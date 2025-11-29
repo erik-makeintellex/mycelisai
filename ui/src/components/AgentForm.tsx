@@ -27,6 +27,32 @@ export default function AgentForm({ initialData, onSuccess }: AgentFormProps) {
     const [promptConfig, setPromptConfig] = useState('{}');
     const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
 
+    // Template State
+    const [templates, setTemplates] = useState<any[]>([]);
+    const [selectedTemplate, setSelectedTemplate] = useState('');
+
+    useEffect(() => {
+        // Fetch Templates
+        fetch(`${API_BASE_URL}/agents/templates`)
+            .then(res => res.json())
+            .then(data => setTemplates(data))
+            .catch(err => console.error("Failed to fetch templates", err));
+    }, []);
+
+    const handleTemplateChange = (templateId: string) => {
+        setSelectedTemplate(templateId);
+        const template = templates.find(t => t.id === templateId);
+        if (template) {
+            // Auto-fill fields
+            setCapabilities(template.capabilities.join(', '));
+            setInputs(template.default_inputs.join(', '));
+            setOutputs(template.default_outputs.join(', '));
+            setPromptConfig(JSON.stringify({ system_prompt: template.system_prompt_template }, null, 2));
+            // Optional: Set name prefix if empty
+            if (!name) setName(`${template.role}-v1`);
+        }
+    };
+
     useEffect(() => {
         if (initialData) {
             setName(initialData.name);
@@ -104,6 +130,7 @@ export default function AgentForm({ initialData, onSuccess }: AgentFormProps) {
                     setInputs('');
                     setOutputs('');
                     setPromptConfig('{}');
+                    setSelectedTemplate('');
                 }
             } else {
                 alert('Failed to register agent');
@@ -117,6 +144,24 @@ export default function AgentForm({ initialData, onSuccess }: AgentFormProps) {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6 p-6 border border-zinc-700 rounded-xl bg-zinc-800 shadow-lg">
+
+            {/* Template Selection */}
+            {!initialData && (
+                <div className="bg-zinc-900/50 p-4 rounded-lg border border-zinc-700 mb-6">
+                    <label className="block text-sm font-medium mb-2 text-emerald-400">Start with a Template</label>
+                    <select
+                        value={selectedTemplate}
+                        onChange={(e) => handleTemplateChange(e.target.value)}
+                        className="w-full p-2 border border-zinc-700 rounded-lg bg-zinc-950 text-zinc-200 focus:ring-2 focus:ring-emerald-600 outline-none transition-all"
+                    >
+                        <option value="">Select a template...</option>
+                        {templates.map(t => (
+                            <option key={t.id} value={t.id}>{t.name} - {t.description}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label className="block text-sm font-medium mb-1 text-zinc-400">Agent Name</label>

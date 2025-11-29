@@ -26,7 +26,7 @@ if command -v tmux &> /dev/null; then
     
     # Window 1: API
     tmux new-window -t mycelis -n 'api'
-    tmux send-keys -t mycelis:1 'make api' C-m
+    tmux send-keys -t mycelis:1 'export OLLAMA_BASE_URL=http://192.168.50.156:11434 && make api' C-m
     
     # Window 2: UI
     tmux new-window -t mycelis -n 'ui'
@@ -36,9 +36,13 @@ if command -v tmux &> /dev/null; then
     tmux new-window -t mycelis -n 'bridge'
     tmux send-keys -t mycelis:3 'make run-bridge' C-m
     
-    # Window 4: Shell (for running agents)
+    # Window 4: Runner
+    tmux new-window -t mycelis -n 'runner'
+    tmux send-keys -t mycelis:4 'export OLLAMA_BASE_URL=http://192.168.50.156:11434 && make runner' C-m
+
+    # Window 5: Shell (for running agents)
     tmux new-window -t mycelis -n 'shell'
-    tmux send-keys -t mycelis:4 'echo "Run agents here: make run-agent NAME=a1"' C-m
+    tmux send-keys -t mycelis:5 'export OLLAMA_BASE_URL=http://192.168.50.156:11434 && echo "Run agents here: make run-agent NAME=a1"' C-m
     
     # Attach
     tmux attach-session -t mycelis
@@ -49,4 +53,5 @@ else
     echo "2. make api"
     echo "3. make ui"
     echo "4. make run-bridge"
+    echo "5. make runner"
 fi

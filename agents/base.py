@@ -39,10 +39,20 @@ class BaseAgent:
             self.llm = MockLLMClient()
             
         # Initialize Memory
-        system_prompt = self.config.prompt_config.get("system_prompt", "You are a helpful AI agent.")
+        from agents.prompts import build_system_prompt
         
-        # Append Tool Instructions
-        system_prompt += "\n\nAvailable Tools:\n- mqtt_publish {\"topic\": str, \"payload\": str}\n\nTo use a tool, your response must contain the following line exactly:\nTOOL: tool_name {\"argument\": \"value\"}\nDo not simulate the tool execution. Just output the TOOL line and stop."
+        custom_instructions = self.config.prompt_config.get("system_prompt", "You are a helpful AI agent.")
+        
+        # TODO: Pass actual team name if available in config, otherwise default
+        team_name = "General" 
+        
+        system_prompt = build_system_prompt(
+            name=self.config.name,
+            team_name=team_name,
+            capabilities=self.config.capabilities,
+            custom_instructions=custom_instructions,
+            assignment=self.config.assignment
+        )
         
         self.memory = AgentContext(system_prompt=system_prompt)
 

@@ -83,7 +83,9 @@ class AgentConfig(BaseModel):
     backend: str = "openai"  # Default backend
     host: str = "192.168.50.156" # Default to host IP for WSL/Docker access
     port: int = 8000
+    assignment: str = "General Contributor" # Specific role/assignment description
     inter_comm_channel: Optional[str] = None  # Channel for inter-agent communication
+    role: str = "standard"  # Role template to use (standard, custom, etc.)
 
 class AIModel(BaseModel):
     id: str
@@ -102,6 +104,7 @@ class Team(BaseModel):
     channels: List[str] = []  # List of associated channels
     inter_comm_channel: Optional[str] = None  # Dedicated channel for team chat
     resource_access: Dict[str, str] = {}  # Resource ID -> Access Level (e.g., "read", "write")
+    assignments: Dict[str, str] = {}  # Agent ID -> Specific Assignment/Role in this team
     shared_context: Dict[str, Any] = {}
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -116,6 +119,7 @@ class ServiceType(str, Enum):
     IOT_DEVICE = "iot_device"
     API = "api"
     DATABASE = "database"
+    MCP_SERVER = "mcp_server"
     OTHER = "other"
 
 class Service(BaseModel):
@@ -163,3 +167,25 @@ class UserCreate(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class Channel(BaseModel):
+    name: str
+    subject: str
+    stream: str
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ChannelCreate(BaseModel):
+    name: str
+    subject: str
+    description: Optional[str] = None
+
+class AgentTemplate(BaseModel):
+    id: str
+    name: str
+    description: str
+    role: str
+    capabilities: List[str]
+    system_prompt_template: str
+    default_inputs: List[str]
+    default_outputs: List[str]

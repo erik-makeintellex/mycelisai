@@ -104,21 +104,35 @@ stop-api:
 	@echo "Stopping API..."
 	@-pkill -f "uvicorn api.main:app" || true
 
+# Run Bridge
+run-bridge:
+	@echo "Starting Bridge..."
+	@cd bridge && uv run python main.py
+
+# Run Runner
+runner:
+	@echo "Starting Agent Runner..."
+	@uv run python runner/main.py
+
 # Stop UI
 stop-ui:
 	@echo "Stopping UI..."
 	@-pkill -f "next" || true
 
 # Stop all application services
-stop-apps: stop-api stop-ui
+stop-apps: stop-api stop-ui stop-runner
 	@echo "Application services stopped."
+
+# Stop Runner
+stop-runner:
+	@echo "Stopping Runner..."
+	@-pkill -f "runner/main.py" || true
 
 # Kill running application processes (Alias for stop-apps)
 kill: stop-apps
 
 # Full shutdown (Infrastructure + Apps)
 shutdown: stop kill
-	@echo "Project shut down completely."
 
 # Check if infrastructure is running
 check-infra:
@@ -145,6 +159,26 @@ clean:
 	@rm -rf ui/.next
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
 	@echo "Clean complete."
+
+# -----------------------------------------------------------------------------
+# Dev Workflow Targets
+# -----------------------------------------------------------------------------
+
+# Kill dev environment (Apps + Tmux)
+kill-dev: stop-apps
+	@echo "Killing tmux session..."
+	@-tmux kill-session -t mycelis 2>/dev/null || true
+	@echo "Dev environment stopped."
+
+# Clean dev environment (Cache)
+clean-dev:
+	@echo "Cleaning dev cache..."
+	@rm -rf ui/.next
+	@echo "Cache cleaned."
+
+# Restart prep (Kill + Clean)
+reset-dev: kill-dev clean-dev
+	@echo "Environment reset. Ready to run ./dev.sh"
 
 # -----------------------------------------------------------------------------
 # Kubernetes Targets

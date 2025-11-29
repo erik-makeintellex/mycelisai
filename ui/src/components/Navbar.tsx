@@ -64,6 +64,15 @@ export default function Navbar() {
                                     Configuration
                                 </Link>
                                 <Link
+                                    href="/channels"
+                                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/channels')
+                                        ? 'bg-zinc-800 text-white'
+                                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+                                        }`}
+                                >
+                                    Channels
+                                </Link>
+                                <Link
                                     href="/monitor"
                                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/monitor')
                                         ? 'bg-zinc-800 text-white'

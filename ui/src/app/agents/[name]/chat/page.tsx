@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { API_BASE_URL } from '@/config';
-import useEventStream from '@/hooks/useEventStream';
+import { useEventStream } from '@/hooks/useEventStream';
 
 interface Message {
     id: string;
@@ -31,21 +31,30 @@ export default function AgentChatPage() {
             });
     }, [agentName]);
 
-    // Subscribe to chat stream (listening for replies to 'user')
-    // In a real app, we'd use a unique session ID. Here we use 'user'.
-    const { messages: streamMessages } = useEventStream('chat.user.user');
+    const [isTyping, setIsTyping] = useState(false);
+
+    // Subscribe to agent's output channel (or default to chat.user.user)
+    const outputChannel = agentConfig?.messaging?.outputs?.[0] || 'chat.user.user';
+    const { events: streamMessages } = useEventStream(outputChannel);
 
     useEffect(() => {
-        if (streamMessages.length > 0) {
-            const lastMsg = streamMessages[streamMessages.length - 1];
+        if (streamMessages && streamMessages.length > 0) {
+            // Defensive check added to prevent runtime error
+            // streamMessages are already parsed objects from useEventStream
+            const lastMsg = streamMessages[0]; // useEventStream returns newest first!
+
+            // Check if we already processed this message
+            // We need a way to track processed messages to avoid loops if we add to 'messages' state
+            // But 'messages' state is local.
+
             try {
-                const data = JSON.parse(lastMsg.data);
                 // Filter for messages from THIS agent
-                if (data.sender === agentName) {
+                if (lastMsg.sender === agentName) {
+                    setIsTyping(false); // Stop typing indicator
                     const newMsg: Message = {
-                        id: data.id,
-                        sender: data.sender,
-                        content: data.content,
+                        id: lastMsg.id,
+                        sender: lastMsg.sender,
+                        content: lastMsg.payload?.content || lastMsg.content || JSON.stringify(lastMsg.payload),
                         timestamp: new Date().toISOString(),
                         type: 'agent'
                     };
@@ -56,7 +65,7 @@ export default function AgentChatPage() {
                     });
                 }
             } catch (e) {
-                console.error("Error parsing message", e);
+                console.error("Error processing message", e);
             }
         }
     }, [streamMessages, agentName]);
@@ -74,21 +83,40 @@ export default function AgentChatPage() {
 
         setMessages(prev => [...prev, userMsg]);
         setInput('');
+        setIsTyping(true); // Start typing indicator
 
         try {
-            await fetch(`${API_BASE_URL}/agents/${agentName}/chat`, {
+            // Determine target channel: use first input channel or default
+            const targetChannel = agentConfig?.messaging?.inputs?.[0] || `chat.agent.${agentName}`;
+
+            // Use generic ingest endpoint
+            const res = await fetch(`${API_BASE_URL}/ingest/${targetChannel}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: userMsg.content, id: userMsg.id, source_agent_id: 'user', type: 'text' })
+                body: JSON.stringify({
+                    id: userMsg.id,
+                    source_agent_id: 'user',
+                    type: 'event',
+                    payload: {
+                        content: userMsg.content,
+                        intent: 'chat'
+                    }
+                })
             });
+
+            if (!res.ok) {
+                console.error("Failed to send message:", await res.text());
+                setIsTyping(false); // Stop on error
+            }
         } catch (e) {
-            console.error("Failed to send message", e);
+            console.error("Network error sending message", e);
+            setIsTyping(false); // Stop on error
         }
     };
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    }, [messages, isTyping]);
 
     return (
         <div className="flex h-screen bg-gray-900 text-gray-100">
@@ -149,14 +177,23 @@ export default function AgentChatPage() {
                     {messages.map((msg) => (
                         <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-2xl px-4 py-3 rounded-2xl ${msg.type === 'user'
-                                    ? 'bg-emerald-600 text-white rounded-br-none'
-                                    : 'bg-gray-800 text-gray-200 rounded-bl-none'
+                                ? 'bg-emerald-600 text-white rounded-br-none'
+                                : 'bg-gray-800 text-gray-200 rounded-bl-none'
                                 }`}>
                                 <div className="text-xs opacity-50 mb-1">{msg.sender}</div>
                                 <div className="whitespace-pre-wrap">{msg.content}</div>
                             </div>
                         </div>
                     ))}
+                    {isTyping && (
+                        <div className="flex justify-start">
+                            <div className="bg-gray-800 text-gray-400 rounded-2xl rounded-bl-none px-4 py-3 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </div>
+                        </div>
+                    )}
                     <div ref={messagesEndRef} />
                 </div>
 
@@ -168,13 +205,15 @@ export default function AgentChatPage() {
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                             placeholder={`Message ${agentName}...`}
-                            className="flex-1 bg-gray-800 border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-100"
+                            disabled={isTyping}
+                            className="flex-1 bg-gray-800 border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-100 disabled:opacity-50"
                         />
                         <button
                             onClick={sendMessage}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                            disabled={isTyping || !input.trim()}
+                            className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors"
                         >
-                            Send
+                            {isTyping ? '...' : 'Send'}
                         </button>
                     </div>
                 </div>
