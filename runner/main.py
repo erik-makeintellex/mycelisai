@@ -139,6 +139,7 @@ async def main():
     runners = {}
 
     print("Runner Service Started. Watching for agents...")
+    print(f"Configuration: OLLAMA_BASE_URL={os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')}")
 
     while True:
         try:

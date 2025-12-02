@@ -19,14 +19,33 @@ Install Python and Node.js dependencies:
 make setup
 ```
 
-### 2. Start Infrastructure
-Start NATS and PostgreSQL containers:
-```bash
-make infra
-```
+### Quick Start
 
-### 3. Run Application
-You can run the API and UI in separate terminals:
+### Prerequisites
+-   Python 3.10+
+-   Node.js 18+
+-   Docker (for NATS/Postgres)
+-   `uv` (Python package manager)
+-   Ollama (running on host or accessible IP)
+
+### Setup
+1.  **Reset & Start Dev Environment**:
+    ```bash
+    make reset-dev
+    ./dev.sh
+    ```
+    This script sets up the database, NATS, and starts the API, UI, and Agent Runner in tmux.
+
+2.  **Access UI**:
+    Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000`).
+
+3.  **Configuration**:
+    -   API URL is configured in `ui/src/config.ts`. Default: `http://192.168.50.156:8000`.
+    -   Ollama URL is configured via `OLLAMA_BASE_URL` env var. Default: `http://192.168.50.156:11434`.
+
+### Documentation
+-   `CLAUDE.md`: High-level goals and architecture.
+-   `.build/state.md`: Current project status and deliverables.
 
 **Terminal 1 (API):**
 ```bash

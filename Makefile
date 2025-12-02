@@ -1,35 +1,38 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup start stop clean dev ui api infra
+KIND_CLUSTER ?= kind
+
+.PHONY: help setup clean test-api runner
 
 help:
-	@echo "Mycelis Service Network Makefile"
+	@echo "Mycelis Service Network - K8s Workflow"
 	@echo "Usage: make [target]"
 	@echo ""
-	@echo "General Targets:"
-	@echo "  setup       Install dependencies (uv, npm)"
-	@echo "  dev         Start infra and print instructions for API/UI"
-	@echo "  stop-apps   Stop all application services (API & UI)"
-	@echo "  shutdown    Full shutdown (Infra + Apps)"
+	@echo "Setup:"
+	@echo "  setup         Install dependencies (uv, npm)"
+	@echo "  k8s-up        Create Kind cluster with Ingress"
+	@echo "  k8s-init      Build, load images, deploy all services"
 	@echo ""
-	@echo "Backend Targets:"
-	@echo "  api         Run API server (dev mode)"
-	@echo "  stop-api    Stop API service only"
-	@echo "  test-api    Run backend tests (pytest)"
+	@echo "Development:"
+	@echo "  k8s-build     Build Docker images (API, UI)"
+	@echo "  k8s-load      Load images into Kind cluster"
+	@echo "  k8s-apply     Apply all k8s manifests"
+	@echo "  k8s-dev       Quick rebuild & restart (SERVICE=api|ui)"
+	@echo "  k8s-forward   Port-forward services to localhost"
 	@echo ""
-	@echo "Frontend Targets:"
-	@echo "  ui          Run UI server (dev mode)"
-	@echo "  stop-ui     Stop UI service only"
+	@echo "Testing:"
+	@echo "  test-api      Run backend tests (pytest)"
+	@echo "  k8s-status    Check all services status"
+	@echo "  k8s-logs      Tail logs (SERVICE=api|ui|nats|postgres)"
 	@echo ""
-	@echo "Infrastructure Targets:"
-	@echo "  infra       Start infrastructure (NATS, Postgres) in Docker"
-	@echo "  stop        Stop infrastructure"
-	@echo "  logs        View infrastructure logs"
+	@echo "Agent Runtime:"
+	@echo "  runner        Run agent runner locally"
 	@echo ""
-	@echo "Maintenance Targets:"
-	@echo "  clean       Remove artifacts and dependencies"
-	@echo "  help        Show this help message"
-
+	@echo "Maintenance:"
+	@echo "  k8s-restart   Restart all deployments"
+	@echo "  k8s-reset     Delete and recreate cluster"
+	@echo "  k8s-down      Delete Kind cluster"
+	@echo "  clean         Remove build artifacts"
 
 # Setup dependencies
 setup:
@@ -38,156 +41,31 @@ setup:
 	@cd ui && npm install
 	@echo "Setup complete."
 
-# Start infrastructure (NATS)
-infra:
-	@echo "Starting infrastructure..."
-	@docker compose up -d
-
-# Aliases for starting infrastructure
-services: infra
-up: infra
-
-# View infrastructure logs
-logs:
-	@docker compose logs -f
-
-# Run API in development mode
-api:
-	@echo "Starting API..."
-	@uv run uvicorn api.main:app --reload --port 8000
-
 # Run backend tests
 test-api:
 	@echo "Running backend tests..."
 	@uv run pytest
 
-# Run UI in development mode
-ui:
-	@echo "Starting UI..."
-	@cd ui && npm run dev
-
-# Run MCP Bridge locally
-run-bridge:
-	@echo "Starting MCP Bridge..."
-	@uv run services/mcp_bridge.py
-
-# Run a specific agent locally
-# Usage: make run-agent NAME=a1
-run-agent:
-	@echo "Starting Agent $(NAME)..."
-	@uv run agents/runner.py $(NAME) --api http://localhost:8000 --nats nats://localhost:4222
-
-# Local Dev Help
-dev-help:
-	@echo "Local Development Commands:"
-	@echo "  make infra        - Start NATS & Postgres (Docker)"
-	@echo "  make api          - Start API (Local)"
-	@echo "  make ui           - Start UI (Local)"
-	@echo "  make run-bridge   - Start MCP Bridge (Local)"
-	@echo "  make run-agent NAME=<name> - Start Agent (Local)"
-
-
-# Start everything (requires multiple terminals or backgrounding)
-dev: infra
-	@echo "Infrastructure started. Please run 'make api' and 'make ui' in separate terminals."
-
-# Stop infrastructure
-stop:
-	@echo "Stopping infrastructure..."
-	@docker compose down
-
-# Alias for stop
-down: stop
-
-# Stop API
-stop-api:
-	@echo "Stopping API..."
-	@-pkill -f "uvicorn api.main:app" || true
-
-# Run Bridge
-run-bridge:
-	@echo "Starting Bridge..."
-	@cd bridge && uv run python main.py
-
-# Run Runner
+# Run Agent Runner locally
 runner:
 	@echo "Starting Agent Runner..."
 	@uv run python runner/main.py
 
-# Stop UI
-stop-ui:
-	@echo "Stopping UI..."
-	@-pkill -f "next" || true
-
-# Stop all application services
-stop-apps: stop-api stop-ui stop-runner
-	@echo "Application services stopped."
-
-# Stop Runner
-stop-runner:
-	@echo "Stopping Runner..."
-	@-pkill -f "runner/main.py" || true
-
-# Kill running application processes (Alias for stop-apps)
-kill: stop-apps
-
-# Full shutdown (Infrastructure + Apps)
-shutdown: stop kill
-
-# Check if infrastructure is running
-check-infra:
-	@echo "Checking infrastructure..."
-	@if ! docker compose ps | grep "Up"; then \
-		echo "Error: Infrastructure is not running. Please run 'make infra' first."; \
-		exit 1; \
-	fi
-
-# Forward K8s ports to localhost (Hybrid Dev)
-k8s-forward:
-	@echo "Forwarding K8s services to localhost..."
-	@echo "NATS: 4222, Postgres: 5432"
-	@trap 'kill %1 %2' SIGINT; \
-	kubectl port-forward svc/nats 4222:4222 -n mycelis & \
-	kubectl port-forward svc/postgres 5432:5432 -n mycelis & \
-	wait
-
 # Clean artifacts
 clean:
 	@echo "Cleaning up..."
-	@rm -rf .venv
-	@rm -rf ui/node_modules
-	@rm -rf ui/.next
+	@rm -rf .venv ui/node_modules ui/.next
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
 	@echo "Clean complete."
-
-# -----------------------------------------------------------------------------
-# Dev Workflow Targets
-# -----------------------------------------------------------------------------
-
-# Kill dev environment (Apps + Tmux)
-kill-dev: stop-apps
-	@echo "Killing tmux session..."
-	@-tmux kill-session -t mycelis 2>/dev/null || true
-	@echo "Dev environment stopped."
-
-# Clean dev environment (Cache)
-clean-dev:
-	@echo "Cleaning dev cache..."
-	@rm -rf ui/.next
-	@echo "Cache cleaned."
-
-# Restart prep (Kill + Clean)
-reset-dev: kill-dev clean-dev
-	@echo "Environment reset. Ready to run ./dev.sh"
 
 # -----------------------------------------------------------------------------
 # Kubernetes Targets
 # -----------------------------------------------------------------------------
 
-KIND_CLUSTER ?= kind
 SERVICE ?= api
 
-.PHONY: k8s-build k8s-load k8s-apply k8s-dev k8s-up k8s-down k8s-reset
+.PHONY: k8s-up k8s-down k8s-reset k8s-build k8s-load k8s-apply k8s-init
+.PHONY: k8s-dev k8s-status k8s-logs k8s-forward k8s-restart
 
 # Create Kind cluster and install Ingress Controller
 k8s-up:
@@ -200,6 +78,7 @@ k8s-up:
 	  --for=condition=ready pod \
 	  --selector=app.kubernetes.io/component=controller \
 	  --timeout=90s
+	@echo "Cluster ready!"
 
 # Delete Kind cluster
 k8s-down:
@@ -207,7 +86,7 @@ k8s-down:
 	@kind delete cluster --name $(KIND_CLUSTER)
 
 # Reset cluster (Down + Up)
-k8s-reset: k8s-down k8s-up
+k8s-reset: k8s-down k8s-up k8s-init
 
 # Build Docker images
 k8s-build:
@@ -221,25 +100,75 @@ k8s-load:
 	@kind load docker-image mycelis-api:latest --name $(KIND_CLUSTER)
 	@kind load docker-image mycelis-ui:latest --name $(KIND_CLUSTER)
 
-# Apply manifests
+# Apply all k8s manifests
 k8s-apply:
 	@echo "Applying Kubernetes manifests..."
 	@kubectl apply -f k8s/
 
-# Standardized dev loop for a specific service
-# Usage: make k8s-dev service=api
+# Full initialization (build + load + deploy)
+k8s-init: k8s-build k8s-load k8s-apply
+	@echo "Waiting for deployments to be ready..."
+	@kubectl wait --for=condition=available --timeout=120s deployment/nats -n mycelis
+	@kubectl wait --for=condition=available --timeout=120s deployment/postgres -n mycelis
+	@kubectl wait --for=condition=available --timeout=120s deployment/api -n mycelis
+	@kubectl wait --for=condition=available --timeout=120s deployment/ui -n mycelis
+	@echo "All services deployed!"
+
+# Quick dev loop for specific service
+# Usage: make k8s-dev SERVICE=api
 k8s-dev:
-	@echo "Deploying update for service: $(SERVICE)"
+	@echo "Rebuilding and restarting: $(SERVICE)"
 	@if [ "$(SERVICE)" = "api" ]; then \
 		docker build -t mycelis-api:latest -f api/Dockerfile .; \
 		kind load docker-image mycelis-api:latest --name $(KIND_CLUSTER); \
 		kubectl rollout restart deployment/api -n mycelis; \
-		kubectl rollout restart deployment/mcp-bridge -n mycelis; \
 	elif [ "$(SERVICE)" = "ui" ]; then \
 		docker build -t mycelis-ui:latest -f ui/Dockerfile ui/; \
 		kind load docker-image mycelis-ui:latest --name $(KIND_CLUSTER); \
 		kubectl rollout restart deployment/ui -n mycelis; \
 	else \
 		echo "Unknown service: $(SERVICE). Available: api, ui"; \
+		exit 1; \
 	fi
+	@echo "Waiting for rollout..."
+	@kubectl rollout status deployment/$(SERVICE) -n mycelis
+
+# Check status of all services
+k8s-status:
+	@echo "=== Mycelis Services Status ==="
+	@kubectl get all -n mycelis
+	@echo ""
+	@echo "=== Ingress Status ==="
+	@kubectl get ingress -n mycelis
+	@echo ""
+	@echo "Access URLs:"
+	@echo "  UI:  http://localhost/"
+	@echo "  API: http://localhost/api/"
+
+# Tail logs for specific service
+# Usage: make k8s-logs SERVICE=api
+k8s-logs:
+	@echo "Tailing logs for: $(SERVICE)"
+	@kubectl logs -f -l app=$(SERVICE) -n mycelis --tail=50
+
+# Port-forward services to localhost
+k8s-forward:
+	@echo "Port-forwarding services..."
+	@echo "NATS: 4222, Postgres: 5432, API: 8000, UI: 3000"
+	@trap 'kill %1 %2 %3 %4' SIGINT; \
+	kubectl port-forward svc/nats 4222:4222 -n mycelis & \
+	kubectl port-forward svc/postgres 5432:5432 -n mycelis & \
+	kubectl port-forward svc/api 8000:8000 -n mycelis & \
+	kubectl port-forward svc/ui 3000:3000 -n mycelis & \
+	wait
+
+# Restart all deployments
+k8s-restart:
+	@echo "Restarting all deployments..."
+	@kubectl rollout restart deployment -n mycelis
+	@echo "Waiting for rollouts..."
+	@kubectl rollout status deployment/nats -n mycelis
+	@kubectl rollout status deployment/postgres -n mycelis
+	@kubectl rollout status deployment/api -n mycelis
+	@kubectl rollout status deployment/ui -n mycelis
 

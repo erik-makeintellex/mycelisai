@@ -22,6 +22,8 @@ spec:
           value: "postgresql+asyncpg://mycelis:password@postgres/mycelis"
         - name: NATS_URL
           value: "nats://nats:4222"
+        - name: OLLAMA_BASE_URL
+          value: "http://192.168.50.156:11434"
         ports:
         - containerPort: 8000
 ---

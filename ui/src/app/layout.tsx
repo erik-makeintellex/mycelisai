@@ -16,8 +16,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-zinc-950 text-zinc-300 min-h-screen antialiased selection:bg-zinc-700 selection:text-white`}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      {/* Hydration warning suppressed for browser extensions */}
+      <body className={`${inter.className} bg-[--bg-primary] text-[--text-primary] min-h-screen antialiased selection:bg-[--accent-link] selection:text-white`}>
         <Navbar />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}

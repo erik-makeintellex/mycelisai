@@ -27,3 +27,28 @@ spec:
       # - ip: "172.17.0.1" # Gateway IP (example)
       #   hostnames:
       #   - "host.docker.internal"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-architect
+  namespace: mycelis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-architect
+  template:
+    metadata:
+      labels:
+        app: agent-architect
+    spec:
+      containers:
+      - name: agent-architect
+        image: mycelis-api:latest
+        imagePullPolicy: Never
+        command: ["uv", "run", "agents/runner.py", "architect", "--api", "http://api:8000", "--nats", "nats://nats:4222"]
+        env:
+        - name: OLLAMA_HOST
+          value: "host.docker.internal"
+

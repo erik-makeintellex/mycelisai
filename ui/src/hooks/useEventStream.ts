@@ -57,9 +57,10 @@ export function useEventStream(channel: string) {
 
         eventSource.onerror = (err) => {
             // eslint-disable-next-line no-console
-            console.error('EventSource error:', err);
+            console.warn('EventSource connection issue (retrying...):', err);
             setStats(prev => ({ ...prev, isConnected: false }));
-            eventSource.close();
+            // Do NOT close; let EventSource auto-retry
+            // eventSource.close(); 
         };
 
         // Calculate events per second

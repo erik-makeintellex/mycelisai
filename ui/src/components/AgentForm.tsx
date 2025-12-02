@@ -30,13 +30,20 @@ export default function AgentForm({ initialData, onSuccess }: AgentFormProps) {
     // Template State
     const [templates, setTemplates] = useState<any[]>([]);
     const [selectedTemplate, setSelectedTemplate] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         // Fetch Templates
         fetch(`${API_BASE_URL}/agents/templates`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error(`Failed to fetch templates: ${res.statusText}`);
+                return res.json();
+            })
             .then(data => setTemplates(data))
-            .catch(err => console.error("Failed to fetch templates", err));
+            .catch(err => {
+                console.error("Failed to fetch templates", err);
+                setError(`Template Error: ${err.message}`);
+            });
     }, []);
 
     const handleTemplateChange = (templateId: string) => {
@@ -76,9 +83,10 @@ export default function AgentForm({ initialData, onSuccess }: AgentFormProps) {
                 if (data.length > 0 && !backend && !initialData) {
                     setBackend(data[0].id);
                 }
-            } catch (error) {
+            } catch (error: any) {
                 // eslint-disable-next-line no-console
                 console.error(error);
+                setError(`Model Fetch Error: ${error.message}`);
             }
         };
         fetchModels();
@@ -144,6 +152,12 @@ export default function AgentForm({ initialData, onSuccess }: AgentFormProps) {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6 p-6 border border-zinc-700 rounded-xl bg-zinc-800 shadow-lg">
+
+            {error && (
+                <div className="p-4 mb-4 text-sm text-red-400 bg-red-900/20 border border-red-900 rounded-lg">
+                    {error}
+                </div>
+            )}
 
             {/* Template Selection */}
             {!initialData && (

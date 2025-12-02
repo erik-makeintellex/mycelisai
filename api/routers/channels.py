@@ -72,6 +72,7 @@ async def stream_events(channel: str, request: Request):
         queue = asyncio.Queue()
         
         async def cb(msg):
+            print(f"DEBUG: cb received message: {msg.data.decode()[:50]}...")
             await queue.put(msg)
 
         # Subscribe to NATS (wildcard for all events in channel)
@@ -87,10 +88,12 @@ async def stream_events(channel: str, request: Request):
                 print(f"DEBUG: Stream provisioning check for {channel}: {e}")
                 pass
 
-            sub = await request.app.state.js.subscribe(f"{channel}.>", cb=cb)
-            print(f"DEBUG: Subscribed to {channel}.>")
+            # Use JetStream subscription
+            # manual_ack=True is required to avoid double-ack errors if we ack manually
+            sub = await request.app.state.js.subscribe(f"{channel}.>", cb=cb, manual_ack=True)
         except Exception as e:
             print(f"ERROR: Failed to subscribe to {channel}: {e}")
+            yield f"data: error: {str(e)}\n\n"
             return
 
         try:
@@ -99,7 +102,11 @@ async def stream_events(channel: str, request: Request):
                     # Wait for message with timeout to send heartbeat
                     msg = await asyncio.wait_for(queue.get(), timeout=15.0)
                     yield f"data: {msg.data.decode()}\n\n"
-                    await msg.ack()
+                    try:
+                        await msg.ack()
+                    except Exception:
+                        # Ignore ack errors (e.g. already acked)
+                        pass
                 except asyncio.TimeoutError:
                     # Send heartbeat (comment) to keep connection alive
                     yield ": keepalive\n\n"

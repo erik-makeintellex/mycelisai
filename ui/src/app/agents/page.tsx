@@ -16,15 +16,17 @@ interface Agent {
 export default function AgentsPage() {
     const [agents, setAgents] = useState<Agent[]>([]);
     const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchAgents = async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/agents`);
             const data = await res.json();
             setAgents(data);
-        } catch (error) {
+        } catch (error: any) {
             // eslint-disable-next-line no-console
             console.error(error);
+            setError(`Agent Fetch Error: ${error.message}`);
         }
     };
 
@@ -56,6 +58,12 @@ export default function AgentsPage() {
                     Agents are autonomous workers powered by LLMs. Define their capabilities, backend models, and communication channels here.
                 </p>
             </div>
+
+            {error && (
+                <div className="p-4 text-sm text-red-400 bg-red-900/20 border border-red-900 rounded-lg">
+                    {error}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>

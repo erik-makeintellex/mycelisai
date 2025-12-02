@@ -93,3 +93,22 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 @app.get("/")
 async def root():
     return {"message": "Mycelis API is running", "docs": "/docs"}
+
+@app.get("/config")
+async def get_config():
+    """Get current configuration"""
+    return {
+        "ollama_base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        "nats_url": os.getenv("NATS_URL", "nats://localhost:4222"),
+        "database_url": "configured" if os.getenv("DATABASE_URL") else "missing"
+    }
+
+@app.post("/config")
+async def update_config(config: dict):
+    """Update configuration (requires API restart to apply)"""
+    # For now, return the config - in production this would update a ConfigMap
+    return {
+        "status": "received",
+        "message": "Configuration update received. Restart API to apply changes.",
+        "config": config
+    }

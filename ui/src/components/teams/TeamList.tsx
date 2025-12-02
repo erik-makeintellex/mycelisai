@@ -1,11 +1,6 @@
 'use client';
 
-interface Team {
-    id: string;
-    name: string;
-    description: string;
-    agents: string[];
-}
+import { Team } from '@/types/team';
 
 interface TeamListProps {
     teams: Team[];

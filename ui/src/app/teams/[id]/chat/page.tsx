@@ -29,12 +29,15 @@ export default function TeamChatPage() {
 
     // Fetch Team Details
     useEffect(() => {
-        fetch(`${API_BASE_URL}/teams`)
-            .then(res => res.json())
+        fetch(`${API_BASE_URL}/teams/${teamId}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Team not found');
+                return res.json();
+            })
             .then(data => {
-                const found = data.find((t: any) => t.id === teamId);
-                setTeam(found);
-            });
+                setTeam(data);
+            })
+            .catch(err => console.error(err));
     }, [teamId]);
 
     // Subscribe to team channel
@@ -184,6 +187,13 @@ export default function TeamChatPage() {
                     >
                         Send
                     </button>
+                </div>
+                {/* Debug Info */}
+                <div className="mt-4 p-2 bg-black/50 text-xs font-mono text-gray-500 overflow-x-auto">
+                    <p>Team ID: {teamId}</p>
+                    <p>Channel: {channel}</p>
+                    <p>Events: {streamEvents.length}</p>
+                    <p>Last Event: {streamEvents[0] ? JSON.stringify(streamEvents[0]) : 'None'}</p>
                 </div>
             </div>
         </div>

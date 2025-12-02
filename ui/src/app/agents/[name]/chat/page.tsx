@@ -15,7 +15,7 @@ interface Message {
 
 export default function AgentChatPage() {
     const params = useParams();
-    const agentName = params.name as string;
+    const agentName = decodeURIComponent(params.name as string);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [agentConfig, setAgentConfig] = useState<any>(null);
@@ -24,10 +24,20 @@ export default function AgentChatPage() {
     // Fetch Agent Config for Context View
     useEffect(() => {
         fetch(`${API_BASE_URL}/agents`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                return res.json();
+            })
             .then(data => {
                 const agent = data.find((a: any) => a.name === agentName);
-                setAgentConfig(agent);
+                if (agent) {
+                    setAgentConfig(agent);
+                } else {
+                    console.error(`Agent ${agentName} not found in config`);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to fetch agent config:", err);
             });
     }, [agentName]);
 
@@ -49,12 +59,14 @@ export default function AgentChatPage() {
 
             try {
                 // Filter for messages from THIS agent
-                if (lastMsg.sender === agentName) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const msgData = lastMsg as any;
+                if (msgData.sender === agentName) {
                     setIsTyping(false); // Stop typing indicator
                     const newMsg: Message = {
-                        id: lastMsg.id,
-                        sender: lastMsg.sender,
-                        content: lastMsg.payload?.content || lastMsg.content || JSON.stringify(lastMsg.payload),
+                        id: msgData.id,
+                        sender: msgData.sender,
+                        content: msgData.payload?.content || msgData.content || JSON.stringify(msgData.payload),
                         timestamp: new Date().toISOString(),
                         type: 'agent'
                     };
@@ -215,6 +227,14 @@ export default function AgentChatPage() {
                         >
                             {isTyping ? '...' : 'Send'}
                         </button>
+                    </div>
+                    {/* Debug Info */}
+                    <div className="mt-4 p-2 bg-black/50 text-xs font-mono text-gray-500 overflow-x-auto">
+                        <p>Agent: {agentName}</p>
+                        <p>Channel: {outputChannel}</p>
+                        <p>API: {API_BASE_URL}</p>
+                        <p>Events: {streamMessages.length}</p>
+                        <p>Last Msg: {streamMessages[0] ? JSON.stringify(streamMessages[0]) : 'None'}</p>
                     </div>
                 </div>
             </div>

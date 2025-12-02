@@ -31,3 +31,5 @@ Thumbs.db
 *.sqlite3
 postgres-data/
 nats-data/
+.build/
+CLAUDE.md

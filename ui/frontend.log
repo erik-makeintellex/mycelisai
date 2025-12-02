@@ -1,0 +1,45 @@
+
+> ui@0.1.0 dev
+> next dev
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.5 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://10.255.255.254:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 23.4s
+ ○ Compiling / ...
+ GET /models 200 in 12.6s (compile: 11.8s, render: 845ms)
+ GET / 200 in 12.6s (compile: 12.1s, render: 547ms)
+ GET / 200 in 106ms (compile: 38ms, render: 68ms)
+ GET / 200 in 63ms (compile: 30ms, render: 33ms)
+ GET /agents 200 in 992ms (compile: 949ms, render: 43ms)
+ GET /agents/researcher-v1/chat 200 in 885ms (compile: 495ms, render: 389ms)
+ GET /agents/researcher-v1/chat 200 in 21.1s (compile: 20.7s, render: 405ms)
+ GET /agents/researcher-v1/chat 200 in 173ms (compile: 63ms, render: 110ms)
+ GET /agents/researcher-v1/chat 200 in 135ms (compile: 51ms, render: 84ms)
+ GET /agents/researcher-v1/chat 200 in 154ms (compile: 78ms, render: 76ms)
+ GET /agents/researcher-v1/chat 200 in 174ms (compile: 82ms, render: 92ms)
+ GET /agents/researcher-v1/chat 200 in 196ms (compile: 82ms, render: 114ms)
+ GET /agents/researcher-v1/chat 200 in 173ms (compile: 76ms, render: 97ms)
+ GET /agents/researcher-v1/chat 200 in 152ms (compile: 70ms, render: 82ms)
+ GET /agents/researcher-v1/chat 200 in 133ms (compile: 59ms, render: 75ms)
+ GET /agents/researcher-v1/chat 200 in 158ms (compile: 72ms, render: 86ms)
+ GET /agents/researcher-v1/chat 200 in 286ms (compile: 115ms, render: 171ms)
+ GET /agents/researcher-v1/chat 200 in 108ms (compile: 46ms, render: 62ms)
+
+Could not open page.tsx in the editor.
+The editor process exited with an error: Terminal editors can only be used on macOS.
+
+To set up the editor integration, add something like REACT_EDITOR=atom to the .env.local file in your project folder and restart the development server.
+
+
+Could not open page.tsx in the editor.
+The editor process exited with an error: Terminal editors can only be used on macOS.
+
+To set up the editor integration, add something like REACT_EDITOR=atom to the .env.local file in your project folder and restart the development server.
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[?25h

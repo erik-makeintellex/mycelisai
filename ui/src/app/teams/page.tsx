@@ -7,17 +7,7 @@ import TeamList from '@/components/teams/TeamList';
 import TeamDetails from '@/components/teams/TeamDetails';
 import AddAgentModal from '@/components/teams/AddAgentModal';
 import EditTeamModal from '@/components/teams/EditTeamModal';
-
-interface Team {
-    id: string;
-    name: string;
-    description: string;
-    agents: string[];
-    channels: string[];
-    inter_comm_channel?: string;
-    resource_access: Record<string, string>;
-    created_at: string;
-}
+import { Team } from '@/types/team';
 
 export default function TeamsPage() {
     const [teams, setTeams] = useState<Team[]>([]);
@@ -174,7 +164,7 @@ export default function TeamsPage() {
                 <TeamList
                     teams={teams}
                     selectedTeam={selectedTeam}
-                    onSelect={setSelectedTeam}
+                    onSelect={(team) => setSelectedTeam(team)}
                     loading={loading}
                 />
 

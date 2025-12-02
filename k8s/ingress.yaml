@@ -4,13 +4,19 @@ metadata:
   name: mycelis-ingress
   namespace: mycelis
   annotations:
-    # Assuming Nginx Ingress Controller
-    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
+  ingressClassName: nginx
   rules:
-  - host: mycelis.local
-    http:
+  - http:
       paths:
+      - path: /api/(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api
+            port:
+              number: 8000
       - path: /
         pathType: Prefix
         backend:
@@ -18,13 +24,3 @@ spec:
             name: ui
             port:
               number: 3000
-  - host: api.mycelis.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: api
-            port:
-              number: 8000
