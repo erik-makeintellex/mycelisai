@@ -41,7 +41,13 @@ class AgentRunner:
         print(f"[{self.config.name}] Starting runner. Listening on {input_channel}.> using model {self.config.backend}")
         
         # Subscribe to input channel
-        self.subscription = await self.js.subscribe(f"{input_channel}.>", cb=self.handle_message)
+        # Subscribe to input channel (exact match)
+        await self.js.subscribe(input_channel, cb=self.handle_message)
+        print(f"[{self.config.name}] Subscribed to {input_channel}")
+
+        # Subscribe to sub-topics
+        await self.js.subscribe(f"{input_channel}.>", cb=self.handle_message)
+        print(f"[{self.config.name}] Subscribed to {input_channel}.>")
 
     async def stop(self):
         self.running = False

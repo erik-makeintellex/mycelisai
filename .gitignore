@@ -33,3 +33,10 @@ postgres-data/
 nats-data/
 .build/
 CLAUDE.md
+
+# Logs and Debug
+*.log
+debug_nats.py
+check_stream.py
+stream_output.txt
+architect_work_order.md

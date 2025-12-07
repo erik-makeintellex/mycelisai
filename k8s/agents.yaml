@@ -20,7 +20,7 @@ spec:
         command: ["uv", "run", "agents/runner.py", "a1", "--api", "http://api:8000", "--nats", "nats://nats:4222"]
         env:
         - name: OLLAMA_HOST
-          value: "host.docker.internal" # For Docker Desktop. Linux users might need the host IP.
+          value: "192.168.50.156"
         # Add host alias for Linux users if needed, though host.docker.internal is becoming standard
       # Optional: Host aliases for Linux if host.docker.internal doesn't work out of the box
       # hostAliases:

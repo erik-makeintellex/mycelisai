@@ -114,6 +114,31 @@ k8s-init: k8s-build k8s-load k8s-apply
 	@kubectl wait --for=condition=available --timeout=120s deployment/ui -n mycelis
 	@echo "All services deployed!"
 
+# Backend-only initialization (No UI, No Agents)
+k8s-backend: k8s-build-backend k8s-load-backend k8s-apply-backend
+	@echo "Waiting for backend deployments..."
+	@kubectl wait --for=condition=available --timeout=120s deployment/nats -n mycelis
+	@kubectl wait --for=condition=available --timeout=120s deployment/postgres -n mycelis
+	@kubectl wait --for=condition=available --timeout=120s deployment/api -n mycelis
+	@echo "Backend services deployed!"
+
+k8s-build-backend:
+	@echo "Building Backend Docker images..."
+	@docker build -t mycelis-api:latest -f api/Dockerfile .
+
+k8s-load-backend:
+	@echo "Loading Backend images into Kind..."
+	@kind load docker-image mycelis-api:latest --name $(KIND_CLUSTER)
+
+k8s-apply-backend:
+	@echo "Applying Backend Kubernetes manifests..."
+	@kubectl apply -f k8s/00-namespace.yaml
+	@kubectl apply -f k8s/nats.yaml
+	@kubectl apply -f k8s/postgres.yaml
+	@kubectl apply -f k8s/api.yaml
+	@kubectl apply -f k8s/mcp-bridge.yaml
+	@kubectl apply -f k8s/ingress.yaml
+
 # Quick dev loop for specific service
 # Usage: make k8s-dev SERVICE=api
 k8s-dev:

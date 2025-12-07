@@ -123,5 +123,6 @@ class MCPBridge:
             return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
-    bridge = MCPBridge()
+    nats_url = os.getenv("NATS_URL", "nats://localhost:4222")
+    bridge = MCPBridge(nats_url=nats_url)
     asyncio.run(bridge.start())
