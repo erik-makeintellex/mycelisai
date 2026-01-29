@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package mycelis.swarm.v1;
+
+option go_package = "github.com/mycelis/core/pkg/pb/swarm";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// -- Message Envelope --
+
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_EVENT = 1;
+  MESSAGE_TYPE_TEXT = 2;
+  MESSAGE_TYPE_BINARY = 3;
+  MESSAGE_TYPE_TOOL_CALL = 4;
+  MESSAGE_TYPE_TOOL_RESULT = 5;
+}
+
+message MsgEnvelope {
+  string id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string source_agent_id = 3;
+  MessageType type = 4;
+  
+  // OneOf for strictly typed payloads
+  oneof payload {
+    EventPayload event = 5;
+    TextPayload text = 6;
+    ToolCallPayload tool_call = 7;
+    ToolResultPayload tool_result = 8;
+  }
+  
+  // Trace context for observability
+  string trace_id = 10;
+  string span_id = 11;
+}
+
+// -- Payloads --
+
+message EventPayload {
+  string event_type = 1; // e.g. "sensor.update", "task.complete"
+  string stream_id = 2;
+  google.protobuf.Struct data = 3; // Equivalent to Dict[str, Any]
+}
+
+message TextPayload {
+  string content = 1;
+  string recipient_id = 2; // For direct messaging
+  string intent = 3;       // "ask", "reply", "inform"
+  string context_id = 4;   // Thread ID
+}
+
+message ToolCallPayload {
+  string call_id = 1;
+  string tool_name = 2;
+  google.protobuf.Struct arguments = 3;
+}
+
+message ToolResultPayload {
+  string call_id = 1;
+  google.protobuf.Struct result = 2;
+  bool is_error = 3;
+  string error_message = 4;
+}
+
+message AgentConfig {
+  string name = 1;
+  string role = 2;
+  repeated string capabilities = 3;
+  MessagingConfig messaging = 4;
+}
+
+message MessagingConfig {
+  repeated string inputs = 1;
+  repeated string outputs = 2;
+}
