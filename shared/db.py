@@ -97,6 +97,34 @@ class GroupDB(Base):
     parent_group_id = Column(String, nullable=True)
     resource_access_policy = Column(JSON, default={})
 
+    resource_access_policy = Column(JSON, default={})
+
+class ConversationDB(Base):
+    __tablename__ = "conversations"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=True)
+    user_id = Column(String, nullable=True) # Optional link to user
+    created_at = Column(DateTime, default=datetime.utcnow)
+    metadata_ = Column("metadata", JSON, default={}) # naming collision with sqlachemy metadata
+
+class MessageDB(Base):
+    __tablename__ = "messages"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    conversation_id = Column(String, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    role = Column(String, nullable=False) # user, agent, system
+    sender = Column(String, nullable=False) # agent_name or "user"
+    content = Column(String, nullable=False)
+    type = Column(String, default="text") # text, event, tool_call
+
+class MemoryDB(Base):
+    __tablename__ = "memories"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    agent_id = Column(String, ForeignKey("agents.name", ondelete="CASCADE"), nullable=False)
+    content = Column(String, nullable=False)
+    tags = Column(JSON, default=[])
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

@@ -5,34 +5,26 @@ KIND_CLUSTER ?= kind
 .PHONY: help setup clean test-api runner
 
 help:
-	@echo "Mycelis Service Network - K8s Workflow"
+	@echo "Mycelis Service Network - Workflow"
 	@echo "Usage: make [target]"
 	@echo ""
-	@echo "Setup:"
-	@echo "  setup         Install dependencies (uv, npm)"
-	@echo "  k8s-up        Create Kind cluster with Ingress"
-	@echo "  k8s-init      Build, load images, deploy all services"
+	@echo "Local Development (Recommended):"
+	@echo "  k8s-services      Deploy infra (NATS, Postgres) to Kind"
+	@echo "  k8s-forward       Port-forward infra (Idempotent + Verify)"
+	@echo "  k8s-stop-forward  Stop port forwarding"
+	@echo "  dev-api           Run API locally (hot-reload)"
+	@echo "  dev-ui            Run UI locally"
 	@echo ""
-	@echo "Development:"
-	@echo "  k8s-build     Build Docker images (API, UI)"
-	@echo "  k8s-load      Load images into Kind cluster"
-	@echo "  k8s-apply     Apply all k8s manifests"
-	@echo "  k8s-dev       Quick rebuild & restart (SERVICE=api|ui)"
-	@echo "  k8s-forward   Port-forward services to localhost"
-	@echo ""
-	@echo "Testing:"
-	@echo "  test-api      Run backend tests (pytest)"
-	@echo "  k8s-status    Check all services status"
-	@echo "  k8s-logs      Tail logs (SERVICE=api|ui|nats|postgres)"
-	@echo ""
-	@echo "Agent Runtime:"
-	@echo "  runner        Run agent runner locally"
-	@echo ""
-	@echo "Maintenance:"
-	@echo "  k8s-restart   Restart all deployments"
-	@echo "  k8s-reset     Delete and recreate cluster"
+	@echo "Full Kubernetes Deployment:"
+	@echo "  k8s-up        Create Kind cluster"
+	@echo "  k8s-init      Build & deploy EVERYTHING to Kind"
 	@echo "  k8s-down      Delete Kind cluster"
-	@echo "  clean         Remove build artifacts"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  setup         Install dependencies"
+	@echo "  k8s-status    Check service status"
+	@echo "  k8s-logs      Tail logs (SERVICE=nats|postgres)"
+	@echo "  clean         Remove artifacts"
 
 # Setup dependencies
 setup:
@@ -50,6 +42,33 @@ test-api:
 runner:
 	@echo "Starting Agent Runner..."
 	@uv run python runner/main.py
+
+# -----------------------------------------------------------------------------
+# Local Development Targets
+# -----------------------------------------------------------------------------
+
+# Run API locally (requires k8s-services + k8s-forward)
+dev-api:
+	@echo "Starting API locally..."
+	@export DATABASE_URL="postgresql+asyncpg://mycelis:password@localhost/mycelis" && \
+	export NATS_URL="nats://localhost:4222" && \
+	export OLLAMA_BASE_URL="http://192.168.50.156:11434" && \
+	uv run uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Run UI locally (Clean Start, Network Accessible)
+dev-ui:
+	@echo "Cleaning UI cache..."
+	@rm -rf ui/.next
+	@echo "Starting UI on 0.0.0.0:3000..."
+	@export API_INTERNAL_URL="http://127.0.0.1:8000" && cd ui && npm run dev -- -H 0.0.0.0 -p 3000
+
+# Run Agent Runner locally
+dev-runner:
+	@echo "Starting Agent Runner..."
+	@export DATABASE_URL="postgresql+asyncpg://mycelis:password@localhost/mycelis" && \
+	export NATS_URL="nats://localhost:4222" && \
+	export OLLAMA_BASE_URL="http://192.168.50.156:11434" && \
+	uv run python runner/main.py
 
 # Clean artifacts
 clean:
@@ -139,6 +158,17 @@ k8s-apply-backend:
 	@kubectl apply -f k8s/mcp-bridge.yaml
 	@kubectl apply -f k8s/ingress.yaml
 
+# Deploy only infrastructure services (NATS, Postgres)
+k8s-services:
+	@echo "Deploying infrastructure services..."
+	@kubectl apply -f k8s/00-namespace.yaml
+	@kubectl apply -f k8s/nats.yaml
+	@kubectl apply -f k8s/postgres.yaml
+	@echo "Waiting for infrastructure..."
+	@kubectl wait --for=condition=available --timeout=120s deployment/nats -n mycelis
+	@kubectl wait --for=condition=available --timeout=120s deployment/postgres -n mycelis
+	@echo "Infrastructure ready!"
+
 # Quick dev loop for specific service
 # Usage: make k8s-dev SERVICE=api
 k8s-dev:
@@ -177,15 +207,13 @@ k8s-logs:
 	@kubectl logs -f -l app=$(SERVICE) -n mycelis --tail=50
 
 # Port-forward services to localhost
+# Port-forward services to localhost (Robust)
 k8s-forward:
-	@echo "Port-forwarding services..."
-	@echo "NATS: 4222, Postgres: 5432, API: 8000, UI: 3000"
-	@trap 'kill %1 %2 %3 %4' SIGINT; \
-	kubectl port-forward svc/nats 4222:4222 -n mycelis & \
-	kubectl port-forward svc/postgres 5432:5432 -n mycelis & \
-	kubectl port-forward svc/api 8000:8000 -n mycelis & \
-	kubectl port-forward svc/ui 3000:3000 -n mycelis & \
-	wait
+	@./scripts/dev/forward_ports.sh
+
+# Stop port forwarding
+k8s-stop-forward:
+	@./scripts/dev/stop_ports.sh
 
 # Restart all deployments
 k8s-restart:

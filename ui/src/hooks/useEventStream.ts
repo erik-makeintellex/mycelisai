@@ -28,10 +28,12 @@ export function useEventStream(channel: string) {
         const eventSource = new EventSource(`${API_BASE_URL}/stream/${channel}`);
 
         eventSource.onopen = () => {
+            console.log("SSE Connection Opened for channel:", channel);
             setStats(prev => ({ ...prev, isConnected: true }));
         };
 
         eventSource.onmessage = (event) => {
+            console.log("SSE Message raw:", event.data);
             try {
                 const data = JSON.parse(event.data);
                 const newEvent: EventMessage = {
@@ -40,6 +42,8 @@ export function useEventStream(channel: string) {
                 };
 
                 setEvents(prev => {
+                    // Prevent duplicates at source
+                    if (prev.some(e => e.id === newEvent.id)) return prev;
                     const updated = [newEvent, ...prev].slice(0, 50); // Keep last 50 events
                     return updated;
                 });

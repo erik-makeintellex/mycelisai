@@ -1,6 +1,10 @@
-# Mycelis Service Network
+# Mycelis AI Agent Platform
 
-Mycelis is a decentralized AI agent orchestration platform designed for high-speed data ingestion, hybrid execution, and visual orchestration.
+> **[🏗️ System Architecture & Design Spec](./architecture.md)** - **Start Here for Technical Deep Dive**
+> A comprehensive guide to the services, data flows, and infrastructure designed for both human and agent engineers.
+
+## Overview
+Mycelis is an agentic service network, a decentralized AI agent orchestration platform designed for high-speed data ingestion, hybrid execution, and visual orchestration.
 
 ## Prerequisites
 
@@ -21,44 +25,46 @@ make setup
 
 ### Quick Start
 
+The recommended development workflow is to run the API and UI locally for hot-reloading, while running the supporting infrastructure (NATS, PostgreSQL) in a local Kubernetes cluster (Kind).
+
 ### Prerequisites
--   Python 3.10+
+-   Python 3.12+
 -   Node.js 18+
--   Docker (for NATS/Postgres)
+-   Docker
 -   `uv` (Python package manager)
--   Ollama (running on host or accessible IP)
+-   `kind` (Kubernetes in Docker)
 
-### Setup
-1.  **Reset & Start Dev Environment**:
-    ```bash
-    make reset-dev
-    ./dev.sh
-    ```
-    This script sets up the database, NATS, and starts the API, UI, and Agent Runner in tmux.
+### 1. Start Infrastructure
+Start the Kubernetes cluster and deploy NATS and PostgreSQL:
+```bash
+make k8s-up        # Create cluster (if not running)
+make k8s-services  # Deploy NATS and Postgres
+make k8s-forward   # Forward ports to localhost (KEEP RUNNING)
+```
 
-2.  **Access UI**:
-    Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000`).
+### 2. Run API (Local)
+In a new terminal, start the Python API:
+```bash
+make dev-api
+```
+This runs the API on port 8000 with hot-reloading enabled.
 
-3.  **Configuration**:
-    -   API URL is configured in `ui/src/config.ts`. Default: `http://192.168.50.156:8000`.
-    -   Ollama URL is configured via `OLLAMA_BASE_URL` env var. Default: `http://192.168.50.156:11434`.
+### 3. Run UI (Local)
+In a new terminal, start the Next.js frontend:
+```bash
+make dev-ui
+```
+This runs the UI on http://localhost:3000.
+
+### Note on Cluster State
+If you previously ran `make k8s-init`, the API and UI might be running inside the cluster. To switch to local development, you should remove them to avoid conflicts:
+```bash
+kubectl delete deployment api ui -n mycelis
+```
 
 ### Documentation
 -   `CLAUDE.md`: High-level goals and architecture.
 -   `.build/state.md`: Current project status and deliverables.
-
-**Terminal 1 (API):**
-```bash
-make api
-```
-
-**Terminal 2 (UI):**
-```bash
-make ui
-```
-
-Access the UI at [http://localhost:3000](http://localhost:3000).
-Access the API docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
 ## Management Commands
 

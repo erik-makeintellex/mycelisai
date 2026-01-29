@@ -32,10 +32,40 @@ async def chat_with_agent(request: Request, agent_name: str, message: TextMessag
         try:
             await js.add_stream(name="chat-agent", subjects=["chat.agent.>"])
         except Exception as e:
-            # print(f"Stream creation error: {e}")
             pass
 
-        # Publish to chat.agent.{name}
+        # Save to DB (Persistent History)
+        # Use a agent-specific conversation for V1 isolation
+        conversation_id = f"session-{agent_name}"
+        
+        from shared.db import get_db, MessageDB, ConversationDB
+        from sqlalchemy import select
+
+        async for session in get_db():
+             # Check for thread
+             conn_stmt = select(ConversationDB).where(ConversationDB.id == conversation_id)
+             res = await session.execute(conn_stmt)
+             conversation = res.scalars().first()
+             
+             if not conversation:
+                 conversation = ConversationDB(id=conversation_id, title=f"Chat with {agent_name}", user_id="user")
+                 session.add(conversation)
+                 session.commit() # Commit to ensure existence
+             
+             # Save Message
+             db_msg = MessageDB(
+                 id=agent_msg.id,
+                 conversation_id=conversation_id,
+                 sender="user",
+                 role="user",
+                 content=message.content,
+                 type="text",
+                 timestamp=datetime.fromtimestamp(float(agent_msg.id.split('-')[1])) if '-' in agent_msg.id else datetime.utcnow()
+             )
+             session.add(db_msg)
+             await session.commit() 
+             break # Close session loop 
+
         await js.publish(f"chat.agent.{agent_name}", agent_msg.model_dump_json().encode())
         
         return {"status": "sent", "id": agent_msg.id}

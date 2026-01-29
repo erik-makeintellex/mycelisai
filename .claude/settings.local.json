@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker rmi:*)",
+      "Bash(docker rm:*)",
+      "Bash(kubectl cluster-info:*)",
+      "Bash(kubectl get:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

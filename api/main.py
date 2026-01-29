@@ -1,27 +1,54 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import nats
 import os
+import uuid
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 from datetime import datetime
 
 from shared.db import init_db, get_db
-from api.routers import agents, teams, services, channels, models, chat
+# Changed imports for structlog wrapper
+from shared.logger import setup_logger, get_logger, set_trace_id, reset_trace_id
+import structlog
+
+from api.routers import agents, teams, services, channels, models, chat, conversations
+
+# Initialize logger for this module
+logger = get_logger("api.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Setup Logger (Console for dev by default, JSON if LOG_JSON=true)
+    setup_logger("api", level=os.getenv("LOG_LEVEL", "INFO"))
+    
+    logger.info("server_startup", message="API Server Starting...")
+
     # Startup
     await init_db()
     app.state.nc = await nats.connect(os.getenv("NATS_URL", "nats://localhost:4222"))
     app.state.js = app.state.nc.jetstream()
+    
+    logger.info("server_ready", message="API Server Ready")
     yield
     # Shutdown
     await app.state.nc.close()
+    logger.info("server_shutdown", message="API Server Shutdown")
 
 app = FastAPI(title="Mycelis Service Network API", lifespan=lifespan)
+
+# Trace ID Middleware
+@app.middleware("http")
+async def add_process_context(request: Request, call_next):
+    trace_id = request.headers.get("X-Trace-ID", str(uuid.uuid4()))
+    token = set_trace_id(trace_id)
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        reset_trace_id(token)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,6 +58,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Include Routers
 app.include_router(agents.router)
 app.include_router(teams.router)
@@ -38,6 +66,7 @@ app.include_router(services.router)
 app.include_router(channels.router)
 app.include_router(models.router)
 app.include_router(chat.router)
+app.include_router(conversations.router)
 
 @app.get("/health")
 async def health_check(db: AsyncSession = Depends(get_db)):

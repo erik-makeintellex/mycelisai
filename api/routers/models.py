@@ -1,20 +1,24 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from shared.schemas import AIModel
 from shared.db import get_db, AIModelDB
+from shared.logger import get_logger
+import httpx
+import os
 
-router = APIRouter(prefix="/models", tags=["models"])
+log = get_logger("api.routers.models")
 
-@router.get("")
-async def list_models(db: AsyncSession = Depends(get_db)):
+router = APIRouter(tags=["models"])
+
+@router.get("/models")
+async def list_models(db: AsyncSession = Depends(get_db), request: Request = None):
+    """List registered models (from Ollama)."""
     # Sync with Ollama
-    import httpx
-    import os
     ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{ollama_url}/api/tags", timeout=1.0)
+            resp = await client.get(f"{ollama_url}/api/tags")
             if resp.status_code == 200:
                 data = resp.json()
                 for model in data.get("models", []):
@@ -44,7 +48,7 @@ async def list_models(db: AsyncSession = Depends(get_db)):
         output_price=m.output_price, description=m.description
     ) for m in models]
 
-@router.post("")
+@router.post("/models")
 async def add_model(model: AIModel, db: AsyncSession = Depends(get_db)):
     db_model = AIModelDB(**model.model_dump())
     db.add(db_model)

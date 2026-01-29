@@ -24,12 +24,54 @@ async def register_agent(config: AgentConfig, db: AsyncSession = Depends(get_db)
 
 @router.delete("/{agent_name}")
 async def delete_agent(agent_name: str, db: AsyncSession = Depends(get_db)):
+    """Delete an agent and all associated data (Memories, History, Config)."""
+    from shared.db import MessageDB, MemoryDB, ConversationDB, AgentDB
+    from sqlalchemy import delete
+    
     agent = await db.get(AgentDB, agent_name)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
+    
+    # 1. Delete Memories
+    await db.execute(delete(MemoryDB).where(MemoryDB.agent_id == agent_name))
+    
+    # 2. Delete Conversation History
+    target_session_id = f"session-{agent_name}"
+    
+    # Delete messages first
+    await db.execute(delete(MessageDB).where(MessageDB.conversation_id == target_session_id))
+    
+    # Also delete any messages where this agent was the sender in ANY conversation
+    # This prevents ghost messages from appearing in other contexts if shared
+    await db.execute(delete(MessageDB).where(MessageDB.sender == agent_name))
+
+    # Delete the conversation itself
+    await db.execute(delete(ConversationDB).where(ConversationDB.id == target_session_id))
+    
+    # 3. Delete Agent Config
     await db.delete(agent)
+    
     await db.commit()
     return {"status": "deleted", "agent": agent_name}
+
+@router.delete("/{agent_name}/memory")
+async def clear_agent_memory(agent_name: str, db: AsyncSession = Depends(get_db)):
+    """Clear all conversation history and memories for an agent."""
+    from shared.db import MessageDB, MemoryDB, ConversationDB
+    from sqlalchemy import delete
+    
+    # 1. Delete Memories
+    await db.execute(delete(MemoryDB).where(MemoryDB.agent_id == agent_name))
+    
+    # 2. Clear Session History
+    target_session_id = f"session-{agent_name}"
+    await db.execute(delete(MessageDB).where(MessageDB.conversation_id == target_session_id))
+    
+    # 3. Clear Broadcast/Group Messages sent by agent
+    await db.execute(delete(MessageDB).where(MessageDB.sender == agent_name))
+    
+    await db.commit()
+    return {"status": "memory_cleared", "agent": agent_name}
 
 @router.get("")
 async def list_agents(db: AsyncSession = Depends(get_db)):
