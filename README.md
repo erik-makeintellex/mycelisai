@@ -1,119 +1,88 @@
-# Mycelis AI Agent Platform
+# Mycelis Service Network (Gen-2)
 
-> **[🏗️ System Architecture & Design Spec](./architecture.md)** - **Start Here for Technical Deep Dive**
-> A comprehensive guide to the services, data flows, and infrastructure designed for both human and agent engineers.
+> **Current State**: Phase 1 - Migration to "Neural Swarm" (Go Architecture)
+> **Agent Context**: This file is the Source of Truth for Project Structure and Tooling.
 
-## Overview
-Mycelis is an agentic service network, a decentralized AI agent orchestration platform designed for high-speed data ingestion, hybrid execution, and visual orchestration.
+## 🏗️ Architecture: The Vertical Skeleton
 
-## Prerequisites
+We are migrating from a monolithic Python app to a high-performance distributed Go architecture.
 
-- **Python**: 3.10+
-- **Node.js**: 18+
-- **Docker**: For running infrastructure (NATS, PostgreSQL)
-- **uv**: Python package manager (`pip install uv`)
+| Component | Status | Path | Description |
+| :--- | :--- | :--- | :--- |
+| **Brain** (Core) | 🚧 In Progress | `core/` | Go-based Orchestrator (State Registry, NATS Adapter) |
+| **Contracts** | ✅ Active | `proto/` | Protobuf definitions (`swarm.proto`) shared by all services |
+| **Hyphae** (Nerves) | ⚠️ Legacy | `runner/` | Python-based Agents (Migrating to standalone services) |
+| **Interface** (UI) | ⚠️ Legacy | `ui/` | Next.js Frontend (Planned for migration to embedded React) |
 
-## Getting Started
+---
 
-The project uses a `Makefile` to manage common tasks.
+## 🛠️ Tooling & Standards
 
-### 1. Setup Dependencies
-Install Python and Node.js dependencies:
+We enforce strict tooling to ensure deterministic environments for Humans and Agents.
+
+-   **Dependency Manager**: **`uv`** (Python) and **`go mod`** (Go).
+-   **Task Runner**: `scripts/dev.py` (Universal Runner wrapped by Makefile).
+-   **Container Engine**: Docker / Podman.
+
+### Quick Start (Universal)
+You only need `uv` installed. The runner handles the rest.
+
 ```bash
-make setup
+# 1. Start Infrastructure (NATS + Postgres)
+make dev-up
+
+# 2. Generate Contracts (Protobuf -> Go)
+make proto
+
+# 3. Build the Core Brain
+make build-core
 ```
 
-### Quick Start
-
-The recommended development workflow is to run the API and UI locally for hot-reloading, while running the supporting infrastructure (NATS, PostgreSQL) in a local Kubernetes cluster (Kind).
-
-### Prerequisites
--   Python 3.12+
--   Node.js 18+
--   Docker
--   `uv` (Python package manager)
--   `kind` (Kubernetes in Docker)
-
-### 1. Start Infrastructure
-Start the Kubernetes cluster and deploy NATS and PostgreSQL:
+### Legacy Workflow (Python API + UI)
+To run the existing functionality while developing Gen-2:
 ```bash
-make k8s-up        # Create cluster (if not running)
-make k8s-services  # Deploy NATS and Postgres
-make k8s-forward   # Forward ports to localhost (KEEP RUNNING)
+make dev-api   # Runs FastAPI on localhost:8000
+make dev-ui    # Runs Next.js on localhost:3000
 ```
 
-### 2. Run API (Local)
-In a new terminal, start the Python API:
-```bash
-make dev-api
+---
+
+## 📂 Directory Structure
+
+```text
+/
+├── core/                  # [Gen-2] The Go Brain
+│   ├── cmd/server/        # Entrypoint
+│   ├── internal/state/    # In-Memory Agent Registry
+│   └── go.mod             # Module: github.com/mycelis/core
+├── proto/                 # [Gen-2] Shared Contracts
+│   └── swarm/v1/          # swarm.proto
+├── deploy/                # [Gen-2] Kubernetes/Docker Manifests
+│   ├── charts/            # Helm Charts
+│   └── docker/            # Distroless Dockerfiles
+├── scripts/               # [Global] Dev Tooling
+│   └── dev.py             # Universal Runner (PEP 723)
+├── api/                   # [Legacy] FastAPI Backend
+├── runner/                # [Legacy] Python Agent Runtime
+└── ui/                    # [Legacy] Next.js Frontend
 ```
-This runs the API on port 8000 with hot-reloading enabled.
 
-### 3. Run UI (Local)
-In a new terminal, start the Next.js frontend:
-```bash
-make dev-ui
-```
-This runs the UI on http://localhost:3000.
+---
 
-### Note on Cluster State
-If you previously ran `make k8s-init`, the API and UI might be running inside the cluster. To switch to local development, you should remove them to avoid conflicts:
-```bash
-kubectl delete deployment api ui -n mycelis
-```
+## 🤖 Agent Directives
 
-### Documentation
--   `CLAUDE.md`: High-level goals and architecture.
--   `.build/state.md`: Current project status and deliverables.
+**If you are an Agent working on this repo:**
+1.  **Architecture**: Respect the separation between `core` (Go) and `runner` (Python). Do not mix them.
+2.  **Tooling**: ALWAYS use `uv run` for Python commands. NEVER use `pip` or `python` directly.
+3.  **State**: Check `task.md` in the active brain session for immediate objectives.
 
-## Management Commands
+**Active Specialists:**
+*   `spec:arch:01` - System Architect (ADR Owner)
+*   `spec:golang:01` - Backend Engineer (Core Implementation)
+*   `spec:devops:01` - Infrastructure Engineer (Charts/Docker)
 
-- `make logs`: View infrastructure logs.
-- `make stop`: Stop infrastructure containers.
-- `make stop-apps`: Stop running API and UI processes.
-- `make shutdown`: Stop everything (infra + apps).
-- `make clean`: Remove artifacts and dependencies.
+---
 
-Run `make help` for a full list of commands.
-
-## User Guide
-
-### 1. Agents
-Agents are the core workers of the network. Each agent has:
-- **Name**: Unique identifier.
-- **Backend Service**: The LLM provider (e.g., OpenAI, Ollama) it uses.
-- **Capabilities**: Tags describing what the agent can do (e.g., "coding", "research").
-- **Prompt Config**: Instructions that define the agent's persona and behavior.
-
-**To Create an Agent:**
-1. Navigate to the **Agents** page.
-2. Click **Create Agent**.
-3. Fill in the details and select a backend model.
-
-### 2. Teams
-Teams are groups of agents working together.
-- **Channels**: NATS subjects the team listens to or publishes to (e.g., `data.ingest`, `alerts`).
-- **Resource Access**: Key-value pairs defining what external resources the team can access (e.g., `db:read`, `s3:write`).
-- **Inter-Comm Channel**: A dedicated channel (`team.{id}.chat`) for agents to talk to each other.
-
-**To Create a Team:**
-1. Navigate to the **Teams** page.
-2. Click **Create Team**.
-3. Select agents and define channels/resources.
-
-**To Manage a Team:**
-- **Add Agent**: Click "+ Add Agent" in the team view.
-- **Remove Agent**: Hover over an agent and click "×".
-- **Edit Team**: Click "Edit Team" to update name, description, channels, or resources.
-
-### 3. Models
-Register LLM backends (local or cloud) for agents to use.
-- **Provider**: The service provider (e.g., `openai`, `anthropic`, `ollama`).
-- **Context Window**: Maximum tokens the model can handle.
-
-## Documentation
-
-- [Product Vision](docs/product_vision.md): High-level vision and target usage scenarios.
-- [Roadmap](docs/roadmap.md): Planned features and expansion phases.
-- [Implementation Plan](docs/implementation_plan.md): Technical details and architecture.
-
+## 📚 Documentation
+*   [Architecture Deep Dive](architecture.md)
+*   [Agent Protocol](proto/swarm/v1/swarm.proto)
