@@ -1,52 +1,103 @@
-# Mycelis Service Network (Gen-2)
+# Mycelis Service Network (Gen-3)
 
-> **Current State**: Phase 1 - Migration to "Neural Swarm" (Go Architecture)
+> **Current Architecture**: "Absolute Architecture" (Phase 3)
 > **Agent Context**: This file is the Source of Truth for Project Structure and Tooling.
 
-## 🏗️ Architecture: The Vertical Skeleton
+## 🏗️ Architecture: The Absolute Standard
 
-We are migrating from a monolithic Python app to a high-performance distributed Go architecture.
+We have pivoted to a strict segregation of concerns:
 
-| Component | Status | Path | Description |
+| Component | Tech | Path | Description |
 | :--- | :--- | :--- | :--- |
-| **Brain** (Core) | 🚧 In Progress | `core/` | Go-based Orchestrator (State Registry, NATS Adapter) |
-| **Contracts** | ✅ Active | `proto/` | Protobuf definitions (`swarm.proto`) shared by all services |
-| **Relay SDK** | ✅ Verified | `sdk/python/src/relay` | Universal Python Bridge (Source-Aware Client) |
-| **Interface** (UI) | ⚠️ Legacy | `ui/` | Next.js Frontend (Planned for migration to embedded React) |
+| **Neural Core** | Go | `core/` | The central brain. Manages state, routing, and swarm coherence. |
+| **Relay SDK** | Python | `sdk/python` | The universal connector for Agents. Stateless & Team-Aware. |
+| **Contracts** | Protobuf | `proto/` | The LAW. `swarm.proto` defines all inter-service communication. |
+| **Memory** | NATS | `cortex.logs` | Centralized, strict-schema logging (`LogEntry`). |
 
 ---
 
 ## 🛠️ Tooling & Standards
 
-We enforce strict tooling to ensure deterministic environments for Humans and Agents.
+We enforce strict tooling to ensure deterministic environments.
 
+-   **Task Runner**: **Invoke** (`tasks.py`). *Makefiles are banned.*
 -   **Dependency Manager**: **`uv`** (Python) and **`go mod`** (Go).
--   **Task Runner**: `scripts/dev.py` (Universal Runner wrapped by Makefile).
--   **Container Engine**: Docker / Podman.
+-   **Cluster**: Kind (Kubernetes in Docker).
 
-### Quick Start (Universal)
+### Quick Start (Invoke Workflow)
 You only need `uv` installed. The runner handles the rest.
 
 ```bash
-# 1. Start Infrastructure (NATS + Postgres)
-make dev-up
+# 0. Install Invoke
+uv tool install invoke
 
-# 2. Generate Contracts (Protobuf -> Go)
-make proto
+# 1. Start Infrastructure (Kind + NATS + Postgres)
+inv k8s.init
 
-# 3. Build the Core Brain
-make build-core
+# 2. Generate Contracts (Protobuf -> Go/Python)
+inv proto.generate
 
-# 4. Verify Hybrid Stack (Go Core + Python Relay)
-make test-hybrid
+# 3. Build & Deploy Core (Go Brain -> Kind)
+inv k8s.deploy
+
+# 4. Open Development Bridge (NATS:4222, HTTP:8080)
+inv k8s.bridge
+
+# 5. Verify Stack
+inv core.test
+inv relay.test
 ```
 
-### Legacy Workflow (Python API + UI)
-To run the existing functionality while developing Gen-2:
-```bash
-make dev-api   # Runs FastAPI on localhost:8000
-make dev-ui    # Runs Next.js on localhost:3000
+---
+
+## 🔌 The Relay (Python SDK)
+
+The **RelayClient** (`sdk/python/src/relay/client.py`) is the only authorized way for Python code to interact with the Swarm.
+
+### Connecting a Service
+```python
+from relay.client import RelayClient
+from swarm.v1 import swarm_pb2
+import asyncio
+
+async def main():
+    # 1. Connect to Swarm
+    relay = RelayClient(
+        agent_id="my-agent-01", 
+        team_id="data-proc"
+    )
+    await relay.connect()
+
+    # 2. Subscribe using Strict Types
+    async def on_task(envelope: swarm_pb2.MsgEnvelope):
+        print(f"Task Received: {envelope.event.event_type}")
+        
+        # 3. Emit Result
+        await relay.send_event(
+            event_type="task.complete",
+            data={"status": "done"},
+            context={"processor": "gpu-01"}
+        )
+
+    await relay.subscribe("swarm.team.data-proc.>", on_task)
+
+    # Keep alive
+    while True: await asyncio.sleep(1)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
+
+---
+
+## 🧠 Cortex Memory (Logging)
+
+No more text files. We use a **Structured Log Event Stream**.
+
+-   **Schema**: Defined in `proto/swarm/v1/swarm.proto` as `LogEntry`.
+-   **Traceability**: `trace_id` and `span_id` are mandatory.
+-   **Context**: Logs capture the `swarm_context` (State Snapshot) at the moment of emission.
+-   **Transport**: All logs flow to `cortex.logs` on NATS.
 
 ---
 
@@ -54,56 +105,28 @@ make dev-ui    # Runs Next.js on localhost:3000
 
 ```text
 /
-├── core/                  # [Gen-2] The Go Brain
+├── core/                  # [Go] The Neural Core
 │   ├── cmd/server/        # Entrypoint
-│   ├── internal/state/    # In-Memory Agent Registry
-│   └── go.mod             # Module: github.com/mycelis/core
-├── proto/                 # [Gen-2] Shared Contracts
-│   └── swarm/v1/          # swarm.proto
-├── deploy/                # [Gen-2] Kubernetes/Docker Manifests
-│   ├── charts/            # Helm Charts
-│   └── docker/            # Distroless Dockerfiles
-├── scripts/               # [Global] Dev Tooling
-│   └── dev.py             # Universal Runner (PEP 723)
-├── api/                   # [Legacy] FastAPI Backend
-├── runner/                # [Legacy] Python Agent Runtime
-└── ui/                    # [Legacy] Next.js Frontend
+│   └── internal/state/    # In-Memory Agent Registry
+├── proto/                 # [Protobuf] The Law
+│   └── swarm/v1/          # swarm.proto (Contracts)
+├── sdk/                   # [Python] The Relay
+│   └── python/            # Source-Aware Client
+├── tasks.py               # [Invoke] The Build System
+└── deploy/                # [K8s] Manifests & Charts
 ```
+
+> **Note**: `api/`, `runner/`, and `ui/` are LEGACY and deprecated. Do not use them for new development.
 
 ---
 
 ## 🤖 Agent Directives
 
 **If you are an Agent working on this repo:**
-1.  **Architecture**: Respect the separation between `core` (Go) and `runner` (Python). Do not mix them.
-2.  **Tooling**: ALWAYS use `uv run` for Python commands. NEVER use `pip` or `python` directly.
-3.  **State**: Check `task.md` in the active brain session for immediate objectives.
+1.  **Strict Mode**: If it's not in `tasks.py`, it doesn't exist.
+2.  **No Makefiles**: Do not suggest or create Makefiles.
+3.  **Python == Relay**: All Python code must use `RelayClient`.
 
 **Active Specialists:**
-*   `spec:arch:01` - System Architect (ADR Owner)
-*   `spec:golang:01` - Backend Engineer (Core Implementation)
-*   `spec:devops:01` - Infrastructure Engineer (Charts/Docker)
-
----
-
-## 📚 Documentation
-*   [Architecture Deep Dive](architecture.md)
-*   [Agent Protocol](proto/swarm/v1/swarm.proto)
-
----
-
-## 🌳 Contribution & Branching
-
-We follow a **Feature Branch** workflow to ensure `main` remains stable and deployable.
-
-### Branching Strategy
-*   **`main`**: source of truth. Protected. Must pass CI (`make test-hybrid`) before merge.
-*   **`feat/<name>`**: New capabilities (e.g., `feat/relay-sdk`).
-*   **`fix/<name>`**: Bug fixes (e.g., `fix/nats-timeout`).
-*   **`chore/<name>`**: Maintenance, docs, refactoring (e.g., `chore/branching-strategy`).
-
-### Workflow
-1.  **Branch**: `git checkout -b feat/my-feature`
-2.  **Develop**: Write code + tests.
-3.  **Verify**: Run `make test-hybrid`.
-4.  **Merge**: Create PR or merge to main locally if verified.
+*   `spec:arch:01` - System Architect
+*   `spec:golang:01` - Backend Engineer

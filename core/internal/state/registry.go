@@ -19,22 +19,20 @@ const (
 
 // AgentState holds the runtime metadata for a single agent
 type AgentState struct {
-	ID            string
-	Name          string
-	TeamID        string // Logical Group (e.g. "marketing")
-	SourceURI     string // Power Source (e.g. "swarm:base")
-	Status        AgentStatus
-	LastHeartbeat time.Time
-	// We can extend this with CurrentTaskID, capabilities, etc.
+	ID            string      `json:"id"`
+	Name          string      `json:"name"`
+	TeamID        string      `json:"team_id"`
+	SourceURI     string      `json:"source_uri"`
+	Status        AgentStatus `json:"status"`
+	LastHeartbeat time.Time   `json:"last_heartbeat"`
 }
 
 // Registry is the thread-safe store for all active agents
 type Registry struct {
-	// agents maps AgentID (string) -> *AgentState
 	agents sync.Map
 }
 
-// Global registry instance (could be injected, keeping it simple for V1)
+// Global registry instance
 var GlobalRegistry = &Registry{}
 
 // NewRegistry creates a fresh registry (useful for tests)
@@ -44,9 +42,11 @@ func NewRegistry() *Registry {
 
 // UpdateHeartbeat refreshes the state of an agent based on an incoming signal
 func (r *Registry) UpdateHeartbeat(agentID, teamID, sourceURI string, status AgentStatus) {
+	if agentID == "" {
+		return
+	}
 	now := time.Now()
 
-	// LoadOrStore handles the race of creating a new entry
 	val, loaded := r.agents.LoadOrStore(agentID, &AgentState{
 		ID:            agentID,
 		Name:          agentID,
@@ -59,10 +59,8 @@ func (r *Registry) UpdateHeartbeat(agentID, teamID, sourceURI string, status Age
 	state := val.(*AgentState)
 
 	if loaded {
-		// Update existing
 		state.Status = status
 		state.LastHeartbeat = now
-		// Allow updating metadata if it changes
 		if teamID != "" {
 			state.TeamID = teamID
 		}

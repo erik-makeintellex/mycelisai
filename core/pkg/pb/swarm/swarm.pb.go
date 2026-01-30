@@ -9,6 +9,7 @@ package swarm
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	anypb "google.golang.org/protobuf/types/known/anypb"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
@@ -649,11 +650,128 @@ func (x *MessagingConfig) GetOutputs() []string {
 	return nil
 }
 
+// Structural Log Entry for the central nervous system (The Cortex Memory)
+type LogEntry struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Timestamp       *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                                    // Precise Time
+	TraceId         string                 `protobuf:"bytes,2,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`                         // Workflow Thread
+	AgentId         string                 `protobuf:"bytes,3,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`                         // Actor
+	TeamId          string                 `protobuf:"bytes,4,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`                            // Group
+	SourceUri       string                 `protobuf:"bytes,5,opt,name=source_uri,json=sourceUri,proto3" json:"source_uri,omitempty"`                   // Capability
+	Intent          string                 `protobuf:"bytes,6,opt,name=intent,proto3" json:"intent,omitempty"`                                          // "process_image", "error", "startup"
+	ContextSnapshot *structpb.Struct       `protobuf:"bytes,7,opt,name=context_snapshot,json=contextSnapshot,proto3" json:"context_snapshot,omitempty"` // State at moment of event
+	Status          string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`                                          // "SUCCESS", "FAILURE"
+	ErrorMessage    string                 `protobuf:"bytes,9,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`          // Details
+	RawPayload      *anypb.Any             `protobuf:"bytes,10,opt,name=raw_payload,json=rawPayload,proto3" json:"raw_payload,omitempty"`               // Replay Data
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *LogEntry) Reset() {
+	*x = LogEntry{}
+	mi := &file_proto_swarm_v1_swarm_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogEntry) ProtoMessage() {}
+
+func (x *LogEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_swarm_v1_swarm_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogEntry.ProtoReflect.Descriptor instead.
+func (*LogEntry) Descriptor() ([]byte, []int) {
+	return file_proto_swarm_v1_swarm_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *LogEntry) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *LogEntry) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
+func (x *LogEntry) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *LogEntry) GetTeamId() string {
+	if x != nil {
+		return x.TeamId
+	}
+	return ""
+}
+
+func (x *LogEntry) GetSourceUri() string {
+	if x != nil {
+		return x.SourceUri
+	}
+	return ""
+}
+
+func (x *LogEntry) GetIntent() string {
+	if x != nil {
+		return x.Intent
+	}
+	return ""
+}
+
+func (x *LogEntry) GetContextSnapshot() *structpb.Struct {
+	if x != nil {
+		return x.ContextSnapshot
+	}
+	return nil
+}
+
+func (x *LogEntry) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *LogEntry) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *LogEntry) GetRawPayload() *anypb.Any {
+	if x != nil {
+		return x.RawPayload
+	}
+	return nil
+}
+
 var File_proto_swarm_v1_swarm_proto protoreflect.FileDescriptor
 
 const file_proto_swarm_v1_swarm_proto_rawDesc = "" +
 	"\n" +
-	"\x1aproto/swarm/v1/swarm.proto\x12\x10mycelis.swarm.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xbf\x04\n" +
+	"\x1aproto/swarm/v1/swarm.proto\x12\x10mycelis.swarm.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x19google/protobuf/any.proto\"\xbf\x04\n" +
 	"\vMsgEnvelope\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12&\n" +
@@ -699,7 +817,21 @@ const file_proto_swarm_v1_swarm_proto_rawDesc = "" +
 	"source_uri\x18\x05 \x01(\tR\tsourceUri\"C\n" +
 	"\x0fMessagingConfig\x12\x16\n" +
 	"\x06inputs\x18\x01 \x03(\tR\x06inputs\x12\x18\n" +
-	"\aoutputs\x18\x02 \x03(\tR\aoutputs*\xad\x01\n" +
+	"\aoutputs\x18\x02 \x03(\tR\aoutputs\"\x82\x03\n" +
+	"\bLogEntry\x128\n" +
+	"\ttimestamp\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x19\n" +
+	"\btrace_id\x18\x02 \x01(\tR\atraceId\x12\x19\n" +
+	"\bagent_id\x18\x03 \x01(\tR\aagentId\x12\x17\n" +
+	"\ateam_id\x18\x04 \x01(\tR\x06teamId\x12\x1d\n" +
+	"\n" +
+	"source_uri\x18\x05 \x01(\tR\tsourceUri\x12\x16\n" +
+	"\x06intent\x18\x06 \x01(\tR\x06intent\x12B\n" +
+	"\x10context_snapshot\x18\a \x01(\v2\x17.google.protobuf.StructR\x0fcontextSnapshot\x12\x16\n" +
+	"\x06status\x18\b \x01(\tR\x06status\x12#\n" +
+	"\rerror_message\x18\t \x01(\tR\ferrorMessage\x125\n" +
+	"\vraw_payload\x18\n" +
+	" \x01(\v2\x14.google.protobuf.AnyR\n" +
+	"rawPayload*\xad\x01\n" +
 	"\vMessageType\x12\x1c\n" +
 	"\x18MESSAGE_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12MESSAGE_TYPE_EVENT\x10\x01\x12\x15\n" +
@@ -721,7 +853,7 @@ func file_proto_swarm_v1_swarm_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_swarm_v1_swarm_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_swarm_v1_swarm_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_swarm_v1_swarm_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_proto_swarm_v1_swarm_proto_goTypes = []any{
 	(MessageType)(0),              // 0: mycelis.swarm.v1.MessageType
 	(*MsgEnvelope)(nil),           // 1: mycelis.swarm.v1.MsgEnvelope
@@ -731,26 +863,31 @@ var file_proto_swarm_v1_swarm_proto_goTypes = []any{
 	(*ToolResultPayload)(nil),     // 5: mycelis.swarm.v1.ToolResultPayload
 	(*AgentConfig)(nil),           // 6: mycelis.swarm.v1.AgentConfig
 	(*MessagingConfig)(nil),       // 7: mycelis.swarm.v1.MessagingConfig
-	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),       // 9: google.protobuf.Struct
+	(*LogEntry)(nil),              // 8: mycelis.swarm.v1.LogEntry
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),       // 10: google.protobuf.Struct
+	(*anypb.Any)(nil),             // 11: google.protobuf.Any
 }
 var file_proto_swarm_v1_swarm_proto_depIdxs = []int32{
-	8,  // 0: mycelis.swarm.v1.MsgEnvelope.timestamp:type_name -> google.protobuf.Timestamp
+	9,  // 0: mycelis.swarm.v1.MsgEnvelope.timestamp:type_name -> google.protobuf.Timestamp
 	0,  // 1: mycelis.swarm.v1.MsgEnvelope.type:type_name -> mycelis.swarm.v1.MessageType
 	2,  // 2: mycelis.swarm.v1.MsgEnvelope.event:type_name -> mycelis.swarm.v1.EventPayload
 	3,  // 3: mycelis.swarm.v1.MsgEnvelope.text:type_name -> mycelis.swarm.v1.TextPayload
 	4,  // 4: mycelis.swarm.v1.MsgEnvelope.tool_call:type_name -> mycelis.swarm.v1.ToolCallPayload
 	5,  // 5: mycelis.swarm.v1.MsgEnvelope.tool_result:type_name -> mycelis.swarm.v1.ToolResultPayload
-	9,  // 6: mycelis.swarm.v1.MsgEnvelope.swarm_context:type_name -> google.protobuf.Struct
-	9,  // 7: mycelis.swarm.v1.EventPayload.data:type_name -> google.protobuf.Struct
-	9,  // 8: mycelis.swarm.v1.ToolCallPayload.arguments:type_name -> google.protobuf.Struct
-	9,  // 9: mycelis.swarm.v1.ToolResultPayload.result:type_name -> google.protobuf.Struct
+	10, // 6: mycelis.swarm.v1.MsgEnvelope.swarm_context:type_name -> google.protobuf.Struct
+	10, // 7: mycelis.swarm.v1.EventPayload.data:type_name -> google.protobuf.Struct
+	10, // 8: mycelis.swarm.v1.ToolCallPayload.arguments:type_name -> google.protobuf.Struct
+	10, // 9: mycelis.swarm.v1.ToolResultPayload.result:type_name -> google.protobuf.Struct
 	7,  // 10: mycelis.swarm.v1.AgentConfig.messaging:type_name -> mycelis.swarm.v1.MessagingConfig
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	9,  // 11: mycelis.swarm.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
+	10, // 12: mycelis.swarm.v1.LogEntry.context_snapshot:type_name -> google.protobuf.Struct
+	11, // 13: mycelis.swarm.v1.LogEntry.raw_payload:type_name -> google.protobuf.Any
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_proto_swarm_v1_swarm_proto_init() }
@@ -770,7 +907,7 @@ func file_proto_swarm_v1_swarm_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_swarm_v1_swarm_proto_rawDesc), len(file_proto_swarm_v1_swarm_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

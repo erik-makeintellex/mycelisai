@@ -39,9 +39,6 @@ func main() {
 	subject := "swarm.prod.agent.*.heartbeat"
 
 	_, err = nc.Subscribe(subject, func(msg *nats.Msg) {
-		// Log receipt (debug)
-		// log.Printf("Received heartbeat on %s", msg.Subject)
-
 		// 4. React (Parse & Update Registry)
 		var envelope pb.MsgEnvelope
 		if err := proto.Unmarshal(msg.Data, &envelope); err != nil {
@@ -49,19 +46,32 @@ func main() {
 			return
 		}
 
-		// Look for EventPayload inside OneOf
-		// In V1 usage, we might expect specific event types.
-		// For simplicity, we assume presence indicates "Alive/Idle" unless specified.
-		// TODO: Parse status from payload if rich heartbeat.
-
 		agentID := envelope.SourceAgentId
 		if agentID == "" {
 			return
 		}
 
+		// EXTRACT: SourceURI from Context (System Standard Phase 3)
+		// Logic: If "source_uri" key exists in swarm_context Struct, use it.
+		sourceURI := ""
+		if envelope.SwarmContext != nil && envelope.SwarmContext.Fields != nil {
+			if val, ok := envelope.SwarmContext.Fields["source_uri"]; ok {
+				sourceURI = val.GetStringValue()
+			}
+		}
+
+		// Fallback: Check Payload if it's an Event (e.g. "agent.startup")
+		if sourceURI == "" {
+			if evt := envelope.GetEvent(); evt != nil {
+				// Sometimes transmitted in event data
+				if val, ok := evt.Data.Fields["source_uri"]; ok {
+					sourceURI = val.GetStringValue()
+				}
+			}
+		}
+
 		// Update Registry
-		// SourceURI is not in MsgEnvelope yet, defaulting to "" or could be in payload
-		state.GlobalRegistry.UpdateHeartbeat(agentID, envelope.TeamId, "", state.StatusIdle)
+		state.GlobalRegistry.UpdateHeartbeat(agentID, envelope.TeamId, sourceURI, state.StatusIdle)
 	})
 
 	if err != nil {
