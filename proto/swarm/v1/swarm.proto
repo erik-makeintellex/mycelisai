@@ -102,3 +102,18 @@ message LogEntry {
   string error_message = 9;                // Details
   google.protobuf.Any raw_payload = 10;    // Replay Data
 }
+
+// -- Governance & Approvals --
+
+message ApprovalRequest {
+  string request_id = 1;
+  MsgEnvelope original_message = 2; // The suspended message
+  string reason = 3;                // e.g. "Amount > $50"
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message ApprovalSignal {
+  string request_id = 1;
+  bool approved = 2;
+  string user_signature = 3; // "admin" or cryptographic signature
+}

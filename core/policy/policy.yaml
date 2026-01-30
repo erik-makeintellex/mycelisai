@@ -1,0 +1,26 @@
+# Governance Policy Definition
+# Version: 1.0
+
+groups:
+  - name: "High Stakes"
+    description: "Actions that cost money or affect live infrastructure"
+    targets:
+      - "team:marketing"
+      - "agent:payment-processor"
+    rules:
+      - intent: "process_payment"
+        condition: "amount > 50"
+        action: "REQUIRE_APPROVAL"
+      - intent: "deploy_infrastructure"
+        action: "REQUIRE_APPROVAL"
+
+  - name: "Sensor Telemetry"
+    description: "High volume, low risk"
+    targets:
+      - "team:sensors"
+    rules:
+      - intent: "telemetry"
+        action: "ALLOW"
+
+defaults:
+  default_action: "ALLOW"
