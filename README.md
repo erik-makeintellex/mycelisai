@@ -89,3 +89,21 @@ make dev-ui    # Runs Next.js on localhost:3000
 ## 📚 Documentation
 *   [Architecture Deep Dive](architecture.md)
 *   [Agent Protocol](proto/swarm/v1/swarm.proto)
+
+---
+
+## 🌳 Contribution & Branching
+
+We follow a **Feature Branch** workflow to ensure `main` remains stable and deployable.
+
+### Branching Strategy
+*   **`main`**: source of truth. Protected. Must pass CI (`make test-hybrid`) before merge.
+*   **`feat/<name>`**: New capabilities (e.g., `feat/relay-sdk`).
+*   **`fix/<name>`**: Bug fixes (e.g., `fix/nats-timeout`).
+*   **`chore/<name>`**: Maintenance, docs, refactoring (e.g., `chore/branching-strategy`).
+
+### Workflow
+1.  **Branch**: `git checkout -b feat/my-feature`
+2.  **Develop**: Write code + tests.
+3.  **Verify**: Run `make test-hybrid`.
+4.  **Merge**: Create PR or merge to main locally if verified.
