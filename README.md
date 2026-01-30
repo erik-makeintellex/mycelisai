@@ -11,7 +11,7 @@ We are migrating from a monolithic Python app to a high-performance distributed 
 | :--- | :--- | :--- | :--- |
 | **Brain** (Core) | 🚧 In Progress | `core/` | Go-based Orchestrator (State Registry, NATS Adapter) |
 | **Contracts** | ✅ Active | `proto/` | Protobuf definitions (`swarm.proto`) shared by all services |
-| **Hyphae** (Nerves) | ⚠️ Legacy | `runner/` | Python-based Agents (Migrating to standalone services) |
+| **Relay SDK** | ✅ Verified | `sdk/python/src/relay` | Universal Python Bridge (Source-Aware Client) |
 | **Interface** (UI) | ⚠️ Legacy | `ui/` | Next.js Frontend (Planned for migration to embedded React) |
 
 ---
@@ -36,6 +36,9 @@ make proto
 
 # 3. Build the Core Brain
 make build-core
+
+# 4. Verify Hybrid Stack (Go Core + Python Relay)
+make test-hybrid
 ```
 
 ### Legacy Workflow (Python API + UI)

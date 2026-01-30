@@ -5,8 +5,15 @@
 #     "click",
 #     "docker",
 #     "watchdog",
+#     "grpcio-tools",
+#     "protobuf",
+#     "pytest",
+#     "pytest-asyncio",
+#     "nats-py",
+#     "aiohttp",
 # ]
 # ///
+
 
 import click
 import subprocess
@@ -177,6 +184,91 @@ def build_go():
     # Re-verify run_cmd logic or just explicit path
     run_cmd("go build -o bin/server ./cmd/server", cwd=str(CORE_DIR))
 
+@cli.command(name="proto-py")
+def proto_py():
+    """Generate Python stubs from Protobuf definitions."""
+    click.echo("Generating Python stubs...")
+    
+    # 1. Ensure Output Dir
+    out_dir = ROOT_DIR / "sdk/python/src/relay/proto"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 2. Run protoc via grpc_tools (installed via uv dependency)
+    # We run against the 'proto' directory as include root
+    # Output to sdk/python/src/relay/proto
+    
+    proto_file = "proto/swarm/v1/swarm.proto"
+    
+    cmd = [
+        sys.executable, "-m", "grpc_tools.protoc",
+        "-Iproto",
+        f"--python_out={out_dir}",
+        f"--grpc_python_out={out_dir}",
+        proto_file
+    ]
+    
+    click.echo(f"Running: {' '.join(str(c) for c in cmd)}")
+    try:
+        subprocess.run(cmd, check=True, cwd=ROOT_DIR)
+    except subprocess.CalledProcessError as e:
+        click.echo(click.style(f"Protoc failed: {e}", fg="red"))
+        sys.exit(e.returncode)
+
+    # 3. Fix Relative Imports (Python Protoc quirk)
+    # The generated file 'swarm_pb2_grpc.py' imports 'swarm.v1.swarm_pb2' 
+    # but in our package structure it needs to be relative or absolute to the package.
+    # Since we output to sdk/python/src/relay/proto, the package is 'relay.proto.swarm.v1' effectively?
+    # Wait, the protoc output usually mirrors the proto package structure if not careful.
+    # 'proto/swarm/v1/swarm.proto' -> 'sdk/python/src/relay/proto/swarm/v1/swarm_pb2.py'
+    # Our include path is '-Iproto', so the generated file structure inside out_dir will conform to 'swarm/v1/'.
+    
+    # Let's inspect what we typically get.
+    # If we generated into '.../relay/proto', we likely have '.../relay/proto/swarm/v1/swarm_pb2.py'
+    # The grpc file will output 'import swarm.v1.swarm_pb2' which fails if 'swarm' is not in python path.
+    # harmonizing to 'from . import swarm_pb2' works if they are in same dir.
+    
+    # We'll use a precise fix for the generated grpc file.
+    # It will be at: sdk/python/src/relay/proto/swarm/v1/swarm_pb2_grpc.py
+    
+    grpc_file = out_dir / "swarm" / "v1" / "swarm_pb2_grpc.py"
+    if grpc_file.exists():
+        click.echo(f"Fixing imports in {grpc_file}...")
+        text = grpc_file.read_text(encoding="utf-8")
+        # Replace absolute import with relative/local
+        # Pattern match might be needed, but usually it's static string.
+        # "import swarm.v1.swarm_pb2 as swarm__pb2" -> "from . import swarm_pb2 as swarm__pb2"
+        # Or similar.
+        
+        # We'll try a generic replacement that covers common cases or just the specific one.
+        # Based on prev Makefile attempt: 'import swarm.v1.swarm_pb2 as'
+        
+        new_text = text.replace("import swarm.v1.swarm_pb2 as", "from . import swarm_pb2 as")
+        grpc_file.write_text(new_text, encoding="utf-8")
+    
+    # Also verify __init__.py existence in subdirs if needed?
+    # Python 3 namespace packages might handle it, but good practice to be safe.
+    pass
+
+@cli.command(name="test-python")
+def test_python():
+    """Run Python SDK Unit Tests."""
+    click.echo("Running Python SDK Tests...")
+    # Using sys.executable to ensure we run in the same uv environment
+    cmd = [sys.executable, "-m", "pytest", "sdk/python/tests"]
+    try:
+        subprocess.run(cmd, check=True, cwd=ROOT_DIR)
+    except subprocess.CalledProcessError as e:
+        sys.exit(e.returncode)
+
+@cli.command(name="verify-topology")
+def verify_topology():
+    """Run Topology Verification Script (Relay -> NATS -> Core)."""
+    click.echo("Running Topology Verification...")
+    cmd = [sys.executable, "scripts/verify_team_topology.py"]
+    try:
+        subprocess.run(cmd, check=True, cwd=ROOT_DIR)
+    except subprocess.CalledProcessError as e:
+        sys.exit(e.returncode)
 
 @cli.command()
 def watch():

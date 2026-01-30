@@ -97,8 +97,12 @@ type MsgEnvelope struct {
 	//	*MsgEnvelope_ToolResult
 	Payload isMsgEnvelope_Payload `protobuf_oneof:"payload"`
 	// Trace context for observability
-	TraceId       string `protobuf:"bytes,10,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
-	SpanId        string `protobuf:"bytes,11,opt,name=span_id,json=spanId,proto3" json:"span_id,omitempty"`
+	TraceId string `protobuf:"bytes,10,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
+	SpanId  string `protobuf:"bytes,11,opt,name=span_id,json=spanId,proto3" json:"span_id,omitempty"`
+	// Team Routing: The logical group (e.g., "marketing", "sensors")
+	TeamId string `protobuf:"bytes,14,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	// Context: Shared Key-Value state for swarm intelligence (AG2 Pattern)
+	SwarmContext  *structpb.Struct `protobuf:"bytes,15,opt,name=swarm_context,json=swarmContext,proto3" json:"swarm_context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -216,6 +220,20 @@ func (x *MsgEnvelope) GetSpanId() string {
 		return x.SpanId
 	}
 	return ""
+}
+
+func (x *MsgEnvelope) GetTeamId() string {
+	if x != nil {
+		return x.TeamId
+	}
+	return ""
+}
+
+func (x *MsgEnvelope) GetSwarmContext() *structpb.Struct {
+	if x != nil {
+		return x.SwarmContext
+	}
+	return nil
 }
 
 type isMsgEnvelope_Payload interface {
@@ -503,11 +521,13 @@ func (x *ToolResultPayload) GetErrorMessage() string {
 }
 
 type AgentConfig struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Role          string                 `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
-	Capabilities  []string               `protobuf:"bytes,3,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	Messaging     *MessagingConfig       `protobuf:"bytes,4,opt,name=messaging,proto3" json:"messaging,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Name         string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Role         string                 `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
+	Capabilities []string               `protobuf:"bytes,3,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	Messaging    *MessagingConfig       `protobuf:"bytes,4,opt,name=messaging,proto3" json:"messaging,omitempty"`
+	// The underlying power source. Defaults to "swarm:base" if empty.
+	SourceUri     string `protobuf:"bytes,5,opt,name=source_uri,json=sourceUri,proto3" json:"source_uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -570,6 +590,13 @@ func (x *AgentConfig) GetMessaging() *MessagingConfig {
 	return nil
 }
 
+func (x *AgentConfig) GetSourceUri() string {
+	if x != nil {
+		return x.SourceUri
+	}
+	return ""
+}
+
 type MessagingConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Inputs        []string               `protobuf:"bytes,1,rep,name=inputs,proto3" json:"inputs,omitempty"`
@@ -626,7 +653,7 @@ var File_proto_swarm_v1_swarm_proto protoreflect.FileDescriptor
 
 const file_proto_swarm_v1_swarm_proto_rawDesc = "" +
 	"\n" +
-	"\x1aproto/swarm/v1/swarm.proto\x12\x10mycelis.swarm.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xe8\x03\n" +
+	"\x1aproto/swarm/v1/swarm.proto\x12\x10mycelis.swarm.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xbf\x04\n" +
 	"\vMsgEnvelope\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x128\n" +
 	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12&\n" +
@@ -639,7 +666,9 @@ const file_proto_swarm_v1_swarm_proto_rawDesc = "" +
 	"toolResult\x12\x19\n" +
 	"\btrace_id\x18\n" +
 	" \x01(\tR\atraceId\x12\x17\n" +
-	"\aspan_id\x18\v \x01(\tR\x06spanIdB\t\n" +
+	"\aspan_id\x18\v \x01(\tR\x06spanId\x12\x17\n" +
+	"\ateam_id\x18\x0e \x01(\tR\x06teamId\x12<\n" +
+	"\rswarm_context\x18\x0f \x01(\v2\x17.google.protobuf.StructR\fswarmContextB\t\n" +
 	"\apayload\"w\n" +
 	"\fEventPayload\x12\x1d\n" +
 	"\n" +
@@ -660,12 +689,14 @@ const file_proto_swarm_v1_swarm_proto_rawDesc = "" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12/\n" +
 	"\x06result\x18\x02 \x01(\v2\x17.google.protobuf.StructR\x06result\x12\x19\n" +
 	"\bis_error\x18\x03 \x01(\bR\aisError\x12#\n" +
-	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage\"\x9a\x01\n" +
+	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage\"\xb9\x01\n" +
 	"\vAgentConfig\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04role\x18\x02 \x01(\tR\x04role\x12\"\n" +
 	"\fcapabilities\x18\x03 \x03(\tR\fcapabilities\x12?\n" +
-	"\tmessaging\x18\x04 \x01(\v2!.mycelis.swarm.v1.MessagingConfigR\tmessaging\"C\n" +
+	"\tmessaging\x18\x04 \x01(\v2!.mycelis.swarm.v1.MessagingConfigR\tmessaging\x12\x1d\n" +
+	"\n" +
+	"source_uri\x18\x05 \x01(\tR\tsourceUri\"C\n" +
 	"\x0fMessagingConfig\x12\x16\n" +
 	"\x06inputs\x18\x01 \x03(\tR\x06inputs\x12\x18\n" +
 	"\aoutputs\x18\x02 \x03(\tR\aoutputs*\xad\x01\n" +
@@ -710,15 +741,16 @@ var file_proto_swarm_v1_swarm_proto_depIdxs = []int32{
 	3,  // 3: mycelis.swarm.v1.MsgEnvelope.text:type_name -> mycelis.swarm.v1.TextPayload
 	4,  // 4: mycelis.swarm.v1.MsgEnvelope.tool_call:type_name -> mycelis.swarm.v1.ToolCallPayload
 	5,  // 5: mycelis.swarm.v1.MsgEnvelope.tool_result:type_name -> mycelis.swarm.v1.ToolResultPayload
-	9,  // 6: mycelis.swarm.v1.EventPayload.data:type_name -> google.protobuf.Struct
-	9,  // 7: mycelis.swarm.v1.ToolCallPayload.arguments:type_name -> google.protobuf.Struct
-	9,  // 8: mycelis.swarm.v1.ToolResultPayload.result:type_name -> google.protobuf.Struct
-	7,  // 9: mycelis.swarm.v1.AgentConfig.messaging:type_name -> mycelis.swarm.v1.MessagingConfig
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	9,  // 6: mycelis.swarm.v1.MsgEnvelope.swarm_context:type_name -> google.protobuf.Struct
+	9,  // 7: mycelis.swarm.v1.EventPayload.data:type_name -> google.protobuf.Struct
+	9,  // 8: mycelis.swarm.v1.ToolCallPayload.arguments:type_name -> google.protobuf.Struct
+	9,  // 9: mycelis.swarm.v1.ToolResultPayload.result:type_name -> google.protobuf.Struct
+	7,  // 10: mycelis.swarm.v1.AgentConfig.messaging:type_name -> mycelis.swarm.v1.MessagingConfig
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_proto_swarm_v1_swarm_proto_init() }
