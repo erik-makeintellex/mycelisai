@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -60,7 +60,8 @@ func main() {
 		}
 
 		// Update Registry
-		state.GlobalRegistry.UpdateHeartbeat(agentID, state.StatusIdle)
+		// SourceURI is not in MsgEnvelope yet, defaulting to "" or could be in payload
+		state.GlobalRegistry.UpdateHeartbeat(agentID, envelope.TeamId, "", state.StatusIdle)
 	})
 
 	if err != nil {
@@ -78,8 +79,15 @@ func main() {
 	http.HandleFunc("/agents", func(w http.ResponseWriter, r *http.Request) {
 		agents := state.GlobalRegistry.GetActiveAgents()
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "{\"active_agents\": %d}", len(agents))
-		// JSON serialization of full list left as exercise for V1.1
+
+		response := map[string]interface{}{
+			"active_agents": len(agents),
+			"agents":        agents,
+		}
+
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("JSON Encode Error: %v", err)
+		}
 	})
 
 	port := os.Getenv("PORT")

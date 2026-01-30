@@ -41,8 +41,20 @@ help:
 proto:
 	@uv run scripts/dev.py proto
 
+proto-go: proto
+
+proto-py:
+	@uv run scripts/dev.py proto-py
+
 build-core:
 	@uv run scripts/dev.py build-go
+
+test-hybrid:
+	@echo "--- Testing Go Core ---"
+	@cd core && go test ./internal/state/...
+	@echo "--- Testing Python Relay ---"
+	@uv run scripts/dev.py test-python
+
 
 # -----------------------------------------------------------------------------
 # Local Development Targets

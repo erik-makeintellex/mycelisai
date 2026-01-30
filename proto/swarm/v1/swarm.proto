@@ -35,6 +35,12 @@ message MsgEnvelope {
   // Trace context for observability
   string trace_id = 10;
   string span_id = 11;
+
+  // Team Routing: The logical group (e.g., "marketing", "sensors")
+  string team_id = 14;
+
+  // Context: Shared Key-Value state for swarm intelligence (AG2 Pattern)
+  google.protobuf.Struct swarm_context = 15;
 }
 
 // -- Payloads --
@@ -70,6 +76,9 @@ message AgentConfig {
   string role = 2;
   repeated string capabilities = 3;
   MessagingConfig messaging = 4;
+
+  // The underlying power source. Defaults to "swarm:base" if empty.
+  string source_uri = 5;
 }
 
 message MessagingConfig {
