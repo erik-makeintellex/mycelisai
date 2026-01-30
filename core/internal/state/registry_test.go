@@ -42,6 +42,18 @@ func TestUpdateHeartbeat_Teams(t *testing.T) {
 	if len(eng) != 1 {
 		t.Errorf("Expected 1 agent in engineering, got %d", len(eng))
 	}
+
+	// 5. Partial Update (Verify Metadata Persistence)
+	// Sending empty team/source should NOT clear existing values
+	reg.UpdateHeartbeat("agent-b", "", "", state.StatusIdle)
+
+	teamSensRefreshed := reg.GetAgentsByTeam("sensors")
+	if len(teamSensRefreshed) != 1 {
+		t.Error("Agent should persist in team on partial heartbeat")
+	}
+	if teamSensRefreshed[0].SourceURI != "ros2:lidar" {
+		t.Errorf("SourceURI should persist. Got %s", teamSensRefreshed[0].SourceURI)
+	}
 }
 
 func TestActiveThreshold(t *testing.T) {

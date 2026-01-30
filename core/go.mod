@@ -1,6 +1,6 @@
 module github.com/mycelis/core
 
-go 1.24.6
+go 1.25
 
 require (
 	github.com/nats-io/nats.go v1.38.0

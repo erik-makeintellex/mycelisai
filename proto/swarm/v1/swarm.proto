@@ -6,6 +6,7 @@ option go_package = "github.com/mycelis/core/pkg/pb/swarm";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
 
 // -- Message Envelope --
 
@@ -84,4 +85,20 @@ message AgentConfig {
 message MessagingConfig {
   repeated string inputs = 1;
   repeated string outputs = 2;
+}
+
+// -- Logging & Observability --
+
+// Structural Log Entry for the central nervous system (The Cortex Memory)
+message LogEntry {
+  google.protobuf.Timestamp timestamp = 1; // Precise Time
+  string trace_id = 2;                     // Workflow Thread
+  string agent_id = 3;                     // Actor
+  string team_id = 4;                      // Group
+  string source_uri = 5;                   // Capability
+  string intent = 6;                       // "process_image", "error", "startup"
+  google.protobuf.Struct context_snapshot = 7; // State at moment of event
+  string status = 8;                       // "SUCCESS", "FAILURE"
+  string error_message = 9;                // Details
+  google.protobuf.Any raw_payload = 10;    // Replay Data
 }

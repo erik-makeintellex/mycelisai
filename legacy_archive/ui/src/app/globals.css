@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #0f1115;       /* Deepest Void */
+  --bg-secondary: #161b22;     /* Panel Background */
+  --bg-glass: rgba(22, 27, 34, 0.7); /* Glass Effect */
+
+  /* Borders */
+  --border-subtle: #30363d;
+  --border-highlight: #58a6ff;
+
+  /* Text */
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --text-mono: #d2a8ff;        /* Code/Data Text */
+
+  /* Accents */
+  --accent-success: #2ea043;   /* Success Green */
+  --accent-error: #da3633;     /* Error Red */
+  --accent-warn: #d29922;      /* Warning Gold */
+  --accent-info: #58a6ff;      /* Info Blue */
+  --accent-glow: rgba(88, 166, 255, 0.15);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}

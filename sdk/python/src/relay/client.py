@@ -1,133 +1,217 @@
 import asyncio
 import uuid
 import time
+import os
 import logging
+from typing import Dict, Any, Callable, Optional, Union
+
 import nats
 from nats.errors import ConnectionClosedError, TimeoutError, NoRespondersError
-from google.protobuf.timestamp_pb2 import Timestamp
-from google.protobuf import struct_pb2
+from nats.js.api import StreamConfig, RetentionPolicy
 
-# Adjust import based on generation output structure
+from google.protobuf.timestamp_pb2 import Timestamp
+from google.protobuf.struct_pb2 import Struct
+from google.protobuf import json_format
+
+# Import generated stubs
+# Assuming relative import or package structure works. 
+# In dev/hybrid mode, we might need path adjustments if installed purely as script.
 try:
     from .proto.swarm.v1 import swarm_pb2
 except ImportError:
-    # Fallback for local testing if path varies
-    import swarm_pb2
+    # Fallback for direct script execution if package not fully installed
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), "proto"))
+    from swarm.v1 import swarm_pb2
 
-logger = logging.getLogger("relay")
+logger = logging.getLogger("relay.client")
 
 class RelayClient:
     """
     The RelayClient bridges Python agents/scripts to the Mycelis Swarm.
-    It enforces swarm.proto schemas and manages the NATS connection.
+    It enforces swarm.proto schemas (v1) and manages the NATS connection.
+    
+    Features:
+    - Team Routing (swarm.team.{id})
+    - Context Propagation (AG2 Pattern)
+    - Auto-Subscription to Inbox
     """
-    def __init__(self, agent_id: str, team_id: str, source_uri: str = "swarm:base", nats_url: str = "nats://localhost:4222"):
-        self.nats_url = nats_url
+    def __init__(self, 
+                 agent_id: str, 
+                 team_id: str, 
+                 source_uri: str = "swarm:base", 
+                 nats_url: str = "nats://localhost:4222"):
+        
         self.agent_id = agent_id or f"python-relay-{uuid.uuid4().hex[:8]}"
         self.team_id = team_id
         self.source_uri = source_uri
+        self.nats_url = nats_url
+        
         self.nc = None
         self.js = None
         self._connected = False
+        
+        # Subscription handlers: subject -> callback(MsgEnvelope)
+        self._handlers: Dict[str, Callable[[swarm_pb2.MsgEnvelope], None]] = {}
+        # Wildcard handlers might need efficient matching, for now exact match or simple prefix
+        self._subscriptions = []
 
     async def connect(self):
-        """Connects to the NATS Nervous System."""
+        """Connects to NATS and sets up inbox subscriptions."""
+        if self._connected:
+            return
+
         try:
             self.nc = await nats.connect(self.nats_url)
             self.js = self.nc.jetstream()
             self._connected = True
-            logger.info(f"Relay connected to {self.nats_url} as {self.agent_id}")
+            logger.info(f"Relay connected to {self.nats_url} as {self.agent_id} (Team: {self.team_id})")
+            
+            # Default Subscriptions (Inbox)
+            # 1. Agent Private: swarm.agent.{id}.>
+            await self.subscribe(f"swarm.agent.{self.agent_id}.>", self._default_handler)
+            
+            # 2. Team Broadcast: swarm.team.{id}.>
+            # We join a queue group for the team to load balance? 
+            # Or broadcast? Usually broadcast for team info, Queue for tasks.
+            # Let's listen to broadcast for now.
+            await self.subscribe(f"swarm.team.{self.team_id}.>", self._default_handler)
+
         except Exception as e:
             logger.error(f"Failed to connect to NATS: {e}")
             raise
 
     async def close(self):
-        """Closes the connection."""
         if self.nc:
             await self.nc.drain()
+            await self.nc.close()
             self._connected = False
             logger.info("Relay connection drained.")
 
-    def _create_envelope(self, payload_key: str, payload_obj, context: dict = None, intent: str = None) -> swarm_pb2.MsgEnvelope:
-        """Wraps a payload in a standard MsgEnvelope with Swarm Context."""
+    async def subscribe(self, subject: str, callback: Callable[[swarm_pb2.MsgEnvelope], None]):
+        """
+        Subscribe to a NATS subject.
+        The callback receives a valid MsgEnvelope.
+        """
+        if not self._connected:
+            raise ConnectionError("Not connected to NATS")
+
+        logger.info(f"Subscribing to {subject}")
         
-        # 1. Timestamp
-        now = time.time()
-        ts = Timestamp()
-        ts.FromSeconds(int(now))
+        # We wrap the callback to deserialize Protocol Buffer
+        async def _nats_callback(msg):
+            try:
+                envelope = swarm_pb2.MsgEnvelope()
+                envelope.ParseFromString(msg.data)
+                
+                # Invoke User Callback
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(envelope)
+                else:
+                    callback(envelope)
+                    
+            except Exception as e:
+                logger.error(f"Error handling message on {subject}: {e}")
 
-        # 2. Build Envelope
-        envelope = swarm_pb2.MsgEnvelope(
-            id=f"msg-{uuid.uuid4()}",
-            timestamp=ts,
-            source_agent_id=self.agent_id,
-            team_id=self.team_id,
-            type=swarm_pb2.MESSAGE_TYPE_TEXT if payload_key == "text" else swarm_pb2.MESSAGE_TYPE_EVENT, # Default logic
-            trace_id=uuid.uuid4().hex # Simple trace generation
-        )
+        # NATS Subscription
+        sub = await self.nc.subscribe(subject, cb=_nats_callback)
+        self._subscriptions.append(sub)
+        self._handlers[subject] = callback
 
-        # 3. Attach Payload (OneOf)
-        # We use getattr/setattr or the generated field setter
-        if payload_key == "text":
-            envelope.text.CopyFrom(payload_obj)
-            envelope.type = swarm_pb2.MESSAGE_TYPE_TEXT
-        elif payload_key == "event":
-            envelope.event.CopyFrom(payload_obj)
-            envelope.type = swarm_pb2.MESSAGE_TYPE_EVENT
-        elif payload_key == "tool_call":
-            envelope.tool_call.CopyFrom(payload_obj)
-            envelope.type = swarm_pb2.MESSAGE_TYPE_TOOL_CALL
-        elif payload_key == "tool_result":
-            envelope.tool_result.CopyFrom(payload_obj)
-            envelope.type = swarm_pb2.MESSAGE_TYPE_TOOL_RESULT
+    async def _default_handler(self, envelope: swarm_pb2.MsgEnvelope):
+        """Default handler for messages without a specific override."""
+        # Just log for now, or user can override
+        logger.debug(f"Received msg {envelope.id} type={envelope.type}")
 
-        # 4. Attach Context (AG2 Pattern)
-        if context:
-            # Convert dict to Struct
-            s = struct_pb2.Struct()
-            s.update(context)
-            envelope.swarm_context.CopyFrom(s)
+    # -- Sending Methods --
 
-        return envelope
-
-    async def send_text(self, content: str, recipient: str = None, intent: str = "inform", context: dict = None):
-        """Sends a standard Human/Chat message."""
+    async def send_text(self, 
+                        content: str, 
+                        recipient_id: str = None, 
+                        context: Dict[str, Any] = None,
+                        target_team: str = None):
+        """Send a standard TextPayload."""
         payload = swarm_pb2.TextPayload(
             content=content,
-            recipient_id=recipient or "",
-            intent=intent,
-            context_id="" 
+            recipient_id=recipient_id or "",
+            intent="talk"
         )
-        envelope = self._create_envelope("text", payload, context)
-        await self._publish(envelope)
+        await self._publish("text", payload, context=context, recipient_id=recipient_id, target_team=target_team)
 
-    async def send_event(self, event_type: str, data: dict, stream_id: str = "main", context: dict = None):
-        """Sends a Helper/System event (e.g. Telemetry)."""
-        # Dict to Struct
-        s_data = struct_pb2.Struct()
-        s_data.update(data)
-
+    async def send_event(self, 
+                         event_type: str, 
+                         data: Dict[str, Any], 
+                         context: Dict[str, Any] = None,
+                         target_team: str = None):
+        """Send a standard EventPayload."""
+        # Convert dict to Struct
+        data_struct = Struct()
+        data_struct.update(data)
+        
         payload = swarm_pb2.EventPayload(
             event_type=event_type,
-            stream_id=stream_id,
-            data=s_data
+            data=data_struct
         )
-        envelope = self._create_envelope("event", payload, context)
-        await self._publish(envelope)
+        await self._publish("event", payload, context=context, target_team=target_team)
 
-    async def _publish(self, envelope: swarm_pb2.MsgEnvelope):
-        """Serializes and publishes to the bus."""
+    async def _publish(self, 
+                       payload_key: str, 
+                       payload_obj, 
+                       context: Dict[str, Any] = None, 
+                       recipient_id: str = None,
+                       target_team: str = None):
+        
         if not self._connected:
             raise ConnectionError("Relay not connected")
 
-        # Subject Logic: swarm.prod.agent.{id}.{type}
-        # Simplified for now: defaults to 'event' or specific intent
-        subject = f"swarm.prod.agent.{self.agent_id}.message" 
+        envelope = self._create_envelope(payload_key, payload_obj, context)
         
-        # Override for heartbeats or specific types if needed, keeping it simple
-        if envelope.type == swarm_pb2.MESSAGE_TYPE_EVENT and envelope.event.event_type == "heartbeat":
-            subject = f"swarm.prod.agent.{self.agent_id}.heartbeat"
-
+        # Determine Topic
+        # Default: swarm.team.{my_team}.agent.{my_id}.output
+        # Or if routed: swarm.agent.{recipient}.input
+        
+        topic = f"swarm.team.{self.team_id}.agent.{self.agent_id}.output"
+        
+        if recipient_id:
+            topic = f"swarm.agent.{recipient_id}.input"
+        elif target_team:
+            topic = f"swarm.team.{target_team}.input"
+            
         data = envelope.SerializeToString()
-        await self.nc.publish(subject, data)
-        # logger.debug(f"Published to {subject}: {envelope.id}")
+        
+        # Use JetStream publish if stream likely exists, else Core NATS?
+        # Core NATS is faster for ephemeral.
+        # We'll use Core Publish for now as we didn't setup streams in this client.
+        await self.nc.publish(topic, data)
+        logger.debug(f"Published {payload_key} to {topic}")
+
+    def _create_envelope(self, payload_key: str, payload_obj, context: dict = None) -> swarm_pb2.MsgEnvelope:
+        ts = Timestamp()
+        ts.GetCurrentTime()
+        
+        envelope = swarm_pb2.MsgEnvelope(
+            id=f"msg-{uuid.uuid4().hex}",
+            timestamp=ts,
+            source_agent_id=self.agent_id,
+            team_id=self.team_id,
+            trace_id=uuid.uuid4().hex, # Trace propagation would go here
+            type=swarm_pb2.MESSAGE_TYPE_TEXT if payload_key == "text" else swarm_pb2.MESSAGE_TYPE_EVENT
+        )
+        
+        # Attach Payload (OneOf)
+        if payload_key == "text":
+            envelope.text.CopyFrom(payload_obj)
+        elif payload_key == "event":
+            envelope.event.CopyFrom(payload_obj)
+        elif payload_key == "tool_call":
+            envelope.tool_call.CopyFrom(payload_obj)
+        elif payload_key == "tool_result":
+            envelope.tool_result.CopyFrom(payload_obj)
+            
+        # Attach AG2 Context
+        if context:
+            struct_ctx = Struct()
+            struct_ctx.update(context)
+            envelope.swarm_context.CopyFrom(struct_ctx)
+            
+        return envelope
