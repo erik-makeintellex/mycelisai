@@ -252,6 +252,33 @@ ns_clean = Collection("clean")
 ns_clean.add_task(clean_legacy, "legacy")
 
 
+# -- TEAM Namespace --
+@task
+def team_sensors(c):
+    """Run Sensor Manager (Telemetry Generator)."""
+    print("Starting Sensor Manager...")
+    env = {"PYTHONPATH": "sdk/python/src"}
+    c.run("uv run python agents/sensors/manager.py", env=env)
+
+@task
+def team_output(c):
+    """Run Output Manager (Display)."""
+    print("Starting Output Manager...")
+    env = {"PYTHONPATH": "sdk/python/src"}
+    c.run("uv run python agents/output/manager.py", env=env)
+
+@task
+def team_test(c):
+    """Run Team Agent Unit Tests."""
+    env = {"PYTHONPATH": "sdk/python/src"}
+    c.run("uv run pytest agents/tests", env=env)
+
+ns_team = Collection("team")
+ns_team.add_task(team_sensors, "sensors")
+ns_team.add_task(team_output, "output")
+ns_team.add_task(team_test, "test")
+
+
 # -- ROOT --
 ns = Collection()
 ns.add_collection(ns_proto)
@@ -259,3 +286,4 @@ ns.add_collection(ns_k8s)
 ns.add_collection(ns_core)
 ns.add_collection(ns_relay)
 ns.add_collection(ns_clean)
+ns.add_collection(ns_team)
