@@ -767,6 +767,134 @@ func (x *LogEntry) GetRawPayload() *anypb.Any {
 	return nil
 }
 
+type ApprovalRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	RequestId       string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	OriginalMessage *MsgEnvelope           `protobuf:"bytes,2,opt,name=original_message,json=originalMessage,proto3" json:"original_message,omitempty"` // The suspended message
+	Reason          string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`                                          // e.g. "Amount > $50"
+	ExpiresAt       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ApprovalRequest) Reset() {
+	*x = ApprovalRequest{}
+	mi := &file_proto_swarm_v1_swarm_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApprovalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApprovalRequest) ProtoMessage() {}
+
+func (x *ApprovalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_swarm_v1_swarm_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApprovalRequest.ProtoReflect.Descriptor instead.
+func (*ApprovalRequest) Descriptor() ([]byte, []int) {
+	return file_proto_swarm_v1_swarm_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ApprovalRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ApprovalRequest) GetOriginalMessage() *MsgEnvelope {
+	if x != nil {
+		return x.OriginalMessage
+	}
+	return nil
+}
+
+func (x *ApprovalRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ApprovalRequest) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+type ApprovalSignal struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Approved      bool                   `protobuf:"varint,2,opt,name=approved,proto3" json:"approved,omitempty"`
+	UserSignature string                 `protobuf:"bytes,3,opt,name=user_signature,json=userSignature,proto3" json:"user_signature,omitempty"` // "admin" or cryptographic signature
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApprovalSignal) Reset() {
+	*x = ApprovalSignal{}
+	mi := &file_proto_swarm_v1_swarm_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApprovalSignal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApprovalSignal) ProtoMessage() {}
+
+func (x *ApprovalSignal) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_swarm_v1_swarm_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApprovalSignal.ProtoReflect.Descriptor instead.
+func (*ApprovalSignal) Descriptor() ([]byte, []int) {
+	return file_proto_swarm_v1_swarm_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ApprovalSignal) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ApprovalSignal) GetApproved() bool {
+	if x != nil {
+		return x.Approved
+	}
+	return false
+}
+
+func (x *ApprovalSignal) GetUserSignature() string {
+	if x != nil {
+		return x.UserSignature
+	}
+	return ""
+}
+
 var File_proto_swarm_v1_swarm_proto protoreflect.FileDescriptor
 
 const file_proto_swarm_v1_swarm_proto_rawDesc = "" +
@@ -831,7 +959,19 @@ const file_proto_swarm_v1_swarm_proto_rawDesc = "" +
 	"\rerror_message\x18\t \x01(\tR\ferrorMessage\x125\n" +
 	"\vraw_payload\x18\n" +
 	" \x01(\v2\x14.google.protobuf.AnyR\n" +
-	"rawPayload*\xad\x01\n" +
+	"rawPayload\"\xcd\x01\n" +
+	"\x0fApprovalRequest\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12H\n" +
+	"\x10original_message\x18\x02 \x01(\v2\x1d.mycelis.swarm.v1.MsgEnvelopeR\x0foriginalMessage\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\x129\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"r\n" +
+	"\x0eApprovalSignal\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x1a\n" +
+	"\bapproved\x18\x02 \x01(\bR\bapproved\x12%\n" +
+	"\x0euser_signature\x18\x03 \x01(\tR\ruserSignature*\xad\x01\n" +
 	"\vMessageType\x12\x1c\n" +
 	"\x18MESSAGE_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12MESSAGE_TYPE_EVENT\x10\x01\x12\x15\n" +
@@ -853,7 +993,7 @@ func file_proto_swarm_v1_swarm_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_swarm_v1_swarm_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_swarm_v1_swarm_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_proto_swarm_v1_swarm_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_proto_swarm_v1_swarm_proto_goTypes = []any{
 	(MessageType)(0),              // 0: mycelis.swarm.v1.MessageType
 	(*MsgEnvelope)(nil),           // 1: mycelis.swarm.v1.MsgEnvelope
@@ -864,30 +1004,34 @@ var file_proto_swarm_v1_swarm_proto_goTypes = []any{
 	(*AgentConfig)(nil),           // 6: mycelis.swarm.v1.AgentConfig
 	(*MessagingConfig)(nil),       // 7: mycelis.swarm.v1.MessagingConfig
 	(*LogEntry)(nil),              // 8: mycelis.swarm.v1.LogEntry
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),       // 10: google.protobuf.Struct
-	(*anypb.Any)(nil),             // 11: google.protobuf.Any
+	(*ApprovalRequest)(nil),       // 9: mycelis.swarm.v1.ApprovalRequest
+	(*ApprovalSignal)(nil),        // 10: mycelis.swarm.v1.ApprovalSignal
+	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),       // 12: google.protobuf.Struct
+	(*anypb.Any)(nil),             // 13: google.protobuf.Any
 }
 var file_proto_swarm_v1_swarm_proto_depIdxs = []int32{
-	9,  // 0: mycelis.swarm.v1.MsgEnvelope.timestamp:type_name -> google.protobuf.Timestamp
+	11, // 0: mycelis.swarm.v1.MsgEnvelope.timestamp:type_name -> google.protobuf.Timestamp
 	0,  // 1: mycelis.swarm.v1.MsgEnvelope.type:type_name -> mycelis.swarm.v1.MessageType
 	2,  // 2: mycelis.swarm.v1.MsgEnvelope.event:type_name -> mycelis.swarm.v1.EventPayload
 	3,  // 3: mycelis.swarm.v1.MsgEnvelope.text:type_name -> mycelis.swarm.v1.TextPayload
 	4,  // 4: mycelis.swarm.v1.MsgEnvelope.tool_call:type_name -> mycelis.swarm.v1.ToolCallPayload
 	5,  // 5: mycelis.swarm.v1.MsgEnvelope.tool_result:type_name -> mycelis.swarm.v1.ToolResultPayload
-	10, // 6: mycelis.swarm.v1.MsgEnvelope.swarm_context:type_name -> google.protobuf.Struct
-	10, // 7: mycelis.swarm.v1.EventPayload.data:type_name -> google.protobuf.Struct
-	10, // 8: mycelis.swarm.v1.ToolCallPayload.arguments:type_name -> google.protobuf.Struct
-	10, // 9: mycelis.swarm.v1.ToolResultPayload.result:type_name -> google.protobuf.Struct
+	12, // 6: mycelis.swarm.v1.MsgEnvelope.swarm_context:type_name -> google.protobuf.Struct
+	12, // 7: mycelis.swarm.v1.EventPayload.data:type_name -> google.protobuf.Struct
+	12, // 8: mycelis.swarm.v1.ToolCallPayload.arguments:type_name -> google.protobuf.Struct
+	12, // 9: mycelis.swarm.v1.ToolResultPayload.result:type_name -> google.protobuf.Struct
 	7,  // 10: mycelis.swarm.v1.AgentConfig.messaging:type_name -> mycelis.swarm.v1.MessagingConfig
-	9,  // 11: mycelis.swarm.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
-	10, // 12: mycelis.swarm.v1.LogEntry.context_snapshot:type_name -> google.protobuf.Struct
-	11, // 13: mycelis.swarm.v1.LogEntry.raw_payload:type_name -> google.protobuf.Any
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	11, // 11: mycelis.swarm.v1.LogEntry.timestamp:type_name -> google.protobuf.Timestamp
+	12, // 12: mycelis.swarm.v1.LogEntry.context_snapshot:type_name -> google.protobuf.Struct
+	13, // 13: mycelis.swarm.v1.LogEntry.raw_payload:type_name -> google.protobuf.Any
+	1,  // 14: mycelis.swarm.v1.ApprovalRequest.original_message:type_name -> mycelis.swarm.v1.MsgEnvelope
+	11, // 15: mycelis.swarm.v1.ApprovalRequest.expires_at:type_name -> google.protobuf.Timestamp
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_proto_swarm_v1_swarm_proto_init() }
@@ -907,7 +1051,7 @@ func file_proto_swarm_v1_swarm_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_swarm_v1_swarm_proto_rawDesc), len(file_proto_swarm_v1_swarm_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

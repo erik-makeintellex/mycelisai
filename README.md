@@ -46,6 +46,10 @@ inv k8s.bridge
 # 5. Verify Stack
 inv core.test
 inv relay.test
+
+# 6. Launch Teams (Phase 4)
+inv team.sensors
+inv team.output
 ```
 
 ---
