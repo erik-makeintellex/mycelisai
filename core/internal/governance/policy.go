@@ -106,10 +106,10 @@ func (e *Engine) checkCondition(condition string, context map[string]interface{}
 	}
 
 	key := parts[0]
-	op := parts[1]
-	// valueStr := parts[2] // Parsing value requires casting, simplified for now
+	// op := parts[1]
+	// valueStr := parts[2]
 
-	val, exists := context[key]
+	_, exists := context[key]
 	if !exists {
 		return false
 	}
