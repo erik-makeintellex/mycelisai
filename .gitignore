@@ -41,3 +41,5 @@ check_stream.py
 stream_output.txt
 architect_work_order.md
 scripts/__pycache__/
+
+kubeconfig.yaml
