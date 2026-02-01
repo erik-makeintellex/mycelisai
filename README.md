@@ -56,19 +56,21 @@ inv k8s.init
 # 2. Generate Contracts (Protobuf -> Go/Python)
 inv proto.generate
 
-# 3. Build & Deploy Core (Go Brain -> Kind)
+# 3. Build & Deploy Core (Helm Chart -> Kind)
 inv k8s.deploy
 
-# 4. Open Development Bridge (NATS:4222, HTTP:8080)
+# 4. Check Status (NEW)
+inv k8s.status
+
+# 5. Open Development Bridge (NATS:4222, HTTP:8080)
 inv k8s.bridge
 
-# 5. Verify Stack
+# 6. Verify Stack
 inv core.test
 inv relay.test
 
-# 6. Launch Teams (Phase 4)
-inv team.sensors
-inv team.output
+# 7. Recovery (Restart Deployments)
+inv k8s.recover
 ```
 
 ---
@@ -139,15 +141,16 @@ Rules are defined in `core/policy/policy.yaml`.
 
 ```text
 /
+├── charts/                # [Helm] Mycelis Core Chart
 ├── core/                  # [Go] The Neural Core
 │   ├── cmd/server/        # Entrypoint
 │   └── internal/state/    # In-Memory Agent Registry
+├── ops/                   # [Python] Build System Tasks
 ├── proto/                 # [Protobuf] The Law
 │   └── swarm/v1/          # swarm.proto (Contracts)
 ├── sdk/                   # [Python] The Relay
 │   └── python/            # Source-Aware Client
-├── tasks.py               # [Invoke] The Build System
-└── deploy/                # [K8s] Manifests & Charts
+└── tasks.py               # [Invoke] Entrypoint (wraps ops/)
 ```
 
 > **Note**: `api/`, `runner/`, and `ui/` are LEGACY and deprecated. Do not use them for new development.

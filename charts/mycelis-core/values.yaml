@@ -1,0 +1,34 @@
+replicaCount: 1
+
+image:
+  repository: mycelis/core
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+podSecurityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  runAsNonRoot: true
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+env:
+  - name: NATS_URL
+    value: "nats://nats:4222" # Keeping existing service name 'nats' to avoid breaking NATS discovery if we don't migrate NATS chart yet
