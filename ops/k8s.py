@@ -18,35 +18,40 @@ def init(c):
     c.run("kubectl apply -f legacy_archive/k8s_raw/00-namespace.yaml")
     c.run("kubectl apply -f legacy_archive/k8s_raw/01-nats.yaml")
 
+from .version import get_version
+from .core import build as core_build
+
 @task
 def deploy(c):
     """
     Deploys the core using Helm (Hardened Security).
+    Uses Immutable Identity Tagging.
     """
-    print("🚀 Deploying Mycelis Core via Helm...")
+    # 1. Build Artifact (Delegated to Core)
+    tag = core_build(c)
     
-    # 1. Build Docker Image (Keeping existing multi-stage build)
-    print("   Building Docker Image...")
-    c.run("docker build -t mycelis/core:latest -f core/Dockerfile .")
+    print(f"🚀 Deploying Release: [{tag}]")
+    
+    print("📦 Building Helm Dependencies...")
+    c.run("helm dependency update ./charts/mycelis-core")
     
     # 2. Load into Kind
-    print("   Loading Image into Cluster...")
-    c.run(f"kind load docker-image mycelis/core:latest --name {CLUSTER_NAME}")
+    print(f"   Loading Image into Cluster...")
+    c.run(f"kind load docker-image mycelis/core:{tag} --name {CLUSTER_NAME}")
     
-    # 3. Helm Upgrade (The atomic deploy)
+    # 3. Helm Upgrade (Atomic with Tag Override)
     print("   Applying Helm Chart...")
-    # Ensure mycelis-core release exists
     cmd = (
         "helm upgrade --install mycelis-core ./charts/mycelis-core "
         f"--namespace {NAMESPACE} --create-namespace "
+        f"--set image.tag={tag} "
         "--wait"
     )
     c.run(cmd)
     
-    # 4. Restart to ensure fresh config if not handled by helm
-    # (Helm upgrade might prompt rollout if hash changes, but explicitly restarting ensures it picks up latest 'latest' tag info if hash is same but content changed in dev)
+    # 4. Restart to ensure fresh config
     c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}")
-    print("✅ Deployment Complete.")
+    print(f"✅ Deployment Complete ({tag}).")
 
 @task
 def bridge(c):
