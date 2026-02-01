@@ -8,3 +8,6 @@ ns.add_collection(proto_relay.ns_proto, "proto")
 ns.add_collection(proto_relay.ns_relay, "relay")
 ns.add_collection(misc.ns_clean, "clean")
 ns.add_collection(misc.ns_team, "team")
+
+from ops import interface
+ns.add_collection(interface, "interface")
