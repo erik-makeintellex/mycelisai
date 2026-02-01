@@ -1,169 +1,112 @@
-# Mycelis Service Network (Gen-3)
+# Mycelis Service Network (Gen-5)
+> **Codename**: "The Conscious Organism"
+> **Standard**: [Service Release 1.0](#-service-development--release-standard)
+> **Status**: Phase 6 (Expansion & Intelligence)
+> **Current Identity**: `v0.6.0` (See [VERSION](VERSION))
 
-> **Current Architecture**: "Absolute Architecture" (Phase 3)
-> **Agent Context**: This file is the Source of Truth for Project Structure and Tooling.
-
-## 📚 Table of Contents
-
-- [Architecture](#-architecture-the-absolute-standard)
-- [Tooling & Standards](#-tooling--standards)
-- [Quick Start](#quick-start-invoke-workflow)
-- [The Relay (SDK)](#-the-relay-python-sdk)
-- [Cortex Memory](#-cortex-memory-logging)
-- [Governance & Policy](#-governance--policy)
-- [Directory Structure](#-directory-structure)
-
-## 📌 Quick Links
-- [System Architecture (Detailed)](architecture.md)
-- [Product Vision (PRD v3)](myclis_v3_arch.md)
-- [Governance Documentation](docs/governance.md)
-- [Logging Schema](docs/logging.md)
-- [UI Design Spec](ui_design_spec.md)
+## 🧠 The Vision
+Mycelis is not a distributed system; it is a single, cohesive cybernetic organism extending the user's will. It adheres to the **V5 Blueprint** (`mycelist_v5_arch.md`) and enforces strict **Immutable Identity** for all cells.
 
 ---
 
-## 🏗️ Architecture: The Absolute Standard
+## 📜 Service Development & Release Standard
+**Version:** 1.0 | **Status:** ENFORCED
 
-We have pivoted to a strict segregation of concerns:
+### 1. The "Immutable Identity" Strategy
+**Objective:** Eliminate ambiguity. Every running container must be traceable to a specific commit SHA. The tag `:latest` is strictly forbidden in production.
 
-| Component | Tech | Path | Description |
+#### 1.1 The Format
+All built artifacts adhere to the **Hybrid Versioning Standard**:
+`v{MAJOR}.{MINOR}.{PATCH}-{SHORT_SHA}`
+
+* **Source of Truth:** The `VERSION` file in the root controls the Semantic Version (Human Intent).
+* **Precision:** The Git Short SHA (7 chars) ensures every commit produces a unique artifact (Machine State).
+
+**Example:**
+* `VERSION` file: `0.6.0`
+* Current Commit: `42f9958`
+* **Resulting Tag:** `v0.6.0-42f9958`
+
+#### 1.2 Implementation Rules
+1.  **Local Dev:** It is permissible to tag `latest` for local debugging *only* (The build system warns you about this).
+2.  **Cluster Deployment:** The build system (`ops/`) automatically calculates and injects the specific tag into the Helm Release.
+3.  **Rollbacks:** Rolling back is deterministic—simply point Helm to the previous unique tag.
+
+---
+
+## 🛠️ Build System Specification (`ops/`)
+We use `uv` and `invoke` to enforce this standard. The logic is abstracted in `ops/`.
+
+### 2.1 Component: `ops/version.py`
+Calculates the identity by combining `VERSION` + `git rev-parse --short HEAD`.
+
+### 2.2 Task: Build (`inv core.build`)
+* **Input:** Auto-detects version.
+* **Action:**
+    1.  Calculates `TAG`.
+    2.  Builds Docker Image: `mycelis/core:{TAG}`.
+    3.  *Warning:* Tags `latest` locally for convenience but warns against pushing it.
+* **Output:** Returns `TAG` string.
+
+### 2.3 Task: Deploy (`inv k8s.deploy`)
+* **Action:**
+    1.  Calls `core.build` to get the fresh `TAG`.
+    2.  Loads `mycelis/core:{TAG}` into Kind.
+    3.  Executes `helm upgrade ... --set image.tag={TAG}`.
+* **Result:** The cluster updates to the exact code on your disk.
+
+---
+
+## 3. Infrastructure Specification (Consolidated Stack)
+To minimize "Cluster Sprawl", we enforce a **Single Persistence** policy.
+
+### 3.1 The "Hippocampus" (PostgreSQL)
+A single PostgreSQL instance handles all long-term memory (State + Vectors).
+
+* **Service:** `mycelis-pg` (via `mycelis-core` chart dependency).
+* **Configuration:**
+    * **Resources:** `100m/256Mi` (Request) -> `500m/512Mi` (Limit).
+    * **Persistence:** 1GB PVC (Local Path).
+* **Pinning:** Strictly pinned to `bitnami/postgresql:16.1.0-debian-11-r12`.
+
+### 3.2 External Dependency Pinning
+All external images in `values.yaml` must be pinned to a specific digest or patch version.
+
+| Service | Image | Required Tag | Status |
 | :--- | :--- | :--- | :--- |
-| **Neural Core** | Go | `core/` | The central brain. Manages state, routing, and swarm coherence. |
-| **Relay SDK** | Python | `sdk/python` | The universal connector for Agents. Stateless & Team-Aware. |
-| **Contracts** | Protobuf | `proto/` | The LAW. `swarm.proto` defines all inter-service communication. |
-| **Memory** | NATS | `cortex.logs` | Centralized, strict-schema logging (`LogEntry`). |
+| **Database** | `bitnami/postgresql` | `16.1.0-debian-11-r12` | **PINNED** |
+| **Message Bus** | `nats` | `2.10.7-alpine3.19` | **PINNED** |
+| **Logic (LLM)** | `ollama/ollama` | `0.1.20` | **PINNED** (External) |
 
 ---
 
-## 🛠️ Tooling & Standards
+## ⚡ Developer Workflow
 
-We enforce strict tooling to ensure deterministic environments.
+### To Release a Feature:
+1.  **Commit Code.**
+2.  *(Optional)* Inspect/Bump `VERSION` file.
+3.  **Run:** `uv run inv k8s.deploy`
+    * *System automates:* Tagging -> Building -> Loading -> Helm Upgrading.
+4.  **Verify:** `uv run inv k8s.status` -> Check that `IMAGE` column matches your new SHA.
 
--   **Task Runner**: **Invoke** (`tasks.py`). *Makefiles are banned.*
--   **Dependency Manager**: **`uv`** (Python) and **`go mod`** (Go).
--   **Cluster**: Kind (Kubernetes in Docker).
+### To Rollback:
+1.  **Find previous tag:** `docker images | grep mycelis/core`
+2.  **Run:** `helm upgrade ... --set image.tag=v0.6.0-OLDSHA`
 
-### Quick Start (Invoke Workflow)
-You only need `uv` installed. The runner handles the rest.
+---
 
+## ⚡ Quick Start
 ```bash
-# 0. Install Invoke
-uv tool install invoke
+# 1. Initialize Body (Infra)
+uv run inv k8s.init
 
-# 1. Start Infrastructure (Kind + NATS + Postgres)
-inv k8s.init
+# 2. Build & Deploy Brain (Standard 1.0)
+uv run inv k8s.deploy
 
-# 2. Generate Contracts (Protobuf -> Go/Python)
-inv proto.generate
+# 3. Check Vital Signs
+uv run inv k8s.status
 
-# 3. Build & Deploy Core (Helm Chart -> Kind)
-inv k8s.deploy
-
-# 4. Check Status (NEW)
-inv k8s.status
-
-# 5. Open Development Bridge (NATS:4222, HTTP:8080)
-inv k8s.bridge
-
-# 6. Verify Stack
-inv core.test
-inv relay.test
-
-# 7. Recovery (Restart Deployments)
-inv k8s.recover
+# 4. Neural Bridge & UI
+uv run inv k8s.bridge
+uv run inv interface.dev
 ```
-
----
-
-## 🔌 The Relay (Python SDK)
-
-The **RelayClient** (`sdk/python/src/relay/client.py`) is the only authorized way for Python code to interact with the Swarm.
-
-### Connecting a Service
-```python
-from relay.client import RelayClient
-from swarm.v1 import swarm_pb2
-import asyncio
-
-async def main():
-    # 1. Connect to Swarm
-    relay = RelayClient(
-        agent_id="my-agent-01", 
-        team_id="data-proc"
-    )
-    await relay.connect()
-
-    # 2. Subscribe using Strict Types
-    async def on_task(envelope: swarm_pb2.MsgEnvelope):
-        print(f"Task Received: {envelope.event.event_type}")
-        
-        # 3. Emit Result
-        await relay.send_event(
-            event_type="task.complete",
-            data={"status": "done"},
-            context={"processor": "gpu-01"}
-        )
-
-    await relay.subscribe("swarm.team.data-proc.>", on_task)
-
-    # Keep alive
-    while True: await asyncio.sleep(1)
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
----
-
-## 🧠 Cortex Memory (Logging)
-
-No more text files. We use a **Structured Log Event Stream**.
-
--   **Schema**: Defined in `proto/swarm/v1/swarm.proto` as `LogEntry`.
--   **Traceability**: `trace_id` and `span_id` are mandatory.
--   **Context**: Logs capture the `swarm_context` (State Snapshot) at the moment of emission.
--   **Transport**: All logs flow to `cortex.logs` on NATS.
-
-> 📘 **Documentation**: See [docs/logging.md](docs/logging.md) for the detailed `LogEntry` schema and parsing guide.
-
----
-
-## 🛡️ Governance & Policy
-
-Messages are filtered by the **Gatekeeper** before routing.
-Rules are defined in `core/policy/policy.yaml`.
-
-> 📘 **Documentation**: See [docs/governance.md](docs/governance.md) for configuration examples (IoT vs. Agents).
-
----
-
-## 📂 Directory Structure
-
-```text
-/
-├── charts/                # [Helm] Mycelis Core Chart
-├── core/                  # [Go] The Neural Core
-│   ├── cmd/server/        # Entrypoint
-│   └── internal/state/    # In-Memory Agent Registry
-├── ops/                   # [Python] Build System Tasks
-├── proto/                 # [Protobuf] The Law
-│   └── swarm/v1/          # swarm.proto (Contracts)
-├── sdk/                   # [Python] The Relay
-│   └── python/            # Source-Aware Client
-└── tasks.py               # [Invoke] Entrypoint (wraps ops/)
-```
-
-> **Note**: `api/`, `runner/`, and `ui/` are LEGACY and deprecated. Do not use them for new development.
-
----
-
-## 🤖 Agent Directives
-
-**If you are an Agent working on this repo:**
-1.  **Strict Mode**: If it's not in `tasks.py`, it doesn't exist.
-2.  **No Makefiles**: Do not suggest or create Makefiles.
-3.  **Python == Relay**: All Python code must use `RelayClient`.
-
-**Active Specialists:**
-*   `spec:arch:01` - System Architect
-*   `spec:golang:01` - Backend Engineer

@@ -31,4 +31,29 @@ securityContext:
 
 env:
   - name: NATS_URL
-    value: "nats://nats:4222" # Keeping existing service name 'nats' to avoid breaking NATS discovery if we don't migrate NATS chart yet
+    value: "nats://nats:4222"
+  - name: DB_HOST
+    value: "mycelis-core-postgresql"
+
+# PostgreSQL Configuration (Bitnami)
+# PostgreSQL Configuration (Bitnami)
+postgresql:
+  enabled: true
+  image:
+    tag: "16.1.0-debian-11-r12"
+  auth:
+    postgresPassword: "password"
+    username: "mycelis"
+    password: "password"
+    database: "cortex"
+  primary:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    persistence:
+      enabled: true
+      size: 1Gi
