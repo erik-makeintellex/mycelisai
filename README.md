@@ -3,6 +3,25 @@
 > **Current Architecture**: "Absolute Architecture" (Phase 3)
 > **Agent Context**: This file is the Source of Truth for Project Structure and Tooling.
 
+## 📚 Table of Contents
+
+- [Architecture](#-architecture-the-absolute-standard)
+- [Tooling & Standards](#-tooling--standards)
+- [Quick Start](#quick-start-invoke-workflow)
+- [The Relay (SDK)](#-the-relay-python-sdk)
+- [Cortex Memory](#-cortex-memory-logging)
+- [Governance & Policy](#-governance--policy)
+- [Directory Structure](#-directory-structure)
+
+## 📌 Quick Links
+- [System Architecture (Detailed)](architecture.md)
+- [Product Vision (PRD v3)](myclis_v3_arch.md)
+- [Governance Documentation](docs/governance.md)
+- [Logging Schema](docs/logging.md)
+- [UI Design Spec](ui_design_spec.md)
+
+---
+
 ## 🏗️ Architecture: The Absolute Standard
 
 We have pivoted to a strict segregation of concerns:
@@ -102,6 +121,17 @@ No more text files. We use a **Structured Log Event Stream**.
 -   **Traceability**: `trace_id` and `span_id` are mandatory.
 -   **Context**: Logs capture the `swarm_context` (State Snapshot) at the moment of emission.
 -   **Transport**: All logs flow to `cortex.logs` on NATS.
+
+> 📘 **Documentation**: See [docs/logging.md](docs/logging.md) for the detailed `LogEntry` schema and parsing guide.
+
+---
+
+## 🛡️ Governance & Policy
+
+Messages are filtered by the **Gatekeeper** before routing.
+Rules are defined in `core/policy/policy.yaml`.
+
+> 📘 **Documentation**: See [docs/governance.md](docs/governance.md) for configuration examples (IoT vs. Agents).
 
 ---
 

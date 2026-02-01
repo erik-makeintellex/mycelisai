@@ -7,6 +7,7 @@ import (
 	"time"
 
 	pb "github.com/mycelis/core/pkg/pb/swarm"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -31,9 +32,32 @@ func NewGatekeeper(policyPath string) (*Gatekeeper, error) {
 
 // Intercept evaluates a message and returns (proceed bool, action string, requestID string)
 func (g *Gatekeeper) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
-	// Extract Context (Convert Struct to Map not fully impl here, passing empty for MVP)
-	// In real impl, would marshal struct to map
+	// Extract Context
 	ctx := make(map[string]interface{})
+	if msg.SwarmContext != nil {
+		for k, v := range msg.SwarmContext.Fields {
+			// Basic type mapping for the naive parser
+			if _, ok := v.Kind.(*structpb.Value_NumberValue); ok {
+				ctx[k] = v.GetNumberValue()
+			} else if _, ok := v.Kind.(*structpb.Value_StringValue); ok {
+				ctx[k] = v.GetStringValue()
+			} else if _, ok := v.Kind.(*structpb.Value_BoolValue); ok {
+				ctx[k] = v.GetBoolValue()
+			}
+		}
+	}
+
+	// Also mix in Event Data for context?
+	// For "amount > 50", usually amount is in the event data, not the header context.
+	// The policy engine might want both.
+	// For this loop, let's also pull data from EventPayload if present.
+	if msg.GetEvent() != nil {
+		for k, v := range msg.GetEvent().Data.Fields {
+			if _, ok := v.Kind.(*structpb.Value_NumberValue); ok {
+				ctx[k] = v.GetNumberValue()
+			}
+		}
+	}
 
 	// Extract intent
 	intent := ""
@@ -78,23 +102,42 @@ func (g *Gatekeeper) createApprovalRequest(msg *pb.MsgEnvelope, reason string) s
 	return reqID
 }
 
-// ProcessSignal handles an admin's decision
-func (g *Gatekeeper) ProcessSignal(signal *pb.ApprovalSignal) *pb.MsgEnvelope {
+// ListPending returns a snapshot of all pending requests
+func (g *Gatekeeper) ListPending() []*pb.ApprovalRequest {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	list := make([]*pb.ApprovalRequest, 0, len(g.PendingBuffer))
+	for _, req := range g.PendingBuffer {
+		list = append(list, req)
+	}
+	return list
+}
+
+// Resolve manually approves or denies a request
+func (g *Gatekeeper) Resolve(reqID string, approved bool, user string) (*pb.MsgEnvelope, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	req, exists := g.PendingBuffer[signal.RequestId]
+	req, exists := g.PendingBuffer[reqID]
 	if !exists {
-		return nil
+		return nil, fmt.Errorf("request %s not found", reqID)
 	}
 
-	delete(g.PendingBuffer, signal.RequestId)
+	delete(g.PendingBuffer, reqID)
 
-	if signal.Approved {
-		log.Printf("✅ Request %s APPROVED by %s", signal.RequestId, signal.UserSignature)
-		return req.OriginalMessage
+	if approved {
+		log.Printf("✅ Request %s MANUALLY APPROVED by %s", reqID, user)
+		return req.OriginalMessage, nil
 	}
 
-	log.Printf("❌ Request %s REJECTED by %s", signal.RequestId, signal.UserSignature)
-	return nil
+	log.Printf("❌ Request %s MANUALLY DENIED by %s", reqID, user)
+	return nil, nil // Nil message means nothing to forward
+}
+
+// ProcessSignal handles an admin's decision (Legacy / Event based)
+func (g *Gatekeeper) ProcessSignal(signal *pb.ApprovalSignal) *pb.MsgEnvelope {
+	// Re-using Resolve logic to keep DRY
+	msg, _ := g.Resolve(signal.RequestId, signal.Approved, signal.UserSignature)
+	return msg
 }
