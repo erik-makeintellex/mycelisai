@@ -15,23 +15,38 @@ def init(c):
         c.run(f"kind create cluster --name {CLUSTER_NAME} --config kind-config.yaml")
     
     print("Applying Infrastructure Layer...")
-    c.run("kubectl apply -f k8s/00-namespace.yaml")
-    c.run("kubectl apply -f k8s/01-nats.yaml")
+    c.run("kubectl apply -f legacy_archive/k8s_raw/00-namespace.yaml")
+    c.run("kubectl apply -f legacy_archive/k8s_raw/01-nats.yaml")
 
 @task
 def deploy(c):
     """
-    Deploy Application Layer.
-    Builds Core, Loads to Kind, Applies Core manifests, Restarts.
+    Deploys the core using Helm (Hardened Security).
     """
-    print("Deploying Application Layer...")
+    print("🚀 Deploying Mycelis Core via Helm...")
+    
+    # 1. Build Docker Image (Keeping existing multi-stage build)
+    print("   Building Docker Image...")
     c.run("docker build -t mycelis/core:latest -f core/Dockerfile .")
+    
+    # 2. Load into Kind
+    print("   Loading Image into Cluster...")
     c.run(f"kind load docker-image mycelis/core:latest --name {CLUSTER_NAME}")
-    c.run("kubectl apply -f k8s/02-core.yaml")
-    try:
-        c.run(f"kubectl rollout restart deployment/neural-core -n {NAMESPACE}")
-    except:
-        pass
+    
+    # 3. Helm Upgrade (The atomic deploy)
+    print("   Applying Helm Chart...")
+    # Ensure mycelis-core release exists
+    cmd = (
+        "helm upgrade --install mycelis-core ./charts/mycelis-core "
+        f"--namespace {NAMESPACE} --create-namespace "
+        "--wait"
+    )
+    c.run(cmd)
+    
+    # 4. Restart to ensure fresh config if not handled by helm
+    # (Helm upgrade might prompt rollout if hash changes, but explicitly restarting ensures it picks up latest 'latest' tag info if hash is same but content changed in dev)
+    c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}")
+    print("✅ Deployment Complete.")
 
 @task
 def bridge(c):
@@ -42,10 +57,10 @@ def bridge(c):
     print("Opening Bridge to Cluster...")
     if is_windows():
         c.run(f"start kubectl port-forward -n {NAMESPACE} svc/nats 4222:4222")
-        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/neural-core 8080:8080")
+        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080")
     else:
         p1 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/nats 4222:4222", asynchronous=True)
-        p2 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/neural-core 8080:8080", asynchronous=True)
+        p2 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080", asynchronous=True)
         print("Bridge active. Press Ctrl+C to stop.")
         p1.join() 
         p2.join()
