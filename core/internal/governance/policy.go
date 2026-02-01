@@ -101,23 +101,52 @@ func (e *Engine) checkCondition(condition string, context map[string]interface{}
 	// Example: "amount > 50"
 	parts := strings.Split(condition, " ")
 	if len(parts) != 3 {
-		// Complex or invalid conditions default to FALSE (Safe fail)
 		return false
 	}
 
 	key := parts[0]
-	// op := parts[1]
-	// valueStr := parts[2]
+	op := parts[1]
+	valStr := parts[2]
 
-	_, exists := context[key]
+	// Get context value
+	ctxVal, exists := context[key]
 	if !exists {
+		// If the key is missing from context, we cannot evaluate, assume mismatch (FALSE)
 		return false
 	}
 
-	// Assumption: Only supporting float comparison for the demo
-	// Ideally use a library like 'govaluate'
-	// For now, hardcode "amount" check logic or return true for demo if complex
+	// Naive float implementation for demo
+	// Convert ctxVal to float64
+	var v1 float64
+	switch v := ctxVal.(type) {
+	case float64:
+		v1 = v
+	case int:
+		v1 = float64(v)
+	case int64:
+		v1 = float64(v)
+	default:
+		return false // Not a number
+	}
 
-	// Simplest approach: Just return true if key exists for MVP to avoid type chaos
-	return true
+	// Parse target value
+	var v2 float64
+	if _, err := fmt.Sscanf(valStr, "%f", &v2); err != nil {
+		return false
+	}
+
+	switch op {
+	case ">":
+		return v1 > v2
+	case "<":
+		return v1 < v2
+	case "==":
+		return v1 == v2
+	case ">=":
+		return v1 >= v2
+	case "<=":
+		return v1 <= v2
+	}
+
+	return false
 }

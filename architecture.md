@@ -4,6 +4,9 @@
 > **Purpose**: Definitive source of truth for system components, data flows, and infrastructure interfaces.
 
 ## 1. System Overview
+
+> 🔙 **Navigation**: [Back to README](README.md)
+
 **Mycelis AI** is an Event-Driven, Agentic Service Network. It decouples "Thinking" (Agents/Runners) from "Serving" (API/UI) using an asynchronous message bus (NATS).
 
 ### Core Philosophy
