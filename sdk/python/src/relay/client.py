@@ -16,6 +16,7 @@ from google.protobuf import json_format
 # Import generated stubs
 # Assuming relative import or package structure works. 
 # In dev/hybrid mode, we might need path adjustments if installed purely as script.
+# Import generated stubs
 try:
     from .proto.swarm.v1 import swarm_pb2
 except ImportError:
@@ -23,6 +24,9 @@ except ImportError:
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), "proto"))
     from swarm.v1 import swarm_pb2
+
+from . import persistence # Phase 3: Resilience
+
 
 logger = logging.getLogger("relay.client")
 
@@ -62,11 +66,18 @@ class RelayClient:
             return
 
         try:
-            self.nc = await nats.connect(self.nats_url)
+            # Phase 3: Pass reconnect callback
+            self.nc = await nats.connect(
+                self.nats_url,
+                reconnected_cb=self._on_reconnect
+            )
             self.js = self.nc.jetstream()
             self._connected = True
             logger.info(f"Relay connected to {self.nats_url} as {self.agent_id} (Team: {self.team_id})")
             
+            # Init Buffer
+            persistence.init_db()
+
             # Default Subscriptions (Inbox)
             # 1. Agent Private: swarm.agent.{id}.>
             await self.subscribe(f"swarm.agent.{self.agent_id}.>", self._default_handler)
@@ -182,8 +193,31 @@ class RelayClient:
         # Use JetStream publish if stream likely exists, else Core NATS?
         # Core NATS is faster for ephemeral.
         # We'll use Core Publish for now as we didn't setup streams in this client.
-        await self.nc.publish(topic, data)
-        logger.debug(f"Published {payload_key} to {topic}")
+        try:
+            await self.nc.publish(topic, data)
+            logger.debug(f"Published {payload_key} to {topic}")
+        except (TimeoutError, ConnectionClosedError, ConnectionError) as e:
+            logger.warning(f"⚠️  Network Severed ({e}). Buffering {payload_key} to {topic}...")
+            persistence.save_impulse(topic, data)
+
+    async def _on_reconnect(self):
+        """Phase 3: Replay buffered events on reconnection."""
+        logger.info("♻️  Connection Restored. Replaying Black Box Buffer...")
+        count = 0
+        try:
+            for row_id, topic, payload, ts in persistence.drain_buffer():
+                try:
+                    await self.nc.publish(topic, payload)
+                    logger.info(f"   Replayed [{ts}] {topic}")
+                    count += 1
+                except Exception as e:
+                    logger.error(f"   Failed to replay {topic}: {e} (Aborting Drain)")
+                    break # Delete wont happen for this row, preserving it.
+        except Exception as e:
+             logger.error(f"Error checking buffer: {e}")
+        
+        if count > 0:
+            logger.info(f"✅ Replayed {count} buffered events.")
 
     def _create_envelope(self, payload_key: str, payload_obj, context: dict = None) -> swarm_pb2.MsgEnvelope:
         ts = Timestamp()

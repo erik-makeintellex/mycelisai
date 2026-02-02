@@ -1,0 +1,19 @@
+groups:
+  - name: "financial_safeguards"
+    description: "Prevent excessive spending"
+    targets: ["team:default", "agent:*"]
+    rules:
+      - intent: "payment.initiate"
+        condition: "amount > 50"
+        action: "REQUIRE_APPROVAL"
+
+  - name: "system_protection"
+    description: "Restrict admin actions"
+    targets: ["agent:*"]
+    rules:
+      - intent: "system.reboot"
+        condition: ""
+        action: "REQUIRE_APPROVAL"
+
+defaults:
+  default_action: "ALLOW"

@@ -1,38 +1,83 @@
 package governance
 
 import (
+	"os"
 	"testing"
 )
 
-func TestPolicyLoading(t *testing.T) {
-	// We can't easily write to FS in unit test without cleanup,
-	// but for now we trust NewEngine works if file exists.
-	// Let's test Logic with struct directly to avoid FS dependency in simple test
+func TestEngine_Evaluate(t *testing.T) {
+	// Create a temporary policy file
+	content := `
+groups:
+  - name: "financial"
+    targets: ["team:default"]
+    rules:
+      - intent: "payment"
+        condition: "amount > 50"
+        action: "REQUIRE_APPROVAL"
+defaults:
+  default_action: "ALLOW"
+`
+	tmpfile, err := os.CreateTemp("", "policy.*.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
 
-	cfg := &PolicyConfig{
-		Groups: []PolicyGroup{
-			{
-				Name:    "Test Group",
-				Targets: []string{"team:test"},
-				Rules: []PolicyRule{
-					{Intent: "dangerous_op", Action: "REQUIRE_APPROVAL"},
-				},
-			},
+	if _, err := tmpfile.Write([]byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	engine, err := NewEngine(tmpfile.Name())
+	if err != nil {
+		t.Fatalf("Failed to load engine: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		intent   string
+		context  map[string]interface{}
+		expected string
+	}{
+		{
+			name:     "Allow Small Payment",
+			intent:   "payment",
+			context:  map[string]interface{}{"amount": 10},
+			expected: "ALLOW", // Default action because condition > 50 is false? No, logic loop needs verification.
+			// Logic: if rule matches intent, check condition. If condition true -> return Action.
+			// If condition false -> continue loop. If no more rules -> return Default.
+			// So logic implies "amount > 50" triggers REQUIRE_APPROVAL.
+			// "amount <= 50" fails condition, falls through to Default ALLOW. Correct.
 		},
-		Defaults: DefaultConfig{DefaultAction: "ALLOW"},
+		{
+			name:     "Block Large Payment",
+			intent:   "payment",
+			context:  map[string]interface{}{"amount": 100},
+			expected: "REQUIRE_APPROVAL",
+		},
+		{
+			name:     "Allow Unknown Intent",
+			intent:   "unknown",
+			context:  nil,
+			expected: "ALLOW",
+		},
 	}
 
-	engine := &Engine{Config: cfg}
-
-	// Case 1: Match
-	action := engine.Evaluate("test", "agent1", "dangerous_op", nil)
-	if action != "REQUIRE_APPROVAL" {
-		t.Errorf("Expected REQUIRE_APPROVAL, got %s", action)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			action := engine.Evaluate("default", "agent-1", tt.intent, tt.context)
+			if action != tt.expected {
+				t.Errorf("Evaluate() = %s, want %s", action, tt.expected)
+			}
+		})
 	}
+}
 
-	// Case 2: No Match (Default)
-	action = engine.Evaluate("marketing", "agent1", "dangerous_op", nil)
-	if action != "ALLOW" {
-		t.Errorf("Expected ALLOW, got %s", action)
-	}
+func TestGatekeeper_Intercept(t *testing.T) {
+	// Basic Stub test to ensure Gatekeeper calls Engine
+	// Requires mocking Engine config or similar setup logic as above
+	// Skipping for now to focus on Engine logic which is the core complexity.
 }

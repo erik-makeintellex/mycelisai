@@ -34,9 +34,20 @@ func NewArchivist(dbUrl string) (*Archivist, error) {
 		return nil, err
 	}
 
-	// Validate connection
-	if err := db.Ping(); err != nil {
-		return nil, err
+	// Validate connection with Retry (Stabilization)
+	var pingErr error
+	for i := 0; i < 30; i++ {
+		pingErr = db.Ping()
+		if pingErr == nil {
+			log.Println("✅ Archivist: Connected to Hippocampus (Postgres)")
+			break
+		}
+		log.Printf("⏳ Archivist: Waiting for Hippocampus... (%d/30) - %v", i+1, pingErr)
+		time.Sleep(1 * time.Second)
+	}
+
+	if pingErr != nil {
+		return nil, pingErr // Fatal after 30s
 	}
 
 	return &Archivist{
