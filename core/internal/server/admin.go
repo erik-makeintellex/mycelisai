@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/state"
 )
@@ -14,12 +15,14 @@ import (
 type AdminServer struct {
 	Router *router.Router
 	GK     *governance.Gatekeeper
+	Mem    *memory.Archivist
 }
 
-func NewAdminServer(r *router.Router, gk *governance.Gatekeeper) *AdminServer {
+func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Archivist) *AdminServer {
 	return &AdminServer{
 		Router: r,
 		GK:     gk,
+		Mem:    mem,
 	}
 }
 
@@ -29,6 +32,9 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/approvals/", s.handleApprovalAction) // Trailing slash for ID parsing
 	mux.HandleFunc("/agents", s.handleAgents)
 	mux.HandleFunc("/healthz", s.handleHealth)
+
+	// Memory API
+	mux.HandleFunc("/api/v1/memory/stream", s.GetMemoryStream)
 }
 
 // GET /admin/approvals

@@ -22,6 +22,8 @@ podSecurityContext:
   runAsGroup: 10001
   fsGroup: 10001
   runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
 
 securityContext:
   allowPrivilegeEscalation: false
@@ -31,9 +33,39 @@ securityContext:
 
 env:
   - name: NATS_URL
-    value: "nats://nats:4222"
+    value: "nats://mycelis-core-nats:4222"
   - name: DB_HOST
     value: "mycelis-core-postgresql"
+  - name: DB_USER
+    value: "mycelis"
+  - name: DB_PASSWORD
+    value: "password"
+  - name: DB_NAME
+    value: "cortex"
+
+# NATS JetStream Configuration
+nats:
+  enabled: true
+  config:
+    jetstream:
+      enabled: true
+      max_memory_store: 128Mi
+      max_file_store: 2Gi # Event Store Limit
+      store_dir: /data/jetstream
+  jetstream:
+    enabled: true
+    fileStore:
+      pvc:
+        enabled: true
+        size: 5Gi
+        storageClassName: standard
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
 
 # PostgreSQL Configuration (Bitnami)
 # PostgreSQL Configuration (Bitnami)
