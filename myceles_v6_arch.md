@@ -1,4 +1,4 @@
-i# Product Requirement Document: Project Mycelis
+# Product Requirement Document: Project Mycelis
 **Version:** 6.0 (The Cortex Architecture)
 **Date:** February 1, 2026
 **Status:** Active Blueprint (Phase 6: Expansion & Hardening)

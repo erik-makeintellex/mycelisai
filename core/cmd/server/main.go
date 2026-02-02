@@ -1,14 +1,19 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	pb "github.com/mycelis/core/pkg/pb/swarm"
 	"github.com/nats-io/nats.go"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/server"
 	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
@@ -33,6 +38,31 @@ func main() {
 		gk = nil
 	} else {
 		log.Println("🛡️ Gatekeeper Active.")
+	}
+
+	// 1c. Load Archivist (Memory)
+	// Default to values.yaml if env missing (but security context might block raw strings?)
+	// Using Env.
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		dbHost = "mycelis-core-postgresql"
+	}
+
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+		"mycelis",  // User (pinned in values.yaml)
+		"password", // Password (pinned in values.yaml)
+		dbHost,
+		"5432",
+		"cortex",
+	)
+
+	archivist, err := memory.NewArchivist(dbURL)
+	if err != nil {
+		log.Printf("⚠️ Memory System Failed: %v. Continuing without persistence.", err)
+		archivist = nil
+	} else {
+		log.Println("🧠 Hippocampus Connected.")
+		go archivist.Start(context.Background())
 	}
 
 	// 2. Connect to NATS
@@ -63,11 +93,74 @@ func main() {
 		log.Fatalf("Failed to start Router: %v", err)
 	}
 
+	// 4. Start Memory Subscriber (The Archivist)
+	if archivist != nil {
+		_, err := nc.Subscribe("swarm.>", func(msg *nats.Msg) {
+			var envelope pb.MsgEnvelope
+			if err := proto.Unmarshal(msg.Data, &envelope); err != nil {
+				// Ignore malformed for now
+				return
+			}
+
+			// Map Envelope to LogEntry
+			// We use default Go timestamp in Archivist if generic, or extract from Envelope?
+			// Envelope has timestamp *timestamppb.Timestamp.
+			ts := time.Now()
+			if envelope.Timestamp != nil {
+				ts = envelope.Timestamp.AsTime()
+			}
+
+			// Extract Message Content
+			msgBody := ""
+			intent := "event"
+			level := "INFO"
+			ctxMap := make(map[string]any) // Should be generic map
+
+			switch p := envelope.Payload.(type) {
+			case *pb.MsgEnvelope_Text:
+				msgBody = p.Text.Content
+				intent = p.Text.Intent
+				if intent == "" {
+					intent = "text"
+				}
+			case *pb.MsgEnvelope_Event:
+				msgBody = fmt.Sprintf("Event: %s", p.Event.EventType)
+				intent = p.Event.EventType
+			case *pb.MsgEnvelope_ToolCall:
+				msgBody = fmt.Sprintf("Tool Call: %s", p.ToolCall.ToolName)
+				intent = "tool_call"
+			case *pb.MsgEnvelope_ToolResult:
+				msgBody = fmt.Sprintf("Tool Result: %s", p.ToolResult.CallId)
+				if p.ToolResult.IsError {
+					level = "ERROR"
+					msgBody = fmt.Sprintf("Error: %s", p.ToolResult.ErrorMessage)
+				}
+				intent = "tool_result"
+			}
+
+			logEntry := &memory.LogEntry{
+				TraceId:   envelope.TraceId,
+				Timestamp: ts,
+				Source:    envelope.SourceAgentId,
+				Intent:    intent,
+				Message:   msgBody,
+				Level:     level,
+				Context:   ctxMap,
+			}
+
+			archivist.Push(logEntry)
+
+		})
+		if err != nil {
+			log.Printf("Failed to subscribe Archivist: %v", err)
+		}
+	}
+
 	// 5. Http Server
 	mux := http.NewServeMux()
 
 	// Create Admin Server
-	adminSrv := server.NewAdminServer(r, gk)
+	adminSrv := server.NewAdminServer(r, gk, archivist)
 	adminSrv.RegisterRoutes(mux)
 
 	port := os.Getenv("PORT")

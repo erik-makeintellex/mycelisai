@@ -35,7 +35,21 @@ This README is the **Source of Truth**. Below are the authoritative references f
 
 ---
 
-## 📜 Service Development & Release Standard
+## Configuration
+
+Configuration is managed via environment variables. Copy `.env.example` to `.env` to customize your local setup.
+
+### Authentication & Secrets
+The following variables control authentication and connectivity:
+- `DB_USER` / `DB_PASSWORD`: Support for PostgreSQL connection.
+- `DB_NAME`: The target database (default: `cortex`).
+- `NATS_URL`: Connection string for the NATS cluster.
+
+See `.env.example` for the full list of configurable options.
+
+## Development
+
+### Running with Verifyd
 **Version:** 1.0 | **Status:** ENFORCED
 
 ### 1. The "Immutable Identity"
@@ -55,7 +69,18 @@ We enforce a **Single Persistence** policy ("The Hippocampus").
 ## ⚡ Platform Management
 We use `uv` and `invoke` to manage the organism.
 
-### Quick Start
+### Quick Start (Orchestration)
+The `dev` namespace provides "One-Click" lifecycle management.
+
+```bash
+# Power Up: Clusters -> Deps -> Build -> Deploy -> Bridge
+uv run inv dev.up
+
+# Power Down: Destroy Cluster & Cleanup
+uv run inv dev.down
+```
+
+### Manual Control
 ```bash
 # 1. Initialize Body (Kind Cluster + Postgres + NATS)
 uv run inv k8s.init

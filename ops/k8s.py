@@ -94,6 +94,9 @@ def status(c):
 
     print("\n📦 Pod Status:")
     c.run(f"kubectl get pods -n {NAMESPACE}")
+    
+    print("\n💾 Persistence (PVC) Status:")
+    c.run(f"kubectl get pvc -n {NAMESPACE}")
 
 @task
 def recover(c):
