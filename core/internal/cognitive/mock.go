@@ -20,3 +20,7 @@ func (m *MockAdapter) Infer(ctx context.Context, prompt string, opts InferOption
 		Provider:  "mock",
 	}, nil
 }
+
+func (m *MockAdapter) Probe(ctx context.Context) (bool, error) {
+	return true, nil
+}

@@ -150,3 +150,12 @@ func (g *GoogleAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 		Provider:  "google",
 	}, nil
 }
+
+func (g *GoogleAdapter) Probe(ctx context.Context) (bool, error) {
+	opts := InferOptions{MaxTokens: 1}
+	_, err := g.Infer(ctx, "ping", opts)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}

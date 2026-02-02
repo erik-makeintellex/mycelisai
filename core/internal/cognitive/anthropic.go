@@ -132,3 +132,13 @@ func (a *AnthropicAdapter) Infer(ctx context.Context, prompt string, opts InferO
 		Provider:  "anthropic",
 	}, nil
 }
+
+func (a *AnthropicAdapter) Probe(ctx context.Context) (bool, error) {
+	// Probe via dummy interference for now
+	opts := InferOptions{MaxTokens: 1}
+	_, err := a.Infer(ctx, "ping", opts)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}

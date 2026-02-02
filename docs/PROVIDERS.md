@@ -1,66 +1,67 @@
-# 🧠 Cognitive Providers Support
+# 🧠 Cognitive Providers & Adaptive Selection
 
-Mycelis Core uses a flexible universal adapter system allowing you to connect to various AI providers.
-Configuration is managed via `core/config/brain.yaml`.
+Mycelis Core uses a **Universal Adapter** system to connect to AI providers.
+Crucially, it implements **Adaptive Selection**, where the system grades available resources and matches them to the precise needs of each agent profile.
 
-## Supported Protocols
-1.  **Ollama** (Local/Private) - Default dev setup.
-2.  **OpenAI** (Universal) - Supports OpenAI, xAI, DeepSeek, OpenRouter, vLLM.
-3.  **Anthropic** (Native) - Direct support for Claude.
-4.  **Google** (Native) - Direct support for Gemini.
+## The Grading System
 
-## Configuration Guide (`brain.yaml`)
+The Cortex checks available hosts (Local & Cloud) and grades models into Tiers.
+This ensures that if a specific model is unavailable, the system adapts by selecting the next best candidate that meets the *capability requirements*.
 
-The V2 Configuration splits **Providers** (Hardware/API) from **Profiles** (Intent/Role).
+| Tier | Class | Generic Capability | Typical Use Case |
+| :--- | :--- | :--- | :--- |
+| **S** | **Supreme** | High-Reasoning, Large Context, Complex Logic | **The Architect**: System Design, Root Cause Analysis, Refactoring. |
+| **A** | **Advanced** | Strong Logic, Code Generation, Medium Speed | **The Coder**: Routine implementation, Unit Tests, API glue. |
+| **B** | **Basic** | Balanced Speed/Smarts, Instruction Following | **The Sentry**: Security Analysis, Log parsing, Intent Routing. |
+| **C** | **Edge** | Ultra-Fast, Low Latency, Small Footprint | **IoT/Sensor**: High-frequency filtering, Wake-word detection. |
+
+## Configuration (`brain.yaml`)
+
+You define *Providers* (Sources) and *profiles* (Intents). The system handles the binding.
 
 ### 1. Define Providers
-Providers are the actual connections to AI services.
+Providers represent the "Host" or "Hardware" layer.
 
 ```yaml
 providers:
-  # --- Local Development ---
-  local_ollama:
+  # --- Local Host (Primary) ---
+  local_primary:
     type: "openai_compatible"
-    endpoint: "http://host.docker.internal:11434/v1" # Use docker internal host!
-    model_id: "qwen2.5-coder:7b"
-    api_key: "ollama" # Dummy key
+    endpoint: "http://host.docker.internal:11434/v1"
+    model_id: "qwen2.5-coder:7b" # Probed & Graded at runtime
+    api_key: "ollama"
 
-  # --- Commercial ---
-  
-  # Method A: OpenAI (or Compatible)
-  production_gpt4:
+  # --- Cloud Utilities (Optional) ---
+  cloud_reasoning:
     type: "openai"
     endpoint: "https://api.openai.com/v1"
-    model_id: "gpt-4-turbo"
+    model_id: "gpt-4-turbo"      # Graded as Tier S
     api_key_env: "OPENAI_API_KEY"
-
-  # Method B: Anthropic Native
-  production_claude:
-    type: "anthropic"
-    model_id: "claude-3-5-sonnet-20240620"
-    api_key_env: "ANTHROPIC_API_KEY"
-  
-  # Method C: Google Gemini Native
-  production_gemini:
-    type: "google"
-    model_id: "gemini-1.5-pro"
-    api_key_env: "GEMINI_API_KEY"
 ```
 
-### 2. Map Profiles
-Profiles define *how* the system uses AI. You map a Profile to a Provider ID.
+### 2. Auto-Discovery & Defaults
+On startup, the Cortex **Probes** these providers.
+-   If `cloud_reasoning` fails auth, it is marked **Offline**.
+-   The **Architect Profile** (requiring Class S/A) will attempt to find an alternative.
+-   If `local_primary` (Tier B) is the only Survivor, the Architect will adapt (Warns user, but proceeds with Tier B).
+
+### 3. Profile Mapping
+Profiles express **Need**, not Hardware.
 
 ```yaml
 profiles:
-  sentry: "local_ollama"      # Security Analysis (Fast)
-  architect: "production_gpt4" # Complex Reasoning (Smart)
-  creative: "production_claude" # Content Generation (Nuanced)
+  architect: 
+    preferred: "cloud_reasoning"
+    min_tier: "A"
+    fallback: "local_primary"
+    
+  sentry: 
+    preferred: "local_primary"
+    min_tier: "C"
 ```
 
-## Security
-**NEVER** commit API keys to `brain.yaml`.
-Always use `api_key_env` to reference a variable injected via Kubernetes Secrets or `.env` files.
-
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY`
-- `GEMINI_API_KEY`
+## Precise Adaptability
+The goal is **Efficiency**.
+-   Do not waste Tier S tokens on log filtering.
+-   Do not trust Tier C models with system architecture.
+-   **Default to Minimum Viable Host**: The system defaults to the most efficient model that satisfies the Tier requirement.
