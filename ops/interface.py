@@ -1,14 +1,13 @@
-from invoke import task
+from invoke import task, Collection
 
-ns = None # Will be populated if we used a Class, but for now just function tasks
+ns = Collection("interface")
 
 @task
 def dev(c):
-    """
-    Start the Next.js development server.
-    """
-    print("🚀 Starting Interface Dev Server...")
-    c.run("cd interface && npm run dev")
+    """Start Interface (Next.js) in Dev Mode."""
+    c.run("npm run dev --prefix interface", pty=True)
+
+ns.add_task(dev)
 
 @task
 def install(c):

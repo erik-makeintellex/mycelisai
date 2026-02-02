@@ -20,7 +20,7 @@ This README is the **Source of Truth**. Below are the authoritative references f
 ### Architecture & Standards
 - 📘 **[The Cortex Blueprint (V6)](myceles_v6_arch.md)**: The active Product Requirement Document and Architecture spec.
 - 📜 **[Release Standard 1.0](#-service-development--release-standard)**: The enforced rules for build, tag, and release.
-- ⚖️ **[Governance Policy](docs/governance.md)**: The "Conscience" defining high-stakes gates.
+- ⚖️ **[Governance Policy](core/config/policy.yaml)**: The "Conscience" defining high-stakes gates.
 - 📝 **[Logging Standard](docs/logging.md)**: The "Memory" structure for events.
 - 🏚️ *[Legacy V5 Arch](mycelist_v5_arch.md)*: (Reference only).
 
@@ -29,6 +29,7 @@ This README is the **Source of Truth**. Below are the authoritative references f
 | :--- | :--- | :--- | :--- |
 | **[Core](core/)** | **The Brain** | Go | [README](core/README.md) |
 | **[Interface](interface/)** | **The Eyes** | Next.js | [README](interface/README.md) |
+| **[CLI](cli/)** | **The Synapse** | Python/Typer | `myc --help` |
 | **[Ops](ops/)** | **The Builder** | Python (Invoke) | [README](ops/README.md) |
 | **[SDK](sdk/python/)** | **The Nerves** | Python | Standard Library |
 | **[Infra](charts/)** | **The Body** | Helm | [Values](charts/mycelis-core/values.yaml) |
@@ -49,27 +50,23 @@ See `.env.example` for the full list of configurable options.
 
 ## Development
 
-### Running with Verifyd
-**Version:** 1.0 | **Status:** ENFORCED
+### ⚡ Synaptic Injector (CLI)
+Mycelis includes a headless control plane for rapid interaction.
+```bash
+# 1. Install Dependencies
+cd cli && uv sync
 
-### 1. The "Immutable Identity"
-Every running container must be traceable to a specific commit SHA.
-* **Format**: `v{MAJOR}.{MINOR}.{PATCH}-{SHORT_SHA}`
-* **Source**: [`VERSION`](VERSION) file + Git SHA.
-* **Example**: `v0.6.0-42f9958`
+# 2. Check Pulse
+uv run python cli/main.py status
 
-### 2. Infrastructure Specification
-We enforce a **Single Persistence** policy ("The Hippocampus").
-* **PostgreSQL**: `bitnami/postgresql:16.1.0-debian-11-r12` (Pinned).
-* **NATS**: `nats:2.10.7-alpine3.19` (Pinned).
-* **Ollama**: `0.1.20` (External Logic).
+# 3. Scan Network
+uv run python cli/main.py scan
+```
 
----
-
-## ⚡ Platform Management
+### ⚡ Platform Management
 We use `uv` and `invoke` to manage the organism.
 
-### Quick Start (Orchestration)
+#### Quick Start (Orchestration)
 The `dev` namespace provides "One-Click" lifecycle management.
 
 ```bash
