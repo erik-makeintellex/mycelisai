@@ -48,8 +48,19 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 		if !allowed {
 			if action == governance.ActionRequireApproval {
 				log.Printf("📢 Published Approval Request %s", reqID)
-				// TODO: Publish real approval request event
+
+				// Publish Governance Request Event
+				// Topic: swarm.governance.needed
+				_, err := proto.Marshal(&envelope)
+				if err == nil {
+					// Publish the RequestID so UI can fetch details or subscribe
+					// Alternatively publish the entire envelope or a specific GovernanceEvent
+					r.nc.Publish("swarm.governance.needed", []byte(reqID))
+				}
+
+				// We also emit a log or metric?
 			}
+			// Stop processing this message (Drop or Park)
 			return
 		}
 	}

@@ -3,6 +3,7 @@ package governance
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -60,13 +61,31 @@ func NewEngine(path string) (*Engine, error) {
 
 // Evaluate determines the action for a given request
 // simple evaluation: check if target matches group, then check intent, then condition
+// Evaluate determines the action for a given request
 func (e *Engine) Evaluate(teamID, agentID, intent string, context map[string]interface{}) string {
 	// 1. Find matching groups
 	for _, group := range e.Config.Groups {
 		if e.matchesTarget(group.Targets, teamID, agentID) {
 			// 2. Check Rules
 			for _, rule := range group.Rules {
-				if rule.Intent == intent || rule.Intent == "*" {
+				// Regex Intent Matching
+				// Cache patterns? For now, re-compile is easier but slow.
+				// Optimization: Compile regex on Load.
+				// Fast path: Exact match or Wildcard
+				matched := false
+				if rule.Intent == "*" || rule.Intent == intent {
+					matched = true
+				} else {
+					// Try RegEx (if it looks like one?)
+					// For safety, treat all as regex if not exact match?
+					// Or assume config provides valid regex.
+					match, err := regexp.MatchString(rule.Intent, intent)
+					if err == nil && match {
+						matched = true
+					}
+				}
+
+				if matched {
 					// 3. Check Condition (Simplified)
 					if e.checkCondition(rule.Condition, context) {
 						return rule.Action
@@ -81,6 +100,9 @@ func (e *Engine) Evaluate(teamID, agentID, intent string, context map[string]int
 
 func (e *Engine) matchesTarget(targets []string, teamID, agentID string) bool {
 	for _, t := range targets {
+		if t == "*" {
+			return true
+		}
 		if t == fmt.Sprintf("team:%s", teamID) {
 			return true
 		}

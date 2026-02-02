@@ -1,19 +1,41 @@
+# Governance Policy Configuration
+# Defines the rules enforced by the Gatekeeper
+
 groups:
-  - name: "financial_safeguards"
-    description: "Prevent excessive spending"
-    targets: ["team:default", "agent:*"]
+  # 1. System Safety Net
+  # Prevents accidental destruction of infrastructure
+  - name: "System Critical"
+    description: "Guard against destructive infrastructure operations"
+    targets: ["*"] # Apply to ALL agents
     rules:
-      - intent: "payment.initiate"
-        condition: "amount > 50"
+      - intent: "k8s.delete.*" # Regex match
+        action: "REQUIRE_APPROVAL"
+      - intent: "system.shutdown"
+        action: "DENY"
+
+  # 2. Financial Guardrails
+  # Prevents excessive spending
+  - name: "Finance Limits"
+    description: "Cap autonomous spending"
+    targets: ["team:finance", "agent:finance-bot"]
+    rules:
+      - intent: "payment.create"
+        condition: "amount > 50" # Context variable check
+        action: "REQUIRE_APPROVAL"
+      - intent: "stripe.charge"
+        condition: "amount > 100"
         action: "REQUIRE_APPROVAL"
 
-  - name: "system_protection"
-    description: "Restrict admin actions"
-    targets: ["agent:*"]
+  # 3. High Velocity IoT
+  # Allow telemetry, block configuration changes
+  - name: "IoT Safety"
+    targets: ["team:robotics", "team:sensors"]
     rules:
-      - intent: "system.reboot"
-        condition: ""
+      - intent: "firmware.update"
         action: "REQUIRE_APPROVAL"
+      - intent: "motor.set_speed"
+        condition: "rpm > 8000"
+        action: "DENY"
 
 defaults:
-  default_action: "ALLOW"
+  default_action: "ALLOW" # Allow benign chatter and thinking
