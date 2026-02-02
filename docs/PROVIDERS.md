@@ -15,6 +15,19 @@ This ensures that if a specific model is unavailable, the system adapts by selec
 | **B** | **Basic** | Balanced Speed/Smarts, Instruction Following | **The Sentry**: Security Analysis, Log parsing, Intent Routing. |
 | **C** | **Edge** | Ultra-Fast, Low Latency, Small Footprint | **IoT/Sensor**: High-frequency filtering, Wake-word detection. |
 
+## Gradience Test Values (Tier Assignment)
+
+The system uses the following pattern matching (Regex) to assign Tiers to models discovered at runtime.
+
+| Tier | Pattern (Partial Match) | Examples |
+| :--- | :--- | :--- |
+| **S** | `gpt-4`, `claude-3-opus`, `gemini-1.5-pro`, `o1` | `gpt-4-turbo`, `claude-3-opus-20240229` |
+| **A** | `claude-3-5-sonnet`, `qwen2.5-32b`, `llama-3-70b` | `anthropic/claude-3.5-sonnet` |
+| **B** | `qwen`, `llama`, `mistral`, `gemma` | `qwen2.5:7b`, `mistral-nemo` |
+| **C** | `phi`, `tiny` | `phi-3-mini` |
+
+*Note: Any unknown model defaults to **Tier B**.*
+
 ## Configuration (`brain.yaml`)
 
 You define *Providers* (Sources) and *profiles* (Intents). The system handles the binding.
