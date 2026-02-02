@@ -1,44 +1,32 @@
-models:
-  - id: "local-qwen"
-    provider: "ollama"
-    endpoint: "http://localhost:11434"
-    name: "qwen2.5-coder:7b-instruct"
-    # Auth & TLS are empty for local-dev, but structure supports expansion
-    auth:
-      type: "none"
-    tls:
-      insecure_skip_verify: true
+providers:
+  # --- Local Development ---
+  local_ollama:
+    type: "openai_compatible"
+    endpoint: "http://localhost:11434/v1" # Docker users: override via OLLAMA_HOST
+    model_id: "qwen2.5-coder:7b"
+    api_key: "ollama"
+
+  # --- Commercial (Environment Variables Required) ---
+  production_gpt4:
+    type: "openai"
+    endpoint: "https://api.openai.com/v1"
+    model_id: "gpt-4-turbo"
+    api_key_env: "OPENAI_API_KEY"
+
+  production_claude:
+    type: "anthropic"
+    model_id: "claude-3-opus-20240229"
+    api_key_env: "ANTHROPIC_API_KEY"
+
+  production_gemini:
+    type: "google"
+    model_id: "gemini-1.5-pro"
+    api_key_env: "GEMINI_API_KEY"
 
 profiles:
-  # 1. The Sentry (Security - Fast & Strict)
-  sentry:
-    active_model: "local-qwen"
-    timeout_ms: 2000
-    max_retries: 0
-    output_schema: "boolean"
-    compression: "high"
-    temperature: 0.1
-
-  # 2. The Architect (Planning - Deep & Patient)
-  architect:
-    active_model: "local-qwen"
-    timeout_ms: 60000
-    max_retries: 2
-    output_schema: "json_blueprint"
-    temperature: 0.7
-
-  # 3. The Coder (Generation - Balanced)
-  coder:
-    active_model: "local-qwen"
-    timeout_ms: 30000
-    max_retries: 3
-    output_schema: "strict_json"
-    temperature: 0.2
-
-  # 4. Standard Chat (Interactive)
-  chat:
-    active_model: "local-qwen"
-    timeout_ms: 10000
-    max_retries: 1
-    output_schema: ""
-    temperature: 0.8
+  # Map Intents to Providers
+  sentry: "local_ollama" # Fast, Cheap
+  architect: "local_ollama" # For Dev (was OpenAI)
+  creative: "local_ollama" # For Dev (was Claude)
+  coder: "local_ollama" # Code Gen
+  chat: "local_ollama" # Interactive
