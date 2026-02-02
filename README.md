@@ -4,6 +4,30 @@
 > **Identity**: [`v0.6.0`](VERSION)
 > **Status**: [🟢 Online](http://localhost:3000)
 
+## 🚀 Branching Strategy
+
+### 1. The "Immutable Identity"
+Every running container must be traceable to a specific commit SHA.
+* **Format**: `v{MAJOR}.{MINOR}.{PATCH}-{SHORT_SHA}`
+* **Source**: [`VERSION`](VERSION) file + Git SHA.
+* **Example**: `v0.6.0-42f9958`
+
+### 2. Development Workflow (Branching)
+**Status:** ENFORCED
+All changes must be performed on isolated branches. Direct commits to `main` are prohibited.
+
+| Branch Type | Prefix | Description | Example |
+| :--- | :--- | :--- | :--- |
+| **Feature** | `feat/` | New functionality or capabilities. | `feat/cli-injector` |
+| **Fix** | `fix/` | Bug repairs or stability patches. | `fix/core-race-condition` |
+| **Chore** | `chore/` | Documentation, tooling, or maintenance. | `chore/update-readme` |
+| **Refactor** | `refactor/` | Code restructuring without behavior change. | `refactor/router-logic` |
+
+**Workflow**:
+1.  `git checkout -b <prefix>/<name>`
+2.  Implement changes & Verify.
+3.  `git checkout main` -> `git merge <branch>` -> `git push`.
+
 ## 🧠 The Vision
 Mycelis is an **Autonomous Neuro-Symbolic Service Network** designed to function as a cohesive cybernetic organism. By unifying infrastructure, state, and intelligence into a single "nervous system," it eliminates the friction of traditional distributed systems.
 
