@@ -75,3 +75,22 @@ go test -v -tags=integration ./tests/...
 3. Load the real config: `cognitive.NewRouter("../config/brain.yaml")`.
 4. Define an `InferRequest` with a specific `Profile`.
 5. Assert the `resp.Text` matches expectations.
+78: 
+79: ---
+80: 
+81: ## Tier 3: Governance Smoke Tests (System)
+82: **Goal:** Verify that the **Gatekeeper** is actively blocking dangerous actions.
+83: **Context:** Uses the CLI or NATS to inject "poison pill" messages.
+84: 
+85: ### 📍 Protocol
+86: 1.  **Start the Core:** `inv core.run` (or separate shell).
+87: 2.  **Inject Poison:** Send a message with intent `k8s.delete.pod`.
+88: 3.  **Verify Block:** Check logs for "⛔ Gatekeeper DENIED".
+89: 4.  **Inject Require Approval:** Send `payment.create` with amount `100`.
+90: 5.  **Verify Inbox:** Check `/admin/approvals` for the pending request.
+91: 
+92: ### ⚡ Running Smoke Tests
+93: ```bash
+94: # Run python script
+95: uv run python scripts/verify_governance.py
+96: ```

@@ -44,7 +44,54 @@ def build(c):
     
     return tag
 
+@task
+def run(c):
+    """
+    Run the Core Service locally (Native).
+    """
+    print("🚀 Starting Mycelis Core (Native)...")
+    # Use Popen or just run? run blocks.
+    # We want it to run in foreground for logs?
+    # Or background? Usually 'run' implies foreground in a separate terminal or blocking.
+    # But for 'restart', we need background or detached?
+    # Let's stick to blocking 'run' for now, user can open new tab.
+    with c.cd(str(CORE_DIR)):
+        # Check platform
+        bin_name = "server.exe" if is_windows() else "server"
+        c.run(f"./bin/{bin_name}")
+
+@task
+def restart(c):
+    """
+    Restart the Core Service (Kill + Run).
+    """
+    print("♻️  Restarting Core...")
+    # 1. Kill
+    if is_windows():
+        c.run("taskkill /F /IM server.exe", warn=True)
+        c.run("taskkill /F /IM core.exe", warn=True) # Handle legacy naming
+    else:
+        c.run("pkill server", warn=True)
+        c.run("pkill core", warn=True)
+        
+    # 2. Run (Non-blocking? No, restart implies we want to see it run)
+    # If we want a "background restart", we need a separate task or flag.
+    # For now, we will call run() which blocks.
+    run(c)
+
+@task
+def smoke(c):
+    """
+    Run Governance Smoke Tests (Go).
+    """
+    print("🧪 Running Smoke Tests...")
+    with c.cd(str(CORE_DIR)):
+        c.run("go run ./cmd/smoke/main.go")
+
 ns = Collection("core")
 ns.add_task(test)
 ns.add_task(clean)
 ns.add_task(build)
+ns.add_task(run)
+ns.add_task(restart)
+ns.add_task(smoke)
