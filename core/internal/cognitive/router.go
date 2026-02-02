@@ -56,9 +56,9 @@ func NewRouter(configPath string) (*Router, error) {
 		case "openai", "openai_compatible":
 			adapter, err = NewOpenAIAdapter(pConfig)
 		case "anthropic":
-			adapter = NewAnthropicAdapter(pConfig)
+			adapter, err = NewAnthropicAdapter(pConfig)
 		case "google":
-			adapter = NewGoogleAdapter(pConfig)
+			adapter, err = NewGoogleAdapter(pConfig)
 		default:
 			err = fmt.Errorf("unknown provider type: %s", pConfig.Type)
 		}
