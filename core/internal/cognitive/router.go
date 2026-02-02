@@ -72,14 +72,21 @@ func NewRouter(configPath string) (*Router, error) {
 	}
 
 	// 4. Discovery & Grading
+	r.AutoConfigure(context.Background())
+
+	return r, nil
+}
+
+// AutoConfigure probes providers and re-routes profiles if necessary
+func (r *Router) AutoConfigure(ctx context.Context) {
 	sd := NewServiceDiscovery(r.Adapters)
-	discoveryResults := sd.DiscoverAll(context.Background())
+	discoveryResults := sd.DiscoverAll(ctx)
 
 	// Log Discovery Results
 	fmt.Println("--- Cognitive Discovery Report ---")
 	for id, res := range discoveryResults {
 		// Grade the model based on Config ModelID (we don't have it in res yet, need to look up)
-		modelID := config.Providers[id].ModelID
+		modelID := r.Config.Providers[id].ModelID
 		tier := GradeModel(modelID)
 
 		status := "✅ Online"
@@ -90,9 +97,9 @@ func NewRouter(configPath string) (*Router, error) {
 	}
 	fmt.Println("----------------------------------")
 
-	// 5. Auto-Config (Profiles)
+	// Auto-Config (Profiles)
 	// For each profile, check if its provider is healthy. If not, fallback.
-	for profileName, providerID := range config.Profiles {
+	for profileName, providerID := range r.Config.Profiles {
 		res, exists := discoveryResults[providerID]
 		if !exists {
 			fmt.Printf("⚠️ Profile '%s' points to unknown provider '%s'\n", profileName, providerID)
@@ -118,8 +125,6 @@ func NewRouter(configPath string) (*Router, error) {
 			}
 		}
 	}
-
-	return r, nil
 }
 
 // InferWithContract executes the request against the configured profile/provider
@@ -144,11 +149,47 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 	// 3. Execute
 	// Defaults for options
 	opts := InferOptions{
-		Temperature: 0.7, // TODO: Load from Profile config (requires extending schema)
+		Temperature: 0.7, // TODO: Load from Profile config
 		MaxTokens:   2048,
 	}
 
-	return adapter.Infer(ctx, req.Prompt, opts)
+	resp, err := adapter.Infer(ctx, req.Prompt, opts)
+	if err != nil {
+		// --- Runtime Self-Recovery ---
+		// If inference fails, we should check if the provider is still healthy.
+		// If dead, we trigger AutoConfigure and retry ONCE.
+		fmt.Printf("⚠️ Inference failed on '%s': %v. Attempting Self-Recovery...\n", providerID, err)
+
+		// 1. Probe specific provider to confirm death (avoid jitter)
+		if healthy, _ := adapter.Probe(ctx); !healthy {
+			fmt.Printf("❌ Provider '%s' confirmed DEAD. Re-calibrating Matrix...\n", providerID)
+
+			// 2. Trigger Auto-Config (Heal)
+			r.AutoConfigure(ctx)
+
+			// 3. Retry on NEW provider
+			newProviderID, ok := r.Config.Profiles[req.Profile]
+			if !ok {
+				return nil, fmt.Errorf("profile lost during recovery")
+			}
+
+			if newProviderID == providerID {
+				return nil, fmt.Errorf("recovery failed: no alternative provider found (stuck on %s)", providerID)
+			}
+
+			newAdapter, ok := r.Adapters[newProviderID]
+			if !ok {
+				return nil, fmt.Errorf("recovery failed: new provider %s not init", newProviderID)
+			}
+
+			fmt.Printf("✅ Optimized to '%s'. Retrying request...\n", newProviderID)
+			return newAdapter.Infer(ctx, req.Prompt, opts)
+		}
+		// If healthy (e.g. context timeout or API error), simple error return
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // Deprecated: Infer is alias for InferWithContract
