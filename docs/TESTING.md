@@ -20,7 +20,8 @@ These tests use **Mock Providers** to simulate various LLM failure modes (timeou
 ### ⚡ Running Unit Tests
 ```bash
 # Run from repository root
-go test -v ./core/internal/cognitive/...
+cd core
+go test -v ./internal/cognitive/...
 ```
 
 ---
@@ -48,7 +49,8 @@ These tests connect to the **Primary System Agent Service Source Model** (e.g., 
 ```bash
 # Run from repository root
 # Note: Ensure OLLAMA_HOST is valid (default: http://localhost:11434)
-go test -v -tags=integration ./core/tests/...
+cd core
+go test -v -tags=integration ./tests/...
 ```
 
 ---
