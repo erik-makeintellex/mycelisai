@@ -1,6 +1,9 @@
 package cognitive
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // Config represents the brain.yaml structure
 type BrainConfig struct {
@@ -9,11 +12,27 @@ type BrainConfig struct {
 }
 
 type Model struct {
-	ID         string `yaml:"id"`
-	Provider   string `yaml:"provider"` // ollama, openai
-	Endpoint   string `yaml:"endpoint"`
-	Name       string `yaml:"name"`         // e.g., qwen2.5:7b
-	AuthKeyEnv string `yaml:"auth_key_env"` // Env var for API Key
+	ID         string     `yaml:"id"`
+	Provider   string     `yaml:"provider"` // ollama, openai, test
+	Endpoint   string     `yaml:"endpoint"`
+	Name       string     `yaml:"name"`         // e.g., qwen2.5:7b
+	AuthKeyEnv string     `yaml:"auth_key_env"` // Env var for API Key (Legacy, use Auth.Value)
+	Auth       AuthConfig `yaml:"auth,omitempty"`
+	TLS        TLSConfig  `yaml:"tls,omitempty"`
+}
+
+type AuthConfig struct {
+	Type         string `yaml:"type"`                    // "env", "file", "header"
+	Value        string `yaml:"value"`                   // Env var name, file path, or value
+	HeaderName   string `yaml:"header_name,omitempty"`   // e.g. "Authorization", "X-API-Key"
+	HeaderFormat string `yaml:"header_format,omitempty"` // "Bearer %s"
+}
+
+type TLSConfig struct {
+	CACertPath     string `yaml:"ca_cert_path,omitempty"`
+	ClientCertPath string `yaml:"client_cert_path,omitempty"`
+	ClientKeyPath  string `yaml:"client_key_path,omitempty"`
+	InsecureSkip   bool   `yaml:"insecure_skip_verify,omitempty"`
 }
 
 // Profile defines the contract for a specific agent role
@@ -47,4 +66,22 @@ type CognitiveError struct {
 
 func (e *CognitiveError) Error() string {
 	return e.Message
+}
+
+// InferRequest represents the API payload
+type InferRequest struct {
+	Profile string `json:"profile"`
+	Prompt  string `json:"prompt"`
+}
+
+// InferResponse represents the API response
+type InferResponse struct {
+	Text      string `json:"text"`
+	ModelUsed string `json:"model_used"`
+	Provider  string `json:"provider"`
+}
+
+// LLMProvider interface for mocking and expansion
+type LLMProvider interface {
+	Call(ctx context.Context, model *Model, prompt string, temp float64) (*InferResponse, error)
 }

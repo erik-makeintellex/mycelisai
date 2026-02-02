@@ -8,13 +8,15 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Router manages model selection and inference
 type Router struct {
-	Config *BrainConfig
+	Config    *BrainConfig
+	Providers map[string]LLMProvider
 }
 
 // NewRouter loads configuration from the given path
@@ -31,6 +33,9 @@ func NewRouter(configPath string) (*Router, error) {
 
 	// Dynamic Override: OLLAMA_HOST
 	if host := os.Getenv("OLLAMA_HOST"); host != "" {
+		if !strings.HasPrefix(host, "http") {
+			host = "http://" + host
+		}
 		for i, m := range config.Models {
 			if m.Provider == "ollama" {
 				config.Models[i].Endpoint = host
@@ -38,50 +43,44 @@ func NewRouter(configPath string) (*Router, error) {
 		}
 	}
 
-	return &Router{Config: &config}, nil
-}
+	r := &Router{
+		Config:    &config,
+		Providers: make(map[string]LLMProvider),
+	}
 
-// InferRequest represents the API payload
-type InferRequest struct {
-	Profile string `json:"profile"`
-	Prompt  string `json:"prompt"`
-}
+	// Register Default Providers
+	r.Providers["ollama"] = &OllamaProvider{}
+	r.Providers["openai"] = &OpenAIProvider{}
 
-// InferResponse represents the API response
-type InferResponse struct {
-	Text      string `json:"text"`
-	ModelUsed string `json:"model_used"`
-	Provider  string `json:"provider"`
+	return r, nil
 }
 
 // Infer determines which model to use and executes the CQA loop
 func (r *Router) Infer(req InferRequest) (*InferResponse, error) {
 	// Root context for the whole operation
-	// We might want a global timeout or use Background
 	return r.InferWithContract(context.Background(), req)
 }
 
-// executeRequest performs the actual provider call (Low Level)
+// executeRequest performs the actual provider call via the Registry
 func (r *Router) executeRequest(ctx context.Context, targetModel *Model, prompt string, temp float64) (*InferResponse, error) {
-	// 3. (Real Logic) Call Provider
-	switch targetModel.Provider {
-	case "ollama":
-		return r.callOllama(ctx, targetModel, prompt, temp)
-	case "openai":
-		return r.callOpenAI(ctx, targetModel, prompt, temp)
+	provider, ok := r.Providers[targetModel.Provider]
+	if !ok {
+		// Fallback Stub for unknown providers
+		return &InferResponse{
+			Text:      fmt.Sprintf("[%s via %s] %s", targetModel.Name, targetModel.Provider, prompt),
+			ModelUsed: targetModel.ID,
+			Provider:  targetModel.Provider,
+		}, nil
 	}
 
-	// Fallback Stub for unknown providers
-	response := &InferResponse{
-		Text:      fmt.Sprintf("[%s via %s] %s", targetModel.Name, targetModel.Provider, prompt),
-		ModelUsed: targetModel.ID,
-		Provider:  targetModel.Provider,
-	}
-
-	return response, nil
+	return provider.Call(ctx, targetModel, prompt, temp)
 }
 
-func (r *Router) callOllama(ctx context.Context, model *Model, prompt string, temp float64) (*InferResponse, error) {
+// --- Provider Implementations ---
+
+type OllamaProvider struct{}
+
+func (p *OllamaProvider) Call(ctx context.Context, model *Model, prompt string, temp float64) (*InferResponse, error) {
 	url := fmt.Sprintf("%s/api/generate", model.Endpoint)
 
 	payload := map[string]interface{}{
@@ -132,15 +131,30 @@ func (r *Router) callOllama(ctx context.Context, model *Model, prompt string, te
 	}, nil
 }
 
-func (r *Router) callOpenAI(ctx context.Context, model *Model, prompt string, temp float64) (*InferResponse, error) {
-	// 1. Get API Key
-	apiKey := os.Getenv(model.AuthKeyEnv)
-	if apiKey == "" {
-		return nil, fmt.Errorf("missing api key for %s (env: %s)", model.ID, model.AuthKeyEnv)
+type OpenAIProvider struct{}
+
+func (p *OpenAIProvider) Call(ctx context.Context, model *Model, prompt string, temp float64) (*InferResponse, error) {
+	if os.Getenv("OPENAI_MOCK") == "true" {
+		return &InferResponse{Text: "mock-openai", ModelUsed: model.ID, Provider: "openai"}, nil
 	}
 
-	// 2. Construct URL (Assume Endpoint is base, e.g., https://api.openai.com/v1)
-	// We append /chat/completions standard
+	// 1. Get API Key (Support both Legacy and New Auth)
+	apiKey := ""
+	if model.Auth.Value != "" {
+		apiKey = os.Getenv(model.Auth.Value) // Treat as Env Var Name for now
+		if apiKey == "" {
+			apiKey = model.Auth.Value // Fallback to raw value if not an env var (unsafe but supported)
+		}
+	} else if model.AuthKeyEnv != "" {
+		apiKey = os.Getenv(model.AuthKeyEnv)
+	}
+
+	// Allow empty logic only if AuthType is none or not set, but OpenAI needs key
+	if apiKey == "" {
+		return nil, fmt.Errorf("missing api key for %s", model.ID)
+	}
+
+	// 2. Construct URL
 	url := fmt.Sprintf("%s/chat/completions", model.Endpoint)
 
 	// 3. Payload
@@ -164,7 +178,6 @@ func (r *Router) callOpenAI(ctx context.Context, model *Model, prompt string, te
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
 
 	client := &http.Client{}

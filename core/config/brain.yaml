@@ -2,14 +2,12 @@ models:
   - id: "local-qwen"
     provider: "ollama"
     endpoint: "http://localhost:11434"
-    name: "qwen2.5:7b"
-    auth_key_env: ""
-
-  - id: "cloud-gpt4"
-    provider: "openai"
-    endpoint: "https://api.openai.com/v1"
-    name: "gpt-4-turbo"
-    auth_key_env: "OPENAI_API_KEY"
+    name: "qwen2.5-coder:7b-instruct"
+    # Auth & TLS are empty for local-dev, but structure supports expansion
+    auth:
+      type: "none"
+    tls:
+      insecure_skip_verify: true
 
 profiles:
   # 1. The Sentry (Security - Fast & Strict)
@@ -24,7 +22,6 @@ profiles:
   # 2. The Architect (Planning - Deep & Patient)
   architect:
     active_model: "local-qwen"
-    fallback_model: "cloud-gpt4"
     timeout_ms: 60000
     max_retries: 2
     output_schema: "json_blueprint"
@@ -33,7 +30,6 @@ profiles:
   # 3. The Coder (Generation - Balanced)
   coder:
     active_model: "local-qwen"
-    fallback_model: "cloud-gpt4"
     timeout_ms: 30000
     max_retries: 3
     output_schema: "strict_json"
