@@ -1,4 +1,3 @@
-
 import typer
 import asyncio
 import httpx
@@ -7,9 +6,19 @@ from rich.table import Table
 import nats
 import os
 import sys
+import time
+from uuid import uuid4
 
 # Add SDK path for Protobufs if needed, or use HTTP API where possible
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../sdk/python/src')))
+
+try:
+    from scip.proto import envelope_pb2
+except ImportError as e:
+    # Just warn, don't crash, so other commands work
+    print(f"Warning: Failed to import SCIP protos: {e}")
+    envelope_pb2 = None
+
 
 app = typer.Typer(name="myc", help="Synaptic Injector - Mycelis CLI")
 console = Console()
@@ -81,11 +90,154 @@ def scan():
         console.print(f"❌ Error: {e}")
 
 @app.command()
-def inject(intent: str, payload: str):
-    """Inject a stimulus into the swarm."""
+def think(prompt: str, profile: str = typer.Option("chat", help="Cognitive Profile (coder, chat, logic)")):
+    """Infer a response using the Cognitive Matrix."""
+    payload = {"profile": profile, "prompt": prompt}
+    
+    try:
+        r = httpx.post(f"{API_URL}/api/v1/cognitive/infer", json=payload, timeout=30.0)
+        if r.status_code == 200:
+            data = r.json()
+            # Print meta to stderr (info)
+            console.print(f"[dim italic]Used Model: {data.get('model_used', 'unknown')}[/dim italic]", style="grey50")
+            # Print raw text to stdout
+            print(data.get("text", ""))
+        else:
+            console.print(f"❌ Error {r.status_code}: {r.text}", style="red")
+    except Exception as e:
+        console.print(f"❌ Connection Failed: {e}", style="red")
+
+@app.command()
+def inject(intent: str, payload: str, type: str = "text"):
+    """Inject a stimulus into the swarm (SCIP)."""
+    if not envelope_pb2:
+        console.print("❌ SCIP Protos not found. Run 'inv proto.generate'")
+        return
+
     console.print(f"💉 Injecting [bold]{intent}[/bold]...")
-    # TODO: Implement NATS publish using RelayClient logic
-    console.print("⚠️  Injection requires Protobuf. Using Stub.")
+
+    async def run_inject():
+        try:
+            nc = await nats.connect(NATS_URL)
+            
+            # Construct Envelope
+            env = envelope_pb2.SignalEnvelope()
+            env.trace_id = str(uuid4())
+            env.timestamp = int(time.time() * 1e9)
+            env.sender_id = "user:cli"
+            env.target_id = "broadcast"
+            env.intent = intent
+            env.data_type = envelope_pb2.TEXT_UTF8 if type == "text" else envelope_pb2.BINARY
+            env.payload = payload.encode('utf-8')
+            
+            # Serialize
+            data = env.SerializeToString()
+            
+            # Publish to broad subject
+            subject = f"scip.{intent}"
+            await nc.publish(subject, data)
+            console.print(f"✅ Sent {len(data)} bytes to {subject}")
+            
+            await nc.close()
+        except Exception as e:
+            console.print(f"❌ Error: {e}")
+
+    asyncio.run(run_inject())
+
+@app.command()
+def snoop():
+    """Spy on the Neural Bus (SCIP)."""
+    if not envelope_pb2:
+        console.print("❌ SCIP Protos not found. Run 'inv proto.generate'")
+        return
+
+    console.print("🕵️  Snooping on [bold]scip.>[/bold]...")
+    
+    async def run_snoop():
+        try:
+            nc = await nats.connect(NATS_URL)
+            
+            async def cb(msg):
+                try:
+                    env = envelope_pb2.SignalEnvelope()
+                    env.ParseFromString(msg.data)
+                    
+                    console.print(f"\n[bold cyan]📨 Envelope ({msg.subject}):[/bold cyan]")
+                    console.print(f"  Trace: {env.trace_id}")
+                    console.print(f"  From:  {env.sender_id} -> {env.target_id}")
+                    console.print(f"  Intent: [bold green]{env.intent}[/bold green]")
+                    console.print(f"  Type:   {envelope_pb2.DataType.Name(env.data_type)}")
+                    console.print(f"  Size:   {len(env.payload)} bytes")
+                    if env.data_type == envelope_pb2.TEXT_UTF8:
+                        console.print(f"  Data:   [italic]{env.payload.decode()}[/italic]")
+                except Exception as e:
+                    console.print(f"❌ Malformed Packet: {e}")
+
+            await nc.subscribe("scip.>", cb=cb)
+            
+            # Keep running
+            while True:
+                await asyncio.sleep(1)
+        except Exception as e:
+            console.print(f"❌ NATS Error: {e}")
+
+    try:
+        asyncio.run(run_snoop())
+    except KeyboardInterrupt:
+        console.print("\nStopped.")
+
+@app.command()
+def admin_create(username: str, role: str = "admin"):
+    """Bootstrap the first Admin user (and Identity Schema)."""
+    console.print(f"👑 Bootstrapping Admin: [bold]{username}[/bold]...")
+    
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    
+    # 1. Connect (Try localhost:5432 - assuming Port Forward)
+    # Default creds for local dev (often postgres/postgres or mycelis/password)
+    # We'll try common defaults
+    DSN = os.getenv("PG_DSN", "postgresql://postgres:postgres@localhost:5432/postgres")
+    
+    try:
+        conn = psycopg2.connect(DSN)
+        conn.autocommit = True
+        cur = conn.cursor()
+        console.print("✅ Connected to Database")
+        
+        # 2. Apply Schema
+        schema_path = os.path.join(os.path.dirname(__file__), '../core/internal/identity/schema.sql')
+        if os.path.exists(schema_path):
+            console.print("📜 Applying Identity Schema...")
+            with open(schema_path, 'r') as f:
+                schema_sql = f.read()
+                cur.execute(schema_sql)
+            console.print("✅ Schema Applied")
+        else:
+            console.print(f"⚠️ Schema file not found at {schema_path}")
+            
+        # 3. Create User
+        user_id = str(uuid4())
+        try:
+            cur.execute(
+                "INSERT INTO users (id, username, role) VALUES (%s, %s, %s) ON CONFLICT (username) DO NOTHING",
+                (user_id, username, role)
+            )
+            console.print(f"✅ User '{username}' inserted/verified (ID: {user_id})")
+        except Exception as e:
+            console.print(f"⚠️ Failed to insert user: {e}")
+
+        # 4. Generate Token (Mock for now, normally JWT)
+        # We assume the UI just checks for presence in localStorage, but ideally we return a signed token.
+        # For Minimum Viable Bootstrapper, we return the UUID.
+        console.print(f"\n🔑 [bold green]Session Token:[/bold green] {user_id}")
+        console.print("👉 Copy this to your UI Settings or Local Storage.")
+
+        conn.close()
+        
+    except Exception as e:
+        console.print(f"❌ Database Error: {e}")
+        console.print("[dim]Ensure 'uv run inv k8s.bridge' is running to forward port 5432.[/dim]")
 
 if __name__ == "__main__":
     app()

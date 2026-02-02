@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/router"
@@ -13,16 +14,18 @@ import (
 
 // AdminServer handles governance and system endpoints
 type AdminServer struct {
-	Router *router.Router
-	GK     *governance.Gatekeeper
-	Mem    *memory.Archivist
+	Router    *router.Router
+	GK        *governance.Gatekeeper
+	Mem       *memory.Archivist
+	Cognitive *cognitive.Router
 }
 
-func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Archivist) *AdminServer {
+func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Archivist, cog *cognitive.Router) *AdminServer {
 	return &AdminServer{
-		Router: r,
-		GK:     gk,
-		Mem:    mem,
+		Router:    r,
+		GK:        gk,
+		Mem:       mem,
+		Cognitive: cog,
 	}
 }
 
@@ -35,6 +38,50 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Memory API
 	mux.HandleFunc("/api/v1/memory/stream", s.GetMemoryStream)
+
+	// Cognitive API
+	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
+
+	// Identity API
+	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
+	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
+	mux.HandleFunc("/api/v1/user/settings", s.HandleUpdateSettings)
+}
+
+func respondJSON(w http.ResponseWriter, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		http.Error(w, "JSON Encode Error", http.StatusInternalServerError)
+	}
+}
+
+// POST /api/v1/cognitive/infer
+func (s *AdminServer) handleInfer(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.Cognitive == nil {
+		http.Error(w, "Cognitive Matrix Offline", http.StatusServiceUnavailable)
+		return
+	}
+
+	var req cognitive.InferRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad JSON", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := s.Cognitive.Infer(req)
+	if err != nil {
+		log.Printf("Inference Failed: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
 
 // GET /admin/approvals

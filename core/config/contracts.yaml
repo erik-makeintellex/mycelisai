@@ -1,0 +1,18 @@
+contracts:
+  # Standard Chat Contract (Human <-> Agent)
+  - id: "std.chat"
+    allowed_types: ["TEXT_UTF8"]
+    max_bytes: 4096 # 4KB limit
+    schema: |
+      {"type": "string", "description": "Natural language input"}
+
+  # High-Bandwidth Sensor Contract (Camera -> Vision Agent)
+  - id: "std.vision"
+    allowed_types: ["IMAGE_BINARY"]
+    max_bytes: 5242880 # 5MB limit
+    required_meta: ["resolution", "format"]
+
+  # Telemetry Contract (Rover -> Core)
+  - id: "std.telemetry"
+    allowed_types: ["TENSOR_FLOAT"]
+    shape: [3, 1] # x, y, z

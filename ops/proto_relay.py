@@ -15,7 +15,7 @@ def generate(c):
         "go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest && "
         "protoc --go_out=core --go_opt=module=github.com/mycelis/core "
         "--go-grpc_out=core --go-grpc_opt=module=github.com/mycelis/core "
-        "proto/swarm/v1/swarm.proto"
+        "proto/swarm/v1/swarm.proto proto/envelope.proto"
     )
     
     script_path = ROOT_DIR / "scripts" / "gen_proto_go.sh"
@@ -43,6 +43,25 @@ def generate(c):
         f"proto/swarm/v1/swarm.proto"
     )
     c.run(cmd_py)
+
+    # SCIP Generation
+    # Define vars again just to be safe or use what we defined above? 
+    # Wait, 'scip_out_dir' was defined at top of function but might have been lost in my mental model of the file content. 
+    # Let me check the file content again. Step 2478 showed it WAS NOT defined.
+    # Ah, I see I missed adding the definition in the previous `multi_replace`.
+    
+    scip_out_dir = SDK_DIR / "src/scip/proto"
+    if not scip_out_dir.exists():
+        scip_out_dir.mkdir(parents=True, exist_ok=True)
+
+    cmd_py_scip = (
+        f"uv run --with grpcio-tools --with protobuf -m grpc_tools.protoc "
+        f"-Iproto "
+        f"--python_out={scip_out_dir} "
+        f"--grpc_python_out={scip_out_dir} "
+        f"proto/envelope.proto"
+    )
+    c.run(cmd_py_scip)
 
     # Post-process Python
     grpc_file = out_dir / "swarm" / "v1" / "swarm_pb2_grpc.py"

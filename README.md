@@ -1,129 +1,61 @@
-# Mycelis Service Network
-> **Codename**: "The Conscious Organism"
-> **Phase**: 6.0 (Expansion & Hardening)
-> **Identity**: [`v0.6.0`](VERSION)
-> **Status**: [🟢 Online](http://localhost:3000)
+# Mycelis Cortex V6
 
-## 🚀 Branching Strategy
+**A Multi-Tenant, Cognitive Swarm Orchestrator.**
 
-### 1. The "Immutable Identity"
-Every running container must be traceable to a specific commit SHA.
-* **Format**: `v{MAJOR}.{MINOR}.{PATCH}-{SHORT_SHA}`
-* **Source**: [`VERSION`](VERSION) file + Git SHA.
-* **Example**: `v0.6.0-42f9958`
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V6 introduces the **Cortex Command Console**, a high-density, rigorous operational environment for managing cognitive resources.
 
-### 2. Development Workflow (Branching)
-**Status:** ENFORCED
-All changes must be performed on isolated branches. Direct commits to `main` are prohibited.
+## 🏗️ Architecture
 
-| Branch Type | Prefix | Description | Example |
-| :--- | :--- | :--- | :--- |
-| **Feature** | `feat/` | New functionality or capabilities. | `feat/cli-injector` |
-| **Fix** | `fix/` | Bug repairs or stability patches. | `fix/core-race-condition` |
-| **Chore** | `chore/` | Documentation, tooling, or maintenance. | `chore/update-readme` |
-| **Refactor** | `refactor/` | Code restructuring without behavior change. | `refactor/router-logic` |
+- **Tier 1: Core (Go + Postgres)**
+  - Use `core` service for Identity, Governance, and Cognitive Routing.
+  - **CQA (Cognitive Quality Assurance):** Enforces strict timeouts and schema validation on all LLM calls.
+  - **SCIP (Standardized Cybernetic Interchange Protocol):** Protobuf-based message envelope for all agent communication.
 
-**Workflow**:
-1.  `git checkout -b <prefix>/<name>`
-2.  Implement changes & Verify.
-3.  `git checkout main` -> `git merge <branch>` -> `git push`.
+- **Tier 2: Nervous System (NATS JetStream)**
+  - Real-time event bus (`scip.>`) connecting the Core to the Swarm.
 
-## 🧠 The Vision
-Mycelis is an **Autonomous Neuro-Symbolic Service Network** designed to function as a cohesive cybernetic organism. By unifying infrastructure, state, and intelligence into a single "nervous system," it eliminates the friction of traditional distributed systems.
+- **Tier 3: The Cortex (Next.js)**
+  - **Aero-Light Theme:** High-contrast, strictly typed command console.
+  - **Cognitive Matrix:** Control panel for routing prompts to Local (Ollama) or Cloud (OpenAI) models.
 
-The platform adheres to the **V6 Cortex Architecture**, enforcing:
-- **Biological Unity**: Services act as "cells" with a shared purpose, not isolated microservices.
-- **Immutable Identity**: Strict, cryptographic traceability for every component.
-- **Adaptive Intelligence**: Embedded cognitive loops for self-healing and decision making.
+## 🚀 Getting Started
 
----
-
-## 📚 Documentation Hub
-This README is the **Source of Truth**. Below are the authoritative references for the platform.
-
-### Architecture & Standards
-- 📘 **[The Cortex Blueprint (V6)](myceles_v6_arch.md)**: The active Product Requirement Document and Architecture spec.
-- 📜 **[Release Standard 1.0](#-service-development--release-standard)**: The enforced rules for build, tag, and release.
-- ⚖️ **[Governance Policy](core/config/policy.yaml)**: The "Conscience" defining high-stakes gates.
-- 📝 **[Logging Standard](docs/logging.md)**: The "Memory" structure for events.
-- 🏚️ *[Legacy V5 Arch](mycelist_v5_arch.md)*: (Reference only).
-
-### System Connectivity Map
-| Component | Role | Tech | Documentation |
-| :--- | :--- | :--- | :--- |
-| **[Core](core/)** | **The Brain** | Go | [README](core/README.md) |
-| **[Interface](interface/)** | **The Eyes** | Next.js | [README](interface/README.md) |
-| **[CLI](cli/)** | **The Synapse** | Python/Typer | `myc --help` |
-| **[Ops](ops/)** | **The Builder** | Python (Invoke) | [README](ops/README.md) |
-| **[SDK](sdk/python/)** | **The Nerves** | Python | Standard Library |
-| **[Infra](charts/)** | **The Body** | Helm | [Values](charts/mycelis-core/values.yaml) |
-
----
-
-## Configuration
-
-Configuration is managed via environment variables. Copy `.env.example` to `.env` to customize your local setup.
-
-### Authentication & Secrets
-The following variables control authentication and connectivity:
-- `DB_USER` / `DB_PASSWORD`: Support for PostgreSQL connection.
-- `DB_NAME`: The target database (default: `cortex`).
-- `NATS_URL`: Connection string for the NATS cluster.
-
-See `.env.example` for the full list of configurable options.
-
-## Development
-
-### ⚡ Synaptic Injector (CLI)
-Mycelis includes a headless control plane for rapid interaction.
+### 1. Boot the Infrastructure
 ```bash
-# 1. Install Dependencies
-cd cli && uv sync
-
-# 2. Check Pulse
-uv run python cli/main.py status
-
-# 3. Scan Network
-uv run python cli/main.py scan
+# Start NATS, Postgres, and Core in Kubernetes (KinD)
+uv run inv k8s.up
 ```
 
-### ⚡ Platform Management
-We use `uv` and `invoke` to manage the organism.
-
-#### Quick Start (Orchestration)
-The `dev` namespace provides "One-Click" lifecycle management.
-
+### 2. Bootstrap Identity (The First Login)
+Since V6 enforces RBAC, you must create an Admin user to access the console.
+*(Ensure `inv k8s.bridge` is running if using local CLI)*
 ```bash
-# Power Up: Clusters -> Deps -> Build -> Deploy -> Bridge
-uv run inv dev.up
-
-# Power Down: Destroy Cluster & Cleanup
-uv run inv dev.down
+# Create the first admin user
+uv run python cli/main.py admin-create "admin"
 ```
+*Copy the Session Token output!*
 
-### Manual Control
+### 3. Launch the Cortex Console
 ```bash
-# 1. Initialize Body (Kind Cluster + Postgres + NATS)
-uv run inv k8s.init
-
-# 2. Build & Deploy Brain (Standard 1.0)
-# (Auto-calculates tag -> Builds -> Deploys)
-uv run inv k8s.deploy
-
-# 3. Check Vital Signs
-uv run inv k8s.status
+cd interface
+npm run dev
 ```
+Open [http://localhost:3000](http://localhost:3000).
 
-### Development Access
+### 4. Configure the Brain
+Edit `core/config/brain.yaml` to define your Model Matrix.
+- **Profiles:** `sentry`, `architect`, `coder`.
+- **Policies:** Set `timeout_ms` and `max_retries` per profile.
+
+## 🛠️ Developer Tools
+
+### CLI (`myc`)
+- `myc snoop`: Decode SCIP traffic in real-time.
+- `myc inject <intent> <payload>`: Send signals to the swarm.
+- `myc think <prompt> --profile=coder`: Test the cognitive router.
+
+### Protobuf Generation
+If you modify `proto/envelope.proto`:
 ```bash
-# Open Neural Bridge (Port Forward NATS:4222 & API:8080)
-uv run inv k8s.bridge
-
-# Launch Visual Cortex (UI) -> http://localhost:3000
-uv run inv interface.dev
+uv run inv proto.generate
 ```
-
-### Release Workflow
-1.  **Commit Code**.
-2.  **Run**: `uv run inv k8s.deploy`.
-3.  **Verify**: `uv run inv k8s.status` to confirm the new `IMAGE` tag matches your SHA.

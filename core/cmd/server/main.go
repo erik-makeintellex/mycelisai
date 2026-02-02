@@ -12,6 +12,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/router"
@@ -28,8 +29,18 @@ func main() {
 		natsURL = nats.DefaultURL // nats://localhost:4222
 	}
 
+	// 1a. Load Cognitive Brain
+	brainPath := "core/config/brain.yaml"
+	cogRouter, err := cognitive.NewRouter(brainPath)
+	if err != nil {
+		log.Printf("⚠️ Brain Config not loaded: %v. Cognitive Matrix Disabled.", err)
+		cogRouter = nil
+	} else {
+		log.Println("🧠 Cognitive Matrix Active.")
+	}
+
 	// 1b. Load Governance Policy
-	policyPath := "core/policy/policy.yaml" // Assuming we run from root or handle path
+	policyPath := "core/config/policy.yaml" // Assuming we run from root or handle path
 	// Fix path for container vs local? For now, relative.
 
 	gk, err := governance.NewGatekeeper(policyPath)
@@ -160,7 +171,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Create Admin Server
-	adminSrv := server.NewAdminServer(r, gk, archivist)
+	adminSrv := server.NewAdminServer(r, gk, archivist, cogRouter)
 	adminSrv.RegisterRoutes(mux)
 
 	port := os.Getenv("PORT")

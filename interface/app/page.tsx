@@ -1,61 +1,69 @@
-import Image from "next/image";
-import SystemStatus from "@/components/SystemStatus";
-import ApprovalDeck from "@/components/ApprovalDeck";
-import LogStream from "@/components/LogStream";
+import { Activity, Cpu, HardDrive, Network } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="h-screen w-full bg-slate-900 text-slate-50 p-6 font-mono grid grid-rows-[auto_1fr_400px] gap-6 overflow-hidden">
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+          Operations Dashboard
+        </h1>
+        <div className="flex gap-2">
+          <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200">System Choice: Normal</span>
+        </div>
+      </div>
 
-      {/* 1. Header Area */}
-      <header className="flex justify-between items-center border-b border-slate-800 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="relative w-12 h-12">
-            <Image
-              src="/logo.png"
-              alt="Mycelis Logo"
-              fill
-              className="object-contain"
-              priority
-            />
+      {/* KPI Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <MetricCard title="Active Agents" value="3" icon={BotIcon} trend="+1" />
+        <MetricCard title="Memory Usage" value="42%" icon={HardDrive} trend="Stable" />
+        <MetricCard title="Cognitive Load" value="12%" icon={Cpu} trend="Low" />
+        <MetricCard title="Network Activity" value="1.2kb/s" icon={Network} trend="Idle" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="p-6 rounded-xl border border-zinc-200 bg-white shadow-sm min-h-[300px]">
+          <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4">Live Activity</h3>
+          <div className="flex items-center justify-center h-full text-zinc-400">
+            Map Visualization Placeholder
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              MYCELIS <span className="text-blue-500">CORTEX</span>
-            </h1>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">
-                Neural Infrastructure v3.0
-              </p>
-            </div>
+        </div>
+
+        <div className="p-6 rounded-xl border border-zinc-200 bg-white shadow-sm min-h-[300px]">
+          <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4">Recent Events</h3>
+          <div className="space-y-4">
+            <EventRow time="10:00" msg="System Initialized" type="info" />
+            <EventRow time="10:02" msg="Agent 'Architect' Provisioned" type="success" />
+            <EventRow time="10:05" msg="SCIP Contract Validated" type="success" />
           </div>
         </div>
-        <SystemStatus />
-      </header>
-
-      {/* 2. Middle: Governance Deck */}
-      <section className="min-h-0 flex flex-col">
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-            Governance Control
-          </h3>
-        </div>
-        <div className="flex-1 min-h-0 bg-slate-900/50 rounded-xl border border-slate-800/50 p-1">
-          <ApprovalDeck />
-        </div>
-      </section>
-
-      {/* 3. Bottom: Log Stream */}
-      <section className="min-h-0 flex flex-col">
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">
-          Neural Activity Stream
-        </h3>
-        <div className="flex-1 min-h-0 shadow-2xl shadow-blue-900/10">
-          <LogStream />
-        </div>
-      </section>
-
-    </main>
+      </div>
+    </div>
   );
+}
+
+function MetricCard({ title, value, icon: Icon, trend }: any) {
+  return (
+    <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-zinc-500 uppercase">{title}</span>
+        <Icon className="w-4 h-4 text-zinc-400" />
+      </div>
+      <div className="text-2xl font-bold text-zinc-900">{value}</div>
+      <div className="text-xs text-emerald-600 mt-1">{trend}</div>
+    </div>
+  )
+}
+
+function EventRow({ time, msg, type }: any) {
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="font-mono text-zinc-400 text-xs">{time}</span>
+      <span className={`w-1.5 h-1.5 rounded-full ${type === 'success' ? 'bg-emerald-500' : 'bg-blue-500'}`}></span>
+      <span className="text-zinc-700">{msg}</span>
+    </div>
+  )
+}
+
+function BotIcon(props: any) {
+  return <Activity {...props} />
 }
