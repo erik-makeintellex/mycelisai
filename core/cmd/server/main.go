@@ -15,6 +15,7 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/memory"
+	"github.com/mycelis/core/internal/provisioning"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/server"
 	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
@@ -170,8 +171,11 @@ func main() {
 	// 5. Http Server
 	mux := http.NewServeMux()
 
+	// 5a. Initialize Provisioning Engine
+	provEngine := provisioning.NewEngine(cogRouter)
+
 	// Create Admin Server
-	adminSrv := server.NewAdminServer(r, gk, archivist, cogRouter)
+	adminSrv := server.NewAdminServer(r, gk, archivist, cogRouter, provEngine)
 	adminSrv.RegisterRoutes(mux)
 
 	port := os.Getenv("PORT")
