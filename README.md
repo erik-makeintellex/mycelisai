@@ -5,7 +5,12 @@
 > **Status**: [🟢 Online](http://localhost:3000)
 
 ## 🧠 The Vision
-Mycelis is not a distributed system; it is a single, cohesive cybernetic organism extending the user's will. It adheres to the **V6 Cortex Architecture** and enforces strict **Immutable Identity** for all cells.
+Mycelis is an **Autonomous Neuro-Symbolic Service Network** designed to function as a cohesive cybernetic organism. By unifying infrastructure, state, and intelligence into a single "nervous system," it eliminates the friction of traditional distributed systems.
+
+The platform adheres to the **V6 Cortex Architecture**, enforcing:
+- **Biological Unity**: Services act as "cells" with a shared purpose, not isolated microservices.
+- **Immutable Identity**: Strict, cryptographic traceability for every component.
+- **Adaptive Intelligence**: Embedded cognitive loops for self-healing and decision making.
 
 ---
 
