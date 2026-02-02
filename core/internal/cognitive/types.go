@@ -24,6 +24,7 @@ type ProviderConfig struct {
 // LLMProvider is the universal contract for all AI backends
 type LLMProvider interface {
 	Infer(ctx context.Context, prompt string, opts InferOptions) (*InferResponse, error)
+	Probe(ctx context.Context) (bool, error) // Returns true if healthy/reachable
 }
 
 type InferOptions struct {

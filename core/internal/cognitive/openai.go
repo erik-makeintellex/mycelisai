@@ -67,3 +67,16 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 		Provider:  "openai",
 	}, nil
 }
+
+func (a *OpenAIAdapter) Probe(ctx context.Context) (bool, error) {
+	// Simple connectivity check: List Models or empty chat?
+	// Listing models is safer/cheaper usually, but might return huge list.
+	// Let's try to send an empty/hello message to check Auth?
+	// Or use ListModels if available. sashabaranov has ListModels.
+
+	_, err := a.client.ListModels(ctx)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}

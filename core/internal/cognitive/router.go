@@ -71,6 +71,54 @@ func NewRouter(configPath string) (*Router, error) {
 		r.Adapters[id] = adapter
 	}
 
+	// 4. Discovery & Grading
+	sd := NewServiceDiscovery(r.Adapters)
+	discoveryResults := sd.DiscoverAll(context.Background())
+
+	// Log Discovery Results
+	fmt.Println("--- Cognitive Discovery Report ---")
+	for id, res := range discoveryResults {
+		// Grade the model based on Config ModelID (we don't have it in res yet, need to look up)
+		modelID := config.Providers[id].ModelID
+		tier := GradeModel(modelID)
+
+		status := "✅ Online"
+		if !res.Healthy {
+			status = fmt.Sprintf("❌ Offline (%v)", res.Error)
+		}
+		fmt.Printf("[%s] Model: %s (Tier %s) -> %s\n", id, modelID, tier, status)
+	}
+	fmt.Println("----------------------------------")
+
+	// 5. Auto-Config (Profiles)
+	// For each profile, check if its provider is healthy. If not, fallback.
+	for profileName, providerID := range config.Profiles {
+		res, exists := discoveryResults[providerID]
+		if !exists {
+			fmt.Printf("⚠️ Profile '%s' points to unknown provider '%s'\n", profileName, providerID)
+			continue
+		}
+
+		if !res.Healthy {
+			fmt.Printf("⚠️ Profile '%s' provider '%s' is DOWN. Attempting fallback...\n", profileName, providerID)
+
+			// Simple Fallback: Find FIRST healthy provider
+			// Improvement: Find healthy provider with matching Tier requirement (TODO)
+			fallbackFound := false
+			for fbID, fbRes := range discoveryResults {
+				if fbRes.Healthy {
+					fmt.Printf("🔄 Re-routing '%s' to '%s'\n", profileName, fbID)
+					r.Config.Profiles[profileName] = fbID
+					fallbackFound = true
+					break
+				}
+			}
+			if !fallbackFound {
+				fmt.Printf("🔥 CRITICAL: No healthy providers found for '%s'.\n", profileName)
+			}
+		}
+	}
+
 	return r, nil
 }
 
