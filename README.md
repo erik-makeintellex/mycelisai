@@ -24,6 +24,19 @@ Mycelis V6 defaults to a **Single Local Model** architecture for privacy and air
 - **Default Model:** `qwen2.5-coder:7b-instruct` (via Ollama).
 - **Fallback:** None (Strict Reliability).
 
+### 🛠️ Developer Orchestration
+Run the following commands from the root directory:
+
+| Command | Description |
+| :--- | :--- |
+| `inv core.build` | Compiles the Go binary and builds the Docker image. |
+| `inv core.test` | Runs Unit Tests. |
+| `inv core.run` | **(New)** Runs the Core locally (Native). |
+| `inv core.restart` | **(New)** Restarts the Core (Kill + Run). |
+| `inv core.smoke` | **(New)** Runs Governance Smoke Tests against local Core. |
+| `inv k8s.status` | Checks the status of the Kubernetes cluster. |
+| `inv k8s.deploy` | Deploys the Helm chart to the local cluster. |
+
 ### Hardware Grading
 | Tier | RAM | Supported Models | Use Case |
 | :--- | :--- | :--- | :--- |
