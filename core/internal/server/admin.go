@@ -8,24 +8,27 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/memory"
+	"github.com/mycelis/core/internal/provisioning"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/state"
 )
 
 // AdminServer handles governance and system endpoints
 type AdminServer struct {
-	Router    *router.Router
-	GK        *governance.Gatekeeper
-	Mem       *memory.Archivist
-	Cognitive *cognitive.Router
+	Router      *router.Router
+	GK          *governance.Gatekeeper
+	Mem         *memory.Archivist
+	Cognitive   *cognitive.Router
+	Provisioner *provisioning.Engine
 }
 
-func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Archivist, cog *cognitive.Router) *AdminServer {
+func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Archivist, cog *cognitive.Router, prov *provisioning.Engine) *AdminServer {
 	return &AdminServer{
-		Router:    r,
-		GK:        gk,
-		Mem:       mem,
-		Cognitive: cog,
+		Router:      r,
+		GK:          gk,
+		Mem:         mem,
+		Cognitive:   cog,
+		Provisioner: prov,
 	}
 }
 
@@ -46,6 +49,10 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUpdateSettings)
+
+	// Provisioning API
+	mux.HandleFunc("/api/v1/provision/draft", s.HandleProvisionDraft)
+	mux.HandleFunc("/api/v1/provision/deploy", s.HandleProvisionDeploy)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {
