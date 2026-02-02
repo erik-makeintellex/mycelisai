@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package scip;
+
+option go_package = "github.com/mycelis/core/pkg/scip";
+
+message SignalEnvelope {
+  // 1. HEADER (Context & Routing)
+  string trace_id = 1;        // UUID for tracking flows across the swarm
+  int64 timestamp = 2;        // UTC Unix Nanoseconds
+  string sender_id = 3;       // e.g., "agent:camera-01" or "user:tier-0"
+  string target_id = 4;       // e.g., "agent:vision-model"
+  string intent = 5;          // e.g., "ingest.frame" or "chat.query"
+
+  // 2. SECURITY (Hardened Hull)
+  string signature = 6;       // HMAC-SHA256 of payload (Anti-Tamper)
+  map<string, string> meta = 7; // Lightweight context (e.g., "priority": "high")
+
+  // 3. THE PAYLOAD (Polymorphic Data)
+  DataType data_type = 8;     // Enum: TEXT, TENSOR, IMAGE_REF, BINARY
+  bytes payload = 9;          // The actual data (Compressed)
+}
+
+enum DataType {
+  TEXT_UTF8 = 0;      // Standard Chat / JSON
+  TENSOR_FLOAT = 1;   // Sensor Arrays (IMU, Audio embeddings)
+  IMAGE_BINARY = 2;   // Raw JPG/PNG bytes
+  STATE_DIFF = 3;     // CRDT / Delta updates
+}

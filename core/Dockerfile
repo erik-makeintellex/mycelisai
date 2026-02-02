@@ -28,6 +28,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server/main.go
 FROM gcr.io/distroless/base-debian12
 
 COPY --from=builder /server /server
-COPY --from=builder /app/core/policy /core/policy
+COPY --from=builder /app/core/config /core/config
 
 ENTRYPOINT ["/server"]

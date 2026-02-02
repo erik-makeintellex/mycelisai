@@ -1,0 +1,48 @@
+models:
+  - id: "local-qwen"
+    provider: "ollama"
+    endpoint: "http://localhost:11434"
+    name: "qwen2.5:7b"
+    auth_key_env: ""
+
+  - id: "cloud-gpt4"
+    provider: "openai"
+    endpoint: "https://api.openai.com/v1"
+    name: "gpt-4-turbo"
+    auth_key_env: "OPENAI_API_KEY"
+
+profiles:
+  # 1. The Sentry (Security - Fast & Strict)
+  sentry:
+    active_model: "local-qwen"
+    timeout_ms: 2000
+    max_retries: 0
+    output_schema: "boolean"
+    compression: "high"
+    temperature: 0.1
+
+  # 2. The Architect (Planning - Deep & Patient)
+  architect:
+    active_model: "local-qwen"
+    fallback_model: "cloud-gpt4"
+    timeout_ms: 60000
+    max_retries: 2
+    output_schema: "json_blueprint"
+    temperature: 0.7
+
+  # 3. The Coder (Generation - Balanced)
+  coder:
+    active_model: "local-qwen"
+    fallback_model: "cloud-gpt4"
+    timeout_ms: 30000
+    max_retries: 3
+    output_schema: "strict_json"
+    temperature: 0.2
+
+  # 4. Standard Chat (Interactive)
+  chat:
+    active_model: "local-qwen"
+    timeout_ms: 10000
+    max_retries: 1
+    output_schema: ""
+    temperature: 0.8
