@@ -44,6 +44,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Cognitive API
 	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
+	mux.HandleFunc("/api/v1/cognitive/matrix", s.handleGetMatrix) // [NEW]
 
 	// Identity API
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
@@ -60,35 +61,6 @@ func respondJSON(w http.ResponseWriter, data interface{}) {
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, "JSON Encode Error", http.StatusInternalServerError)
 	}
-}
-
-// POST /api/v1/cognitive/infer
-func (s *AdminServer) handleInfer(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if s.Cognitive == nil {
-		http.Error(w, "Cognitive Matrix Offline", http.StatusServiceUnavailable)
-		return
-	}
-
-	var req cognitive.InferRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Bad JSON", http.StatusBadRequest)
-		return
-	}
-
-	resp, err := s.Cognitive.Infer(req)
-	if err != nil {
-		log.Printf("Inference Failed: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
 }
 
 // GET /admin/approvals

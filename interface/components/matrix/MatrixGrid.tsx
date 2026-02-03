@@ -1,54 +1,70 @@
 "use client";
 
-import { useState } from "react";
-import { DataTable } from "./data-table";
-import { columns, CognitiveProfile } from "./columns";
-import { BrainCircuit } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Brain, Cpu, Zap } from "lucide-react";
 
-// Mock Data for MVP
-const MOCK_DATA: CognitiveProfile[] = [
-    {
-        id: "coder",
-        activeModel: "qwen2.5:7b",
-        provider: "ollama",
-        status: "online",
-        costPerTk: "0.00",
-        temperature: 0.1
-    },
-    {
-        id: "chat",
-        activeModel: "gpt-4-turbo",
-        provider: "openai",
-        status: "online",
-        costPerTk: "$0.03",
-        temperature: 0.7
-    },
-    {
-        id: "logic",
-        activeModel: "deepseek-r1",
-        provider: "openai",
-        status: "offline",
-        costPerTk: "$0.005",
-        temperature: 0.0
-    }
-]
+interface MatrixConfig {
+    profiles: Record<string, string>; // profile -> providerID
+    providers: Record<string, {
+        type: string;
+        model_id: string;
+        endpoint?: string;
+    }>;
+}
 
-export function MatrixGrid() {
-    const [data] = useState<CognitiveProfile[]>(MOCK_DATA);
+export default function MatrixGrid() {
+    const [config, setConfig] = useState<MatrixConfig | null>(null);
+
+    useEffect(() => {
+        fetch("/api/v1/cognitive/matrix")
+            .then(res => res.json())
+            .then(setConfig)
+            .catch(console.error);
+    }, []);
+
+    if (!config) return <div className="p-4 text-xs text-slate-500">Loading Matrix...</div>;
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                        <BrainCircuit className="text-emerald-500" />
-                        Cognitive Matrix
-                    </h2>
-                    <p className="text-zinc-500">Manage neural resources and model routing.</p>
-                </div>
-            </div>
+        <div className="p-4 bg-[#0b101a] border border-slate-800 rounded-xl h-full flex flex-col">
+            <h3 className="text-xs font-bold text-slate-400 mb-4 flex items-center gap-2">
+                <Brain size={12} className="text-purple-500" />
+                COGNITIVE_MATRIX
+            </h3>
 
-            <DataTable columns={columns} data={data} />
+            <div className="space-y-4">
+                {Object.entries(config.profiles).map(([profile, providerID]) => {
+                    const provider = config.providers[providerID];
+                    if (!provider) return null;
+
+                    return (
+                        <div key={profile} className="bg-slate-900 border border-slate-800 rounded-lg p-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-purple-500/10 text-purple-400 rounded-md">
+                                    <Zap size={14} />
+                                </div>
+                                <div>
+                                    <div className="text-xs font-bold text-slate-200 capitalize">{profile}</div>
+                                    <div className="text-[10px] text-slate-500">Profile</div>
+                                </div>
+                            </div>
+
+                            <div className="h-px bg-slate-800 flex-1 mx-4 relative">
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-slate-600 rounded-full" />
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                    <div className="text-xs font-bold text-slate-200">{provider.model_id}</div>
+                                    <div className="text-[10px] text-slate-500">{provider.type} ({providerID})</div>
+                                </div>
+                                <div className="p-2 bg-blue-500/10 text-blue-400 rounded-md">
+                                    <Cpu size={14} />
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
-    )
+    );
 }

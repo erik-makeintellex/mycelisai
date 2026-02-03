@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { User, Users, BrainCircuit, Settings, Shield } from "lucide-react";
-import { MatrixGrid } from "@/components/matrix/MatrixGrid";
+import MatrixGrid from "@/components/matrix/MatrixGrid";
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState("profile");

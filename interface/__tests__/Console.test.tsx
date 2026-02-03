@@ -2,39 +2,17 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { Console } from '../components/operator/Console'
 import { describe, it, expect, vi } from 'vitest'
 
-// Mock useChat
-vi.mock('@ai-sdk/react', () => ({
-    useChat: () => ({
-        messages: [
-            { id: '1', role: 'user', content: 'Status report' },
-            { id: '2', role: 'assistant', content: 'Systems nominal.' }
-        ],
-        input: '',
-        handleInputChange: vi.fn(),
-        handleSubmit: vi.fn(),
-        isLoading: false
-    })
-}))
-
-// Mock scrollIntoView
-window.HTMLElement.prototype.scrollIntoView = vi.fn()
-
-
-describe('Operator Console', () => {
+// Stubbed Console Test for Maintenance Mode
+describe('Operator Console (Stubbed)', () => {
     it('renders in minimized state initially', () => {
         render(<Console />)
-        expect(screen.getByText('Operator Console')).toBeDefined()
-        // Content should not be visible
-        expect(screen.queryByText('Status report')).toBeNull()
+        expect(screen.getByText('Operator Console (Offline)')).toBeDefined()
     })
 
-    it('expands when clicked', () => {
+    it('shows maintenance message when expanded', () => {
         render(<Console />)
-        const header = screen.getByText('Operator Console')
+        const header = screen.getByText('Operator Console (Offline)')
         fireEvent.click(header)
-
-        // Content should now be visible
-        expect(screen.getByText('Status report')).toBeDefined()
-        expect(screen.getByText('Systems nominal.')).toBeDefined()
+        expect(screen.getByText('Console currently disabled for maintenance.')).toBeDefined()
     })
 })

@@ -35,6 +35,10 @@ func (m *MockProvider) Infer(ctx context.Context, prompt string, opts InferOptio
 	return &InferResponse{Text: "default response", ModelUsed: "mock-model", Provider: "mock"}, nil
 }
 
+func (m *MockProvider) Probe(ctx context.Context) (bool, error) {
+	return true, nil
+}
+
 // --- Tests ---
 
 func setupRouter() *Router {
