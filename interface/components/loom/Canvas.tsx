@@ -10,17 +10,18 @@ import ReactFlow, {
     addEdge,
     Connection,
     Edge,
+    Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-const initialNodes = [
+const initialNodes: Node[] = [
     { id: '1', position: { x: 0, y: 0 }, data: { label: 'Mycelis Core' }, type: 'input' },
     { id: '2', position: { x: 0, y: 100 }, data: { label: 'Active Agent Loop' } },
 ];
-const initialEdges = [{ id: 'e1-2', source: '1', target: '2', animated: true }];
+const initialEdges: Edge[] = [{ id: 'e1-2', source: '1', target: '2', animated: true }];
 
 export function Canvas() {
-    const [nodes, onNodesChange] = useNodesState(initialNodes);
+    const [nodes, , onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
     const onConnect = useCallback(

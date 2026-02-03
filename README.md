@@ -17,6 +17,7 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 - **Tier 3: The Cortex (Next.js)**
   - **Aero-Light Theme:** High-contrast, strictly typed command console.
   - **Cognitive Matrix:** Control panel for routing prompts.
+  - **Telemetry Dashboard:** Real-time observability (Logs, Agents) at `/dashboard`.
 
 ## 📚 Documentation Hub
 | Context | Resource | Description |
