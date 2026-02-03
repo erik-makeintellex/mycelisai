@@ -1,5 +1,5 @@
 from invoke import Collection
-from ops import core, k8s, proto_relay, misc, interface, dev
+from ops import core, k8s, proto_relay, misc, interface
 
 ns = Collection()
 ns.add_collection(core.ns)
@@ -10,7 +10,7 @@ ns.add_collection(proto_relay.ns_relay)
 ns.add_collection(misc.ns_clean)
 ns.add_collection(misc.ns_team)
 ns.add_collection(interface.ns)
-ns.add_collection(dev.dev_ns)
+
 
 
 

@@ -30,7 +30,28 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
+            - name: NATS_URL
+              value: "nats://{{ .Release.Name }}-nats:4222"
+            - name: DB_HOST
+              value: "{{ .Release.Name }}-postgresql"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgresql-secret
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgresql-secret
+                  key: postgres-password
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgresql-secret
+                  key: postgres-db
+            {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: tmp-volume
               mountPath: /tmp
