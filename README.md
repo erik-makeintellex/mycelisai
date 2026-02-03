@@ -18,6 +18,24 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
   - **Aero-Light Theme:** High-contrast, strictly typed command console.
   - **Cognitive Matrix:** Control panel for routing prompts.
 
+## 📚 Documentation Hub
+| Context | Resource | Description |
+| :--- | :--- | :--- |
+| **Architecture** | [The Archivist](docs/architecture/DIRECTIVE_ARCHIVIST.md) | Event Store & Memory Architecture Specs. |
+| **Governance** | [Gatekeeper Protocol](docs/governance.md) | Policy enforcement, approvals, and security boundaries. |
+| **Telemetry** | [Logging Schema](docs/logging.md) | SCIP Log structure and centralized observability. |
+| **Testing** | [Verification Suite](docs/TESTING.md) | Unit, Integration, and Smoke Testing protocols. |
+| **AI Providers** | [Provider Guide](docs/PROVIDERS.md) | LLM configuration (Ollama, OpenAI, Anthropic). |
+| **Core API** | [Core Specs](core/README.md) | Go Service architecture and internal packages. |
+| **CLI** | [Synaptic Injector](cli/README.md) | `myc` command-line tool usage. |
+| **Interface** | [Cortex UI](interface/README.md) | Next.js Frontend architecture. |
+
+### 🔑 Key Configurations
+- **Brain (Models):** `core/config/brain.yaml`
+- **Policy (Rules):** `core/config/policy.yaml`
+- **Secrets:** `.env` (See `.env.example`)
+
+
 ## 🧠 Cognitive Architecture (Default)
 
 Mycelis V6 defaults to a **Single Local Model** architecture for privacy and air-gapped readiness.
