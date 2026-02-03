@@ -130,3 +130,20 @@ go test ./internal/cognitive/...
 # Run Integration Tests (Real Ollama)
 go test -v -tags=integration ./tests/...
 ```
+
+## 🌲 Branching Strategy
+
+Mycelis follows a strict **Trunk-Based Development** workflow with ephemeral feature branches.
+
+| Branch Type | Prefix | Example | Description |
+| :--- | :--- | :--- | :--- |
+| **Production** | `main` | `main` | Stable, deployable code. All PRs must pass CI. |
+| **Feature** | `feat/` | `feat/neural-router` | New capabilities or substantial changes. |
+| **Fix** | `fix/` | `fix/memory-leak` | patches for bugs or regression. |
+| **Chore** | `chore/` | `chore/infra-reset` | Maintenance, dependencies, or refactoring. |
+| **Documentation** | `docs/` | `docs/api-spec` | Documentation-only updates. |
+
+### Protocol:
+1.  **Branch off `main`:** Always start fresh.
+2.  **Commit Often:** Use conventional commits (e.g., `feat: add gatekeeper`).
+3.  **Merge via Squash:** Keep history linear and clean.
