@@ -31,17 +31,8 @@ securityContext:
   capabilities:
     drop: ["ALL"]
 
-env:
-  - name: NATS_URL
-    value: "nats://mycelis-core-nats:4222"
-  - name: DB_HOST
-    value: "mycelis-core-postgresql"
-  - name: DB_USER
-    value: "mycelis"
-  - name: DB_PASSWORD
-    value: "password"
-  - name: DB_NAME
-    value: "cortex"
+# Environment variables (Extras)
+env: []
 
 # NATS JetStream Configuration
 nats:
@@ -70,14 +61,16 @@ nats:
 # PostgreSQL Configuration (Bitnami)
 # PostgreSQL Configuration (Bitnami)
 postgresql:
-  enabled: true
+  enabled: false
   image:
-    tag: "16.1.0-debian-11-r12"
+    registry: docker.io
+    repository: pgvector/pgvector
+    tag: "pg16"
   auth:
-    postgresPassword: "password"
-    username: "mycelis"
-    password: "password"
-    database: "cortex"
+    postgresPassword: ""
+    username: ""
+    password: ""
+    database: ""
   primary:
     resources:
       requests:
@@ -89,3 +82,10 @@ postgresql:
     persistence:
       enabled: true
       size: 1Gi
+    podSecurityContext:
+      fsGroup: 999
+      runAsUser: 999
+    containerSecurityContext:
+      runAsUser: 999
+      readOnlyRootFilesystem: false
+      allowPrivilegeEscalation: true

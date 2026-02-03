@@ -26,7 +26,7 @@ def build(c):
     Returns the calculated TAG.
     """
     tag = get_version(c)
-    print(f"📦 Building Artifact: mycelis/core:{tag}")
+    print(f"Building Artifact: mycelis/core:{tag}")
     
     # 1. Build Go Binary
     print("   Compiling Go Binary...")
@@ -40,7 +40,7 @@ def build(c):
     
     # 3. Dev Tagging (Warning)
     c.run(f"docker tag mycelis/core:{tag} mycelis/core:latest")
-    print("⚠️  Local 'latest' tag created for debugging only. Do NOT push to production.")
+    print("WARNING: Local 'latest' tag created for debugging only. Do NOT push to production.")
     
     return tag
 
@@ -49,7 +49,7 @@ def run(c):
     """
     Run the Core Service locally (Native).
     """
-    print("🚀 Starting Mycelis Core (Native)...")
+    print("Starting Mycelis Core (Native)...")
     # Use Popen or just run? run blocks.
     # We want it to run in foreground for logs?
     # Or background? Usually 'run' implies foreground in a separate terminal or blocking.
@@ -65,7 +65,7 @@ def stop(c):
     """
     Stop the Core Service (Kill).
     """
-    print("🛑 Stopping Core...")
+    print("Stopping Core...")
     if is_windows():
         c.run("taskkill /F /IM server.exe", warn=True)
         c.run("taskkill /F /IM core.exe", warn=True) # Handle legacy naming
@@ -78,7 +78,7 @@ def restart(c):
     """
     Restart the Core Service (Kill + Run).
     """
-    print("♻️  Restarting Core...")
+    print("Restarting Core...")
     stop(c)
     run(c)
 
@@ -87,7 +87,7 @@ def smoke(c):
     """
     Run Governance Smoke Tests (Go).
     """
-    print("🧪 Running Smoke Tests...")
+    print("Running Smoke Tests...")
     with c.cd(str(CORE_DIR)):
         c.run("go run ./cmd/smoke/main.go")
 

@@ -34,8 +34,10 @@ Run the following commands from the root directory:
 | `inv core.run` | **(New)** Runs the Core locally (Native). |
 | `inv core.restart` | **(New)** Restarts the Core (Kill + Run). |
 | `inv core.smoke` | **(New)** Runs Governance Smoke Tests against local Core. |
+| `inv k8s.reset` | **(New)** Full Infrastructure Reset (Teardown + Init + Deploy). |
 | `inv k8s.status` | Checks the status of the Kubernetes cluster. |
 | `inv k8s.deploy` | Deploys the Helm chart to the local cluster. |
+| `inv k8s.bridge` | Opens ports for NATS, API, and Postgres. |
 
 ### Hardware Grading
 | Tier | RAM | Supported Models | Use Case |
@@ -48,10 +50,20 @@ Run the following commands from the root directory:
 
 ## 🚀 Getting Started
 
-### 1. Boot the Infrastructure
+### 1. Configure Secrets
+Ensure your `.env` file exists and contains the necessary credentials:
 ```bash
-# Start NATS, Postgres, and Core in Kubernetes (KinD)
-uv run inv k8s.up
+cp .env.example .env
+# Edit .env to set POSTGRES_USER, POSTGRES_PASSWORD, etc.
+```
+
+### 2. Boot the Infrastructure
+```bash
+# Full System Reset (Cluster + Core + DB)
+uv run inv k8s.reset
+
+# Open Development Bridge (Required for CLI/UI)
+uv run inv k8s.bridge
 ```
 
 ### 2. Bootstrap Identity (The First Login)
