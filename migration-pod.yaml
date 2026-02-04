@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: migration-runner
+  namespace: mycelis
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+  containers:
+    - name: runner
+      image: postgres:alpine
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsNonRoot: true
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+      env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-creds
+              key: password
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "Starting Secure Migration..."
+          psql -h mycelis-core-postgresql -U mycelis -d cortex -f /migrations/001_init_memory.sql
+          psql -h mycelis-core-postgresql -U mycelis -d cortex -f /migrations/002_schema_v6.up.sql
+          psql -h mycelis-core-postgresql -U mycelis -d cortex -f /migrations/003_mission_hierarchy.up.sql
+          psql -h mycelis-core-postgresql -U mycelis -d cortex -f /migrations/004_registry.up.sql
+          echo "MIGRATION SUCCESS"
+      volumeMounts:
+        - name: scripts
+          mountPath: /migrations
+  volumes:
+    - name: scripts
+      configMap:
+        name: migration-scripts
