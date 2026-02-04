@@ -1,8 +1,15 @@
-# Mycelis Cortex V6
+# Mycelis Cortex V6.1 (Transitioning)
 
-**A Multi-Tenant, Cognitive Swarm Orchestrator.**
+**The Recursive Swarm Operating System.**
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V6 introduces the **Cortex Command Console**, a high-density, rigorous operational environment for managing cognitive resources.
+> [!IMPORTANT]
+> **MASTER STATE AUTHORITY**
+> The Single Source of Truth for the project state, architectural delta, and immediate goals is:
+> **[mycelis-6-1-0-stable.md](mycelis-6-1-0-stable.md)**
+>
+> **Agents & Humans:** Always consult the Master State document before making architectural decisions. The README provides general usage instructions, but the Master State defines "What is True" for the current version.
+
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V6.1 introduces the **Recursive Hierarchy**, **Registry**, and **Iron Dome Security**.
 
 ## 🏗️ Architecture
 
@@ -13,6 +20,10 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 
 - **Tier 2: Nervous System (NATS JetStream)**
   - Real-time event bus (`scip.>`) connecting the Core to the Swarm.
+
+- **Tier 2.5: Iron Dome & Registry**
+  - **Registry:** Centralized database for Connectors and Blueprints.
+  - **Iron Dome:** Security layer executing agents as `User 10001` with `ReadOnlyRootFilesystem` and strict `NetworkPolicies`.
 
 - **Tier 3: The Cortex (Next.js)**
   - **Aero-Light Theme:** High-contrast, strictly typed command console.
@@ -60,6 +71,9 @@ Run the following commands from the root directory:
 | `inv k8s.status` | Checks the status of the Kubernetes cluster. |
 | `inv k8s.deploy` | Deploys the Helm chart to the local cluster. |
 | `inv k8s.bridge` | Opens ports for NATS, API, and Postgres. |
+
+> [!NOTE]
+> **Secure Migrations:** Database migrations are applied via a hardened ephemeral pod (`migration-runner`) enforcing Iron Dome standards (User 10001, ReadOnlyRoot). Do not run manual `psql` unless necessary.
 
 ### Hardware Grading
 | Tier | RAM | Supported Models | Use Case |

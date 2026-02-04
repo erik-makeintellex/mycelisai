@@ -1,0 +1,54 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-registry-strict
+  namespace: mycelis
+spec:
+  podSelector:
+    matchLabels:
+      app: registry
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from core-api (Admin)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mycelis-core # Helm chart standard label
+      ports:
+        - protocol: TCP
+          port: 8080 # Assuming registry port
+    # Allow from consul-service (Negotiator) - Placeholder if not exists
+    - from:
+        - podSelector:
+            matchLabels:
+              app: consul
+
+  egress:
+    # Allow to postgres (DB)
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to kubernetes-api (To spawn connectors)
+    - to:
+        - ipBlock:
+            cidr: 10.96.0.1/32
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
