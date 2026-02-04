@@ -9,6 +9,7 @@ import (
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/provisioning"
+	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/state"
 )
@@ -20,15 +21,17 @@ type AdminServer struct {
 	Mem         *memory.Archivist
 	Cognitive   *cognitive.Router
 	Provisioner *provisioning.Engine
+	Registry    *registry.Service
 }
 
-func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Archivist, cog *cognitive.Router, prov *provisioning.Engine) *AdminServer {
+func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Archivist, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service) *AdminServer {
 	return &AdminServer{
 		Router:      r,
 		GK:          gk,
 		Mem:         mem,
 		Cognitive:   cog,
 		Provisioner: prov,
+		Registry:    reg,
 	}
 }
 
@@ -54,6 +57,29 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Provisioning API
 	mux.HandleFunc("/api/v1/provision/draft", s.HandleProvisionDraft)
 	mux.HandleFunc("/api/v1/provision/deploy", s.HandleProvisionDeploy)
+
+	// Registry API
+	mux.HandleFunc("/api/v1/registry/templates", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			s.handleListTemplates(w, r)
+		} else if r.Method == "POST" {
+			s.handleRegisterTemplate(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	// Wildcard matching for connectors? Mux doesn't support wildcards well in stdlib 1.21- (but Go 1.22 does).
+	// Assuming Go 1.22+ "POST /api/v1/teams/{id}/connectors".
+	// Since we are using basic mux, we might rely on prefix matching if we register "/api/v1/teams/"
+	// But HandleTeams is already on "/api/v1/teams".
+	// We need to be careful with overlaps.
+	// Let's register a specific path for connectors if possible, or handle inside HandleTeams?
+	// HandleTeams probably handles GET /teams.
+	// Let's register "/api/v1/teams/" as a prefix catcher if needed, OR just rely on specific pattern if Go 1.22.
+	// Go 1.25 is in go.mod. So we HAVE path params!
+
+	mux.HandleFunc("POST /api/v1/teams/{id}/connectors", s.handleInstallConnector)
+	mux.HandleFunc("GET /api/v1/teams/{id}/wiring", s.handleGetWiring)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {

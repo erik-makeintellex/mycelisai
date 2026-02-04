@@ -18,12 +18,15 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
   - **Aero-Light Theme:** High-contrast, strictly typed command console.
   - **Cognitive Matrix:** Control panel for routing prompts.
   - **Telemetry Dashboard:** Real-time observability (Logs, Agents) at `/dashboard`.
+  - **Registry & Marketplace:** Catalog for installing Connectors (`/marketplace`) and Blueprints.
+  - **Neural Wiring:** Visual signal graph (`/wiring`) of input/output data flows.
 
 ## 📚 Documentation Hub
 | Context | Resource | Description |
 | :--- | :--- | :--- |
 | **Architecture** | [The Archivist](docs/architecture/DIRECTIVE_ARCHIVIST.md) | Event Store & Memory Architecture Specs. |
 | **Governance** | [Gatekeeper Protocol](docs/governance.md) | Policy enforcement, approvals, and security boundaries. |
+| **Registry** | [The Registry](core/internal/registry/README.md) | Connector Marketplace and Wiring Graph specs. |
 | **Telemetry** | [Logging Schema](docs/logging.md) | SCIP Log structure and centralized observability. |
 | **Testing** | [Verification Suite](docs/TESTING.md) | Unit, Integration, and Smoke Testing protocols. |
 | **AI Providers** | [Provider Guide](docs/PROVIDERS.md) | LLM configuration (Ollama, OpenAI, Anthropic). |

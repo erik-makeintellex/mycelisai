@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/provisioning"
+	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/server"
 	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
@@ -171,11 +173,27 @@ func main() {
 	// 5. Http Server
 	mux := http.NewServeMux()
 
-	// 5a. Initialize Provisioning Engine
+	// 5a. Initialize Registry Service
+	// We create a separate connection for Registry
+	regDB, err := sql.Open("pgx", dbURL)
+	var regService *registry.Service
+	if err != nil {
+		log.Printf("⚠️ Registry DB Connection Failed: %v", err)
+	} else {
+		// Ping to verify
+		if err := regDB.Ping(); err != nil {
+			log.Printf("⚠️ Registry DB Ping Failed: %v", err)
+		} else {
+			regService = registry.NewService(regDB)
+			log.Println("📋 Registry Service Active.")
+		}
+	}
+
+	// 5b. Initialize Provisioning Engine
 	provEngine := provisioning.NewEngine(cogRouter)
 
 	// Create Admin Server
-	adminSrv := server.NewAdminServer(r, gk, archivist, cogRouter, provEngine)
+	adminSrv := server.NewAdminServer(r, gk, archivist, cogRouter, provEngine, regService)
 	adminSrv.RegisterRoutes(mux)
 
 	port := os.Getenv("PORT")
