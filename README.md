@@ -15,6 +15,7 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 
 - **Tier 1: Core (Go + Postgres)**
   - Use `core` service for Identity, Governance, and Cognitive Routing.
+  - **Bootstrap Service:** Listens for NATS hardware announcements (`swarm.bootstrap.announce`) and registers new nodes (`005_nodes`).
   - **CQA (Cognitive Quality Assurance):** Enforces strict timeouts and schema validation on all LLM calls.
   - **SCIP (Standardized Cybernetic Interchange Protocol):** Protobuf-based message envelope for all agent communication.
 
@@ -23,10 +24,19 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 
 - **Tier 2.5: Iron Dome & Registry**
   - **Registry:** Centralized database for Connectors and Blueprints.
-  - **Iron Dome:** Security layer executing agents as `User 10001` with `ReadOnlyRootFilesystem` and strict `NetworkPolicies`.
+  - **Iron Dome:** Security layer enforcing NSA/CIS Hardening standards:
+    - **Non-Root Execution:** Agents run as `User 10001`.
+    - **Immutable FS:** `readOnlyRootFilesystem: true`.
+    - **Cap Drop:** `capabilities: drop: ["ALL"]`.
+    - **Seccomp:** `RuntimeDefault`.
+    - **Network Policy:** Default Deny-All egress/ingress.
+    - **Audit Logs:** Full logging enabled (`ops/audit-policy.yaml`) to `logs/audit/`.
+    - **Pod Security Admission:** Enforced `restricted` baseline (exempting system namespaces).
 
 - **Tier 3: The Cortex (Next.js)**
   - **Aero-Light Theme:** High-contrast, strictly typed command console.
+  - **Genesis Terminal (Phase 3):** "First Run" hardware discovery UI (`/`) powered by the Bootstrap Service.
+  - **Standard Operating View (Phase 4):** 4-Zone Layout (Rail, Workspace, Stream, Decision) utilizing `UniversalRenderers`.
   - **Cognitive Matrix:** Control panel for routing prompts.
   - **Telemetry Dashboard:** Real-time observability (Logs, Agents) at `/dashboard`.
   - **Registry & Marketplace:** Catalog for installing Connectors (`/marketplace`) and Blueprints.
@@ -71,6 +81,7 @@ Run the following commands from the root directory:
 | `inv k8s.status` | Checks the status of the Kubernetes cluster. |
 | `inv k8s.deploy` | Deploys the Helm chart to the local cluster. |
 | `inv k8s.bridge` | Opens ports for NATS, API, and Postgres. |
+| `inv device.boot` | **(New)** Simulates a hardware node announcement via NATS. |
 
 > [!NOTE]
 > **Secure Migrations:** Database migrations are applied via a hardened ephemeral pod (`migration-runner`) enforcing Iron Dome standards (User 10001, ReadOnlyRoot). Do not run manual `psql` unless necessary.
