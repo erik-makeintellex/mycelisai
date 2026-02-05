@@ -25,7 +25,7 @@ import (
 )
 
 func main() {
-	log.Println("Starting Mycelis Core [Brain]...")
+	log.Println("Starting Mycelis Core [System]...")
 
 	// 1. Config
 	natsURL := os.Getenv("NATS_URL")
@@ -33,14 +33,14 @@ func main() {
 		natsURL = nats.DefaultURL // nats://localhost:4222
 	}
 
-	// 1a. Load Cognitive Brain
-	brainPath := "core/config/brain.yaml"
-	cogRouter, err := cognitive.NewRouter(brainPath)
+	// 1a. Load Cognitive Engine
+	cogPath := "core/config/cognitive.yaml"
+	cogRouter, err := cognitive.NewRouter(cogPath)
 	if err != nil {
-		log.Printf("⚠️ Brain Config not loaded: %v. Cognitive Matrix Disabled.", err)
+		log.Printf("WARN: Cognitive Config not loaded: %v. Cognitive Engine Disabled.", err)
 		cogRouter = nil
 	} else {
-		log.Println("🧠 Cognitive Matrix Active.")
+		log.Println("Cognitive Engine Active.")
 	}
 
 	// 1b. Load Governance Policy
@@ -49,13 +49,13 @@ func main() {
 
 	gk, err := governance.NewGatekeeper(policyPath)
 	if err != nil {
-		log.Printf("⚠️ Governance Policy not loaded: %v. Allowing all.", err)
+		log.Printf("WARN: Governance Policy not loaded: %v. Allowing all.", err)
 		gk = nil
 	} else {
-		log.Println("🛡️ Gatekeeper Active.")
+		log.Println("Governance Guard Active.")
 	}
 
-	// 1c. Load Archivist (Memory)
+	// 1c. Load Memory Service (The Cortex Memory)
 	// Default to values.yaml if env missing (but security context might block raw strings?)
 	// Using Env.
 	dbHost := os.Getenv("DB_HOST")
@@ -71,13 +71,13 @@ func main() {
 		"cortex",
 	)
 
-	archivist, err := memory.NewArchivist(dbURL)
+	memService, err := memory.NewService(dbURL)
 	if err != nil {
-		log.Printf("⚠️ Memory System Failed: %v. Continuing without persistence.", err)
-		archivist = nil
+		log.Printf("WARN: Memory System Failed: %v. Continuing without persistence.", err)
+		memService = nil
 	} else {
-		log.Println("🧠 Hippocampus Connected.")
-		go archivist.Start(context.Background())
+		log.Println("Cortex Memory Connected.")
+		go memService.Start(context.Background())
 	}
 
 	// 2. Connect to NATS
@@ -108,8 +108,8 @@ func main() {
 		log.Fatalf("Failed to start Router: %v", err)
 	}
 
-	// 4. Start Memory Subscriber (The Archivist)
-	if archivist != nil {
+	// 4. Start Memory Subscriber (The Memory Service)
+	if memService != nil {
 		_, err := nc.Subscribe("swarm.>", func(msg *nats.Msg) {
 			var envelope pb.MsgEnvelope
 			if err := proto.Unmarshal(msg.Data, &envelope); err != nil {
@@ -163,11 +163,11 @@ func main() {
 				Context:   ctxMap,
 			}
 
-			archivist.Push(logEntry)
+			memService.Push(logEntry)
 
 		})
 		if err != nil {
-			log.Printf("Failed to subscribe Archivist: %v", err)
+			log.Printf("Failed to subscribe Memory Service: %v", err)
 		}
 	}
 
@@ -179,14 +179,14 @@ func main() {
 	regDB, err := sql.Open("pgx", dbURL)
 	var regService *registry.Service
 	if err != nil {
-		log.Printf("⚠️ Registry DB Connection Failed: %v", err)
+		log.Printf("WARN: Registry DB Connection Failed: %v", err)
 	} else {
 		// Ping to verify
 		if err := regDB.Ping(); err != nil {
-			log.Printf("⚠️ Registry DB Ping Failed: %v", err)
+			log.Printf("WARN: Registry DB Ping Failed: %v", err)
 		} else {
 			regService = registry.NewService(regDB)
-			log.Println("📋 Registry Service Active.")
+			log.Println("Registry Service Active.")
 		}
 	}
 
@@ -202,12 +202,10 @@ func main() {
 	mux.HandleFunc("/api/v1/nodes/pending", bootstrapSrv.HandlePendingNodes)
 
 	// Create Admin Server
-	adminSrv := server.NewAdminServer(r, gk, archivist, cogRouter, provEngine, regService)
+	adminSrv := server.NewAdminServer(r, gk, memService, cogRouter, provEngine, regService)
 	adminSrv.RegisterRoutes(mux)
 
-	// Cognitive API (Stubs/Real)
-	mux.HandleFunc("/api/v1/brain/config", adminSrv.HandleBrainConfig)
-	mux.HandleFunc("/api/v1/chat", adminSrv.HandleChat)
+	// Routes already registered by AdminServer
 
 	port := os.Getenv("PORT")
 	if port == "" {

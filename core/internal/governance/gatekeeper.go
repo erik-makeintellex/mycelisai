@@ -72,13 +72,13 @@ func (g *Gatekeeper) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 	}
 
 	if action == ActionDeny {
-		log.Printf("⛔ Gatekeeper DENIED: %s from %s", intent, msg.SourceAgentId)
+		log.Printf("DENY: Guard blocked: %s from %s", intent, msg.SourceAgentId)
 		return false, action, ""
 	}
 
 	if action == ActionRequireApproval {
 		reqID := g.createApprovalRequest(msg, "Policy Triggered")
-		log.Printf("✋ Gatekeeper Halted: %s. Request ID: %s", intent, reqID)
+		log.Printf("HALT: Guard paused: %s. Request ID: %s", intent, reqID)
 		return false, action, reqID
 	}
 
@@ -127,11 +127,11 @@ func (g *Gatekeeper) Resolve(reqID string, approved bool, user string) (*pb.MsgE
 	delete(g.PendingBuffer, reqID)
 
 	if approved {
-		log.Printf("✅ Request %s MANUALLY APPROVED by %s", reqID, user)
+		log.Printf("APPROVED: Request %s MANUALLY APPROVED by %s", reqID, user)
 		return req.OriginalMessage, nil
 	}
 
-	log.Printf("❌ Request %s MANUALLY DENIED by %s", reqID, user)
+	log.Printf("DENIED: Request %s MANUALLY DENIED by %s", reqID, user)
 	return nil, nil // Nil message means nothing to forward
 }
 

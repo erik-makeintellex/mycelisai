@@ -1,0 +1,32 @@
+providers:
+  # --- Local Development ---
+  local_ollama:
+    type: "openai_compatible"
+    endpoint: "http://localhost:11434/v1" # Docker users: override via OLLAMA_HOST
+    model_id: "qwen2.5-coder:7b"
+    api_key: "ollama"
+
+  # --- Commercial (Environment Variables Required) ---
+  production_gpt4:
+    type: "openai"
+    endpoint: "https://api.openai.com/v1"
+    model_id: "gpt-4-turbo"
+    api_key_env: "OPENAI_API_KEY"
+
+  production_claude:
+    type: "anthropic"
+    model_id: "claude-3-opus-20240229"
+    api_key_env: "ANTHROPIC_API_KEY"
+
+  production_gemini:
+    type: "google"
+    model_id: "gemini-1.5-pro"
+    api_key_env: "GEMINI_API_KEY"
+
+profiles:
+  # Map Intents to Providers
+  sentry: "local_ollama" # Fast, Cheap
+  architect: "local_ollama" # For Dev (was OpenAI)
+  creative: "local_ollama" # For Dev (was Claude)
+  coder: "local_ollama" # Code Gen
+  chat: "local_ollama" # Interactive
