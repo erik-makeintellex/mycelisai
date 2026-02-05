@@ -12,7 +12,28 @@ def init(c):
         c.run(f"kind get clusters | findstr {CLUSTER_NAME}" if is_windows() else f"kind get clusters | grep {CLUSTER_NAME}", hide=True)
         print("Cluster exists.")
     except:
-        c.run(f"kind create cluster --name {CLUSTER_NAME} --config kind-config.yaml")
+        # Check if we need to hydrate absolute paths for Windows Kind
+        from pathlib import Path
+        
+        with open("kind-config.yaml", "r") as f:
+            config = f.read()
+        
+        # Replace relative paths with absolute
+        # We assume relative paths start with ./ops/
+        abs_ops = str(ROOT_DIR / "ops").replace("\\", "/")
+        # Basic substitution - robust enough for this specific file
+        config = config.replace("./ops", abs_ops)
+        
+        # Fix Logs path too
+        abs_logs = str(ROOT_DIR / "logs").replace("\\", "/")
+        config = config.replace("./logs", abs_logs)
+
+        # Write temp
+        with open("kind-config.gen.yaml", "w") as f:
+            f.write(config)
+
+        print(f"Generated absolute config at kind-config.gen.yaml")
+        c.run(f"kind create cluster --name {CLUSTER_NAME} --config kind-config.gen.yaml")
     
     
     # Legacy raw manifests removed. Helm chart handles infra.
