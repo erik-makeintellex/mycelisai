@@ -20,13 +20,13 @@ nodes:
 #            node-labels: "ingress-ready=true"
 
 #    extraMounts:
-#      - hostPath: ./ops/audit-policy.yaml
+#      - hostPath: D:/MakeIntellex/Projects/mycelisai/scratch/ops/audit-policy.yaml
 #        containerPath: /etc/kubernetes/audit-policy.yaml
 #        readOnly: true
-#      - hostPath: ./ops/admission-control.yaml
+#      - hostPath: D:/MakeIntellex/Projects/mycelisai/scratch/ops/admission-control.yaml
 #        containerPath: /etc/kubernetes/admission-control.yaml
 #        readOnly: true
-#      - hostPath: ./logs/audit
+#      - hostPath: D:/MakeIntellex/Projects/mycelisai/scratch/logs/audit
 #        containerPath: /var/log/kubernetes
 #        readOnly: false
 #    extraPortMappings:
