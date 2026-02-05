@@ -16,9 +16,9 @@ spec:
         app: postgresql
     spec:
       securityContext:
-        fsGroup: 999
-        runAsUser: 999
-        runAsGroup: 999
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsGroup: 1000
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
