@@ -39,6 +39,7 @@ spec:
           psql -h mycelis-core-postgresql -U mycelis -d cortex -f /migrations/002_schema_v6.up.sql
           psql -h mycelis-core-postgresql -U mycelis -d cortex -f /migrations/003_mission_hierarchy.up.sql
           psql -h mycelis-core-postgresql -U mycelis -d cortex -f /migrations/004_registry.up.sql
+          psql -h mycelis-core-postgresql -U mycelis -d cortex -f /migrations/005_nodes.up.sql
           echo "MIGRATION SUCCESS"
       volumeMounts:
         - name: scripts

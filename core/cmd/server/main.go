@@ -13,6 +13,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/memory"
@@ -191,6 +192,14 @@ func main() {
 
 	// 5b. Initialize Provisioning Engine
 	provEngine := provisioning.NewEngine(cogRouter)
+
+	// 5c. Initialize Bootstrap Service
+	// Reuse registry DB connection or Create new? Using regDB for simplicity as it shares 'cortex' DB
+	bootstrapSrv := bootstrap.NewService(regDB, nc)
+	bootstrapSrv.Start()
+
+	// Routes
+	mux.HandleFunc("/api/v1/nodes/pending", bootstrapSrv.HandlePendingNodes)
 
 	// Create Admin Server
 	adminSrv := server.NewAdminServer(r, gk, archivist, cogRouter, provEngine, regService)
