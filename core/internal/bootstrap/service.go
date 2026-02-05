@@ -10,16 +10,10 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+// BootstrapService listens for new hardware announcements
 type Service struct {
 	db *sql.DB
 	nc *nats.Conn
-}
-
-type Node struct {
-	ID           string    `json:"id"`
-	Status       string    `json:"status"`
-	Capabilities []string  `json:"capabilities"`
-	LastSeen     time.Time `json:"last_seen"`
 }
 
 func NewService(db *sql.DB, nc *nats.Conn) *Service {
@@ -29,73 +23,68 @@ func NewService(db *sql.DB, nc *nats.Conn) *Service {
 	}
 }
 
-func (s *Service) Start() {
-	// Subscribe to Announcement
-	_, err := s.nc.Subscribe("swarm.bootstrap.announce", func(msg *nats.Msg) {
-		var payload struct {
-			ID           string   `json:"id"`
-			Capabilities []string `json:"capabilities"`
-		}
-		if err := json.Unmarshal(msg.Data, &payload); err != nil {
-			log.Printf("Bootstrap: Malformed announcement: %v", err)
-			return
-		}
+// processAnnouncement handles the core logic independent of NATS
+func (s *Service) processAnnouncement(data []byte) error {
+	var payload struct {
+		ID    string          `json:"id"`
+		Type  string          `json:"type"`
+		Specs json.RawMessage `json:"specs"`
+	}
+	if err := json.Unmarshal(data, &payload); err != nil {
+		log.Printf("Bootstrap: Malformed announcement: %v", err)
+		return err
+	}
 
-		log.Printf("Bootstrap: Detected Node %s", payload.ID)
-
-		// Check DB
-		var exists string
-		err := s.db.QueryRow("SELECT id FROM nodes WHERE id = $1", payload.ID).Scan(&exists)
-		if err == sql.ErrNoRows {
-			// Insert New
-			capsJSON, _ := json.Marshal(payload.Capabilities)
-			_, err := s.db.Exec("INSERT INTO nodes (id, status, capabilities) VALUES ($1, 'pending', $2)", payload.ID, capsJSON)
-			if err != nil {
-				log.Printf("Bootstrap: Failed to insert node: %v", err)
-				return
-			}
-
-			// Publish Event for UI
-			event := map[string]interface{}{
-				"type":    "system",
-				"message": "New Hardware Detected: " + payload.ID,
-			}
-			eventBytes, _ := json.Marshal(event)
-			s.nc.Publish("swarm.system.events", eventBytes)
-
-		} else if err != nil {
-			log.Printf("Bootstrap: DB Error: %v", err)
-		} else {
-			// Update Last Seen
-			s.db.Exec("UPDATE nodes SET last_seen = NOW() WHERE id = $1", payload.ID)
-		}
-	})
+	_, err := s.db.Exec(`
+		INSERT INTO nodes (id, type, status, last_seen, specs)
+		VALUES ($1, $2, 'pending', NOW(), $3)
+		ON CONFLICT (id) DO UPDATE SET
+			last_seen = NOW()
+	`, payload.ID, payload.Type, payload.Specs)
 
 	if err != nil {
-		log.Printf("Bootstrap: Failed to subscribe to NATS: %v", err)
+		log.Printf("Bootstrap: DB Error: %v", err)
+		return err
 	}
+
+	log.Printf("Bootstrap: Detected Node %s", payload.ID)
+	return nil
 }
 
-func (s *Service) HandlePendingNodes(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func (s *Service) Start() {
+	s.nc.Subscribe("swarm.bootstrap.announce", func(msg *nats.Msg) {
+		s.processAnnouncement(msg.Data)
+	})
+	log.Println("👂 Bootstrap Listener Active (swarm.bootstrap.announce)")
+}
 
-	rows, err := s.db.Query("SELECT id, status, capabilities, last_seen FROM nodes WHERE status = 'pending'")
+// HandlePendingNodes returns list of unassigned nodes
+// GET /api/v1/nodes/pending
+func (s *Service) HandlePendingNodes(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.db.Query("SELECT id, type, status, last_seen, specs FROM nodes WHERE status = 'pending'")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
-	nodes := []Node{}
+	var nodes []map[string]interface{}
 	for rows.Next() {
-		var n Node
-		var capsJSON []byte
-		if err := rows.Scan(&n.ID, &n.Status, &capsJSON, &n.LastSeen); err != nil {
+		var id, nType, status string
+		var lastSeen time.Time
+		var specs json.RawMessage
+		if err := rows.Scan(&id, &nType, &status, &lastSeen, &specs); err != nil {
 			continue
 		}
-		json.Unmarshal(capsJSON, &n.Capabilities)
-		nodes = append(nodes, n)
+		nodes = append(nodes, map[string]interface{}{
+			"id":        id,
+			"type":      nType,
+			"status":    status,
+			"last_seen": lastSeen,
+			"specs":     specs,
+		})
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(nodes)
 }

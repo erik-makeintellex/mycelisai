@@ -45,9 +45,10 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Memory API
 	mux.HandleFunc("/api/v1/memory/stream", s.GetMemoryStream)
 
-	// Cognitive API
+	// Cognitive API (Real)
 	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
-	mux.HandleFunc("/api/v1/cognitive/matrix", s.handleGetMatrix) // [NEW]
+	mux.HandleFunc("/api/v1/brain/config", s.HandleBrainConfig)
+	mux.HandleFunc("/api/v1/chat", s.HandleChat)
 
 	// Identity API
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)

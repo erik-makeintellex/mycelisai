@@ -205,6 +205,10 @@ func main() {
 	adminSrv := server.NewAdminServer(r, gk, archivist, cogRouter, provEngine, regService)
 	adminSrv.RegisterRoutes(mux)
 
+	// Cognitive API (Stubs/Real)
+	mux.HandleFunc("/api/v1/brain/config", adminSrv.HandleBrainConfig)
+	mux.HandleFunc("/api/v1/chat", adminSrv.HandleChat)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

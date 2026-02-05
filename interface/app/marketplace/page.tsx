@@ -8,7 +8,7 @@ interface Template {
     name: string;
     type: string;
     image: string;
-    config_schema: any;
+    config_schema: Record<string, any>; // Schema is dynamic JSON
     description?: string;
 }
 
@@ -26,11 +26,7 @@ export default function MarketplacePage() {
             .catch(err => console.error(err));
     }, []);
 
-    // Mock Loading
-    // const templates = [
-    //     { id: '1', name: 'Weather Poller', type: 'ingress', description: 'Fetch weather data from OpenWeatherMap', image: 'mycelis/weather', config_schema: {} },
-    //     { id: '2', name: 'Slack Bot', type: 'egress', description: 'Post messages to Slack channel', image: 'mycelis/slack', config_schema: {} },
-    // ];
+    // Registry active
 
     const [installing, setInstalling] = useState(false);
 
@@ -49,7 +45,7 @@ export default function MarketplacePage() {
             // 2. Default Config (Mock Form)
             // Real implementation would gather state from <ConfigForm>
             // We just send empty or default values if schema allows
-            const config: any = {};
+            const config: Record<string, unknown> = {};
             if (selected.config_schema?.properties?.city) config.city = "Seattle";
             if (selected.config_schema?.properties?.api_key) config.api_key = "123456";
             if (selected.config_schema?.properties?.webhook_url) config.webhook_url = "https://hooks.slack.com/services/xxx";
@@ -68,8 +64,8 @@ export default function MarketplacePage() {
 
             alert("Installed Successfully!");
             setSelected(null);
-        } catch (err: any) {
-            alert("Installation Failed: " + err.message);
+        } catch (err: unknown) {
+            alert("Installation Failed: " + (err instanceof Error ? err.message : String(err)));
         } finally {
             setInstalling(false);
         }

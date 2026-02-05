@@ -1,6 +1,6 @@
 export type EnvelopeType = 'thought' | 'metric' | 'artifact' | 'governance';
 
-export interface Envelope<T = any> {
+export interface Envelope<T = unknown> {
     type: EnvelopeType;
     source: string;
     timestamp: string; // ISO8601

@@ -1,22 +1,19 @@
 "use client";
-
-import { useState } from "react";
+import useSWR from "swr";
 import { ModelHealth } from "@/components/settings/ModelHealth";
 
-// Mock Data (matches brain.yaml default)
-const INITIAL_CONFIG = {
-    models: [
-        { id: "local-qwen", name: "qwen2.5:7b" },
-        { id: "cloud-gpt4", name: "gpt-4-turbo" },
-    ],
-    profiles: [
-        { id: "coder", active_model: "local-qwen", temperature: 0.1 },
-        { id: "chat", active_model: "cloud-gpt4", temperature: 0.7 },
-    ]
-};
+interface BrainConfig {
+    models: { id: string; name: string }[];
+    profiles: { id: string; active_model: string; temperature: number }[];
+}
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function BrainSettings() {
-    const [config, setConfig] = useState(INITIAL_CONFIG);
+    const { data: config, error } = useSWR<BrainConfig>("/api/v1/brain/config", fetcher);
+
+    if (error) return <div>Failed to load cognitive matrix.</div>;
+    if (!config) return <div>Loading neural pathways...</div>;
 
     // TODO: Implement GET /api/v1/config/brain and PATCH support
 
@@ -41,13 +38,8 @@ export default function BrainSettings() {
                                 <td className="p-4">
                                     <select
                                         value={profile.active_model}
-                                        onChange={(e) => {
-                                            const newProfiles = config.profiles.map(p =>
-                                                p.id === profile.id ? { ...p, active_model: e.target.value } : p
-                                            );
-                                            setConfig({ ...config, profiles: newProfiles });
-                                        }}
-                                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-300 focus:border-cyan-500 outline-none"
+                                        disabled // Read-Only for Genesis
+                                        className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-300 focus:border-cyan-500 outline-none disabled:opacity-50"
                                     >
                                         {config.models.map(m => (
                                             <option key={m.id} value={m.id}>{m.name} ({m.id})</option>
@@ -60,8 +52,9 @@ export default function BrainSettings() {
                                             type="range"
                                             min="0" max="1" step="0.1"
                                             value={profile.temperature}
-                                            className="w-24 accent-cyan-500"
+                                            className="w-24 accent-cyan-500 disabled:opacity-50"
                                             readOnly // Readonly for MVP Demo
+                                            disabled
                                         />
                                         <span className="text-xs text-slate-500">{profile.temperature}</span>
                                     </div>
@@ -76,8 +69,8 @@ export default function BrainSettings() {
             </div>
 
             <div className="mt-6 flex justify-end">
-                <button className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded shadow-[0_0_15px_#06b6d4]">
-                    SYNC MATRIX
+                <button className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded shadow-[0_0_15px_#06b6d4] opacity-50 cursor-not-allowed">
+                    SYNC MATRIX (LOCKED)
                 </button>
             </div>
         </div>

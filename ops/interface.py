@@ -24,3 +24,15 @@ def build(c):
     """
     print("🔨 Building Interface...")
     c.run("cd interface && npm run build")
+
+@task
+def lint(c):
+    """
+    Lint the Interface code.
+    """
+    print("✨ Linting Interface...")
+    c.run("cd interface && npm run lint")
+
+ns.add_task(install)
+ns.add_task(build)
+ns.add_task(lint)

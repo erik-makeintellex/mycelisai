@@ -1,5 +1,5 @@
 "use client"
-import { GenesisTerminal } from "@/components/genesis/GenesisTerminal"
+import GenesisTerminal from "@/components/genesis/GenesisTerminal"
 
 export default function CommandPage() {
   // In a real app, we check if missions exist.
