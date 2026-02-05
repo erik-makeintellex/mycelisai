@@ -11,6 +11,9 @@ ns.add_collection(misc.ns_clean)
 ns.add_collection(misc.ns_team)
 ns.add_collection(interface.ns)
 
+from ops import device
+ns.add_collection(device.ns)
+
 
 
 

@@ -61,7 +61,7 @@ nats:
 # PostgreSQL Configuration (Bitnami)
 # PostgreSQL Configuration (Bitnami)
 postgresql:
-  enabled: false
+  enabled: true
   image:
     registry: docker.io
     repository: pgvector/pgvector

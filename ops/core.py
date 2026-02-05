@@ -57,8 +57,10 @@ def run(c):
     # Let's stick to blocking 'run' for now, user can open new tab.
     with c.cd(str(CORE_DIR)):
         # Check platform
-        bin_name = "server.exe" if is_windows() else "server"
-        c.run(f"./bin/{bin_name}")
+        if is_windows():
+            c.run(f"bin\\{bin_name}")
+        else:
+            c.run(f"./bin/{bin_name}")
 
 @task
 def stop(c):

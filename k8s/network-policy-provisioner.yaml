@@ -22,7 +22,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app: mycelis-core-nats # Adjusted to match standard Helm label if needed, assuming user's label 'app: nats' might be generic.
+              app.kubernetes.io/name: nats
       ports:
         - protocol: TCP
           port: 4222
