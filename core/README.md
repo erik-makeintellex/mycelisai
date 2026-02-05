@@ -1,13 +1,13 @@
-# The Neural Core (Tier 1)
-> **Role**: The Brain & State Engine
+# Mycelis Core (Tier 1)
+> **Role**: The Cognitive & State Engine
 > **Language**: Go
 > **Path**: `core/`
 
 ## 🧠 Responsibilities
 1.  **Routing**: Delivers `MsgEnvelope` between Agents (NATS).
-2.  **Governance**: Enforces `policy.yaml` (The Gatekeeper).
-3.  **Memory**: Persists logs to PostgreSQL (The Archivist).
-4.  **Intelligence**: Connects to Ollama for cognitive loops.
+2.  **Governance**: Enforces `policy.yaml` (The Guard).
+3.  **Memory**: Persists logs to PostgreSQL (Memory Service).
+4.  **Intelligence**: Connects to LLMs for cognitive loops (Cognitive Engine).
 
 ## 🏗️ Structure
 - `cmd/server/`: Main entrypoint.

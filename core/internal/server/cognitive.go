@@ -36,9 +36,9 @@ func (s *AdminServer) handleInfer(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, resp)
 }
 
-// GET /api/v1/brain/config
-// Returns the current Brain Configuration (Profiles + Providers)
-func (s *AdminServer) HandleBrainConfig(w http.ResponseWriter, r *http.Request) {
+// GET /api/v1/cognitive/config
+// Returns the current Cognitive Configuration (Profiles + Providers)
+func (s *AdminServer) HandleCognitiveConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

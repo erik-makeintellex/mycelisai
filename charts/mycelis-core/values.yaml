@@ -70,7 +70,7 @@ postgresql:
     postgresPassword: ""
     username: ""
     password: ""
-    database: ""
+    database: "cortex"
   primary:
     resources:
       requests:

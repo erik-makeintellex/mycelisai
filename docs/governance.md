@@ -2,12 +2,12 @@
 
 > 🔙 **Navigation**: [Back to README](../README.md) | [Architecture Overview](../architecture.md)
 
-The Mycelis Core includes a **Governance Gatekeeper** that intercepts every message passing through the Swarm Router. It enforces a logic-based policy defined in `core/policy/policy.yaml`.
+The Mycelis Core includes a **Governance Guard** that intercepts every message passing through the Swarm Router. It enforces a logic-based policy defined in `core/policy/policy.yaml`.
 
 ## 1. How It Works
 
-1.  **Intercept**: The Router passes every `MsgEnvelope` to the Gatekeeper before routing.
-2.  **Evaluate**: The Gatekeeper checks the message against the loaded Policy rules.
+1.  **Intercept**: The Router passes every `MsgEnvelope` to the Guard before routing.
+2.  **Evaluate**: The Guard checks the message against the loaded Policy rules.
     -   **Matches Team/Agent**: Does the sender belong to a targeted group?
     -   **Matches Intent**: Does the message `intent` (or event type) match a rule?
     -   **Unlocks Condition**: Do the context variables satisfy the logic (e.g., `amount > 50`)?

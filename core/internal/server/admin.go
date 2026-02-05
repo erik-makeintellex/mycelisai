@@ -18,13 +18,13 @@ import (
 type AdminServer struct {
 	Router      *router.Router
 	GK          *governance.Gatekeeper
-	Mem         *memory.Archivist
+	Mem         *memory.Service
 	Cognitive   *cognitive.Router
 	Provisioner *provisioning.Engine
 	Registry    *registry.Service
 }
 
-func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Archivist, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service) *AdminServer {
+func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service) *AdminServer {
 	return &AdminServer{
 		Router:      r,
 		GK:          gk,
@@ -47,7 +47,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Cognitive API (Real)
 	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
-	mux.HandleFunc("/api/v1/brain/config", s.HandleBrainConfig)
+	mux.HandleFunc("/api/v1/cognitive/config", s.HandleCognitiveConfig)
 	mux.HandleFunc("/api/v1/chat", s.HandleChat)
 
 	// Identity API

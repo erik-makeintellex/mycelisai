@@ -1,124 +1,182 @@
-# MASTER STATE DEFINITION: MYCELIS CORTEX (V6.1)
+# PRODUCT REQUIREMENTS DOCUMENT: MYCELIS CORTEX V6.1
 **Codename:** "The Conscious Organism"
-**Date:** February 4, 2026
-**Status:** ACTIVE TRANSITION
-**Authored By:** The Systems Architect (Tier 1)
+**Version:** 6.1.0 (Target State)
+**Authored By:** Systems Architect (Tier 1)
+**Scope:** Infrastructure, Backend Core, Interface, and Governance.
 
 ---
 
 ## 1. EXECUTIVE SUMMARY
-We are pivoting from a "Flat Agent Framework" to a **"Recursive Swarm Operating System."**
-The goal is to build the "Operating System for the Physical Singularity"—a platform capable of orchestrating not just chatbots, but complex, hierarchical organizations of software and hardware (IoT/Robotics) through a strategic AI interface.
+**The Vision:** Mycelis Cortex is not an "Agent Framework." It is a **Sovereign Operating System for the Physical Singularity**. It bridges the gap between High-Level Human Intent (Strategy) and Low-Level Hardware Execution (IoT/Robotics).
 
-### The Delta (Current vs. Target)
-
-| Aspect | **Current State (V6.0)** | **Target State (V6.1)** |
-| :--- | :--- | :--- |
-| **Organization** | Flat List of Teams. | **Recursive Hierarchy** (Mission > Division > Squad). |
-| **Strategy** | User manually creates agents. | **Consular Negotiation:** AI "Chief of Staff" proposes & refines architectures. |
-| **Connectivity** | Ad-hoc Python scripts. | **Registry:** Standardized Connectors (IoT/API) & Blueprints. |
-| **Security** | Standard Docker Container. | **Iron Dome:** NSA-Hardened, Read-Only Root, Zero Trust Network. |
-| **Interface** | Passive Dashboard. | **Command Console:** Active "Aero-Light" Terminal & Split-View Negotiation. |
-| **Cognition** | Single Model Dependency. | **Universal Adapter:** Hybrid Routing (Local Qwen + Cloud GPT-4). |
+**The Pivot:** We are moving from a "Flat Chatbot" model to a **"Recursive Swarm"** model.
+* **Recursive:** Missions can own Sub-Missions. Teams can own Sub-Teams.
+* **Physical:** The system is aware of "Ghost Nodes" (Hardware) and "Virtual Services" (MCP).
+* **Strategic:** The User negotiates with a "Consul" (Chief of Staff) rather than micro-managing Python scripts.
 
 ---
 
-## 2. DETAILED ASPECT SPECIFICATIONS
+## 2. INFRASTRUCTURE & SECURITY ("THE IRON DOME")
+**Standard:** NSA/CISA Kubernetes Hardening & CIS Benchmarks.
 
-### ASPECT 1: THE FOUNDATION (DATA & HIERARCHY)
-**Goal:** Enable deep organizational nesting and "Mission-Aware" context.
+### 2.1. The Universal Security Paradigm
+Every container deployed by the "Provisioning Engine" (The Forge) MUST adhere to this strict manifest:
+* **User Identity:** `runAsUser: 1000`, `runAsGroup: 3000`. Root (`0`) is FORBIDDEN.
+* **Filesystem:** `readOnlyRootFilesystem: true`. Writable layers are strictly limited to `/tmp` (EmptyDir).
+* **Capabilities:** `drop: ["ALL"]`. No privileged escalation.
+* **Network (Zero Trust):** Default `Deny-All` NetworkPolicy.
+    * *Allow:* Egress to NATS (`4222`), K8s API (`443` - Internal), and DNS (`53`).
+    * *Block:* All public Internet egress unless explicitly whitelisted via Governance Guard.
 
-* **Current State:**
-    * `teams` table is a flat list.
-    * Agents have no awareness of a "Grand Strategy."
-* **Target Requirements:**
-    * **The Mission Root:** A "Genesis" container defining the *Prime Directive* (e.g., "Symbiotic Swarm").
-    * **Recursive Teams:** Teams can own other Teams (`parent_id`).
-    * **Context Cascade:** Agents inherit directives from their entire ancestry tree.
-    * **Schema:**
-        ```sql
-        CREATE TABLE missions (id UUID, directive TEXT, ...);
-        ALTER TABLE teams ADD COLUMN parent_id UUID, path TEXT;
-        ```
-
-### ASPECT 2: THE BRAIN (STRATEGY & COGNITION)
-**Goal:** Move from "Text Generation" to "Strategic Orchestration."
-
-* **Current State:**
-    * `cognitive` package supports basic LLM calls.
-    * **Phase 20/21 Complete:** Universal Adapter & Grading System (Tier S/A/B) are live.
-* **Target Requirements:**
-    * **The Consular Layer:** A "Tier 1.5" service that sits between User and Provisioning.
-    * **Negotiation Protocol:**
-        1.  **Draft:** Consul proposes a hierarchy based on user intent.
-        2.  **Refine:** User critiques the draft (Chat + Graph).
-        3.  **Finalize:** Consul commits the structure to Reality.
-    * **Mission Archetypes:** "One-Click" deployment of complex stacks (e.g., "IoT Swarm", "Startup Team") defined in JSON templates.
-
-### ASPECT 3: THE BODY (PROVISIONING & REGISTRY)
-**Goal:** Standardize how the system touches the world.
-
-* **Current State:**
-    * **Phase 19:** Provisioning Engine ("The Forge") is code-complete but blocked by network testing.
-    * No standardized way to add "Weather" or "Serial Port" inputs.
-* **Target Requirements:**
-    * **The Registry:** A database of "Connectors" (Data Sources) and "Blueprints" (Agent Roles).
-    * **Wiring API:**
-        * `POST /connectors`: Install a "Weather Poller" container.
-        * `PATCH /wiring`: Connect `weather_topic` to `agent_input`.
-    * **Iron Dome (Phase 11):**
-        * **Immutable Runtime:** Agents run as User 1000 with `readOnlyRootFilesystem`.
-        * **Zero Trust:** Default `Deny-All` Network Policy. Only NATS/DNS allowed.
-
-### ASPECT 4: THE FACE (INTERFACE)
-**Goal:** Pivot from "Passive Observation" to "Active Command."
-
-* **Current State:**
-    * Basic Dashboard scaffolding.
-    * "Mission Control" naming (Vague).
-* **Target Requirements:**
-    * **Theme:** "Aero-Light" (Clinical/Professional, `Zinc-50`).
-    * **Root View (`/`):** **Command Console**.
-        * *Status Bar:* UPLINK (NATS), BRAIN (Provider), CAPACITY (Agents).
-        * *Central Feed:* List of **Active Sessions** (Drafting, Running, Paused).
-        * *Input:* "Omni-Command" terminal (`>_`).
-    * **Consular View (`/genesis`):** Split-screen (Chat Left / Graph Right) for negotiating drafts.
-    * **Orchestration View (`/orchestration`):** The "Loom" graph for wiring and monitoring.
+### 2.2. Connectivity Architecture (Dual-Plane)
+* **The Nervous System (NATS JetStream):**
+    * Used for high-frequency, asynchronous Agent-to-Agent communication.
+    * Topic Standard: `swarm.{mission}.{team}.{signal}`.
+* **The Tool Plane (MCP - Model Context Protocol):**
+    * Used for connecting the Swarm to external Tools (Stripe, GitHub, Local Files).
+    * The Core acts as an **MCP Host**, mounting external servers and exposing them to Agents as native functions.
 
 ---
 
-## 3. EXECUTION REGISTER (DELIVERY TRACKING)
+## 3. CORE LOGIC ARCHITECTURE ("THE BRAIN")
 
-This register tracks the **True Delivery** of the target state. A task is only "Complete" when the **Proof Command** succeeds.
+### 3.1. The Cognitive Engine (`core/internal/cognitive`)
+* **Role:** The Router and Reasoning Unit.
+* **Capability:** **Universal Adapter.** dynamically routes prompts between Local Models (Qwen/Llama via Ollama) and Cloud Models (GPT-4/Claude) based on the `Mission.Priority`.
 
-### 🟥 BACKEND (CORE)
-| ID | Deliverable | Target State | Proof Command (Verification) | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **D-1.1** | **Hierarchy Schema** | `missions` + recursive `teams` | `INSERT INTO teams (parent_id) VALUES (non_existent)` -> Fails FK. | 🔴 Pending |
-| **D-2.1** | **Registry API** | Connector/Blueprint CRUD | `curl POST /api/registry/templates` -> 201 Created. | 🔴 Pending |
-| **D-C.1** | **Consul Logic** | Negotiation/Drafting Service | Send "Add Node" chat -> LLM calls `AddNode` tool -> Draft updates. | 🔴 Pending |
-| **D-11.1** | **Secure Image** | Non-Root Docker Image | `docker inspect image` -> User is `1000`. | 🔴 Pending |
+### 3.2. Cortex Memory (`core/internal/memory`)
+* **Role:** Long-term persistence and Context Retrieval.
+* **Components:**
+    * **SQL (Postgres):** Structured data (Missions, Nodes, Logs).
+    * **Vector (pgvector):** Semantic search for "Thought History."
+* **The "Archivist" Pattern:** A background service that watches NATS logs and asynchronously indexes them into Cortex Memory.
 
-### 🟦 FRONTEND (INTERFACE)
-| ID | Deliverable | Target State | Proof Command (Verification) | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **D-3.1** | **Genesis Wizard** | Tabula Rasa "First Run" | Clear DB -> Load UI -> Wizard Modal appears. | 🔴 Pending |
-| **D-9.2** | **Command Input** | Active Terminal on Root | Load Page -> Input is focused -> `Enter` POSTs to API. | 🔴 Pending |
-| **D-C.2** | **Negotiation UI** | Split Chat/Graph View | Chat "Add Vision Team" -> Node appears on Graph instantly. | 🔴 Pending |
+### 3.3. The Governance Guard (`core/internal/governance`)
+* **Role:** The "Gatekeeper" of Action.
+* **Logic:** Intercepts every **Tool Call** (e.g., "Delete File", "Transfer Funds").
+    * *Low Risk:* Auto-Approve.
+    * *High Risk:* Halt execution. Trigger **Zone D (Decision Overlay)** in UI.
 
-### 🟩 INFRASTRUCTURE (OPS)
-| ID | Deliverable | Target State | Proof Command (Verification) | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **D-11.3** | **Network Policy** | Zero Trust (Deny All) | `kubectl exec agent -- curl google.com` -> Timeout. | 🔴 Pending |
-| **D-2.4** | **Mock Source** | Runtime Connector | `kubectl get pods` shows `mock-source` running after API call. | 🔴 Pending |
+### 3.4. Consular Operations (`core/internal/consul`)
+* **Role:** The Strategic Layer.
+* **Function:** Manages the **Negotiation Protocol**. It maintains the `OrganizationDraft` (state in Redis) while the user edits the team structure, only committing to Postgres upon "Finalization."
 
 ---
 
-## 4. IMMEDIATE ACTION PLAN
+## 4. INTERFACE ARCHITECTURE ("THE STANDARD OPERATING VIEW")
+**Philosophy:** "Generative Content within a Rigid Frame."
 
-**The Blockers:** We cannot build the UI or the Consul without the **Data Foundation** (Phase 1).
+### 4.1. The 4 Immutable Zones
+To ensure stability while allowing infinite agent variety, the UI is divided into four zones.
 
-1.  **Execute Phase 1 (Data):** Apply `003_mission_hierarchy.up.sql`.
-2.  **Execute Phase 19 (Fix):** Resolve network blocking to finalize Provisioning Engine.
-3.  **Execute Phase 2.5 (Registry):** Apply `004_registry.up.sql` to support Connectors.
-4.  **Execute Phase 3 (Genesis):** Build the Frontend Wizard to create the first Mission.
+| Zone | Name | Role | Behavior |
+| :--- | :--- | :--- | :--- |
+| **A** | **Command Rail** | Navigation & Vitals | Fixed Left Vertical. Never scrolls. Shows Identity & System Heartbeat. |
+| **B** | **Active Workspace** | The Task Canvas | **Dynamic.** Renders the *current* tool (Terminal, Graph, Doc). |
+| **C** | **Activity Stream** | The Black Box | Fixed Right Vertical. Immutable feed of Thoughts/Actions/Events. |
+| **D** | **Decision Overlay** | Governance | Modal/Toast. Blocks interaction for critical human approvals. |
+
+### 4.2. The Universal Renderer
+The Frontend is "Dumb." It does not know what a "Drone" is. It only knows how to render **Universal Envelopes**.
+* **`type: "thought"`**: Collapsible reasoning traces.
+* **`type: "metric"`**: Sparklines/Pills for numbers (Battery, Cash).
+* **`type: "artifact"`**: Cards for Files/Images/Code.
+
+---
+
+## 5. DETAILED UI SPECIFICATIONS (PER PAGE)
+
+### 5.1. The Genesis Terminal (Route: `/genesis`)
+* **User Intent:** "I want to initialize a new Swarm or Mission."
+* **Zone B Configuration:** **Split View (Generative Chat + Topology Graph).**
+
+#### Element A: The Pathfinder Deck (Initial State)
+* **Concept:** Three large interactive cards to guide the user's start.
+* **Cards:** "Architect" (Manual), "Commander" (Template), "Explorer" (Demo).
+* **API:** None (Static Route).
+
+#### Element B: The Resource Grid (The "Ghost" Visualizer)
+* **Concept:** A visual map of "Unassigned Matter" (Nodes) vs "Assigned Spirit" (Agents).
+* **Interaction:** Drag-and-Drop a "Ghost Node" (from the edge) onto a "Mission Node" (center) to link them.
+* **Data Source:** `GET /api/v1/nodes/pending` (Polled).
+    * *Returns:* `[{ "id": "rpi-01", "status": "pending", "capabilities": ["gpio"] }]`.
+* **User Empowerment:** The user feels like a "God" bestowing purpose on inert matter.
+
+#### Element C: The Consular Chat (The Negotiator)
+* **Concept:** Natural Language interface to modify the Graph.
+* **API:** `POST /api/v1/consul/negotiate`.
+    * *Input:* "Add a Sentry Team."
+    * *Output:* Updated `OrganizationDraft` JSON.
+* **GenUI Behavior:** The Chat triggers a re-render of the Graph in real-time.
+
+---
+
+### 5.2. The Command Console (Route: `/command`)
+* **User Intent:** "Active Monitoring & High-Level Direction."
+* **Zone B Configuration:** **The "Loom" (Orchestration Graph).**
+
+#### Element A: The Omni-Input (Terminal Bar)
+* **Concept:** A CLI-like input at the bottom of Zone B.
+* **Capabilities:** Slash Commands (`/deploy`, `/halt`), Natural Language ("Scan the perimeter").
+* **API:** `POST /api/v1/command/exec`.
+
+#### Element B: The Live Topology (The Graph)
+* **Concept:** Visualization of the active NATS mesh.
+* **Visuals:** Nodes pulse when publishing messages. Links glow based on traffic volume.
+* **Interaction:** Clicking a Node opens its **Context Inspector** (Memory, Logs, Config).
+
+---
+
+## 6. PROTOCOLS & DATA STANDARDS
+
+### 6.1. The Bootstrap Protocol ("The Handshake")
+How a new Node (Client) joins the Swarm.
+
+1.  **Boot:** Node reads local file `/etc/mycelis/identity.yaml` (UUID + Cert).
+2.  **Connect:** Node establishes TLS connection to NATS (`swarm.bootstrap`).
+3.  **Announce:** Node publishes Identity + Capabilities.
+4.  **Wait:** Node listens on `swarm.node.{uuid}.config`.
+5.  **Adoption:** User (via Consul) approves Node. Core publishes `Config` (Mission Context).
+6.  **Activate:** Node applies Config and switches to "Active" mode.
+
+### 6.2. The Data Envelope Standard (CTS - Cortex Telemetry Standard)
+All Agents MUST output data in this format to be renderable by Zone C.
+
+```json
+{
+  "meta": {
+    "id": "uuid",
+    "timestamp": "iso8601",
+    "source_node": "hardware-id",
+    "source_agent": "agent-role-id"
+  },
+  "type": "metric", // or 'thought', 'artifact', 'log'
+  "payload": {
+    "label": "CPU Temp",
+    "value": 45.2,
+    "unit": "C"
+  }
+}
+
+```
+
+---
+
+## 7. EXECUTION REGISTER (DEVELOPER TARGETS)
+
+### Priority 1: The Foundation (Backend)
+
+* [ ] **Refactor Terminology:** Rename `hippocampus` -> `memory`.
+* [ ] **Iron Dome Audit:** Verify `core/deploy` manifests match the Security Paradigm.
+* [ ] **Bootstrap Service:** Implement the `swarm.bootstrap.announce` listener.
+
+### Priority 2: The Face (Frontend)
+
+* [ ] **App Shell:** Implement the 4-Zone Layout (CSS Grid).
+* [ ] **Universal Renderer:** Build `ThoughtCard`, `MetricPill`, `ArtifactCard`.
+* [ ] **Genesis Terminal:** Build the "Pathfinder" Cards and "Resource Grid."
+
+### Priority 3: The Intelligence (Cognitive)
+
+* [ ] **Consul Service:** Connect the LLM to the `OrganizationDraft` state machine.
+* [ ] **MCP Bridge:** Implement the server capability to mount external tools.

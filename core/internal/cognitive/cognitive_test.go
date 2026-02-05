@@ -12,7 +12,7 @@ import (
 // TestInfer_Mock ensures that we can inject a mock adapter
 func TestInfer_Mock(t *testing.T) {
 	// 1. Setup
-	r, err := cognitive.NewRouter("../../config/brain.yaml")
+	r, err := cognitive.NewRouter("../../config/cognitive.yaml")
 	if err != nil {
 		t.Fatalf("Failed to load generic config: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestInfer_Live(t *testing.T) {
 	}
 
 	// 1. Setup
-	r, err := cognitive.NewRouter("../../config/brain.yaml")
+	r, err := cognitive.NewRouter("../../config/cognitive.yaml")
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}

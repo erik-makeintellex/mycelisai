@@ -34,7 +34,7 @@ def boot(c, id="ghost-01", capabilities="gpio,camera"):
         
         subject = "swarm.bootstrap.announce"
         await nc.publish(subject, json.dumps(payload).encode())
-        print(f"📢 Device '{id}' announced on '{subject}'")
+        print(f"Device '{id}' announced on '{subject}'")
         print(f"   Capabilities: {caps_list}")
         
         await nc.drain()

@@ -22,13 +22,13 @@ type LogEntry struct {
 	Context   map[string]any `json:"context"` // Generic map for JSONB
 }
 
-// Archivist manages the projection of stream events to state.
-type Archivist struct {
+// Service manages the projection of stream events to state.
+type Service struct {
 	db     *sql.DB
 	events chan *LogEntry // Buffered channel to prevent blocking
 }
 
-func NewArchivist(dbUrl string) (*Archivist, error) {
+func NewService(dbUrl string) (*Service, error) {
 	db, err := sql.Open("pgx", dbUrl)
 	if err != nil {
 		return nil, err
@@ -39,10 +39,10 @@ func NewArchivist(dbUrl string) (*Archivist, error) {
 	for i := 0; i < 30; i++ {
 		pingErr = db.Ping()
 		if pingErr == nil {
-			log.Println("✅ Archivist: Connected to Hippocampus (Postgres)")
+			log.Println("Memory: Connected to Cortex (Postgres)")
 			break
 		}
-		log.Printf("⏳ Archivist: Waiting for Hippocampus... (%d/30) - %v", i+1, pingErr)
+		log.Printf("Memory: Waiting for Cortex... (%d/30) - %v", i+1, pingErr)
 		time.Sleep(1 * time.Second)
 	}
 
@@ -50,37 +50,37 @@ func NewArchivist(dbUrl string) (*Archivist, error) {
 		return nil, pingErr // Fatal after 30s
 	}
 
-	return &Archivist{
+	return &Service{
 		db:     db,
 		events: make(chan *LogEntry, 1000), // Buffer 1000 logs
 	}, nil
 }
 
 // Push adds an event to the processing queue non-blocking.
-func (a *Archivist) Push(entry *LogEntry) {
+func (s *Service) Push(entry *LogEntry) {
 	select {
-	case a.events <- entry:
+	case s.events <- entry:
 		// Queued
 	default:
 		// Buffer full: Log error to stderr or drop (Do not crash Core)
-		log.Println("⚠️ Archivist Buffer Full: Dropping Event")
+		log.Println("WARN: Memory Buffer Full: Dropping Event")
 	}
 }
 
 // Start begins the projection loop.
-func (a *Archivist) Start(ctx context.Context) {
-	log.Println("🧠 Archivist: Projection Loop Started")
+func (s *Service) Start(ctx context.Context) {
+	log.Println("Memory: Projection Loop Started")
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case entry := <-a.events:
-			a.persist(entry)
+		case entry := <-s.events:
+			s.persist(entry)
 		}
 	}
 }
 
-func (a *Archivist) persist(entry *LogEntry) {
+func (s *Service) persist(entry *LogEntry) {
 	// 1. Insert Log
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -95,18 +95,18 @@ func (a *Archivist) persist(entry *LogEntry) {
 		ts = time.Now()
 	}
 
-	_, err := a.db.ExecContext(ctx,
+	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO log_entries (trace_id, timestamp, level, source, intent, message, context) 
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		entry.TraceId, ts, entry.Level, entry.Source, entry.Intent, entry.Message, contextJSON,
 	)
 	if err != nil {
-		log.Printf("❌ Archivist Save Error: %v", err)
+		log.Printf("ERROR: Memory Save Error: %v", err)
 	}
 
 	// 2. Upsert Registry (Live State)
 	// "On Conflict" logic updates the 'last_seen' timestamp automatically.
-	_, err = a.db.ExecContext(ctx,
+	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO agent_registry (agent_id, team_id, status, last_seen)
          VALUES ($1, $2, $3, NOW())
          ON CONFLICT (agent_id) DO UPDATE 
@@ -114,17 +114,17 @@ func (a *Archivist) persist(entry *LogEntry) {
 		entry.Source, "default", "ACTIVE", // Default Team/Status for now
 	)
 	if err != nil {
-		log.Printf("❌ Registry Update Error: %v", err)
+		log.Printf("ERROR: Registry Update Error: %v", err)
 	}
 }
 
 // ListRecent retrieves the last N logs.
-func (a *Archivist) ListRecent(limit int) ([]*LogEntry, error) {
+func (s *Service) ListRecent(limit int) ([]*LogEntry, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 
-	rows, err := a.db.Query(`SELECT trace_id, timestamp, level, source, intent, message, context 
+	rows, err := s.db.Query(`SELECT trace_id, timestamp, level, source, intent, message, context 
                              FROM log_entries ORDER BY timestamp DESC LIMIT $1`, limit)
 
 	if err != nil {

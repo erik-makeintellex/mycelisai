@@ -45,8 +45,8 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 ## 📚 Documentation Hub
 | Context | Resource | Description |
 | :--- | :--- | :--- |
-| **Architecture** | [The Archivist](docs/architecture/DIRECTIVE_ARCHIVIST.md) | Event Store & Memory Architecture Specs. |
-| **Governance** | [Gatekeeper Protocol](docs/governance.md) | Policy enforcement, approvals, and security boundaries. |
+| **Architecture** | [Memory Specs](docs/architecture/DIRECTIVE_ARCHIVIST.md) | Event Store & Memory Architecture Specs. |
+| **Governance** | [Guard Protocol](docs/governance.md) | Policy enforcement, approvals, and security boundaries. |
 | **Registry** | [The Registry](core/internal/registry/README.md) | Connector Marketplace and Wiring Graph specs. |
 | **Telemetry** | [Logging Schema](docs/logging.md) | SCIP Log structure and centralized observability. |
 | **Testing** | [Verification Suite](docs/TESTING.md) | Unit, Integration, and Smoke Testing protocols. |
@@ -56,7 +56,7 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 | **Interface** | [Cortex UI](interface/README.md) | Next.js Frontend architecture. |
 
 ### 🔑 Key Configurations
-- **Brain (Models):** `core/config/brain.yaml`
+- **Cognitive (Models):** `core/config/cognitive.yaml`
 - **Policy (Rules):** `core/config/policy.yaml`
 - **Secrets:** `.env` (See `.env.example`)
 
@@ -129,8 +129,8 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000).
 
-### 4. Configure the Brain
-Edit `core/config/brain.yaml` to define your Model Matrix.
+### 4. Configure the Cognitive Engine
+Edit `core/config/cognitive.yaml` to define your Model Matrix.
 - **Profiles:** `sentry`, `architect`, `coder`.
 - **Policies:** Set `timeout_ms` and `max_retries` per profile.
 
