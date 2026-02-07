@@ -76,8 +76,8 @@ defaults:
 	}
 }
 
-func TestGatekeeper_Intercept(t *testing.T) {
-	// Basic Stub test to ensure Gatekeeper calls Engine
+func TestGuard_Intercept(t *testing.T) {
+	// Basic Stub test to ensure Guard calls Engine
 	// Requires mocking Engine config or similar setup logic as above
 	// Skipping for now to focus on Engine logic which is the core complexity.
 }

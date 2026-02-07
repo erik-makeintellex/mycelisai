@@ -13,6 +13,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 
+	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
@@ -33,31 +34,7 @@ func main() {
 		natsURL = nats.DefaultURL // nats://localhost:4222
 	}
 
-	// 1a. Load Cognitive Engine
-	cogPath := "core/config/cognitive.yaml"
-	cogRouter, err := cognitive.NewRouter(cogPath)
-	if err != nil {
-		log.Printf("WARN: Cognitive Config not loaded: %v. Cognitive Engine Disabled.", err)
-		cogRouter = nil
-	} else {
-		log.Println("Cognitive Engine Active.")
-	}
-
-	// 1b. Load Governance Policy
-	policyPath := "core/config/policy.yaml" // Assuming we run from root or handle path
-	// Fix path for container vs local? For now, relative.
-
-	gk, err := governance.NewGatekeeper(policyPath)
-	if err != nil {
-		log.Printf("WARN: Governance Policy not loaded: %v. Allowing all.", err)
-		gk = nil
-	} else {
-		log.Println("Governance Guard Active.")
-	}
-
-	// 1c. Load Memory Service (The Cortex Memory)
-	// Default to values.yaml if env missing (but security context might block raw strings?)
-	// Using Env.
+	// 1a. Initialize Database (Shared)
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
 		dbHost = "mycelis-core-postgresql"
@@ -71,6 +48,38 @@ func main() {
 		"cortex",
 	)
 
+	// Open Shared DB Connection
+	sharedDB, err := sql.Open("pgx", dbURL)
+	if err != nil {
+		log.Printf("WARN: Shared DB Init Failed: %v", err)
+	} else if err := sharedDB.Ping(); err != nil {
+		log.Printf("WARN: Shared DB Ping Failed: %v", err)
+	} else {
+		log.Println("Shared Database Connection Active.")
+	}
+
+	// 1b. Load Cognitive Engine
+	cogPath := "core/config/cognitive.yaml"
+	cogRouter, err := cognitive.NewRouter(cogPath, sharedDB)
+	if err != nil {
+		log.Printf("WARN: Cognitive Config not loaded: %v. Cognitive Engine Disabled.", err)
+		cogRouter = nil
+	} else {
+		log.Println("Cognitive Engine Active.")
+	}
+
+	// 1b. Load Governance Policy
+	policyPath := "core/config/policy.yaml" // Assuming we run from root or handle path
+
+	guard, err := governance.NewGuard(policyPath)
+	if err != nil {
+		log.Printf("WARN: Governance Policy not loaded: %v. Allowing all.", err)
+		guard = nil
+	} else {
+		log.Println("Governance Guard Active.")
+	}
+
+	// 1c. Load Memory Service (The Cortex Memory)
 	memService, err := memory.NewService(dbURL)
 	if err != nil {
 		log.Printf("WARN: Memory System Failed: %v. Continuing without persistence.", err)
@@ -103,7 +112,7 @@ func main() {
 	nc := ncWrapper.Conn
 
 	// 3. Start Router
-	r := router.NewRouter(nc, gk)
+	r := router.NewRouter(nc, guard)
 	if err := r.Start(); err != nil {
 		log.Fatalf("Failed to start Router: %v", err)
 	}
@@ -118,8 +127,6 @@ func main() {
 			}
 
 			// Map Envelope to LogEntry
-			// We use default Go timestamp in Archivist if generic, or extract from Envelope?
-			// Envelope has timestamp *timestamppb.Timestamp.
 			ts := time.Now()
 			if envelope.Timestamp != nil {
 				ts = envelope.Timestamp.AsTime()
@@ -174,38 +181,54 @@ func main() {
 	// 5. Http Server
 	mux := http.NewServeMux()
 
-	// 5a. Initialize Registry Service
-	// We create a separate connection for Registry
-	regDB, err := sql.Open("pgx", dbURL)
+	// 1d. Initialize Archivist (Intelligence)
+	var archivist *memory.Archivist
+	if memService != nil && cogRouter != nil {
+		archivist = memory.NewArchivist(memService, cogRouter)
+		log.Println("Archivist Engine Active.")
+	}
+
+	// 5a. Initialize Registry Service (Reuse shared DB)
 	var regService *registry.Service
-	if err != nil {
-		log.Printf("WARN: Registry DB Connection Failed: %v", err)
-	} else {
-		// Ping to verify
-		if err := regDB.Ping(); err != nil {
-			log.Printf("WARN: Registry DB Ping Failed: %v", err)
-		} else {
-			regService = registry.NewService(regDB)
-			log.Println("Registry Service Active.")
-		}
+	if sharedDB != nil {
+		regService = registry.NewService(sharedDB)
+		log.Println("Registry Service Active.")
 	}
 
 	// 5b. Initialize Provisioning Engine
 	provEngine := provisioning.NewEngine(cogRouter)
 
 	// 5c. Initialize Bootstrap Service
-	// Reuse registry DB connection or Create new? Using regDB for simplicity as it shares 'cortex' DB
-	bootstrapSrv := bootstrap.NewService(regDB, nc)
+	bootstrapSrv := bootstrap.NewService(sharedDB, nc)
 	bootstrapSrv.Start()
 
 	// Routes
 	mux.HandleFunc("/api/v1/nodes/pending", bootstrapSrv.HandlePendingNodes)
 
-	// Create Admin Server
-	adminSrv := server.NewAdminServer(r, gk, memService, cogRouter, provEngine, regService)
-	adminSrv.RegisterRoutes(mux)
+	// Archivist Routes
+	if archivist != nil {
+		mux.HandleFunc("/api/v1/memory/sitrep", func(w http.ResponseWriter, r *http.Request) {
+			// POST to generate, GET to list?
+			// Simple trigger for now
+			// team_id param, duration param
+			// Defaults: Mycelis Core, 24h
+			if r.Method == "POST" {
+				err := archivist.GenerateSitRep(r.Context(), "22222222-2222-2222-2222-222222222222", 24*time.Hour)
+				if err != nil {
+					http.Error(w, err.Error(), 500)
+					return
+				}
+				w.Write([]byte(`{"status": "SitRep Generated"}`))
+			} else {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		})
+	}
 
-	// Routes already registered by AdminServer
+	// Create Admin Server
+	// Note: We pass nil for unused services if they failed init, which is handled inside AdminServer hopefully.
+	adminSrv := server.NewAdminServer(r, guard, memService, cogRouter, provEngine, regService)
+	adminSrv.RegisterRoutes(mux)
 
 	port := os.Getenv("PORT")
 	if port == "" {

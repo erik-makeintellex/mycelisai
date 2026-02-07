@@ -11,27 +11,27 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Gatekeeper intercepts and manages approvals
-type Gatekeeper struct {
+// Guard intercepts and manages approvals
+type Guard struct {
 	Engine        *Engine
 	PendingBuffer map[string]*pb.ApprovalRequest
 	mu            sync.RWMutex
 }
 
-func NewGatekeeper(policyPath string) (*Gatekeeper, error) {
+func NewGuard(policyPath string) (*Guard, error) {
 	engine, err := NewEngine(policyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Gatekeeper{
+	return &Guard{
 		Engine:        engine,
 		PendingBuffer: make(map[string]*pb.ApprovalRequest),
 	}, nil
 }
 
 // Intercept evaluates a message and returns (proceed bool, action string, requestID string)
-func (g *Gatekeeper) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
+func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 	// Extract Context
 	ctx := make(map[string]interface{})
 	if msg.SwarmContext != nil {
@@ -85,7 +85,7 @@ func (g *Gatekeeper) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 	return true, ActionAllow, ""
 }
 
-func (g *Gatekeeper) createApprovalRequest(msg *pb.MsgEnvelope, reason string) string {
+func (g *Guard) createApprovalRequest(msg *pb.MsgEnvelope, reason string) string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -103,7 +103,7 @@ func (g *Gatekeeper) createApprovalRequest(msg *pb.MsgEnvelope, reason string) s
 }
 
 // ListPending returns a snapshot of all pending requests
-func (g *Gatekeeper) ListPending() []*pb.ApprovalRequest {
+func (g *Guard) ListPending() []*pb.ApprovalRequest {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -115,7 +115,7 @@ func (g *Gatekeeper) ListPending() []*pb.ApprovalRequest {
 }
 
 // Resolve manually approves or denies a request
-func (g *Gatekeeper) Resolve(reqID string, approved bool, user string) (*pb.MsgEnvelope, error) {
+func (g *Guard) Resolve(reqID string, approved bool, user string) (*pb.MsgEnvelope, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -136,7 +136,7 @@ func (g *Gatekeeper) Resolve(reqID string, approved bool, user string) (*pb.MsgE
 }
 
 // ProcessSignal handles an admin's decision (Legacy / Event based)
-func (g *Gatekeeper) ProcessSignal(signal *pb.ApprovalSignal) *pb.MsgEnvelope {
+func (g *Guard) ProcessSignal(signal *pb.ApprovalSignal) *pb.MsgEnvelope {
 	// Re-using Resolve logic to keep DRY
 	msg, _ := g.Resolve(signal.RequestId, signal.Approved, signal.UserSignature)
 	return msg

@@ -1,17 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Brain, ChevronDown, ChevronRight, Zap } from 'lucide-react';
 import { ThoughtContent } from '@/lib/types/protocol';
 
-export const ThoughtCard: React.FC<{ data: ThoughtContent }> = ({ data }) => {
+export function ThoughtCard({ content }: { content: ThoughtContent }) {
+    const [expanded, setExpanded] = useState(false);
+
     return (
-        <div className="border-l-2 border-zinc-300 pl-3 py-1 my-2">
-            <div className="flex justify-between items-center text-xs text-zinc-500 mb-1">
-                <span className="font-mono">Thinking...</span>
-                <span className="bg-zinc-100 px-1 rounded text-[10px]">{data.model}</span>
+        <div className="border border-indigo-100 bg-indigo-50/50 rounded-lg p-3 hover:border-indigo-200 transition-colors">
+            <div
+                className="flex items-center cursor-pointer select-none"
+                onClick={() => setExpanded(!expanded)}
+            >
+                <div className="mr-2 text-indigo-500">
+                    {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </div>
+                <Brain size={16} className="text-indigo-600 mr-2" />
+                <span className="text-sm font-semibold text-indigo-900 flex-1 truncate">
+                    {content.summary}
+                </span>
+                <span className="text-[10px] uppercase font-bold text-indigo-400 bg-white px-1.5 py-0.5 rounded border border-indigo-100">
+                    {content.model}
+                </span>
             </div>
-            <p className="text-sm font-medium text-zinc-700">{data.summary}</p>
-            {data.detail && (
-                <p className="text-xs text-zinc-500 mt-1">{data.detail}</p>
+
+            {expanded && (
+                <div className="mt-2 pl-8 text-xs text-indigo-800 font-mono whitespace-pre-wrap leading-relaxed border-l-2 border-indigo-200 ml-1.5">
+                    {content.detail}
+                </div>
             )}
         </div>
     );
-};
+}

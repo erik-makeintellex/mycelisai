@@ -33,6 +33,15 @@ def lint(c):
     print("✨ Linting Interface...")
     c.run("cd interface && npm run lint")
 
+@task
+def test(c):
+    """
+    Run Interface Unit Tests (Vitest).
+    """
+    print("Running Interface Tests...")
+    c.run("cd interface && npm run test")
+
 ns.add_task(install)
 ns.add_task(build)
 ns.add_task(lint)
+ns.add_task(test)

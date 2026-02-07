@@ -49,7 +49,7 @@ func main() {
 
 	// Construct complex context/data
 	// We need to match the Policy: 'amount > 50'
-	// The Gatekeeper checks:
+	// The Guard checks:
 	// a) SwarmContext (headers)
 	// b) Event.Data (payload)
 
@@ -95,9 +95,9 @@ func main() {
 
 	log.Printf("✅ API Response: Found %d pending approvals.", len(approvals))
 	if len(approvals) > 0 {
-		log.Println("🎉 SUCCESS! Gatekeeper logic verified.")
+		log.Println("🎉 SUCCESS! Guard logic verified.")
 	} else {
-		log.Println("⚠️  WARNING: No approvals found. Gatekeeper might have allowed it or failed to park.")
+		log.Println("⚠️  WARNING: No approvals found. Guard might have allowed it or failed to park.")
 	}
 }
 

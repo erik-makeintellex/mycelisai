@@ -1,22 +1,22 @@
 import React from 'react';
-import { Envelope, ThoughtContent, MetricContent, ArtifactContent, GovernanceContent } from '@/lib/types/protocol';
+import { Envelope } from '@/lib/types/protocol';
 import { ThoughtCard } from './ThoughtCard';
 import { MetricPill } from './MetricPill';
 import { ArtifactCard } from './ArtifactCard';
-import { ApprovalCard } from './ApprovalCard';
 
-const JsonFallback: React.FC<{ data: unknown }> = ({ data }) => (
-    <div className="bg-zinc-100 p-2 rounded my-1 text-[10px] font-mono overflow-x-auto text-zinc-500">
-        <pre>{JSON.stringify(data, null, 2)}</pre>
-    </div>
-);
-
-export const UniversalRenderer: React.FC<{ message: Envelope }> = ({ message }) => {
-    switch (message.type) {
-        case 'thought': return <ThoughtCard data={message.content as ThoughtContent} />;
-        case 'metric': return <MetricPill data={message.content as MetricContent} />;
-        case 'artifact': return <ArtifactCard data={message.content as ArtifactContent} />;
-        case 'governance': return <ApprovalCard data={message.content as GovernanceContent} />;
-        default: return <JsonFallback data={message} />;
+export function UniversalRenderer({ envelope }: { envelope: Envelope<any> }) {
+    switch (envelope.type) {
+        case 'thought':
+            return <ThoughtCard content={envelope.content} />;
+        case 'metric':
+            return <MetricPill content={envelope.content} />;
+        case 'artifact':
+            return <ArtifactCard content={envelope.content} />;
+        default:
+            return (
+                <div className="p-2 bg-red-50 border border-red-200 rounded text-red-600 text-xs font-mono">
+                    Unknown Envelope Type: {envelope.type}
+                </div>
+            );
     }
-};
+}

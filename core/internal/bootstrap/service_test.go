@@ -5,6 +5,9 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	pb "github.com/mycelis/core/pkg/pb/swarm"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Mock NATS for testing?
@@ -41,4 +44,47 @@ func TestService_HandleAnnouncement(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
+}
+
+func TestService_ProcessHeartbeat(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer db.Close()
+
+	s := &Service{db: db}
+
+	// Create Protobuf Heartbeat
+	env := &pb.MsgEnvelope{
+		Id:            "msg-123",
+		SourceAgentId: "agent-007",
+		TeamId:        "team-alpha",
+		Timestamp:     timestamppb.Now(),
+		Payload: &pb.MsgEnvelope_Event{
+			Event: &pb.EventPayload{
+				EventType: "agent.heartbeat",
+			},
+		},
+	}
+	data, _ := proto.Marshal(env)
+
+	// Expectation
+	// INSERT INTO nodes (id, type, status, last_seen, specs) ...
+	mock.ExpectExec("INSERT INTO nodes").
+		WithArgs("agent-007", "agent:team-alpha", "alive", anyArg()). // specs is []byte("{}")
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	if err := s.processHeartbeat(data); err != nil {
+		t.Errorf("error processing heartbeat: %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+// Custom matcher for []byte("{}") or ignoring it
+func anyArg() interface{} {
+	return sqlmock.AnyArg()
 }

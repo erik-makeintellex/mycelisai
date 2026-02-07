@@ -151,3 +151,31 @@ func (s *Service) ListRecent(limit int) ([]*LogEntry, error) {
 	}
 	return logs, nil
 }
+
+// ListLogs retrieves logs within a time range
+func (s *Service) ListLogs(ctx context.Context, start, end time.Time, limit int) ([]*LogEntry, error) {
+	stmt := `SELECT trace_id, timestamp, level, source, intent, message, context 
+             FROM log_entries 
+             WHERE timestamp BETWEEN $1 AND $2 
+             ORDER BY timestamp ASC LIMIT $3`
+
+	rows, err := s.db.QueryContext(ctx, stmt, start, end, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []*LogEntry
+	for rows.Next() {
+		var entry LogEntry
+		var ctxJSON []byte
+		if err := rows.Scan(&entry.TraceId, &entry.Timestamp, &entry.Level, &entry.Source, &entry.Intent, &entry.Message, &ctxJSON); err != nil {
+			return nil, err
+		}
+		if len(ctxJSON) > 0 {
+			_ = json.Unmarshal(ctxJSON, &entry.Context)
+		}
+		logs = append(logs, &entry)
+	}
+	return logs, nil
+}
