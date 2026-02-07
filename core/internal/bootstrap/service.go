@@ -8,9 +8,12 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"google.golang.org/protobuf/proto"
+
+	pb "github.com/mycelis/core/pkg/pb/swarm"
 )
 
-// BootstrapService listens for new hardware announcements
+// Service listens for new hardware announcements
 type Service struct {
 	db *sql.DB
 	nc *nats.Conn
@@ -51,11 +54,58 @@ func (s *Service) processAnnouncement(data []byte) error {
 	return nil
 }
 
+// processHeartbeat handles agent pulses via Protobuf
+func (s *Service) processHeartbeat(data []byte) error {
+	var env pb.MsgEnvelope
+	if err := proto.Unmarshal(data, &env); err != nil {
+		log.Printf("Bootstrap: Failed to unmarshal Heartbeat: %v", err)
+		return err
+	}
+
+	agentID := env.SourceAgentId
+	teamID := env.TeamId
+
+	// Upsert into Nodes table
+	// We treat Agents as Nodes with type 'agent' or 'agent:<team>'
+	nodeType := "agent"
+	if teamID != "" {
+		nodeType = "agent:" + teamID
+	}
+
+	// Status from event?
+	status := "alive"
+
+	// Specs? Maybe just the swarm config or empty for now.
+	specs := []byte("{}")
+
+	_, err := s.db.Exec(`
+		INSERT INTO nodes (id, type, status, last_seen, specs)
+		VALUES ($1, $2, $3, NOW(), $4)
+		ON CONFLICT (id) DO UPDATE SET
+			last_seen = NOW(),
+			status = $3
+	`, agentID, nodeType, status, specs)
+
+	if err != nil {
+		log.Printf("Bootstrap: DB Error on Heartbeat: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 func (s *Service) Start() {
+	// Announce (Legacy JSON device)
 	s.nc.Subscribe("swarm.bootstrap.announce", func(msg *nats.Msg) {
 		s.processAnnouncement(msg.Data)
 	})
-	log.Println("👂 Bootstrap Listener Active (swarm.bootstrap.announce)")
+
+	// Heartbeat (Protobuf Agent)
+	s.nc.Subscribe("swarm.global.heartbeat", func(msg *nats.Msg) {
+		s.processHeartbeat(msg.Data)
+	})
+
+	log.Println("👂 Bootstrap Listener Active (announce, heartbeat)")
 }
 
 // HandlePendingNodes returns list of unassigned nodes

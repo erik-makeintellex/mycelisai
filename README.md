@@ -1,51 +1,45 @@
-# Mycelis Cortex V6.1 (Transitioning)
+# Mycelis Cortex V6.2 (The Lattice)
 
 **The Recursive Swarm Operating System.**
 
 > [!IMPORTANT]
 > **MASTER STATE AUTHORITY**
 > The Single Source of Truth for the project state, architectural delta, and immediate goals is:
-> **[mycelis-6-1-0-stable.md](mycelis-6-1-0-stable.md)**
+> **[mycelis-6-2.md](mycelis-6-2.md)**
 >
-> **Agents & Humans:** Always consult the Master State document before making architectural decisions. The README provides general usage instructions, but the Master State defines "What is True" for the current version.
+> **Agents & Humans:** Always consult the Master State document before making architectural decisions. This README provides general usage instructions, but the Codex defines "What is True".
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V6.1 introduces the **Recursive Hierarchy**, **Registry**, and **Iron Dome Security**.
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V6.2 introduces the **Fractal Fabric**, **Cognitive Registry**, and **Context Economy**.
 
 ## 🏗️ Architecture
 
-- **Tier 1: Core (Go + Postgres)**
+- **Tier 1: Core (Go + Postgres + pgvector)**
   - Use `core` service for Identity, Governance, and Cognitive Routing.
-  - **Bootstrap Service:** Listens for NATS hardware announcements (`swarm.bootstrap.announce`) and registers new nodes (`005_nodes`).
-  - **CQA (Cognitive Quality Assurance):** Enforces strict timeouts and schema validation on all LLM calls.
-  - **SCIP (Standardized Cybernetic Interchange Protocol):** Protobuf-based message envelope for all agent communication.
+  - **Cognitive Registry:** Database-backed (`llm_providers`) lookup for AI models, decoupling logic from config.
+  - **Guard:** The Governance Engine (formerly Gatekeeper) enforcing policy on every message.
+  - **Bootstrap Service:** Listens for Hardware Announcements and Heartbeats (`005_nodes`).
+  - **Archivist:** The Context Engine. Summarizes logs into **SitReps** (Situation Reports) for efficient Agentry.
 
 - **Tier 2: Nervous System (NATS JetStream)**
-  - Real-time event bus (`scip.>`) connecting the Core to the Swarm.
+  - **Heartbeat:** Global 1Hz pulse (`swarm.global.heartbeat`) from all nodes.
+  - **Audit Trace:** Enforced logging (`swarm.audit.trace`) of all traffic.
+  - **SCIP:** Standardized Cybernetic Interchange Protocol (Protobuf).
 
-- **Tier 2.5: Iron Dome & Registry**
+- **Tier 2.5: The Fractal Fabric (Data)**
+  - **Teams & Missions:** Recursive hierarchy (`007_team_fabric`) defining ownership and purpose.
   - **Registry:** Centralized database for Connectors and Blueprints.
-  - **Iron Dome:** Security layer enforcing NSA/CIS Hardening standards:
-    - **Non-Root Execution:** Agents run as `User 10001`.
-    - **Immutable FS:** `readOnlyRootFilesystem: true`.
-    - **Cap Drop:** `capabilities: drop: ["ALL"]`.
-    - **Seccomp:** `RuntimeDefault`.
-    - **Network Policy:** Default Deny-All egress/ingress.
-    - **Audit Logs:** Full logging enabled (`ops/audit-policy.yaml`) to `logs/audit/`.
-    - **Pod Security Admission:** Enforced `restricted` baseline (exempting system namespaces).
+  - **Iron Dome:** Security layer enforcing NSA/CIS Hardening standards (User 10001, ReadOnly FS).
 
-- **Tier 3: The Cortex (Next.js)**
-  - **Aero-Light Theme:** High-contrast, strictly typed command console.
-  - **Genesis Terminal (Phase 3):** "First Run" hardware discovery UI (`/`) powered by the Bootstrap Service.
-  - **Standard Operating View (Phase 4):** 4-Zone Layout (Rail, Workspace, Stream, Decision) utilizing `UniversalRenderers`.
-  - **Cognitive Matrix:** Control panel for routing prompts.
-  - **Telemetry Dashboard:** Real-time observability (Logs, Agents) at `/dashboard`.
-  - **Registry & Marketplace:** Catalog for installing Connectors (`/marketplace`) and Blueprints.
-  - **Neural Wiring:** Visual signal graph (`/wiring`) of input/output data flows.
+- **Tier 3: The Face (Next.js)**
+  - **Genesis Terminal:** Hardware discovery and Bootstrap UI.
+  - **Universal Renderer:** Dynamic UI components driven by the "Zone Layout" (Rail, Workspace, Stream, Decision).
+  - **Cortex Console:** The 4-Zone dashboard for controlling the organism.
 
 ## 📚 Documentation Hub
+
 | Context | Resource | Description |
 | :--- | :--- | :--- |
-| **Architecture** | [Memory Specs](docs/architecture/DIRECTIVE_ARCHIVIST.md) | Event Store & Memory Architecture Specs. |
+| **Architecture** | [Memory Specs](docs/architecture/DIRECTIVE_MEMORY_SERVICE.md) | Event Store & Memory Architecture Specs. |
 | **Governance** | [Guard Protocol](docs/governance.md) | Policy enforcement, approvals, and security boundaries. |
 | **Registry** | [The Registry](core/internal/registry/README.md) | Connector Marketplace and Wiring Graph specs. |
 | **Telemetry** | [Logging Schema](docs/logging.md) | SCIP Log structure and centralized observability. |
@@ -56,18 +50,21 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 | **Interface** | [Cortex UI](interface/README.md) | Next.js Frontend architecture. |
 
 ### 🔑 Key Configurations
-- **Cognitive (Models):** `core/config/cognitive.yaml`
+
+- **Cognitive (Bootstrap):** `core/config/cognitive.yaml` (Overrides DB if needed)
+- **Cognitive (Dynamic):** `llm_providers` table (Managed via UI/SQL)
 - **Policy (Rules):** `core/config/policy.yaml`
 - **Secrets:** `.env` (See `.env.example`)
-
 
 ## 🧠 Cognitive Architecture (Default)
 
 Mycelis V6 defaults to a **Single Local Model** architecture for privacy and air-gapped readiness.
+
 - **Default Model:** `qwen2.5-coder:7b-instruct` (via Ollama).
 - **Fallback:** None (Strict Reliability).
 
 ### 🛠️ Developer Orchestration
+
 Run the following commands from the root directory:
 
 | Command | Description |
@@ -87,6 +84,7 @@ Run the following commands from the root directory:
 > **Secure Migrations:** Database migrations are applied via a hardened ephemeral pod (`migration-runner`) enforcing Iron Dome standards (User 10001, ReadOnlyRoot). Do not run manual `psql` unless necessary.
 
 ### Hardware Grading
+
 | Tier | RAM | Supported Models | Use Case |
 | :--- | :--- | :--- | :--- |
 | **Tier 1 (Min)** | 16 GB | 7B Models (Q4) | Basic Coding, CLI |
@@ -98,13 +96,16 @@ Run the following commands from the root directory:
 ## 🚀 Getting Started
 
 ### 1. Configure Secrets
+
 Ensure your `.env` file exists and contains the necessary credentials:
+
 ```bash
 cp .env.example .env
 # Edit .env to set POSTGRES_USER, POSTGRES_PASSWORD, etc.
 ```
 
 ### 2. Boot the Infrastructure
+
 ```bash
 # Full System Reset (Cluster + Core + DB)
 uv run inv k8s.reset
@@ -114,49 +115,66 @@ uv run inv k8s.bridge
 ```
 
 ### 2. Bootstrap Identity (The First Login)
+
 Since V6 enforces RBAC, you must create an Admin user to access the console.
 *(Ensure `inv k8s.bridge` is running if using local CLI)*
+
 ```bash
 # Create the first admin user
 uv run python cli/main.py admin-create "admin"
 ```
+
 *Copy the Session Token output!*
 
 ### 3. Launch the Cortex Console
+
 ```bash
 cd interface
 npm run dev
 ```
+
 Open [http://localhost:3000](http://localhost:3000).
 
 ### 4. Configure the Cognitive Engine
+
 Edit `core/config/cognitive.yaml` to define your Model Matrix.
+
 - **Profiles:** `sentry`, `architect`, `coder`.
 - **Policies:** Set `timeout_ms` and `max_retries` per profile.
 
 ## 🛠️ Developer Tools
 
 ### CLI (`myc`)
+
 - `myc snoop`: Decode SCIP traffic in real-time.
 - `myc inject <intent> <payload>`: Send signals to the swarm.
 - `myc think <prompt> --profile=coder`: Test the cognitive router.
 
 ### Protobuf Generation
+
 If you modify `proto/envelope.proto`:
+
 ```bash
 uv run inv proto.generate
 ```
 
 ## 🧪 Verification
+
 Mycelis uses a 2-Tier testing strategy (Mocked Unit + Real Integration).
 See [docs/TESTING.md](docs/TESTING.md) for full details.
 
 ```bash
-# Run Unit Tests (Logic)
+# Run All Core Unit Tests (Logic)
 cd core
-go test ./internal/cognitive/...
+go test ./...
+
+# Run Specific Package Tests
+go test -v ./internal/bootstrap/... # Heartbeats
+go test -v ./internal/memory/...    # Archivist/SitReps
+go test -v ./internal/cognitive/... # LLM Router
 
 # Run Integration Tests (Real Ollama)
+# Requires TEST_LIVE_LLM=true
 go test -v -tags=integration ./tests/...
 ```
 
@@ -172,7 +190,8 @@ Mycelis follows a strict **Trunk-Based Development** workflow with ephemeral fea
 | **Chore** | `chore/` | `chore/infra-reset` | Maintenance, dependencies, or refactoring. |
 | **Documentation** | `docs/` | `docs/api-spec` | Documentation-only updates. |
 
-### Protocol:
-1.  **Branch off `main`:** Always start fresh.
-2.  **Commit Often:** Use conventional commits (e.g., `feat: add gatekeeper`).
-3.  **Merge via Squash:** Keep history linear and clean.
+### Protocol
+
+1. **Branch off `main`:** Always start fresh.
+2. **Commit Often:** Use conventional commits (e.g., `feat: add gatekeeper`).
+3. **Merge via Squash:** Keep history linear and clean.

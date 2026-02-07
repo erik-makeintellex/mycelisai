@@ -17,17 +17,17 @@ import (
 // AdminServer handles governance and system endpoints
 type AdminServer struct {
 	Router      *router.Router
-	GK          *governance.Gatekeeper
+	Guard       *governance.Guard
 	Mem         *memory.Service
 	Cognitive   *cognitive.Router
 	Provisioner *provisioning.Engine
 	Registry    *registry.Service
 }
 
-func NewAdminServer(r *router.Router, gk *governance.Gatekeeper, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service) *AdminServer {
 	return &AdminServer{
 		Router:      r,
-		GK:          gk,
+		Guard:       guard,
 		Mem:         mem,
 		Cognitive:   cog,
 		Provisioner: prov,
@@ -97,12 +97,12 @@ func (s *AdminServer) handleApprovals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.GK == nil {
+	if s.Guard == nil {
 		http.Error(w, "Governance disabled", http.StatusNotImplemented)
 		return
 	}
 
-	pending := s.GK.ListPending()
+	pending := s.Guard.ListPending()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pending)
 }
@@ -132,7 +132,7 @@ func (s *AdminServer) handleApprovalAction(w http.ResponseWriter, r *http.Reques
 
 	approved := payload.Action == "APPROVE"
 
-	msg, err := s.GK.Resolve(id, approved, "admin-api")
+	msg, err := s.Guard.Resolve(id, approved, "admin-api")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

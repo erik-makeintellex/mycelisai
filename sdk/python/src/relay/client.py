@@ -59,6 +59,7 @@ class RelayClient:
         self._handlers: Dict[str, Callable[[swarm_pb2.MsgEnvelope], None]] = {}
         # Wildcard handlers might need efficient matching, for now exact match or simple prefix
         self._subscriptions = []
+        self._heartbeat_task = None
 
     async def connect(self):
         """Connects to NATS and sets up inbox subscriptions."""
@@ -88,16 +89,93 @@ class RelayClient:
             # Let's listen to broadcast for now.
             await self.subscribe(f"swarm.team.{self.team_id}.>", self._default_handler)
 
+            # 3. Start Heartbeat Loop
+            self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+            
         except Exception as e:
             logger.error(f"Failed to connect to NATS: {e}")
             raise
 
     async def close(self):
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            try:
+                await self._heartbeat_task
+            except asyncio.CancelledError:
+                pass
+
         if self.nc:
             await self.nc.drain()
             await self.nc.close()
             self._connected = False
             logger.info("Relay connection drained.")
+
+    async def _heartbeat_loop(self):
+        """Emits a heartbeat every 5 seconds."""
+        logger.info("💓 Heartbeat Loop Started")
+        while True:
+            try:
+                await asyncio.sleep(5)
+                if not self._connected:
+                    continue
+                
+                # Payload matching CloudEvent or simple JSON
+                hb_data = {
+                    "agent_id": self.agent_id,
+                    "team_id": self.team_id,
+                    "status": "alive",
+                    "timestamp": time.time(),
+                    "meta": {"sdk": "python-relay-v1"}
+                }
+                
+                # Publish to global heartbeat topic
+                # This bypasses the standard _publish wrapper slightly to target system topic
+                # or we can use _publish with raw target
+                
+                # Topic: swarm.global.heartbeat
+                # Use _publish to get envelope, but target specific topic
+                
+                # We need to expose a way to publish raw or custom topic via internal method
+                # reusing _publish logic
+                
+                # Let's direct publish for now to be explicit, but wrapping in envelope is safer for system standard
+                # We'll use _publish with target_team="system" concept or just raw topic override?
+                # _publish takes target_team. 
+                
+                # Let's manually construct envelope to ensure it meets system spec
+                envelope = self._create_envelope("event", Struct(fields={
+                    k:  Struct(fields={}) if isinstance(v, dict) else v # Simple Value wrapper? 
+                    # Protobuf Struct is tricky with mixed types.
+                    # Lets use the send_event helper?
+                }))
+                
+                # Actually, easier to use send_event but we need to override topic.
+                # The current send_event doesn't allow custom topic override easily.
+                # Let's modify _publish or just do it raw here.
+                
+                # Construct Payload
+                payload = swarm_pb2.EventPayload(
+                    event_type="agent.heartbeat",
+                     # For data we need a Struct.
+                     # Simplified:
+                )
+                # json_format.ParseDict(hb_data, payload.data) # If we had it imported
+                
+                # Let's just send a simple text pulse for now if Struct is annoying,
+                # OR use the existing send_event and add a special routing rule.
+                
+                # Routing Rule: If event_type == "agent.heartbeat", route to swarm.global.heartbeat
+                pass 
+
+                # Let's implement the routing rule in _publish
+                await self.send_event("agent.heartbeat", hb_data)
+
+            except asyncio.CancelledError:
+                logger.info("💓 Heartbeat Loop Stopped")
+                break
+            except Exception as e:
+                logger.error(f"Heartbeat Error: {e}")
+
 
     async def subscribe(self, subject: str, callback: Callable[[swarm_pb2.MsgEnvelope], None]):
         """
@@ -183,7 +261,10 @@ class RelayClient:
         
         topic = f"swarm.team.{self.team_id}.agent.{self.agent_id}.output"
         
-        if recipient_id:
+        # Routing Logic
+        if payload_key == "event" and payload_obj.event_type == "agent.heartbeat":
+             topic = "swarm.global.heartbeat"
+        elif recipient_id:
             topic = f"swarm.agent.{recipient_id}.input"
         elif target_team:
             topic = f"swarm.team.{target_team}.input"
