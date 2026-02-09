@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function Workspace({ children }: { children: React.ReactNode }) {
+export function ZoneB({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex-1 flex flex-col relative overflow-hidden bg-white min-w-0">
             {/* Workspace Canvas */}

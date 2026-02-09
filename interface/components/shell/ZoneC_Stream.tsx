@@ -1,7 +1,7 @@
 import React from 'react';
 import { Activity } from 'lucide-react';
 
-export function ActivityStream() {
+export function ZoneC() {
     // Placeholder mock data - Real version will pull from NATS/UniversalRenderer
     return (
         <div className="hidden lg:flex w-80 bg-zinc-50 border-l border-zinc-200 flex-col z-40 flex-shrink-0">

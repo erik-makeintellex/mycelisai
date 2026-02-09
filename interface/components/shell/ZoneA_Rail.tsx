@@ -1,7 +1,7 @@
 import React from 'react';
 import { Network, Cpu, LayoutGrid, Settings, Shield } from 'lucide-react';
 
-export function CommandRail() {
+export function ZoneA() {
     return (
         <div className="w-16 md:w-64 bg-zinc-950 text-white flex flex-col border-r border-zinc-800 z-50 flex-shrink-0 transition-all duration-300">
             {/* 1. Identity / Logo */}
