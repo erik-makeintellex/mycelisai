@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, Check, X } from 'lucide-react';
 
-export function DecisionOverlay() {
+export function ZoneD() {
     // Mock State - Real version connects to Governance Store
     const [activeRequest, setActiveRequest] = useState<null | { id: string, desc: string }>(null);
 
