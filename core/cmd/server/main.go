@@ -22,6 +22,7 @@ import (
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/server"
+	"github.com/mycelis/core/internal/swarm"
 	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
 )
 
@@ -201,6 +202,16 @@ func main() {
 	// 5c. Initialize Bootstrap Service
 	bootstrapSrv := bootstrap.NewService(sharedDB, nc)
 	bootstrapSrv.Start()
+
+	// 5d. Initialize Swarm Intelligence (Soma)
+	// Guard is already initialized as 'guard'
+	// Registry path?
+	teamConfigPath := "core/config/teams"
+	swarmReg := swarm.NewRegistry(teamConfigPath)
+	soma := swarm.NewSoma(nc, guard, swarmReg, cogRouter)
+	if err := soma.Start(); err != nil {
+		log.Fatalf("Failed to start Soma: %v", err)
+	}
 
 	// Routes
 	mux.HandleFunc("/api/v1/nodes/pending", bootstrapSrv.HandlePendingNodes)

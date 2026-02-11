@@ -1,4 +1,8 @@
+"use client";
+
 import React from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Network, Cpu, LayoutGrid, Settings, Shield } from 'lucide-react';
 
 export function ZoneA() {
@@ -16,29 +20,33 @@ export function ZoneA() {
 
             {/* 2. Navigation Items */}
             <div className="flex-1 flex flex-col py-4 gap-2 px-2">
-                <NavItem icon={LayoutGrid} label="Mission Control" active />
-                <NavItem icon={Cpu} label="System Status" />
-                <NavItem icon={Shield} label="Governance" />
+                <NavItem href="/" icon={LayoutGrid} label="Mission Control" />
+                <NavItem href="/telemetry" icon={Cpu} label="System Status" />
+                <NavItem href="/approvals" icon={Shield} label="Governance" />
             </div>
 
             {/* 3. Footer / User / Settings */}
             <div className="p-2 border-t border-zinc-900">
-                <NavItem icon={Settings} label="Settings" />
+                <NavItem href="/settings" icon={Settings} label="Settings" />
             </div>
         </div>
     );
 }
 
-function NavItem({ icon: Icon, label, active = false }: { icon: any; label: string; active?: boolean }) {
+function NavItem({ icon: Icon, label, href }: { icon: any; label: string; href: string }) {
+    const pathname = usePathname();
+    const isActive = pathname === href;
+
     return (
-        <button
+        <Link
+            href={href}
             className={`
         flex items-center justify-center md:justify-start w-full p-2 rounded-md transition-colors
-        ${active ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'}
+        ${isActive ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'}
       `}
         >
             <Icon className="w-5 h-5" />
             <span className="hidden md:block ml-3 text-sm font-medium">{label}</span>
-        </button>
+        </Link>
     );
 }

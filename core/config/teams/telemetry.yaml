@@ -1,0 +1,12 @@
+id: telemetry-core
+name: Telemetry Core
+type: expression
+description: "Handles system status and real-time visualization outputs."
+members:
+  - id: observer
+    role: data_visualizer
+inputs:
+  - swarm.global.input.sensor.>
+  - swarm.team.telemetry.signal.status
+deliveries:
+  - swarm.global.output.ui.telemetry
