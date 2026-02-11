@@ -2,7 +2,7 @@ providers:
   # --- Local Development ---
   local_ollama:
     type: "openai_compatible"
-    endpoint: "http://localhost:11434/v1" # Docker users: override via OLLAMA_HOST
+    endpoint: "http://192.168.50.156:11434/v1" # Docker users: override via OLLAMA_HOST
     model_id: "qwen2.5-coder:7b"
     api_key: "ollama"
 

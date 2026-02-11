@@ -1,0 +1,14 @@
+id: genesis-core
+name: Genesis Core
+type: action
+description: "The primary bootstrapping and system management team."
+members:
+  - id: architect
+    role: system_architect
+  - id: commander
+    role: operations_commander
+inputs:
+  - swarm.global.input.cli.command
+  - swarm.team.genesis.internal.command
+deliveries:
+  - swarm.team.genesis.signal.status
