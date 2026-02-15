@@ -31,8 +31,17 @@ securityContext:
   capabilities:
     drop: ["ALL"]
 
+# Agent output data volume (artifacts, generated files, media)
+dataVolume:
+  size: 2Gi
+  storageClassName: standard
+
 # Environment variables (Extras)
-env: []
+env:
+  - name: OLLAMA_HOST
+    value: "http://192.168.50.156:11434"
+  - name: DATA_DIR
+    value: "/data/artifacts"
 
 # NATS JetStream Configuration
 nats:

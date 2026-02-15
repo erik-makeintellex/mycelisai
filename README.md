@@ -13,7 +13,7 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 
 ## 🏗️ Architecture
 
-- **Tier 1: Core (Go + Postgres + pgvector)**
+- **Tier 1: Core (Go + Postgres + pgvector) [VERIFIED]**
   - Use `core` service for Identity, Governance, and Cognitive Routing.
   - **Cognitive Registry:** Database-backed (`llm_providers`) lookup for AI models, decoupling logic from config.
   - **Guard:** The Governance Engine (formerly Gatekeeper) enforcing policy on every message.
@@ -30,10 +30,21 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
   - **Registry:** Centralized database for Connectors and Blueprints.
   - **Iron Dome:** Security layer enforcing NSA/CIS Hardening standards (User 10001, ReadOnly FS).
 
-- **Tier 3: The Face (Next.js)**
-  - **Genesis Terminal:** Hardware discovery and Bootstrap UI.
-  - **Universal Renderer:** Dynamic UI components driven by the "Zone Layout" (Rail, Workspace, Stream, Decision).
-  - **Cortex Console:** The 4-Zone dashboard for controlling the organism.
+- **Tier 3: The Face (Next.js + Zustand)**
+  - **Mission Control (`/`):** Panopticon dashboard — TelemetryRow (4 live compute sparkline cards polling `/api/v1/telemetry/compute`), PriorityStream (filtered governance/error/artifact NATS feed), MissionsPanel (active missions), ActivityStream (full SSE feed). Header routes: NEW MISSION → `/wiring`, Settings → `/settings`.
+  - **The Shell Layout (`/wiring`):** A rigid frame for fluid intelligence.
+    - **Zone A (Vitals):** System health, heartbeat, and resource metrics.
+    - **Zone B (The Circuit):** Workspace split-pane — ArchitectChat (intent negotiation + TrustSlider + BlueprintDrawer) + CircuitBoard (ReactFlow DAG) or SquadRoom (fractal drill-down).
+    - **Spectrum (Bottom Panel):** NatsWaterfall — collapsible real-time SSE stream visualization powered by Zustand `streamLogs[]`.
+    - **Zone D (The Valve):** Human-in-the-loop Governance overlay — `GovernanceModal.tsx` with two-column review (output + proof-of-work), APPROVE/REJECT controls. Trust Economy: envelopes with `TrustScore < AutoExecuteThreshold` are halted by the Overseer Governance Valve and routed to Zone D via SSE `governance_halt` signals.
+    - **Deliverables Tray:** Bottom-docked `DeliverablesTray.tsx` showing pending `CTSEnvelope` artifacts intercepted from SSE. Pulsing green glow signals human action needed.
+  - **Trust Economy:** Autonomy Threshold slider (0.0–1.0) in ArchitectChat controls the `AutoExecuteThreshold`. High-trust envelopes bypass human approval; low-trust halts for governance. Synced to backend via `PUT /api/v1/trust/threshold`.
+  - **Blueprint Library:** Slide-out drawer in ArchitectChat for saving, importing (JSON), exporting, and loading mission topologies into the ReactFlow canvas.
+  - **Node Iconography:** AgentNode border-left accent by category — Cognitive (purple), Sensory (cyan), Actuation (green), Ledger (muted). Trust score badge visible per-node.
+  - **Fractal Navigation:** Double-click team group nodes to drill into SquadRoom sub-views (internal debate feed + proof-of-work artifacts).
+  - **State Fabric:** Zustand 5.0.11 atomic store (`useCortexStore`) — strict unidirectional data flow, no useState for API/graph state. Trust state: `trustThreshold`, `setTrustThreshold()`. Blueprint state: `savedBlueprints[]`, `loadBlueprint()`, `toggleBlueprintDrawer()`.
+  - **Live Telemetry:** SSE stream (`/api/v1/stream`) dispatches signals to both the waterfall and individual ReactFlow agent nodes (activity ring + thought bubble). Compute telemetry: `GET /api/v1/telemetry/compute` (goroutines, heap, system memory, LLM tokens/sec).
+  - **Visual Protocol:** Vuexy Dark — `cortex-bg` (#25293C), `cortex-surface` (#2F3349), `cortex-primary` (#7367F0), `cortex-success` (#28C76F). Zero zinc/slate classes in active routes.
 
 ## 📚 Documentation Hub
 
@@ -58,30 +69,57 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 
 ## 🧠 Cognitive Architecture (Default)
 
-Mycelis V6 defaults to a **Single Local Model** architecture for privacy and air-gapped readiness.
+Mycelis V6 defaults to a **Single Local Model** architecture for privacy and air-gapped readiness, but supports granular overrides per Agent.
 
 - **Default Model:** `qwen2.5-coder:7b-instruct` (via Ollama).
 - **Fallback:** None (Strict Reliability).
+- **Agent Overrides:**
+  - **System Prompt:** Custom instructions defining the agent's persona.
+  - **Model Profile:** Specific model ID (e.g., `llama3.2`, `gpt-4o`) for specialized tasks.
 
 ### 🛠️ Developer Orchestration
+
+**Prerequisites:** [uv](https://github.com/astral-sh/uv) (for Python/Node management) and [Docker](https://www.docker.com/).
 
 Run the following commands from the root directory:
 
 | Command | Description |
 | :--- | :--- |
+| **Core** | |
 | `inv core.build` | Compiles the Go binary and builds the Docker image. |
 | `inv core.test` | Runs Unit Tests. |
-| `inv core.run` | **(New)** Runs the Core locally (Native). |
-| `inv core.restart` | **(New)** Restarts the Core (Kill + Run). |
-| `inv core.smoke` | **(New)** Runs Governance Smoke Tests against local Core. |
-| `inv k8s.reset` | **(New)** Full Infrastructure Reset (Teardown + Init + Deploy). |
+| `inv core.run` | Runs the Core locally (Native). |
+| `inv core.restart` | Restarts the Core (Kill + Run). |
+| `inv core.smoke` | Runs Governance Smoke Tests against local Core. |
+| **Interface** | |
+| `inv interface.dev` | Start Next.js dev server (Turbopack). |
+| `inv interface.build` | Production build. |
+| `inv interface.lint` | ESLint check. |
+| `inv interface.test` | Run Vitest unit tests. |
+| `inv interface.check` | Smoke-test running server (fetches pages, checks for errors). |
+| `inv interface.stop` | Kill dev server by port. |
+| `inv interface.clean` | Clear `.next` build cache. |
+| `inv interface.restart` | Full restart: stop → clean → build → dev → check. |
+| **Database** | |
+| `inv db.migrate` | Apply all SQL migrations to cortex (idempotent). |
+| `inv db.reset` | Drop + recreate cortex DB, then run all migrations. |
+| `inv db.create` | Create the cortex database if it doesn't exist. |
+| `inv db.status` | Show tables in the cortex database. |
+| **Infrastructure** | |
+| `inv k8s.reset` | Full Infrastructure Reset (Teardown + Init + Deploy). |
 | `inv k8s.status` | Checks the status of the Kubernetes cluster. |
 | `inv k8s.deploy` | Deploys the Helm chart to the local cluster. |
 | `inv k8s.bridge` | Opens ports for NATS, API, and Postgres. |
-| `inv device.boot` | **(New)** Simulates a hardware node announcement via NATS. |
+| `inv device.boot` | Simulates a hardware node announcement via NATS. |
+| **Testing** | |
+| `inv test.all` | Run all tests (Core + Interface). |
+| `inv team.test` | Run Python agent unit tests. |
+
+> [!TIP]
+> **Pro Tip:** If you run `uv venv` and activate your virtual environment, you can run `inv` directly without `uv run`.
 
 > [!NOTE]
-> **Secure Migrations:** Database migrations are applied via a hardened ephemeral pod (`migration-runner`) enforcing Iron Dome standards (User 10001, ReadOnlyRoot). Do not run manual `psql` unless necessary.
+> **Migrations:** Use `uvx inv db.migrate` (idempotent) or `uvx inv db.reset` (destructive). Migrations live in `core/migrations/*.sql` and are applied in lexicographic order via `psql` over the bridge.
 
 ### Hardware Grading
 
@@ -108,29 +146,35 @@ cp .env.example .env
 
 ```bash
 # Full System Reset (Cluster + Core + DB)
-uv run inv k8s.reset
-
-# Open Development Bridge (Required for CLI/UI)
-uv run inv k8s.bridge
+uvx inv k8s.reset
 ```
 
-### 2. Bootstrap Identity (The First Login)
+### 3. Open the Development Bridge (Terminal 1)
 
-Since V6 enforces RBAC, you must create an Admin user to access the console.
-*(Ensure `inv k8s.bridge` is running if using local CLI)*
+Port-forwards PostgreSQL, NATS, and HTTP from the Kind cluster to localhost. Keep this running.
 
 ```bash
-# Create the first admin user
-uv run python cli/main.py admin-create "admin"
+uvx inv k8s.bridge
 ```
 
-*Copy the Session Token output!*
-
-### 3. Launch the Cortex Console
+### 4. Initialize the Database
 
 ```bash
-cd interface
-npm run dev
+uvx inv db.migrate    # Apply all migrations (idempotent)
+# or: uvx inv db.reset   # Full drop + recreate + migrate
+```
+
+### 5. Start the Core Server (Terminal 2)
+
+```bash
+uvx inv core.run      # Stops any existing instance, then starts
+```
+
+### 6. Launch the Cortex Console (Terminal 3)
+
+```bash
+uvx inv interface.install   # First time: install npm dependencies
+uvx inv interface.dev       # Start dev server on port 3000
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -174,8 +218,9 @@ go test -v ./internal/memory/...    # Archivist/SitReps
 go test -v ./internal/cognitive/... # LLM Router
 
 # Run Integration Tests (Real Ollama)
-# Requires TEST_LIVE_LLM=true
-go test -v -tags=integration ./tests/...
+# Run Integration Tests (Real Ollama)
+# Requires OLLAMA_HOST to be set
+$env:OLLAMA_HOST="http://localhost:11434"; go test -v -tags=integration ./tests/...
 ```
 
 ## 🌲 Branching Strategy

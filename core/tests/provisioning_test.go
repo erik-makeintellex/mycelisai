@@ -13,7 +13,7 @@ import (
 
 func TestProvisioning_Draft(t *testing.T) {
 	// 1. Setup (Load Brain)
-	router, err := cognitive.NewRouter("../config/brain.yaml")
+	router, err := cognitive.NewRouter("../config/cognitive.yaml", nil)
 	if err != nil {
 		t.Fatalf("Failed to load brain: %v", err)
 	}

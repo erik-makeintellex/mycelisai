@@ -51,7 +51,7 @@ func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 	// For "amount > 50", usually amount is in the event data, not the header context.
 	// The policy engine might want both.
 	// For this loop, let's also pull data from EventPayload if present.
-	if msg.GetEvent() != nil {
+	if msg.GetEvent() != nil && msg.GetEvent().Data != nil {
 		for k, v := range msg.GetEvent().Data.Fields {
 			if _, ok := v.Kind.(*structpb.Value_NumberValue); ok {
 				ctx[k] = v.GetNumberValue()

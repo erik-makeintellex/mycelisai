@@ -34,7 +34,7 @@ func TestSoma_Integration(t *testing.T) {
 	reg := NewRegistry(".") // Empty path, no manifests load
 
 	// 4. Init Soma
-	soma := NewSoma(nc, guard, reg, nil) // brain is nil for this integration test
+	soma := NewSoma(nc, guard, reg, nil, nil, nil) // brain, stream, and toolExec are nil for this integration test
 	if err := soma.Start(); err != nil {
 		t.Fatalf("Soma start failed: %v", err)
 	}
@@ -50,11 +50,16 @@ func TestSoma_Integration(t *testing.T) {
 		}
 	})
 
+	// Allow subscriptions to propagate
+	nc.Flush()
+	time.Sleep(100 * time.Millisecond)
+
 	// Publish via Global Bus
 	err = nc.Publish("swarm.global.input.cli.command", []byte("hello swarm"))
 	if err != nil {
 		t.Fatalf("Publish failed: %v", err)
 	}
+	nc.Flush()
 
 	select {
 	case <-done:

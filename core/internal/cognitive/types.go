@@ -7,17 +7,17 @@ import (
 // --- Configuration V2 ---
 
 type BrainConfig struct {
-	Providers map[string]ProviderConfig `yaml:"providers"`
-	Profiles  map[string]string         `yaml:"profiles"` // ProfileName -> ProviderID
+	Providers map[string]ProviderConfig `yaml:"providers" json:"providers"`
+	Profiles  map[string]string         `yaml:"profiles" json:"profiles"` // ProfileName -> ProviderID
 }
 
 type ProviderConfig struct {
-	Type       string `yaml:"type"`        // openai, openai_compatible, anthropic, google
-	Driver     string `yaml:"-"`           // DB Driver type (mapped to Type)
-	Endpoint   string `yaml:"endpoint"`    // e.g. "http://localhost:11434/v1"
-	ModelID    string `yaml:"model_id"`    // e.g. "qwen2.5-coder:7b"
-	AuthKey    string `yaml:"api_key"`     // Direct value (unsafe for prod)
-	AuthKeyEnv string `yaml:"api_key_env"` // Env Var Name
+	Type       string `yaml:"type" json:"type"`             // openai, openai_compatible, anthropic, google
+	Driver     string `yaml:"-" json:"-"`                   // DB Driver type (mapped to Type)
+	Endpoint   string `yaml:"endpoint" json:"endpoint,omitempty"` // e.g. "http://localhost:11434/v1"
+	ModelID    string `yaml:"model_id" json:"model_id"`     // e.g. "qwen2.5-coder:7b"
+	AuthKey    string `yaml:"api_key" json:"-"`             // NEVER expose in API responses
+	AuthKeyEnv string `yaml:"api_key_env" json:"-"`         // NEVER expose in API responses
 }
 
 // --- Interfaces ---
@@ -42,10 +42,22 @@ type InferRequest struct {
 }
 
 type InferResponse struct {
-	Text      string `json:"text"`
-	ModelUsed string `json:"model_used"`
-	Provider  string `json:"provider"`
+	Text       string `json:"text"`
+	ModelUsed  string `json:"model_used"`
+	Provider   string `json:"provider"`
+	TokensUsed int    `json:"tokens_used,omitempty"`
 }
+
+// --- Embedding Interface ---
+
+// EmbedProvider is implemented by adapters that support text embedding (e.g. Ollama, OpenAI).
+// Not all LLMProviders support this — callers must type-assert.
+type EmbedProvider interface {
+	Embed(ctx context.Context, text string, model string) ([]float64, error)
+}
+
+// DefaultEmbedModel is the standard embedding model (768 dims, matches context_vectors table).
+const DefaultEmbedModel = "nomic-embed-text"
 
 // --- Middleware / Contracts ---
 

@@ -2,36 +2,63 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/mycelis/core/internal/artifacts"
+	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
+	"github.com/mycelis/core/internal/overseer"
 	"github.com/mycelis/core/internal/provisioning"
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
+	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
+	"github.com/mycelis/core/internal/swarm"
 )
 
 // AdminServer handles governance and system endpoints
 type AdminServer struct {
-	Router      *router.Router
-	Guard       *governance.Guard
-	Mem         *memory.Service
-	Cognitive   *cognitive.Router
-	Provisioner *provisioning.Engine
-	Registry    *registry.Service
+	Router        *router.Router
+	Guard         *governance.Guard
+	Mem           *memory.Service
+	Cognitive     *cognitive.Router
+	Provisioner   *provisioning.Engine
+	Registry      *registry.Service
+	Soma          *swarm.Soma
+	Stream        *signal.StreamHandler
+	MetaArchitect *cognitive.MetaArchitect
+	Overseer      *overseer.Engine    // Phase 5.2: Trust Economy
+	Archivist     *memory.Archivist   // Phase 5.3: RAG Persistence
+	Proposals     *ProposalStore      // Phase 5.3: Team Manifestation
+	MCP           *mcp.Service        // Phase 7.0: MCP Ingress
+	MCPPool       *mcp.ClientPool     // Phase 7.0: MCP Ingress
+	Catalogue     *catalogue.Service  // Phase 7.5: Agent Catalogue
+	Artifacts     *artifacts.Service  // Phase 7.5: Agent Outputs
 }
 
-func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, cat *catalogue.Service, art *artifacts.Service) *AdminServer {
 	return &AdminServer{
-		Router:      r,
-		Guard:       guard,
-		Mem:         mem,
-		Cognitive:   cog,
-		Provisioner: prov,
-		Registry:    reg,
+		Router:        r,
+		Guard:         guard,
+		Mem:           mem,
+		Cognitive:     cog,
+		Provisioner:   prov,
+		Registry:      reg,
+		Soma:          soma,
+		Stream:        stream,
+		MetaArchitect: architect,
+		Overseer:      ov,
+		Archivist:     arch,
+		Proposals:     NewProposalStore(),
+		MCP:           mcpSvc,
+		MCPPool:       mcpPool,
+		Catalogue:     cat,
+		Artifacts:     art,
 	}
 }
 
@@ -42,18 +69,32 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/agents", s.handleAgents)
 	mux.HandleFunc("/healthz", s.handleHealth)
 
+	// Stream API (guarded — Stream may be nil in degraded mode)
+	if s.Stream != nil {
+		mux.HandleFunc("/api/v1/stream", s.Stream.HandleStream)
+	} else {
+		mux.HandleFunc("/api/v1/stream", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, `{"error":"SSE stream handler not initialized — infrastructure offline"}`, http.StatusServiceUnavailable)
+		})
+	}
+
 	// Memory API
 	mux.HandleFunc("/api/v1/memory/stream", s.GetMemoryStream)
 
 	// Cognitive API (Real)
 	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
 	mux.HandleFunc("/api/v1/cognitive/config", s.HandleCognitiveConfig)
+	mux.HandleFunc("/api/v1/cognitive/matrix", s.HandleCognitiveConfig) // Alias: UI calls /matrix
 	mux.HandleFunc("/api/v1/chat", s.HandleChat)
 
 	// Identity API
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUpdateSettings)
+
+	// Missions API (Dashboard)
+	mux.HandleFunc("GET /api/v1/missions", s.handleListMissions)
 
 	// Provisioning API
 	mux.HandleFunc("/api/v1/provision/draft", s.HandleProvisionDraft)
@@ -81,6 +122,48 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("POST /api/v1/teams/{id}/connectors", s.handleInstallConnector)
 	mux.HandleFunc("GET /api/v1/teams/{id}/wiring", s.handleGetWiring)
+
+	// Intent Negotiation API
+	mux.HandleFunc("POST /api/v1/intent/negotiate", s.handleIntentNegotiate)
+
+	// Intent Commit (Instantiate Mission into Ledger + Activate in Soma)
+	mux.HandleFunc("POST /api/v1/intent/commit", s.handleIntentCommit)
+
+	// Phase 6.0: Symbiotic Seed (built-in sensor team, no LLM required)
+	mux.HandleFunc("POST /api/v1/intent/seed/symbiotic", s.handleSymbioticSeed)
+
+	// Phase 5.2: Telemetry & Trust Economy
+	mux.HandleFunc("GET /api/v1/telemetry/compute", s.HandleTelemetry)
+	mux.HandleFunc("/api/v1/trust/threshold", s.HandleTrustThreshold)
+
+	// Phase 5.3: RAG Memory & Sensory
+	mux.HandleFunc("GET /api/v1/memory/search", s.HandleMemorySearch)
+	mux.HandleFunc("GET /api/v1/memory/sitreps", s.HandleListSitReps)
+	mux.HandleFunc("GET /api/v1/sensors", s.HandleSensors)
+
+	// Phase 5.3: Team Manifestation Proposals
+	mux.HandleFunc("/api/v1/proposals", s.HandleProposals)
+	mux.HandleFunc("POST /api/v1/proposals/{id}/approve", s.HandleProposalApprove)
+	mux.HandleFunc("POST /api/v1/proposals/{id}/reject", s.HandleProposalReject)
+
+	// Phase 7.0: MCP Ingress API
+	mux.HandleFunc("POST /api/v1/mcp/install", s.handleMCPInstall)
+	mux.HandleFunc("GET /api/v1/mcp/servers", s.handleMCPList)
+	mux.HandleFunc("DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
+	mux.HandleFunc("POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
+	mux.HandleFunc("GET /api/v1/mcp/tools", s.handleMCPToolsList)
+
+	// Phase 7.5: Agent Catalogue API
+	mux.HandleFunc("GET /api/v1/catalogue/agents", s.handleListCatalogue)
+	mux.HandleFunc("POST /api/v1/catalogue/agents", s.handleCreateCatalogue)
+	mux.HandleFunc("PUT /api/v1/catalogue/agents/{id}", s.handleUpdateCatalogue)
+	mux.HandleFunc("DELETE /api/v1/catalogue/agents/{id}", s.handleDeleteCatalogue)
+
+	// Phase 7.5: Artifacts API (Agent Outputs)
+	mux.HandleFunc("GET /api/v1/artifacts", s.handleListArtifacts)
+	mux.HandleFunc("GET /api/v1/artifacts/{id}", s.handleGetArtifact)
+	mux.HandleFunc("POST /api/v1/artifacts", s.handleStoreArtifact)
+	mux.HandleFunc("PUT /api/v1/artifacts/{id}/status", s.handleUpdateArtifactStatus)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {
@@ -165,4 +248,37 @@ func (s *AdminServer) handleAgents(w http.ResponseWriter, r *http.Request) {
 func (s *AdminServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
+}
+
+// POST /api/v1/intent/negotiate
+func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Request) {
+	if s.MetaArchitect == nil {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, `{"error":"Cognitive engine offline — MetaArchitect not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	var req struct {
+		Intent string `json:"intent"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Intent == "" {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, `{"error":"intent is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	blueprint, err := s.MetaArchitect.GenerateBlueprint(r.Context(), req.Intent)
+	if err != nil {
+		log.Printf("Intent negotiation failed: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, fmt.Sprintf(`{"error":"Cognitive engine error: %s"}`, err.Error()), http.StatusBadGateway)
+		return
+	}
+
+	respondJSON(w, blueprint)
 }

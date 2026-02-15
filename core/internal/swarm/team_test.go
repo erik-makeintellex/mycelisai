@@ -26,7 +26,7 @@ func TestTeam_TriggerLogic(t *testing.T) {
 		Inputs: []string{"swarm.global.event.boom"},
 	}
 
-	team := NewTeam(manifest, nc, nil)
+	team := NewTeam(manifest, nc, nil, nil)
 	team.Start()
 	defer team.Stop()
 

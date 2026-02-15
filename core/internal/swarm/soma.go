@@ -2,12 +2,16 @@ package swarm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/signal"
+	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
 
@@ -15,33 +19,36 @@ import (
 // It acts as the User Proxy, receiving external inputs and high-level directives.
 // It delegates execution to "Axon" (The Messenger) and Action/Expression Cores.
 type Soma struct {
-	id       string
-	nc       *nats.Conn
-	guard    *governance.Guard
-	axon     *Axon
-	teams    map[string]*Team
-	mu       sync.RWMutex
-	ctx      context.Context
-	cancel   context.CancelFunc
-	registry *Registry
-	brain    *cognitive.Router
+	id           string
+	nc           *nats.Conn
+	guard        *governance.Guard
+	axon         *Axon
+	teams        map[string]*Team
+	mu           sync.RWMutex
+	ctx          context.Context
+	cancel       context.CancelFunc
+	registry     *Registry
+	brain        *cognitive.Router
+	toolExecutor MCPToolExecutor
 }
 
 // NewSoma creates a new Executive instance.
-func NewSoma(nc *nats.Conn, guard *governance.Guard, registry *Registry, brain *cognitive.Router) *Soma {
+// toolExec may be nil if MCP tools are not available.
+func NewSoma(nc *nats.Conn, guard *governance.Guard, registry *Registry, brain *cognitive.Router, stream *signal.StreamHandler, toolExec MCPToolExecutor) *Soma {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Soma{
-		id:       "soma-core",
-		nc:       nc,
-		guard:    guard,
-		registry: registry,
-		brain:    brain,
-		teams:    make(map[string]*Team),
-		ctx:      ctx,
-		cancel:   cancel,
+		id:           "soma-core",
+		nc:           nc,
+		guard:        guard,
+		registry:     registry,
+		brain:        brain,
+		toolExecutor: toolExec,
+		teams:        make(map[string]*Team),
+		ctx:          ctx,
+		cancel:       cancel,
 	}
 	// Axon is Soma's Assistant
-	s.axon = NewAxon(nc, s)
+	s.axon = NewAxon(nc, s, stream)
 	return s
 }
 
@@ -55,7 +62,7 @@ func (s *Soma) Start() error {
 		log.Printf("WARN: Failed to load team manifests: %v", err)
 	}
 	for _, m := range manifests {
-		team := NewTeam(m, s.nc, s.brain)
+		team := NewTeam(m, s.nc, s.brain, s.toolExecutor)
 		s.teams[m.ID] = team
 		if err := team.Start(); err != nil {
 			log.Printf("ERR: Failed to start team %s: %v", m.ID, err)
@@ -63,7 +70,7 @@ func (s *Soma) Start() error {
 	}
 
 	// 1. Subscribe to Global User Input (GUI, CLI, Sensors)
-	if _, err = s.nc.Subscribe("swarm.global.input.>", s.handleGlobalInput); err != nil {
+	if _, err = s.nc.Subscribe(protocol.TopicGlobalInputWild, s.handleGlobalInput); err != nil {
 		return fmt.Errorf("failed to subscribe to global input: %w", err)
 	}
 
@@ -93,8 +100,138 @@ func (s *Soma) handleGlobalInput(msg *nats.Msg) {
 	s.axon.ProcessSignal(msg)
 }
 
-// Shutdown stops the Soma and its Axon.
+// SpawnTeam dynamically creates and starts a new Team.
+func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.teams[manifest.ID]; exists {
+		return fmt.Errorf("team %s already exists", manifest.ID)
+	}
+
+	// Persist? For now, just runtime spawn.
+	// TODO: Save to Registry (YAML)
+
+	team := NewTeam(manifest, s.nc, s.brain, s.toolExecutor)
+	if err := team.Start(); err != nil {
+		return err
+	}
+
+	s.teams[manifest.ID] = team
+	log.Printf("Soma Spawned New Team: %s", manifest.ID)
+	return nil
+}
+
+// ListTeams returns a snapshot of active teams.
+func (s *Soma) ListTeams() []*TeamManifest {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var list []*TeamManifest
+	for _, t := range s.teams {
+		list = append(list, t.Manifest)
+	}
+	return list
+}
+
+// REST Handlers (For Router)
+
+// HandleCreateTeam processes HTTP POST /api/swarm/teams
+// and GET /api/swarm/teams (List)
+func (s *Soma) HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		s.HandleListTeams(w, r)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var manifest TeamManifest
+	if err := json.NewDecoder(r.Body).Decode(&manifest); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Basic Validation
+	if manifest.ID == "" || manifest.Name == "" {
+		http.Error(w, "Missing ID or Name", http.StatusBadRequest)
+		return
+	}
+
+	// Sanatize/Default
+	if manifest.Type == "" {
+		manifest.Type = TeamTypeAction
+	}
+
+	if err := s.SpawnTeam(&manifest); err != nil {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"status": "spawned", "id": manifest.ID})
+}
+
+// HandleListTeams returns the list of active teams.
+func (s *Soma) HandleListTeams(w http.ResponseWriter, r *http.Request) {
+	teams := s.ListTeams()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(teams)
+}
+
+// HandleCommand processes HTTP POST /api/swarm/command
+// It injects a user command into the Swarm Global Input bus.
+func (s *Soma) HandleCommand(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload struct {
+		Content string `json:"content"`
+		Source  string `json:"source"` // e.g. "mission-control"
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Content == "" {
+		http.Error(w, "Missing content", http.StatusBadRequest)
+		return
+	}
+
+	// 1. Construct Message
+	// Topic: swarm.global.input.user
+	subject := protocol.TopicGlobalInputUser
+	if payload.Source != "" {
+		subject = fmt.Sprintf("swarm.global.input.%s", payload.Source)
+	}
+
+	// 2. Publish
+	if err := s.nc.Publish(subject, []byte(payload.Content)); err != nil {
+		log.Printf("Failed to publish command: %v", err)
+		http.Error(w, "Failed to inject command", http.StatusInternalServerError)
+		return
+	}
+	s.nc.Flush()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "sent", "subject": subject})
+}
+
+// Shutdown stops the Soma, all teams, and its Axon.
 func (s *Soma) Shutdown() {
+	s.mu.RLock()
+	for id, t := range s.teams {
+		log.Printf("Soma shutting down Team [%s]", id)
+		t.Stop()
+	}
+	s.mu.RUnlock()
 	s.cancel()
-	// Shutdown teams?
 }

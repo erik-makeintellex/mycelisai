@@ -68,6 +68,34 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 	}, nil
 }
 
+// Embed generates a vector embedding for the given text using the OpenAI-compatible
+// /v1/embeddings endpoint. Works with Ollama (nomic-embed-text) and OpenAI (text-embedding-3-small).
+func (a *OpenAIAdapter) Embed(ctx context.Context, text string, model string) ([]float64, error) {
+	if model == "" {
+		model = DefaultEmbedModel
+	}
+
+	resp, err := a.client.CreateEmbeddings(ctx, openai.EmbeddingRequest{
+		Input: []string{text},
+		Model: openai.EmbeddingModel(model),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("embedding failed: %w", err)
+	}
+
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("no embedding returned")
+	}
+
+	// Convert float32 → float64 for pgvector compatibility
+	raw := resp.Data[0].Embedding
+	vec := make([]float64, len(raw))
+	for i, v := range raw {
+		vec[i] = float64(v)
+	}
+	return vec, nil
+}
+
 func (a *OpenAIAdapter) Probe(ctx context.Context) (bool, error) {
 	// Simple connectivity check: List Models or empty chat?
 	// Listing models is safer/cheaper usually, but might return huge list.
