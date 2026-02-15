@@ -1,11 +1,11 @@
-# Implementation Directive: The Archivist (Phase 2B)
+# Implementation Directive: Memory Service (Phase 2B)
 **Target:** `mycelis-core` (Go)
 **Goal:** Transform the Core from a stateless router into a "State Engine" by projecting NATS events into PostgreSQL.
 **Security Level:** High (No raw SQL strings, usage of Env Vars).
 
 ---
 
-## 1. The Biological Schema (Migration)
+## 1. The Cortex Schema (Migration)
 Create the database structure that supports both the immutable event log and the live state registry.
 
 **File:** `core/migrations/001_init_memory.sql`
@@ -44,10 +44,10 @@ CREATE TABLE IF NOT EXISTS agent_registry (
 );
 ```
 
-## 2. The Archivist Package (Write Logic)
+## 2. The Memory Service Package (Write Logic)
 Implement the worker that listens to the stream and writes to the DB without blocking the reflex loop.
 
-**File:** `core/internal/memory/archivist.go`
+**File:** `core/internal/memory/service.go`
 
 ```go
 package memory
@@ -62,13 +62,13 @@ import (
     pb "github.com/mycelis/proto/swarm/v1"
 )
 
-// Archivist manages the projection of stream events to state.
-type Archivist struct {
+// Service manages the projection of stream events to state.
+type Service struct {
     db     *sql.DB
     events chan *pb.LogEntry // Buffered channel to prevent blocking
 }
 
-func NewArchivist(dbUrl string) (*Archivist, error) {
+func NewService(dbUrl string) (*Service, error) {
     db, err := sql.Open("pgx", dbUrl)
     if err != nil {
         return nil, err
@@ -79,16 +79,16 @@ func NewArchivist(dbUrl string) (*Archivist, error) {
         return nil, err
     }
 
-    return &Archivist{
+    return &Service{
         db:     db,
         events: make(chan *pb.LogEntry, 1000), // Buffer 1000 logs
     }, nil
 }
 
 // Push adds an event to the processing queue non-blocking.
-func (a *Archivist) Push(entry *pb.LogEntry) {
+func (s *Service) Push(entry *pb.LogEntry) {
     select {
-    case a.events <- entry:
+    case s.events <- entry:
         // Queued
     default:
         // Buffer full: Log error to stderr or drop (Do not crash Core)
@@ -97,25 +97,25 @@ func (a *Archivist) Push(entry *pb.LogEntry) {
 }
 
 // Start begins the projection loop.
-func (a *Archivist) Start(ctx context.Context) {
+func (s *Service) Start(ctx context.Context) {
     for {
         select {
         case <-ctx.Done():
             return
-        case entry := <-a.events:
-            a.persist(entry)
+        case entry := <-s.events:
+            s.persist(entry)
         }
     }
 }
 
-func (a *Archivist) persist(entry *pb.LogEntry) {
+func (s *Service) persist(entry *pb.LogEntry) {
     // 1. Insert Log
     ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
     defer cancel()
 
     contextJSON, _ := json.Marshal(entry.Context)
 
-    _, err := a.db.ExecContext(ctx, 
+    _, err := s.db.ExecContext(ctx, 
         `INSERT INTO log_entries (trace_id, timestamp, level, source, intent, message, context) 
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         entry.TraceId, time.Now(), entry.Level, entry.Source, entry.Intent, entry.Message, contextJSON,
@@ -126,7 +126,7 @@ func (a *Archivist) persist(entry *pb.LogEntry) {
 
     // 2. Upsert Registry (Live State)
     // "On Conflict" logic updates the 'last_seen' timestamp automatically.
-    _, err = a.db.ExecContext(ctx,
+    _, err = s.db.ExecContext(ctx,
         `INSERT INTO agent_registry (agent_id, team_id, status, last_seen)
          VALUES ($1, $2, $3, NOW())
          ON CONFLICT (agent_id) DO UPDATE 
@@ -157,7 +157,7 @@ func (s *Server) GetMemoryStream(w http.ResponseWriter, r *http.Request) {
 ```
 
 ## 4. Wiring (The Cortex Connection)
-Connect the Database and start the Archivist in the main loop.
+Connect the Database and start the Service in the main loop.
 
 **File:** `core/cmd/server/main.go`
 
@@ -165,7 +165,7 @@ Connect the Database and start the Archivist in the main loop.
 func main() {
     // ... config loading ...
 
-    // 1. Connect to Hippocampus (Postgres)
+    // 1. Connect to Cortex Memory (Postgres)
     dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
         os.Getenv("DB_USER"),
         os.Getenv("DB_PASSWORD"),
@@ -174,13 +174,13 @@ func main() {
         os.Getenv("DB_NAME"),
     )
     
-    archivist, err := memory.NewArchivist(dbURL)
+    memService, err := memory.NewService(dbURL)
     if err != nil {
         log.Fatalf("❌ Memory Corruption: %v", err)
     }
 
     // 2. Start Projection Routine (Background)
-    go archivist.Start(context.Background())
+    go memService.Start(context.Background())
 
     // 3. Start NATS Subscriber
     nc.Subscribe("swarm.>", func(msg *nats.Msg) {
@@ -189,8 +189,8 @@ func main() {
         // A. The Reflex (Router)
         router.Dispatch(entry)
 
-        // B. The Memory (Archivist)
-        archivist.Push(entry)
+        // B. The Memory (Service)
+        memService.Push(entry)
     })
     
     // ... start HTTP server ...

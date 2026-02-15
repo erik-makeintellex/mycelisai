@@ -30,7 +30,7 @@ func TestCognitiveMatrix(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// 3. Invoke Handler
-	handler := http.HandlerFunc(s.handleGetMatrix)
+	handler := http.HandlerFunc(s.HandleCognitiveConfig)
 	handler.ServeHTTP(rr, req)
 
 	// 4. Assertions

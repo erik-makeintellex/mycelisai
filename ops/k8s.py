@@ -12,7 +12,28 @@ def init(c):
         c.run(f"kind get clusters | findstr {CLUSTER_NAME}" if is_windows() else f"kind get clusters | grep {CLUSTER_NAME}", hide=True)
         print("Cluster exists.")
     except:
-        c.run(f"kind create cluster --name {CLUSTER_NAME} --config kind-config.yaml")
+        # Check if we need to hydrate absolute paths for Windows Kind
+        from pathlib import Path
+        
+        with open("kind-config.yaml", "r") as f:
+            config = f.read()
+        
+        # Replace relative paths with absolute
+        # We assume relative paths start with ./ops/
+        abs_ops = str(ROOT_DIR / "ops").replace("\\", "/")
+        # Basic substitution - robust enough for this specific file
+        config = config.replace("./ops", abs_ops)
+        
+        # Fix Logs path too
+        abs_logs = str(ROOT_DIR / "logs").replace("\\", "/")
+        config = config.replace("./logs", abs_logs)
+
+        # Write temp
+        with open("kind-config.gen.yaml", "w") as f:
+            f.write(config)
+
+        print(f"Generated absolute config at kind-config.gen.yaml")
+        c.run(f"kind create cluster --name {CLUSTER_NAME} --config kind-config.gen.yaml")
     
     
     # Legacy raw manifests removed. Helm chart handles infra.
@@ -75,11 +96,11 @@ def bridge(c):
     """
     print("Starting Port-Forward Proxy (NATS:4222, HTTP:8080, PG:5432)...")
     if is_windows():
-        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/nats 4222:4222")
+        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core-nats 4222:4222")
         c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080")
         c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core-postgresql 5432:5432")
     else:
-        p1 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/nats 4222:4222", asynchronous=True)
+        p1 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core-nats 4222:4222", asynchronous=True)
         p2 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080", asynchronous=True)
         p3 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core-postgresql 5432:5432", asynchronous=True)
         print("Bridge active. Press Ctrl+C to stop.")

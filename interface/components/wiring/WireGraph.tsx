@@ -59,7 +59,6 @@ export default function WireGraph() {
 
                 const newNodes: Node[] = [];
                 const newEdges: Edge[] = [];
-                let yOffset = 0;
 
                 // Center Node: The Team
                 newNodes.push({

@@ -13,6 +13,7 @@ type BrainConfig struct {
 
 type ProviderConfig struct {
 	Type       string `yaml:"type"`        // openai, openai_compatible, anthropic, google
+	Driver     string `yaml:"-"`           // DB Driver type (mapped to Type)
 	Endpoint   string `yaml:"endpoint"`    // e.g. "http://localhost:11434/v1"
 	ModelID    string `yaml:"model_id"`    // e.g. "qwen2.5-coder:7b"
 	AuthKey    string `yaml:"api_key"`     // Direct value (unsafe for prod)

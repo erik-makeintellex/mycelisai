@@ -2,152 +2,115 @@ package memory
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // Use pgx driver
+	"github.com/mycelis/core/internal/cognitive"
 )
 
-// LogEntry matches the SQL schema log_entries table
-type LogEntry struct {
-	ID        string         `json:"id"`
-	TraceId   string         `json:"trace_id"`
-	Timestamp time.Time      `json:"timestamp"`
-	Level     string         `json:"level"`
-	Source    string         `json:"source"`
-	Intent    string         `json:"intent"`
-	Message   string         `json:"message"`
-	Context   map[string]any `json:"context"` // Generic map for JSONB
-}
-
-// Archivist manages the projection of stream events to state.
+// Archivist manages high-level context and reflection
 type Archivist struct {
-	db     *sql.DB
-	events chan *LogEntry // Buffered channel to prevent blocking
+	Mem *Service
+	Cog *cognitive.Router
 }
 
-func NewArchivist(dbUrl string) (*Archivist, error) {
-	db, err := sql.Open("pgx", dbUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	// Validate connection with Retry (Stabilization)
-	var pingErr error
-	for i := 0; i < 30; i++ {
-		pingErr = db.Ping()
-		if pingErr == nil {
-			log.Println("✅ Archivist: Connected to Hippocampus (Postgres)")
-			break
-		}
-		log.Printf("⏳ Archivist: Waiting for Hippocampus... (%d/30) - %v", i+1, pingErr)
-		time.Sleep(1 * time.Second)
-	}
-
-	if pingErr != nil {
-		return nil, pingErr // Fatal after 30s
-	}
-
+func NewArchivist(mem *Service, cog *cognitive.Router) *Archivist {
 	return &Archivist{
-		db:     db,
-		events: make(chan *LogEntry, 1000), // Buffer 1000 logs
-	}, nil
-}
-
-// Push adds an event to the processing queue non-blocking.
-func (a *Archivist) Push(entry *LogEntry) {
-	select {
-	case a.events <- entry:
-		// Queued
-	default:
-		// Buffer full: Log error to stderr or drop (Do not crash Core)
-		log.Println("⚠️ Archivist Buffer Full: Dropping Event")
+		Mem: mem,
+		Cog: cog,
 	}
 }
 
-// Start begins the projection loop.
-func (a *Archivist) Start(ctx context.Context) {
-	log.Println("🧠 Archivist: Projection Loop Started")
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case entry := <-a.events:
-			a.persist(entry)
-		}
-	}
-}
+// GenerateSitRep summarizes the last window of time for a given team
+func (a *Archivist) GenerateSitRep(ctx context.Context, teamID string, duration time.Duration) error {
+	end := time.Now()
+	start := end.Add(-duration)
 
-func (a *Archivist) persist(entry *LogEntry) {
-	// 1. Insert Log
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	contextJSON, _ := json.Marshal(entry.Context)
-
-	// Use time.Now() for consistency or entry.Timestamp if we trust it?
-	// SQL uses DEFAULT NOW(), but we pass $2.
-	// If entry.Timestamp is set, use it. Else Now().
-	ts := entry.Timestamp
-	if ts.IsZero() {
-		ts = time.Now()
-	}
-
-	_, err := a.db.ExecContext(ctx,
-		`INSERT INTO log_entries (trace_id, timestamp, level, source, intent, message, context) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		entry.TraceId, ts, entry.Level, entry.Source, entry.Intent, entry.Message, contextJSON,
-	)
+	// 1. Retrieve Logs
+	logs, err := a.Mem.ListLogs(ctx, start, end, 500) // Cap at 500 logs for context window
 	if err != nil {
-		log.Printf("❌ Archivist Save Error: %v", err)
+		return fmt.Errorf("failed to fetch logs: %w", err)
 	}
 
-	// 2. Upsert Registry (Live State)
-	// "On Conflict" logic updates the 'last_seen' timestamp automatically.
-	_, err = a.db.ExecContext(ctx,
-		`INSERT INTO agent_registry (agent_id, team_id, status, last_seen)
-         VALUES ($1, $2, $3, NOW())
-         ON CONFLICT (agent_id) DO UPDATE 
-         SET last_seen = NOW(), status = EXCLUDED.status`,
-		entry.Source, "default", "ACTIVE", // Default Team/Status for now
-	)
-	if err != nil {
-		log.Printf("❌ Registry Update Error: %v", err)
+	if len(logs) == 0 {
+		return fmt.Errorf("no logs found for window")
 	}
+
+	// 2. Compress Context
+	logSummary := ""
+	for _, l := range logs {
+		logSummary += fmt.Sprintf("[%s] %s: %s (%s)\n", l.Timestamp.Format(time.RFC3339), l.Source, l.Message, l.Intent)
+	}
+
+	// 3. Prompt Cognitive Engine
+	prompt := fmt.Sprintf(`
+Analyze the following system logs for Team %s and generate a SITREP (Situation Report).
+Time Window: %s to %s
+
+LOGS:
+%s
+
+FORMAT (JSON):
+{
+	"summary": "High level narrative of what happened.",
+	"key_events": ["list of critical check points or errors"],
+	"strategies": "Recommendation for next steps."
+}
+	`, teamID, start.Format(time.RFC3339), end.Format(time.RFC3339), logSummary)
+
+	req := cognitive.InferRequest{
+		Profile: "architect", // Use the Architect profile (likely stronger model)
+		Prompt:  prompt,
+	}
+
+	// Make Schema Enforcement Explicit?
+	// For now we trust the Architect to follow instructions.
+
+	resp, err := a.Cog.InferWithContract(ctx, req)
+	if err != nil {
+		// Log error but treat as "brain fog"
+		log.Printf("Archivist: Brain Fog (Inference Failed): %v", err)
+		return err
+	}
+
+	// 4. Parse Response
+	var sitrep struct {
+		Summary    string   `json:"summary"`
+		KeyEvents  []string `json:"key_events"`
+		Strategies string   `json:"strategies"`
+	}
+
+	// Try to unmarshal JSON from text (it might be wrapped in Markdown ```json ... ```)
+	// Simple cleanup: find { and }
+	cleanText := resp.Text // TODO: robust JSON extractor
+
+	if err := json.Unmarshal([]byte(cleanText), &sitrep); err != nil {
+		log.Printf("Archivist: Failed to parse SitRep JSON: %v. Raw: %s", err, resp.Text)
+		// Fallback: Store raw text as summary
+		sitrep.Summary = resp.Text
+	}
+
+	// 5. Save to DB
+	eventsJSON, _ := json.Marshal(sitrep.KeyEvents)
+
+	_, err = a.Mem.db.ExecContext(ctx, `
+		INSERT INTO sitreps (team_id, time_window_start, time_window_end, summary, key_events, strategies)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, teamID, start, end, sitrep.Summary, eventsJSON, sitrep.Strategies)
+
+	if err != nil {
+		return fmt.Errorf("failed to save sitrep: %w", err)
+	}
+
+	log.Printf("✅ Archivist Generated SitRep for %s", teamID)
+	return nil
 }
 
-// ListRecent retrieves the last N logs.
-func (a *Archivist) ListRecent(limit int) ([]*LogEntry, error) {
-	if limit <= 0 {
-		limit = 50
-	}
-
-	rows, err := a.db.Query(`SELECT trace_id, timestamp, level, source, intent, message, context 
-                             FROM log_entries ORDER BY timestamp DESC LIMIT $1`, limit)
-
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var logs []*LogEntry
-	for rows.Next() {
-		var entry LogEntry
-		var ctxJSON []byte
-
-		if err := rows.Scan(&entry.TraceId, &entry.Timestamp, &entry.Level, &entry.Source, &entry.Intent, &entry.Message, &ctxJSON); err != nil {
-			return nil, err
-		}
-
-		if len(ctxJSON) > 0 {
-			if err := json.Unmarshal(ctxJSON, &entry.Context); err != nil {
-				// Log warning?
-			}
-		}
-
-		logs = append(logs, &entry)
-	}
-	return logs, nil
+// GenerateContextVector creates an embedding for a piece of content
+func (a *Archivist) GenerateContextVector(ctx context.Context, content string, meta map[string]interface{}) error {
+	// TODO: use cognitive.Embed() if available.
+	// For now, placeholder or use "embedding" profile if implemented.
+	return nil
 }
