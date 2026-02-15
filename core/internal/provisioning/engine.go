@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/mycelis/core/internal/cognitive"
 )
@@ -63,7 +64,23 @@ Return ONLY value valid JSON. No markdown.`, intent)
 
 	// 3. Unmarshal & Validate
 	var manifest ServiceManifest
-	if err := json.Unmarshal([]byte(resp.Text), &manifest); err != nil {
+
+	text := resp.Text
+	// Strip Markdown Code Blocks
+	if idx := strings.Index(text, "```json"); idx != -1 {
+		text = text[idx+7:]
+		if end := strings.LastIndex(text, "```"); end != -1 {
+			text = text[:end]
+		}
+	} else if idx := strings.Index(text, "```"); idx != -1 { // Generic code block
+		text = text[idx+3:]
+		if end := strings.LastIndex(text, "```"); end != -1 {
+			text = text[:end]
+		}
+	}
+	text = strings.TrimSpace(text)
+
+	if err := json.Unmarshal([]byte(text), &manifest); err != nil {
 		return nil, fmt.Errorf("invalid manifest generated: %w", err)
 	}
 

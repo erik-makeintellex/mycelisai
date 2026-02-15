@@ -8,7 +8,7 @@ import NetworkMap from "@/components/registry/NetworkMap";
 
 export default function DashboardPage() {
     return (
-        <div className="h-full grid grid-rows-[auto_1fr] gap-4 p-6 bg-[#0b101a] text-slate-200">
+        <div className="h-full grid grid-rows-[auto_1fr] gap-4 p-6 bg-cortex-bg text-cortex-text-main">
             {/* Top Row: KPI Deck (System Status) */}
             <div className="h-24">
                 <SystemStatus />

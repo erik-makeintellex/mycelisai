@@ -8,14 +8,57 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
-// Router manages model selection and inference via Adapters
+// Router manages model selection and inference via Adapters.
+// Phase 5.2: Tracks cumulative token usage for telemetry reporting.
 type Router struct {
 	Config   *BrainConfig
 	Adapters map[string]LLMProvider
+
+	// Token telemetry — sliding window for rate calculation
+	totalTokens  atomic.Int64 // cumulative tokens processed
+	windowStart  atomic.Int64 // unix nanoseconds of window start
+	windowTokens atomic.Int64 // tokens in current window
+}
+
+// RecordTokens adds to the cumulative and windowed token counters.
+func (r *Router) RecordTokens(n int) {
+	r.totalTokens.Add(int64(n))
+	r.windowTokens.Add(int64(n))
+}
+
+// TokenRate returns estimated tokens/second over the current window.
+// Resets the window every 60 seconds for fresh measurements.
+func (r *Router) TokenRate() float64 {
+	now := time.Now().UnixNano()
+	start := r.windowStart.Load()
+
+	// Initialize window on first call
+	if start == 0 {
+		r.windowStart.Store(now)
+		return 0
+	}
+
+	elapsed := float64(now-start) / float64(time.Second)
+	if elapsed <= 0 {
+		return 0
+	}
+
+	tokens := float64(r.windowTokens.Load())
+	rate := tokens / elapsed
+
+	// Reset window every 60 seconds
+	if elapsed > 60 {
+		r.windowTokens.Store(0)
+		r.windowStart.Store(now)
+	}
+
+	return rate
 }
 
 // NewRouter loads configuration and initializes adapters
@@ -100,7 +143,58 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		r.Adapters[id] = adapter
 	}
 
-	// 5. Discovery & Grading
+	// 5. Emergency Sovereign Fallback
+	// If zero adapters were initialized (YAML missing + DB down), attempt to
+	// discover a local Ollama instance at well-known endpoints. This implements
+	// the Universal Sovereignty principle: the organism must survive in isolation.
+	if len(r.Adapters) == 0 {
+		log.Println("WARN: Zero cognitive adapters initialized. Attempting emergency Ollama discovery...")
+		emergencyEndpoints := []string{
+			"http://localhost:11434/v1",
+			"http://127.0.0.1:11434/v1",
+		}
+		// Also check OLLAMA_HOST env
+		if host := os.Getenv("OLLAMA_HOST"); host != "" {
+			if !strings.HasPrefix(host, "http") {
+				host = "http://" + host
+			}
+			emergencyEndpoints = append([]string{host + "/v1"}, emergencyEndpoints...)
+		}
+
+		for _, ep := range emergencyEndpoints {
+			emergencyConfig := ProviderConfig{
+				Type:     "openai_compatible",
+				Endpoint: ep,
+				ModelID:  "qwen2.5-coder:7b",
+				AuthKey:  "ollama",
+			}
+			adapter, err := NewOpenAIAdapter(emergencyConfig)
+			if err != nil {
+				continue
+			}
+			// Probe with short timeout
+			probeCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			healthy, _ := adapter.Probe(probeCtx)
+			cancel()
+			if healthy {
+				log.Printf("Emergency Ollama discovered at %s", ep)
+				r.Adapters["emergency-ollama"] = adapter
+				r.Config.Providers["emergency-ollama"] = emergencyConfig
+				// Wire all missing profiles to emergency adapter
+				for _, profile := range []string{"architect", "sentry", "coder", "chat", "creative", "overseer"} {
+					if _, exists := r.Config.Profiles[profile]; !exists {
+						r.Config.Profiles[profile] = "emergency-ollama"
+					}
+				}
+				break
+			}
+		}
+		if len(r.Adapters) == 0 {
+			log.Println("WARN: Emergency Ollama discovery failed. Cognitive Engine will operate in DEGRADED mode.")
+		}
+	}
+
+	// 6. Discovery & Grading
 	// Only auto-configure if we have providers
 	if len(r.Adapters) > 0 {
 		r.AutoConfigure(context.Background())
@@ -228,23 +322,25 @@ func (r *Router) AutoConfigure(ctx context.Context) {
 // InferWithContract executes the request against the configured profile/provider
 func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*InferResponse, error) {
 
-	// 1. Resolve Profile -> ProviderID
+	// 1. Resolve Profile -> ProviderID (3-tier fallback)
 	providerID, ok := r.Config.Profiles[req.Profile]
 	if !ok {
-		// Fallback to first available or error? use 'sentry' default?
-		providerID = "sentry" // Safe default
-		if _, exists := r.Config.Profiles["sentry"]; !exists {
-			// If no sentry, try any active provider
-			// Or just fail.
-			// Let's try to be robust.
-			if len(r.Adapters) > 0 {
-				for k := range r.Adapters {
-					providerID = k
-					break
-				}
-			} else {
-				return nil, fmt.Errorf("profile '%s' not found and no sentry fallback", req.Profile)
+		log.Printf("WARN: Profile '%s' not found. Attempting fallback chain...", req.Profile)
+
+		// Tier 1: Try sentry (safe default)
+		if sentryID, exists := r.Config.Profiles["sentry"]; exists {
+			log.Printf("Fallback: '%s' -> sentry ('%s')", req.Profile, sentryID)
+			providerID = sentryID
+		} else if len(r.Adapters) > 0 {
+			// Tier 2: First available adapter
+			for k := range r.Adapters {
+				log.Printf("Fallback: '%s' -> first available adapter '%s'", req.Profile, k)
+				providerID = k
+				break
 			}
+		} else {
+			// Tier 3: No profiles, no adapters — total cognitive blackout
+			return nil, fmt.Errorf("profile '%s' not found — no providers available (check config/cognitive.yaml and DB connectivity)", req.Profile)
 		}
 	}
 
@@ -262,6 +358,18 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 	}
 
 	resp, err := adapter.Infer(ctx, req.Prompt, opts)
+	if err == nil && resp != nil {
+		// Record tokens for telemetry. If the adapter didn't report token
+		// count, estimate at ~4 chars per token (conservative approximation).
+		tokens := resp.TokensUsed
+		if tokens == 0 && resp.Text != "" {
+			tokens = len(resp.Text) / 4
+			if tokens < 1 {
+				tokens = 1
+			}
+		}
+		r.RecordTokens(tokens)
+	}
 	if err != nil {
 		// --- Runtime Self-Recovery ---
 		// If inference fails, we should check if the provider is still healthy.
@@ -269,8 +377,9 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 		fmt.Printf("⚠️ Inference failed on '%s': %v. Attempting Self-Recovery...\n", providerID, err)
 
 		// 1. Probe specific provider to confirm death (avoid jitter)
-		if healthy, _ := adapter.Probe(ctx); !healthy {
-			fmt.Printf("❌ Provider '%s' confirmed DEAD. Re-calibrating Matrix...\n", providerID)
+		healthy, probeErr := adapter.Probe(ctx)
+		if !healthy {
+			fmt.Printf("❌ Provider '%s' confirmed DEAD (%v). Re-calibrating Matrix...\n", providerID, probeErr)
 
 			// 2. Trigger Auto-Config (Heal)
 			r.AutoConfigure(ctx)
@@ -282,7 +391,7 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 			}
 
 			if newProviderID == providerID {
-				return nil, fmt.Errorf("recovery failed: no alternative provider found (stuck on %s)", providerID)
+				return nil, fmt.Errorf("recovery failed: no alternative provider found (stuck on %s, probe error: %v)", providerID, probeErr)
 			}
 
 			newAdapter, ok := r.Adapters[newProviderID]
@@ -303,4 +412,30 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 // Deprecated: Infer is alias for InferWithContract
 func (r *Router) Infer(req InferRequest) (*InferResponse, error) {
 	return r.InferWithContract(context.Background(), req)
+}
+
+// Embed generates a text embedding vector using the first available EmbedProvider.
+// Resolution order: "embed" profile → first Ollama-compatible adapter → first adapter.
+func (r *Router) Embed(ctx context.Context, text string, model string) ([]float64, error) {
+	if model == "" {
+		model = DefaultEmbedModel
+	}
+
+	// 1. Try "embed" profile if configured
+	if providerID, ok := r.Config.Profiles["embed"]; ok {
+		if adapter, ok := r.Adapters[providerID]; ok {
+			if ep, ok := adapter.(EmbedProvider); ok {
+				return ep.Embed(ctx, text, model)
+			}
+		}
+	}
+
+	// 2. Try any adapter that implements EmbedProvider
+	for _, adapter := range r.Adapters {
+		if ep, ok := adapter.(EmbedProvider); ok {
+			return ep.Embed(ctx, text, model)
+		}
+	}
+
+	return nil, fmt.Errorf("no embedding provider available (need OpenAI-compatible adapter)")
 }

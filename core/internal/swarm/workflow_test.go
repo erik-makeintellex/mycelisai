@@ -8,6 +8,7 @@ import (
 
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/pkg/protocol"
 	server "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
@@ -50,22 +51,22 @@ func TestWorkflow_FullLoop(t *testing.T) {
 	// We'll manually inject a team instead of loading from disk to keep test self-contained
 	guard := &governance.Guard{}
 	registry := NewRegistry(".") // Empty
-	soma := NewSoma(nc, guard, registry, brain)
+	soma := NewSoma(nc, guard, registry, brain, nil, nil)
 
 	// Manually inject a team
 	manifest := &TeamManifest{
 		ID:   "workflow-team",
 		Name: "Workflow Team",
 		Type: TeamTypeAction,
-		Members: []TeamMember{
+		Members: []protocol.AgentManifest{
 			{ID: "worker-1", Role: "assistant"},
 		},
 		Inputs: []string{"swarm.global.input.workflow.start"},
 	}
-	team := NewTeam(manifest, nc, brain)
+	team := NewTeam(manifest, nc, brain, nil)
 	soma.teams["workflow-team"] = team
 	team.Start()
-	soma.axon = NewAxon(nc, soma) // Axon needs to know about the team map, but currently it routes by convention.
+	soma.axon = NewAxon(nc, soma, nil) // Axon needs to know about the team map, but currently it routes by convention.
 	// Actually Axon routes based on config/logic.
 	// Let's just test the Team-Agent loop directly for now, as routing logic is simple string matching.
 
@@ -86,9 +87,14 @@ func TestWorkflow_FullLoop(t *testing.T) {
 	// No, Team needs to forward to Internal Bus for Agents to see?
 	// Check Team.handleTrigger implementation.
 
+	// Allow agent goroutine subscriptions to propagate
+	nc.Flush()
+	time.Sleep(100 * time.Millisecond)
+
 	// Publish directly to Internal Bus to test Agent logic
 	agentTrigger := "swarm.team.workflow-team.internal.trigger"
 	nc.Publish(agentTrigger, []byte("Do work!"))
+	nc.Flush()
 
 	select {
 	case resp := <-done:

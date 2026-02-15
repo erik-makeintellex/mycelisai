@@ -3,68 +3,140 @@
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Cortex Palette — Vuexy Dark Protocol */
+  --color-cortex-bg: #25293C;
+  --color-cortex-surface: #2F3349;
+  --color-cortex-primary: #7367F0;
+  --color-cortex-primary-glow: rgba(115, 103, 240, 0.39);
+  --color-cortex-success: #28C76F;
+  --color-cortex-warning: #FF9F43;
+  --color-cortex-danger: #EA5455;
+  --color-cortex-info: #00CFE8;
+  --color-cortex-text-main: #CFD3EC;
+  --color-cortex-text-muted: #7983BB;
+  --color-cortex-border: #434968;
 }
 
 @layer base {
   :root {
-    /* Base Palette: Zinc (Aero Clean Room) */
-    --background: 250 250 250;
-    /* Zinc-50 #FAFAFA */
-    --foreground: 24 24 27;
-    /* Zinc-900 #18181B */
-
-    --surface: 255 255 255;
-    /* White #FFFFFF */
-    --surface-hover: 244 244 245;
-    /* Zinc-100 #F4F4F5 */
-
-    --border: 228 228 231;
-    /* Zinc-200 #E4E4E7 */
-    --border-active: 39 39 42;
-    /* Zinc-800 (Contrast) */
+    --background: 37 41 60;
+    --foreground: 207 211 236;
+    --surface: 47 51 73;
+    --surface-hover: 55 60 85;
+    --border: 67 73 104;
+    --border-active: 115 103 240;
 
     /* Semantic Status Colors */
-    --status-stable: 5 150 105;
-    /* Emerald-600 */
-    --status-stable-bg: 236 253 245;
-    /* Emerald-50 */
-
-    --status-warning: 245 158 11;
-    /* Amber-500 */
-    --status-warning-bg: 255 251 235;
-    /* Amber-50 */
-
-    --status-critical: 225 29 72;
-    /* Rose-600 */
-    --status-critical-bg: 255 241 242;
-    /* Rose-50 */
-
-    --status-active: 2 132 199;
-    /* Sky-600 */
-    --status-active-bg: 240 249 255;
-    /* Sky-50 */
+    --status-stable: 40 199 111;
+    --status-stable-bg: 30 50 40;
+    --status-warning: 255 159 67;
+    --status-warning-bg: 50 40 25;
+    --status-critical: 234 84 85;
+    --status-critical-bg: 50 25 25;
+    --status-active: 115 103 240;
+    --status-active-bg: 35 30 60;
   }
 
   body {
-    background-color: rgb(var(--background));
-    color: rgb(var(--foreground));
+    background-color: var(--color-cortex-bg);
+    color: var(--color-cortex-text-main);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    /* Dot Grid Background */
-    background-image: radial-gradient(#e4e4e7 1px, transparent 1px);
-    background-size: 24px 24px;
   }
 }
 
 @layer components {
 
-  /* Aero Card Utility */
-  .aero-card {
-    @apply bg-[rgb(var(--surface))] border border-[rgb(var(--border))] rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+  /* Cortex Card */
+  .cortex-card {
+    @apply rounded-xl border shadow-sm transition-shadow duration-200 hover:shadow-md;
+    background-color: var(--color-cortex-surface);
+    border-color: var(--color-cortex-border);
   }
 
-  /* Aero Panel (Sidebar/Header) */
-  .aero-panel {
-    @apply bg-[rgb(var(--surface))] border-r border-[rgb(var(--border))];
+  /* Cortex Panel (Sidebar/Header) */
+  .cortex-panel {
+    background-color: var(--color-cortex-surface);
+    border-color: var(--color-cortex-border);
+  }
+
+  /* Glass Morphism */
+  .glass {
+    @apply backdrop-blur-md border;
+    background-color: rgba(47, 51, 73, 0.7);
+    border-color: var(--color-cortex-border);
+  }
+
+  /* Glow Utilities */
+  .glow-stable {
+    box-shadow: 0 0 12px rgba(40, 199, 111, 0.3);
+  }
+  .glow-active {
+    box-shadow: 0 0 12px rgba(115, 103, 240, 0.3);
+  }
+  .glow-critical {
+    box-shadow: 0 0 12px rgba(234, 84, 85, 0.3);
+  }
+  .glow-primary {
+    box-shadow: 0 4px 14px 0 rgba(115, 103, 240, 0.39);
+  }
+
+  /* Active nav pill — Vuexy style */
+  .nav-pill-active {
+    @apply rounded-lg text-white;
+    background-color: var(--color-cortex-primary);
+    box-shadow: 0 4px 14px 0 rgba(115, 103, 240, 0.39);
+  }
+
+  /* Ghost Draft Nodes — Symbiote "thinking" state */
+  .ghost-draft {
+    animation: pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .react-flow__node.ghost-draft > div {
+    opacity: 0.5;
+    border-style: dashed;
+    border-color: rgba(115, 103, 240, 0.4);
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: rgba(115, 103, 240, 0.4); }
+  50% { border-color: rgba(115, 103, 240, 1); box-shadow: 0 0 15px rgba(115, 103, 240, 0.5); }
+}
+
+/* Override ReactFlow's default canvas background */
+.react-flow {
+  background-color: #25293C !important;
+}
+
+/* Agent Activity Ring — orbiting glow when agent is "thinking" */
+.activity-ring {
+  animation: ring-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes ring-pulse {
+  0%, 100% {
+    border-color: rgba(115, 103, 240, 0.3);
+    box-shadow: 0 0 0 rgba(115, 103, 240, 0);
+  }
+  50% {
+    border-color: rgba(115, 103, 240, 0.8);
+    box-shadow: 0 0 16px rgba(115, 103, 240, 0.35);
+  }
+}
+
+/* Deliverables Tray — subtle pulse to signal pending human action */
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(40, 199, 111, 0.08);
+  }
+  50% {
+    box-shadow: 0 4px 24px rgba(40, 199, 111, 0.2);
   }
 }

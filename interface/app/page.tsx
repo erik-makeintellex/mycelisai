@@ -1,8 +1,6 @@
-"use client"
-import GenesisTerminal from "@/components/genesis/GenesisTerminal"
+"use client";
+import MissionControlLayout from "@/components/dashboard/MissionControl";
 
 export default function CommandPage() {
-  // In a real app, we check if missions exist.
-  // For Phase 3 Verification, we mount Genesis directly.
-  return <GenesisTerminal />
+  return <MissionControlLayout />;
 }

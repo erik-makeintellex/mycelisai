@@ -15,7 +15,7 @@ import (
 // correctly interacts with the local model (Ollama) and returns exact bools.
 func TestAgentInteraction_Sentry(t *testing.T) {
 	// 1. Load Config
-	router, err := cognitive.NewRouter("../config/brain.yaml")
+	router, err := cognitive.NewRouter("../config/cognitive.yaml", nil)
 	if err != nil {
 		t.Fatalf("Failed to load brain config: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestAgentInteraction_Sentry(t *testing.T) {
 // can generate valid JSON structures.
 func TestAgentInteraction_Coder(t *testing.T) {
 	// 1. Load Config
-	router, err := cognitive.NewRouter("../config/brain.yaml")
+	router, err := cognitive.NewRouter("../config/cognitive.yaml", nil)
 	if err != nil {
 		t.Fatalf("Failed to load brain config: %v", err)
 	}
@@ -76,7 +76,18 @@ func TestAgentInteraction_Coder(t *testing.T) {
 
 	t.Logf("✅ Response in %s: %s", elapsed, resp.Text)
 
-	if !strings.HasPrefix(resp.Text, "{") {
+	cleanText := strings.TrimSpace(resp.Text)
+	if strings.HasPrefix(cleanText, "```json") {
+		cleanText = strings.TrimPrefix(cleanText, "```json")
+		cleanText = strings.TrimSuffix(cleanText, "```")
+		cleanText = strings.TrimSpace(cleanText)
+	} else if strings.HasPrefix(cleanText, "```") {
+		cleanText = strings.TrimPrefix(cleanText, "```")
+		cleanText = strings.TrimSuffix(cleanText, "```")
+		cleanText = strings.TrimSpace(cleanText)
+	}
+
+	if !strings.HasPrefix(cleanText, "{") {
 		t.Errorf("Validation Failure: Does not start with '{'")
 	}
 }

@@ -1,0 +1,41 @@
+=== RUN   TestAgentInteraction_Coder
+ΓÜá∩╕Å Failed to init provider production_gpt4: missing api key
+ΓÜá∩╕Å Failed to init provider production_claude: missing api key for anthropic
+--- Cognitive Discovery Report ---
+[local_ollama] Model: qwen2.5-coder:7b (Tier B) -> Γ£à Online
+[production_gemini] Model: gemini-1.5-pro (Tier S) -> Γ¥î Offline (google error 400: {
+  "error": {
+    "code": 400,
+    "message": "API key expired. Please renew the API key.",
+    "status": "INVALID_ARGUMENT",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "API_KEY_INVALID",
+        "domain": "googleapis.com",
+        "metadata": {
+          "service": "generativelanguage.googleapis.com"
+        }
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
+        "locale": "en-US",
+        "message": "API key expired. Please renew the API key."
+      }
+    ]
+  }
+}
+)
+----------------------------------
+    agent_interaction_test.go:65: ≡ƒñû Coder Agent: Probing Model [coder]...
+    agent_interaction_test.go:77: Γ£à Response in 621.6306ms: ```json
+        {
+          "username": "exampleUser",
+          "id": 12345
+        }
+        ```
+    agent_interaction_test.go:80: Validation Failure: Does not start with '{'
+--- FAIL: TestAgentInteraction_Coder (0.81s)
+FAIL
+FAIL	github.com/mycelis/core/tests	1.546s
+FAIL
