@@ -1,0 +1,31 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  # The following requests were manually identified as high-volume and low-risk,
+  # so drop them.
+  - level: None
+    users: ["system:kube-proxy"]
+    verbs: ["watch"]
+    resources:
+      - group: "" # core
+        resources: ["endpoints", "services", "services/status"]
+  - level: None
+    users: ["system:unsecured"]
+    namespaces: ["kube-system"]
+    verbs: ["get"]
+    resources:
+      - group: "" # core
+        resources: ["configmaps"]
+
+  # Log "RequestResponse" for creating/modifying pods, deployments, services
+  - level: RequestResponse
+    resources:
+      - group: ""
+        resources: ["pods", "services", "configmaps", "secrets"]
+      - group: "apps"
+        resources: ["deployments", "statefulsets", "daemonsets"]
+
+  # Log "Metadata" for everything else
+  - level: Metadata
+    omitStages:
+      - "RequestReceived"

@@ -18,9 +18,9 @@ resources:
     memory: 256Mi
 
 podSecurityContext:
-  runAsUser: 10001
-  runAsGroup: 10001
-  fsGroup: 10001
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
   runAsNonRoot: true
   seccompProfile:
     type: RuntimeDefault
@@ -52,8 +52,8 @@ nats:
         storageClassName: standard
   securityContext:
     runAsNonRoot: true
-    runAsUser: 1001
-    fsGroup: 1001
+    runAsUser: 1000
+    fsGroup: 1000
     allowPrivilegeEscalation: false
     capabilities:
       drop: ["ALL"]
@@ -61,7 +61,7 @@ nats:
 # PostgreSQL Configuration (Bitnami)
 # PostgreSQL Configuration (Bitnami)
 postgresql:
-  enabled: false
+  enabled: true
   image:
     registry: docker.io
     repository: pgvector/pgvector
@@ -70,7 +70,7 @@ postgresql:
     postgresPassword: ""
     username: ""
     password: ""
-    database: ""
+    database: "cortex"
   primary:
     resources:
       requests:
@@ -83,9 +83,9 @@ postgresql:
       enabled: true
       size: 1Gi
     podSecurityContext:
-      fsGroup: 999
-      runAsUser: 999
+      fsGroup: 1000
+      runAsUser: 1000
     containerSecurityContext:
-      runAsUser: 999
+      runAsUser: 1000
       readOnlyRootFilesystem: false
       allowPrivilegeEscalation: true

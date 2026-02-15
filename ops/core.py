@@ -58,7 +58,10 @@ def run(c):
     with c.cd(str(CORE_DIR)):
         # Check platform
         bin_name = "server.exe" if is_windows() else "server"
-        c.run(f"./bin/{bin_name}")
+        if is_windows():
+            c.run(f"bin\\{bin_name}")
+        else:
+            c.run(f"./bin/{bin_name}")
 
 @task
 def stop(c):

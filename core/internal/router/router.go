@@ -15,15 +15,15 @@ import (
 
 // Router handles the distribution of messages from NATS to Agents
 type Router struct {
-	nc         *nats.Conn
-	gatekeeper *governance.Gatekeeper
+	nc    *nats.Conn
+	guard *governance.Guard
 }
 
 // NewRouter creates a new router instance
-func NewRouter(nc *nats.Conn, gk *governance.Gatekeeper) *Router {
+func NewRouter(nc *nats.Conn, guard *governance.Guard) *Router {
 	return &Router{
-		nc:         nc,
-		gatekeeper: gk,
+		nc:    nc,
+		guard: guard,
 	}
 }
 
@@ -35,7 +35,12 @@ func (r *Router) Start() error {
 }
 
 func (r *Router) handleMessage(msg *nats.Msg) {
-	// 1. Unmarshal
+	// 1. Loop Prevention & System Topics
+	if strings.HasPrefix(msg.Subject, "swarm.audit.") {
+		return
+	}
+
+	// 2. Unmarshal
 	var envelope pb.MsgEnvelope
 	if err := proto.Unmarshal(msg.Data, &envelope); err != nil {
 		// log.Printf("Failed to unmarshal: %v", err)
@@ -43,8 +48,8 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 	}
 
 	// 2. Governance Check
-	if r.gatekeeper != nil {
-		allowed, action, reqID := r.gatekeeper.Intercept(&envelope)
+	if r.guard != nil {
+		allowed, action, reqID := r.guard.Intercept(&envelope)
 		if !allowed {
 			if action == governance.ActionRequireApproval {
 				log.Printf("📢 Published Approval Request %s", reqID)
@@ -68,7 +73,21 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 	// 3. Heartbeat / Registry Update
 	r.updateRegistry(&envelope, msg.Subject)
 
-	// 4. Routing Logic (if any specific P2P logic is needed beyond NATS wildcards)
+	// 4. Audit Trace (Enforcement)
+	// We emit a lightweight trace of this event
+	// Topic: swarm.audit.trace
+	// Payload: Original Envelope or a Summary?
+	// Phase 2 Spec says "Enforce swarm.audit.trace".
+	// Let's assume we re-publish the envelope to this topic for the Archivist to pick up.
+	// Since we filtered "swarm.audit." above, this won't loop.
+	go func() {
+		// Asynchronous to not block handling
+		if err := r.nc.Publish("swarm.audit.trace", msg.Data); err != nil {
+			log.Printf("⚠️ Audit Trace Failed: %v", err)
+		}
+	}()
+
+	// 5. Routing Logic (if any specific P2P logic is needed beyond NATS wildcards)
 	// Currently NATS handles the delivery to subscribers.
 	// This router component acts as the "Sidecar" or "Observer" for the Core.
 }

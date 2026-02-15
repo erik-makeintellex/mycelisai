@@ -11,27 +11,27 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Gatekeeper intercepts and manages approvals
-type Gatekeeper struct {
+// Guard intercepts and manages approvals
+type Guard struct {
 	Engine        *Engine
 	PendingBuffer map[string]*pb.ApprovalRequest
 	mu            sync.RWMutex
 }
 
-func NewGatekeeper(policyPath string) (*Gatekeeper, error) {
+func NewGuard(policyPath string) (*Guard, error) {
 	engine, err := NewEngine(policyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Gatekeeper{
+	return &Guard{
 		Engine:        engine,
 		PendingBuffer: make(map[string]*pb.ApprovalRequest),
 	}, nil
 }
 
 // Intercept evaluates a message and returns (proceed bool, action string, requestID string)
-func (g *Gatekeeper) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
+func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 	// Extract Context
 	ctx := make(map[string]interface{})
 	if msg.SwarmContext != nil {
@@ -72,20 +72,20 @@ func (g *Gatekeeper) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 	}
 
 	if action == ActionDeny {
-		log.Printf("⛔ Gatekeeper DENIED: %s from %s", intent, msg.SourceAgentId)
+		log.Printf("DENY: Guard blocked: %s from %s", intent, msg.SourceAgentId)
 		return false, action, ""
 	}
 
 	if action == ActionRequireApproval {
 		reqID := g.createApprovalRequest(msg, "Policy Triggered")
-		log.Printf("✋ Gatekeeper Halted: %s. Request ID: %s", intent, reqID)
+		log.Printf("HALT: Guard paused: %s. Request ID: %s", intent, reqID)
 		return false, action, reqID
 	}
 
 	return true, ActionAllow, ""
 }
 
-func (g *Gatekeeper) createApprovalRequest(msg *pb.MsgEnvelope, reason string) string {
+func (g *Guard) createApprovalRequest(msg *pb.MsgEnvelope, reason string) string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -103,7 +103,7 @@ func (g *Gatekeeper) createApprovalRequest(msg *pb.MsgEnvelope, reason string) s
 }
 
 // ListPending returns a snapshot of all pending requests
-func (g *Gatekeeper) ListPending() []*pb.ApprovalRequest {
+func (g *Guard) ListPending() []*pb.ApprovalRequest {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -115,7 +115,7 @@ func (g *Gatekeeper) ListPending() []*pb.ApprovalRequest {
 }
 
 // Resolve manually approves or denies a request
-func (g *Gatekeeper) Resolve(reqID string, approved bool, user string) (*pb.MsgEnvelope, error) {
+func (g *Guard) Resolve(reqID string, approved bool, user string) (*pb.MsgEnvelope, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -127,17 +127,32 @@ func (g *Gatekeeper) Resolve(reqID string, approved bool, user string) (*pb.MsgE
 	delete(g.PendingBuffer, reqID)
 
 	if approved {
-		log.Printf("✅ Request %s MANUALLY APPROVED by %s", reqID, user)
+		log.Printf("APPROVED: Request %s MANUALLY APPROVED by %s", reqID, user)
 		return req.OriginalMessage, nil
 	}
 
-	log.Printf("❌ Request %s MANUALLY DENIED by %s", reqID, user)
+	log.Printf("DENIED: Request %s MANUALLY DENIED by %s", reqID, user)
 	return nil, nil // Nil message means nothing to forward
 }
 
-// ProcessSignal handles an admin's decision (Legacy / Event based)
-func (g *Gatekeeper) ProcessSignal(signal *pb.ApprovalSignal) *pb.MsgEnvelope {
-	// Re-using Resolve logic to keep DRY
-	msg, _ := g.Resolve(signal.RequestId, signal.Approved, signal.UserSignature)
-	return msg
+// ValidateIngress checks raw NATS messages before they enter the Soma processing loop.
+// It enforces size limits and subject allowlists.
+func (g *Guard) ValidateIngress(subject string, data []byte) error {
+	// 1. Size Limit (e.g., 1MB)
+	if len(data) > 1024*1024 {
+		return fmt.Errorf("payload too large: %d bytes", len(data))
+	}
+
+	// 2. Subject Allowlists (Basic Guard Rails)
+	// Only allow specific global input channels
+	// swarm.global.input.gui -> User Interface
+	// swarm.global.input.sensor -> Hardware Sensors
+	// swarm.global.input.cli -> Command Line
+	// allowed := []string{"swarm.global.input.gui", "swarm.global.input.sensor", "swarm.global.input.cli"}
+	// For now, just check prefix
+	if len(subject) < 18 || subject[:18] != "swarm.global.input" {
+		return fmt.Errorf("invalid ingress subject: %s", subject)
+	}
+
+	return nil
 }

@@ -7,18 +7,8 @@ interface ModelHealthProps {
 }
 
 export function ModelHealth({ modelId }: ModelHealthProps) {
-    const [status, setStatus] = useState<"ok" | "error" | "loading">("loading");
-
-    // Mock health check for now, can be real API later
-    // Logic: For MVP, assume "local-qwen" is OK if Pulse is OK.
-    useEffect(() => {
-        // Determine status based on Model ID or future API
-        if (modelId.startsWith("local")) {
-            setStatus("ok");
-        } else {
-            setStatus("ok"); // Assume Cloud is OK too for now
-        }
-    }, [modelId]);
+    // Mock health check for now, logic is synchronous
+    const status = modelId.startsWith("local") ? "ok" : "ok"; // Assume Cloud is OK too for now
 
     const color =
         status === "ok" ? "bg-green-500 shadow-[0_0_8px_#22c55e]" :

@@ -4,22 +4,19 @@ import { streamText } from 'ai';
 export async function POST(req: Request) {
     const { messages } = await req.json();
 
-    // Simple mock stream using basic response for now as we don't have OpenAI keys set up in this env yet
-    // We'll simulate a stream response
+    try {
+        const response = await fetch("http://mycelis-core:8080/api/v1/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages })
+        });
 
-    const response = "I am the Operator Console. I am listening.";
-
-    // Create a stream of characters
-    const stream = new ReadableStream({
-        async start(controller) {
-            const encoder = new TextEncoder();
-            for (const char of response) {
-                controller.enqueue(encoder.encode(char));
-                await new Promise(r => setTimeout(r, 20)); // Simulate typing
-            }
-            controller.close();
+        if (!response.ok) {
+            return new Response("Cognitive Uplink Invalid", { status: 503 });
         }
-    });
 
-    return new Response(stream);
+        return new Response(response.body);
+    } catch (e) {
+        return new Response("Core Unreachable", { status: 503 });
+    }
 }

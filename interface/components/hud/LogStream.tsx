@@ -16,7 +16,7 @@ interface LogEntry {
 
 export default function LogStream() {
     const [logs, setLogs] = useState<LogEntry[]>([]);
-    const [lastFetch, setLastFetch] = useState(Date.now());
+    const [lastFetch, setLastFetch] = useState(0);
 
     // Polling Loop
     useEffect(() => {
