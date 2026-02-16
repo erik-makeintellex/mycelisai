@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -191,6 +190,14 @@ func respondJSON(w http.ResponseWriter, data interface{}) {
 	}
 }
 
+// respondError writes a JSON error response with proper escaping.
+// Never use fmt.Sprintf to build JSON — raw error text can contain quotes.
+func respondError(w http.ResponseWriter, msg string, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
 // GET /admin/approvals
 func (s *AdminServer) handleApprovals(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
@@ -293,8 +300,7 @@ func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Reque
 	blueprint, err := s.MetaArchitect.GenerateBlueprint(r.Context(), req.Intent)
 	if err != nil {
 		log.Printf("Intent negotiation failed: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, fmt.Sprintf(`{"error":"Cognitive engine error: %s"}`, err.Error()), http.StatusBadGateway)
+		respondError(w, "Cognitive engine error: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 
