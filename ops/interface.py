@@ -35,6 +35,19 @@ def test(c):
     print("Running Interface Tests...")
     c.run("cd interface && npm run test")
 
+@task
+def e2e(c, headed=False):
+    """
+    Run Playwright E2E tests against a running dev server.
+    Requires: interface.dev running on port 3000.
+    Use --headed to see the browser.
+    """
+    print("Running Playwright E2E Tests...")
+    cmd = "cd interface && npx playwright test"
+    if headed:
+        cmd += " --headed"
+    c.run(cmd, pty=not is_windows())
+
 # ── Process Management ───────────────────────────────────────
 
 @task
@@ -117,7 +130,7 @@ def check(c, port=INTERFACE_PORT):
     import urllib.request
 
     base = f"http://{INTERFACE_HOST}:{port}"
-    pages = ["/", "/wiring", "/architect", "/dashboard", "/catalogue", "/memory", "/settings/tools"]
+    pages = ["/", "/wiring", "/architect", "/dashboard", "/catalogue", "/teams", "/memory", "/settings/tools"]
     errors = []
 
     print(f"Checking Interface at {base}...")
@@ -173,6 +186,7 @@ ns.add_task(install)
 ns.add_task(build)
 ns.add_task(lint)
 ns.add_task(test)
+ns.add_task(e2e)
 ns.add_task(stop)
 ns.add_task(clean)
 ns.add_task(restart)
