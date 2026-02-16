@@ -168,8 +168,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	msg, err := s.NC.RequestWithContext(reqCtx, subject, []byte(lastMsg.Content))
 	if err != nil {
 		log.Printf("Chat via Admin agent failed: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, fmt.Sprintf(`{"error":"Admin agent did not respond: %s"}`, err.Error()), http.StatusBadGateway)
+		respondError(w, "Admin agent did not respond: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 

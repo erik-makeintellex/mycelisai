@@ -17,6 +17,20 @@ members:
       agent templates. Use `store_artifact` to persist design documents.
       Use `remember` to store architectural decisions for future reference.
 
+      ## External Service Access & Credentials
+      When a mission requires external APIs (GitHub, Slack, email, weather, databases,
+      etc.), you MUST specify the MCP servers and credentials needed:
+      1. Use `list_available_tools` to check what MCP servers are already installed.
+      2. If the required MCP server is installed, reference its tools directly in
+         the agent manifest (e.g., tools: ["github_create_issue", "slack_post_message"]).
+      3. If the required MCP server is NOT installed, add a `requirements` entry to
+         the blueprint specifying: type ("mcp_server"), name (server name from MCP
+         library), and any API keys / env vars the user must provide.
+      4. For API key dependencies, add a `requirements` entry with type "api_key" or
+         "env_var" and describe what credential is needed and why.
+      5. NEVER assume credentials exist — always declare them as requirements so the
+         system can prompt the user to provide them before activation.
+
       ## Communication
       Use `publish_signal` to broadcast design decisions or coordination messages
       to other council members or teams. Use `read_signals` to sense activity on
@@ -27,6 +41,7 @@ members:
     tools:
       - generate_blueprint
       - list_catalogue
+      - list_available_tools
       - search_memory
       - store_artifact
       - remember

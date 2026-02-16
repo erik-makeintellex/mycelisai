@@ -277,13 +277,11 @@ func main() {
 		toolExec = mcp.NewToolExecutorAdapter(mcpService, mcpPool)
 	}
 
-	var soma *swarm.Soma
+	// Build Internal Tool Registry (built-in tools for agents)
+	// Hoisted outside NATS block so MetaArchitect can read tool descriptions even in degraded mode.
+	var internalTools *swarm.InternalToolRegistry
 	if nc != nil {
-		teamConfigPath := "config/teams"
-		swarmReg := swarm.NewRegistry(teamConfigPath)
-
-		// Build Internal Tool Registry (built-in tools for agents)
-		internalTools := swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
+		internalTools = swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
 			NC:        nc,
 			Brain:     cogRouter,
 			Mem:       memService,
@@ -291,6 +289,12 @@ func main() {
 			Catalogue: catService,
 			DB:        sharedDB,
 		})
+	}
+
+	var soma *swarm.Soma
+	if nc != nil {
+		teamConfigPath := "config/teams"
+		swarmReg := swarm.NewRegistry(teamConfigPath)
 
 		soma = swarm.NewSoma(nc, guard, swarmReg, cogRouter, streamHandler, toolExec, internalTools)
 		if err := soma.Start(); err != nil {
@@ -378,6 +382,13 @@ func main() {
 		log.Println("MCP Library Active.")
 	}
 
+	// Wire system capabilities into Meta-Architect (tools, MCP servers, library)
+	if metaArchitect != nil {
+		caps := buildSystemCapabilities(ctx, internalTools, mcpService, mcpLibrary)
+		metaArchitect.SetCapabilities(caps)
+		log.Println("Meta-Architect capabilities wired.")
+	}
+
 	// Create Admin Server
 	adminSrv := server.NewAdminServer(r, guard, memService, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService)
 	adminSrv.RegisterRoutes(mux)
@@ -438,4 +449,55 @@ func main() {
 	}
 
 	log.Println("Mycelis Core shutdown complete.")
+}
+
+// buildSystemCapabilities assembles the live system context that the
+// Meta-Architect uses to generate resource-aware mission blueprints.
+func buildSystemCapabilities(ctx context.Context, tools *swarm.InternalToolRegistry, mcpSvc *mcp.Service, lib *mcp.Library) *cognitive.SystemCapabilities {
+	caps := &cognitive.SystemCapabilities{}
+
+	// 1. Internal tool descriptions
+	if tools != nil {
+		caps.InternalTools = tools.ListDescriptions()
+	}
+
+	// 2. Installed MCP servers + their discovered tools
+	if mcpSvc != nil {
+		servers, err := mcpSvc.List(ctx)
+		if err == nil {
+			for _, srv := range servers {
+				toolNames := []string{}
+				if defs, err := mcpSvc.ListTools(ctx, srv.ID); err == nil {
+					for _, t := range defs {
+						toolNames = append(toolNames, t.Name)
+					}
+				}
+				caps.MCPServers = append(caps.MCPServers, cognitive.MCPServerCapability{
+					Name:   srv.Name,
+					Status: "installed",
+					Tools:  toolNames,
+				})
+			}
+		}
+	}
+
+	// 3. Library entries (available for install)
+	if lib != nil {
+		for _, cat := range lib.Categories {
+			for _, entry := range cat.Servers {
+				reqEnv := make([]string, 0, len(entry.Env))
+				for k := range entry.Env {
+					reqEnv = append(reqEnv, k)
+				}
+				caps.MCPServers = append(caps.MCPServers, cognitive.MCPServerCapability{
+					Name:        entry.Name,
+					Description: entry.Description,
+					Status:      "available",
+					RequiredEnv: reqEnv,
+				})
+			}
+		}
+	}
+
+	return caps
 }
