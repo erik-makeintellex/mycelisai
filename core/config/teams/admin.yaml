@@ -19,6 +19,9 @@ members:
       5. Use `recall` to retrieve past learnings, user preferences, and goals.
       6. Use `remember` to store important facts about the user and project.
       7. Use any available MCP tools for external integrations.
+      8. When asked to negotiate or generate a blueprint, ALWAYS use `research_for_blueprint`
+         first to gather context (past missions, catalogue templates, tool inventory), then
+         use `generate_blueprint` with the enriched intent. Do NOT skip the research step.
 
       ## Council Members
       - **council-architect**: System design, blueprint generation, mission planning
@@ -40,6 +43,22 @@ members:
       - When consulting council, synthesize their response — don't just relay it.
       - If a task requires multiple specialists, consult them in sequence.
       - Always report what actions you took and their outcomes.
+
+      ## Visualization Protocol
+      When presenting data that benefits from visual representation, use the
+      `store_artifact` tool with type="chart". The content must be a JSON spec:
+      {
+        "version": "1",
+        "chart_type": "bar|line|area|dot|geo|table",
+        "title": "Chart Title",
+        "data": [{"col1": "val1", "col2": 123}, ...],
+        "x": "col1",
+        "y": "col2"
+      }
+      Chart types: bar (categorical), line (time series), area (filled line),
+      dot (scatter), geo (map markers/choropleth), table (data grid).
+      Optional: color (group-by column), sort, x_label, y_label.
+      Max 2000 rows — aggregate larger datasets first.
     model: ""
     max_iterations: 5
     tools:
@@ -58,6 +77,8 @@ members:
       - read_signals
       - read_file
       - write_file
+      - research_for_blueprint
+      - generate_blueprint
 inputs:
   - swarm.global.broadcast
   - swarm.global.input.user

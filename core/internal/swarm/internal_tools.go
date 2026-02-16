@@ -227,13 +227,14 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["store_artifact"] = &InternalTool{
 		Name:        "store_artifact",
-		Description: "Persist an agent output (code, document, data, etc.) as a typed artifact.",
+		Description: `Persist an agent output as a typed artifact. For type="chart", content MUST be a JSON chart spec: {"version":"1", "chart_type":"bar|line|area|dot|geo|table", "title":"...", "data":[{...}], "x":"col", "y":"col"}. Max 2000 data rows.`,
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"type":    map[string]any{"type": "string", "description": "Artifact type: code, document, image, data, file, chart"},
-				"title":   map[string]any{"type": "string", "description": "Human-readable title"},
-				"content": map[string]any{"type": "string", "description": "The artifact content"},
+				"type":     map[string]any{"type": "string", "description": "Artifact type: code, document, image, data, file, chart"},
+				"title":    map[string]any{"type": "string", "description": "Human-readable title"},
+				"content":  map[string]any{"type": "string", "description": "The artifact content. For chart type: JSON chart spec with version, chart_type, data[], x, y fields."},
+				"metadata": map[string]any{"type": "object", "description": "Optional key-value metadata"},
 			},
 			"required": []string{"type", "title", "content"},
 		},
@@ -308,6 +309,19 @@ func (r *InternalToolRegistry) registerAll() {
 			"required": []string{"prompt"},
 		},
 		Handler: r.handleGenerateImage,
+	}
+
+	r.tools["research_for_blueprint"] = &InternalTool{
+		Name:        "research_for_blueprint",
+		Description: "Conduct multi-source research before generating a mission blueprint. Queries past missions (recall), agent catalogue (templates), and tool inventory (internal + MCP). Returns an enriched context block to feed into generate_blueprint.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"intent": map[string]any{"type": "string", "description": "The user's natural language intent to research"},
+			},
+			"required": []string{"intent"},
+		},
+		Handler: r.handleResearchForBlueprint,
 	}
 }
 
@@ -501,6 +515,49 @@ func (r *InternalToolRegistry) handleGenerateBlueprint(ctx context.Context, args
 	return string(data), nil
 }
 
+func (r *InternalToolRegistry) handleResearchForBlueprint(ctx context.Context, args map[string]any) (string, error) {
+	intent, _ := args["intent"].(string)
+	if intent == "" {
+		return "", fmt.Errorf("research_for_blueprint requires 'intent'")
+	}
+
+	var research strings.Builder
+	research.WriteString("# Blueprint Research Report\n\n")
+
+	// 1. Recall past missions with similar intents
+	memories, err := r.handleRecall(ctx, map[string]any{"query": intent, "limit": float64(3)})
+	if err == nil && memories != "" {
+		research.WriteString("## Past Mission Context\n" + memories + "\n\n")
+	} else {
+		research.WriteString("## Past Mission Context\nNo relevant past missions found.\n\n")
+	}
+
+	// 2. Search catalogue for reusable agent templates
+	catalogue, err := r.handleListCatalogue(ctx, nil)
+	if err == nil && catalogue != "" {
+		research.WriteString("## Available Agent Templates\n" + catalogue + "\n\n")
+	} else {
+		research.WriteString("## Available Agent Templates\nAgent catalogue not available.\n\n")
+	}
+
+	// 3. List installed + available tools
+	tools, err := r.handleListAvailableTools(ctx, nil)
+	if err == nil && tools != "" {
+		research.WriteString("## Tool Inventory\n" + tools + "\n\n")
+	} else {
+		research.WriteString("## Tool Inventory\nTool listing not available.\n\n")
+	}
+
+	// 4. List active missions for context
+	missions, err := r.handleListMissions(ctx, nil)
+	if err == nil && missions != "" {
+		research.WriteString("## Active Missions\n" + missions + "\n\n")
+	}
+
+	research.WriteString("Use this research to inform the blueprint you generate with generate_blueprint.\n")
+	return research.String(), nil
+}
+
 func (r *InternalToolRegistry) handleListCatalogue(ctx context.Context, _ map[string]any) (string, error) {
 	if r.catalogue == nil {
 		return "Agent catalogue not available.", nil
@@ -528,11 +585,36 @@ func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map
 		return "", fmt.Errorf("database not available — cannot store artifact")
 	}
 
-	// Insert into artifacts table (minimal — full service integration later)
+	contentType := "text/plain"
+
+	// Chart validation: must be valid JSON with required fields
+	if artType == "chart" {
+		var spec map[string]any
+		if err := json.Unmarshal([]byte(content), &spec); err != nil {
+			return "", fmt.Errorf("chart content must be valid JSON: %w", err)
+		}
+		if _, ok := spec["chart_type"]; !ok {
+			return "", fmt.Errorf("chart spec missing required 'chart_type' field")
+		}
+		if dataArr, ok := spec["data"].([]any); !ok {
+			return "", fmt.Errorf("chart spec missing required 'data' array")
+		} else if len(dataArr) > 2000 {
+			return "", fmt.Errorf("chart data exceeds 2000-row limit (%d rows); summarize or aggregate first", len(dataArr))
+		}
+		contentType = "application/vnd.mycelis.chart+json"
+	}
+
+	metaJSON := "{}"
+	if m, ok := args["metadata"]; ok {
+		if b, err := json.Marshal(m); err == nil {
+			metaJSON = string(b)
+		}
+	}
+
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status)
-		VALUES ('internal', $1, $2, 'text/plain', $3, '{}', 'pending')
-	`, artType, title, content)
+		VALUES ('internal', $1, $2, $3, $4, $5, 'pending')
+	`, artType, title, contentType, content, metaJSON)
 	if err != nil {
 		log.Printf("store_artifact: %v", err)
 		return fmt.Sprintf("Failed to store artifact: %v", err), nil
@@ -894,7 +976,8 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, 
 	sb.WriteString("1. Check if past context is relevant → `recall` or `search_memory`\n")
 	sb.WriteString("2. Check if specialist knowledge is needed → `consult_council`\n")
 	sb.WriteString("3. Check if actionable work should be delegated → `delegate_task`\n")
-	sb.WriteString("4. Check if MCP tools can fulfill the request directly\n\n")
+	sb.WriteString("4. Check if MCP tools can fulfill the request directly\n")
+	sb.WriteString("5. Check if data would benefit from visualization → `store_artifact` with type=chart\n\n")
 	sb.WriteString("**Post-response** (after completing a task):\n")
 	sb.WriteString("1. Store important learnings or decisions → `remember`\n")
 	sb.WriteString("2. Store significant outputs → `store_artifact`\n")

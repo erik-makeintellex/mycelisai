@@ -1,9 +1,13 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/catalogue"
@@ -18,6 +22,7 @@ import (
 	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
 	"github.com/mycelis/core/internal/swarm"
+	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
 
@@ -98,10 +103,15 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Identity API
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
+	mux.HandleFunc("GET /api/v1/teams/detail", s.HandleTeamsDetail)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUpdateSettings)
 
-	// Missions API (Dashboard)
+	// Missions API (Dashboard + Phase 9: Neural Wiring Edit/Delete)
 	mux.HandleFunc("GET /api/v1/missions", s.handleListMissions)
+	mux.HandleFunc("GET /api/v1/missions/{id}", s.handleGetMission)
+	mux.HandleFunc("PUT /api/v1/missions/{id}/agents/{name}", s.handleUpdateMissionAgent)
+	mux.HandleFunc("DELETE /api/v1/missions/{id}/agents/{name}", s.handleDeleteMissionAgent)
+	mux.HandleFunc("DELETE /api/v1/missions/{id}", s.handleDeleteMission)
 
 	// Provisioning API
 	mux.HandleFunc("/api/v1/provision/draft", s.HandleProvisionDraft)
@@ -276,6 +286,8 @@ func (s *AdminServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST /api/v1/intent/negotiate
+// Phase 10: Routes through Admin agent's ReAct loop for researched blueprint
+// generation. Falls back to direct MetaArchitect if Admin agent is unavailable.
 func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Request) {
 	if s.MetaArchitect == nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -297,6 +309,17 @@ func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Try routing through Admin agent for research-enriched blueprint
+	if s.NC != nil {
+		blueprint, err := s.negotiateViaAdmin(r.Context(), req.Intent)
+		if err == nil && blueprint != nil {
+			respondJSON(w, blueprint)
+			return
+		}
+		log.Printf("Admin-routed negotiate failed, falling back to direct MetaArchitect: %v", err)
+	}
+
+	// Fallback: direct MetaArchitect (single-shot, no research)
 	blueprint, err := s.MetaArchitect.GenerateBlueprint(r.Context(), req.Intent)
 	if err != nil {
 		log.Printf("Intent negotiation failed: %v", err)
@@ -305,4 +328,66 @@ func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Reque
 	}
 
 	respondJSON(w, blueprint)
+}
+
+// negotiateViaAdmin sends the intent to the Admin agent via NATS request-reply.
+// The Admin agent uses research_for_blueprint → generate_blueprint in its ReAct loop.
+func (s *AdminServer) negotiateViaAdmin(ctx context.Context, intent string) (*protocol.MissionBlueprint, error) {
+	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, "admin")
+	directive := fmt.Sprintf(
+		"The user wants to negotiate a mission blueprint. Their intent is:\n\n%s\n\n"+
+			"Use research_for_blueprint to gather context first, then use generate_blueprint "+
+			"to create the mission blueprint. Return ONLY the blueprint JSON — no commentary.",
+		intent,
+	)
+
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	msg, err := s.NC.RequestWithContext(reqCtx, subject, []byte(directive))
+	if err != nil {
+		return nil, fmt.Errorf("admin agent did not respond: %w", err)
+	}
+
+	// Extract blueprint JSON from the admin's response
+	return extractBlueprintFromResponse(string(msg.Data))
+}
+
+// extractBlueprintFromResponse parses a MissionBlueprint from an agent's text response.
+// The agent may wrap the JSON in markdown fences or include commentary.
+func extractBlueprintFromResponse(response string) (*protocol.MissionBlueprint, error) {
+	text := response
+
+	// Strip markdown fences if present
+	if idx := strings.Index(text, "```json"); idx >= 0 {
+		text = text[idx+7:]
+		if end := strings.Index(text, "```"); end >= 0 {
+			text = text[:end]
+		}
+	} else if idx := strings.Index(text, "```"); idx >= 0 {
+		text = text[idx+3:]
+		if end := strings.Index(text, "```"); end >= 0 {
+			text = text[:end]
+		}
+	}
+
+	// Find first { and last } for bare JSON extraction
+	text = strings.TrimSpace(text)
+	start := strings.Index(text, "{")
+	end := strings.LastIndex(text, "}")
+	if start < 0 || end < 0 || end <= start {
+		return nil, fmt.Errorf("no JSON object found in admin response")
+	}
+	text = text[start : end+1]
+
+	var bp protocol.MissionBlueprint
+	if err := json.Unmarshal([]byte(text), &bp); err != nil {
+		return nil, fmt.Errorf("failed to parse blueprint JSON: %w", err)
+	}
+
+	if bp.MissionID == "" || len(bp.Teams) == 0 {
+		return nil, fmt.Errorf("invalid blueprint: missing mission_id or teams")
+	}
+
+	return &bp, nil
 }

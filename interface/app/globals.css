@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
@@ -98,6 +99,37 @@
     opacity: 0.5;
     border-style: dashed;
     border-color: rgba(115, 103, 240, 0.4);
+  }
+
+  /* Observable Plot — Vuexy Dark Overrides */
+  .chart-container figure[aria-label] {
+    color: var(--color-cortex-text-main);
+    background: transparent;
+  }
+  .chart-container figure[aria-label] text {
+    fill: var(--color-cortex-text-muted);
+  }
+  .chart-container figure[aria-label] line,
+  .chart-container figure[aria-label] .tick line {
+    stroke: var(--color-cortex-border);
+  }
+  .chart-container figure[aria-label] .domain {
+    stroke: var(--color-cortex-border);
+  }
+
+  /* Leaflet — Vuexy Dark Overrides */
+  .leaflet-container {
+    background-color: var(--color-cortex-surface);
+  }
+  .leaflet-control-zoom a {
+    background-color: var(--color-cortex-surface) !important;
+    color: var(--color-cortex-text-main) !important;
+    border-color: var(--color-cortex-border) !important;
+  }
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background-color: var(--color-cortex-surface);
+    color: var(--color-cortex-text-main);
   }
 }
 

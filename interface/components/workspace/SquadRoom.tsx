@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useRef, useEffect, useMemo } from 'react';
-import { ArrowLeft, Users, MessageSquare, FileCheck, Bot } from 'lucide-react';
+import { ArrowLeft, Users, MessageSquare, FileCheck, Bot, BarChart3 } from 'lucide-react';
 import { useCortexStore, type StreamSignal } from '@/store/useCortexStore';
+import { ChartRenderer, type MycelisChartSpec } from '@/components/charts';
 
 interface SquadRoomProps {
     teamId: string;
@@ -83,6 +84,36 @@ function DebateEntry({ signal }: { signal: StreamSignal }) {
 
 function ProofCard({ signal }: { signal: StreamSignal }) {
     const message = signal.message ?? JSON.stringify(signal.payload ?? {});
+
+    // Attempt to detect chart spec in signal payload
+    const chartSpec = useMemo(() => {
+        try {
+            const parsed = JSON.parse(message);
+            if (parsed.chart_type && parsed.data && Array.isArray(parsed.data)) {
+                return parsed as MycelisChartSpec;
+            }
+        } catch { /* not a chart */ }
+        return null;
+    }, [message]);
+
+    if (chartSpec) {
+        return (
+            <div className="mx-3 mb-3 rounded-lg border border-emerald-700/40 bg-emerald-950/20 p-3">
+                <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase">
+                        Chart: {chartSpec.title}
+                    </span>
+                    <span className="text-[10px] font-mono text-cortex-text-muted ml-auto">
+                        {signal.source ?? 'agent'}
+                    </span>
+                </div>
+                <div className="bg-cortex-bg rounded p-2 h-32 overflow-hidden">
+                    <ChartRenderer spec={chartSpec} compact={true} />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="mx-3 mb-3 rounded-lg border border-emerald-700/40 bg-emerald-950/20 p-3">

@@ -9,7 +9,7 @@
 >
 > **Agents & Humans:** Always consult the Master State document before making architectural decisions. This README provides general usage instructions, but the Codex defines "What is True".
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V7.7 introduces the **Admin Orchestrator**, **Council Activation**, **Runtime Context Injection**, **Cognitive Matrix UI**, and **MCP Library**.
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V7.7 introduces the **Admin Orchestrator**, **Council Activation**, **Runtime Context Injection**, **Cognitive Matrix UI**, **MCP Library**, **Agent Visualization Pipeline**, **Neural Wiring Edit/Delete**, and **Team Management**.
 
 ## Architecture
 
@@ -28,7 +28,8 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 
 - **Tier 3: The Face (Next.js 16 + React 19 + Zustand 5)**
   - **Mission Control:** Admin Chat + Team Explorer + Telemetry + Sensors + Governance.
-  - **Neural Wiring:** ArchitectChat + CircuitBoard (ReactFlow) + ToolsPalette + NatsWaterfall.
+  - **Neural Wiring:** ArchitectChat + CircuitBoard (ReactFlow) + ToolsPalette + NatsWaterfall. Interactive edit/delete: click agent nodes to modify manifests, delete agents, discard drafts, or terminate active missions.
+  - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
   - **Settings:** Cognitive Matrix + MCP Tools (with curated library).
   - **Visual Protocol:** Vuexy Dark palette — zero zinc/slate classes.
 
@@ -127,7 +128,8 @@ Run from `scratch/` root using `uvx inv`:
 | Route | Description |
 | :--- | :--- |
 | `/` | Mission Control — Admin chat, broadcast, teams, telemetry, sensors, proposals |
-| `/wiring` | Neural Wiring — ArchitectChat + CircuitBoard + NatsWaterfall |
+| `/wiring` | Neural Wiring — ArchitectChat + CircuitBoard (edit/delete agents) + NatsWaterfall |
+| `/teams` | Team Management — browse standing + mission teams, agent roster, delivery targets |
 | `/catalogue` | Agent Catalogue — CRUD for agent blueprints |
 | `/memory` | Memory Explorer — Hot/Warm/Cold three-tier browser |
 | `/approvals` | Governance — approve/reject agent actions, policy config |

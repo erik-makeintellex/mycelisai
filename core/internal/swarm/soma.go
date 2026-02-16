@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/mycelis/core/internal/cognitive"
@@ -306,6 +307,26 @@ func (s *Soma) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		"teams_hit": teamCount,
 		"source":    payload.Source,
 	})
+}
+
+// DeactivateMission stops and removes all teams belonging to a mission.
+// Team IDs follow the pattern "{missionID}.{sanitized-team-name}".
+func (s *Soma) DeactivateMission(missionID string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	prefix := missionID + "."
+	stopped := 0
+	for id, team := range s.teams {
+		if strings.HasPrefix(id, prefix) {
+			team.Stop()
+			delete(s.teams, id)
+			stopped++
+		}
+	}
+	if stopped > 0 {
+		log.Printf("DeactivateMission: stopped %d teams for mission %s", stopped, missionID)
+	}
+	return stopped
 }
 
 // Shutdown stops the Soma, all teams, and its Axon.
