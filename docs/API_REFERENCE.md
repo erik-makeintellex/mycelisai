@@ -19,6 +19,10 @@
 | `/api/v1/intent/commit` | POST | Instantiate mission from blueprint |
 | `/api/v1/intent/seed/symbiotic` | POST | Seed Gmail+Weather mission (no LLM required) |
 | `/api/v1/missions` | GET | List missions with team/agent counts |
+| `/api/v1/missions/{id}` | GET | Full mission detail with teams and agent manifests |
+| `/api/v1/missions/{id}` | DELETE | Delete mission (cascade to teams/agents, deactivates Soma runtime) |
+| `/api/v1/missions/{id}/agents/{name}` | PUT | Update agent manifest within an active mission |
+| `/api/v1/missions/{id}/agents/{name}` | DELETE | Remove agent from an active mission |
 | **Swarm & Teams** | | |
 | `/api/v1/teams` | GET | List active teams |
 | `/api/swarm/teams` | POST | Create team via Soma |

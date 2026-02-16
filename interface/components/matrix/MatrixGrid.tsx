@@ -198,7 +198,7 @@ export default function MatrixGrid() {
                                     </span>
                                     <div className="flex items-center gap-1">
                                         {needsKey && (
-                                            <Key size={10} className="text-cortex-warning" title="API key required" />
+                                            <span title="API key required"><Key size={10} className="text-cortex-warning" /></span>
                                         )}
                                         <span className="text-[10px] text-cortex-text-muted font-mono px-1.5 py-0.5 bg-cortex-bg rounded border border-cortex-border">
                                             {prov.type}

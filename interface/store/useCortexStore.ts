@@ -34,13 +34,14 @@ export interface StreamSignal {
     topic?: string;
 }
 
-interface AgentManifest {
+export interface AgentManifest {
     id: string;
     role: string;
     system_prompt?: string;
     model?: string;
     inputs?: string[];
     outputs?: string[];
+    tools?: string[];
 }
 
 interface BlueprintTeam {
@@ -188,6 +189,32 @@ export interface TeamDetail {
     role: string;
     agents: TeamAgent[];
 }
+
+// ── Team Management (Phase 11) ──────────────────────────────
+
+export interface TeamDetailAgentEntry {
+    id: string;
+    role: string;
+    status: number; // 0=offline, 1=idle, 2=busy, 3=error
+    last_heartbeat: string;
+    tools: string[];
+    model: string;
+    system_prompt?: string;
+}
+
+export interface TeamDetailEntry {
+    id: string;
+    name: string;
+    role: string;
+    type: 'standing' | 'mission';
+    mission_id: string | null;
+    mission_intent: string | null;
+    inputs: string[];
+    deliveries: string[];
+    agents: TeamDetailAgentEntry[];
+}
+
+export type TeamsFilter = 'all' | 'standing' | 'mission';
 
 // ── MCP Servers (Phase 7.5) ──────────────────────────────────
 
@@ -362,6 +389,17 @@ export interface CortexState {
     // Cognitive Engine Status (Phase 7.7 vLLM)
     cognitiveStatus: CognitiveStatus | null;
 
+    // Team Management (Phase 11)
+    teamsDetail: TeamDetailEntry[];
+    isFetchingTeamsDetail: boolean;
+    selectedTeamId: string | null;
+    isTeamDrawerOpen: boolean;
+    teamsFilter: TeamsFilter;
+
+    // Wiring Edit/Delete (Phase 9)
+    selectedAgentNodeId: string | null;
+    isAgentEditorOpen: boolean;
+
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
 
@@ -427,6 +465,20 @@ export interface CortexState {
 
     // Cognitive Engine Status (Phase 7.7 vLLM)
     fetchCognitiveStatus: () => Promise<void>;
+
+    // Team Management (Phase 11)
+    fetchTeamsDetail: () => Promise<void>;
+    selectTeam: (teamId: string | null) => void;
+    setTeamsFilter: (filter: TeamsFilter) => void;
+
+    // Wiring Edit/Delete (Phase 9)
+    selectAgentNode: (nodeId: string | null) => void;
+    updateAgentInDraft: (teamIdx: number, agentIdx: number, updates: Partial<AgentManifest>) => void;
+    deleteAgentFromDraft: (teamIdx: number, agentIdx: number) => void;
+    discardDraft: () => void;
+    updateAgentInMission: (agentName: string, manifest: Partial<AgentManifest>) => Promise<void>;
+    deleteAgentFromMission: (agentName: string) => Promise<void>;
+    deleteMission: (missionId: string) => Promise<void>;
 }
 
 // ── Layout Constants ──────────────────────────────────────────
@@ -510,6 +562,8 @@ function blueprintToGraph(bp: MissionBlueprint): { nodes: Node[]; edges: Edge[] 
                     lastThought: agent.system_prompt
                         ? agent.system_prompt.slice(0, 60)
                         : undefined,
+                    teamIdx: tIdx,
+                    agentIdx: aIdx,
                 } as AgentNodeData,
                 sourcePosition: Position.Right,
                 targetPosition: Position.Left,
@@ -691,6 +745,17 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     isFetchingPolicy: false,
     isFetchingApprovals: false,
     cognitiveStatus: null,
+
+    // Team Management (Phase 11)
+    teamsDetail: [],
+    isFetchingTeamsDetail: false,
+    selectedTeamId: null,
+    isTeamDrawerOpen: false,
+    teamsFilter: 'all' as TeamsFilter,
+
+    // Wiring Edit/Delete (Phase 9)
+    selectedAgentNodeId: null,
+    isAgentEditorOpen: false,
 
     onNodesChange: (changes) => {
         set({ nodes: applyNodeChanges(changes, get().nodes) });
@@ -1511,6 +1576,209 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                     { role: 'architect', content: `Error: ${msg}` },
                 ],
             }));
+        }
+    },
+
+    // ── Team Management (Phase 11) ──────────────────────────────
+
+    fetchTeamsDetail: async () => {
+        set({ isFetchingTeamsDetail: true });
+        try {
+            const res = await fetch('/api/v1/teams/detail');
+            if (res.ok) {
+                const data = await res.json();
+                set({ teamsDetail: Array.isArray(data) ? data : [], isFetchingTeamsDetail: false });
+            } else {
+                set({ teamsDetail: [], isFetchingTeamsDetail: false });
+            }
+        } catch {
+            set({ teamsDetail: [], isFetchingTeamsDetail: false });
+        }
+    },
+
+    selectTeam: (teamId: string | null) => {
+        set({
+            selectedTeamId: teamId,
+            isTeamDrawerOpen: teamId !== null,
+        });
+    },
+
+    setTeamsFilter: (filter: TeamsFilter) => {
+        set({ teamsFilter: filter });
+    },
+
+    // ── Wiring Edit/Delete (Phase 9) ──────────────────────────
+
+    selectAgentNode: (nodeId: string | null) => {
+        set({
+            selectedAgentNodeId: nodeId,
+            isAgentEditorOpen: nodeId !== null,
+        });
+    },
+
+    updateAgentInDraft: (teamIdx: number, agentIdx: number, updates: Partial<AgentManifest>) => {
+        const bp = get().blueprint;
+        if (!bp) return;
+        const newBp: MissionBlueprint = structuredClone(bp);
+        const agent = newBp.teams[teamIdx]?.agents[agentIdx];
+        if (!agent) return;
+        Object.assign(agent, updates);
+        const { nodes, edges } = blueprintToGraph(newBp);
+        set({ blueprint: newBp, nodes, edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
+    },
+
+    deleteAgentFromDraft: (teamIdx: number, agentIdx: number) => {
+        console.log('[DEBUG] deleteAgentFromDraft called', { teamIdx, agentIdx });
+        const bp = get().blueprint;
+        if (!bp) {
+            console.error('[DEBUG] No blueprint found');
+            return;
+        }
+        const newBp: MissionBlueprint = structuredClone(bp);
+        console.log('[DEBUG] Blueprint cloned', newBp);
+        const team = newBp.teams[teamIdx];
+        if (!team) {
+            console.error('[DEBUG] Team not found', teamIdx);
+            return;
+        }
+        team.agents.splice(agentIdx, 1);
+        console.log('[DEBUG] Agent spliced. Remaining in team:', team.agents.length);
+        // Remove team if empty
+        if (team.agents.length === 0) {
+            newBp.teams.splice(teamIdx, 1);
+            console.log('[DEBUG] Team removed (empty). Remaining teams:', newBp.teams.length);
+        }
+        const { nodes, edges } = blueprintToGraph(newBp);
+        console.log('[DEBUG] Graph regenerated', { nodes: nodes.length, edges: edges.length });
+        set({ blueprint: newBp, nodes, edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
+        console.log('[DEBUG] State updated');
+    },
+
+    discardDraft: () => {
+        set({
+            blueprint: null,
+            nodes: [],
+            edges: [],
+            missionStatus: 'idle',
+            activeMissionId: null,
+            selectedAgentNodeId: null,
+            isAgentEditorOpen: false,
+        });
+    },
+
+    updateAgentInMission: async (agentName: string, manifest: Partial<AgentManifest>) => {
+        const { activeMissionId, blueprint } = get();
+        if (!activeMissionId) return;
+
+        try {
+            const res = await fetch(`/api/v1/missions/${activeMissionId}/agents/${agentName}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(manifest),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                console.error('updateAgentInMission:', data.error ?? res.statusText);
+                return;
+            }
+
+            // Update local blueprint to match
+            if (blueprint) {
+                const newBp: MissionBlueprint = structuredClone(blueprint);
+                for (const team of newBp.teams) {
+                    const agent = team.agents.find((a) => a.id === agentName);
+                    if (agent) {
+                        Object.assign(agent, manifest);
+                        break;
+                    }
+                }
+                const { nodes, edges } = blueprintToGraph(newBp);
+                set({ blueprint: newBp, nodes: solidifyNodes(nodes), edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
+            }
+        } catch (err) {
+            console.error('updateAgentInMission:', err);
+        }
+    },
+
+    deleteAgentFromMission: async (agentName: string) => {
+        const { activeMissionId, blueprint } = get();
+        console.log('[DEBUG] deleteAgentFromMission called', { agentName, activeMissionId });
+        if (!activeMissionId) return;
+
+        try {
+            const res = await fetch(`/api/v1/missions/${activeMissionId}/agents/${agentName}`, {
+                method: 'DELETE',
+            });
+            console.log('[DEBUG] DELETE API response:', res.status);
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                const errMsg = data.error ?? res.statusText;
+                console.error('deleteAgentFromMission error:', errMsg);
+
+                const div = document.createElement('div');
+                div.id = 'debug-result-error';
+                div.innerText = 'DELETE ERROR: ' + errMsg;
+                div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:red;color:white;font-size:32px;padding:20px;border:4px solid black;';
+                document.body.appendChild(div);
+                return;
+            }
+
+            const div = document.createElement('div');
+            div.id = 'debug-result-success';
+            div.innerText = 'DELETE SUCCESS: ' + agentName;
+            div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:green;color:white;font-size:32px;padding:20px;border:4px solid black;';
+            document.body.appendChild(div);
+
+            // Update local blueprint
+            if (blueprint) {
+                const newBp: MissionBlueprint = structuredClone(blueprint);
+                let spliced = false;
+                for (let tIdx = 0; tIdx < newBp.teams.length; tIdx++) {
+                    const aIdx = newBp.teams[tIdx].agents.findIndex((a) => a.id === agentName);
+                    if (aIdx !== -1) {
+                        console.log('[DEBUG] Splicing active agent at', { tIdx, aIdx });
+                        newBp.teams[tIdx].agents.splice(aIdx, 1);
+                        spliced = true;
+                        if (newBp.teams[tIdx].agents.length === 0) {
+                            newBp.teams.splice(tIdx, 1);
+                        }
+                        break;
+                    }
+                }
+                if (!spliced) console.warn('[DEBUG] Active agent NOT found in blueprint:', agentName);
+
+                const { nodes, edges } = blueprintToGraph(newBp);
+                set({ blueprint: newBp, nodes: solidifyNodes(nodes), edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
+                console.log('[DEBUG] Active state updated');
+            }
+        } catch (err) {
+            console.error('deleteAgentFromMission:', err);
+        }
+    },
+
+    deleteMission: async (missionId: string) => {
+        try {
+            const res = await fetch(`/api/v1/missions/${missionId}`, {
+                method: 'DELETE',
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                console.error('deleteMission:', data.error ?? res.statusText);
+                return;
+            }
+
+            // Clear canvas
+            set({
+                blueprint: null,
+                nodes: [],
+                edges: [],
+                missionStatus: 'idle',
+                activeMissionId: null,
+                selectedAgentNodeId: null,
+                isAgentEditorOpen: false,
+            });
+        } catch (err) {
+            console.error('deleteMission:', err);
         }
     },
 }));

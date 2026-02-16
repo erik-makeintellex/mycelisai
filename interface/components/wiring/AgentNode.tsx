@@ -2,7 +2,7 @@
 
 import React, { memo } from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
-import { Bot, Cpu, Shield, Eye, Database, Zap } from 'lucide-react';
+import { Bot, Cpu, Shield, Eye, Database, Zap, Pencil } from 'lucide-react';
 
 // ── Node Category (Phase 5.2 — Universal Bus) ──────────────────
 // Hardware and Software are structurally identical NATS publishers.
@@ -17,6 +17,8 @@ export interface AgentNodeData {
     isThinking?: boolean;
     nodeType?: NodeCategory;
     trustScore?: number;
+    teamIdx?: number;
+    agentIdx?: number;
 }
 
 // ── Role → NodeCategory mapping ────────────────────────────────
@@ -105,6 +107,11 @@ function AgentNodeComponent({ data }: NodeProps<AgentNodeData>) {
                 position={Position.Left}
                 className="!w-2.5 !h-2.5 !bg-cortex-text-muted !border-2 !border-cortex-border"
             />
+
+            {/* Edit hint — visible on hover */}
+            <div className="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil className="w-3 h-3 text-cortex-text-muted" />
+            </div>
 
             {/* Node body — left border accent by node category */}
             <div className={`bg-cortex-surface border border-l-4 ${borderClass} rounded-lg px-4 py-3 min-w-[160px] max-w-[220px] transition-all ${

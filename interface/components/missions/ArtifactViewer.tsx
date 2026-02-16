@@ -22,6 +22,7 @@ import {
     type ArtifactType,
     type ArtifactStatus,
 } from "@/store/useCortexStore";
+import { ChartRenderer, type MycelisChartSpec } from "@/components/charts";
 
 interface ArtifactViewerProps {
     missionId: string;
@@ -243,6 +244,33 @@ export default function ArtifactViewer({ missionId }: ArtifactViewerProps) {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Chart thumbnail preview */}
+                                    {artifact.artifact_type === "chart" &&
+                                        artifact.content &&
+                                        (() => {
+                                            try {
+                                                const spec = JSON.parse(
+                                                    artifact.content,
+                                                ) as MycelisChartSpec;
+                                                if (
+                                                    spec.chart_type &&
+                                                    spec.data
+                                                ) {
+                                                    return (
+                                                        <div className="mt-2 h-24 overflow-hidden rounded bg-cortex-bg pointer-events-none">
+                                                            <ChartRenderer
+                                                                spec={spec}
+                                                                compact={true}
+                                                            />
+                                                        </div>
+                                                    );
+                                                }
+                                            } catch {
+                                                /* ignore parse errors */
+                                            }
+                                            return null;
+                                        })()}
                                 </button>
                             );
                         })}
@@ -344,6 +372,25 @@ function ArtifactDetailPanel({
             );
         }
 
+        // Chart — interactive visualization
+        if (
+            artifact.artifact_type === "chart" ||
+            ct.includes("vnd.mycelis.chart")
+        ) {
+            try {
+                const spec = JSON.parse(content) as MycelisChartSpec;
+                if (spec.chart_type && spec.data) {
+                    return (
+                        <div className="p-3">
+                            <ChartRenderer spec={spec} />
+                        </div>
+                    );
+                }
+            } catch {
+                // Fall through to raw JSON display
+            }
+        }
+
         // Data / JSON
         if (
             artifact.artifact_type === "data" ||
@@ -371,7 +418,7 @@ function ArtifactDetailPanel({
     };
 
     return (
-        <div className="absolute right-0 top-0 bottom-0 w-96 z-30 bg-cortex-surface border-l border-cortex-border shadow-2xl flex flex-col">
+        <div className={`absolute right-0 top-0 bottom-0 z-30 bg-cortex-surface border-l border-cortex-border shadow-2xl flex flex-col ${artifact.artifact_type === "chart" ? "w-[640px]" : "w-96"}`}>
             {/* Detail header */}
             <div className="h-12 border-b border-cortex-border bg-cortex-surface/50 backdrop-blur-sm flex items-center justify-between px-4 flex-shrink-0">
                 <div className="flex items-center gap-2">
