@@ -51,7 +51,7 @@ func TestWorkflow_FullLoop(t *testing.T) {
 	// We'll manually inject a team instead of loading from disk to keep test self-contained
 	guard := &governance.Guard{}
 	registry := NewRegistry(".") // Empty
-	soma := NewSoma(nc, guard, registry, brain, nil, nil)
+	soma := NewSoma(nc, guard, registry, brain, nil, nil, nil)
 
 	// Manually inject a team
 	manifest := &TeamManifest{

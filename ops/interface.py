@@ -1,5 +1,5 @@
 from invoke import task, Collection
-from .config import is_windows, powershell
+from .config import is_windows, powershell, INTERFACE_HOST, INTERFACE_PORT
 
 ns = Collection("interface")
 
@@ -38,7 +38,7 @@ def test(c):
 # ── Process Management ───────────────────────────────────────
 
 @task
-def stop(c, port=3000):
+def stop(c, port=INTERFACE_PORT):
     """
     Stop the Interface dev server.
     Kills any node process listening on --port (default 3000).
@@ -70,7 +70,7 @@ def clean(c):
     print("Cache cleared.")
 
 @task
-def restart(c, port=3000):
+def restart(c, port=INTERFACE_PORT):
     """
     Full Interface restart: stop -> clear cache -> build -> start dev -> check.
     Use when UI shows stale errors or HMR is broken.
@@ -108,7 +108,7 @@ def restart(c, port=3000):
 # ── Health Check ─────────────────────────────────────────────
 
 @task
-def check(c, port=3000):
+def check(c, port=INTERFACE_PORT):
     """
     Smoke-test the running Interface dev server.
     Fetches key pages and checks for SSR errors, 404s, and dark-mode leaks.
@@ -116,8 +116,8 @@ def check(c, port=3000):
     """
     import urllib.request
 
-    base = f"http://localhost:{port}"
-    pages = ["/", "/wiring", "/architect", "/dashboard"]
+    base = f"http://{INTERFACE_HOST}:{port}"
+    pages = ["/", "/wiring", "/architect", "/dashboard", "/catalogue", "/memory", "/settings/tools"]
     errors = []
 
     print(f"Checking Interface at {base}...")

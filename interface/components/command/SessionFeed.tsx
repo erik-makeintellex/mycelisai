@@ -1,6 +1,7 @@
 "use client"
 
-import { Play, Pause, ExternalLink } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Pause, ExternalLink, Activity } from "lucide-react"
 
 interface ActiveSession {
     id: string
@@ -11,18 +12,40 @@ interface ActiveSession {
 }
 
 export function SessionFeed() {
-    // Mock Data for "Active State"
-    const sessions: ActiveSession[] = [
-        { id: "0xf1", agent: "@architect", intent: "provision", status: "drafting", output: "Mapping 'Market Watcher' to MCP Tools..." },
-        { id: "0xa4", agent: "@sentry", intent: "scan", status: "running", output: "Parsed 450 logs. No anomalies found." },
-        { id: "0xb2", agent: "@coder", intent: "refactor", status: "paused", output: "Wait: User Approval required for 'fs.write'." },
-    ]
+    const [sessions, setSessions] = useState<ActiveSession[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchSessions = async () => {
+            try {
+                const res = await fetch('/agents')
+                if (!res.ok) throw new Error('Failed to fetch')
+                const data = await res.json()
+                const agents = data.agents || []
+                const mapped: ActiveSession[] = agents.map((a: Record<string, string>) => ({
+                    id: a.id || a.agent_id || '',
+                    agent: `@${a.role || a.id || 'unknown'}`,
+                    intent: a.status === '1' ? 'idle' : a.status === '2' ? 'active' : 'offline',
+                    status: a.status === '2' ? 'running' as const : a.status === '1' ? 'drafting' as const : 'paused' as const,
+                    output: a.last_heartbeat ? `Last seen: ${new Date(a.last_heartbeat).toLocaleTimeString()}` : 'No activity',
+                }))
+                setSessions(mapped)
+            } catch {
+                setSessions([])
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchSessions()
+        const timer = setInterval(fetchSessions, 10000)
+        return () => clearInterval(timer)
+    }, [])
 
     return (
         <div className="flex flex-col flex-1 max-w-5xl mx-auto w-full px-8 py-12">
 
             {/* Table Header */}
-            <div className="grid grid-cols-12 gap-4 pb-4 border-b border-zinc-200 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+            <div className="grid grid-cols-12 gap-4 pb-4 border-b border-cortex-border text-xs font-semibold text-cortex-text-muted uppercase tracking-wider">
                 <div className="col-span-2">Agent</div>
                 <div className="col-span-1">Intent</div>
                 <div className="col-span-2">Status</div>
@@ -32,41 +55,36 @@ export function SessionFeed() {
 
             {/* List */}
             <div className="space-y-1 mt-2">
-                {sessions.map((session) => (
-                    <div key={session.id} className="grid grid-cols-12 gap-4 py-4 items-center border-b border-zinc-100 hover:bg-zinc-50 group transition-colors rounded-sm px-2 -mx-2">
-                        {/* Agent */}
-                        <div className="col-span-2 font-mono text-sm font-semibold text-slate-900">
-                            {session.agent}
-                        </div>
-
-                        {/* Intent */}
-                        <div className="col-span-1 text-xs text-zinc-500 font-mono">
-                            {session.intent}
-                        </div>
-
-                        {/* Status */}
-                        <div className="col-span-2 flex items-center gap-2">
-                            <StatusIndicator status={session.status} />
-                        </div>
-
-                        {/* Output */}
-                        <div className="col-span-6 font-mono text-xs text-slate-600 truncate opacity-80 group-hover:opacity-100">
-                            {session.output}
-                        </div>
-
-                        {/* Action */}
-                        <div className="col-span-1 text-right">
-                            <button className="p-1 hover:bg-zinc-200 rounded text-zinc-400 hover:text-zinc-600 transition-colors">
-                                <ExternalLink size={14} />
-                            </button>
-                        </div>
+                {loading ? (
+                    <div className="py-8 text-center text-cortex-text-muted text-xs font-mono">Loading agents...</div>
+                ) : sessions.length === 0 ? (
+                    <div className="py-12 flex flex-col items-center text-cortex-text-muted">
+                        <Activity className="w-8 h-8 mb-2 opacity-20" />
+                        <p className="text-xs font-mono">No active sessions</p>
                     </div>
-                ))}
-            </div>
-
-            {/* Empty Space Filler (Optional visual balance) */}
-            <div className="flex-1 min-h-[200px] flex items-end justify-center pb-12 opacity-30">
-                {/* Can put a watermark or subtle graphic here if needed */}
+                ) : (
+                    sessions.map((session) => (
+                        <div key={session.id} className="grid grid-cols-12 gap-4 py-4 items-center border-b border-cortex-border hover:bg-cortex-bg group transition-colors rounded-sm px-2 -mx-2">
+                            <div className="col-span-2 font-mono text-sm font-semibold text-cortex-text-main">
+                                {session.agent}
+                            </div>
+                            <div className="col-span-1 text-xs text-cortex-text-muted font-mono">
+                                {session.intent}
+                            </div>
+                            <div className="col-span-2 flex items-center gap-2">
+                                <StatusIndicator status={session.status} />
+                            </div>
+                            <div className="col-span-6 font-mono text-xs text-cortex-text-muted truncate opacity-80 group-hover:opacity-100">
+                                {session.output}
+                            </div>
+                            <div className="col-span-1 text-right">
+                                <button className="p-1 hover:bg-cortex-border rounded text-cortex-text-muted hover:text-cortex-text-main transition-colors">
+                                    <ExternalLink size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     )
@@ -75,25 +93,25 @@ export function SessionFeed() {
 function StatusIndicator({ status }: { status: ActiveSession['status'] }) {
     if (status === 'running') {
         return (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="flex items-center gap-1.5 text-xs font-medium text-cortex-success bg-cortex-success/10 px-2 py-0.5 rounded-full border border-cortex-success/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-cortex-success animate-pulse" />
                 Running
             </span>
         )
     }
     if (status === 'drafting') {
         return (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                Drafting
+            <span className="flex items-center gap-1.5 text-xs font-medium text-cortex-info bg-cortex-info/10 px-2 py-0.5 rounded-full border border-cortex-info/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-cortex-info" />
+                Idle
             </span>
         )
     }
     if (status === 'paused') {
         return (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+            <span className="flex items-center gap-1.5 text-xs font-medium text-cortex-warning bg-cortex-warning/10 px-2 py-0.5 rounded-full border border-cortex-warning/20">
                 <Pause size={8} fill="currentColor" />
-                Paused
+                Offline
             </span>
         )
     }

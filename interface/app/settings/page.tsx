@@ -1,54 +1,80 @@
 "use client";
 
 import { useState } from "react";
-import { User, Users, BrainCircuit, Settings, Shield } from "lucide-react";
+import dynamic from "next/dynamic";
+import { User, Users, BrainCircuit, Settings, Shield, Wrench } from "lucide-react";
 import MatrixGrid from "@/components/matrix/MatrixGrid";
+
+const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegistry"), {
+    ssr: false,
+    loading: () => (
+        <div className="h-64 flex items-center justify-center">
+            <span className="text-cortex-text-muted text-xs font-mono animate-pulse">Loading tool registry...</span>
+        </div>
+    ),
+});
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState("profile");
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8 p-6">
+        <div className="h-full flex flex-col">
             {/* Header */}
-            <div>
+            <div className="max-w-5xl mx-auto w-full px-6 pt-6 pb-0">
                 <h1 className="text-2xl font-bold tracking-tight text-cortex-text-main flex items-center gap-2">
                     <Settings className="w-6 h-6 text-cortex-text-muted" />
                     Settings
                 </h1>
-                <p className="text-cortex-text-muted">Manage your neural interface preferences.</p>
+                <p className="text-cortex-text-muted mt-1">Manage your neural interface preferences.</p>
             </div>
 
             {/* Tabs */}
-            <div className="flex items-center gap-1 border-b border-cortex-border">
-                <Tab
-                    id="profile"
-                    label="Profile"
-                    icon={User}
-                    active={activeTab === "profile"}
-                    onClick={() => setActiveTab("profile")}
-                />
-                <Tab
-                    id="teams"
-                    label="Teams"
-                    icon={Users}
-                    active={activeTab === "teams"}
-                    onClick={() => setActiveTab("teams")}
-                />
-                <Tab
-                    id="matrix"
-                    label="Cognitive Matrix"
-                    icon={BrainCircuit}
-                    active={activeTab === "matrix"}
-                    onClick={() => setActiveTab("matrix")}
-                />
+            <div className="max-w-5xl mx-auto w-full px-6 mt-6">
+                <div className="flex items-center gap-1 border-b border-cortex-border">
+                    <Tab
+                        id="profile"
+                        label="Profile"
+                        icon={User}
+                        active={activeTab === "profile"}
+                        onClick={() => setActiveTab("profile")}
+                    />
+                    <Tab
+                        id="teams"
+                        label="Teams"
+                        icon={Users}
+                        active={activeTab === "teams"}
+                        onClick={() => setActiveTab("teams")}
+                    />
+                    <Tab
+                        id="matrix"
+                        label="Cognitive Matrix"
+                        icon={BrainCircuit}
+                        active={activeTab === "matrix"}
+                        onClick={() => setActiveTab("matrix")}
+                    />
+                    <Tab
+                        id="tools"
+                        label="MCP Tools"
+                        icon={Wrench}
+                        active={activeTab === "tools"}
+                        onClick={() => setActiveTab("tools")}
+                    />
+                </div>
             </div>
 
             {/* Content */}
-            <div className="min-h-[400px]">
-                {activeTab === "profile" && <ProfileSettings />}
-                {activeTab === "teams" && <TeamSettings />}
-                {activeTab === "matrix" && <div className="p-1"><MatrixGrid /></div>}
-            </div>
+            {activeTab === "tools" ? (
+                /* Tools tab gets full height for the registry layout */
+                <div className="flex-1 overflow-hidden mt-2">
+                    <MCPToolRegistry />
+                </div>
+            ) : (
+                <div className="max-w-5xl mx-auto w-full px-6 py-6 min-h-[400px]">
+                    {activeTab === "profile" && <ProfileSettings />}
+                    {activeTab === "teams" && <TeamSettings />}
+                    {activeTab === "matrix" && <div className="p-1"><MatrixGrid /></div>}
+                </div>
+            )}
         </div>
     );
 }

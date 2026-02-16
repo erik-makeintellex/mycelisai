@@ -16,6 +16,15 @@ ROOT_DIR = Path(__file__).parent.parent.resolve() # tasks/../ -> root
 CORE_DIR = ROOT_DIR / "core"
 SDK_DIR = ROOT_DIR / "sdk/python"
 
+# -- Host Defaults (env-var overridable) --
+# Core API server
+API_HOST = os.environ.get("MYCELIS_API_HOST", "localhost")
+API_PORT = int(os.environ.get("MYCELIS_API_PORT", "8081"))
+
+# Interface (Next.js) dev server
+INTERFACE_HOST = os.environ.get("MYCELIS_INTERFACE_HOST", "localhost")
+INTERFACE_PORT = int(os.environ.get("MYCELIS_INTERFACE_PORT", "3000"))
+
 def is_windows():
     return platform.system() == "Windows"
 

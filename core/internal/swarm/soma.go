@@ -19,34 +19,49 @@ import (
 // It acts as the User Proxy, receiving external inputs and high-level directives.
 // It delegates execution to "Axon" (The Messenger) and Action/Expression Cores.
 type Soma struct {
-	id           string
-	nc           *nats.Conn
-	guard        *governance.Guard
-	axon         *Axon
-	teams        map[string]*Team
-	mu           sync.RWMutex
-	ctx          context.Context
-	cancel       context.CancelFunc
-	registry     *Registry
-	brain        *cognitive.Router
-	toolExecutor MCPToolExecutor
+	id            string
+	nc            *nats.Conn
+	guard         *governance.Guard
+	axon          *Axon
+	teams         map[string]*Team
+	mu            sync.RWMutex
+	ctx           context.Context
+	cancel        context.CancelFunc
+	registry      *Registry
+	brain         *cognitive.Router
+	toolExecutor  MCPToolExecutor // composite (internal + MCP)
+	internalTools *InternalToolRegistry
 }
 
 // NewSoma creates a new Executive instance.
-// toolExec may be nil if MCP tools are not available.
-func NewSoma(nc *nats.Conn, guard *governance.Guard, registry *Registry, brain *cognitive.Router, stream *signal.StreamHandler, toolExec MCPToolExecutor) *Soma {
+// internalTools may be nil; mcpExec may be nil. Both are composed into a
+// CompositeToolExecutor that is passed to all teams and agents.
+func NewSoma(nc *nats.Conn, guard *governance.Guard, registry *Registry, brain *cognitive.Router, stream *signal.StreamHandler, mcpExec MCPToolExecutor, internalTools *InternalToolRegistry) *Soma {
+	// Build composite tool executor (internal first, MCP fallback)
+	var composite MCPToolExecutor
+	if internalTools != nil || mcpExec != nil {
+		composite = NewCompositeToolExecutor(internalTools, mcpExec)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Soma{
-		id:           "soma-core",
-		nc:           nc,
-		guard:        guard,
-		registry:     registry,
-		brain:        brain,
-		toolExecutor: toolExec,
-		teams:        make(map[string]*Team),
-		ctx:          ctx,
-		cancel:       cancel,
+		id:            "soma-core",
+		nc:            nc,
+		guard:         guard,
+		registry:      registry,
+		brain:         brain,
+		toolExecutor:  composite,
+		internalTools: internalTools,
+		teams:         make(map[string]*Team),
+		ctx:           ctx,
+		cancel:        cancel,
 	}
+
+	// Wire Soma back-reference into internal tools (for list_teams, BuildContext, etc.)
+	if internalTools != nil {
+		internalTools.SetSoma(s)
+	}
+
 	// Axon is Soma's Assistant
 	s.axon = NewAxon(nc, s, stream)
 	return s
@@ -56,13 +71,25 @@ func NewSoma(nc *nats.Conn, guard *governance.Guard, registry *Registry, brain *
 func (s *Soma) Start() error {
 	log.Printf("🧠 Soma [%s] Online. Listening for User Intent...", s.id)
 
-	// 0. Load Teams from Registry
+	// 0. Build tool descriptions for prompt injection
+	var toolDescs map[string]string
+	if s.internalTools != nil {
+		toolDescs = s.internalTools.ListDescriptions()
+	}
+
+	// 1. Load Teams from Registry
 	manifests, err := s.registry.LoadManifests()
 	if err != nil {
 		log.Printf("WARN: Failed to load team manifests: %v", err)
 	}
 	for _, m := range manifests {
 		team := NewTeam(m, s.nc, s.brain, s.toolExecutor)
+		if len(toolDescs) > 0 {
+			team.SetToolDescriptions(toolDescs)
+		}
+		if s.internalTools != nil {
+			team.SetInternalTools(s.internalTools)
+		}
 		s.teams[m.ID] = team
 		if err := team.Start(); err != nil {
 			log.Printf("ERR: Failed to start team %s: %v", m.ID, err)
@@ -113,6 +140,12 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 	// TODO: Save to Registry (YAML)
 
 	team := NewTeam(manifest, s.nc, s.brain, s.toolExecutor)
+	if s.internalTools != nil {
+		team.SetToolDescriptions(s.internalTools.ListDescriptions())
+	}
+	if s.internalTools != nil {
+		team.SetInternalTools(s.internalTools)
+	}
 	if err := team.Start(); err != nil {
 		return err
 	}
@@ -223,6 +256,56 @@ func (s *Soma) HandleCommand(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "sent", "subject": subject})
+}
+
+// HandleBroadcast processes HTTP POST /api/v1/swarm/broadcast
+// It fans out a directive message to ALL active teams' internal trigger topics.
+func (s *Soma) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var payload struct {
+		Content string `json:"content"`
+		Source  string `json:"source"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Content == "" {
+		http.Error(w, "Missing content", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Source == "" {
+		payload.Source = "mission-control"
+	}
+
+	// Fan out to all active teams
+	s.mu.RLock()
+	teamCount := 0
+	for id := range s.teams {
+		subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, id)
+		if err := s.nc.Publish(subject, []byte(payload.Content)); err != nil {
+			log.Printf("Broadcast failed for team [%s]: %v", id, err)
+			continue
+		}
+		teamCount++
+		log.Printf("📡 Broadcast to team [%s] on [%s]", id, subject)
+	}
+	s.mu.RUnlock()
+	s.nc.Flush()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "broadcast",
+		"teams_hit": teamCount,
+		"source":    payload.Source,
+	})
 }
 
 // Shutdown stops the Soma, all teams, and its Axon.

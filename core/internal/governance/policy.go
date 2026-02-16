@@ -18,25 +18,25 @@ const (
 
 // PolicyConfig represents the YAML structure
 type PolicyConfig struct {
-	Groups   []PolicyGroup `yaml:"groups"`
-	Defaults DefaultConfig `yaml:"defaults"`
+	Groups   []PolicyGroup `yaml:"groups" json:"groups"`
+	Defaults DefaultConfig `yaml:"defaults" json:"defaults"`
 }
 
 type PolicyGroup struct {
-	Name        string       `yaml:"name"`
-	Description string       `yaml:"description"`
-	Targets     []string     `yaml:"targets"` // "team:marketing", "agent:xyz"
-	Rules       []PolicyRule `yaml:"rules"`
+	Name        string       `yaml:"name" json:"name"`
+	Description string       `yaml:"description" json:"description"`
+	Targets     []string     `yaml:"targets" json:"targets"` // "team:marketing", "agent:xyz"
+	Rules       []PolicyRule `yaml:"rules" json:"rules"`
 }
 
 type PolicyRule struct {
-	Intent    string `yaml:"intent"`
-	Condition string `yaml:"condition"` // Simple "key > value" string
-	Action    string `yaml:"action"`
+	Intent    string `yaml:"intent" json:"intent"`
+	Condition string `yaml:"condition" json:"condition"` // Simple "key > value" string
+	Action    string `yaml:"action" json:"action"`
 }
 
 type DefaultConfig struct {
-	DefaultAction string `yaml:"default_action"`
+	DefaultAction string `yaml:"default_action" json:"default_action"`
 }
 
 // Engine handles policy evaluation

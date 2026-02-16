@@ -12,9 +12,16 @@ import type { AgentNodeData } from '@/components/wiring/AgentNode';
 
 // ── Domain Types ──────────────────────────────────────────────
 
+export interface ChatConsultation {
+    member: string;
+    summary: string;
+}
+
 export interface ChatMessage {
-    role: 'user' | 'architect';
+    role: 'user' | 'architect' | 'admin';
     content: string;
+    consultations?: ChatConsultation[];
+    tools_used?: string[];
 }
 
 export interface StreamSignal {
@@ -165,6 +172,23 @@ export interface ArtifactFilters {
     limit?: number;
 }
 
+// ── Team Explorer (Phase 7.6) ────────────────────────────────
+
+export interface TeamAgent {
+    id: string;
+    name: string;
+    team_id: string;
+    status: number; // 0=offline, 1=idle, 2=busy, 3=error
+    last_heartbeat: string;
+}
+
+export interface TeamDetail {
+    id: string;
+    name: string;
+    role: string;
+    agents: TeamAgent[];
+}
+
 // ── MCP Servers (Phase 7.5) ──────────────────────────────────
 
 export interface MCPServer {
@@ -191,6 +215,62 @@ export interface MCPTool {
 
 export interface MCPServerWithTools extends MCPServer {
     tools: MCPTool[];
+}
+
+export interface MCPLibraryEntry {
+    name: string;
+    description: string;
+    transport: string;
+    command: string;
+    args: string[];
+    env?: Record<string, string>;
+    tags: string[];
+}
+
+export interface MCPLibraryCategory {
+    name: string;
+    servers: MCPLibraryEntry[];
+}
+
+// ── Governance Policy (Phase 7.7) ────────────────────────────
+
+export interface PolicyRule {
+    intent: string;
+    condition: string;
+    action: 'ALLOW' | 'DENY' | 'REQUIRE_APPROVAL';
+}
+
+export interface PolicyGroup {
+    name: string;
+    description: string;
+    targets: string[];
+    rules: PolicyRule[];
+}
+
+export interface PolicyConfig {
+    groups: PolicyGroup[];
+    defaults: { default_action: string };
+}
+
+export interface PendingApproval {
+    id: string;
+    reason: string;
+    source_agent: string;
+    team_id: string;
+    intent: string;
+    timestamp: string;
+    expires_at: string;
+}
+
+export interface CognitiveEngineStatus {
+    status: "online" | "offline";
+    endpoint?: string;
+    model?: string;
+}
+
+export interface CognitiveStatus {
+    text: CognitiveEngineStatus;
+    media: CognitiveEngineStatus;
 }
 
 // ── Store Contract ────────────────────────────────────────────
@@ -229,6 +309,9 @@ export interface CortexState {
     savedBlueprints: MissionBlueprint[];
     isBlueprintDrawerOpen: boolean;
 
+    // Tools Palette (Phase 7.7) — workspace tool browser
+    isToolsPaletteOpen: boolean;
+
     // Sensor Library (Phase 5.3) — grouped subscriptions
     sensorFeeds: SensorNode[];
     isFetchingSensors: boolean;
@@ -253,6 +336,32 @@ export interface CortexState {
     isFetchingMCPServers: boolean;
     mcpTools: MCPTool[];
 
+    // MCP Library (Phase 7.7)
+    mcpLibrary: MCPLibraryCategory[];
+    isFetchingMCPLibrary: boolean;
+
+    // Mission Control Chat (Phase 7.6)
+    missionChat: ChatMessage[];
+    isMissionChatting: boolean;
+    missionChatError: string | null;
+
+    // Broadcast (Phase 8.0)
+    isBroadcasting: boolean;
+    lastBroadcastResult: { teams_hit: number } | null;
+
+    // Team Explorer (Phase 7.6)
+    teamRoster: TeamDetail[];
+    isFetchingTeamRoster: boolean;
+
+    // Governance (Phase 7.7)
+    policyConfig: PolicyConfig | null;
+    pendingApprovals: PendingApproval[];
+    isFetchingPolicy: boolean;
+    isFetchingApprovals: boolean;
+
+    // Cognitive Engine Status (Phase 7.7 vLLM)
+    cognitiveStatus: CognitiveStatus | null;
+
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
 
@@ -269,6 +378,7 @@ export interface CortexState {
     setTrustThreshold: (value: number) => void;
     fetchTrustThreshold: () => Promise<void>;
     toggleBlueprintDrawer: () => void;
+    toggleToolsPalette: () => void;
     saveBlueprint: (bp: MissionBlueprint) => void;
     loadBlueprint: (bp: MissionBlueprint) => void;
     fetchSensors: () => Promise<void>;
@@ -294,6 +404,29 @@ export interface CortexState {
     installMCPServer: (config: Partial<MCPServer>) => Promise<void>;
     deleteMCPServer: (id: string) => Promise<void>;
     fetchMCPTools: () => Promise<void>;
+
+    // MCP Library (Phase 7.7)
+    fetchMCPLibrary: () => Promise<void>;
+    installFromLibrary: (name: string, env?: Record<string, string>) => Promise<void>;
+
+    // Mission Control Chat (Phase 7.6)
+    sendMissionChat: (message: string) => Promise<void>;
+    clearMissionChat: () => void;
+
+    // Broadcast (Phase 8.0)
+    broadcastToSwarm: (message: string) => Promise<void>;
+
+    // Team Explorer (Phase 7.6)
+    fetchTeamDetails: () => Promise<void>;
+
+    // Governance (Phase 7.7)
+    fetchPolicy: () => Promise<void>;
+    updatePolicy: (config: PolicyConfig) => Promise<void>;
+    fetchPendingApprovals: () => Promise<void>;
+    resolveApproval: (id: string, approved: boolean) => Promise<void>;
+
+    // Cognitive Engine Status (Phase 7.7 vLLM)
+    fetchCognitiveStatus: () => Promise<void>;
 }
 
 // ── Layout Constants ──────────────────────────────────────────
@@ -515,6 +648,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     isSyncingThreshold: false,
     savedBlueprints: [],
     isBlueprintDrawerOpen: false,
+    isToolsPaletteOpen: false,
     sensorFeeds: [],
     isFetchingSensors: false,
     subscribedSensorGroups: [],
@@ -535,6 +669,28 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     mcpServers: [],
     isFetchingMCPServers: false,
     mcpTools: [],
+    mcpLibrary: [],
+    isFetchingMCPLibrary: false,
+
+    // Mission Control Chat (Phase 7.6)
+    missionChat: [],
+    isMissionChatting: false,
+    missionChatError: null,
+
+    // Broadcast (Phase 8.0)
+    isBroadcasting: false,
+    lastBroadcastResult: null,
+
+    // Team Explorer (Phase 7.6)
+    teamRoster: [],
+    isFetchingTeamRoster: false,
+
+    // Governance (Phase 7.7)
+    policyConfig: null,
+    pendingApprovals: [],
+    isFetchingPolicy: false,
+    isFetchingApprovals: false,
+    cognitiveStatus: null,
 
     onNodesChange: (changes) => {
         set({ nodes: applyNodeChanges(changes, get().nodes) });
@@ -757,6 +913,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     toggleBlueprintDrawer: () => {
         set((s) => ({ isBlueprintDrawerOpen: !s.isBlueprintDrawerOpen }));
+    },
+
+    toggleToolsPalette: () => {
+        set((s) => ({ isToolsPaletteOpen: !s.isToolsPaletteOpen }));
     },
 
     saveBlueprint: (bp: MissionBlueprint) => {
@@ -1049,6 +1209,255 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         } catch {
             set({ mcpTools: [] });
         }
+    },
+
+    // ── MCP Library (Phase 7.7) ─────────────────────────────────
+
+    fetchMCPLibrary: async () => {
+        set({ isFetchingMCPLibrary: true });
+        try {
+            const res = await fetch('/api/v1/mcp/library');
+            if (res.ok) {
+                const data = await res.json();
+                set({ mcpLibrary: Array.isArray(data) ? data : [], isFetchingMCPLibrary: false });
+            } else {
+                set({ mcpLibrary: [], isFetchingMCPLibrary: false });
+            }
+        } catch {
+            set({ mcpLibrary: [], isFetchingMCPLibrary: false });
+        }
+    },
+
+    installFromLibrary: async (name: string, env?: Record<string, string>) => {
+        try {
+            const res = await fetch('/api/v1/mcp/library/install', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, env }),
+            });
+            if (res.ok) {
+                // Refresh installed servers list
+                get().fetchMCPServers();
+            } else {
+                console.error('[MCP Library] Install failed:', await res.text());
+            }
+        } catch (err) {
+            console.error('[MCP Library] Install failed:', err);
+        }
+    },
+
+    // ── Mission Control Chat (Phase 7.6) ────────────────────────
+
+    sendMissionChat: async (message: string) => {
+        const trimmed = message.trim();
+        if (!trimmed) return;
+
+        // Append user message and set loading
+        set((s) => ({
+            missionChat: [...s.missionChat, { role: 'user', content: trimmed }],
+            isMissionChatting: true,
+            missionChatError: null,
+        }));
+
+        try {
+            // Build messages for backend (map admin/architect to assistant for Vercel compat)
+            const messages = [...get().missionChat].map((m) => ({
+                role: m.role === 'user' ? 'user' : 'assistant',
+                content: m.content,
+            }));
+
+            const res = await fetch('/api/v1/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages }),
+            });
+
+            if (!res.ok) {
+                const errText = `Chat request failed (${res.status})`;
+                set((s) => ({
+                    isMissionChatting: false,
+                    missionChatError: errText,
+                    missionChat: [...s.missionChat, { role: 'admin', content: errText }],
+                }));
+                return;
+            }
+
+            const text = await res.text();
+
+            // Try to parse as JSON envelope (Admin agent may return structured response)
+            let chatMsg: ChatMessage = { role: 'admin', content: text };
+            try {
+                const envelope = JSON.parse(text);
+                if (envelope.text) {
+                    chatMsg = {
+                        role: 'admin',
+                        content: envelope.text,
+                        consultations: envelope.consultations,
+                        tools_used: envelope.tools_used,
+                    };
+                }
+            } catch {
+                // Not JSON — raw text response (normal)
+            }
+
+            set((s) => ({
+                isMissionChatting: false,
+                missionChat: [...s.missionChat, chatMsg],
+            }));
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Chat failed';
+            set((s) => ({
+                isMissionChatting: false,
+                missionChatError: msg,
+                missionChat: [...s.missionChat, { role: 'admin', content: `Error: ${msg}` }],
+            }));
+        }
+    },
+
+    clearMissionChat: () => {
+        set({ missionChat: [], missionChatError: null });
+    },
+
+    // ── Broadcast (Phase 8.0) ─────────────────────────────────────
+
+    broadcastToSwarm: async (message: string) => {
+        const trimmed = message.trim();
+        if (!trimmed) return;
+
+        set((s) => ({
+            missionChat: [...s.missionChat, { role: 'user', content: `[BROADCAST] ${trimmed}` }],
+            isBroadcasting: true,
+            missionChatError: null,
+        }));
+
+        try {
+            const res = await fetch('/api/v1/swarm/broadcast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: trimmed, source: 'mission-control' }),
+            });
+
+            if (!res.ok) {
+                const errText = `Broadcast failed (${res.status})`;
+                set((s) => ({
+                    isBroadcasting: false,
+                    missionChatError: errText,
+                    missionChat: [...s.missionChat, { role: 'architect', content: errText }],
+                }));
+                return;
+            }
+
+            const data = await res.json();
+            set((s) => ({
+                isBroadcasting: false,
+                lastBroadcastResult: { teams_hit: data.teams_hit },
+                missionChat: [
+                    ...s.missionChat,
+                    { role: 'architect', content: `Broadcast sent to ${data.teams_hit} active team(s).` },
+                ],
+            }));
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Broadcast failed';
+            set((s) => ({
+                isBroadcasting: false,
+                missionChatError: msg,
+                missionChat: [...s.missionChat, { role: 'architect', content: `Error: ${msg}` }],
+            }));
+        }
+    },
+
+    // ── Team Explorer (Phase 7.6) ────────────────────────────────
+
+    fetchTeamDetails: async () => {
+        set({ isFetchingTeamRoster: true });
+        try {
+            const [teamsRes, agentsRes] = await Promise.all([
+                fetch('/api/v1/teams'),
+                fetch('/agents'),
+            ]);
+
+            const teams = teamsRes.ok ? await teamsRes.json() : [];
+            const agentsData = agentsRes.ok ? await agentsRes.json() : { agents: [] };
+            const agents: TeamAgent[] = Array.isArray(agentsData.agents) ? agentsData.agents : [];
+
+            // Merge agents into their teams
+            const roster: TeamDetail[] = (Array.isArray(teams) ? teams : []).map((t: any) => ({
+                id: t.id,
+                name: t.name,
+                role: t.role || 'observer',
+                agents: agents.filter((a) => a.team_id === t.id),
+            }));
+
+            set({ teamRoster: roster, isFetchingTeamRoster: false });
+        } catch {
+            set({ teamRoster: [], isFetchingTeamRoster: false });
+        }
+    },
+
+    // ── Governance (Phase 7.7) ────────────────────────────────────
+
+    fetchPolicy: async () => {
+        set({ isFetchingPolicy: true });
+        try {
+            const res = await fetch('/api/v1/governance/policy');
+            if (res.ok) {
+                const data = await res.json();
+                set({ policyConfig: data, isFetchingPolicy: false });
+            } else {
+                set({ isFetchingPolicy: false });
+            }
+        } catch { set({ isFetchingPolicy: false }); }
+    },
+
+    updatePolicy: async (config: PolicyConfig) => {
+        try {
+            const res = await fetch('/api/v1/governance/policy', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config),
+            });
+            if (res.ok) {
+                set({ policyConfig: config });
+            }
+        } catch (err) { console.error('[Governance] Update failed:', err); }
+    },
+
+    fetchPendingApprovals: async () => {
+        set({ isFetchingApprovals: true });
+        try {
+            const res = await fetch('/api/v1/governance/pending');
+            if (res.ok) {
+                const data = await res.json();
+                set({ pendingApprovals: Array.isArray(data) ? data : [], isFetchingApprovals: false });
+            } else {
+                set({ pendingApprovals: [], isFetchingApprovals: false });
+            }
+        } catch { set({ pendingApprovals: [], isFetchingApprovals: false }); }
+    },
+
+    resolveApproval: async (id: string, approved: boolean) => {
+        try {
+            const res = await fetch(`/api/v1/governance/resolve/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: approved ? 'APPROVE' : 'REJECT' }),
+            });
+            if (res.ok) {
+                set((s) => ({
+                    pendingApprovals: s.pendingApprovals.filter((a) => a.id !== id),
+                }));
+            }
+        } catch (err) { console.error('[Governance] Resolve failed:', err); }
+    },
+
+    fetchCognitiveStatus: async () => {
+        try {
+            const res = await fetch('/api/v1/cognitive/status');
+            if (res.ok) {
+                const data = await res.json();
+                set({ cognitiveStatus: data });
+            }
+        } catch { /* silently fail — dashboard gauge will show offline */ }
     },
 
     instantiateMission: async () => {
