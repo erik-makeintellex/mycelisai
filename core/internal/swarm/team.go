@@ -39,10 +39,12 @@ type Team struct {
 	nc            *nats.Conn
 	brain         *cognitive.Router
 	toolExecutor  MCPToolExecutor
+	toolDescs     map[string]string        // tool name → description for agent prompt injection
+	internalTools *InternalToolRegistry    // live system state + context builder
 	ctx           context.Context
 	cancel        context.CancelFunc
 	mu            sync.Mutex
-	sensorConfigs map[string]SensorConfig // agent.ID → config; nil = all cognitive
+	sensorConfigs map[string]SensorConfig  // agent.ID → config; nil = all cognitive
 }
 
 // NewTeam creates a new Team instance.
@@ -79,6 +81,21 @@ func (t *Team) Start() error {
 			go sensor.Start()
 		} else {
 			agent := NewAgent(t.ctx, manifest, t.Manifest.ID, t.nc, t.brain, t.toolExecutor)
+			// Inject tool descriptions for the agent's bound tools
+			if len(manifest.Tools) > 0 && len(t.toolDescs) > 0 {
+				agentDescs := make(map[string]string, len(manifest.Tools))
+				for _, name := range manifest.Tools {
+					if desc, ok := t.toolDescs[name]; ok {
+						agentDescs[name] = desc
+					}
+				}
+				agent.SetToolDescriptions(agentDescs)
+			}
+			// Inject internal tool registry (for runtime context) and team topology
+			if t.internalTools != nil {
+				agent.SetInternalTools(t.internalTools)
+			}
+			agent.SetTeamTopology(t.Manifest.Inputs, t.Manifest.Deliveries)
 			go agent.Start()
 		}
 	}
@@ -108,10 +125,18 @@ func (t *Team) handleResponse(msg *nats.Msg) {
 }
 
 // SetSensorConfigs marks specific agents as sensor agents.
-// Agents whose ID appears in the map will be spawned as SensorAgents
-// (poll-based) instead of cognitive Agents (LLM-based).
 func (t *Team) SetSensorConfigs(configs map[string]SensorConfig) {
 	t.sensorConfigs = configs
+}
+
+// SetToolDescriptions provides tool name→description pairs for agent prompt injection.
+func (t *Team) SetToolDescriptions(descs map[string]string) {
+	t.toolDescs = descs
+}
+
+// SetInternalTools provides the internal tool registry for runtime context building.
+func (t *Team) SetInternalTools(tools *InternalToolRegistry) {
+	t.internalTools = tools
 }
 
 // Stop shuts down the team.

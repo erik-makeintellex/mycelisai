@@ -187,6 +187,76 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 	respondJSON(w, result)
 }
 
+// handleMCPLibrary returns the curated MCP server library organized by category.
+// GET /api/v1/mcp/library
+func (s *AdminServer) handleMCPLibrary(w http.ResponseWriter, r *http.Request) {
+	if s.MCPLibrary == nil {
+		http.Error(w, `{"error":"MCP library not loaded"}`, http.StatusServiceUnavailable)
+		return
+	}
+	respondJSON(w, s.MCPLibrary.Categories)
+}
+
+// handleMCPLibraryInstall installs an MCP server from the curated library by name.
+// POST /api/v1/mcp/library/install
+func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Request) {
+	if s.MCP == nil || s.MCPPool == nil {
+		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if s.MCPLibrary == nil {
+		http.Error(w, `{"error":"MCP library not loaded"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	var req struct {
+		Name string            `json:"name"`
+		Env  map[string]string `json:"env,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" {
+		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	entry := s.MCPLibrary.FindByName(req.Name)
+	if entry == nil {
+		http.Error(w, fmt.Sprintf(`{"error":"server %q not found in library"}`, req.Name), http.StatusNotFound)
+		return
+	}
+
+	cfg := entry.ToServerConfig(req.Env)
+	ctx := r.Context()
+
+	installed, err := s.MCP.Install(ctx, cfg)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"install failed: %s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	// Connect and discover tools (best-effort)
+	if err := s.MCPPool.Connect(ctx, *installed); err != nil {
+		log.Printf("MCP library install: connect to %s failed (best-effort): %v", installed.Name, err)
+	}
+
+	tools, err := s.MCP.ListTools(ctx, installed.ID)
+	if err != nil {
+		log.Printf("MCP library install: list tools for %s failed: %v", installed.Name, err)
+		tools = []mcp.ToolDef{}
+	}
+	if tools == nil {
+		tools = []mcp.ToolDef{}
+	}
+
+	respondJSON(w, map[string]interface{}{
+		"server": installed,
+		"tools":  tools,
+	})
+}
+
 // handleMCPToolsList returns a flat list of all tools across all MCP servers.
 // GET /api/v1/mcp/tools
 func (s *AdminServer) handleMCPToolsList(w http.ResponseWriter, r *http.Request) {

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { Cpu, MemoryStick, Zap, Activity } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Cpu, MemoryStick, Zap, Activity, WifiOff } from 'lucide-react';
 
 interface TelemetryData {
     goroutines: number;
@@ -69,9 +69,13 @@ function MetricCard({ icon: Icon, label, value, unit, history, color }: MetricCa
     );
 }
 
+const MAX_RETRIES = 3;
+
 export default function TelemetryRow() {
     const [current, setCurrent] = useState<TelemetryData | null>(null);
     const [history, setHistory] = useState<TelemetryData[]>([]);
+    const [failCount, setFailCount] = useState(0);
+    const failRef = useRef(0);
 
     const poll = useCallback(async () => {
         try {
@@ -80,8 +84,16 @@ export default function TelemetryRow() {
                 const data: TelemetryData = await res.json();
                 setCurrent(data);
                 setHistory((prev) => [...prev, data].slice(-20));
+                failRef.current = 0;
+                setFailCount(0);
+            } else {
+                failRef.current++;
+                setFailCount(failRef.current);
             }
-        } catch { /* degraded mode */ }
+        } catch {
+            failRef.current++;
+            setFailCount(failRef.current);
+        }
     }, []);
 
     useEffect(() => {
@@ -90,9 +102,24 @@ export default function TelemetryRow() {
         return () => clearInterval(interval);
     }, [poll]);
 
+    // Degraded state — backend unreachable after retries
+    if (!current && failCount >= MAX_RETRIES) {
+        return (
+            <div className="flex gap-3 px-4 py-2 border-b border-cortex-border" data-testid="telemetry-row">
+                <div className="flex-1 flex items-center justify-center gap-2 py-2 bg-cortex-surface border border-cortex-border rounded-lg">
+                    <WifiOff className="w-4 h-4 text-cortex-text-muted opacity-40" />
+                    <span className="text-[10px] font-mono text-cortex-text-muted">
+                        TELEMETRY OFFLINE — core not reachable
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    // Loading skeleton
     if (!current) {
         return (
-            <div className="flex gap-3 px-4 py-2 border-b border-cortex-border">
+            <div className="flex gap-3 px-4 py-2 border-b border-cortex-border" data-testid="telemetry-row">
                 {[1, 2, 3, 4].map((i) => (
                     <div key={i} className="flex-1 h-14 bg-cortex-surface border border-cortex-border rounded-lg animate-pulse" />
                 ))}
@@ -101,7 +128,7 @@ export default function TelemetryRow() {
     }
 
     return (
-        <div className="flex gap-3 px-4 py-2 border-b border-cortex-border">
+        <div className="flex gap-3 px-4 py-2 border-b border-cortex-border" data-testid="telemetry-row">
             <MetricCard
                 icon={Cpu}
                 label="Goroutines"

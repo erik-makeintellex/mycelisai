@@ -19,6 +19,7 @@ import (
 	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
 	"github.com/mycelis/core/internal/swarm"
+	"github.com/nats-io/nats.go"
 )
 
 // AdminServer handles governance and system endpoints
@@ -30,6 +31,7 @@ type AdminServer struct {
 	Provisioner   *provisioning.Engine
 	Registry      *registry.Service
 	Soma          *swarm.Soma
+	NC            *nats.Conn          // NATS for chat request-reply routing
 	Stream        *signal.StreamHandler
 	MetaArchitect *cognitive.MetaArchitect
 	Overseer      *overseer.Engine    // Phase 5.2: Trust Economy
@@ -37,11 +39,12 @@ type AdminServer struct {
 	Proposals     *ProposalStore      // Phase 5.3: Team Manifestation
 	MCP           *mcp.Service        // Phase 7.0: MCP Ingress
 	MCPPool       *mcp.ClientPool     // Phase 7.0: MCP Ingress
+	MCPLibrary    *mcp.Library        // Phase 7.7: Curated MCP Library
 	Catalogue     *catalogue.Service  // Phase 7.5: Agent Catalogue
 	Artifacts     *artifacts.Service  // Phase 7.5: Agent Outputs
 }
 
-func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, cat *catalogue.Service, art *artifacts.Service) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service) *AdminServer {
 	return &AdminServer{
 		Router:        r,
 		Guard:         guard,
@@ -50,6 +53,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		Provisioner:   prov,
 		Registry:      reg,
 		Soma:          soma,
+		NC:            nc,
 		Stream:        stream,
 		MetaArchitect: architect,
 		Overseer:      ov,
@@ -57,6 +61,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		Proposals:     NewProposalStore(),
 		MCP:           mcpSvc,
 		MCPPool:       mcpPool,
+		MCPLibrary:    mcpLib,
 		Catalogue:     cat,
 		Artifacts:     art,
 	}
@@ -86,6 +91,9 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
 	mux.HandleFunc("/api/v1/cognitive/config", s.HandleCognitiveConfig)
 	mux.HandleFunc("/api/v1/cognitive/matrix", s.HandleCognitiveConfig) // Alias: UI calls /matrix
+	mux.HandleFunc("GET /api/v1/cognitive/status", s.HandleCognitiveStatus)
+	mux.HandleFunc("PUT /api/v1/cognitive/profiles", s.HandleUpdateProfiles)
+	mux.HandleFunc("PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
 	mux.HandleFunc("/api/v1/chat", s.HandleChat)
 
 	// Identity API
@@ -152,6 +160,16 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
 	mux.HandleFunc("POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
 	mux.HandleFunc("GET /api/v1/mcp/tools", s.handleMCPToolsList)
+
+	// Phase 7.7: MCP Library (curated server registry)
+	mux.HandleFunc("GET /api/v1/mcp/library", s.handleMCPLibrary)
+	mux.HandleFunc("POST /api/v1/mcp/library/install", s.handleMCPLibraryInstall)
+
+	// Phase 7.7: Governance Policy API
+	mux.HandleFunc("GET /api/v1/governance/policy", s.handleGetPolicy)
+	mux.HandleFunc("PUT /api/v1/governance/policy", s.handleUpdatePolicy)
+	mux.HandleFunc("GET /api/v1/governance/pending", s.handleGetPendingApprovals)
+	mux.HandleFunc("POST /api/v1/governance/resolve/{id}", s.handleResolveApproval)
 
 	// Phase 7.5: Agent Catalogue API
 	mux.HandleFunc("GET /api/v1/catalogue/agents", s.handleListCatalogue)

@@ -1,0 +1,132 @@
+categories:
+  - name: "Development"
+    servers:
+      - name: "filesystem"
+        description: "Read, write, and manage local files and directories"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+        tags: ["files", "code", "local"]
+      - name: "github"
+        description: "GitHub API integration — repos, issues, PRs, code search"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-github"]
+        env:
+          GITHUB_PERSONAL_ACCESS_TOKEN: ""
+        tags: ["git", "code", "vcs"]
+
+  - name: "Data & Search"
+    servers:
+      - name: "postgres"
+        description: "Query PostgreSQL databases with read/write SQL access"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-postgres"]
+        env:
+          POSTGRES_URL: ""
+        tags: ["database", "sql"]
+      - name: "sqlite"
+        description: "Local SQLite database querying and management"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-sqlite"]
+        tags: ["database", "sql", "local"]
+      - name: "brave-search"
+        description: "Web search via Brave Search API"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-brave-search"]
+        env:
+          BRAVE_API_KEY: ""
+        tags: ["search", "web"]
+      - name: "fetch"
+        description: "Fetch and convert web pages to markdown for analysis"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-fetch"]
+        tags: ["web", "scraping"]
+
+  - name: "Communication"
+    servers:
+      - name: "slack"
+        description: "Slack workspace integration — channels, messages, users"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-slack"]
+        env:
+          SLACK_BOT_TOKEN: ""
+          SLACK_TEAM_ID: ""
+        tags: ["messaging", "team"]
+
+  - name: "Media & Content Generation"
+    servers:
+      - name: "stable-diffusion"
+        description: "Generate images via Stable Diffusion (local or API). Text-to-image, image-to-image, inpainting."
+        transport: stdio
+        command: "npx"
+        args: ["-y", "mcp-server-stable-diffusion"]
+        env:
+          SD_API_URL: "http://127.0.0.1:7860"
+        tags: ["image", "generation", "ai"]
+      - name: "flux"
+        description: "Generate images using Black Forest Labs FLUX models via API"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@anthropic/mcp-server-flux"]
+        env:
+          BFL_API_KEY: ""
+        tags: ["image", "generation", "ai"]
+      - name: "elevenlabs"
+        description: "Text-to-speech and voice synthesis via ElevenLabs API"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "mcp-server-elevenlabs"]
+        env:
+          ELEVENLABS_API_KEY: ""
+        tags: ["audio", "tts", "voice"]
+      - name: "replicate"
+        description: "Run ML models on Replicate — image, video, audio, text generation"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "mcp-server-replicate"]
+        env:
+          REPLICATE_API_TOKEN: ""
+        tags: ["image", "video", "audio", "generation", "ai"]
+      - name: "comfyui"
+        description: "Execute ComfyUI workflows for advanced image generation pipelines"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "mcp-server-comfyui"]
+        env:
+          COMFYUI_URL: "http://127.0.0.1:8188"
+        tags: ["image", "workflow", "generation"]
+      - name: "dall-e"
+        description: "Generate images using OpenAI DALL-E models"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "mcp-server-dall-e"]
+        env:
+          OPENAI_API_KEY: ""
+        tags: ["image", "generation", "ai"]
+
+  - name: "Utilities"
+    servers:
+      - name: "memory"
+        description: "Persistent knowledge graph memory for entity storage and retrieval"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-memory"]
+        tags: ["memory", "knowledge"]
+      - name: "puppeteer"
+        description: "Browser automation — navigate, screenshot, interact with web pages"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-puppeteer"]
+        tags: ["browser", "automation"]
+      - name: "sequential-thinking"
+        description: "Dynamic problem-solving through structured thought sequences"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+        tags: ["reasoning", "planning"]

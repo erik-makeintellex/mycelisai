@@ -92,16 +92,16 @@ def deploy(c):
 def bridge(c):
     """
     Open Development Bridge.
-    Forwards cluster ports (NATS:4222, HTTP:8080) to localhost.
+    Forwards cluster ports (NATS:4222, HTTP:8081←8080, PG:5432) to localhost.
     """
-    print("Starting Port-Forward Proxy (NATS:4222, HTTP:8080, PG:5432)...")
+    print("Starting Port-Forward Proxy (NATS:4222, HTTP:8081, PG:5432)...")
     if is_windows():
         c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core-nats 4222:4222")
-        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080")
+        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8081:8080")
         c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core-postgresql 5432:5432")
     else:
         p1 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core-nats 4222:4222", asynchronous=True)
-        p2 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080", asynchronous=True)
+        p2 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8081:8080", asynchronous=True)
         p3 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core-postgresql 5432:5432", asynchronous=True)
         print("Bridge active. Press Ctrl+C to stop.")
         p1.join() 

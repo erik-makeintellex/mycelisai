@@ -16,7 +16,7 @@ function MissionChip({ mission }: { mission: Mission }) {
 
     return (
         <button
-            onClick={() => router.push("/wiring")}
+            onClick={() => router.push(`/missions/${mission.id}/teams`)}
             className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-cortex-bg border border-cortex-border hover:border-cortex-primary/40 transition-colors group"
         >
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[mission.status] ?? STATUS_DOT.active}`} />

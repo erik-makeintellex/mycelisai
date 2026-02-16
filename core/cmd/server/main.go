@@ -263,6 +263,13 @@ func main() {
 	// Initialize Signal Stream (SSE) — always created (no NATS dependency for handler itself)
 	streamHandler := mycelis_signal.NewStreamHandler()
 
+	// Create Meta-Architect (may be nil if cogRouter is nil)
+	var metaArchitect *cognitive.MetaArchitect
+	if cogRouter != nil {
+		metaArchitect = cognitive.NewMetaArchitect(cogRouter)
+		log.Println("Meta-Architect Active.")
+	}
+
 	// 5d. Initialize Swarm Intelligence (Soma — requires NATS)
 	// Build MCP tool executor adapter for agent ReAct loop
 	var toolExec swarm.MCPToolExecutor
@@ -274,13 +281,25 @@ func main() {
 	if nc != nil {
 		teamConfigPath := "config/teams"
 		swarmReg := swarm.NewRegistry(teamConfigPath)
-		soma = swarm.NewSoma(nc, guard, swarmReg, cogRouter, streamHandler, toolExec)
+
+		// Build Internal Tool Registry (built-in tools for agents)
+		internalTools := swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
+			NC:        nc,
+			Brain:     cogRouter,
+			Mem:       memService,
+			Architect: metaArchitect,
+			Catalogue: catService,
+			DB:        sharedDB,
+		})
+
+		soma = swarm.NewSoma(nc, guard, swarmReg, cogRouter, streamHandler, toolExec, internalTools)
 		if err := soma.Start(); err != nil {
 			log.Printf("WARN: Failed to start Soma: %v", err)
 		}
 		// 5e. Swarm Routes
 		mux.HandleFunc("/api/swarm/teams", soma.HandleCreateTeam)
 		mux.HandleFunc("/api/swarm/command", soma.HandleCommand)
+		mux.HandleFunc("/api/v1/swarm/broadcast", soma.HandleBroadcast)
 	} else {
 		log.Println("WARN: Soma (Swarm) disabled (no NATS connection).")
 	}
@@ -308,13 +327,6 @@ func main() {
 				w.WriteHeader(http.StatusMethodNotAllowed)
 			}
 		})
-	}
-
-	// Create Meta-Architect (may be nil if cogRouter is nil)
-	var metaArchitect *cognitive.MetaArchitect
-	if cogRouter != nil {
-		metaArchitect = cognitive.NewMetaArchitect(cogRouter)
-		log.Println("Meta-Architect Active.")
 	}
 
 	// Start Archivist Background Loop (DB-based periodic SitReps)
@@ -356,13 +368,23 @@ func main() {
 		log.Println("WARN: Overseer disabled (no NATS connection).")
 	}
 
+	// Phase 7.7: Load MCP Library (curated server registry)
+	var mcpLibrary *mcp.Library
+	mcpLibPath := "config/mcp-library.yaml"
+	if lib, err := mcp.LoadLibrary(mcpLibPath); err != nil {
+		log.Printf("WARN: MCP Library not loaded: %v", err)
+	} else {
+		mcpLibrary = lib
+		log.Println("MCP Library Active.")
+	}
+
 	// Create Admin Server
-	adminSrv := server.NewAdminServer(r, guard, memService, cogRouter, provEngine, regService, soma, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, catService, artService)
+	adminSrv := server.NewAdminServer(r, guard, memService, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService)
 	adminSrv.RegisterRoutes(mux)
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8081"
 	}
 
 	// CORS Middleware

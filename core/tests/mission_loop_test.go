@@ -17,7 +17,7 @@ import (
 const (
 	// Adjust these if your environment differs
 	API_URL  = "http://localhost:8081" // Updated to 8081 for Recovery Phase
-	NATS_URL = "nats://localhost:4222"
+	NATS_URL = "nats://127.0.0.1:4222"
 )
 
 type Blueprint struct {

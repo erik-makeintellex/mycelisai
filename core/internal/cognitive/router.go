@@ -17,8 +17,9 @@ import (
 // Router manages model selection and inference via Adapters.
 // Phase 5.2: Tracks cumulative token usage for telemetry reporting.
 type Router struct {
-	Config   *BrainConfig
-	Adapters map[string]LLMProvider
+	Config     *BrainConfig
+	ConfigPath string // path to cognitive.yaml for persistence
+	Adapters   map[string]LLMProvider
 
 	// Token telemetry — sliding window for rate calculation
 	totalTokens  atomic.Int64 // cumulative tokens processed
@@ -92,9 +93,9 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		if !strings.HasPrefix(host, "http") {
 			host = "http://" + host
 		}
-		// Patch all local_ollama endpoints
+		// Patch all ollama-compatible endpoints (any openai_compatible provider)
 		for k, v := range config.Providers {
-			if k == "local_ollama" || v.Type == "openai_compatible" || v.Driver == "ollama" {
+			if k == "ollama" || v.Type == "openai_compatible" || v.Driver == "ollama" {
 				v.Endpoint = host + "/v1" // Standardize on /v1 for adapter
 				config.Providers[k] = v
 			}
@@ -102,8 +103,9 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	}
 
 	r := &Router{
-		Config:   &config,
-		Adapters: make(map[string]LLMProvider),
+		Config:     &config,
+		ConfigPath: configPath,
+		Adapters:   make(map[string]LLMProvider),
 	}
 
 	// 4. Initialize Adapters
@@ -438,4 +440,24 @@ func (r *Router) Embed(ctx context.Context, text string, model string) ([]float6
 	}
 
 	return nil, fmt.Errorf("no embedding provider available (need OpenAI-compatible adapter)")
+}
+
+// SaveConfig persists the current BrainConfig back to the YAML file.
+// Only writes providers (without secrets) and profiles — safe for runtime updates.
+func (r *Router) SaveConfig() error {
+	if r.ConfigPath == "" {
+		return fmt.Errorf("no config path set — cannot persist")
+	}
+
+	data, err := yaml.Marshal(r.Config)
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(r.ConfigPath, data, 0644); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+
+	log.Printf("Cognitive config saved to %s", r.ConfigPath)
+	return nil
 }

@@ -24,7 +24,7 @@ func main() {
 
 	// 1. Spawn Team Alpha
 	// We retry a few times in case backend is waking up
-	spawnURL := "http://localhost:8080/api/swarm/teams"
+	spawnURL := "http://localhost:8081/api/swarm/teams"
 	spawnBody := `{"id":"team-alpha","name":"Alpha Unit","type":"action"}`
 
 	log.Println("Attempting to spawn Team Alpha...")

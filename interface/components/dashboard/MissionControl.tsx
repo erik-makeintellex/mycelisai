@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { SignalProvider, useSignalStream } from "./SignalContext";
 import { Activity, Settings, Plus } from "lucide-react";
 import TelemetryRow from "./TelemetryRow";
+import TeamsSummaryCard from "./TeamsSummaryCard";
 import ActiveMissionsBar from "./ActiveMissionsBar";
-import PriorityStream from "./PriorityStream";
-import ActivityStream from "./ActivityStream";
+import CenterTabs from "./CenterTabs";
+import MissionControlChat from "./MissionControlChat";
 import SensorLibrary from "./SensorLibrary";
-import ManifestationPanel from "./ManifestationPanel";
+import CognitiveStatusPanel from "../workspace/CognitiveStatusPanel";
 
 export default function MissionControlLayout() {
     return (
@@ -62,6 +63,9 @@ function DashboardGrid() {
             {/* Telemetry Row — Live Compute Cartography */}
             <TelemetryRow />
 
+            {/* Teams Summary — aggregate metrics for active missions */}
+            <TeamsSummaryCard />
+
             {/* Active Missions Bar — compact running state */}
             <ActiveMissionsBar />
 
@@ -70,28 +74,26 @@ function DashboardGrid() {
                 className="flex-1 overflow-hidden"
                 style={{
                     display: "grid",
-                    gridTemplateColumns: "minmax(200px, 280px) 1fr minmax(280px, 384px)",
+                    gridTemplateColumns: "minmax(200px, 280px) 1fr minmax(280px, 360px)",
                     minHeight: 0,
                 }}
             >
-                {/* Left: Sensor Library (grouped subscriptions) */}
-                <div className="h-full overflow-hidden border-r border-cortex-border">
+                {/* Left: Cognitive Status + Sensor Library */}
+                <div className="h-full overflow-y-auto border-r border-cortex-border">
+                    <div className="p-3">
+                        <CognitiveStatusPanel />
+                    </div>
                     <SensorLibrary />
                 </div>
 
-                {/* Center: PriorityStream + ManifestationPanel (stacked) */}
-                <div className="h-full flex flex-col min-w-0 overflow-hidden">
-                    <div className="flex-1 min-h-0 overflow-hidden">
-                        <PriorityStream />
-                    </div>
-                    <div className="h-64 flex-shrink-0 border-t border-cortex-border overflow-hidden">
-                        <ManifestationPanel />
-                    </div>
+                {/* Center: Tabbed — Priority | Teams | Manifestation */}
+                <div className="h-full overflow-hidden border-r border-cortex-border">
+                    <CenterTabs />
                 </div>
 
-                {/* Right: Activity Stream (full feed) */}
+                {/* Right: Architect Chat */}
                 <div className="h-full overflow-hidden">
-                    <ActivityStream />
+                    <MissionControlChat />
                 </div>
             </div>
         </div>

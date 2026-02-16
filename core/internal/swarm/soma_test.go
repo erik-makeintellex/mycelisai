@@ -34,7 +34,7 @@ func TestSoma_Integration(t *testing.T) {
 	reg := NewRegistry(".") // Empty path, no manifests load
 
 	// 4. Init Soma
-	soma := NewSoma(nc, guard, reg, nil, nil, nil) // brain, stream, and toolExec are nil for this integration test
+	soma := NewSoma(nc, guard, reg, nil, nil, nil, nil) // brain, stream, mcpExec, internalTools are nil for this test
 	if err := soma.Start(); err != nil {
 		t.Fatalf("Soma start failed: %v", err)
 	}

@@ -35,4 +35,5 @@ managed = true
 [tool.uv.workspace]
 members = [
     "cli",
+    "cognitive",
 ]

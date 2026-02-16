@@ -9,6 +9,13 @@ import (
 type BrainConfig struct {
 	Providers map[string]ProviderConfig `yaml:"providers" json:"providers"`
 	Profiles  map[string]string         `yaml:"profiles" json:"profiles"` // ProfileName -> ProviderID
+	Media     *MediaConfig              `yaml:"media,omitempty" json:"media,omitempty"`
+}
+
+// MediaConfig holds the Diffusers media engine endpoint (OpenAI-compatible images API).
+type MediaConfig struct {
+	Endpoint string `yaml:"endpoint" json:"endpoint"` // e.g. "http://127.0.0.1:8001/v1"
+	ModelID  string `yaml:"model_id" json:"model_id"` // e.g. "stable-diffusion-xl"
 }
 
 type ProviderConfig struct {

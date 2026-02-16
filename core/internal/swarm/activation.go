@@ -62,6 +62,9 @@ func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs ma
 		}
 
 		team := NewTeam(manifest, s.nc, s.brain, s.toolExecutor)
+		if s.internalTools != nil {
+			team.SetToolDescriptions(s.internalTools.ListDescriptions())
+		}
 		if len(teamSensorConfigs) > 0 {
 			team.SetSensorConfigs(teamSensorConfigs)
 		}

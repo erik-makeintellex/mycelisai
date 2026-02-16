@@ -1,22 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     async rewrites() {
+        const host = process.env.MYCELIS_API_HOST || 'localhost';
+        const port = process.env.MYCELIS_API_PORT || '8081';
+        const backend = `http://${host}:${port}`;
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://localhost:8081/api/:path*', // Proxy to Backend
+                destination: `${backend}/api/:path*`, // Proxy to Backend
             },
             {
                 source: '/admin/:path*',
-                destination: 'http://localhost:8081/admin/:path*', // Proxy Governance
+                destination: `${backend}/admin/:path*`, // Proxy Governance
             },
             {
                 source: '/agents',
-                destination: 'http://localhost:8081/agents', // Proxy Agent Registry
+                destination: `${backend}/agents`, // Proxy Agent Registry
             },
             {
                 source: '/healthz',
-                destination: 'http://localhost:8081/healthz', // Proxy Health Check
+                destination: `${backend}/healthz`, // Proxy Health Check
             },
         ]
     },

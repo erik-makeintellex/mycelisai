@@ -13,6 +13,9 @@ const (
 	TopicGlobalInputWild = "swarm.global.input.>"
 	TopicGlobalInputUser = "swarm.global.input.user"
 
+	// Global Broadcast (Mission Control → All Teams)
+	TopicGlobalBroadcast = "swarm.global.broadcast"
+
 	// Format strings requiring fmt.Sprintf with agent/team IDs
 	TopicAgentOutputFmt      = "swarm.agent.%s.output"           // agent ID
 	TopicTeamInternalTrigger = "swarm.team.%s.internal.trigger"  // team ID
@@ -30,6 +33,9 @@ const (
 	// Wildcard subscriptions
 	TopicTeamInternalWild = "swarm.team.*.internal.>"
 	TopicSwarmWild        = "swarm.>"
+
+	// Council request-reply (direct addressing)
+	TopicCouncilRequestFmt = "swarm.council.%s.request" // agent ID
 
 	// Sensor Data (Ingress feeds)
 	TopicSensorDataWild    = "swarm.data.>"
