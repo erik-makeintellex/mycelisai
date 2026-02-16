@@ -36,9 +36,9 @@ jobs:
         working-directory: ./interface
         run: npm run lint
 
-      # - name: Type Check
-      #   working-directory: ./interface
-      #   run: npx tsc --noEmit # Ensure tsc is available via devDependencies
+      - name: Type Check
+        working-directory: ./interface
+        run: npx tsc --noEmit
 
       - name: Test
         working-directory: ./interface
