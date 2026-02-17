@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+
 const nextConfig = {
+    output: isStaticExport ? 'export' : undefined,
+    images: {
+        unoptimized: isStaticExport,
+    },
+    // Only enable rewrites if NOT exporting (rewrites are not supported in static export)
     async rewrites() {
+        if (isStaticExport) return [];
+
         const host = process.env.MYCELIS_API_HOST || 'localhost';
         const port = process.env.MYCELIS_API_PORT || '8081';
         const backend = `http://${host}:${port}`;
