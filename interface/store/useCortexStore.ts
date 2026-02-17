@@ -18,10 +18,13 @@ export interface ChatConsultation {
 }
 
 export interface ChatMessage {
-    role: 'user' | 'architect' | 'admin';
+    role: 'user' | 'architect' | 'admin' | 'council';
     content: string;
     consultations?: ChatConsultation[];
     tools_used?: string[];
+    source_node?: string;    // e.g. "council-architect"
+    trust_score?: number;    // 0.0-1.0
+    timestamp?: string;      // ISO 8601
 }
 
 export interface StreamSignal {
@@ -104,6 +107,27 @@ export interface SensorNode {
     status: 'online' | 'offline' | 'degraded';
     last_seen: string;
     label: string;
+}
+
+// ── Council Chat API (Standardized CTS) ─────────────────────
+
+export interface CouncilMember {
+    id: string;
+    role: string;
+    team: string;
+}
+
+export interface APIResponse<T = unknown> {
+    ok: boolean;
+    data?: T;
+    error?: string;
+}
+
+export interface CTSChatEnvelope {
+    meta: { source_node: string; timestamp: string; trace_id?: string };
+    signal_type: string;
+    trust_score: number;
+    payload: { text: string; consultations?: string[]; tools_used?: string[] };
 }
 
 // ── Team Manifestation Proposals ─────────────────────────────
@@ -367,10 +391,12 @@ export interface CortexState {
     mcpLibrary: MCPLibraryCategory[];
     isFetchingMCPLibrary: boolean;
 
-    // Mission Control Chat (Phase 7.6)
+    // Mission Control Chat (Phase 7.6) + Council API
     missionChat: ChatMessage[];
     isMissionChatting: boolean;
     missionChatError: string | null;
+    councilTarget: string;              // active council member ID ("admin" default)
+    councilMembers: CouncilMember[];    // populated from GET /council/members
 
     // Broadcast (Phase 8.0)
     isBroadcasting: boolean;
@@ -447,9 +473,11 @@ export interface CortexState {
     fetchMCPLibrary: () => Promise<void>;
     installFromLibrary: (name: string, env?: Record<string, string>) => Promise<void>;
 
-    // Mission Control Chat (Phase 7.6)
+    // Mission Control Chat (Phase 7.6) + Council API
     sendMissionChat: (message: string) => Promise<void>;
     clearMissionChat: () => void;
+    setCouncilTarget: (id: string) => void;
+    fetchCouncilMembers: () => Promise<void>;
 
     // Broadcast (Phase 8.0)
     broadcastToSwarm: (message: string) => Promise<void>;
@@ -730,6 +758,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     missionChat: [],
     isMissionChatting: false,
     missionChatError: null,
+    councilTarget: 'admin',
+    councilMembers: [],
 
     // Broadcast (Phase 8.0)
     isBroadcasting: false,
@@ -1311,11 +1341,30 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         }
     },
 
-    // ── Mission Control Chat (Phase 7.6) ────────────────────────
+    // ── Mission Control Chat + Council API ───────────────────────
+
+    setCouncilTarget: (id: string) => {
+        set({ councilTarget: id });
+    },
+
+    fetchCouncilMembers: async () => {
+        try {
+            const res = await fetch('/api/v1/council/members');
+            if (!res.ok) return;
+            const body: APIResponse<CouncilMember[]> = await res.json();
+            if (body.ok && body.data) {
+                set({ councilMembers: body.data });
+            }
+        } catch {
+            // Swarm offline — leave members empty, selector falls back to "Admin"
+        }
+    },
 
     sendMissionChat: async (message: string) => {
         const trimmed = message.trim();
         if (!trimmed) return;
+
+        const { councilTarget } = get();
 
         // Append user message and set loading
         set((s) => ({
@@ -1325,45 +1374,40 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         }));
 
         try {
-            // Build messages for backend (map admin/architect to assistant for Vercel compat)
+            // Build messages for backend (map non-user roles to assistant for Vercel compat)
             const messages = [...get().missionChat].map((m) => ({
                 role: m.role === 'user' ? 'user' : 'assistant',
                 content: m.content,
             }));
 
-            const res = await fetch('/api/v1/chat', {
+            const res = await fetch(`/api/v1/council/${councilTarget}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages }),
             });
 
-            if (!res.ok) {
-                const errText = `Chat request failed (${res.status})`;
+            const body: APIResponse<CTSChatEnvelope> = await res.json();
+
+            if (!body.ok || !body.data) {
+                const errText = body.error || `Chat request failed (${res.status})`;
                 set((s) => ({
                     isMissionChatting: false,
                     missionChatError: errText,
-                    missionChat: [...s.missionChat, { role: 'admin', content: errText }],
+                    missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget }],
                 }));
                 return;
             }
 
-            const text = await res.text();
-
-            // Try to parse as JSON envelope (Admin agent may return structured response)
-            let chatMsg: ChatMessage = { role: 'admin', content: text };
-            try {
-                const envelope = JSON.parse(text);
-                if (envelope.text) {
-                    chatMsg = {
-                        role: 'admin',
-                        content: envelope.text,
-                        consultations: envelope.consultations,
-                        tools_used: envelope.tools_used,
-                    };
-                }
-            } catch {
-                // Not JSON — raw text response (normal)
-            }
+            const envelope = body.data;
+            const chatMsg: ChatMessage = {
+                role: 'council',
+                content: envelope.payload.text,
+                consultations: envelope.payload.consultations?.map((c) => ({ member: c, summary: c })),
+                tools_used: envelope.payload.tools_used,
+                source_node: envelope.meta.source_node,
+                trust_score: envelope.trust_score,
+                timestamp: envelope.meta.timestamp,
+            };
 
             set((s) => ({
                 isMissionChatting: false,
@@ -1374,7 +1418,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             set((s) => ({
                 isMissionChatting: false,
                 missionChatError: msg,
-                missionChat: [...s.missionChat, { role: 'admin', content: `Error: ${msg}` }],
+                missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget }],
             }));
         }
     },

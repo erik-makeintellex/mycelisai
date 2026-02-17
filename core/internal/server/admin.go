@@ -100,6 +100,10 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
 	mux.HandleFunc("/api/v1/chat", s.HandleChat)
 
+	// Council Chat API — standardized, CTS-enveloped council interaction
+	mux.HandleFunc("POST /api/v1/council/{member}/chat", s.HandleCouncilChat)
+	mux.HandleFunc("GET /api/v1/council/members", s.HandleListCouncilMembers)
+
 	// Identity API
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)

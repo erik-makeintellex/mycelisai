@@ -4,6 +4,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Send, Loader2, Bot, User, Trash2, Megaphone, Shield } from 'lucide-react';
 import { useCortexStore, type ChatMessage } from '@/store/useCortexStore';
 
+// Trust badge color based on score
+function trustColor(score?: number): string {
+    if (score == null) return '';
+    if (score >= 0.8) return 'text-cortex-success';
+    if (score >= 0.5) return 'text-cortex-warning';
+    return 'text-cortex-danger';
+}
+
 function MessageBubble({ msg }: { msg: ChatMessage }) {
     const isUser = msg.role === 'user';
     const isBroadcast = isUser && msg.content.startsWith('[BROADCAST]');
@@ -16,16 +24,46 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                 </div>
             )}
 
-            <div
-                className={`max-w-[85%] px-3 py-2 rounded-lg text-xs font-mono leading-relaxed ${
-                    isBroadcast
-                        ? 'bg-cortex-warning/10 text-cortex-text-main border border-cortex-warning/30'
-                        : isUser
-                        ? 'bg-cortex-bg text-cortex-text-main border border-cortex-border'
-                        : 'bg-cortex-info/5 text-cortex-text-main border border-cortex-info/20'
-                }`}
-            >
-                {msg.content}
+            <div className="max-w-[85%] flex flex-col gap-0.5">
+                {/* Source label + trust badge */}
+                {!isUser && msg.source_node && (
+                    <div className="flex items-center gap-1.5 px-1">
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-cortex-info font-mono">
+                            {msg.source_node.replace('council-', '').toUpperCase()}
+                        </span>
+                        {msg.trust_score != null && msg.trust_score > 0 && (
+                            <span className={`text-[8px] font-mono font-bold ${trustColor(msg.trust_score)}`}>
+                                T:{msg.trust_score.toFixed(1)}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                <div
+                    className={`px-3 py-2 rounded-lg text-xs font-mono leading-relaxed ${
+                        isBroadcast
+                            ? 'bg-cortex-warning/10 text-cortex-text-main border border-cortex-warning/30'
+                            : isUser
+                            ? 'bg-cortex-bg text-cortex-text-main border border-cortex-border'
+                            : 'bg-cortex-info/5 text-cortex-text-main border border-cortex-info/20'
+                    }`}
+                >
+                    {msg.content}
+                </div>
+
+                {/* Tools used pills */}
+                {!isUser && msg.tools_used && msg.tools_used.length > 0 && (
+                    <div className="flex flex-wrap gap-1 px-1 mt-0.5">
+                        {msg.tools_used.map((tool) => (
+                            <span
+                                key={tool}
+                                className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/20"
+                            >
+                                {tool}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {isUser && (
@@ -53,12 +91,21 @@ export default function MissionControlChat() {
     const clearMissionChat = useCortexStore((s) => s.clearMissionChat);
     const broadcastToSwarm = useCortexStore((s) => s.broadcastToSwarm);
     const isBroadcasting = useCortexStore((s) => s.isBroadcasting);
+    const councilTarget = useCortexStore((s) => s.councilTarget);
+    const councilMembers = useCortexStore((s) => s.councilMembers);
+    const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
+    const fetchCouncilMembers = useCortexStore((s) => s.fetchCouncilMembers);
 
     const [input, setInput] = useState('');
     const [broadcastMode, setBroadcastMode] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const isLoading = isMissionChatting || isBroadcasting;
+
+    // Fetch available council members on mount
+    useEffect(() => {
+        fetchCouncilMembers();
+    }, [fetchCouncilMembers]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -84,20 +131,42 @@ export default function MissionControlChat() {
         setInput('');
     };
 
+    // Find the display label for the current council target
+    const targetMember = councilMembers.find((m) => m.id === councilTarget);
+    const targetLabel = targetMember?.role?.toUpperCase() || councilTarget.toUpperCase();
+
     return (
         <div className="h-full flex flex-col" data-testid="mission-chat">
             {/* Header */}
             <div className="h-8 px-3 border-b border-cortex-border flex items-center gap-2 flex-shrink-0">
                 {broadcastMode ? (
-                    <Megaphone className="w-3.5 h-3.5 text-cortex-warning" />
+                    <>
+                        <Megaphone className="w-3.5 h-3.5 text-cortex-warning" />
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-cortex-warning">
+                            Broadcast
+                        </span>
+                    </>
                 ) : (
-                    <Shield className="w-3.5 h-3.5 text-cortex-info" />
+                    <>
+                        <Shield className="w-3.5 h-3.5 text-cortex-info" />
+                        <select
+                            value={councilTarget}
+                            onChange={(e) => setCouncilTarget(e.target.value)}
+                            className="bg-transparent text-[9px] font-bold uppercase tracking-widest text-cortex-text-muted border-none outline-none cursor-pointer font-mono"
+                        >
+                            {/* Always have Admin as fallback */}
+                            {councilMembers.length === 0 ? (
+                                <option value="admin">Admin</option>
+                            ) : (
+                                councilMembers.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                        {m.role.toUpperCase()} ({m.team.replace('-core', '')})
+                                    </option>
+                                ))
+                            )}
+                        </select>
+                    </>
                 )}
-                <span className={`text-[9px] font-bold uppercase tracking-widest ${
-                    broadcastMode ? 'text-cortex-warning' : 'text-cortex-text-muted'
-                }`}>
-                    {broadcastMode ? 'Broadcast' : 'Admin'}
-                </span>
 
                 <div className="ml-auto flex items-center gap-1">
                     {isLoading && (
@@ -157,7 +226,7 @@ export default function MissionControlChat() {
                         <p className="text-[10px] font-mono text-center">
                             {broadcastMode
                                 ? 'Broadcast directives to all active teams'
-                                : 'Ask about team state, mission progress, or direct the council'}
+                                : `Ask the ${targetLabel.toLowerCase()} about team state, missions, or direct the council`}
                         </p>
                     </div>
                 ) : (
@@ -203,7 +272,11 @@ export default function MissionControlChat() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                        placeholder={broadcastMode ? 'Broadcast to all teams...' : 'Ask the admin... (or /all to broadcast)'}
+                        placeholder={
+                            broadcastMode
+                                ? 'Broadcast to all teams...'
+                                : `Ask the ${targetLabel.toLowerCase()}... (or /all to broadcast)`
+                        }
                         disabled={isLoading}
                         className={`flex-1 bg-cortex-bg border rounded-lg px-2.5 py-1.5 text-xs text-cortex-text-main placeholder-cortex-text-muted/50 font-mono focus:outline-none focus:ring-1 disabled:opacity-50 ${
                             broadcastMode

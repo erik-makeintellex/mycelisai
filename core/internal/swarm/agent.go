@@ -34,8 +34,8 @@ type Agent struct {
 	nc             *nats.Conn
 	brain          *cognitive.Router
 	toolExecutor   MCPToolExecutor
-	toolDescs      map[string]string        // tool name → description for prompt injection
-	internalTools  *InternalToolRegistry   // live system state + context builder
+	toolDescs      map[string]string     // tool name → description for prompt injection
+	internalTools  *InternalToolRegistry // live system state + context builder
 	ctx            context.Context
 	cancel         context.CancelFunc
 }
@@ -152,7 +152,9 @@ func (a *Agent) buildToolsBlock() string {
 
 // processMessage handles LLM inference + ReAct tool loop, returning the response text.
 // Shared by handleTrigger and handleDirectRequest.
-func (a *Agent) processMessage(input string) string {
+// priorHistory is optional — if non-nil, earlier conversation turns are prepended
+// after the system prompt so the agent has multi-turn context.
+func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessage) string {
 	if a.brain == nil {
 		log.Printf("Agent [%s] has no brain. Skipping inference.", a.Manifest.ID)
 		return ""
@@ -171,7 +173,14 @@ func (a *Agent) processMessage(input string) string {
 
 	sys += a.buildToolsBlock()
 
-	prompt := fmt.Sprintf("%s\n\nInput: %s", sys, input)
+	// Construct structured messages: system prompt + prior history + current input
+	messages := []cognitive.ChatMessage{
+		{Role: "system", Content: sys},
+	}
+	if len(priorHistory) > 0 {
+		messages = append(messages, priorHistory...)
+	}
+	messages = append(messages, cognitive.ChatMessage{Role: "user", Content: input})
 
 	profile := "chat"
 	if a.Manifest.Model != "" {
@@ -179,8 +188,8 @@ func (a *Agent) processMessage(input string) string {
 	}
 
 	req := cognitive.InferRequest{
-		Profile: profile,
-		Prompt:  prompt,
+		Profile:  profile,
+		Messages: messages,
 	}
 
 	resp, err := a.brain.InferWithContract(a.ctx, req)
@@ -215,9 +224,10 @@ func (a *Agent) processMessage(input string) string {
 				break
 			}
 
-			// Re-infer with tool result appended to context
-			prompt = fmt.Sprintf("%s\n\nTool result from %s:\n%s\n\nContinue your response:", prompt, toolCall.Name, toolResult)
-			req.Prompt = prompt
+			// Append Assistant's tool call and User's tool result to history
+			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "assistant", Content: responseText})
+			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolCall.Name, toolResult)})
+
 			resp, err = a.brain.InferWithContract(a.ctx, req)
 			if err != nil {
 				log.Printf("Agent [%s] re-inference failed: %v", a.Manifest.ID, err)
@@ -239,7 +249,7 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 
 	log.Printf("Agent [%s] thinking about: %s", a.Manifest.ID, string(msg.Data))
 
-	responseText := a.processMessage(string(msg.Data))
+	responseText := a.processMessage(string(msg.Data), nil)
 	if responseText == "" {
 		return
 	}
@@ -257,6 +267,13 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 
 // handleDirectRequest handles NATS request-reply for personal/council addressing.
 // Always responds via msg.Respond() since this is always a request-reply.
+//
+// The payload may be either:
+//   - Plain text (from consult_council, delegate_task, etc.)
+//   - A JSON array of {role, content} objects (from HandleChat — full conversation history)
+//
+// When a JSON array is detected, prior turns are extracted and passed to processMessage
+// so the agent maintains multi-turn conversational context.
 func (a *Agent) handleDirectRequest(msg *nats.Msg) {
 	select {
 	case <-a.ctx.Done():
@@ -264,9 +281,12 @@ func (a *Agent) handleDirectRequest(msg *nats.Msg) {
 	default:
 	}
 
-	log.Printf("Agent [%s] direct request: %s", a.Manifest.ID, string(msg.Data))
+	data := msg.Data
+	input, history := a.parseConversationPayload(data)
 
-	responseText := a.processMessage(string(msg.Data))
+	log.Printf("Agent [%s] direct request (%d prior turns): %s", a.Manifest.ID, len(history), truncateLog(input, 200))
+
+	responseText := a.processMessage(input, history)
 	if responseText == "" {
 		if msg.Reply != "" {
 			msg.Respond([]byte("Agent unavailable — no cognitive engine."))
@@ -279,6 +299,63 @@ func (a *Agent) handleDirectRequest(msg *nats.Msg) {
 		msg.Respond([]byte(responseText))
 	}
 	log.Printf("Agent [%s] direct request replied.", a.Manifest.ID)
+}
+
+// parseConversationPayload detects whether the NATS payload is a JSON conversation
+// array or plain text. Returns the last user message as input and any prior turns
+// as ChatMessage history.
+func (a *Agent) parseConversationPayload(data []byte) (string, []cognitive.ChatMessage) {
+	// Quick check: does it look like a JSON array?
+	trimmed := strings.TrimSpace(string(data))
+	if len(trimmed) == 0 || trimmed[0] != '[' {
+		return string(data), nil
+	}
+
+	// Try to parse as conversation array
+	type chatTurn struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	}
+	var turns []chatTurn
+	if err := json.Unmarshal(data, &turns); err != nil {
+		// Not valid JSON array — treat as plain text
+		return string(data), nil
+	}
+
+	if len(turns) == 0 {
+		return "", nil
+	}
+
+	// Last turn is the current input; everything before is history
+	last := turns[len(turns)-1]
+	if len(turns) == 1 {
+		return last.Content, nil
+	}
+
+	// Build prior history: map roles to LLM-compatible roles
+	history := make([]cognitive.ChatMessage, 0, len(turns)-1)
+	for _, t := range turns[:len(turns)-1] {
+		role := t.Role
+		switch role {
+		case "admin", "architect", "assistant":
+			role = "assistant"
+		case "user":
+			// keep as-is
+		default:
+			role = "user" // unknown roles treated as user context
+		}
+		history = append(history, cognitive.ChatMessage{Role: role, Content: t.Content})
+	}
+
+	return last.Content, history
+}
+
+// truncateLog shortens a string for log output.
+func truncateLog(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 // toolCallPayload represents a tool invocation extracted from LLM output.

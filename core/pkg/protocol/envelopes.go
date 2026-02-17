@@ -16,7 +16,8 @@ const (
 	SignalError          SignalType = "error"
 	SignalHeartbeat      SignalType = "heartbeat"
 	SignalGovernanceHalt SignalType = "governance_halt"
-	SignalSensorData    SignalType = "sensor_data"
+	SignalSensorData     SignalType = "sensor_data"
+	SignalChatResponse   SignalType = "chat_response"
 )
 
 // Trust Economy — default trust scores by node category.
@@ -70,6 +71,34 @@ func (e *CTSEnvelope) Validate() error {
 		return fmt.Errorf("cts: payload is required")
 	}
 	return nil
+}
+
+// ChatResponsePayload is the CTS Payload for council chat responses.
+// Any endpoint returning LLM-generated content wraps it in this struct
+// inside a CTSEnvelope.
+type ChatResponsePayload struct {
+	Text          string   `json:"text"`
+	Consultations []string `json:"consultations,omitempty"`
+	ToolsUsed     []string `json:"tools_used,omitempty"`
+}
+
+// APIResponse is the standard response wrapper for all Mycelis API endpoints.
+// New endpoints SHOULD return this envelope. Existing endpoints will be
+// migrated incrementally.
+type APIResponse struct {
+	OK    bool        `json:"ok"`
+	Data  interface{} `json:"data,omitempty"`
+	Error string      `json:"error,omitempty"`
+}
+
+// NewAPISuccess creates a successful response envelope.
+func NewAPISuccess(data interface{}) APIResponse {
+	return APIResponse{OK: true, Data: data}
+}
+
+// NewAPIError creates an error response envelope.
+func NewAPIError(msg string) APIResponse {
+	return APIResponse{OK: false, Error: msg}
 }
 
 // ValidateTelemetryMessage is NATS middleware that rejects any message on

@@ -126,6 +126,11 @@ func (s *AdminServer) HandleCognitiveConfig(w http.ResponseWriter, r *http.Reque
 // Routes user messages exclusively through the Admin agent via NATS request-reply.
 // The Admin agent has its full system prompt, tools, and council access.
 // No raw LLM fallback — if the swarm is offline, the endpoint returns an error.
+//
+// The full conversation history is forwarded as JSON so the admin agent can
+// maintain multi-turn context. The NATS payload is a JSON array of
+// {role, content} objects; the agent's handleDirectRequest detects JSON arrays
+// and reconstructs prior turns.
 func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -150,8 +155,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lastMsg := req.Messages[len(req.Messages)-1]
-
 	// 2. NATS must be available — the Admin agent is the ONLY path for chat.
 	// No raw LLM fallback: agents must always operate within their context
 	// (system prompt, tools, input/output rules).
@@ -161,11 +164,19 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 3. Forward FULL conversation history to admin agent via NATS.
+	// Serialize the entire messages array so the agent can reconstruct context.
+	payload, err := json.Marshal(req.Messages)
+	if err != nil {
+		http.Error(w, "Failed to serialize messages", http.StatusInternalServerError)
+		return
+	}
+
 	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, "admin")
 	reqCtx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 
-	msg, err := s.NC.RequestWithContext(reqCtx, subject, []byte(lastMsg.Content))
+	msg, err := s.NC.RequestWithContext(reqCtx, subject, payload)
 	if err != nil {
 		log.Printf("Chat via Admin agent failed: %v", err)
 		respondError(w, "Admin agent did not respond: "+err.Error(), http.StatusBadGateway)
@@ -174,6 +185,152 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Write(msg.Data)
+}
+
+// ---------------------------------------------------------------------------
+// Council Chat API — standardized, CTS-enveloped council interaction
+// ---------------------------------------------------------------------------
+
+// CouncilMemberInfo is returned by HandleListCouncilMembers.
+type CouncilMemberInfo struct {
+	ID   string `json:"id"`
+	Role string `json:"role"`
+	Team string `json:"team"`
+}
+
+// respondAPIJSON writes a protocol.APIResponse as JSON with an explicit status code.
+func respondAPIJSON(w http.ResponseWriter, status int, resp protocol.APIResponse) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(resp)
+}
+
+// respondAPIError writes a structured APIResponse error.
+func respondAPIError(w http.ResponseWriter, msg string, status int) {
+	respondAPIJSON(w, status, protocol.NewAPIError(msg))
+}
+
+// isCouncilMember checks whether memberID belongs to a standing council team
+// (admin-core or council-core). Returns the team ID and role on match.
+// Dynamic: add a new member to the YAML, restart, done.
+func (s *AdminServer) isCouncilMember(memberID string) (teamID string, role string, ok bool) {
+	if s.Soma == nil {
+		return "", "", false
+	}
+	for _, tm := range s.Soma.ListTeams() {
+		if tm.ID != "admin-core" && tm.ID != "council-core" {
+			continue
+		}
+		for _, m := range tm.Members {
+			if m.ID == memberID {
+				return tm.ID, m.Role, true
+			}
+		}
+	}
+	return "", "", false
+}
+
+// GET /api/v1/council/members
+// Returns all addressable council members from standing teams.
+func (s *AdminServer) HandleListCouncilMembers(w http.ResponseWriter, r *http.Request) {
+	if s.Soma == nil {
+		respondAPIError(w, "Swarm offline", http.StatusServiceUnavailable)
+		return
+	}
+
+	var members []CouncilMemberInfo
+	for _, tm := range s.Soma.ListTeams() {
+		if tm.ID != "admin-core" && tm.ID != "council-core" {
+			continue
+		}
+		for _, m := range tm.Members {
+			members = append(members, CouncilMemberInfo{
+				ID:   m.ID,
+				Role: m.Role,
+				Team: tm.ID,
+			})
+		}
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(members))
+}
+
+// POST /api/v1/council/{member}/chat
+// Routes user conversation to a specific council member via NATS request-reply.
+// Returns a CTS envelope wrapped in APIResponse with trust score and provenance.
+func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) {
+	memberID := r.PathValue("member")
+	if memberID == "" {
+		respondAPIError(w, "Missing council member ID", http.StatusBadRequest)
+		return
+	}
+
+	// Validate member exists in standing council teams
+	teamID, _, ok := s.isCouncilMember(memberID)
+	if !ok {
+		respondAPIError(w, fmt.Sprintf("Unknown council member: %s", memberID), http.StatusNotFound)
+		return
+	}
+
+	// Parse Vercel-format messages: { messages: [{role, content}] }
+	type VercelMessage struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	}
+	var req struct {
+		Messages []VercelMessage `json:"messages"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "Bad JSON", http.StatusBadRequest)
+		return
+	}
+	if len(req.Messages) == 0 {
+		respondAPIError(w, "Empty conversation", http.StatusBadRequest)
+		return
+	}
+
+	// NATS must be available
+	if s.NC == nil {
+		respondAPIError(w, "Swarm offline — council agents unavailable. Start the organism first.", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Forward conversation to the council member's personal NATS topic
+	payload, err := json.Marshal(req.Messages)
+	if err != nil {
+		respondAPIError(w, "Failed to serialize messages", http.StatusInternalServerError)
+		return
+	}
+
+	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, memberID)
+	reqCtx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+
+	msg, err := s.NC.RequestWithContext(reqCtx, subject, payload)
+	if err != nil {
+		log.Printf("Council chat with %s failed: %v", memberID, err)
+		respondAPIError(w, fmt.Sprintf("Council member %s did not respond: %s", memberID, err.Error()), http.StatusBadGateway)
+		return
+	}
+
+	// Wrap response in CTS envelope with trust score and provenance
+	chatPayload := protocol.ChatResponsePayload{
+		Text: string(msg.Data),
+	}
+	payloadBytes, _ := json.Marshal(chatPayload)
+
+	envelope := protocol.CTSEnvelope{
+		Meta: protocol.CTSMeta{
+			SourceNode: memberID,
+			Timestamp:  time.Now(),
+		},
+		SignalType: protocol.SignalChatResponse,
+		TrustScore: protocol.TrustScoreCognitive,
+		Payload:    payloadBytes,
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
+	log.Printf("Council chat: member=%s team=%s trust=%.1f len=%d", memberID, teamID, envelope.TrustScore, len(msg.Data))
 }
 
 // PUT /api/v1/cognitive/profiles

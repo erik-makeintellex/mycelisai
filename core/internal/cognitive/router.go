@@ -90,6 +90,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 
 	// 3. Dynamic Overrides (Docker Support)
 	if host := os.Getenv("OLLAMA_HOST"); host != "" {
+		log.Printf("DEBUG: Found OLLAMA_HOST env var: %s", host)
 		if !strings.HasPrefix(host, "http") {
 			host = "http://" + host
 		}
@@ -98,8 +99,11 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 			if k == "ollama" || v.Type == "openai_compatible" || v.Driver == "ollama" {
 				v.Endpoint = host + "/v1" // Standardize on /v1 for adapter
 				config.Providers[k] = v
+				log.Printf("DEBUG: Patched provider %s endpoint to %s", k, v.Endpoint)
 			}
 		}
+	} else {
+		log.Println("DEBUG: No OLLAMA_HOST env var found.")
 	}
 
 	r := &Router{
@@ -110,6 +114,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 
 	// 4. Initialize Adapters
 	for id, pConfig := range config.Providers {
+		log.Printf("DEBUG: Initializing provider %s with endpoint %s", id, pConfig.Endpoint)
 		var adapter LLMProvider
 		var err error
 
@@ -357,6 +362,7 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 	opts := InferOptions{
 		Temperature: 0.7, // TODO: Load from Profile config
 		MaxTokens:   2048,
+		Messages:    req.Messages,
 	}
 
 	resp, err := adapter.Infer(ctx, req.Prompt, opts)

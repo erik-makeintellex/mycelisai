@@ -490,8 +490,37 @@ func (r *InternalToolRegistry) handleGetSystemStatus(_ context.Context, _ map[st
 	return string(data), nil
 }
 
-func (r *InternalToolRegistry) handleListAvailableTools(_ context.Context, _ map[string]any) (string, error) {
+func (r *InternalToolRegistry) handleListAvailableTools(ctx context.Context, _ map[string]any) (string, error) {
+	// Start with internal (built-in) tools
 	descs := r.ListDescriptions()
+
+	// Merge MCP tools from the database
+	if r.db != nil {
+		queryCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+
+		rows, err := r.db.QueryContext(queryCtx, `
+			SELECT t.name, COALESCE(t.description, ''), s.name
+			FROM mcp_tools t
+			JOIN mcp_servers s ON s.id = t.server_id
+			ORDER BY s.name, t.name
+		`)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var toolName, toolDesc, serverName string
+				if err := rows.Scan(&toolName, &toolDesc, &serverName); err == nil {
+					if toolDesc == "" {
+						toolDesc = fmt.Sprintf("MCP tool via %s", serverName)
+					} else {
+						toolDesc = fmt.Sprintf("%s (MCP via %s)", toolDesc, serverName)
+					}
+					descs[toolName] = toolDesc
+				}
+			}
+		}
+	}
+
 	data, _ := json.Marshal(descs)
 	return string(data), nil
 }
@@ -1056,7 +1085,7 @@ func (r *InternalToolRegistry) writeCognitiveStatus(sb *strings.Builder) {
 }
 
 func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
-	sb.WriteString("### Installed MCP Servers\n")
+	sb.WriteString("### Installed MCP Servers & Tools\n")
 	if r.db == nil {
 		sb.WriteString("- (Database offline — MCP registry unavailable)\n\n")
 		return
@@ -1089,19 +1118,23 @@ func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
 		return
 	}
 
-	// Tools by server
-	toolRows, err := r.db.QueryContext(ctx, `SELECT server_id, name FROM mcp_tools ORDER BY name`)
-	toolMap := make(map[string][]string)
+	// Tools by server (with descriptions for prompt injection)
+	type mcpTool struct {
+		name, desc string
+	}
+	toolRows, err := r.db.QueryContext(ctx, `SELECT server_id, name, COALESCE(description, '') FROM mcp_tools ORDER BY name`)
+	toolMap := make(map[string][]mcpTool)
 	if err == nil {
 		defer toolRows.Close()
 		for toolRows.Next() {
-			var serverID, toolName string
-			if err := toolRows.Scan(&serverID, &toolName); err == nil {
-				toolMap[serverID] = append(toolMap[serverID], toolName)
+			var serverID, toolName, toolDesc string
+			if err := toolRows.Scan(&serverID, &toolName, &toolDesc); err == nil {
+				toolMap[serverID] = append(toolMap[serverID], mcpTool{name: toolName, desc: toolDesc})
 			}
 		}
 	}
 
+	hasMCPTools := false
 	for _, s := range servers {
 		statusLabel := s.status
 		if statusLabel == "connected" {
@@ -1109,11 +1142,33 @@ func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
 		}
 		tools := toolMap[s.id]
 		if len(tools) > 0 {
+			hasMCPTools = true
+			toolNames := make([]string, len(tools))
+			for i, t := range tools {
+				toolNames[i] = t.name
+			}
 			sb.WriteString(fmt.Sprintf("- **%s** (%s, %s): tools=[%s]\n",
-				s.name, s.transport, statusLabel, strings.Join(tools, ", ")))
+				s.name, s.transport, statusLabel, strings.Join(toolNames, ", ")))
 		} else {
 			sb.WriteString(fmt.Sprintf("- **%s** (%s, %s): no tools discovered\n",
 				s.name, s.transport, statusLabel))
+		}
+	}
+
+	if hasMCPTools {
+		sb.WriteString("\n**MCP tools are callable.** Use the tool name directly in a tool_call:\n")
+		sb.WriteString("```json\n{\"tool_call\": {\"name\": \"<mcp_tool_name>\", \"arguments\": {...}}}\n```\n")
+
+		// List each MCP tool with its description for the LLM
+		sb.WriteString("\n**MCP Tool Reference:**\n")
+		for _, s := range servers {
+			for _, t := range toolMap[s.id] {
+				desc := t.desc
+				if desc == "" {
+					desc = "(no description)"
+				}
+				sb.WriteString(fmt.Sprintf("- **%s**: %s (via %s)\n", t.name, desc, s.name))
+			}
 		}
 	}
 	sb.WriteString("\n")

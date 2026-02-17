@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import { SignalProvider, useSignalStream } from "./SignalContext";
 import { Activity, Settings, Plus } from "lucide-react";
 import TelemetryRow from "./TelemetryRow";
-import TeamsSummaryCard from "./TeamsSummaryCard";
-import ActiveMissionsBar from "./ActiveMissionsBar";
-import CenterTabs from "./CenterTabs";
+import OperationsBoard from "./OperationsBoard";
 import MissionControlChat from "./MissionControlChat";
 import SensorLibrary from "./SensorLibrary";
 import CognitiveStatusPanel from "../workspace/CognitiveStatusPanel";
@@ -60,16 +58,10 @@ function DashboardGrid() {
                 </div>
             </header>
 
-            {/* Telemetry Row — Live Compute Cartography */}
+            {/* Telemetry Row */}
             <TelemetryRow />
 
-            {/* Teams Summary — aggregate metrics for active missions */}
-            <TeamsSummaryCard />
-
-            {/* Active Missions Bar — compact running state */}
-            <ActiveMissionsBar />
-
-            {/* Main Content — 3-column responsive grid */}
+            {/* Main 3-column grid */}
             <div
                 className="flex-1 overflow-hidden"
                 style={{
@@ -86,9 +78,9 @@ function DashboardGrid() {
                     <SensorLibrary />
                 </div>
 
-                {/* Center: Tabbed — Priority | Teams | Manifestation */}
+                {/* Center: Operations Board */}
                 <div className="h-full overflow-hidden border-r border-cortex-border">
-                    <CenterTabs />
+                    <OperationsBoard />
                 </div>
 
                 {/* Right: Architect Chat */}

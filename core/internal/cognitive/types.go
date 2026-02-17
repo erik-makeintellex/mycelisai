@@ -19,12 +19,12 @@ type MediaConfig struct {
 }
 
 type ProviderConfig struct {
-	Type       string `yaml:"type" json:"type"`             // openai, openai_compatible, anthropic, google
-	Driver     string `yaml:"-" json:"-"`                   // DB Driver type (mapped to Type)
+	Type       string `yaml:"type" json:"type"`                   // openai, openai_compatible, anthropic, google
+	Driver     string `yaml:"-" json:"-"`                         // DB Driver type (mapped to Type)
 	Endpoint   string `yaml:"endpoint" json:"endpoint,omitempty"` // e.g. "http://localhost:11434/v1"
-	ModelID    string `yaml:"model_id" json:"model_id"`     // e.g. "qwen2.5-coder:7b"
-	AuthKey    string `yaml:"api_key" json:"-"`             // NEVER expose in API responses
-	AuthKeyEnv string `yaml:"api_key_env" json:"-"`         // NEVER expose in API responses
+	ModelID    string `yaml:"model_id" json:"model_id"`           // e.g. "qwen2.5-coder:7b"
+	AuthKey    string `yaml:"api_key" json:"-"`                   // NEVER expose in API responses
+	AuthKeyEnv string `yaml:"api_key_env" json:"-"`               // NEVER expose in API responses
 }
 
 // --- Interfaces ---
@@ -39,13 +39,20 @@ type InferOptions struct {
 	Temperature float64
 	MaxTokens   int
 	Stop        []string
+	Messages    []ChatMessage // Optional: Structured messages (overrides prompt if supported)
 }
 
 // --- Requests & Responses (Legacy/Compat) ---
 
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 type InferRequest struct {
-	Profile string `json:"profile"`
-	Prompt  string `json:"prompt"`
+	Profile  string        `json:"profile"`
+	Prompt   string        `json:"prompt"` // Legacy
+	Messages []ChatMessage `json:"messages,omitempty"`
 }
 
 type InferResponse struct {
