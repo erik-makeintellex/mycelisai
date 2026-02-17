@@ -6,7 +6,6 @@ const nextConfig = {
     images: {
         unoptimized: isStaticExport,
     },
-    basePath: isStaticExport ? '/mycelisai' : undefined,
     // Only enable rewrites if NOT exporting (rewrites are not supported in static export)
     async rewrites() {
         if (isStaticExport) return [];
