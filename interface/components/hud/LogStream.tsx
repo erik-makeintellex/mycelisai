@@ -51,17 +51,17 @@ export default function LogStream() {
             {/* Terminal Body */}
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 <div className="flex flex-col gap-1">
-                    {logs.map((log) => {
+                    {logs.map((log, index) => {
                         const levelColor =
                             log.level === "WARN" ? "text-amber-400" :
-                            log.level === "ERROR" ? "text-red-400" :
-                            log.level === "DEBUG" ? "text-cortex-text-muted" :
-                            "text-cortex-info";
+                                log.level === "ERROR" ? "text-red-400" :
+                                    log.level === "DEBUG" ? "text-cortex-text-muted" :
+                                        "text-cortex-info";
 
                         const ts = new Date(log.timestamp).toLocaleTimeString();
 
                         return (
-                            <div key={log.id} className="flex gap-3 hover:bg-cortex-surface/30 px-2 py-0.5 rounded -mx-2 transition-colors group border-l-2 border-transparent hover:border-cortex-border">
+                            <div key={`${log.id}-${index}`} className="flex gap-3 hover:bg-cortex-surface/30 px-2 py-0.5 rounded -mx-2 transition-colors group border-l-2 border-transparent hover:border-cortex-border">
                                 <span className="text-cortex-text-muted/50 select-none w-20 tabular-nums group-hover:text-cortex-text-muted transition-opacity whitespace-nowrap">
                                     {ts}
                                 </span>
