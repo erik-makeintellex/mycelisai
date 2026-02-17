@@ -36,6 +36,12 @@ def test(c):
     c.run("cd interface && npm run test")
 
 @task
+def test_coverage(c):
+    """Run Interface unit tests with V8 coverage report."""
+    print("Running Interface Tests with Coverage...")
+    c.run("cd interface && npx vitest run --coverage", pty=not is_windows())
+
+@task
 def e2e(c, headed=False):
     """
     Run Playwright E2E tests against a running dev server.
@@ -130,7 +136,7 @@ def check(c, port=INTERFACE_PORT):
     import urllib.request
 
     base = f"http://{INTERFACE_HOST}:{port}"
-    pages = ["/", "/wiring", "/architect", "/dashboard", "/catalogue", "/teams", "/memory", "/settings/tools"]
+    pages = ["/", "/wiring", "/architect", "/dashboard", "/catalogue", "/teams", "/memory", "/settings/tools", "/approvals"]
     errors = []
 
     print(f"Checking Interface at {base}...")
@@ -186,6 +192,7 @@ ns.add_task(install)
 ns.add_task(build)
 ns.add_task(lint)
 ns.add_task(test)
+ns.add_task(test_coverage, name="test-coverage")
 ns.add_task(e2e)
 ns.add_task(stop)
 ns.add_task(clean)

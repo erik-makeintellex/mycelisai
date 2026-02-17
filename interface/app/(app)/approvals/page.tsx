@@ -20,8 +20,9 @@ import {
     type PolicyRule,
 } from "@/store/useCortexStore";
 import TrustSlider from "@/components/workspace/TrustSlider";
+import ManifestationPanel from "@/components/dashboard/ManifestationPanel";
 
-type TabId = "approvals" | "policy";
+type TabId = "approvals" | "policy" | "proposals";
 
 // ── Main Page ────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ export default function ApprovalsPage() {
                             Governance
                         </h1>
                         <p className="text-cortex-text-muted text-sm mt-1">
-                            Approval queue and policy configuration
+                            Approval queue, policy configuration, and team proposals
                         </p>
                     </div>
                 </div>
@@ -57,6 +58,12 @@ export default function ApprovalsPage() {
                         icon={<Settings size={14} />}
                         label="Policy Configuration"
                     />
+                    <TabButton
+                        active={activeTab === "proposals"}
+                        onClick={() => setActiveTab("proposals")}
+                        icon={<ShieldCheck size={14} />}
+                        label="Team Proposals"
+                    />
                 </div>
             </header>
 
@@ -64,6 +71,11 @@ export default function ApprovalsPage() {
             <div className="flex-1 overflow-y-auto">
                 {activeTab === "approvals" && <ApprovalsTab />}
                 {activeTab === "policy" && <PolicyTab />}
+                {activeTab === "proposals" && (
+                    <div className="p-6 max-w-3xl mx-auto">
+                        <ManifestationPanel />
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,4 +1,4 @@
-# Mycelis Cortex V7.7 (The Orchestrator)
+# Mycelis Cortex V12 (The Council)
 
 **The Recursive Swarm Operating System.**
 
@@ -9,13 +9,14 @@
 >
 > **Agents & Humans:** Always consult the Master State document before making architectural decisions. This README provides general usage instructions, but the Codex defines "What is True".
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V7.7 introduces the **Admin Orchestrator**, **Council Activation**, **Runtime Context Injection**, **Cognitive Matrix UI**, **MCP Library**, **Agent Visualization Pipeline**, **Neural Wiring Edit/Delete**, and **Team Management**.
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 12 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, and now the **Standardized Council Chat API** with CTS-enveloped responses, trust scores, and any council member addressable via HTTP.
 
 ## Architecture
 
 - **Tier 1: Core (Go 1.26 + Postgres + pgvector)**
   - **Soma → Axon → Teams → Agents:** Mission activation pipeline with heartbeat + proof-of-work.
-  - **Standing Teams:** Admin (orchestrator, 17 tools, 5 ReAct iterations) + Council (architect, coder, creative, sentry).
+  - **Standing Teams:** Admin (orchestrator, 17 tools, 5 ReAct iterations) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
+  - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
   - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
   - **Internal Tool Registry:** 17 built-in tools — consult_council, delegate_task, search_memory, remember, recall, file I/O, NATS bus sensing, image generation, and more.
   - **Composite Tool Executor:** Unified interface routing tool calls to InternalToolRegistry or MCP ToolExecutorAdapter.
@@ -27,7 +28,7 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
   - Heartbeat, audit trace, SCIP (Protobuf), council request-reply.
 
 - **Tier 3: The Face (Next.js 16 + React 19 + Zustand 5)**
-  - **Mission Control:** Admin Chat + Team Explorer + Telemetry + Sensors + Governance.
+  - **Mission Control:** Council Chat (member selector dropdown) + OperationsBoard (priority alerts, standing workloads, missions) + Telemetry + Sensors + Cognitive Status.
   - **Neural Wiring:** ArchitectChat + CircuitBoard (ReactFlow) + ToolsPalette + NatsWaterfall. Interactive edit/delete: click agent nodes to modify manifests, delete agents, discard drafts, or terminate active missions.
   - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
   - **Settings:** Cognitive Matrix + MCP Tools (with curated library).
@@ -104,6 +105,7 @@ Run from `scratch/` root using `uvx inv`:
 | `uvx inv interface.dev` | Start Next.js dev server (Turbopack) |
 | `uvx inv interface.build` | Production build |
 | `uvx inv interface.test` | Run Vitest unit tests |
+| `uvx inv interface.e2e` | Run Playwright E2E tests (requires running servers) |
 | `uvx inv interface.check` | Smoke-test running server |
 | `uvx inv interface.stop` | Kill dev server |
 | `uvx inv interface.clean` | Clear `.next` cache |
@@ -120,6 +122,16 @@ Run from `scratch/` root using `uvx inv`:
 | **CI Pipeline** | |
 | `uvx inv ci.deploy` | Full CI: lint → test → build → check |
 
+### CI Workflows (GitHub Actions)
+
+Three workflows run on push/PR to `main` and `develop`:
+
+| Workflow | Trigger Paths | Checks |
+| :--- | :--- | :--- |
+| **Core CI** (`core-ci.yaml`) | `core/**`, `ops/core.py` | Go test + coverage, GolangCI-Lint v1.64.5, binary build |
+| **Interface CI** (`interface-ci.yaml`) | `interface/**`, `ops/interface.py` | ESLint, `tsc --noEmit`, Vitest, production build |
+| **E2E CI** (`e2e-ci.yaml`) | `interface/**`, `core/**` | Build Core + Next.js, start servers, Playwright (Chromium) |
+
 > [!TIP]
 > If you run `uv venv` and activate your virtual environment, you can use `inv` directly without `uvx`.
 
@@ -127,12 +139,12 @@ Run from `scratch/` root using `uvx inv`:
 
 | Route | Description |
 | :--- | :--- |
-| `/` | Mission Control — Admin chat, broadcast, teams, telemetry, sensors, proposals |
+| `/` | Mission Control — Council chat (member selector), operations board, telemetry, sensors, cognitive status |
 | `/wiring` | Neural Wiring — ArchitectChat + CircuitBoard (edit/delete agents) + NatsWaterfall |
 | `/teams` | Team Management — browse standing + mission teams, agent roster, delivery targets |
 | `/catalogue` | Agent Catalogue — CRUD for agent blueprints |
 | `/memory` | Memory Explorer — Hot/Warm/Cold three-tier browser |
-| `/approvals` | Governance — approve/reject agent actions, policy config |
+| `/approvals` | Governance — approval queue, policy config, team proposals (3 tabs) |
 | `/missions/[id]/teams` | Team Actuation — live team drill-down |
 | `/settings` | Profile, Teams, Cognitive Matrix, MCP Tools |
 | `/dashboard` | KPI deck, MatrixGrid, LogStream |
@@ -146,7 +158,7 @@ Run from `scratch/` root using `uvx inv`:
 | Config | Location | Managed Via |
 | :--- | :--- | :--- |
 | Cognitive (Bootstrap) | `core/config/cognitive.yaml` | UI (`/settings` → Matrix) or YAML |
-| Standing Teams | `core/config/teams/*.yaml` | YAML (auto-loaded at startup) |
+| Standing Teams | `core/config/teams/*.yaml` | YAML (auto-loaded at startup, council members auto-addressable via API) |
 | MCP Servers | Database | UI (`/settings` → MCP Tools) or API |
 | Governance Policy | `core/config/policy.yaml` | UI (`/approvals` → Policy tab) or YAML |
 | MCP Library | `core/config/mcp-library.yaml` | YAML (curated registry) |
@@ -179,11 +191,14 @@ Run from `scratch/` root using `uvx inv`:
 ## Verification
 
 ```bash
-uvx inv ci.test           # All tests (Core + Interface)
-uvx inv core.test         # Core only
-uvx inv interface.test    # Interface only (Vitest)
-uvx inv core.smoke        # Governance smoke tests
+uvx inv core.test             # Go unit tests (~112 handler tests)
+uvx inv interface.test        # Vitest component tests (~114 tests)
+uvx inv interface.e2e         # Playwright E2E specs (12 spec files, requires running servers)
+uvx inv interface.check       # HTTP smoke test against running dev server
+uvx inv core.smoke            # Governance smoke tests
 ```
+
+> Full testing documentation: [docs/TESTING.md](docs/TESTING.md)
 
 ## Branching Strategy
 

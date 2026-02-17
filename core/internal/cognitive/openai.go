@@ -42,17 +42,32 @@ func NewOpenAIAdapter(config ProviderConfig) (*OpenAIAdapter, error) {
 }
 
 func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOptions) (*InferResponse, error) {
-	req := openai.ChatCompletionRequest{
-		Model: a.model,
-		Messages: []openai.ChatCompletionMessage{
+	// Map abstract ChatMessage to openai.ChatCompletionMessage
+	var messages []openai.ChatCompletionMessage
+	if len(opts.Messages) > 0 {
+		messages = make([]openai.ChatCompletionMessage, len(opts.Messages))
+		for i, m := range opts.Messages {
+			messages[i] = openai.ChatCompletionMessage{
+				Role:    m.Role,
+				Content: m.Content,
+			}
+		}
+	} else {
+		// Fallback for legacy Prompt field
+		messages = []openai.ChatCompletionMessage{
 			{Role: "user", Content: prompt},
-		},
+		}
+	}
+
+	reqBody := openai.ChatCompletionRequest{
+		Model:       a.model,
+		Messages:    messages,
 		Temperature: float32(opts.Temperature),
 		MaxTokens:   opts.MaxTokens,
 		Stop:        opts.Stop,
 	}
 
-	resp, err := a.client.CreateChatCompletion(ctx, req)
+	resp, err := a.client.CreateChatCompletion(ctx, reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("openai inference failed: %w", err)
 	}

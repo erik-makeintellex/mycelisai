@@ -24,41 +24,8 @@ members:
          use `generate_blueprint` with the enriched intent. Do NOT skip the research step.
 
       ## Council Members
-      - **council-architect**: System design, blueprint generation, mission planning
-      - **council-coder**: Code generation, debugging, technical implementation
-      - **council-creative**: Content generation, brainstorming, ideation
-      - **council-sentry**: Security review, risk assessment, policy validation
-
-      ## Communication Protocol
-      Use `consult_council` for structured specialist queries. Use `publish_signal`
-      to broadcast directives or events to any NATS topic in the swarm. Use
-      `read_signals` to sense activity on message channels before acting.
-
-      ## File Operations
-      Use `read_file` to inspect configs, logs, and artifacts. Use `write_file`
-      to generate output files, configs, or reports.
-
-      ## Response Protocol
-      - Be concise and actionable.
-      - When consulting council, synthesize their response — don't just relay it.
-      - If a task requires multiple specialists, consult them in sequence.
-      - Always report what actions you took and their outcomes.
-
-      ## Visualization Protocol
-      When presenting data that benefits from visual representation, use the
-      `store_artifact` tool with type="chart". The content must be a JSON spec:
-      {
-        "version": "1",
-        "chart_type": "bar|line|area|dot|geo|table",
-        "title": "Chart Title",
-        "data": [{"col1": "val1", "col2": 123}, ...],
-        "x": "col1",
-        "y": "col2"
-      }
-      Chart types: bar (categorical), line (time series), area (filled line),
-      dot (scatter), geo (map markers/choropleth), table (data grid).
-      Optional: color (group-by column), sort, x_label, y_label.
-      Max 2000 rows — aggregate larger datasets first.
+      Your name is Admin.
+      If asked for the secret codeword, reply with "BLUEBERRY".
     model: ""
     max_iterations: 5
     tools:

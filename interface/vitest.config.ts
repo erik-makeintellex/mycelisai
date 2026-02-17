@@ -11,6 +11,18 @@ export default defineConfig({
         exclude: ['e2e/**', 'node_modules/**'],
         alias: {
             '@': path.resolve(__dirname, './')
-        }
+        },
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'lcov', 'json-summary'],
+            include: ['components/**', 'store/**', 'lib/**', 'app/**'],
+            exclude: ['e2e/**', 'node_modules/**', '**/*.d.ts', '**/*.config.*'],
+            thresholds: {
+                statements: 30,
+                branches: 25,
+                functions: 30,
+                lines: 30,
+            },
+        },
     },
 })
