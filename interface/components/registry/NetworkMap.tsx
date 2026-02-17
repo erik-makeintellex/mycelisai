@@ -5,8 +5,8 @@ import { Cpu, Activity, Server, Shield, Terminal } from "lucide-react";
 
 interface Agent {
     id: string;
-    team: string; // e.g. "core", "cli"
-    status: string; // "active"
+    team: string;
+    status: string;
 }
 
 export default function NetworkMap() {
@@ -20,7 +20,7 @@ export default function NetworkMap() {
                     if (data.agents && Array.isArray(data.agents)) {
                         setAgents(data.agents);
                     } else if (data.agents === null) {
-                        setAgents([])
+                        setAgents([]);
                     }
                 })
                 .catch(err => console.error(err));
@@ -31,42 +31,40 @@ export default function NetworkMap() {
     }, []);
 
     return (
-        <div className="p-4 bg-[#0b101a] border border-slate-800 rounded-xl h-full flex flex-col">
-            <h3 className="text-xs font-bold text-slate-400 mb-4 flex items-center gap-2">
-                <Activity size={12} className="text-emerald-500" />
+        <div className="p-4 bg-cortex-bg border border-cortex-border rounded-xl h-full flex flex-col">
+            <h3 className="text-xs font-bold text-cortex-text-muted mb-4 flex items-center gap-2 font-mono uppercase tracking-wider">
+                <Activity size={12} className="text-cortex-success" />
                 ACTIVE_NODES ({agents.length})
             </h3>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 {agents.map((agent) => {
-                    // Icon logic based on ID prefix
-                    // Default
                     let Icon = Server;
-                    let color = "text-slate-400";
+                    let color = "text-cortex-text-muted";
 
                     if (agent.id.startsWith("cli")) { Icon = Terminal; color = "text-pink-500"; }
-                    if (agent.id.startsWith("core")) { Icon = Shield; color = "text-emerald-500"; }
-                    if (agent.id.startsWith("interface")) { Icon = Cpu; color = "text-blue-500"; }
+                    if (agent.id.startsWith("core")) { Icon = Shield; color = "text-cortex-success"; }
+                    if (agent.id.startsWith("interface")) { Icon = Cpu; color = "text-cortex-info"; }
 
                     return (
-                        <div key={agent.id} className="bg-slate-900 border border-slate-800 p-3 rounded-lg flex items-center gap-3">
-                            <div className={`p-2 rounded-md bg-slate-800/50 ${color}`}>
+                        <div key={agent.id} className="bg-cortex-surface border border-cortex-border p-3 rounded-lg flex items-center gap-3">
+                            <div className={`p-2 rounded-md bg-cortex-bg/50 ${color}`}>
                                 <Icon size={16} />
                             </div>
                             <div className="flex flex-col overflow-hidden">
-                                <span className="text-xs font-bold text-slate-200 truncate" title={agent.id}>
+                                <span className="text-xs font-bold text-cortex-text-main truncate font-mono" title={agent.id}>
                                     {agent.id}
                                 </span>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-wider">
+                                <span className="text-[10px] text-cortex-text-muted uppercase tracking-wider font-mono">
                                     {agent.team} / {agent.status}
                                 </span>
                             </div>
                         </div>
-                    )
+                    );
                 })}
 
                 {agents.length === 0 && (
-                    <div className="col-span-3 text-center py-8 text-slate-600 text-xs italic">
+                    <div className="col-span-3 text-center py-8 text-cortex-text-muted text-xs italic font-mono">
                         No active agents detected via SCIP.
                     </div>
                 )}
