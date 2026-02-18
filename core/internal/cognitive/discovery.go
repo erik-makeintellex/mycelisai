@@ -38,8 +38,8 @@ func (s *ServiceDiscovery) DiscoverAll(ctx context.Context) map[string]Validatio
 	results := make(map[string]ValidationResult)
 
 	for id, provider := range s.Providers {
-		// Default 3s timeout for probing
-		ctxProbe, cancel := context.WithTimeout(ctx, 3*time.Second)
+		// 10s timeout for probing (Kind->Host LAN can be slow)
+		ctxProbe, cancel := context.WithTimeout(ctx, 10*time.Second)
 		healthy, err := provider.Probe(ctxProbe)
 		cancel()
 

@@ -4,7 +4,11 @@
       "Bash(docker rmi:*)",
       "Bash(docker rm:*)",
       "Bash(kubectl cluster-info:*)",
-      "Bash(kubectl get:*)"
+      "Bash(kubectl get:*)",
+      "mcp__filesystem__read_multiple_files",
+      "Bash(GOTOOLCHAIN=local go version:*)",
+      "Bash(/usr/bin/go version:*)",
+      "Bash(/usr/local/go/bin/go version:*)"
     ],
     "deny": [],
     "ask": []

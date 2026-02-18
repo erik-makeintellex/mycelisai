@@ -1,37 +1,73 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/mycelis/core/internal/artifacts"
+	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
+	"github.com/mycelis/core/internal/overseer"
 	"github.com/mycelis/core/internal/provisioning"
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
+	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
+	"github.com/mycelis/core/internal/swarm"
+	"github.com/mycelis/core/pkg/protocol"
+	"github.com/nats-io/nats.go"
 )
 
 // AdminServer handles governance and system endpoints
 type AdminServer struct {
-	Router      *router.Router
-	Guard       *governance.Guard
-	Mem         *memory.Service
-	Cognitive   *cognitive.Router
-	Provisioner *provisioning.Engine
-	Registry    *registry.Service
+	Router        *router.Router
+	Guard         *governance.Guard
+	Mem           *memory.Service
+	Cognitive     *cognitive.Router
+	Provisioner   *provisioning.Engine
+	Registry      *registry.Service
+	Soma          *swarm.Soma
+	NC            *nats.Conn          // NATS for chat request-reply routing
+	Stream        *signal.StreamHandler
+	MetaArchitect *cognitive.MetaArchitect
+	Overseer      *overseer.Engine    // Phase 5.2: Trust Economy
+	Archivist     *memory.Archivist   // Phase 5.3: RAG Persistence
+	Proposals     *ProposalStore      // Phase 5.3: Team Manifestation
+	MCP           *mcp.Service        // Phase 7.0: MCP Ingress
+	MCPPool       *mcp.ClientPool     // Phase 7.0: MCP Ingress
+	MCPLibrary    *mcp.Library        // Phase 7.7: Curated MCP Library
+	Catalogue     *catalogue.Service  // Phase 7.5: Agent Catalogue
+	Artifacts     *artifacts.Service  // Phase 7.5: Agent Outputs
 }
 
-func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service) *AdminServer {
 	return &AdminServer{
-		Router:      r,
-		Guard:       guard,
-		Mem:         mem,
-		Cognitive:   cog,
-		Provisioner: prov,
-		Registry:    reg,
+		Router:        r,
+		Guard:         guard,
+		Mem:           mem,
+		Cognitive:     cog,
+		Provisioner:   prov,
+		Registry:      reg,
+		Soma:          soma,
+		NC:            nc,
+		Stream:        stream,
+		MetaArchitect: architect,
+		Overseer:      ov,
+		Archivist:     arch,
+		Proposals:     NewProposalStore(),
+		MCP:           mcpSvc,
+		MCPPool:       mcpPool,
+		MCPLibrary:    mcpLib,
+		Catalogue:     cat,
+		Artifacts:     art,
 	}
 }
 
@@ -42,18 +78,44 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/agents", s.handleAgents)
 	mux.HandleFunc("/healthz", s.handleHealth)
 
+	// Stream API (guarded — Stream may be nil in degraded mode)
+	if s.Stream != nil {
+		mux.HandleFunc("/api/v1/stream", s.Stream.HandleStream)
+	} else {
+		mux.HandleFunc("/api/v1/stream", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, `{"error":"SSE stream handler not initialized — infrastructure offline"}`, http.StatusServiceUnavailable)
+		})
+	}
+
 	// Memory API
 	mux.HandleFunc("/api/v1/memory/stream", s.GetMemoryStream)
 
 	// Cognitive API (Real)
 	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
 	mux.HandleFunc("/api/v1/cognitive/config", s.HandleCognitiveConfig)
+	mux.HandleFunc("/api/v1/cognitive/matrix", s.HandleCognitiveConfig) // Alias: UI calls /matrix
+	mux.HandleFunc("GET /api/v1/cognitive/status", s.HandleCognitiveStatus)
+	mux.HandleFunc("PUT /api/v1/cognitive/profiles", s.HandleUpdateProfiles)
+	mux.HandleFunc("PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
 	mux.HandleFunc("/api/v1/chat", s.HandleChat)
+
+	// Council Chat API — standardized, CTS-enveloped council interaction
+	mux.HandleFunc("POST /api/v1/council/{member}/chat", s.HandleCouncilChat)
+	mux.HandleFunc("GET /api/v1/council/members", s.HandleListCouncilMembers)
 
 	// Identity API
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
+	mux.HandleFunc("GET /api/v1/teams/detail", s.HandleTeamsDetail)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUpdateSettings)
+
+	// Missions API (Dashboard + Phase 9: Neural Wiring Edit/Delete)
+	mux.HandleFunc("GET /api/v1/missions", s.handleListMissions)
+	mux.HandleFunc("GET /api/v1/missions/{id}", s.handleGetMission)
+	mux.HandleFunc("PUT /api/v1/missions/{id}/agents/{name}", s.handleUpdateMissionAgent)
+	mux.HandleFunc("DELETE /api/v1/missions/{id}/agents/{name}", s.handleDeleteMissionAgent)
+	mux.HandleFunc("DELETE /api/v1/missions/{id}", s.handleDeleteMission)
 
 	// Provisioning API
 	mux.HandleFunc("/api/v1/provision/draft", s.HandleProvisionDraft)
@@ -81,6 +143,58 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("POST /api/v1/teams/{id}/connectors", s.handleInstallConnector)
 	mux.HandleFunc("GET /api/v1/teams/{id}/wiring", s.handleGetWiring)
+
+	// Intent Negotiation API
+	mux.HandleFunc("POST /api/v1/intent/negotiate", s.handleIntentNegotiate)
+
+	// Intent Commit (Instantiate Mission into Ledger + Activate in Soma)
+	mux.HandleFunc("POST /api/v1/intent/commit", s.handleIntentCommit)
+
+	// Phase 6.0: Symbiotic Seed (built-in sensor team, no LLM required)
+	mux.HandleFunc("POST /api/v1/intent/seed/symbiotic", s.handleSymbioticSeed)
+
+	// Phase 5.2: Telemetry & Trust Economy
+	mux.HandleFunc("GET /api/v1/telemetry/compute", s.HandleTelemetry)
+	mux.HandleFunc("/api/v1/trust/threshold", s.HandleTrustThreshold)
+
+	// Phase 5.3: RAG Memory & Sensory
+	mux.HandleFunc("GET /api/v1/memory/search", s.HandleMemorySearch)
+	mux.HandleFunc("GET /api/v1/memory/sitreps", s.HandleListSitReps)
+	mux.HandleFunc("GET /api/v1/sensors", s.HandleSensors)
+
+	// Phase 5.3: Team Manifestation Proposals
+	mux.HandleFunc("/api/v1/proposals", s.HandleProposals)
+	mux.HandleFunc("POST /api/v1/proposals/{id}/approve", s.HandleProposalApprove)
+	mux.HandleFunc("POST /api/v1/proposals/{id}/reject", s.HandleProposalReject)
+
+	// Phase 7.0: MCP Ingress API
+	mux.HandleFunc("POST /api/v1/mcp/install", s.handleMCPInstall)
+	mux.HandleFunc("GET /api/v1/mcp/servers", s.handleMCPList)
+	mux.HandleFunc("DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
+	mux.HandleFunc("POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
+	mux.HandleFunc("GET /api/v1/mcp/tools", s.handleMCPToolsList)
+
+	// Phase 7.7: MCP Library (curated server registry)
+	mux.HandleFunc("GET /api/v1/mcp/library", s.handleMCPLibrary)
+	mux.HandleFunc("POST /api/v1/mcp/library/install", s.handleMCPLibraryInstall)
+
+	// Phase 7.7: Governance Policy API
+	mux.HandleFunc("GET /api/v1/governance/policy", s.handleGetPolicy)
+	mux.HandleFunc("PUT /api/v1/governance/policy", s.handleUpdatePolicy)
+	mux.HandleFunc("GET /api/v1/governance/pending", s.handleGetPendingApprovals)
+	mux.HandleFunc("POST /api/v1/governance/resolve/{id}", s.handleResolveApproval)
+
+	// Phase 7.5: Agent Catalogue API
+	mux.HandleFunc("GET /api/v1/catalogue/agents", s.handleListCatalogue)
+	mux.HandleFunc("POST /api/v1/catalogue/agents", s.handleCreateCatalogue)
+	mux.HandleFunc("PUT /api/v1/catalogue/agents/{id}", s.handleUpdateCatalogue)
+	mux.HandleFunc("DELETE /api/v1/catalogue/agents/{id}", s.handleDeleteCatalogue)
+
+	// Phase 7.5: Artifacts API (Agent Outputs)
+	mux.HandleFunc("GET /api/v1/artifacts", s.handleListArtifacts)
+	mux.HandleFunc("GET /api/v1/artifacts/{id}", s.handleGetArtifact)
+	mux.HandleFunc("POST /api/v1/artifacts", s.handleStoreArtifact)
+	mux.HandleFunc("PUT /api/v1/artifacts/{id}/status", s.handleUpdateArtifactStatus)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {
@@ -88,6 +202,14 @@ func respondJSON(w http.ResponseWriter, data interface{}) {
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, "JSON Encode Error", http.StatusInternalServerError)
 	}
+}
+
+// respondError writes a JSON error response with proper escaping.
+// Never use fmt.Sprintf to build JSON — raw error text can contain quotes.
+func respondError(w http.ResponseWriter, msg string, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
 
 // GET /admin/approvals
@@ -165,4 +287,111 @@ func (s *AdminServer) handleAgents(w http.ResponseWriter, r *http.Request) {
 func (s *AdminServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok"))
+}
+
+// POST /api/v1/intent/negotiate
+// Phase 10: Routes through Admin agent's ReAct loop for researched blueprint
+// generation. Falls back to direct MetaArchitect if Admin agent is unavailable.
+func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Request) {
+	if s.MetaArchitect == nil {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, `{"error":"Cognitive engine offline — MetaArchitect not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	var req struct {
+		Intent string `json:"intent"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
+		return
+	}
+	if req.Intent == "" {
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, `{"error":"intent is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Try routing through Admin agent for research-enriched blueprint
+	if s.NC != nil {
+		blueprint, err := s.negotiateViaAdmin(r.Context(), req.Intent)
+		if err == nil && blueprint != nil {
+			respondJSON(w, blueprint)
+			return
+		}
+		log.Printf("Admin-routed negotiate failed, falling back to direct MetaArchitect: %v", err)
+	}
+
+	// Fallback: direct MetaArchitect (single-shot, no research)
+	blueprint, err := s.MetaArchitect.GenerateBlueprint(r.Context(), req.Intent)
+	if err != nil {
+		log.Printf("Intent negotiation failed: %v", err)
+		respondError(w, "Cognitive engine error: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	respondJSON(w, blueprint)
+}
+
+// negotiateViaAdmin sends the intent to the Admin agent via NATS request-reply.
+// The Admin agent uses research_for_blueprint → generate_blueprint in its ReAct loop.
+func (s *AdminServer) negotiateViaAdmin(ctx context.Context, intent string) (*protocol.MissionBlueprint, error) {
+	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, "admin")
+	directive := fmt.Sprintf(
+		"The user wants to negotiate a mission blueprint. Their intent is:\n\n%s\n\n"+
+			"Use research_for_blueprint to gather context first, then use generate_blueprint "+
+			"to create the mission blueprint. Return ONLY the blueprint JSON — no commentary.",
+		intent,
+	)
+
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	msg, err := s.NC.RequestWithContext(reqCtx, subject, []byte(directive))
+	if err != nil {
+		return nil, fmt.Errorf("admin agent did not respond: %w", err)
+	}
+
+	// Extract blueprint JSON from the admin's response
+	return extractBlueprintFromResponse(string(msg.Data))
+}
+
+// extractBlueprintFromResponse parses a MissionBlueprint from an agent's text response.
+// The agent may wrap the JSON in markdown fences or include commentary.
+func extractBlueprintFromResponse(response string) (*protocol.MissionBlueprint, error) {
+	text := response
+
+	// Strip markdown fences if present
+	if idx := strings.Index(text, "```json"); idx >= 0 {
+		text = text[idx+7:]
+		if end := strings.Index(text, "```"); end >= 0 {
+			text = text[:end]
+		}
+	} else if idx := strings.Index(text, "```"); idx >= 0 {
+		text = text[idx+3:]
+		if end := strings.Index(text, "```"); end >= 0 {
+			text = text[:end]
+		}
+	}
+
+	// Find first { and last } for bare JSON extraction
+	text = strings.TrimSpace(text)
+	start := strings.Index(text, "{")
+	end := strings.LastIndex(text, "}")
+	if start < 0 || end < 0 || end <= start {
+		return nil, fmt.Errorf("no JSON object found in admin response")
+	}
+	text = text[start : end+1]
+
+	var bp protocol.MissionBlueprint
+	if err := json.Unmarshal([]byte(text), &bp); err != nil {
+		return nil, fmt.Errorf("failed to parse blueprint JSON: %w", err)
+	}
+
+	if bp.MissionID == "" || len(bp.Teams) == 0 {
+		return nil, fmt.Errorf("invalid blueprint: missing mission_id or teams")
+	}
+
+	return &bp, nil
 }

@@ -17,13 +17,6 @@ export default function ApprovalDeck() {
     const [requests, setRequests] = useState<ApprovalRequest[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Mock data for design review if API fails or is empty
-    // Remove this in prod, but helpful for "polished" look if backend is empty
-    const mockRequests = [
-        { id: "mock-1", source: "payment-processor", rule_id: "marketing-budget", intent: "process_payment", payload_summary: "amount: $150.00", timestamp: "14:45:00" },
-        { id: "mock-2", source: "access-control", rule_id: "admin-access", intent: "grant_permission", payload_summary: "user: 'guest'", timestamp: "14:46:12" },
-    ];
-
     const fetchApprovals = async () => {
         setLoading(true);
         try {

@@ -1,4 +1,4 @@
-# Mycelis Cortex V6.2 (The Lattice)
+# Mycelis Cortex V12 (The Council)
 
 **The Recursive Swarm Operating System.**
 
@@ -9,95 +9,36 @@
 >
 > **Agents & Humans:** Always consult the Master State document before making architectural decisions. This README provides general usage instructions, but the Codex defines "What is True".
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. V6.2 introduces the **Fractal Fabric**, **Cognitive Registry**, and **Context Economy**.
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 12 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, and now the **Standardized Council Chat API** with CTS-enveloped responses, trust scores, and any council member addressable via HTTP.
 
-## 🏗️ Architecture
+## Architecture
 
-- **Tier 1: Core (Go + Postgres + pgvector)**
-  - Use `core` service for Identity, Governance, and Cognitive Routing.
-  - **Cognitive Registry:** Database-backed (`llm_providers`) lookup for AI models, decoupling logic from config.
-  - **Guard:** The Governance Engine (formerly Gatekeeper) enforcing policy on every message.
-  - **Bootstrap Service:** Listens for Hardware Announcements and Heartbeats (`005_nodes`).
-  - **Archivist:** The Context Engine. Summarizes logs into **SitReps** (Situation Reports) for efficient Agentry.
+- **Tier 1: Core (Go 1.26 + Postgres + pgvector)**
+  - **Soma → Axon → Teams → Agents:** Mission activation pipeline with heartbeat + proof-of-work.
+  - **Standing Teams:** Admin (orchestrator, 17 tools, 5 ReAct iterations) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
+  - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
+  - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
+  - **Internal Tool Registry:** 17 built-in tools — consult_council, delegate_task, search_memory, remember, recall, file I/O, NATS bus sensing, image generation, and more.
+  - **Composite Tool Executor:** Unified interface routing tool calls to InternalToolRegistry or MCP ToolExecutorAdapter.
+  - **MCP Ingress:** Install, manage, and invoke MCP tool servers. Curated library with one-click install.
+  - **Archivist:** Context engine — SitReps, auto-embed to pgvector, semantic search.
+  - **Governance:** Policy engine with YAML rules, approval queue, trust economy (0.0–1.0 threshold).
 
 - **Tier 2: Nervous System (NATS JetStream)**
-  - **Heartbeat:** Global 1Hz pulse (`swarm.global.heartbeat`) from all nodes.
-  - **Audit Trace:** Enforced logging (`swarm.audit.trace`) of all traffic.
-  - **SCIP:** Standardized Cybernetic Interchange Protocol (Protobuf).
+  - Heartbeat, audit trace, SCIP (Protobuf), council request-reply.
 
-- **Tier 2.5: The Fractal Fabric (Data)**
-  - **Teams & Missions:** Recursive hierarchy (`007_team_fabric`) defining ownership and purpose.
-  - **Registry:** Centralized database for Connectors and Blueprints.
-  - **Iron Dome:** Security layer enforcing NSA/CIS Hardening standards (User 10001, ReadOnly FS).
+- **Tier 3: The Face (Next.js 16 + React 19 + Zustand 5)**
+  - **Mission Control:** Council Chat (member selector dropdown) + OperationsBoard (priority alerts, standing workloads, missions) + Telemetry + Sensors + Cognitive Status.
+  - **Neural Wiring:** ArchitectChat + CircuitBoard (ReactFlow) + ToolsPalette + NatsWaterfall. Interactive edit/delete: click agent nodes to modify manifests, delete agents, discard drafts, or terminate active missions.
+  - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
+  - **Settings:** Cognitive Matrix + MCP Tools (with curated library).
+  - **Visual Protocol:** Vuexy Dark palette — zero zinc/slate classes.
 
-- **Tier 3: The Face (Next.js)**
-  - **Genesis Terminal:** Hardware discovery and Bootstrap UI.
-  - **Universal Renderer:** Dynamic UI components driven by the "Zone Layout" (Rail, Workspace, Stream, Decision).
-  - **Cortex Console:** The 4-Zone dashboard for controlling the organism.
+> Full architecture details: [Swarm Operations](docs/SWARM_OPERATIONS.md) | [Cognitive Architecture](docs/COGNITIVE_ARCHITECTURE.md) | [API Reference](docs/API_REFERENCE.md)
 
-## 📚 Documentation Hub
-
-| Context | Resource | Description |
-| :--- | :--- | :--- |
-| **Architecture** | [Memory Specs](docs/architecture/DIRECTIVE_MEMORY_SERVICE.md) | Event Store & Memory Architecture Specs. |
-| **Governance** | [Guard Protocol](docs/governance.md) | Policy enforcement, approvals, and security boundaries. |
-| **Registry** | [The Registry](core/internal/registry/README.md) | Connector Marketplace and Wiring Graph specs. |
-| **Telemetry** | [Logging Schema](docs/logging.md) | SCIP Log structure and centralized observability. |
-| **Testing** | [Verification Suite](docs/TESTING.md) | Unit, Integration, and Smoke Testing protocols. |
-| **AI Providers** | [Provider Guide](docs/PROVIDERS.md) | LLM configuration (Ollama, OpenAI, Anthropic). |
-| **Core API** | [Core Specs](core/README.md) | Go Service architecture and internal packages. |
-| **CLI** | [Synaptic Injector](cli/README.md) | `myc` command-line tool usage. |
-| **Interface** | [Cortex UI](interface/README.md) | Next.js Frontend architecture. |
-
-### 🔑 Key Configurations
-
-- **Cognitive (Bootstrap):** `core/config/cognitive.yaml` (Overrides DB if needed)
-- **Cognitive (Dynamic):** `llm_providers` table (Managed via UI/SQL)
-- **Policy (Rules):** `core/config/policy.yaml`
-- **Secrets:** `.env` (See `.env.example`)
-
-## 🧠 Cognitive Architecture (Default)
-
-Mycelis V6 defaults to a **Single Local Model** architecture for privacy and air-gapped readiness.
-
-- **Default Model:** `qwen2.5-coder:7b-instruct` (via Ollama).
-- **Fallback:** None (Strict Reliability).
-
-### 🛠️ Developer Orchestration
-
-Run the following commands from the root directory:
-
-| Command | Description |
-| :--- | :--- |
-| `inv core.build` | Compiles the Go binary and builds the Docker image. |
-| `inv core.test` | Runs Unit Tests. |
-| `inv core.run` | **(New)** Runs the Core locally (Native). |
-| `inv core.restart` | **(New)** Restarts the Core (Kill + Run). |
-| `inv core.smoke` | **(New)** Runs Governance Smoke Tests against local Core. |
-| `inv k8s.reset` | **(New)** Full Infrastructure Reset (Teardown + Init + Deploy). |
-| `inv k8s.status` | Checks the status of the Kubernetes cluster. |
-| `inv k8s.deploy` | Deploys the Helm chart to the local cluster. |
-| `inv k8s.bridge` | Opens ports for NATS, API, and Postgres. |
-| `inv device.boot` | **(New)** Simulates a hardware node announcement via NATS. |
-
-> [!NOTE]
-> **Secure Migrations:** Database migrations are applied via a hardened ephemeral pod (`migration-runner`) enforcing Iron Dome standards (User 10001, ReadOnlyRoot). Do not run manual `psql` unless necessary.
-
-### Hardware Grading
-
-| Tier | RAM | Supported Models | Use Case |
-| :--- | :--- | :--- | :--- |
-| **Tier 1 (Min)** | 16 GB | 7B Models (Q4) | Basic Coding, CLI |
-| **Tier 2 (Rec)** | 32 GB | 14B - 32B Models | Complex Architecture, Deep Reasoning |
-| **Tier 3 (Ultra)** | 64 GB+ | 70B+ or Multi-Model | **Enterprise Core** (Current Dev Host) |
-
-*Note: The system auto-detects resources but defaults to the 7B model for speed.*
-
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Configure Secrets
-
-Ensure your `.env` file exists and contains the necessary credentials:
 
 ```bash
 cp .env.example .env
@@ -107,91 +48,170 @@ cp .env.example .env
 ### 2. Boot the Infrastructure
 
 ```bash
-# Full System Reset (Cluster + Core + DB)
-uv run inv k8s.reset
-
-# Open Development Bridge (Required for CLI/UI)
-uv run inv k8s.bridge
+uvx inv k8s.reset    # Full System Reset (Cluster + Core + DB)
 ```
 
-### 2. Bootstrap Identity (The First Login)
+### 3. Open the Development Bridge (Terminal 1)
 
-Since V6 enforces RBAC, you must create an Admin user to access the console.
-*(Ensure `inv k8s.bridge` is running if using local CLI)*
+Port-forwards PostgreSQL, NATS, and HTTP from the Kind cluster to localhost.
 
 ```bash
-# Create the first admin user
-uv run python cli/main.py admin-create "admin"
+uvx inv k8s.bridge
 ```
 
-*Copy the Session Token output!*
-
-### 3. Launch the Cortex Console
+### 4. Initialize the Database
 
 ```bash
-cd interface
-npm run dev
+uvx inv db.migrate    # Apply all migrations (idempotent)
+```
+
+### 5. Start the Core Server (Terminal 2)
+
+```bash
+uvx inv core.run
+```
+
+### 6. Launch the Cortex Console (Terminal 3)
+
+```bash
+uvx inv interface.install   # First time only
+uvx inv interface.dev       # Start dev server on port 3000
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### 4. Configure the Cognitive Engine
+### 7. Configure the Cognitive Engine
 
-Edit `core/config/cognitive.yaml` to define your Model Matrix.
+- **UI:** `/settings` → **Cognitive Matrix** tab — change provider routing, configure endpoints.
+- **MCP:** `/settings` → **MCP Tools** tab — install servers from curated library or manually.
+- **YAML:** Edit `core/config/cognitive.yaml` directly.
 
-- **Profiles:** `sentry`, `architect`, `coder`.
-- **Policies:** Set `timeout_ms` and `max_retries` per profile.
+## Developer Orchestration
 
-## 🛠️ Developer Tools
+**Prerequisites:** [uv](https://github.com/astral-sh/uv) and [Docker](https://www.docker.com/).
 
-### CLI (`myc`)
+Run from `scratch/` root using `uvx inv`:
 
-- `myc snoop`: Decode SCIP traffic in real-time.
-- `myc inject <intent> <payload>`: Send signals to the swarm.
-- `myc think <prompt> --profile=coder`: Test the cognitive router.
+| Command | Description |
+| :--- | :--- |
+| **Core** | |
+| `uvx inv core.build` | Compile Go binary + Docker image |
+| `uvx inv core.test` | Run unit tests (`go test ./...`) |
+| `uvx inv core.run` | Run Core locally (foreground) |
+| `uvx inv core.stop` | Kill running Core process |
+| `uvx inv core.restart` | Stop + Run |
+| `uvx inv core.smoke` | Governance smoke tests |
+| **Interface** | |
+| `uvx inv interface.dev` | Start Next.js dev server (Turbopack) |
+| `uvx inv interface.build` | Production build |
+| `uvx inv interface.test` | Run Vitest unit tests |
+| `uvx inv interface.e2e` | Run Playwright E2E tests (requires running servers) |
+| `uvx inv interface.check` | Smoke-test running server |
+| `uvx inv interface.stop` | Kill dev server |
+| `uvx inv interface.clean` | Clear `.next` cache |
+| `uvx inv interface.restart` | Full restart: stop → clean → build → dev → check |
+| **Database** | |
+| `uvx inv db.migrate` | Apply SQL migrations (idempotent) |
+| `uvx inv db.reset` | Drop + recreate + migrate |
+| `uvx inv db.status` | Show tables |
+| **Infrastructure** | |
+| `uvx inv k8s.reset` | Full cluster reset |
+| `uvx inv k8s.status` | Cluster status |
+| `uvx inv k8s.deploy` | Deploy Helm chart |
+| `uvx inv k8s.bridge` | Port-forward NATS, API, Postgres |
+| **CI Pipeline** | |
+| `uvx inv ci.deploy` | Full CI: lint → test → build → check |
 
-### Protobuf Generation
+### CI Workflows (GitHub Actions)
 
-If you modify `proto/envelope.proto`:
+Three workflows run on push/PR to `main` and `develop`:
+
+| Workflow | Trigger Paths | Checks |
+| :--- | :--- | :--- |
+| **Core CI** (`core-ci.yaml`) | `core/**`, `ops/core.py` | Go test + coverage, GolangCI-Lint v1.64.5, binary build |
+| **Interface CI** (`interface-ci.yaml`) | `interface/**`, `ops/interface.py` | ESLint, `tsc --noEmit`, Vitest, production build |
+| **E2E CI** (`e2e-ci.yaml`) | `interface/**`, `core/**` | Build Core + Next.js, start servers, Playwright (Chromium) |
+
+> [!TIP]
+> If you run `uv venv` and activate your virtual environment, you can use `inv` directly without `uvx`.
+
+## Frontend Routes
+
+| Route | Description |
+| :--- | :--- |
+| `/` | Product landing page (marketing) — links to `/dashboard` to launch console |
+| `/dashboard` | Mission Control — Council chat (member selector), operations board, telemetry, sensors, cognitive status |
+| `/wiring` | Neural Wiring — ArchitectChat + CircuitBoard (edit/delete agents) + NatsWaterfall |
+| `/architect` | Redirects to `/wiring` |
+| `/teams` | Team Management — browse standing + mission teams, agent roster, delivery targets |
+| `/catalogue` | Agent Catalogue — CRUD for agent blueprints |
+| `/memory` | Memory Explorer — Hot/Warm/Cold three-tier browser |
+| `/approvals` | Governance — approval queue, policy config, team proposals (3 tabs) |
+| `/missions/[id]/teams` | Team Actuation — live team drill-down |
+| `/settings` | Profile, Teams, Cognitive Matrix, MCP Tools |
+| `/matrix` | Cognitive Matrix grid |
+| `/marketplace` | Skills Market — connector registry |
+| `/telemetry` | System Status — infrastructure monitoring |
+
+## Key Configurations
+
+| Config | Location | Managed Via |
+| :--- | :--- | :--- |
+| Cognitive (Bootstrap) | `core/config/cognitive.yaml` | UI (`/settings` → Matrix) or YAML |
+| Standing Teams | `core/config/teams/*.yaml` | YAML (auto-loaded at startup, council members auto-addressable via API) |
+| MCP Servers | Database | UI (`/settings` → MCP Tools) or API |
+| Governance Policy | `core/config/policy.yaml` | UI (`/approvals` → Policy tab) or YAML |
+| MCP Library | `core/config/mcp-library.yaml` | YAML (curated registry) |
+
+### Environment Variables
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `MYCELIS_API_HOST` | `localhost` | Core API host |
+| `MYCELIS_API_PORT` | `8081` | Core API port |
+| `MYCELIS_INTERFACE_HOST` | `localhost` | Next.js dev server host |
+| `MYCELIS_INTERFACE_PORT` | `3000` | Next.js dev server port |
+
+## Documentation Hub
+
+| Topic | Document |
+| :--- | :--- |
+| **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance |
+| **API Reference** | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Full endpoint table |
+| **Cognitive Architecture** | [docs/COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md) — Providers, profiles, matrix UI, embedding |
+| **Memory Specs** | [docs/architecture/DIRECTIVE_MEMORY_SERVICE.md](docs/architecture/DIRECTIVE_MEMORY_SERVICE.md) — Event store & memory architecture |
+| **Governance** | [docs/governance.md](docs/governance.md) — Policy enforcement, approvals, security |
+| **Registry** | [core/internal/registry/README.md](core/internal/registry/README.md) — Connector marketplace |
+| **Telemetry** | [docs/logging.md](docs/logging.md) — SCIP log structure |
+| **Testing** | [docs/TESTING.md](docs/TESTING.md) — Unit, integration, smoke protocols |
+| **Core API** | [core/README.md](core/README.md) — Go service architecture |
+| **CLI** | [cli/README.md](cli/README.md) — `myc` command-line tool |
+| **Interface** | [interface/README.md](interface/README.md) — Next.js frontend architecture |
+
+## Verification
 
 ```bash
-uv run inv proto.generate
+uvx inv core.test             # Go unit tests (~112 handler tests)
+uvx inv interface.test        # Vitest component tests (~114 tests)
+uvx inv interface.e2e         # Playwright E2E specs (12 spec files, requires running servers)
+uvx inv interface.check       # HTTP smoke test against running dev server
+uvx inv core.smoke            # Governance smoke tests
 ```
 
-## 🧪 Verification
+> Full testing documentation: [docs/TESTING.md](docs/TESTING.md)
 
-Mycelis uses a 2-Tier testing strategy (Mocked Unit + Real Integration).
-See [docs/TESTING.md](docs/TESTING.md) for full details.
+## Branching Strategy
 
-```bash
-# Run All Core Unit Tests (Logic)
-cd core
-go test ./...
+Trunk-based development with ephemeral feature branches.
 
-# Run Specific Package Tests
-go test -v ./internal/bootstrap/... # Heartbeats
-go test -v ./internal/memory/...    # Archivist/SitReps
-go test -v ./internal/cognitive/... # LLM Router
+| Type | Prefix | Example |
+| :--- | :--- | :--- |
+| Production | `main` | `main` |
+| Feature | `feat/` | `feat/neural-router` |
+| Fix | `fix/` | `fix/memory-leak` |
+| Chore | `chore/` | `chore/infra-reset` |
+| Docs | `docs/` | `docs/api-spec` |
 
-# Run Integration Tests (Real Ollama)
-# Requires TEST_LIVE_LLM=true
-go test -v -tags=integration ./tests/...
-```
-
-## 🌲 Branching Strategy
-
-Mycelis follows a strict **Trunk-Based Development** workflow with ephemeral feature branches.
-
-| Branch Type | Prefix | Example | Description |
-| :--- | :--- | :--- | :--- |
-| **Production** | `main` | `main` | Stable, deployable code. All PRs must pass CI. |
-| **Feature** | `feat/` | `feat/neural-router` | New capabilities or substantial changes. |
-| **Fix** | `fix/` | `fix/memory-leak` | patches for bugs or regression. |
-| **Chore** | `chore/` | `chore/infra-reset` | Maintenance, dependencies, or refactoring. |
-| **Documentation** | `docs/` | `docs/api-spec` | Documentation-only updates. |
-
-### Protocol
-
-1. **Branch off `main`:** Always start fresh.
-2. **Commit Often:** Use conventional commits (e.g., `feat: add gatekeeper`).
-3. **Merge via Squash:** Keep history linear and clean.
+1. Branch off `main`.
+2. Commit often (conventional commits).
+3. Merge via squash.

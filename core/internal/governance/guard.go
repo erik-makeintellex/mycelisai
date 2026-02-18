@@ -3,12 +3,14 @@ package governance
 import (
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
 	pb "github.com/mycelis/core/pkg/pb/swarm"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"gopkg.in/yaml.v3"
 )
 
 // Guard intercepts and manages approvals
@@ -51,7 +53,7 @@ func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 	// For "amount > 50", usually amount is in the event data, not the header context.
 	// The policy engine might want both.
 	// For this loop, let's also pull data from EventPayload if present.
-	if msg.GetEvent() != nil {
+	if msg.GetEvent() != nil && msg.GetEvent().Data != nil {
 		for k, v := range msg.GetEvent().Data.Fields {
 			if _, ok := v.Kind.(*structpb.Value_NumberValue); ok {
 				ctx[k] = v.GetNumberValue()
@@ -152,6 +154,38 @@ func (g *Guard) ValidateIngress(subject string, data []byte) error {
 	// For now, just check prefix
 	if len(subject) < 18 || subject[:18] != "swarm.global.input" {
 		return fmt.Errorf("invalid ingress subject: %s", subject)
+	}
+
+	return nil
+}
+
+// GetPolicyConfig returns the current policy configuration.
+func (g *Guard) GetPolicyConfig() *PolicyConfig {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.Engine.Config
+}
+
+// UpdatePolicyConfig replaces the in-memory policy configuration.
+func (g *Guard) UpdatePolicyConfig(cfg *PolicyConfig) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.Engine.Config = cfg
+}
+
+// SavePolicyToFile writes the current policy configuration back to a YAML file.
+func (g *Guard) SavePolicyToFile(path string) error {
+	g.mu.RLock()
+	cfg := g.Engine.Config
+	g.mu.RUnlock()
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal policy config: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write policy file: %w", err)
 	}
 
 	return nil

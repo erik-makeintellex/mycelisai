@@ -1,7 +1,7 @@
 [project]
-name = "scratch"
+name = "mycelis"
 version = "0.1.0"
-description = "Add your description here"
+description = "Mycelis Cortex V6.2 — Recursive Swarm Operating System"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -25,7 +25,15 @@ dev = [
     "pytest-asyncio>=1.3.0",
 ]
 
+[project.scripts]
+myc = "invoke.main:program.run"
+
+[tool.uv]
+# Prefer the project .venv over any system VIRTUAL_ENV
+managed = true
+
 [tool.uv.workspace]
 members = [
     "cli",
+    "cognitive",
 ]

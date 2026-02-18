@@ -11,6 +11,7 @@ import (
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/state"
 	pb "github.com/mycelis/core/pkg/pb/swarm"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 // Router handles the distribution of messages from NATS to Agents
@@ -29,8 +30,8 @@ func NewRouter(nc *nats.Conn, guard *governance.Guard) *Router {
 
 // Start listens on the swarm network
 func (r *Router) Start() error {
-	log.Println("⚡ Router Listening on swarm.>")
-	_, err := r.nc.Subscribe("swarm.>", r.handleMessage)
+	log.Println("Router Listening on swarm.>")
+	_, err := r.nc.Subscribe(protocol.TopicSwarmWild, r.handleMessage)
 	return err
 }
 
@@ -82,7 +83,7 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 	// Since we filtered "swarm.audit." above, this won't loop.
 	go func() {
 		// Asynchronous to not block handling
-		if err := r.nc.Publish("swarm.audit.trace", msg.Data); err != nil {
+		if err := r.nc.Publish(protocol.TopicAuditTrace, msg.Data); err != nil {
 			log.Printf("⚠️ Audit Trace Failed: %v", err)
 		}
 	}()

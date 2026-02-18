@@ -17,9 +17,9 @@ func TestInfer_Mock(t *testing.T) {
 		t.Fatalf("Failed to load generic config: %v", err)
 	}
 
-	// 2. Inject Mock for "local_ollama" (which "sentry" profile uses)
-	// We use "sentry" profile in the request. In brain.yaml, sentry -> local_ollama.
-	r.Adapters["local_ollama"] = &cognitive.MockAdapter{FixedResponse: "Explicit Mock"}
+	// 2. Inject Mock for "ollama" (which "sentry" profile uses)
+	// We use "sentry" profile in the request. In cognitive.yaml, sentry -> ollama.
+	r.Adapters["ollama"] = &cognitive.MockAdapter{FixedResponse: "Explicit Mock"}
 
 	// 3. Execute
 	req := cognitive.InferRequest{
@@ -55,7 +55,7 @@ func TestInfer_Live(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 2. Execute against 'sentry' (which points to local_ollama usually)
+	// 2. Execute against 'sentry' (which points to ollama usually)
 	req := cognitive.InferRequest{
 		Profile: "sentry",
 		Prompt:  "Reply with 'PONG'",
