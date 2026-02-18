@@ -10,6 +10,7 @@ import SquadRoom from './SquadRoom';
 import DeliverablesTray from './DeliverablesTray';
 import GovernanceModal from '../shell/GovernanceModal';
 import { NatsWaterfall } from '../stream/NatsWaterfall';
+import SignalDetailDrawer from '../stream/SignalDetailDrawer';
 import { useCortexStore } from '@/store/useCortexStore';
 
 export default function Workspace() {
@@ -18,7 +19,7 @@ export default function Workspace() {
     const isToolsPaletteOpen = useCortexStore((s) => s.isToolsPaletteOpen);
 
     return (
-        <div className="h-full flex flex-col bg-cortex-bg">
+        <div className="h-full flex flex-col bg-cortex-bg relative">
             {/* Top: Chat + Canvas */}
             <div className="flex-1 grid grid-cols-[360px_1fr] gap-6 p-6 min-h-0">
                 {/* Left: Negotiation Chat + Blueprint Drawer */}
@@ -59,6 +60,9 @@ export default function Workspace() {
 
             {/* Governance Modal — z-50 overlay */}
             <GovernanceModal />
+
+            {/* Signal Detail Drawer */}
+            <SignalDetailDrawer />
         </div>
     );
 }

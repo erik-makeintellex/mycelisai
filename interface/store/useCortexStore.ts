@@ -109,6 +109,34 @@ export interface SensorNode {
     label: string;
 }
 
+// ── Signal Detail (clickable event drawer) ──────────────────
+
+export interface SignalDetail {
+    type: string;
+    source: string;
+    level?: string;
+    message: string;
+    timestamp: string;
+    topic?: string;
+    payload?: any;
+    id?: string;
+    trace_id?: string;
+    intent?: string;
+    context?: Record<string, unknown>;
+    trust_score?: number;
+}
+
+export interface LogEntry {
+    id: string;
+    trace_id: string;
+    timestamp: string;
+    level: string;
+    source: string;
+    intent: string;
+    message: string;
+    context: Record<string, unknown>;
+}
+
 // ── Council Chat API (Standardized CTS) ─────────────────────
 
 export interface CouncilMember {
@@ -426,6 +454,9 @@ export interface CortexState {
     selectedAgentNodeId: string | null;
     isAgentEditorOpen: boolean;
 
+    // Signal Detail Drawer
+    selectedSignalDetail: SignalDetail | null;
+
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
 
@@ -507,6 +538,9 @@ export interface CortexState {
     updateAgentInMission: (agentName: string, manifest: Partial<AgentManifest>) => Promise<void>;
     deleteAgentFromMission: (agentName: string) => Promise<void>;
     deleteMission: (missionId: string) => Promise<void>;
+
+    // Signal Detail Drawer
+    selectSignalDetail: (detail: SignalDetail | null) => void;
 }
 
 // ── Layout Constants ──────────────────────────────────────────
@@ -787,6 +821,9 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     selectedAgentNodeId: null,
     isAgentEditorOpen: false,
 
+    // Signal Detail Drawer
+    selectedSignalDetail: null,
+
     onNodesChange: (changes) => {
         set({ nodes: applyNodeChanges(changes, get().nodes) });
     },
@@ -957,6 +994,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     selectArtifact: (artifact: CTSEnvelope | null) => {
         set({ selectedArtifact: artifact });
+    },
+
+    selectSignalDetail: (detail: SignalDetail | null) => {
+        set({ selectedSignalDetail: detail });
     },
 
     approveArtifact: (id: string) => {
@@ -1385,6 +1426,23 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages }),
             });
+
+            if (!res.ok) {
+                const text = await res.text();
+                let errMsg: string;
+                try {
+                    const parsed = JSON.parse(text);
+                    errMsg = parsed.error || `Council agent error (${res.status})`;
+                } catch {
+                    errMsg = `Council agent unreachable (${res.status})`;
+                }
+                set((s) => ({
+                    isMissionChatting: false,
+                    missionChatError: errMsg,
+                    missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget }],
+                }));
+                return;
+            }
 
             const body: APIResponse<CTSChatEnvelope> = await res.json();
 

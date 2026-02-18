@@ -2,20 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Terminal } from "lucide-react";
-
-interface LogEntry {
-    id: string;
-    trace_id: string;
-    timestamp: string;
-    level: string;
-    source: string;
-    intent: string;
-    message: string;
-    context: Record<string, unknown>;
-}
+import { useCortexStore, type LogEntry } from "@/store/useCortexStore";
+import { logEntryToDetail } from "@/lib/signalNormalize";
 
 export default function LogStream() {
     const [logs, setLogs] = useState<LogEntry[]>([]);
+    const selectSignalDetail = useCortexStore((s) => s.selectSignalDetail);
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -61,7 +53,11 @@ export default function LogStream() {
                         const ts = new Date(log.timestamp).toLocaleTimeString();
 
                         return (
-                            <div key={`${log.id}-${index}`} className="flex gap-3 hover:bg-cortex-surface/30 px-2 py-0.5 rounded -mx-2 transition-colors group border-l-2 border-transparent hover:border-cortex-border">
+                            <div
+                                key={`${log.id}-${index}`}
+                                className="flex gap-3 hover:bg-cortex-surface/30 px-2 py-0.5 rounded -mx-2 transition-colors group border-l-2 border-transparent hover:border-cortex-border cursor-pointer"
+                                onClick={() => selectSignalDetail(logEntryToDetail(log))}
+                            >
                                 <span className="text-cortex-text-muted/50 select-none w-20 tabular-nums group-hover:text-cortex-text-muted transition-opacity whitespace-nowrap">
                                     {ts}
                                 </span>

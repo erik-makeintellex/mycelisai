@@ -7,7 +7,7 @@ vi.mock('reactflow', async () => {
     return mock;
 });
 
-// The root page renders MissionControlLayout which has deep dependencies
+// The dashboard page renders MissionControlLayout which has deep dependencies
 // (SignalProvider with EventSource, TelemetryRow, OperationsBoard, etc.)
 // Mock the heavy component to isolate the page smoke test.
 vi.mock('@/components/dashboard/MissionControl', () => ({
@@ -15,12 +15,12 @@ vi.mock('@/components/dashboard/MissionControl', () => ({
     default: () => <div data-testid="mission-control">MissionControl</div>,
 }));
 
-import Page from '@/app/page';
+import DashboardPage from '@/app/(app)/dashboard/page';
 
-describe('Dashboard Page (app/page.tsx)', () => {
+describe('Dashboard Page (/dashboard)', () => {
     it('mounts without crashing', async () => {
         await act(async () => {
-            render(<Page />);
+            render(<DashboardPage />);
         });
 
         expect(screen.getByTestId('mission-control')).toBeDefined();
@@ -28,7 +28,7 @@ describe('Dashboard Page (app/page.tsx)', () => {
 
     it('renders the MissionControl layout component', async () => {
         await act(async () => {
-            render(<Page />);
+            render(<DashboardPage />);
         });
 
         expect(screen.getByText('MissionControl')).toBeDefined();
