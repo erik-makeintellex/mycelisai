@@ -55,14 +55,30 @@ export default function MarketplacePage() {
         setInstalling(true);
 
         try {
-            // 2. Default Config (Mock Form)
-            // Real implementation would gather state from <ConfigForm>
-            // We just send empty or default values if schema allows
+            // 2. Extract Config from Form
             const config: Record<string, unknown> = {};
-            if (selected.config_schema?.properties?.city) config.city = "Seattle";
-            if (selected.config_schema?.properties?.api_key) config.api_key = "123456";
-            if (selected.config_schema?.properties?.webhook_url) config.webhook_url = "https://hooks.slack.com/services/xxx";
-            if (selected.config_schema?.properties?.frequency) config.frequency = 101.5;
+            const formElements = document.querySelectorAll(`[name]`) as NodeListOf<HTMLInputElement | HTMLSelectElement>;
+
+            formElements.forEach(el => {
+                if (el.closest('.fixed')) { // Ensure we only get inputs from the modal
+                    const key = el.getAttribute('name');
+                    if (key && selected.config_schema?.properties?.[key]) {
+                        const schema = selected.config_schema.properties[key];
+                        let value: any = el.value;
+
+                        // Type coercion
+                        if (schema.type === 'number' || schema.type === 'integer') {
+                            value = Number(value);
+                        } else if (schema.type === 'boolean') {
+                            value = value === 'true';
+                        }
+
+                        if (value !== "" && value !== null) {
+                            config[key] = value;
+                        }
+                    }
+                }
+            });
 
             const res = await fetch(`/api/v1/teams/${selectedTeamId}/connectors`, {
                 method: "POST",
@@ -137,44 +153,76 @@ export default function MarketplacePage() {
                 >
                     <div className="bg-white rounded-xl shadow-xl p-8 max-w-lg w-full" onClick={e => e.stopPropagation()}>
                         <h2 className="text-xl font-bold mb-4">Configure {selected.name}</h2>
-                        <div className="mb-4 text-xs text-zinc-500 bg-zinc-50 p-2 rounded">
-                            Target Configuration Parameters:
-                            <ul className="list-disc pl-4 mt-1 space-y-1">
-                                {selected.config_schema?.properties ? (
-                                    Object.entries(selected.config_schema.properties).map(([key, val]: [string, any]) => (
-                                        <li key={key}>
-                                            <span className="font-semibold">{val.title || key}</span>
-                                            {val.default && <span className="text-zinc-400 ml-1">(Default: {val.default})</span>}
-                                        </li>
-                                    ))
-                                ) : (
-                                    <li>No configuration schema defined.</li>
-                                )}
-                            </ul>
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-zinc-700 mb-1">Assign to Team</label>
-                            <select
-                                className="w-full border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                                value={selectedTeamId}
-                                onChange={e => setSelectedTeamId(e.target.value)}
-                            >
-                                <option value="" disabled>Select a Team...</option>
-                                {teams.map(team => (
-                                    <option key={team.id} value={team.id}>
-                                        {team.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {/* Dynamic Configuration Form */}
+                        <div className="mb-6 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                            <div className="p-3 bg-zinc-50 rounded text-xs text-zinc-500 mb-2">
+                                Configure the {selected.name} target before enabling.
+                            </div>
 
-                        <div className="mb-4 text-xs text-zinc-500 bg-zinc-50 p-2 rounded">
-                            Target Configuration Parameters:
-                            {/* ... list ... */}
+                            {/* Team Selection */}
+                            <div>
+                                <label className="block text-xs font-medium text-zinc-700 mb-1 uppercase tracking-wider">Assigned Team</label>
+                                <select
+                                    className="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black transition-shadow"
+                                    value={selectedTeamId}
+                                    onChange={e => setSelectedTeamId(e.target.value)}
+                                >
+                                    <option value="" disabled>Select a Team...</option>
+                                    {teams.map(team => (
+                                        <option key={team.id} value={team.id}>
+                                            {team.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <hr className="border-zinc-100 my-4" />
+
+                            {selected.config_schema?.properties ? (
+                                Object.entries(selected.config_schema.properties).map(([key, val]: [string, any]) => (
+                                    <div key={key}>
+                                        <label className="block text-xs font-medium text-zinc-700 mb-1">
+                                            {val.title || key}
+                                            {val.description && <span className="ml-2 font-normal text-zinc-400">- {val.description}</span>}
+                                        </label>
+
+                                        {val.type === 'boolean' ? (
+                                            <select
+                                                name={key}
+                                                className="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                                defaultValue={val.default?.toString() || "false"}
+                                            >
+                                                <option value="true">True</option>
+                                                <option value="false">False</option>
+                                            </select>
+                                        ) : val.enum ? (
+                                            <select
+                                                name={key}
+                                                className="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                                defaultValue={val.default || ""}
+                                            >
+                                                {val.enum.map((opt: string) => (
+                                                    <option key={opt} value={opt}>{opt}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <input
+                                                type={val.type === 'number' || val.type === 'integer' ? 'number' : 'text'}
+                                                name={key}
+                                                className="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                                placeholder={val.default ? `Default: ${val.default}` : `Enter ${key}...`}
+                                                defaultValue={val.default}
+                                            />
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-8 text-zinc-400 italic text-sm">
+                                    No configuration required for this target.
+                                </div>
+                            )}
                         </div>
-                        <pre className="bg-zinc-100 p-4 rounded text-xs font-mono mb-4 text-zinc-600 overflow-auto max-h-40">
-                            {JSON.stringify(selected.config_schema, null, 2)}
-                        </pre>
+                        {/* Debug info removed for cleanliness */}
                         <div className="flex justify-end gap-2">
                             <button className="px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded" onClick={() => setSelected(null)}>Cancel</button>
                             <button

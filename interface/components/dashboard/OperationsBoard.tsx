@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCortexStore, type TeamDetailEntry } from "@/store/useCortexStore";
 import { useSignalStream, type Signal } from "./SignalContext";
+import { streamSignalToDetail } from "@/lib/signalNormalize";
 
 // ── Priority Alert types ──────────────────────────────────────
 
@@ -113,6 +114,7 @@ function PriorityAlerts() {
 }
 
 function AlertRow({ signal }: { signal: Signal }) {
+    const selectSignalDetail = useCortexStore((s) => s.selectSignalDetail);
     const config = ALERT_CONFIG[signal.type] ?? ALERT_CONFIG.error;
     const Icon = config.icon;
     const time = signal.timestamp
@@ -120,7 +122,10 @@ function AlertRow({ signal }: { signal: Signal }) {
         : "";
 
     return (
-        <div className="px-4 py-1.5 flex items-start gap-2 hover:bg-cortex-bg/20 transition-colors">
+        <div
+            className="px-4 py-1.5 flex items-start gap-2 hover:bg-cortex-bg/20 transition-colors cursor-pointer"
+            onClick={() => selectSignalDetail(streamSignalToDetail(signal))}
+        >
             <Icon className={`w-3 h-3 mt-0.5 flex-shrink-0 ${config.color}`} />
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

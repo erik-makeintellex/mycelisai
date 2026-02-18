@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Activity, Radio, ChevronUp, ChevronDown, ArrowDownLeft, ArrowUpRight, RotateCw } from 'lucide-react';
 import { useCortexStore, type StreamSignal } from '@/store/useCortexStore';
+import { streamSignalToDetail } from '@/lib/signalNormalize';
 
 // ── Signal Direction Classification ─────────────────────────
 
@@ -128,6 +129,7 @@ function formatTime(timestamp?: string): string {
 }
 
 function SignalRow({ signal }: { signal: StreamSignal }) {
+    const selectSignalDetail = useCortexStore((s) => s.selectSignalDetail);
     const time = formatTime(signal.timestamp);
     const source = signal.source ?? 'system';
     const message = signal.message ?? JSON.stringify(signal.payload ?? {});
@@ -137,7 +139,10 @@ function SignalRow({ signal }: { signal: StreamSignal }) {
     const dirColor = DIRECTION_COLORS[direction];
 
     return (
-        <div className={`flex items-center gap-2 px-4 py-1.5 hover:bg-cortex-surface/50 transition-colors font-mono ${colors.glow}`}>
+        <div
+            className={`flex items-center gap-2 px-4 py-1.5 hover:bg-cortex-surface/50 transition-colors font-mono cursor-pointer ${colors.glow}`}
+            onClick={() => selectSignalDetail(streamSignalToDetail(signal))}
+        >
             {/* Direction indicator */}
             <DirIcon className={`w-3 h-3 flex-shrink-0 ${dirColor}`} />
 

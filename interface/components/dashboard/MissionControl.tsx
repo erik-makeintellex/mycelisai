@@ -9,6 +9,7 @@ import OperationsBoard from "./OperationsBoard";
 import MissionControlChat from "./MissionControlChat";
 import SensorLibrary from "./SensorLibrary";
 import CognitiveStatusPanel from "../workspace/CognitiveStatusPanel";
+import SignalDetailDrawer from "../stream/SignalDetailDrawer";
 
 export default function MissionControlLayout() {
     return (
@@ -23,7 +24,7 @@ function DashboardGrid() {
     const router = useRouter();
 
     return (
-        <div className="h-full flex flex-col bg-cortex-bg text-cortex-text-main">
+        <div className="h-full flex flex-col bg-cortex-bg text-cortex-text-main relative">
             {/* Header */}
             <header className="h-12 border-b border-cortex-border flex items-center justify-between px-4 bg-cortex-surface/50 backdrop-blur-sm flex-shrink-0">
                 <div className="flex items-center gap-4">
@@ -88,6 +89,9 @@ function DashboardGrid() {
                     <MissionControlChat />
                 </div>
             </div>
+
+            {/* Signal Detail Drawer */}
+            <SignalDetailDrawer />
         </div>
     );
 }

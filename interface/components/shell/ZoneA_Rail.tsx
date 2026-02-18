@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Network, Cpu, LayoutGrid, Settings, Shield, Share2, BrainCircuit, Cable, Store, BookOpen, Brain, BarChart3, Users, Home } from 'lucide-react';
+import { Network, Cpu, Settings, Shield, BrainCircuit, Cable, Store, BookOpen, Brain, Users, Home } from 'lucide-react';
 
 export function ZoneA() {
     return (
@@ -20,11 +20,9 @@ export function ZoneA() {
 
             {/* 2. Navigation Items */}
             <div className="flex-1 flex flex-col py-4 gap-1 px-2">
-                <NavItem href="/" icon={Home} label="Product Home" />
-                <NavItem href="/dashboard" icon={BarChart3} label="Dashboard" />
-                <NavItem href="/architect" icon={Share2} label="Swarm Architect" />
-                <NavItem href="/matrix" icon={BrainCircuit} label="Cognitive Matrix" />
+                <NavItem href="/dashboard" icon={Home} label="Mission Control" />
                 <NavItem href="/wiring" icon={Cable} label="Neural Wiring" />
+                <NavItem href="/matrix" icon={BrainCircuit} label="Cognitive Matrix" />
                 <NavItem href="/teams" icon={Users} label="Team Management" />
                 <NavItem href="/catalogue" icon={BookOpen} label="Agent Catalogue" />
                 <NavItem href="/marketplace" icon={Store} label="Skills Market" />

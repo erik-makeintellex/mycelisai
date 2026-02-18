@@ -139,16 +139,16 @@ Three workflows run on push/PR to `main` and `develop`:
 
 | Route | Description |
 | :--- | :--- |
-| `/` | Mission Control — Council chat (member selector), operations board, telemetry, sensors, cognitive status |
+| `/` | Product landing page (marketing) — links to `/dashboard` to launch console |
+| `/dashboard` | Mission Control — Council chat (member selector), operations board, telemetry, sensors, cognitive status |
 | `/wiring` | Neural Wiring — ArchitectChat + CircuitBoard (edit/delete agents) + NatsWaterfall |
+| `/architect` | Redirects to `/wiring` |
 | `/teams` | Team Management — browse standing + mission teams, agent roster, delivery targets |
 | `/catalogue` | Agent Catalogue — CRUD for agent blueprints |
 | `/memory` | Memory Explorer — Hot/Warm/Cold three-tier browser |
 | `/approvals` | Governance — approval queue, policy config, team proposals (3 tabs) |
 | `/missions/[id]/teams` | Team Actuation — live team drill-down |
 | `/settings` | Profile, Teams, Cognitive Matrix, MCP Tools |
-| `/dashboard` | KPI deck, MatrixGrid, LogStream |
-| `/architect` | Full Workspace (alias for `/wiring`) |
 | `/matrix` | Cognitive Matrix grid |
 | `/marketplace` | Skills Market — connector registry |
 | `/telemetry` | System Status — infrastructure monitoring |

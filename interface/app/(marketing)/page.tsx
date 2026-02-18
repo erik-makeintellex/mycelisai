@@ -232,8 +232,8 @@ export default function LandingPage() {
                     </div>
                     <div className="flex gap-6 text-sm">
                         <Link href="https://github.com/erik-makeintellex/mycelisai#readme" target="_blank" className="hover:text-zinc-300 transition-colors">Documentation</Link>
-                        <Link href="#" className="hover:text-zinc-300 transition-colors">API Reference</Link>
-                        <Link href="#" className="hover:text-zinc-300 transition-colors">Status</Link>
+                        <Link href="/dashboard" className="hover:text-zinc-300 transition-colors">Dashboard</Link>
+                        <Link href="/telemetry" className="hover:text-zinc-300 transition-colors">Status</Link>
                     </div>
                 </div>
             </footer>
