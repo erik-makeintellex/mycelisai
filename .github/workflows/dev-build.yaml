@@ -1,0 +1,59 @@
+name: Dev Build
+
+on:
+  push:
+    branches: ["develop"]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-dev:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/mycelis/core
+            ${{ env.REGISTRY }}/mycelis/interface
+          tags: type=raw,value=dev
+
+      - name: Build and push Core (Dev)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: core/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/mycelis/core:dev
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_MODE=dev
+
+      - name: Build and push Interface (Dev)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./interface
+          file: ./interface/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/mycelis/interface:dev
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_ENV=development

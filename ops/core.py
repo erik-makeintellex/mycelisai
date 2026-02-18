@@ -1,5 +1,5 @@
 from invoke import task, Collection
-from .config import CORE_DIR, is_windows
+from .config import CORE_DIR, ROOT_DIR, is_windows
 
 @task
 def test(c):
@@ -44,24 +44,29 @@ def build(c):
     
     return tag
 
+def _load_env():
+    """Load .env into the process environment for local execution."""
+    from dotenv import load_dotenv
+    load_dotenv(str(ROOT_DIR / ".env"))
+
 @task
 def run(c):
     """
     Run the Core Service locally (Native).
+    Stops any existing instance first to avoid port conflicts.
     """
+    stop(c)
+    _load_env()
+    import os
+    os.environ["PYTHONIOENCODING"] = "utf-8"
     print("Starting Mycelis Core (Native)...")
-    # Use Popen or just run? run blocks.
-    # We want it to run in foreground for logs?
-    # Or background? Usually 'run' implies foreground in a separate terminal or blocking.
-    # But for 'restart', we need background or detached?
-    # Let's stick to blocking 'run' for now, user can open new tab.
     with c.cd(str(CORE_DIR)):
-        # Check platform
         bin_name = "server.exe" if is_windows() else "server"
+        env = {"PYTHONIOENCODING": "utf-8"}
         if is_windows():
-            c.run(f"bin\\{bin_name}")
+            c.run(f"bin\\{bin_name}", pty=False, in_stream=False, env=env)
         else:
-            c.run(f"./bin/{bin_name}")
+            c.run(f"./bin/{bin_name}", pty=True, env=env)
 
 @task
 def stop(c):

@@ -1,0 +1,39 @@
+# Mycelis Cognitive Engine Configuration
+# Controls both vLLM text inference and Diffusers media generation
+
+text:
+  # vLLM text model configuration
+  model: "Qwen/Qwen2.5-Coder-7B-Instruct-AWQ"
+  host: "0.0.0.0"
+  port: 8000
+  # GPU memory utilization (0.0-1.0) — leave headroom for media engine
+  gpu_memory_utilization: 0.60
+  # Max model length (context window)
+  max_model_len: 8192
+  # Quantization method (awq for AWQ models)
+  quantization: "awq"
+  # Tensor parallelism (number of GPUs for text)
+  tensor_parallel_size: 1
+  # API key for vLLM (matches cognitive.yaml)
+  api_key: "mycelis-local"
+
+media:
+  # Diffusers image generation
+  model: "stabilityai/stable-diffusion-xl-base-1.0"
+  host: "0.0.0.0"
+  port: 8001
+  # Device: auto selects cuda if available, falls back to cpu
+  device: "auto"
+  # Default inference parameters
+  default_steps: 30
+  default_guidance_scale: 7.5
+  default_width: 1024
+  default_height: 1024
+  # Enable torch.compile for faster inference (requires torch 2.0+)
+  compile: false
+
+# Hardware partitioning strategy
+# Single GPU: text gets 60% VRAM, media gets 40% via sequential offload
+# Multi-GPU: tensor_parallel_size > 1 for text, media on separate GPU
+partitioning:
+  strategy: "shared"  # "shared" (single GPU) or "dedicated" (multi-GPU)

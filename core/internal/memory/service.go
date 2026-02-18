@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // Use pgx driver
@@ -178,4 +180,125 @@ func (s *Service) ListLogs(ctx context.Context, start, end time.Time, limit int)
 		logs = append(logs, &entry)
 	}
 	return logs, nil
+}
+
+// ── Vector Memory (pgvector) ─────────────────────────────────
+
+// VectorResult is a single semantic search hit from context_vectors.
+type VectorResult struct {
+	ID        string         `json:"id"`
+	Content   string         `json:"content"`
+	Metadata  map[string]any `json:"metadata"`
+	Score     float64        `json:"score"` // cosine similarity (1.0 = identical)
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+// StoreVector persists an embedding into context_vectors for future RAG retrieval.
+func (s *Service) StoreVector(ctx context.Context, content string, embedding []float64, metadata map[string]any) error {
+	metaJSON, _ := json.Marshal(metadata)
+	vecStr := formatVector(embedding)
+
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO context_vectors (content, embedding, metadata)
+		VALUES ($1, $2::vector, $3)
+	`, content, vecStr, metaJSON)
+
+	if err != nil {
+		return fmt.Errorf("store vector failed: %w", err)
+	}
+	return nil
+}
+
+// SemanticSearch finds the top-K nearest vectors by cosine similarity.
+func (s *Service) SemanticSearch(ctx context.Context, queryVec []float64, limit int) ([]VectorResult, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+
+	vecStr := formatVector(queryVec)
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, content, metadata, 1 - (embedding <=> $1::vector) AS score, created_at
+		FROM context_vectors
+		WHERE embedding IS NOT NULL
+		ORDER BY embedding <=> $1::vector
+		LIMIT $2
+	`, vecStr, limit)
+	if err != nil {
+		return nil, fmt.Errorf("semantic search failed: %w", err)
+	}
+	defer rows.Close()
+
+	var results []VectorResult
+	for rows.Next() {
+		var r VectorResult
+		var metaJSON []byte
+		if err := rows.Scan(&r.ID, &r.Content, &metaJSON, &r.Score, &r.CreatedAt); err != nil {
+			return nil, err
+		}
+		if len(metaJSON) > 0 {
+			_ = json.Unmarshal(metaJSON, &r.Metadata)
+		}
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+// ListSitReps retrieves recent SitReps for a team.
+func (s *Service) ListSitReps(ctx context.Context, teamID string, limit int) ([]map[string]any, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, team_id, timestamp, time_window_start, time_window_end, summary, key_events, strategies, status
+		FROM sitreps
+		WHERE team_id = $1
+		ORDER BY timestamp DESC
+		LIMIT $2
+	`, teamID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []map[string]any
+	for rows.Next() {
+		var id, tID, summary, status string
+		var strategies sql.NullString
+		var ts, winStart, winEnd time.Time
+		var keyEventsJSON []byte
+
+		if err := rows.Scan(&id, &tID, &ts, &winStart, &winEnd, &summary, &keyEventsJSON, &strategies, &status); err != nil {
+			return nil, err
+		}
+
+		entry := map[string]any{
+			"id":                id,
+			"team_id":           tID,
+			"timestamp":         ts,
+			"time_window_start": winStart,
+			"time_window_end":   winEnd,
+			"summary":           summary,
+			"strategies":        strategies.String,
+			"status":            status,
+		}
+
+		var keyEvents []string
+		if json.Unmarshal(keyEventsJSON, &keyEvents) == nil {
+			entry["key_events"] = keyEvents
+		}
+
+		results = append(results, entry)
+	}
+	return results, nil
+}
+
+// formatVector converts a float64 slice to pgvector string format: "[0.1,0.2,0.3]"
+func formatVector(v []float64) string {
+	parts := make([]string, len(v))
+	for i, f := range v {
+		parts[i] = fmt.Sprintf("%g", f)
+	}
+	return "[" + strings.Join(parts, ",") + "]"
 }

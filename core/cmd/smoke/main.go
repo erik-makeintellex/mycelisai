@@ -78,7 +78,7 @@ func main() {
 
 	// 4. Check API
 	log.Println("\n🧪 Test 3: Checking Admin API for Approvals...")
-	resp, err := http.Get("http://localhost:8080/admin/approvals")
+	resp, err := http.Get("http://localhost:8081/admin/approvals")
 	if err != nil {
 		log.Fatalf("❌ API Failed: %v", err)
 	}

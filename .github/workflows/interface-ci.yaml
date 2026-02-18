@@ -1,0 +1,68 @@
+name: Interface CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+    paths:
+      - "interface/**"
+      - "ops/interface.py"
+      - ".github/workflows/interface-ci.yaml"
+  pull_request:
+    branches: ["main", "develop"]
+    paths:
+      - "interface/**"
+      - "ops/interface.py"
+      - ".github/workflows/interface-ci.yaml"
+
+jobs:
+  validate:
+    name: Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: ./interface
+        run: npm ci
+
+      - name: Lint
+        working-directory: ./interface
+        run: npm run lint
+
+      - name: Type Check
+        working-directory: ./interface
+        run: npx tsc --noEmit
+
+      - name: Test
+        working-directory: ./interface
+        run: npm run test
+
+  build:
+    name: Build Production
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: ./interface
+        # Using npm ci for clean install
+        run: npm ci
+
+      - name: Build
+        working-directory: ./interface
+        run: npm run build

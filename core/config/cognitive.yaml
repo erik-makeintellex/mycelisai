@@ -1,10 +1,24 @@
 providers:
-  # --- Local Development ---
-  local_ollama:
+  # --- Self-Hosted Inference Engines ---
+  # These can run anywhere on the network. Set endpoint to the host address.
+
+  vllm:
     type: "openai_compatible"
-    endpoint: "http://192.168.50.156:11434/v1" # Docker users: override via OLLAMA_HOST
+    endpoint: "http://127.0.0.1:8000/v1"
+    model_id: "qwen2.5-coder"
+    api_key: "mycelis-local"
+
+  ollama:
+    type: "openai_compatible"
+    endpoint: "http://192.168.50.156:11434/v1"
     model_id: "qwen2.5-coder:7b"
     api_key: "ollama"
+
+  lmstudio:
+    type: "openai_compatible"
+    endpoint: "http://127.0.0.1:1234/v1"
+    model_id: "default"
+    api_key: "lm-studio"
 
   # --- Commercial (Environment Variables Required) ---
   production_gpt4:
@@ -24,9 +38,15 @@ providers:
     api_key_env: "GEMINI_API_KEY"
 
 profiles:
-  # Map Intents to Providers
-  sentry: "local_ollama" # Fast, Cheap
-  architect: "local_ollama" # For Dev (was OpenAI)
-  creative: "local_ollama" # For Dev (was Claude)
-  coder: "local_ollama" # Code Gen
-  chat: "local_ollama" # Interactive
+  # Map Intents to Providers — change these to route profiles to any provider above
+  sentry: "ollama"
+  architect: "ollama"
+  creative: "ollama"
+  coder: "ollama"
+  chat: "ollama"
+  admin: "ollama"
+
+# Media generation engine (Diffusers-based, OpenAI-compatible API)
+media:
+  endpoint: "http://127.0.0.1:8001/v1"
+  model_id: "stable-diffusion-xl"

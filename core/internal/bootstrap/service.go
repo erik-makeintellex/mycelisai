@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/mycelis/core/pkg/pb/swarm"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 // Service listens for new hardware announcements
@@ -96,12 +97,12 @@ func (s *Service) processHeartbeat(data []byte) error {
 
 func (s *Service) Start() {
 	// Announce (Legacy JSON device)
-	s.nc.Subscribe("swarm.bootstrap.announce", func(msg *nats.Msg) {
+	s.nc.Subscribe(protocol.TopicGlobalAnnounce, func(msg *nats.Msg) {
 		s.processAnnouncement(msg.Data)
 	})
 
 	// Heartbeat (Protobuf Agent)
-	s.nc.Subscribe("swarm.global.heartbeat", func(msg *nats.Msg) {
+	s.nc.Subscribe(protocol.TopicGlobalHeartbeat, func(msg *nats.Msg) {
 		s.processHeartbeat(msg.Data)
 	})
 
