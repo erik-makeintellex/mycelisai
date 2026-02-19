@@ -336,6 +336,19 @@ func (r *InternalToolRegistry) registerAll() {
 		},
 		Handler: r.handleResearchForBlueprint,
 	}
+
+	r.tools["summarize_conversation"] = &InternalTool{
+		Name:        "summarize_conversation",
+		Description: "Summarize recent conversation into persistent memory. Extracts key topics, user preferences, personality notes, and data references. The summary is embedded into pgvector for future semantic recall. Call this when you want to checkpoint important conversation context.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"messages": map[string]any{"type": "string", "description": "The conversation text to summarize (last 15-20 messages)"},
+			},
+			"required": []string{"messages"},
+		},
+		Handler: r.handleSummarizeConversation,
+	}
 }
 
 // ── Tool Handlers ──────────────────────────────────────────────
@@ -1084,12 +1097,126 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 	return string(data), nil
 }
 
+// ── Conversation Memory ─────────────────────────────────────────
+
+func (r *InternalToolRegistry) handleSummarizeConversation(ctx context.Context, args map[string]any) (string, error) {
+	messagesText, _ := args["messages"].(string)
+	if messagesText == "" {
+		return "", fmt.Errorf("summarize_conversation requires 'messages'")
+	}
+
+	if r.brain == nil {
+		return "", fmt.Errorf("cognitive engine offline — cannot summarize")
+	}
+	if r.mem == nil {
+		return "", fmt.Errorf("memory service offline — cannot store summary")
+	}
+
+	return r.summarizeAndStore(ctx, "admin", messagesText, 0)
+}
+
+// AutoSummarize compresses a chat history window into a persistent summary.
+// Called as a background goroutine from the agent's ReAct pipeline — non-blocking, non-fatal.
+func (r *InternalToolRegistry) AutoSummarize(ctx context.Context, agentID string, history []cognitive.ChatMessage) {
+	if r.brain == nil || r.mem == nil {
+		return
+	}
+
+	// Flatten last messages into a text block
+	var sb strings.Builder
+	for _, m := range history {
+		sb.WriteString(fmt.Sprintf("[%s]: %s\n", m.Role, m.Content))
+	}
+
+	summaryID, err := r.summarizeAndStore(ctx, agentID, sb.String(), len(history))
+	if err != nil {
+		log.Printf("AutoSummarize [%s]: failed: %v", agentID, err)
+		return
+	}
+	log.Printf("AutoSummarize [%s]: stored summary %s (%d messages)", agentID, summaryID, len(history))
+}
+
+// summarizeAndStore sends conversation text to the LLM for compression, parses the
+// structured output, and stores it in the conversation_summaries table + pgvector.
+func (r *InternalToolRegistry) summarizeAndStore(ctx context.Context, agentID, messagesText string, msgCount int) (string, error) {
+	compressionPrompt := `Summarize this conversation in 2-3 sentences. Then extract structured metadata.
+
+Respond with ONLY this JSON (no markdown fences):
+{
+  "summary": "2-3 sentence summary of the conversation",
+  "key_topics": ["topic1", "topic2"],
+  "user_preferences": {"preference_key": "preference_value"},
+  "personality_notes": "how the user wants to be addressed or treated",
+  "data_references": [{"type": "file/url/artifact", "ref": "the reference"}]
+}
+
+Conversation:
+` + messagesText
+
+	req := cognitive.InferRequest{
+		Profile: "chat",
+		Messages: []cognitive.ChatMessage{
+			{Role: "system", Content: "You are a conversation summarizer. Output only valid JSON."},
+			{Role: "user", Content: compressionPrompt},
+		},
+	}
+
+	resp, err := r.brain.InferWithContract(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("LLM compression failed: %w", err)
+	}
+
+	// Parse structured output from LLM
+	var parsed struct {
+		Summary          string         `json:"summary"`
+		KeyTopics        []string       `json:"key_topics"`
+		UserPreferences  map[string]any `json:"user_preferences"`
+		PersonalityNotes string         `json:"personality_notes"`
+		DataReferences   []any          `json:"data_references"`
+	}
+
+	// Strip markdown fences if present
+	text := strings.TrimSpace(resp.Text)
+	text = strings.TrimPrefix(text, "```json")
+	text = strings.TrimPrefix(text, "```")
+	text = strings.TrimSuffix(text, "```")
+	text = strings.TrimSpace(text)
+
+	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
+		// Fallback: store the raw text as the summary
+		log.Printf("summarizeAndStore: LLM output not valid JSON, using raw text: %v", err)
+		parsed.Summary = resp.Text
+	}
+
+	if parsed.Summary == "" {
+		parsed.Summary = resp.Text
+	}
+	if parsed.KeyTopics == nil {
+		parsed.KeyTopics = []string{}
+	}
+	if parsed.UserPreferences == nil {
+		parsed.UserPreferences = map[string]any{}
+	}
+	if parsed.DataReferences == nil {
+		parsed.DataReferences = []any{}
+	}
+
+	embedFunc := memory.EmbedFunc(r.brain.Embed)
+	summaryID, err := r.mem.StoreConversationSummary(ctx, embedFunc, agentID, parsed.Summary,
+		parsed.KeyTopics, parsed.UserPreferences, parsed.PersonalityNotes, parsed.DataReferences, msgCount)
+	if err != nil {
+		return "", fmt.Errorf("store summary failed: %w", err)
+	}
+
+	return summaryID, nil
+}
+
 // ── Runtime Context Builder ─────────────────────────────────────
 
 // BuildContext generates a live system state block for injection into an agent's
 // system prompt. Gives agents awareness of active teams, NATS topology, cognitive
 // config, and installed MCP servers before they process any message.
-func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, teamDeliveries []string) string {
+func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, teamDeliveries []string, currentInput string) string {
 	var sb strings.Builder
 	sb.WriteString("\n\n## Runtime Context (Live System State)\n")
 	sb.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
@@ -1106,7 +1233,10 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, 
 	// 4. Installed MCP Servers
 	r.writeMCPServers(&sb)
 
-	// 5. Interaction Protocol
+	// 5. Recalled Conversation Context (pgvector semantic recall)
+	r.writeRecalledMemory(&sb, agentID, currentInput)
+
+	// 6. Interaction Protocol
 	sb.WriteString("### Interaction Protocol\n")
 	sb.WriteString("**Pre-response** (before answering):\n")
 	sb.WriteString("1. Check if past context is relevant → `recall` or `search_memory`\n")
@@ -1284,6 +1414,51 @@ func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
 				sb.WriteString(fmt.Sprintf("- **%s**: %s (via %s)\n", t.name, desc, s.name))
 			}
 		}
+	}
+	sb.WriteString("\n")
+}
+
+func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID, currentInput string) {
+	if r.brain == nil || r.mem == nil || currentInput == "" {
+		return
+	}
+
+	// Embed the current input (truncated) for semantic search
+	query := currentInput
+	if len(query) > 200 {
+		query = query[:200]
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	vec, err := r.brain.Embed(ctx, query, "")
+	if err != nil {
+		return // Silent — embedding not available
+	}
+
+	summaries, err := r.mem.RecallConversations(ctx, vec, agentID, 3)
+	if err != nil || len(summaries) == 0 {
+		return
+	}
+
+	sb.WriteString("### Previous Context (from past conversations)\n")
+	for _, s := range summaries {
+		age := time.Since(s.CreatedAt)
+		var ageStr string
+		switch {
+		case age < time.Hour:
+			ageStr = fmt.Sprintf("%d min ago", int(age.Minutes()))
+		case age < 24*time.Hour:
+			ageStr = fmt.Sprintf("%d hours ago", int(age.Hours()))
+		default:
+			ageStr = fmt.Sprintf("%d days ago", int(age.Hours()/24))
+		}
+		sb.WriteString(fmt.Sprintf("- [%s] %s", ageStr, s.Summary))
+		if len(s.KeyTopics) > 0 {
+			sb.WriteString(fmt.Sprintf(" (topics: %s)", strings.Join(s.KeyTopics, ", ")))
+		}
+		sb.WriteString("\n")
 	}
 	sb.WriteString("\n")
 }
