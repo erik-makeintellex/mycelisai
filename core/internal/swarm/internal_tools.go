@@ -660,16 +660,31 @@ func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map
 		}
 	}
 
-	_, err := r.db.ExecContext(ctx, `
+	var artifactID string
+	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status)
 		VALUES ('internal', $1, $2, $3, $4, $5, 'pending')
-	`, artType, title, contentType, content, metaJSON)
+		RETURNING id
+	`, artType, title, contentType, content, metaJSON).Scan(&artifactID)
 	if err != nil {
 		log.Printf("store_artifact: %v", err)
 		return fmt.Sprintf("Failed to store artifact: %v", err), nil
 	}
 
-	return fmt.Sprintf("Artifact '%s' stored successfully (type: %s).", title, artType), nil
+	artifactRef := map[string]any{
+		"id": artifactID, "type": artType, "title": title, "content_type": contentType,
+	}
+	// Include inline content for text-based types (not images/audio — too large for LLM context)
+	if artType != "image" && artType != "audio" && len(content) < 500_000 {
+		artifactRef["content"] = content
+	}
+
+	result := map[string]any{
+		"message":  fmt.Sprintf("Artifact '%s' stored (type: %s, id: %s).", title, artType, artifactID),
+		"artifact": artifactRef,
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
 }
 
 func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[string]any) (string, error) {
@@ -1018,10 +1033,11 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		return fmt.Sprintf("Media engine error (HTTP %d): %s", resp.StatusCode, string(respBody)), nil
 	}
 
-	// Parse response to extract metadata (don't return full base64 to LLM — too large)
+	// Parse response to extract base64 image data
 	var imgResp struct {
 		Created int `json:"created"`
 		Data    []struct {
+			B64JSON       string `json:"b64_json"`
 			RevisedPrompt string `json:"revised_prompt"`
 		} `json:"data"`
 	}
@@ -1029,22 +1045,43 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		return "Image generated but failed to parse response metadata.", nil
 	}
 
+	b64Content := ""
+	if len(imgResp.Data) > 0 {
+		b64Content = imgResp.Data[0].B64JSON
+	}
+
+	titleTrunc := prompt
+	if len(titleTrunc) > 80 {
+		titleTrunc = titleTrunc[:80]
+	}
+	title := fmt.Sprintf("Generated: %s", titleTrunc)
+
 	// Store the image as an artifact if DB is available
+	var artifactID string
 	if r.db != nil {
-		titleTrunc := prompt
-		if len(titleTrunc) > 80 {
-			titleTrunc = titleTrunc[:80]
-		}
-		_, storeErr := r.db.ExecContext(ctx, `
+		err := r.db.QueryRowContext(ctx, `
 			INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status)
-			VALUES ('internal', 'image', $1, 'image/png', 'base64-stored', $2, 'completed')
-		`, fmt.Sprintf("Generated: %s", titleTrunc), string(respBody))
-		if storeErr != nil {
-			log.Printf("generate_image: failed to store artifact: %v", storeErr)
+			VALUES ('internal', 'image', $1, 'image/png', $2, $3, 'completed')
+			RETURNING id
+		`, title, b64Content, string(respBody)).Scan(&artifactID)
+		if err != nil {
+			log.Printf("generate_image: failed to store artifact: %v", err)
 		}
 	}
 
-	return fmt.Sprintf("Image generated successfully for prompt: \"%s\" (size: %s). The image has been stored as an artifact.", prompt, size), nil
+	// Return structured result: message for LLM, artifact for HTTP pipeline
+	result := map[string]any{
+		"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). Stored as artifact.", prompt, size),
+		"artifact": map[string]any{
+			"id":           artifactID,
+			"type":         "image",
+			"title":        title,
+			"content_type": "image/png",
+			"content":      b64Content,
+		},
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
 }
 
 // ── Runtime Context Builder ─────────────────────────────────────
@@ -1099,12 +1136,19 @@ func (r *InternalToolRegistry) writeTeamRoster(sb *strings.Builder) {
 	}
 
 	for _, m := range manifests {
-		memberIDs := make([]string, len(m.Members))
-		for i, a := range m.Members {
-			memberIDs[i] = a.ID
+		desc := m.Description
+		if desc == "" {
+			desc = fmt.Sprintf("%d agent(s)", len(m.Members))
 		}
-		sb.WriteString(fmt.Sprintf("- **%s** (`%s`, %s): %d agents [%s]\n",
-			m.Name, m.ID, m.Type, len(m.Members), strings.Join(memberIDs, ", ")))
+		sb.WriteString(fmt.Sprintf("- **%s** (`%s`, %s): %s\n",
+			m.Name, m.ID, m.Type, desc))
+		for _, a := range m.Members {
+			tools := ""
+			if len(a.Tools) > 0 {
+				tools = " [" + strings.Join(a.Tools, ", ") + "]"
+			}
+			sb.WriteString(fmt.Sprintf("  - `%s` (%s)%s\n", a.ID, a.Role, tools))
+		}
 	}
 	sb.WriteString("\n")
 }

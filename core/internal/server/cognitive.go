@@ -183,18 +183,37 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Agent now returns structured JSON (ProcessResult). Extract just the text
-	// for the plain-text admin chat endpoint. This keeps backward compatibility.
+	// Agent returns structured JSON (ProcessResult with text, tools_used, artifacts).
+	// Wrap in CTS envelope so artifacts flow to the frontend.
 	var agentResult struct {
-		Text string `json:"text"`
+		Text      string                     `json:"text"`
+		ToolsUsed []string                   `json:"tools_used,omitempty"`
+		Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
 	}
-	responseText := string(msg.Data)
-	if err := json.Unmarshal(msg.Data, &agentResult); err == nil && agentResult.Text != "" {
-		responseText = agentResult.Text
+	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
+		agentResult.Text = string(msg.Data)
+		agentResult.ToolsUsed = nil
+		agentResult.Artifacts = nil
 	}
 
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write([]byte(responseText))
+	chatPayload := protocol.ChatResponsePayload{
+		Text:      agentResult.Text,
+		ToolsUsed: agentResult.ToolsUsed,
+		Artifacts: agentResult.Artifacts,
+	}
+	payloadBytes, _ := json.Marshal(chatPayload)
+
+	envelope := protocol.CTSEnvelope{
+		Meta: protocol.CTSMeta{
+			SourceNode: "admin",
+			Timestamp:  time.Now(),
+		},
+		SignalType: protocol.SignalChatResponse,
+		TrustScore: protocol.TrustScoreCognitive,
+		Payload:    payloadBytes,
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
 }
 
 // ---------------------------------------------------------------------------
@@ -323,22 +342,25 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Parse structured agent response (ProcessResult JSON with text + tools_used).
+	// Parse structured agent response (ProcessResult JSON with text, tools_used, artifacts).
 	// Falls back gracefully to raw text if the agent returns plain text.
 	var agentResult struct {
-		Text      string   `json:"text"`
-		ToolsUsed []string `json:"tools_used,omitempty"`
+		Text      string                     `json:"text"`
+		ToolsUsed []string                   `json:"tools_used,omitempty"`
+		Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
 	}
 	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
 		// Fallback: treat entire response as plain text
 		agentResult.Text = string(msg.Data)
 		agentResult.ToolsUsed = nil
+		agentResult.Artifacts = nil
 	}
 
 	// Wrap response in CTS envelope with trust score, provenance, and tool metadata
 	chatPayload := protocol.ChatResponsePayload{
 		Text:      agentResult.Text,
 		ToolsUsed: agentResult.ToolsUsed,
+		Artifacts: agentResult.Artifacts,
 	}
 	payloadBytes, _ := json.Marshal(chatPayload)
 
