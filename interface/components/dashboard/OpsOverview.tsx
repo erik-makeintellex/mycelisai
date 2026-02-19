@@ -27,11 +27,13 @@ import { streamSignalToDetail } from "@/lib/signalNormalize";
 
 function SectionCard({
     title,
+    subtitle,
     icon: Icon,
     href,
     children,
 }: {
     title: string;
+    subtitle: string;
     icon: React.ElementType;
     href: string;
     children: React.ReactNode;
@@ -42,12 +44,17 @@ function SectionCard({
         <div className="border border-cortex-border rounded-lg overflow-hidden">
             <div className="flex items-center gap-2 px-3 py-2 bg-cortex-bg/50">
                 <Icon className="w-3 h-3 text-cortex-text-muted" />
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted flex-1">
-                    {title}
-                </span>
+                <div className="flex-1 min-w-0">
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted block">
+                        {title}
+                    </span>
+                    <span className="text-[8px] font-mono text-cortex-text-muted/60 block truncate">
+                        {subtitle}
+                    </span>
+                </div>
                 <button
                     onClick={() => router.push(href)}
-                    className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors"
+                    className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors flex-shrink-0"
                     title={`Open ${title}`}
                 >
                     <ExternalLink className="w-3 h-3" />
@@ -82,7 +89,7 @@ function SystemStatus() {
     const onlineSensors = sensors.filter((s) => s.status === "online").length;
 
     return (
-        <SectionCard title="System" icon={Cpu} href="/settings/brain">
+        <SectionCard title="System" subtitle="LLM engines and sensor feeds powering the organism" icon={Cpu} href="/settings/brain">
             <div className="px-3 py-2 space-y-1.5">
                 <EngineRow
                     label="Text"
@@ -265,10 +272,11 @@ function MissionsSection() {
     };
 
     return (
-        <SectionCard title="Missions" icon={Radar} href="/wiring">
+        <SectionCard title="Missions" subtitle="Active agent swarms executing user-defined objectives" icon={Radar} href="/wiring">
             {sortedMissions.length === 0 ? (
                 <div className="px-3 py-4 text-center">
-                    <p className="text-[10px] font-mono text-cortex-text-muted">No missions</p>
+                    <p className="text-[10px] font-mono text-cortex-text-muted">No active missions</p>
+                    <p className="text-[8px] font-mono text-cortex-text-muted/50 mt-1">Ask Soma to create one, or use the Wiring page</p>
                 </div>
             ) : (
                 <div className="max-h-48 overflow-y-auto">
@@ -312,7 +320,7 @@ function TeamsSection() {
     if (standingTeams.length === 0) return null;
 
     return (
-        <SectionCard title="Teams" icon={Users} href="/teams">
+        <SectionCard title="Teams" subtitle="Standing teams always online — Soma, Council, and more" icon={Users} href="/teams">
             <div className="max-h-32 overflow-y-auto">
                 {standingTeams.map((team) => {
                     const status = aggregateStatus(team.agents);
@@ -356,12 +364,17 @@ function MCPToolsSection() {
     const missingRecommended = RECOMMENDED_SERVERS.filter((n) => !installedNames.has(n));
 
     return (
-        <SectionCard title="MCP Tools" icon={Wrench} href="/settings/tools">
+        <SectionCard title="MCP Tools" subtitle="External tool servers agents can use — files, web, APIs" icon={Wrench} href="/settings/tools">
             <div className="px-3 py-2 space-y-1.5">
                 {mcpServers.length === 0 ? (
-                    <p className="text-[10px] font-mono text-cortex-text-muted">
-                        No tools installed
-                    </p>
+                    <div>
+                        <p className="text-[10px] font-mono text-cortex-text-muted">
+                            No tools installed
+                        </p>
+                        <p className="text-[8px] font-mono text-cortex-text-muted/50 mt-1">
+                            Start the backend to auto-install filesystem + fetch
+                        </p>
+                    </div>
                 ) : (
                     <>
                         {mcpServers.map((srv) => (
