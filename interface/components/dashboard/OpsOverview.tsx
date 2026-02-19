@@ -42,22 +42,22 @@ function SectionCard({
 
     return (
         <div className="border border-cortex-border rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 bg-cortex-bg/50">
-                <Icon className="w-3 h-3 text-cortex-text-muted" />
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-cortex-bg/50">
+                <Icon className="w-4 h-4 text-cortex-text-muted" />
                 <div className="flex-1 min-w-0">
-                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted block">
+                    <span className="text-[13px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted block">
                         {title}
                     </span>
-                    <span className="text-[8px] font-mono text-cortex-text-muted/60 block truncate">
+                    <span className="text-xs font-mono text-cortex-text-muted/60 block truncate">
                         {subtitle}
                     </span>
                 </div>
                 <button
                     onClick={() => router.push(href)}
-                    className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors flex-shrink-0"
+                    className="p-1 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors flex-shrink-0"
                     title={`Open ${title}`}
                 >
-                    <ExternalLink className="w-3 h-3" />
+                    <ExternalLink className="w-3.5 h-3.5" />
                 </button>
             </div>
             {children}
@@ -90,7 +90,7 @@ function SystemStatus() {
 
     return (
         <SectionCard title="System" subtitle="LLM engines and sensor feeds powering the organism" icon={Cpu} href="/settings/brain">
-            <div className="px-3 py-2 space-y-1.5">
+            <div className="px-3.5 py-2.5 space-y-2">
                 <EngineRow
                     label="Text"
                     sublabel={text?.model ?? "—"}
@@ -103,11 +103,11 @@ function SystemStatus() {
                 />
                 {sensors.length > 0 && (
                     <div className="flex items-center gap-2 pt-0.5">
-                        <Radio className="w-3 h-3 text-cortex-text-muted" />
-                        <span className="text-[10px] font-mono text-cortex-text-main">
+                        <Radio className="w-3.5 h-3.5 text-cortex-text-muted" />
+                        <span className="text-xs font-mono text-cortex-text-main">
                             Sensors
                         </span>
-                        <span className="ml-auto text-[9px] font-mono text-cortex-text-muted">
+                        <span className="ml-auto text-xs font-mono text-cortex-text-muted">
                             {onlineSensors}/{sensors.length} online
                         </span>
                     </div>
@@ -129,16 +129,16 @@ function EngineRow({
     return (
         <div className="flex items-center gap-2">
             <Circle
-                className={`w-1.5 h-1.5 flex-shrink-0 ${
+                className={`w-2 h-2 flex-shrink-0 ${
                     online
                         ? "fill-cortex-success text-cortex-success"
                         : "fill-cortex-danger text-cortex-danger"
                 }`}
             />
-            <span className="text-[10px] font-mono text-cortex-text-main">
+            <span className="text-[13px] font-mono font-semibold text-cortex-text-main">
                 {label}
             </span>
-            <span className="text-[9px] font-mono text-cortex-text-muted truncate ml-auto">
+            <span className="text-xs font-mono text-cortex-text-muted truncate ml-auto">
                 {sublabel}
             </span>
         </div>
@@ -172,38 +172,38 @@ function PriorityAlerts() {
         <div className="border border-cortex-border rounded-lg overflow-hidden">
             <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="w-full flex items-center gap-2 px-3 py-2 bg-cortex-bg/50 hover:bg-cortex-bg/80 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 bg-cortex-bg/50 hover:bg-cortex-bg/80 transition-colors"
             >
                 {collapsed ? (
-                    <ChevronRight className="w-3 h-3 text-cortex-text-muted" />
+                    <ChevronRight className="w-3.5 h-3.5 text-cortex-text-muted" />
                 ) : (
-                    <ChevronDown className="w-3 h-3 text-cortex-text-muted" />
+                    <ChevronDown className="w-3.5 h-3.5 text-cortex-text-muted" />
                 )}
-                <ShieldAlert className="w-3 h-3 text-cortex-warning" />
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-warning flex-1 text-left">
+                <ShieldAlert className="w-4 h-4 text-cortex-warning" />
+                <span className="text-[13px] font-mono font-bold uppercase tracking-widest text-cortex-warning flex-1 text-left">
                     Alerts
                 </span>
-                <span className="text-[8px] font-mono text-cortex-warning bg-cortex-warning/10 px-1.5 py-0.5 rounded">
+                <span className="text-xs font-mono text-cortex-warning bg-cortex-warning/10 px-2 py-0.5 rounded">
                     {alerts.length}
                 </span>
             </button>
 
             {!collapsed && (
-                <div className="max-h-36 overflow-y-auto">
+                <div className="max-h-40 overflow-y-auto">
                     {alerts.map((signal, i) => {
                         const config = ALERT_CONFIG[signal.type] ?? ALERT_CONFIG.error;
                         const Icon = config.icon;
                         return (
                             <div
                                 key={`${signal.type}-${signal.timestamp}-${i}`}
-                                className="px-3 py-1.5 flex items-center gap-2 hover:bg-cortex-bg/20 transition-colors cursor-pointer"
+                                className="px-3.5 py-2 flex items-center gap-2.5 hover:bg-cortex-bg/20 transition-colors cursor-pointer"
                                 onClick={() => selectSignalDetail(streamSignalToDetail(signal))}
                             >
-                                <Icon className={`w-3 h-3 flex-shrink-0 ${config.color}`} />
-                                <span className={`text-[8px] font-mono font-bold ${config.color}`}>
+                                <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${config.color}`} />
+                                <span className={`text-xs font-mono font-bold ${config.color}`}>
                                     {config.label}
                                 </span>
-                                <span className="text-[9px] font-mono text-cortex-text-main truncate flex-1">
+                                <span className="text-xs font-mono text-cortex-text-main truncate flex-1">
                                     {signal.message || signal.source || "—"}
                                 </span>
                             </div>
@@ -274,12 +274,12 @@ function MissionsSection() {
     return (
         <SectionCard title="Missions" subtitle="Active agent swarms executing user-defined objectives" icon={Radar} href="/wiring">
             {sortedMissions.length === 0 ? (
-                <div className="px-3 py-4 text-center">
-                    <p className="text-[10px] font-mono text-cortex-text-muted">No active missions</p>
-                    <p className="text-[8px] font-mono text-cortex-text-muted/50 mt-1">Ask Soma to create one, or use the Wiring page</p>
+                <div className="px-4 py-5 text-center">
+                    <p className="text-sm font-mono text-cortex-text-muted">No active missions</p>
+                    <p className="text-xs font-mono text-cortex-text-muted/50 mt-1">Ask Soma to create one, or use the Wiring page</p>
                 </div>
             ) : (
-                <div className="max-h-48 overflow-y-auto">
+                <div className="max-h-64 overflow-y-auto">
                     {sortedMissions.map((mission) => {
                         const teams = missionTeamMap.get(mission.id) ?? [];
                         const allAgents = teams.flatMap((t) => t.agents);
@@ -289,19 +289,19 @@ function MissionsSection() {
                             <button
                                 key={mission.id}
                                 onClick={() => router.push(`/missions/${mission.id}/teams`)}
-                                className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-cortex-bg/30 transition-colors text-left group"
+                                className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-cortex-bg/30 transition-colors text-left group"
                             >
-                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[status]}`} />
-                                <span className="text-[10px] font-mono font-bold text-cortex-text-main truncate flex-1">
+                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_DOT[status]}`} />
+                                <span className="text-[13px] font-mono font-bold text-cortex-text-main truncate flex-1">
                                     {mission.id}
                                 </span>
-                                <span className={`text-[8px] font-mono font-bold uppercase px-1 py-0.5 rounded ${STATUS_BADGE[mission.status] ?? STATUS_BADGE.active}`}>
+                                <span className={`text-xs font-mono font-bold uppercase px-2 py-0.5 rounded ${STATUS_BADGE[mission.status] ?? STATUS_BADGE.active}`}>
                                     {mission.status}
                                 </span>
-                                <span className="text-[8px] font-mono text-cortex-text-muted">
-                                    {mission.teams}T/{mission.agents}A
+                                <span className="text-xs font-mono text-cortex-text-muted">
+                                    {mission.teams}T / {mission.agents}A
                                 </span>
-                                <ExternalLink className="w-2.5 h-2.5 text-cortex-text-muted opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                <ExternalLink className="w-3.5 h-3.5 text-cortex-text-muted opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </button>
                         );
                     })}
@@ -321,7 +321,7 @@ function TeamsSection() {
 
     return (
         <SectionCard title="Teams" subtitle="Standing teams always online — Soma, Council, and more" icon={Users} href="/teams">
-            <div className="max-h-32 overflow-y-auto">
+            <div className="max-h-44 overflow-y-auto">
                 {standingTeams.map((team) => {
                     const status = aggregateStatus(team.agents);
                     const onlineCount = team.agents.filter((a) => a.status >= 1 && a.status <= 2).length;
@@ -329,13 +329,13 @@ function TeamsSection() {
                     return (
                         <div
                             key={team.id}
-                            className="px-3 py-1.5 flex items-center gap-2"
+                            className="px-3.5 py-2 flex items-center gap-2.5"
                         >
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[status]}`} />
-                            <span className="text-[10px] font-mono font-bold text-cortex-text-main truncate flex-1">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[status]}`} />
+                            <span className="text-[13px] font-mono font-bold text-cortex-text-main truncate flex-1">
                                 {team.name}
                             </span>
-                            <span className="text-[8px] font-mono text-cortex-text-muted">
+                            <span className="text-xs font-mono text-cortex-text-muted">
                                 {onlineCount}/{team.agents.length}
                             </span>
                         </div>
@@ -365,38 +365,38 @@ function MCPToolsSection() {
 
     return (
         <SectionCard title="MCP Tools" subtitle="External tool servers agents can use — files, web, APIs" icon={Wrench} href="/settings/tools">
-            <div className="px-3 py-2 space-y-1.5">
+            <div className="px-3.5 py-2.5 space-y-2">
                 {mcpServers.length === 0 ? (
                     <div>
-                        <p className="text-[10px] font-mono text-cortex-text-muted">
+                        <p className="text-xs font-mono text-cortex-text-muted">
                             No tools installed
                         </p>
-                        <p className="text-[8px] font-mono text-cortex-text-muted/50 mt-1">
+                        <p className="text-xs font-mono text-cortex-text-muted/50 mt-1">
                             Start the backend to auto-install filesystem + fetch
                         </p>
                     </div>
                 ) : (
                     <>
                         {mcpServers.map((srv) => (
-                            <div key={srv.id} className="flex items-center gap-2">
+                            <div key={srv.id} className="flex items-center gap-2.5">
                                 <Circle
-                                    className={`w-1.5 h-1.5 flex-shrink-0 ${
+                                    className={`w-2 h-2 flex-shrink-0 ${
                                         srv.status === "connected"
                                             ? "fill-cortex-success text-cortex-success"
                                             : "fill-cortex-danger text-cortex-danger"
                                     }`}
                                 />
-                                <span className="text-[10px] font-mono text-cortex-text-main truncate flex-1">
+                                <span className="text-[13px] font-mono text-cortex-text-main truncate flex-1">
                                     {srv.name}
                                 </span>
                                 {srv.tools && (
-                                    <span className="text-[8px] font-mono text-cortex-text-muted">
+                                    <span className="text-xs font-mono text-cortex-text-muted">
                                         {srv.tools.length}t
                                     </span>
                                 )}
                             </div>
                         ))}
-                        <div className="text-[9px] font-mono text-cortex-text-muted pt-0.5">
+                        <div className="text-xs font-mono text-cortex-text-muted pt-0.5">
                             {connectedCount}/{mcpServers.length} connected
                         </div>
                     </>
@@ -404,17 +404,17 @@ function MCPToolsSection() {
 
                 {missingRecommended.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-cortex-border/50">
-                        <p className="text-[8px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted mb-1.5">
+                        <p className="text-xs font-mono font-bold uppercase tracking-widest text-cortex-text-muted mb-1.5">
                             Recommended
                         </p>
                         {missingRecommended.map((name) => (
                             <button
                                 key={name}
                                 onClick={() => router.push("/settings/tools")}
-                                className="w-full flex items-center gap-1.5 py-0.5 text-left hover:text-cortex-primary transition-colors"
+                                className="w-full flex items-center gap-2 py-1 text-left hover:text-cortex-primary transition-colors"
                             >
-                                <Plus className="w-2.5 h-2.5 text-cortex-text-muted" />
-                                <span className="text-[9px] font-mono text-cortex-text-muted hover:text-cortex-primary">
+                                <Plus className="w-3.5 h-3.5 text-cortex-text-muted" />
+                                <span className="text-xs font-mono text-cortex-text-muted hover:text-cortex-primary">
                                     {name}
                                 </span>
                             </button>
@@ -431,15 +431,16 @@ function MCPToolsSection() {
 export default function OpsOverview() {
     return (
         <div className="h-full overflow-hidden bg-cortex-surface flex flex-col">
-            {/* Horizontal grid of section cards — fills width, scrolls vertically if needed */}
-            <div className="flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-cortex-border">
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2.5">
+            <div className="flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-cortex-border space-y-3">
+                {/* Top row: compact status cards in auto-fit grid */}
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
                     <SystemStatus />
                     <PriorityAlerts />
-                    <MissionsSection />
                     <TeamsSection />
                     <MCPToolsSection />
                 </div>
+                {/* Bottom: Missions full-width so outputs are readable */}
+                <MissionsSection />
             </div>
         </div>
     );

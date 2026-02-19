@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
@@ -259,8 +260,16 @@ func (s *Soma) HandleCommand(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "sent", "subject": subject})
 }
 
+// BroadcastReply holds one team's response to a broadcast.
+type BroadcastReply struct {
+	TeamID  string `json:"team_id"`
+	Content string `json:"content"`
+	Error   string `json:"error,omitempty"`
+}
+
 // HandleBroadcast processes HTTP POST /api/v1/swarm/broadcast
-// It fans out a directive message to ALL active teams' internal trigger topics.
+// It fans out a directive to ALL active teams via NATS request-reply,
+// waits for each team's response, and returns them to the caller.
 func (s *Soma) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -285,27 +294,44 @@ func (s *Soma) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		payload.Source = "mission-control"
 	}
 
-	// Fan out to all active teams
+	// Snapshot team IDs under lock
 	s.mu.RLock()
-	teamCount := 0
+	teamIDs := make([]string, 0, len(s.teams))
 	for id := range s.teams {
-		subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, id)
-		if err := s.nc.Publish(subject, []byte(payload.Content)); err != nil {
-			log.Printf("Broadcast failed for team [%s]: %v", id, err)
-			continue
-		}
-		teamCount++
-		log.Printf("📡 Broadcast to team [%s] on [%s]", id, subject)
+		teamIDs = append(teamIDs, id)
 	}
 	s.mu.RUnlock()
-	s.nc.Flush()
+
+	// Fan out request-reply concurrently, one per team
+	var wg sync.WaitGroup
+	replies := make([]BroadcastReply, len(teamIDs))
+	timeout := 60 * time.Second
+
+	for i, id := range teamIDs {
+		wg.Add(1)
+		go func(idx int, teamID string) {
+			defer wg.Done()
+			subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID)
+			log.Printf("📡 Broadcast request to team [%s] on [%s]", teamID, subject)
+
+			msg, err := s.nc.Request(subject, []byte(payload.Content), timeout)
+			if err != nil {
+				log.Printf("Broadcast: team [%s] did not respond: %v", teamID, err)
+				replies[idx] = BroadcastReply{TeamID: teamID, Error: err.Error()}
+				return
+			}
+			replies[idx] = BroadcastReply{TeamID: teamID, Content: string(msg.Data)}
+		}(i, id)
+	}
+	wg.Wait()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":    "broadcast",
-		"teams_hit": teamCount,
+		"teams_hit": len(teamIDs),
 		"source":    payload.Source,
+		"replies":   replies,
 	})
 }
 

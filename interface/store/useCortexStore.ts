@@ -1526,13 +1526,36 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             }
 
             const data = await res.json();
+            // Build a chat message per team reply
+            const replyMessages: ChatMessage[] = [];
+            if (Array.isArray(data.replies)) {
+                for (const reply of data.replies) {
+                    if (reply.error) {
+                        replyMessages.push({
+                            role: 'architect',
+                            content: `**${reply.team_id}**: _timed out or unavailable_`,
+                            source_node: reply.team_id,
+                        });
+                    } else if (reply.content) {
+                        replyMessages.push({
+                            role: 'council',
+                            content: reply.content,
+                            source_node: reply.team_id,
+                        });
+                    }
+                }
+            }
+            // Fallback if no replies came back
+            if (replyMessages.length === 0) {
+                replyMessages.push({
+                    role: 'architect',
+                    content: `Broadcast sent to ${data.teams_hit} team(s) — no replies received.`,
+                });
+            }
             set((s) => ({
                 isBroadcasting: false,
                 lastBroadcastResult: { teams_hit: data.teams_hit },
-                missionChat: [
-                    ...s.missionChat,
-                    { role: 'architect', content: `Broadcast sent to ${data.teams_hit} active team(s).` },
-                ],
+                missionChat: [...s.missionChat, ...replyMessages],
             }));
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Broadcast failed';
