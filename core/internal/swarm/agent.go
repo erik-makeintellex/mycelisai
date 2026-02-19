@@ -154,8 +154,9 @@ func (a *Agent) buildToolsBlock() string {
 // ProcessResult holds the structured output of a processMessage call,
 // including the final text and metadata about which tools were invoked.
 type ProcessResult struct {
-	Text      string   `json:"text"`
-	ToolsUsed []string `json:"tools_used,omitempty"`
+	Text      string                      `json:"text"`
+	ToolsUsed []string                    `json:"tools_used,omitempty"`
+	Artifacts []protocol.ChatArtifactRef  `json:"artifacts,omitempty"`
 }
 
 // processMessage handles LLM inference + ReAct tool loop, returning the response text.
@@ -214,8 +215,11 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 	// ReAct Tool Loop: if agent has tools bound and LLM returns a tool_call,
 	// execute it and re-infer with the result. Track which tools were invoked.
+	// Artifacts are captured from structured tool results and passed through
+	// to the HTTP response (NOT fed back into the LLM context window).
 	responseText := resp.Text
 	var toolsUsed []string
+	var artifacts []protocol.ChatArtifactRef
 	if a.toolExecutor != nil && len(a.Manifest.Tools) > 0 {
 		maxIter := a.Manifest.EffectiveMaxIterations()
 		for i := 0; i < maxIter; i++ {
@@ -240,6 +244,21 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 				break
 			}
 
+			// Extract artifact from structured tool result (side-channel).
+			// Only the text message goes back to the LLM — large payloads
+			// like base64 images are captured here for the HTTP response.
+			var toolOutput struct {
+				Message  string                     `json:"message"`
+				Artifact *protocol.ChatArtifactRef  `json:"artifact"`
+			}
+			if json.Unmarshal([]byte(toolResult), &toolOutput) == nil && toolOutput.Artifact != nil {
+				artifacts = append(artifacts, *toolOutput.Artifact)
+				toolResult = toolOutput.Message
+				if toolResult == "" {
+					toolResult = fmt.Sprintf("Tool %s completed successfully.", toolCall.Name)
+				}
+			}
+
 			// Append Assistant's tool call and User's tool result to history
 			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "assistant", Content: responseText})
 			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "user", Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolCall.Name, toolResult)})
@@ -253,7 +272,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 		}
 	}
 
-	return ProcessResult{Text: responseText, ToolsUsed: toolsUsed}
+	return ProcessResult{Text: responseText, ToolsUsed: toolsUsed, Artifacts: artifacts}
 }
 
 func (a *Agent) handleTrigger(msg *nats.Msg) {

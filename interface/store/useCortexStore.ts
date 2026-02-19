@@ -751,6 +751,33 @@ function dispatchSignalToNodes(
     return changed ? updated : null;
 }
 
+// ── Chat Persistence (localStorage) ──────────────────────────
+// Soma's memory: chat survives page refreshes. Use clearMissionChat to reset.
+
+const CHAT_STORAGE_KEY = 'mycelis-mission-chat';
+const CHAT_MAX_PERSISTED = 200; // cap to avoid localStorage quota issues
+
+function loadPersistedChat(): ChatMessage[] {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        if (!raw) return [];
+        const msgs: ChatMessage[] = JSON.parse(raw);
+        return Array.isArray(msgs) ? msgs.slice(-CHAT_MAX_PERSISTED) : [];
+    } catch {
+        return [];
+    }
+}
+
+function persistChat(messages: ChatMessage[]) {
+    if (typeof window === 'undefined') return;
+    try {
+        // Only persist the last N messages to respect localStorage limits
+        const toStore = messages.slice(-CHAT_MAX_PERSISTED);
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
+    } catch { /* quota exceeded — silently drop */ }
+}
+
 // ── Zustand Store ─────────────────────────────────────────────
 
 export const useCortexStore = create<CortexState>((set, get) => ({
@@ -798,8 +825,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     mcpLibrary: [],
     isFetchingMCPLibrary: false,
 
-    // Mission Control Chat (Phase 7.6)
-    missionChat: [],
+    // Mission Control Chat (Phase 7.6) — rehydrated from localStorage
+    missionChat: loadPersistedChat(),
     isMissionChatting: false,
     missionChatError: null,
     councilTarget: 'admin',
@@ -1494,6 +1521,9 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     clearMissionChat: () => {
         set({ missionChat: [], missionChatError: null });
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(CHAT_STORAGE_KEY);
+        }
     },
 
     // ── Broadcast (Phase 8.0) ─────────────────────────────────────
@@ -1918,3 +1948,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         }
     },
 }));
+
+// ── Auto-sync missionChat → localStorage ─────────────────────
+useCortexStore.subscribe((state, prevState) => {
+    if (state.missionChat !== prevState.missionChat) {
+        persistChat(state.missionChat);
+    }
+});
