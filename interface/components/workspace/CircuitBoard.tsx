@@ -187,21 +187,21 @@ export default function CircuitBoard() {
                     fitViewOptions={{ padding: 0.3 }}
                     proOptions={{ hideAttribution: true }}
                 >
-                    <Background color="#7983BB" variant={BackgroundVariant.Dots} gap={20} size={1} style={{ backgroundColor: '#2F3349' }} />
+                    <Background color="#27272a" variant={BackgroundVariant.Dots} gap={20} size={1} style={{ backgroundColor: '#09090b' }} />
                     <Controls
                         position="bottom-right"
                         style={{
-                            background: '#2F3349',
-                            border: '1px solid #434968',
+                            background: '#18181b',
+                            border: '1px solid #27272a',
                             borderRadius: '8px',
                         }}
                     />
                     <MiniMap
-                        nodeColor="#434968"
-                        maskColor="rgba(37,41,60,0.7)"
+                        nodeColor="#27272a"
+                        maskColor="rgba(9,9,11,0.7)"
                         style={{
-                            background: '#25293C',
-                            border: '1px solid #434968',
+                            background: '#09090b',
+                            border: '1px solid #27272a',
                         }}
                     />
                 </ReactFlow>
@@ -225,7 +225,7 @@ export default function CircuitBoard() {
                         <button
                             onClick={instantiateMission}
                             disabled={isCommitting}
-                            className="flex items-center gap-2.5 px-6 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-300 shadow-lg border border-cortex-success/40 bg-cortex-success/90 hover:bg-cortex-success hover:shadow-[0_0_25px_rgba(40,199,111,0.4)] text-white disabled:opacity-60 disabled:cursor-wait"
+                            className="flex items-center gap-2.5 px-6 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-300 shadow-lg border border-cortex-success/40 bg-cortex-success/90 hover:bg-cortex-success hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] text-cortex-bg disabled:opacity-60 disabled:cursor-wait"
                         >
                             {isCommitting ? (
                                 <>

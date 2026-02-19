@@ -382,6 +382,11 @@ func main() {
 		log.Println("MCP Library Active.")
 	}
 
+	// Phase 18: Bootstrap default MCP servers (filesystem, fetch) on first run
+	if mcpService != nil && mcpPool != nil && mcpLibrary != nil {
+		mcpService.BootstrapDefaults(ctx, mcpLibrary, mcpPool)
+	}
+
 	// Wire system capabilities into Meta-Architect (tools, MCP servers, library)
 	if metaArchitect != nil {
 		caps := buildSystemCapabilities(ctx, internalTools, mcpService, mcpLibrary)

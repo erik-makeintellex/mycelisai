@@ -184,9 +184,9 @@ function ChoroplethMap({
     const val = valueLookup.get(name) ?? 0;
     const intensity = Math.min(val / maxVal, 1);
     return {
-      fillColor: `rgba(115, 103, 240, ${0.15 + intensity * 0.7})`,
+      fillColor: `rgba(6, 182, 212, ${0.15 + intensity * 0.7})`,
       fillOpacity: 0.8,
-      color: "#434968",
+      color: "#27272a",
       weight: 1,
     };
   };

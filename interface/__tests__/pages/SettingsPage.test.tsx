@@ -71,6 +71,6 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
 
         expect(screen.getByText('Appearance')).toBeDefined();
-        expect(screen.getByText('Vuexy Dark')).toBeDefined();
+        expect(screen.getByText('Midnight Cortex')).toBeDefined();
     });
 });

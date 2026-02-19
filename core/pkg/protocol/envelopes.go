@@ -77,9 +77,23 @@ func (e *CTSEnvelope) Validate() error {
 // Any endpoint returning LLM-generated content wraps it in this struct
 // inside a CTSEnvelope.
 type ChatResponsePayload struct {
-	Text          string   `json:"text"`
-	Consultations []string `json:"consultations,omitempty"`
-	ToolsUsed     []string `json:"tools_used,omitempty"`
+	Text          string              `json:"text"`
+	Consultations []string            `json:"consultations,omitempty"`
+	ToolsUsed     []string            `json:"tools_used,omitempty"`
+	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`
+}
+
+// ChatArtifactRef is an inline artifact reference embedded in a chat response.
+// For small content (code snippets, chart specs, short documents) the Content
+// field carries the data directly. For large/binary content, ID references an
+// artifact in the artifacts table that can be fetched separately.
+type ChatArtifactRef struct {
+	ID          string `json:"id,omitempty"`           // artifact table ID (for stored artifacts)
+	Type        string `json:"type"`                   // code | document | image | audio | data | chart | file
+	Title       string `json:"title"`
+	ContentType string `json:"content_type,omitempty"` // MIME type
+	Content     string `json:"content,omitempty"`      // inline content (text, JSON, base64 for images)
+	URL         string `json:"url,omitempty"`          // external URL (for links, images)
 }
 
 // APIResponse is the standard response wrapper for all Mycelis API endpoints.

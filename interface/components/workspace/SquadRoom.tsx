@@ -200,7 +200,7 @@ export default function SquadRoom({ teamId }: SquadRoomProps) {
             <div className="px-4 py-2 border-b border-cortex-border/50 flex items-center gap-3 flex-shrink-0">
                 {agentIds.map((id) => (
                     <div key={id} className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cortex-success shadow-[0_0_4px_rgba(40,199,111,0.5)]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-cortex-success shadow-[0_0_4px_rgba(16,185,129,0.5)]" />
                         <span className="text-[10px] font-mono text-cortex-text-muted">{id}</span>
                     </div>
                 ))}
