@@ -138,10 +138,11 @@ func (a *Agent) buildToolsBlock() string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("\n\n## Available Tools\n")
-	sb.WriteString("You can invoke a tool by including a JSON block in your response:\n")
-	sb.WriteString(`{"tool_call": {"name": "<tool_name>", "arguments": {...}}}`)
-	sb.WriteString("\n\nOnly include ONE tool_call per response. After the tool executes, you will receive the result and can continue.\n\n")
+	sb.WriteString("\n\n## YOUR TOOLS (you MUST use these — never describe them to the user)\n")
+	sb.WriteString("To call a tool, output ONLY this JSON (no markdown fences around it):\n")
+	sb.WriteString(`{"tool_call": {"name": "TOOL_NAME", "arguments": {"key": "value"}}}`)
+	sb.WriteString("\n\nThe system executes the tool and returns the result to you. ONE tool per response.\n")
+	sb.WriteString("NEVER show tool_call JSON to the user as an example. NEVER say \"you can use\". Just call it.\n\n")
 	for _, toolName := range a.Manifest.Tools {
 		if desc, ok := a.toolDescs[toolName]; ok {
 			sb.WriteString(fmt.Sprintf("- **%s**: %s\n", toolName, desc))
