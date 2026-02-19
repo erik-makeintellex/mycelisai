@@ -64,6 +64,7 @@ func ConvertBlueprintToManifests(bp *protocol.MissionBlueprint) []*TeamManifest 
 			Members:     members,
 			Inputs:      inputs,
 			Deliveries:  deliveries,
+			Schedule:    team.Schedule,
 		})
 	}
 

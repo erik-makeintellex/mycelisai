@@ -294,6 +294,172 @@ func (s *Service) ListSitReps(ctx context.Context, teamID string, limit int) ([]
 	return results, nil
 }
 
+// ── Conversation Memory (Phase 19) ───────────────────────────
+
+// ConversationSummary represents a stored conversation summary with extracted metadata.
+type ConversationSummary struct {
+	ID               string         `json:"id"`
+	AgentID          string         `json:"agent_id"`
+	Summary          string         `json:"summary"`
+	KeyTopics        []string       `json:"key_topics"`
+	UserPreferences  map[string]any `json:"user_preferences"`
+	PersonalityNotes string         `json:"personality_notes"`
+	DataReferences   []any          `json:"data_references"`
+	MessageCount     int            `json:"message_count"`
+	CreatedAt        time.Time      `json:"created_at"`
+	Score            float64        `json:"score,omitempty"` // cosine similarity (only on recall)
+}
+
+// StoreConversationSummary persists a conversation summary and embeds it into pgvector.
+// The embedding is stored in context_vectors with metadata linking back to this summary.
+// cog may be nil — in that case, only the RDBMS record is created (no vector).
+func (s *Service) StoreConversationSummary(ctx context.Context, cog EmbedFunc, agentID, summary string, topics []string, prefs map[string]any, personalityNotes string, dataRefs []any, messageCount int) (string, error) {
+	prefsJSON, _ := json.Marshal(prefs)
+	refsJSON, _ := json.Marshal(dataRefs)
+
+	var summaryID string
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO conversation_summaries (agent_id, summary, key_topics, user_preferences, personality_notes, data_references, message_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`, agentID, summary, pqTextArray(topics), prefsJSON, personalityNotes, refsJSON, messageCount).Scan(&summaryID)
+	if err != nil {
+		return "", fmt.Errorf("store conversation summary: %w", err)
+	}
+
+	// Embed and store vector (best-effort)
+	if cog != nil {
+		embText := fmt.Sprintf("[conversation] %s", summary)
+		vec, err := cog(ctx, embText, "")
+		if err == nil {
+			meta := map[string]any{
+				"type":       "conversation",
+				"agent_id":   agentID,
+				"summary_id": summaryID,
+			}
+			if storeErr := s.StoreVector(ctx, embText, vec, meta); storeErr != nil {
+				log.Printf("conversation summary: vector store failed (non-fatal): %v", storeErr)
+			}
+		} else {
+			log.Printf("conversation summary: embedding failed (non-fatal): %v", err)
+		}
+	}
+
+	return summaryID, nil
+}
+
+// RecallConversations finds the most relevant past conversation summaries for a query.
+// Uses semantic search on context_vectors filtered by type="conversation", then JOINs
+// with conversation_summaries for structured data.
+func (s *Service) RecallConversations(ctx context.Context, queryVec []float64, agentID string, limit int) ([]ConversationSummary, error) {
+	if limit <= 0 {
+		limit = 3
+	}
+
+	vecStr := formatVector(queryVec)
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT cs.id, cs.agent_id, cs.summary, cs.key_topics, cs.user_preferences,
+		       cs.personality_notes, cs.data_references, cs.message_count, cs.created_at,
+		       1 - (cv.embedding <=> $1::vector) AS score
+		FROM context_vectors cv
+		JOIN conversation_summaries cs ON cs.id::text = cv.metadata->>'summary_id'
+		WHERE cv.metadata->>'type' = 'conversation'
+		  AND cv.embedding IS NOT NULL
+		  AND ($2 = '' OR cv.metadata->>'agent_id' = $2)
+		ORDER BY cv.embedding <=> $1::vector
+		LIMIT $3
+	`, vecStr, agentID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("recall conversations: %w", err)
+	}
+	defer rows.Close()
+
+	var results []ConversationSummary
+	for rows.Next() {
+		var cs ConversationSummary
+		var topicsArr []string
+		var prefsJSON, refsJSON []byte
+
+		if err := rows.Scan(&cs.ID, &cs.AgentID, &cs.Summary, pqScanArray(&topicsArr),
+			&prefsJSON, &cs.PersonalityNotes, &refsJSON, &cs.MessageCount, &cs.CreatedAt, &cs.Score); err != nil {
+			log.Printf("recall conversations: scan error: %v", err)
+			continue
+		}
+		cs.KeyTopics = topicsArr
+		if len(prefsJSON) > 0 {
+			_ = json.Unmarshal(prefsJSON, &cs.UserPreferences)
+		}
+		if len(refsJSON) > 0 {
+			_ = json.Unmarshal(refsJSON, &cs.DataReferences)
+		}
+		results = append(results, cs)
+	}
+	return results, nil
+}
+
+// EmbedFunc is a callback for embedding text (decouples memory from cognitive package).
+type EmbedFunc func(ctx context.Context, text string, model string) ([]float64, error)
+
+// pqTextArray formats a Go string slice as a Postgres TEXT[] literal.
+func pqTextArray(arr []string) string {
+	if len(arr) == 0 {
+		return "{}"
+	}
+	escaped := make([]string, len(arr))
+	for i, s := range arr {
+		escaped[i] = `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
+	}
+	return "{" + strings.Join(escaped, ",") + "}"
+}
+
+// pqScanArray returns a scanner that reads a Postgres TEXT[] into a Go string slice.
+func pqScanArray(dest *[]string) interface{ Scan(src any) error } {
+	return &pgTextArrayScanner{dest: dest}
+}
+
+type pgTextArrayScanner struct {
+	dest *[]string
+}
+
+func (s *pgTextArrayScanner) Scan(src any) error {
+	if src == nil {
+		*s.dest = nil
+		return nil
+	}
+	switch v := src.(type) {
+	case []byte:
+		return s.parseArray(string(v))
+	case string:
+		return s.parseArray(v)
+	default:
+		return fmt.Errorf("unsupported pg array type: %T", src)
+	}
+}
+
+func (s *pgTextArrayScanner) parseArray(raw string) error {
+	// Handle empty array
+	raw = strings.TrimSpace(raw)
+	if raw == "{}" || raw == "" {
+		*s.dest = nil
+		return nil
+	}
+	// Strip outer braces and split
+	raw = strings.TrimPrefix(raw, "{")
+	raw = strings.TrimSuffix(raw, "}")
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		p = strings.Trim(p, `"`)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	*s.dest = result
+	return nil
+}
+
 // formatVector converts a float64 slice to pgvector string format: "[0.1,0.2,0.3]"
 func formatVector(v []float64) string {
 	parts := make([]string, len(v))

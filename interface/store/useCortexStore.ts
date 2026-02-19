@@ -1452,11 +1452,14 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         }));
 
         try {
-            // Build messages for backend (map non-user roles to assistant for Vercel compat)
-            const messages = [...get().missionChat].map((m) => ({
-                role: m.role === 'user' ? 'user' : 'assistant',
-                content: m.content,
-            }));
+            // Smart windowing: send only the last 20 messages to the LLM.
+            // Older context is auto-recalled from pgvector by the backend (Phase 19).
+            const messages = [...get().missionChat]
+                .slice(-20)
+                .map((m) => ({
+                    role: m.role === 'user' ? 'user' : 'assistant',
+                    content: m.content,
+                }));
 
             const res = await fetch(`/api/v1/council/${councilTarget}/chat`, {
                 method: 'POST',

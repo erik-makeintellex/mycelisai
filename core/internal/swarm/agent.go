@@ -183,7 +183,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 	// Inject live system state (active teams, MCP servers, NATS topology, cognitive config)
 	if a.internalTools != nil {
-		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.TeamInputs, a.TeamDeliveries)
+		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.TeamInputs, a.TeamDeliveries, input)
 	}
 
 	sys += a.buildToolsBlock()
@@ -277,6 +277,14 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	// Small LLMs sometimes echo tool_call JSON as text even after execution,
 	// or the loop may break early leaving raw JSON in the response.
 	responseText = stripToolCallJSON(responseText)
+
+	// Auto-summarize: every 15 messages, compress conversation into pgvector.
+	// Non-blocking background goroutine — failures are logged, never fatal.
+	if a.internalTools != nil && len(priorHistory) > 0 && len(priorHistory)%15 == 0 {
+		histCopy := make([]cognitive.ChatMessage, len(priorHistory))
+		copy(histCopy, priorHistory)
+		go a.internalTools.AutoSummarize(a.ctx, a.Manifest.ID, histCopy)
+	}
 
 	return ProcessResult{Text: responseText, ToolsUsed: toolsUsed, Artifacts: artifacts}
 }
