@@ -121,7 +121,7 @@ function DashboardGrid() {
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
             >
-                {/* Top: Admin / Council Chat */}
+                {/* Top: Soma / Council Chat */}
                 <div className="overflow-hidden" style={{ height: topPercent, minHeight: 0 }}>
                     <MissionControlChat />
                 </div>

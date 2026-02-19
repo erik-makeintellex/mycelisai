@@ -350,10 +350,13 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                 {!isUser && msg.source_node && (
                     <div className="flex items-center gap-1.5 px-1">
                         <span className="text-[8px] font-bold uppercase tracking-widest text-cortex-info font-mono">
-                            {msg.source_node.replace("council-", "").toUpperCase()}
+                            {msg.source_node === 'admin' ? 'SOMA' : msg.source_node.replace("council-", "").toUpperCase()}
                         </span>
                         {msg.trust_score != null && msg.trust_score > 0 && (
-                            <span className={`text-[8px] font-mono font-bold ${trustColor(msg.trust_score)}`}>
+                            <span
+                                className={`text-[8px] font-mono font-bold ${trustColor(msg.trust_score)}`}
+                                title={`Trust Score: ${msg.trust_score.toFixed(2)} — Confidence level of this response (0.0–1.0)`}
+                            >
                                 T:{msg.trust_score.toFixed(1)}
                             </span>
                         )}
@@ -392,6 +395,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                             <span
                                 key={tool}
                                 className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/20"
+                                title={`Tool executed: ${tool}`}
                             >
                                 {tool}
                             </span>
@@ -470,7 +474,7 @@ export default function MissionControlChat() {
     };
 
     const targetMember = councilMembers.find((m) => m.id === councilTarget);
-    const targetLabel = targetMember?.role?.toUpperCase() || councilTarget.toUpperCase();
+    const targetLabel = councilTarget === 'admin' ? 'Soma' : (targetMember?.role?.toUpperCase() || councilTarget.toUpperCase());
 
     return (
         <div className="h-full flex flex-col" data-testid="mission-chat">
@@ -489,14 +493,15 @@ export default function MissionControlChat() {
                         <select
                             value={councilTarget}
                             onChange={(e) => setCouncilTarget(e.target.value)}
+                            title="Select council member or Soma to direct your message"
                             className="bg-transparent text-[9px] font-bold uppercase tracking-widest text-cortex-text-muted border-none outline-none cursor-pointer font-mono"
                         >
                             {councilMembers.length === 0 ? (
-                                <option value="admin">Admin</option>
+                                <option value="admin">SOMA (soma)</option>
                             ) : (
                                 councilMembers.map((m) => (
                                     <option key={m.id} value={m.id}>
-                                        {m.role.toUpperCase()} ({m.team.replace("-core", "")})
+                                        {m.role === 'admin' ? 'SOMA' : m.role.toUpperCase()} ({m.team === 'admin-core' ? 'soma' : m.team.replace('-core', '')})
                                     </option>
                                 ))
                             )}
@@ -517,7 +522,7 @@ export default function MissionControlChat() {
                                 ? "bg-cortex-warning/20 text-cortex-warning"
                                 : "hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main"
                         }`}
-                        title={broadcastMode ? "Broadcast mode ON (messages go to ALL teams)" : "Toggle broadcast mode"}
+                        title={broadcastMode ? "Broadcast mode ON — messages go to ALL active teams" : "Broadcast mode — click to send to all teams instead of one agent"}
                     >
                         <Megaphone className="w-3 h-3" />
                     </button>

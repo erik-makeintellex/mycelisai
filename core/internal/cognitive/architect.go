@@ -67,6 +67,7 @@ OUTPUT SCHEMA (Strict JSON, no markdown):
         {
           "id": "<agent-id>",
           "role": "<specialist role>",
+          "model": "<cognitive profile or model name>",
           "system_prompt": "<instructions>",
           "tools": ["<tool names from available tools>"],
           "inputs": ["<nats topics>"],
@@ -93,6 +94,13 @@ RULES:
 3. If an MCP server is already installed, agents can use its tools directly — no requirement needed.
 4. For sensor/polling agents, set role to "sensory". For LLM-reasoning agents, use "cognitive".
 5. NATS topics follow the pattern: topic.<domain>.<action> (e.g., topic.weather.raw, topic.email.sent).
+6. Keep teams LEAN: 2-4 agents per team maximum. Each agent must have a distinct role.
+   Prefer fewer, more capable agents over many narrow specialists.
+7. Assign a "model" to each agent based on task complexity:
+   - Heavy reasoning/architecture/code-gen: use the largest available model
+   - Routine summarization/formatting/polling: use smaller, faster models
+   - If unsure, leave model as "" (system default will be used)
+8. Each team should have clear input/output contracts via NATS topics. Avoid circular dependencies between teams.
 
 Return ONLY valid JSON. No markdown fences.`, intent, capBlock)
 
