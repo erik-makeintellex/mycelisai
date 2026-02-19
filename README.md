@@ -14,17 +14,17 @@
 > | [Frontend Specification](docs/architecture/FRONTEND.md) | Working on React/Next.js, Zustand, design |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 12 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, and the **Standardized Council Chat API** with CTS-enveloped responses, trust scores, and any council member addressable via HTTP.
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 13 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, the **Standardized Council Chat API** with CTS-enveloped responses, and **Soma Identity** with persistent chat memory, artifact pipeline, and in-character organism personality.
 
 ## Architecture
 
 ### Tier 1: Core (Go 1.26 + Postgres + pgvector)
 
 - **Soma → Axon → Teams → Agents:** Mission activation pipeline with heartbeat + proof-of-work.
-- **Standing Teams:** Admin (orchestrator, 17 tools, 5 ReAct iterations) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
+- **Standing Teams:** Admin/Soma (orchestrator, 18 tools, 10 ReAct iterations, persistent identity) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
 - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
 - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
-- **Internal Tool Registry:** 17 built-in tools — consult_council, delegate_task, search_memory, remember, recall, file I/O, NATS bus sensing, image generation, and more.
+- **Internal Tool Registry:** 18 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O, NATS bus sensing, image generation, and more.
 - **Composite Tool Executor:** Unified interface routing tool calls to InternalToolRegistry or MCP ToolExecutorAdapter.
 - **MCP Ingress:** Install, manage, and invoke MCP tool servers. Curated library with one-click install.
 - **Archivist:** Context engine — SitReps, auto-embed to pgvector (768-dim, nomic-embed-text), semantic search.
@@ -69,13 +69,16 @@ Mission Control (`/dashboard`) is the admin's primary interface — a resizable 
 ├═══════════════════ drag to resize ════════════════════════════─┤
 │                                                               │
 │   OPS OVERVIEW  (45% — collapsible)                           │
-│   ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌───────┐ ┌───────┐ │
-│   │ SYSTEM  │ │ ALERTS   │ │ MISSIONS │ │ TEAMS │ │ MCP   │ │
-│   │ Text: ● │ │ GOV x2   │ │ abc ●LIVE│ │ admin │ │ fs  ● │ │
-│   │ Media:● │ │ DONE x1  │ │ 2T/6A    │ │ cncl  │ │ fetch●│ │
-│   │ Sens:3/5│ │          │ │          │ │       │ │ +brave│ │
-│   └── ↗ ────┘ └──────────┘ └── ↗ ────┘ └─ ↗ ──┘ └─ ↗ ──┘ │
-│                                                               │
+│   ┌─────────────┐ ┌────────────┐ ┌──────────┐ ┌────────────┐ │
+│   │ SYSTEM      │ │ ALERTS     │ │ TEAMS    │ │ MCP TOOLS  │ │
+│   │ Text: ●     │ │ GOV x2     │ │ admin    │ │ fs  ●      │ │
+│   │ Media: ●    │ │ DONE x1    │ │ council  │ │ fetch ●    │ │
+│   │ Sensors:3/5 │ │            │ │          │ │ +brave     │ │
+│   └── ↗ ───────┘ └────────────┘ └── ↗ ────┘ └── ↗ ───────┘ │
+│   ┌──────────────────────────────────────────────────────────┐│
+│   │ ACTIVE MISSIONS (full width)                             ││
+│   │ mission-abc ●LIVE  2T/6A    mission-xyz ●DONE  1T/3A    ││
+│   └── ↗ ────────────────────────────────────────────────────┘│
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -125,10 +128,13 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | **Council targeting** | Dropdown selector: Admin, Architect, Coder, Creative, Sentry. Each has its own system prompt, tools, and specialization. |
 | **Broadcast mode** | Toggle or `/all` prefix — sends message to ALL active teams via NATS |
 | **File I/O** | Admin + council agents can `read_file` and `write_file` on the host filesystem (no path restrictions). Sentry is read-only. |
-| **Tool access** | 17 internal tools: consult_council, delegate_task, search_memory, remember, recall, publish_signal, read_signals, read_file, write_file, generate_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue |
+| **Tool access** | 18 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue |
 | **MCP tools** | Any installed MCP server tools are also available (filesystem, fetch, brave-search, etc.) |
 | **Trust scores** | Each response carries a CTS trust score (0.0–1.0), displayed as a colored badge |
 | **Multi-turn** | Full conversation history is forwarded to the agent — maintains context across turns |
+| **Chat memory** | Conversation persists to localStorage (survives page refresh, 200-message cap). Use `clearMissionChat` to reset. |
+| **Broadcast replies** | Broadcast collects responses from all active teams via NATS request-reply (60s timeout per team) |
+| **Artifact pipeline** | Tool results with artifacts (images, charts, code) flow through CTS envelope to frontend for inline rendering |
 
 #### Ops Overview Cards
 
@@ -136,11 +142,11 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | :--- | :--- | :--- | :--- |
 | **System Status** | `GET /api/v1/cognitive/status` + `GET /api/v1/sensors` | `/settings/brain` | 15s / 60s |
 | **Priority Alerts** | SSE signal stream (governance_halt, error, task_complete, artifact) | Signal Detail Drawer (click row) | Real-time |
-| **Active Missions** | `GET /api/v1/missions` + `GET /api/v1/teams/detail` | `/missions/{id}/teams` per row | 15s / 10s |
 | **Standing Teams** | `GET /api/v1/teams/detail` (filtered: `type === "standing"`) | `/teams` | 10s |
 | **MCP Tools** | `GET /api/v1/mcp/servers` | `/settings/tools` | On mount |
+| **Active Missions** *(full-width below grid)* | `GET /api/v1/missions` + `GET /api/v1/teams/detail` | `/missions/{id}/teams` per row | 15s / 10s |
 
-Each card header has an ↗ icon linking to its detail page. The MCP card also shows a **Recommended** banner for `brave-search` and `github` if not installed.
+Top 4 cards sit in an auto-fit grid; Active Missions spans full width below for better output readability. Each card header has an ↗ icon linking to its detail page. The MCP card also shows a **Recommended** banner for `brave-search` and `github` if not installed.
 
 #### MCP Bootstrap (Zero-Config)
 
@@ -369,6 +375,7 @@ uvx inv core.smoke            # Governance smoke tests
 | 11.0 | Team Management | /teams route, TeamCard, TeamDetailDrawer |
 | 17.0 | Legacy Migration | Complete cortex-* migration, Vuexy CSS vars removed, landing page rewritten |
 | 18.0 | Command Center | Resizable Mission Control, OpsOverview dashboard, MCP bootstrap, rich chat (markdown + inline artifacts), tools_used surfacing |
+| 18.5 | Soma Identity & Artifacts | Soma in-character identity (NEVER BREAK CHARACTER), council routing table, artifact pipeline (tool → CTS → inline render), broadcast with team replies, chat memory persistence (localStorage), tool_call JSON sanitizer, self-awareness block |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)
 
