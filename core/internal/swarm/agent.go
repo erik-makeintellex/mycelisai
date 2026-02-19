@@ -388,27 +388,66 @@ type toolCallPayload struct {
 }
 
 // parseToolCall extracts a tool_call JSON block from LLM response text.
-// Expected format: {"tool_call": {"name": "...", "arguments": {...}}}
+// Handles both compact and pretty-printed JSON from LLMs:
+//
+//	Compact:  {"tool_call": {"name": "read_file", "arguments": {...}}}
+//	Pretty:   {\n  "tool_call": {\n    "name": "read_file" ...
+//	Fenced:   ```json\n{"tool_call": ...}\n```
+//
 // Returns nil if no tool call is found.
 func parseToolCall(text string) *toolCallPayload {
-	// Find JSON-like block containing "tool_call"
-	start := strings.Index(text, `{"tool_call"`)
+	keyword := `"tool_call"`
+	idx := strings.Index(text, keyword)
+	if idx == -1 {
+		return nil
+	}
+
+	// Walk backwards from "tool_call" to find the opening brace.
+	// LLMs may emit whitespace/newlines between { and "tool_call".
+	start := -1
+	for i := idx - 1; i >= 0; i-- {
+		ch := text[i]
+		if ch == '{' {
+			start = i
+			break
+		}
+		if ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
+			break // unexpected character before "tool_call"
+		}
+	}
 	if start == -1 {
 		return nil
 	}
 
-	// Find matching closing brace
+	// Find the matching closing brace, respecting JSON string escaping.
 	depth := 0
 	end := -1
+	inStr := false
+	esc := false
 	for i := start; i < len(text); i++ {
-		switch text[i] {
+		ch := text[i]
+		if esc {
+			esc = false
+			continue
+		}
+		if ch == '\\' && inStr {
+			esc = true
+			continue
+		}
+		if ch == '"' {
+			inStr = !inStr
+			continue
+		}
+		if inStr {
+			continue
+		}
+		switch ch {
 		case '{':
 			depth++
 		case '}':
 			depth--
 			if depth == 0 {
 				end = i + 1
-				break
 			}
 		}
 		if end != -1 {
@@ -423,6 +462,7 @@ func parseToolCall(text string) *toolCallPayload {
 		ToolCall toolCallPayload `json:"tool_call"`
 	}
 	if err := json.Unmarshal([]byte(text[start:end]), &wrapper); err != nil {
+		log.Printf("[parseToolCall] JSON unmarshal failed: %v (excerpt: %s)", err, truncateLog(text[start:end], 200))
 		return nil
 	}
 	if wrapper.ToolCall.Name == "" {
