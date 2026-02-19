@@ -259,6 +259,9 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 func (a *Agent) handleTrigger(msg *nats.Msg) {
 	select {
 	case <-a.ctx.Done():
+		if msg.Reply != "" {
+			msg.Respond([]byte("Agent shutting down."))
+		}
 		return
 	default:
 	}
@@ -267,6 +270,10 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 
 	responseText := a.processMessage(string(msg.Data), nil)
 	if responseText == "" {
+		// Still respond if caller is waiting (request-reply pattern)
+		if msg.Reply != "" {
+			msg.Respond([]byte(fmt.Sprintf("[%s] No response — LLM may be unavailable.", a.Manifest.ID)))
+		}
 		return
 	}
 
