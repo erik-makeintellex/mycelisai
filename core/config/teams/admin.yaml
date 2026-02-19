@@ -53,6 +53,7 @@ members:
       - generate_image
       - remember
       - recall
+      - broadcast
       - publish_signal
       - read_signals
       - read_file
