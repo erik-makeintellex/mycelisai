@@ -234,6 +234,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			serverID, _, err := a.toolExecutor.FindToolByName(a.ctx, toolCall.Name)
 			if err != nil {
 				log.Printf("Agent [%s] tool lookup failed: %v", a.Manifest.ID, err)
+				responseText = fmt.Sprintf("Tool '%s' is not available: %v", toolCall.Name, err)
 				break
 			}
 
@@ -272,7 +273,41 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 		}
 	}
 
+	// Sanitize: strip any residual tool_call JSON from the response.
+	// Small LLMs sometimes echo tool_call JSON as text even after execution,
+	// or the loop may break early leaving raw JSON in the response.
+	responseText = stripToolCallJSON(responseText)
+
 	return ProcessResult{Text: responseText, ToolsUsed: toolsUsed, Artifacts: artifacts}
+}
+
+// stripToolCallJSON removes tool_call JSON blocks from response text.
+// Returns the text before the JSON block, or a fallback if only JSON remains.
+func stripToolCallJSON(text string) string {
+	keyword := `"tool_call"`
+	idx := strings.Index(text, keyword)
+	if idx == -1 {
+		return text
+	}
+
+	// Walk backwards from "tool_call" to find the opening brace
+	start := -1
+	for i := idx - 1; i >= 0; i-- {
+		if text[i] == '{' {
+			start = i
+			break
+		}
+	}
+	if start == -1 {
+		return text
+	}
+
+	// Return the text before the JSON block, trimmed
+	cleaned := strings.TrimSpace(text[:start])
+	if cleaned != "" {
+		return cleaned
+	}
+	return text // Don't return empty — keep original if nothing before the JSON
 }
 
 func (a *Agent) handleTrigger(msg *nats.Msg) {
