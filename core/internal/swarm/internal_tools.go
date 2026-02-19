@@ -346,6 +346,13 @@ func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args ma
 		return "", fmt.Errorf("council member %s did not respond: %w", member, err)
 	}
 
+	// Agent returns structured JSON (ProcessResult). Extract just the text.
+	var result struct {
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(msg.Data, &result); err == nil && result.Text != "" {
+		return result.Text, nil
+	}
 	return string(msg.Data), nil
 }
 
