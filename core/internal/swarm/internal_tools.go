@@ -255,6 +255,19 @@ func (r *InternalToolRegistry) registerAll() {
 		Handler: r.handlePublishSignal,
 	}
 
+	r.tools["broadcast"] = &InternalTool{
+		Name:        "broadcast",
+		Description: "Send a message to ALL active teams in the swarm. Every team's agents will process it and respond. Use when the user says 'broadcast', 'tell everyone', or 'announce to all teams'.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"message": map[string]any{"type": "string", "description": "The message to broadcast to all teams"},
+			},
+			"required": []string{"message"},
+		},
+		Handler: r.handleBroadcast,
+	}
+
 	r.tools["read_signals"] = &InternalTool{
 		Name:        "read_signals",
 		Description: "Subscribe to a NATS topic pattern and collect messages for a brief window. Use to sense what's happening on a bus channel.",
@@ -805,6 +818,56 @@ func (r *InternalToolRegistry) handlePublishSignal(_ context.Context, args map[s
 	r.nc.Flush()
 
 	return fmt.Sprintf("Signal published to %s (%d bytes).", subject, len(message)), nil
+}
+
+func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[string]any) (string, error) {
+	message, _ := args["message"].(string)
+	if message == "" {
+		return "", fmt.Errorf("broadcast requires 'message'")
+	}
+	if r.nc == nil {
+		return "", fmt.Errorf("NATS not available")
+	}
+	if r.somaRef == nil {
+		return "", fmt.Errorf("Soma not available — cannot enumerate teams")
+	}
+
+	teams := r.somaRef.ListTeams()
+	if len(teams) == 0 {
+		return "No active teams to broadcast to.", nil
+	}
+
+	timeout := 60 * time.Second
+	type reply struct {
+		teamID  string
+		content string
+		err     error
+	}
+	ch := make(chan reply, len(teams))
+
+	for _, t := range teams {
+		go func(teamID string) {
+			subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID)
+			msg, err := r.nc.Request(subject, []byte(message), timeout)
+			if err != nil {
+				ch <- reply{teamID: teamID, err: err}
+				return
+			}
+			ch <- reply{teamID: teamID, content: string(msg.Data)}
+		}(t.ID)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Broadcast sent to %d team(s):\n\n", len(teams)))
+	for range teams {
+		r := <-ch
+		if r.err != nil {
+			sb.WriteString(fmt.Sprintf("- **%s**: _%v_\n", r.teamID, r.err))
+		} else {
+			sb.WriteString(fmt.Sprintf("- **%s**: %s\n", r.teamID, r.content))
+		}
+	}
+	return sb.String(), nil
 }
 
 func (r *InternalToolRegistry) handleReadSignals(ctx context.Context, args map[string]any) (string, error) {
