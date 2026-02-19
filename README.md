@@ -38,13 +38,120 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 
 ### Tier 3: The Face (Next.js 16 + React 19 + Zustand 5)
 
-- **Mission Control (`/dashboard`):** Council Chat (member selector dropdown) + OperationsBoard (priority alerts, standing workloads, missions) + Telemetry + Sensors + Cognitive Status.
+- **Mission Control (`/dashboard`):** The admin's primary command interface — see [Mission Control Reference](#mission-control-reference) below.
 - **Neural Wiring (`/wiring`):** ArchitectChat + CircuitBoard (ReactFlow) + ToolsPalette + NatsWaterfall. Interactive edit/delete: click agent nodes to modify manifests, delete agents, discard drafts, or terminate active missions.
 - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
 - **Team Management (`/teams`):** Browse standing + mission teams, agent roster, delivery targets.
 - **Memory Explorer (`/memory`):** Hot/Warm/Cold three-tier browser with semantic search.
 - **Settings (`/settings`):** Cognitive Matrix + MCP Tools (with curated library).
 - **Visual Protocol:** Midnight Cortex theme — `cortex-bg #09090b`, `cortex-primary #06b6d4` (cyan). Zero `bg-white` in new code.
+
+### Mission Control Reference
+
+Mission Control (`/dashboard`) is the admin's primary interface — a resizable two-panel layout where 80% of work happens in conversation.
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│  MISSION CONTROL          SIGNAL: LIVE       [+ NEW] [⚙]     │
+├─── Telemetry Row ─────────────────────────────────────────────┤
+│  [Goroutines: 42] [Heap: 18MB] [System: 52MB] [LLM: 3.2t/s] │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│   ADMIN / COUNCIL CHAT  (55% — resizable)                     │
+│   ┌───────────────────────────────────────────────────────┐   │
+│   │  Council target selector: [ARCHITECT ▾]               │   │
+│   │  Rich messages: markdown, code blocks, tables, links  │   │
+│   │  Inline artifacts: charts, images, audio, data        │   │
+│   │  Trust score badges + tool-use pills                  │   │
+│   │  /all prefix or broadcast toggle for swarm-wide msgs  │   │
+│   └───────────────────────────────────────────────────────┘   │
+│                                                               │
+├═══════════════════ drag to resize ════════════════════════════─┤
+│                                                               │
+│   OPS OVERVIEW  (45% — collapsible)                           │
+│   ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌───────┐ ┌───────┐ │
+│   │ SYSTEM  │ │ ALERTS   │ │ MISSIONS │ │ TEAMS │ │ MCP   │ │
+│   │ Text: ● │ │ GOV x2   │ │ abc ●LIVE│ │ admin │ │ fs  ● │ │
+│   │ Media:● │ │ DONE x1  │ │ 2T/6A    │ │ cncl  │ │ fetch●│ │
+│   │ Sens:3/5│ │          │ │          │ │       │ │ +brave│ │
+│   └── ↗ ────┘ └──────────┘ └── ↗ ────┘ └─ ↗ ──┘ └─ ↗ ──┘ │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+```
+
+#### Layout
+
+| Zone | Component | Description |
+| :--- | :--- | :--- |
+| **Header** | `MissionControl` | Signal status (SSE live/offline), NEW MISSION button (→ `/wiring`), Settings gear (→ `/settings`) |
+| **Telemetry Row** | `TelemetryRow` | 4 sparkline cards — Goroutines, Heap, System Memory, LLM Tokens/s. Polls `/api/v1/telemetry/compute` every 5s. Shows offline banner after 3 failures. |
+| **Chat (top)** | `MissionControlChat` | The primary interaction surface — see Chat section below |
+| **Resize Handle** | custom drag | Pointer-event drag handler. Split ratio persisted to localStorage (`mission-control-split`). Clamped 25%–80%. |
+| **Ops Overview (bottom)** | `OpsOverview` | Responsive auto-fit grid of compact dashboard cards — see Ops section below |
+| **Signal Drawer** | `SignalDetailDrawer` | Right-side slide-over for signal inspection (type badge, metadata grid, raw JSON). Opened by clicking alert rows. |
+
+#### Chat Panel — Rich Message Rendering
+
+The chat renders council/agent responses as **full markdown** (via `react-markdown` + `remark-gfm`):
+
+| Content Type | Rendering |
+| :--- | :--- |
+| Text | Headings, bold, italic, strikethrough, paragraphs |
+| Links | Styled with external-link icon, open in new tab |
+| Code blocks | Mono font, cortex-themed background, scrollable |
+| Inline code | Colored pill (`cortex-primary`) |
+| Tables | GFM tables with header row, scrollable overflow |
+| Lists | Ordered/unordered with proper indentation |
+| Blockquotes | Left border accent in `cortex-primary` |
+| Images | Inline `<img>` with max-height constraint |
+
+**Inline artifacts** are rendered below the message text when the response includes `artifacts[]`:
+
+| Artifact Type | Viewer |
+| :--- | :--- |
+| `chart` | Observable Plot via `ChartRenderer` (bar, line, area, dot, waffle, tree, geo, table) |
+| `image` | `<img>` from URL or base64 data URI |
+| `code` | Syntax block with copy-to-clipboard button |
+| `audio` | HTML5 `<audio>` player |
+| `data` / `document` | Expandable/collapsible JSON or text preview with copy |
+| `file` | Compact reference card with external link |
+
+**Tool-use pills** appear after messages showing which internal/MCP tools the agent invoked during its ReAct loop (e.g. `read_file`, `consult_council`, `search_memory`).
+
+#### Chat Capabilities
+
+| Feature | Details |
+| :--- | :--- |
+| **Council targeting** | Dropdown selector: Admin, Architect, Coder, Creative, Sentry. Each has its own system prompt, tools, and specialization. |
+| **Broadcast mode** | Toggle or `/all` prefix — sends message to ALL active teams via NATS |
+| **File I/O** | Admin + council agents can `read_file` and `write_file` on the host filesystem (no path restrictions). Sentry is read-only. |
+| **Tool access** | 17 internal tools: consult_council, delegate_task, search_memory, remember, recall, publish_signal, read_signals, read_file, write_file, generate_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue |
+| **MCP tools** | Any installed MCP server tools are also available (filesystem, fetch, brave-search, etc.) |
+| **Trust scores** | Each response carries a CTS trust score (0.0–1.0), displayed as a colored badge |
+| **Multi-turn** | Full conversation history is forwarded to the agent — maintains context across turns |
+
+#### Ops Overview Cards
+
+| Card | Data Source | Deep Link | Refresh |
+| :--- | :--- | :--- | :--- |
+| **System Status** | `GET /api/v1/cognitive/status` + `GET /api/v1/sensors` | `/settings/brain` | 15s / 60s |
+| **Priority Alerts** | SSE signal stream (governance_halt, error, task_complete, artifact) | Signal Detail Drawer (click row) | Real-time |
+| **Active Missions** | `GET /api/v1/missions` + `GET /api/v1/teams/detail` | `/missions/{id}/teams` per row | 15s / 10s |
+| **Standing Teams** | `GET /api/v1/teams/detail` (filtered: `type === "standing"`) | `/teams` | 10s |
+| **MCP Tools** | `GET /api/v1/mcp/servers` | `/settings/tools` | On mount |
+
+Each card header has an ↗ icon linking to its detail page. The MCP card also shows a **Recommended** banner for `brave-search` and `github` if not installed.
+
+#### MCP Bootstrap (Zero-Config)
+
+On first server boot, two MCP servers are automatically installed and connected:
+
+| Server | Purpose | Config |
+| :--- | :--- | :--- |
+| `filesystem` | Read/write files from a mounted data directory | Path: `DATA_DIR` env (default `./workspace`) |
+| `fetch` | HTTP fetch — hit any URL for APIs, web pages, data | No config needed |
+
+These give agents immediate file and web access without manual setup. Additional servers (brave-search, github, etc.) can be installed via Settings → MCP Tools.
 
 > Full architecture details: [Architecture Overview](docs/architecture/OVERVIEW.md) | [Backend Spec](docs/architecture/BACKEND.md) | [Frontend Spec](docs/architecture/FRONTEND.md) | [Operations Manual](docs/architecture/OPERATIONS.md)
 
@@ -162,7 +269,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | Route | Description |
 | :--- | :--- |
 | `/` | Product landing page (marketing) — links to `/dashboard` to launch console |
-| `/dashboard` | Mission Control — Council chat (member selector), operations board, telemetry, sensors, cognitive status |
+| `/dashboard` | Mission Control — Resizable chat-dominant layout, OpsOverview dashboard, telemetry sparklines |
 | `/wiring` | Neural Wiring — ArchitectChat + CircuitBoard (edit/delete agents) + NatsWaterfall |
 | `/architect` | Redirects to `/wiring` |
 | `/teams` | Team Management — browse standing + mission teams, agent roster, delivery targets |
@@ -261,6 +368,7 @@ uvx inv core.smoke            # Governance smoke tests
 | 10.0 | Meta-Agent Research | research_for_blueprint, admin-routed negotiate |
 | 11.0 | Team Management | /teams route, TeamCard, TeamDetailDrawer |
 | 17.0 | Legacy Migration | Complete cortex-* migration, Vuexy CSS vars removed, landing page rewritten |
+| 18.0 | Command Center | Resizable Mission Control, OpsOverview dashboard, MCP bootstrap, rich chat (markdown + inline artifacts), tools_used surfacing |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)
 
@@ -275,7 +383,7 @@ Planned phases with detailed specifications are documented in the Architecture O
 | 14 | Hot-Reload Runtime | Live agent goroutine replacement, zero-downtime reconfiguration |
 | 15 | Advanced Governance & RBAC | Role enforcement, API keys, audit trail, policy versioning |
 | 16 | Distributed Federation | Multi-node NATS, team affinity, cross-instance delegation |
-| 18 | Streaming LLM | Token-by-token streaming, SSE relay, mid-stream tool detection |
+| 18 | Streaming LLM | Token-by-token streaming via SSE, mid-stream tool detection |
 | 19 | Workflow Templates | Mission template store, one-click instantiation, built-in pipelines |
 | 20 | Observability Dashboard | Historical metrics, Prometheus export, agent performance analytics |
 

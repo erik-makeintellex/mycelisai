@@ -183,8 +183,18 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Agent now returns structured JSON (ProcessResult). Extract just the text
+	// for the plain-text admin chat endpoint. This keeps backward compatibility.
+	var agentResult struct {
+		Text string `json:"text"`
+	}
+	responseText := string(msg.Data)
+	if err := json.Unmarshal(msg.Data, &agentResult); err == nil && agentResult.Text != "" {
+		responseText = agentResult.Text
+	}
+
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write(msg.Data)
+	w.Write([]byte(responseText))
 }
 
 // ---------------------------------------------------------------------------
@@ -313,9 +323,22 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Wrap response in CTS envelope with trust score and provenance
+	// Parse structured agent response (ProcessResult JSON with text + tools_used).
+	// Falls back gracefully to raw text if the agent returns plain text.
+	var agentResult struct {
+		Text      string   `json:"text"`
+		ToolsUsed []string `json:"tools_used,omitempty"`
+	}
+	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
+		// Fallback: treat entire response as plain text
+		agentResult.Text = string(msg.Data)
+		agentResult.ToolsUsed = nil
+	}
+
+	// Wrap response in CTS envelope with trust score, provenance, and tool metadata
 	chatPayload := protocol.ChatResponsePayload{
-		Text: string(msg.Data),
+		Text:      agentResult.Text,
+		ToolsUsed: agentResult.ToolsUsed,
 	}
 	payloadBytes, _ := json.Marshal(chatPayload)
 
@@ -330,7 +353,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
-	log.Printf("Council chat: member=%s team=%s trust=%.1f len=%d", memberID, teamID, envelope.TrustScore, len(msg.Data))
+	log.Printf("Council chat: member=%s team=%s trust=%.1f tools=%v len=%d", memberID, teamID, envelope.TrustScore, agentResult.ToolsUsed, len(agentResult.Text))
 }
 
 // PUT /api/v1/cognitive/profiles
