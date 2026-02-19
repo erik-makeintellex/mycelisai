@@ -67,7 +67,7 @@ function spectrumColor(type?: string): { dot: string; text: string; glow: string
             return {
                 dot: 'bg-cortex-info',
                 text: 'text-cortex-info',
-                glow: 'shadow-[0_0_8px_rgba(0,207,232,0.3)]',
+                glow: 'shadow-[0_0_8px_rgba(56,189,248,0.3)]',
             };
         case 'artifact':
         case 'output':
@@ -75,7 +75,7 @@ function spectrumColor(type?: string): { dot: string; text: string; glow: string
             return {
                 dot: 'bg-cortex-success',
                 text: 'text-cortex-success',
-                glow: 'shadow-[0_0_8px_rgba(40,199,111,0.3)]',
+                glow: 'shadow-[0_0_8px_rgba(16,185,129,0.3)]',
             };
         case 'error':
             return {
@@ -229,7 +229,7 @@ export function NatsWaterfall() {
                     <span
                         className={`inline-block w-1.5 h-1.5 rounded-full transition-all ${
                             isConnected
-                                ? 'bg-cortex-success shadow-[0_0_4px_rgba(40,199,111,0.5)]'
+                                ? 'bg-cortex-success shadow-[0_0_4px_rgba(16,185,129,0.5)]'
                                 : 'bg-cortex-danger shadow-[0_0_4px_rgba(234,84,85,0.5)]'
                         }`}
                     />

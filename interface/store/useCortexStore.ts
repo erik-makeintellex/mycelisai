@@ -17,6 +17,15 @@ export interface ChatConsultation {
     summary: string;
 }
 
+export interface ChatArtifactRef {
+    id?: string;              // artifact table ID (for stored artifacts)
+    type: string;             // code | document | image | audio | data | chart | file
+    title: string;
+    content_type?: string;    // MIME type
+    content?: string;         // inline content (text, JSON, base64 for images)
+    url?: string;             // external URL (for links, images)
+}
+
 export interface ChatMessage {
     role: 'user' | 'architect' | 'admin' | 'council';
     content: string;
@@ -25,6 +34,7 @@ export interface ChatMessage {
     source_node?: string;    // e.g. "council-architect"
     trust_score?: number;    // 0.0-1.0
     timestamp?: string;      // ISO 8601
+    artifacts?: ChatArtifactRef[];
 }
 
 export interface StreamSignal {
@@ -155,7 +165,7 @@ export interface CTSChatEnvelope {
     meta: { source_node: string; timestamp: string; trace_id?: string };
     signal_type: string;
     trust_score: number;
-    payload: { text: string; consultations?: string[]; tools_used?: string[] };
+    payload: { text: string; consultations?: string[]; tools_used?: string[]; artifacts?: ChatArtifactRef[] };
 }
 
 // ── Team Manifestation Proposals ─────────────────────────────
@@ -1465,6 +1475,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 source_node: envelope.meta.source_node,
                 trust_score: envelope.trust_score,
                 timestamp: envelope.meta.timestamp,
+                artifacts: envelope.payload.artifacts,
             };
 
             set((s) => ({

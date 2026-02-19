@@ -5,7 +5,7 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Cortex Palette — Vuexy Dark Protocol (Midnight Override) */
+  /* Cortex Palette — Midnight Cortex */
   --color-cortex-bg: #09090b;
   /* zinc-950 */
   --color-cortex-surface: #18181b;
@@ -30,25 +30,6 @@
 }
 
 @layer base {
-  :root {
-    --background: 37 41 60;
-    --foreground: 207 211 236;
-    --surface: 47 51 73;
-    --surface-hover: 55 60 85;
-    --border: 67 73 104;
-    --border-active: 115 103 240;
-
-    /* Semantic Status Colors */
-    --status-stable: 40 199 111;
-    --status-stable-bg: 30 50 40;
-    --status-warning: 255 159 67;
-    --status-warning-bg: 50 40 25;
-    --status-critical: 234 84 85;
-    --status-critical-bg: 50 25 25;
-    --status-active: 115 103 240;
-    --status-active-bg: 35 30 60;
-  }
-
   body {
     background-color: var(--color-cortex-bg);
     color: var(--color-cortex-text-main);
@@ -75,17 +56,17 @@
   /* Glass Morphism */
   .glass {
     @apply backdrop-blur-md border;
-    background-color: rgba(47, 51, 73, 0.7);
+    background-color: rgba(24, 24, 27, 0.7);
     border-color: var(--color-cortex-border);
   }
 
   /* Glow Utilities */
   .glow-stable {
-    box-shadow: 0 0 12px rgba(40, 199, 111, 0.3);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
   }
 
   .glow-active {
-    box-shadow: 0 0 12px rgba(115, 103, 240, 0.3);
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
   }
 
   .glow-critical {
@@ -93,14 +74,14 @@
   }
 
   .glow-primary {
-    box-shadow: 0 4px 14px 0 rgba(115, 103, 240, 0.39);
+    box-shadow: 0 4px 14px 0 var(--color-cortex-primary-glow);
   }
 
-  /* Active nav pill — Vuexy style */
+  /* Active nav pill */
   .nav-pill-active {
-    @apply rounded-lg text-white;
+    @apply rounded-lg text-cortex-bg;
     background-color: var(--color-cortex-primary);
-    box-shadow: 0 4px 14px 0 rgba(115, 103, 240, 0.39);
+    box-shadow: 0 4px 14px 0 var(--color-cortex-primary-glow);
   }
 
   /* Ghost Draft Nodes — Symbiote "thinking" state */
@@ -111,10 +92,10 @@
   .react-flow__node.ghost-draft>div {
     opacity: 0.5;
     border-style: dashed;
-    border-color: rgba(115, 103, 240, 0.4);
+    border-color: rgba(6, 182, 212, 0.4);
   }
 
-  /* Observable Plot — Vuexy Dark Overrides */
+  /* Observable Plot — Dark Overrides */
   .chart-container figure[aria-label] {
     color: var(--color-cortex-text-main);
     background: transparent;
@@ -133,7 +114,7 @@
     stroke: var(--color-cortex-border);
   }
 
-  /* Leaflet — Vuexy Dark Overrides */
+  /* Leaflet — Dark Overrides */
   .leaflet-container {
     background-color: var(--color-cortex-surface);
   }
@@ -155,12 +136,12 @@
 
   0%,
   100% {
-    border-color: rgba(115, 103, 240, 0.4);
+    border-color: rgba(6, 182, 212, 0.4);
   }
 
   50% {
-    border-color: rgba(115, 103, 240, 1);
-    box-shadow: 0 0 15px rgba(115, 103, 240, 0.5);
+    border-color: rgba(6, 182, 212, 1);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
   }
 }
 
@@ -178,13 +159,13 @@
 
   0%,
   100% {
-    border-color: rgba(115, 103, 240, 0.3);
-    box-shadow: 0 0 0 rgba(115, 103, 240, 0);
+    border-color: rgba(6, 182, 212, 0.3);
+    box-shadow: 0 0 0 rgba(6, 182, 212, 0);
   }
 
   50% {
-    border-color: rgba(115, 103, 240, 0.8);
-    box-shadow: 0 0 16px rgba(115, 103, 240, 0.35);
+    border-color: rgba(6, 182, 212, 0.8);
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.35);
   }
 }
 
@@ -197,10 +178,10 @@
 
   0%,
   100% {
-    box-shadow: 0 4px 20px rgba(40, 199, 111, 0.08);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
   }
 
   50% {
-    box-shadow: 0 4px 24px rgba(40, 199, 111, 0.2);
+    box-shadow: 0 4px 24px rgba(16, 185, 129, 0.2);
   }
 }

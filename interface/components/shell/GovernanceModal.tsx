@@ -180,7 +180,7 @@ export default function GovernanceModal() {
 
                         <button
                             onClick={handleApprove}
-                            className="flex items-center gap-2.5 px-8 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-cortex-success text-cortex-bg hover:shadow-[0_0_25px_rgba(40,199,111,0.4)] hover:bg-cortex-success/90"
+                            className="flex items-center gap-2.5 px-8 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-cortex-success text-cortex-bg hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] hover:bg-cortex-success/90"
                         >
                             <CheckCircle2 className="w-4 h-4" />
                             Approve & Dispatch
