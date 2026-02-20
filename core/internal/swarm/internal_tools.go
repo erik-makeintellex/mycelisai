@@ -22,6 +22,45 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+// Phase 0 security: workspace sandbox for file tools
+const maxWriteSize = 1 << 20 // 1 MB
+
+func validateToolPath(rawPath string) (string, error) {
+	workspace := os.Getenv("MYCELIS_WORKSPACE")
+	if workspace == "" {
+		workspace = "./workspace"
+	}
+	absWorkspace, err := filepath.Abs(workspace)
+	if err != nil {
+		return "", fmt.Errorf("invalid workspace path: %w", err)
+	}
+
+	var absTarget string
+	if filepath.IsAbs(rawPath) {
+		absTarget = filepath.Clean(rawPath)
+	} else {
+		absTarget = filepath.Clean(filepath.Join(absWorkspace, rawPath))
+	}
+
+	rel, err := filepath.Rel(absWorkspace, absTarget)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return "", fmt.Errorf("path %q escapes workspace boundary", rawPath)
+	}
+
+	// Symlink escape check (best-effort for existing paths)
+	checkPath := absTarget
+	if _, statErr := os.Lstat(absTarget); os.IsNotExist(statErr) {
+		checkPath = filepath.Dir(absTarget)
+	}
+	if realPath, evalErr := filepath.EvalSymlinks(checkPath); evalErr == nil {
+		relReal, _ := filepath.Rel(absWorkspace, realPath)
+		if strings.HasPrefix(relReal, "..") {
+			return "", fmt.Errorf("symlink at %q resolves outside workspace", rawPath)
+		}
+	}
+	return absTarget, nil
+}
+
 // InternalTool describes a built-in tool available to agents without an
 // external MCP server. The Handler function is invoked during the ReAct loop.
 type InternalTool struct {
@@ -127,6 +166,16 @@ func (r *InternalToolRegistry) registerAll() {
 			"properties": map[string]any{
 				"team_id": map[string]any{"type": "string", "description": "The target team ID"},
 				"task":    map[string]any{"type": "string", "description": "The task description to send"},
+				"hint": map[string]any{
+					"type":        "object",
+					"description": "Optional scoring hints for delegation priority",
+					"properties": map[string]any{
+						"confidence": map[string]any{"type": "number", "description": "0.0-1.0 confidence this is the right team"},
+						"urgency":    map[string]any{"type": "string", "enum": []string{"low", "medium", "high", "critical"}},
+						"complexity":  map[string]any{"type": "integer", "description": "1-5 complexity rating"},
+						"risk":       map[string]any{"type": "string", "enum": []string{"low", "medium", "high"}},
+					},
+				},
 			},
 			"required": []string{"team_id", "task"},
 		},
@@ -262,6 +311,7 @@ func (r *InternalToolRegistry) registerAll() {
 			"type": "object",
 			"properties": map[string]any{
 				"message": map[string]any{"type": "string", "description": "The message to broadcast to all teams"},
+				"urgency": map[string]any{"type": "string", "description": "Optional urgency level", "enum": []string{"low", "medium", "high", "critical"}},
 			},
 			"required": []string{"message"},
 		},
@@ -285,11 +335,11 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["read_file"] = &InternalTool{
 		Name:        "read_file",
-		Description: "Read the contents of a file from the local filesystem. Use for inspecting configs, logs, artifacts, or any file the organism can access.",
+		Description: "Read the contents of a file within the workspace sandbox (MYCELIS_WORKSPACE). Relative paths resolve from the workspace root. Absolute paths must be inside the workspace boundary.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"path": map[string]any{"type": "string", "description": "Absolute or relative file path to read"},
+				"path": map[string]any{"type": "string", "description": "File path relative to workspace root, or absolute path within workspace"},
 			},
 			"required": []string{"path"},
 		},
@@ -298,11 +348,11 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["write_file"] = &InternalTool{
 		Name:        "write_file",
-		Description: "Write content to a file on the local filesystem. Creates parent directories if needed. Use for generating configs, code, reports, or any file output.",
+		Description: "Write content to a file within the workspace sandbox (MYCELIS_WORKSPACE). Creates parent directories if needed. Max 1MB per write. Paths must resolve inside the workspace boundary.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"path":    map[string]any{"type": "string", "description": "File path to write to"},
+				"path":    map[string]any{"type": "string", "description": "File path relative to workspace root, or absolute path within workspace"},
 				"content": map[string]any{"type": "string", "description": "The file content to write"},
 			},
 			"required": []string{"path", "content"},
@@ -387,6 +437,18 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	task, _ := args["task"].(string)
 	if teamID == "" || task == "" {
 		return "", fmt.Errorf("delegate_task requires 'team_id' and 'task'")
+	}
+
+	// Log delegation hint if provided (observability only — V1)
+	if hintRaw, ok := args["hint"]; ok {
+		if hint, ok := hintRaw.(map[string]any); ok {
+			log.Printf("DelegationHint [%s]: confidence=%.2f urgency=%v complexity=%v risk=%v",
+				teamID,
+				hint["confidence"],
+				hint["urgency"],
+				hint["complexity"],
+				hint["risk"])
+		}
 	}
 
 	if r.nc == nil {
@@ -853,6 +915,12 @@ func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[strin
 	if message == "" {
 		return "", fmt.Errorf("broadcast requires 'message'")
 	}
+
+	// Log urgency hint if provided (observability only — V1)
+	if urgency, ok := args["urgency"].(string); ok && urgency != "" {
+		log.Printf("Broadcast urgency: %s", urgency)
+	}
+
 	if r.nc == nil {
 		return "", fmt.Errorf("NATS not available")
 	}
@@ -966,9 +1034,14 @@ func (r *InternalToolRegistry) handleReadFile(_ context.Context, args map[string
 		return "", fmt.Errorf("read_file requires 'path'")
 	}
 
-	data, err := os.ReadFile(path)
+	safePath, err := validateToolPath(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to read %s: %w", path, err)
+		return "", err
+	}
+
+	data, err := os.ReadFile(safePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s: %w", safePath, err)
 	}
 
 	// Truncate large files to prevent LLM context overflow
@@ -987,17 +1060,26 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 		return "", fmt.Errorf("write_file requires 'path' and 'content'")
 	}
 
+	if len(content) > maxWriteSize {
+		return "", fmt.Errorf("content size %d exceeds maximum write size of %d bytes", len(content), maxWriteSize)
+	}
+
+	safePath, err := validateToolPath(path)
+	if err != nil {
+		return "", err
+	}
+
 	// Create parent directories
-	dir := filepath.Dir(path)
+	dir := filepath.Dir(safePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("failed to write %s: %w", path, err)
+	if err := os.WriteFile(safePath, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("failed to write %s: %w", safePath, err)
 	}
 
-	return fmt.Sprintf("File written: %s (%d bytes).", path, len(content)), nil
+	return fmt.Sprintf("File written: %s (%d bytes).", safePath, len(content)), nil
 }
 
 func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map[string]any) (string, error) {

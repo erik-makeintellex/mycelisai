@@ -26,6 +26,28 @@ export interface ChatArtifactRef {
     url?: string;             // external URL (for links, images)
 }
 
+// CE-1: Orchestration Template types
+export type TemplateID = 'chat-to-answer' | 'chat-to-proposal';
+export type ExecutionMode = 'answer' | 'proposal';
+
+export interface AnswerProvenance {
+    resolved_intent: string;
+    permission_check: string;
+    policy_decision: string;
+    audit_event_id: string;
+    consult_chain?: string[];
+}
+
+export interface ProposalData {
+    intent: string;
+    teams: number;
+    agents: number;
+    tools: string[];
+    risk_level: string;
+    confirm_token: string;
+    intent_proof_id: string;
+}
+
 export interface ChatMessage {
     role: 'user' | 'architect' | 'admin' | 'council';
     content: string;
@@ -35,6 +57,11 @@ export interface ChatMessage {
     trust_score?: number;    // 0.0-1.0
     timestamp?: string;      // ISO 8601
     artifacts?: ChatArtifactRef[];
+    // CE-1: Template metadata
+    template_id?: TemplateID;
+    mode?: ExecutionMode;
+    provenance?: AnswerProvenance;
+    proposal?: ProposalData;
 }
 
 export interface StreamSignal {
@@ -464,6 +491,11 @@ export interface CortexState {
     selectedAgentNodeId: string | null;
     isAgentEditorOpen: boolean;
 
+    // CE-1: Orchestration Templates
+    pendingProposal: ProposalData | null;
+    activeConfirmToken: string | null;
+    lastCommitProof: { intent_proof_id: string; audit_event_id: string } | null;
+
     // Signal Detail Drawer
     selectedSignalDetail: SignalDetail | null;
 
@@ -522,6 +554,10 @@ export interface CortexState {
 
     // Broadcast (Phase 8.0)
     broadcastToSwarm: (message: string) => Promise<void>;
+
+    // CE-1: Template-aware actions
+    confirmProposal: () => Promise<void>;
+    cancelProposal: () => void;
 
     // Team Explorer (Phase 7.6)
     fetchTeamDetails: () => Promise<void>;
@@ -858,6 +894,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     selectedAgentNodeId: null,
     isAgentEditorOpen: false,
 
+    // CE-1: Orchestration Templates
+    pendingProposal: null,
+    activeConfirmToken: null,
+    lastCommitProof: null,
+
     // Signal Detail Drawer
     selectedSignalDetail: null,
 
@@ -903,7 +944,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 return;
             }
 
-            const bp = data as MissionBlueprint;
+            // CE-1: Negotiate response is now { blueprint, intent_proof, confirm_token, template }
+            const bp = (data.blueprint ?? data) as MissionBlueprint;
             const { nodes, edges } = blueprintToGraph(bp);
 
             const agentCount = bp.teams.reduce((sum, t) => sum + t.agents.length, 0);
@@ -913,9 +955,21 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 bp.constraints && bp.constraints.length > 0
                     ? `${bp.constraints.length} constraint${bp.constraints.length !== 1 ? 's' : ''} applied.`
                     : '',
+                data.confirm_token ? 'Confirm token issued.' : '',
             ]
                 .filter(Boolean)
                 .join(' ');
+
+            // CE-1: Extract proposal data from enriched response
+            const proposalData: ProposalData | null = data.confirm_token ? {
+                intent: bp.intent,
+                teams: bp.teams.length,
+                agents: agentCount,
+                tools: data.intent_proof?.scope_validation?.tools || [],
+                risk_level: data.intent_proof?.scope_validation?.risk_level || 'medium',
+                confirm_token: data.confirm_token.token,
+                intent_proof_id: data.intent_proof?.id || '',
+            } : null;
 
             set((s) => ({
                 isDrafting: false,
@@ -923,6 +977,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 nodes,
                 edges,
                 missionStatus: 'draft',
+                pendingProposal: proposalData,
+                activeConfirmToken: data.confirm_token?.token || null,
                 chatHistory: [...s.chatHistory, { role: 'architect', content: summary }],
             }));
         } catch (err) {
@@ -1506,6 +1562,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 trust_score: envelope.trust_score,
                 timestamp: envelope.meta.timestamp,
                 artifacts: envelope.payload.artifacts,
+                // CE-1: Template metadata
+                template_id: (envelope as any).template_id || 'chat-to-answer',
+                mode: (envelope as any).mode || 'answer',
+                provenance: envelope.payload?.provenance,
             };
 
             set((s) => ({

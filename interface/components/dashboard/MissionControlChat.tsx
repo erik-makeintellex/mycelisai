@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useCortexStore, type ChatMessage, type ChatArtifactRef } from "@/store/useCortexStore";
 import { ChartRenderer, type MycelisChartSpec } from "@/components/charts";
+import { sourceNodeLabel, trustBadge, trustTooltip, toolLabel, councilLabel, councilOptionLabel } from "@/lib/labels";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -350,14 +351,14 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                 {!isUser && msg.source_node && (
                     <div className="flex items-center gap-1.5 px-1">
                         <span className="text-[8px] font-bold uppercase tracking-widest text-cortex-info font-mono">
-                            {msg.source_node === 'admin' ? 'SOMA' : msg.source_node.replace("council-", "").toUpperCase()}
+                            {sourceNodeLabel(msg.source_node!)}
                         </span>
                         {msg.trust_score != null && msg.trust_score > 0 && (
                             <span
                                 className={`text-[8px] font-mono font-bold ${trustColor(msg.trust_score)}`}
-                                title={`Trust Score: ${msg.trust_score.toFixed(2)} — Confidence level of this response (0.0–1.0)`}
+                                title={trustTooltip(msg.trust_score)}
                             >
-                                T:{msg.trust_score.toFixed(1)}
+                                {trustBadge(msg.trust_score)}
                             </span>
                         )}
                     </div>
@@ -395,11 +396,19 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                             <span
                                 key={tool}
                                 className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/20"
-                                title={`Tool executed: ${tool}`}
+                                title={tool}
                             >
-                                {tool}
+                                {toolLabel(tool)}
                             </span>
                         ))}
+                    </div>
+                )}
+
+                {/* Recalled memory indicator */}
+                {!isUser && msg.tools_used && (msg.tools_used.includes('recall') || msg.tools_used.includes('search_memory')) && (
+                    <div className="flex items-center gap-1 px-1 mt-0.5">
+                        <span className="w-1 h-1 rounded-full bg-cortex-primary" />
+                        <span className="text-[8px] font-mono text-cortex-primary/70 italic">recalled from memory</span>
                     </div>
                 )}
             </div>
@@ -473,8 +482,7 @@ export default function MissionControlChat() {
         setInput("");
     };
 
-    const targetMember = councilMembers.find((m) => m.id === councilTarget);
-    const targetLabel = councilTarget === 'admin' ? 'Soma' : (targetMember?.role?.toUpperCase() || councilTarget.toUpperCase());
+    const targetLabel = councilLabel(councilTarget).name;
 
     return (
         <div className="h-full flex flex-col" data-testid="mission-chat">
@@ -497,11 +505,11 @@ export default function MissionControlChat() {
                             className="bg-transparent text-[9px] font-bold uppercase tracking-widest text-cortex-text-muted border-none outline-none cursor-pointer font-mono"
                         >
                             {councilMembers.length === 0 ? (
-                                <option value="admin">SOMA (soma)</option>
+                                <option value="admin">Soma — Executive Cortex</option>
                             ) : (
                                 councilMembers.map((m) => (
                                     <option key={m.id} value={m.id}>
-                                        {m.role === 'admin' ? 'SOMA' : m.role.toUpperCase()} ({m.team === 'admin-core' ? 'soma' : m.team.replace('-core', '')})
+                                        {councilOptionLabel(m.id, m.role)}
                                     </option>
                                 ))
                             )}
@@ -567,7 +575,7 @@ export default function MissionControlChat() {
                         <p className="text-[10px] font-mono text-center">
                             {broadcastMode
                                 ? "Broadcast directives to all active teams"
-                                : `Ask the ${targetLabel.toLowerCase()} about team state, missions, or direct the council`}
+                                : `Ask ${targetLabel} about missions, teams, or your system`}
                         </p>
                     </div>
                 ) : (
@@ -597,6 +605,11 @@ export default function MissionControlChat() {
                                     : "bg-cortex-info/5 border border-cortex-info/20"
                             }`}
                         >
+                            <span className={`text-[10px] font-mono block mb-1 ${isBroadcasting ? "text-cortex-warning/70" : "text-cortex-info/70"}`}>
+                                {isBroadcasting
+                                    ? "Broadcasting to all teams..."
+                                    : `${targetLabel} is recalling context...`}
+                            </span>
                             <div className="flex gap-1">
                                 <span
                                     className={`w-1.5 h-1.5 rounded-full animate-bounce ${isBroadcasting ? "bg-cortex-warning" : "bg-cortex-info"}`}
@@ -627,7 +640,7 @@ export default function MissionControlChat() {
                         placeholder={
                             broadcastMode
                                 ? "Broadcast to all teams..."
-                                : `Ask the ${targetLabel.toLowerCase()}... (or /all to broadcast)`
+                                : `Ask ${targetLabel}... (or /all to broadcast)`
                         }
                         disabled={isLoading}
                         className={`flex-1 bg-cortex-bg border rounded-lg px-2.5 py-1.5 text-xs text-cortex-text-main placeholder-cortex-text-muted/50 font-mono focus:outline-none focus:ring-1 disabled:opacity-50 ${

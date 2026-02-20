@@ -17,7 +17,8 @@ const (
 	SignalHeartbeat      SignalType = "heartbeat"
 	SignalGovernanceHalt SignalType = "governance_halt"
 	SignalSensorData     SignalType = "sensor_data"
-	SignalChatResponse   SignalType = "chat_response"
+	SignalChatResponse      SignalType = "chat_response"
+	SignalBlueprintProposal SignalType = "blueprint_proposal" // CE-1: proposal with confirm token
 )
 
 // Trust Economy — default trust scores by node category.
@@ -47,6 +48,9 @@ type CTSEnvelope struct {
 	SignalType SignalType      `json:"signal_type"`
 	TrustScore float64         `json:"trust_score,omitempty"`
 	Payload    json.RawMessage `json:"payload"`
+	// CE-1: Orchestration template metadata (backward-compatible, omitempty)
+	TemplateID TemplateID    `json:"template_id,omitempty"`
+	Mode       ExecutionMode `json:"mode,omitempty"`
 }
 
 // HasTrustScore returns true if the envelope carries an explicit trust rating.
@@ -81,6 +85,8 @@ type ChatResponsePayload struct {
 	Consultations []string            `json:"consultations,omitempty"`
 	ToolsUsed     []string            `json:"tools_used,omitempty"`
 	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`
+	// CE-1: Answer provenance (audit linkage for Chat-to-Answer template)
+	Provenance    *AnswerProvenance   `json:"provenance,omitempty"`
 }
 
 // ChatArtifactRef is an inline artifact reference embedded in a chat response.
@@ -94,6 +100,15 @@ type ChatArtifactRef struct {
 	ContentType string `json:"content_type,omitempty"` // MIME type
 	Content     string `json:"content,omitempty"`      // inline content (text, JSON, base64 for images)
 	URL         string `json:"url,omitempty"`          // external URL (for links, images)
+}
+
+// DelegationHint carries optional scoring metadata for task delegation.
+// V1: logged for observability only. Future: somatic modulation.
+type DelegationHint struct {
+	Confidence float64 `json:"confidence,omitempty"` // 0.0-1.0
+	Urgency    string  `json:"urgency,omitempty"`    // low, medium, high, critical
+	Complexity int     `json:"complexity,omitempty"` // 1-5
+	Risk       string  `json:"risk,omitempty"`       // low, medium, high
 }
 
 // APIResponse is the standard response wrapper for all Mycelis API endpoints.

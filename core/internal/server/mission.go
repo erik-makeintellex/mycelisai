@@ -19,32 +19,48 @@ const rootOwnerID = "00000000-0000-0000-0000-000000000000"
 
 // CommitResponse is the JSON reply from POST /api/v1/intent/commit.
 type CommitResponse struct {
-	Status     string                  `json:"status"`
-	MissionID  string                  `json:"mission_id"`
-	Teams      int                     `json:"teams"`
-	Agents     int                     `json:"agents"`
-	Activation *swarm.ActivationResult `json:"activation,omitempty"`
+	Status        string                  `json:"status"`
+	MissionID     string                  `json:"mission_id"`
+	Teams         int                     `json:"teams"`
+	Agents        int                     `json:"agents"`
+	Activation    *swarm.ActivationResult `json:"activation,omitempty"`
+	IntentProofID string                  `json:"intent_proof_id,omitempty"` // CE-1
+	AuditEventID  string                  `json:"audit_event_id,omitempty"` // CE-1
 }
 
 // handleIntentCommit persists a MissionBlueprint into the Ledger
 // (missions, teams, service_manifests) and activates teams in the Soma runtime.
+// CE-1: Requires a confirm_token. No token = no commit.
 func (s *AdminServer) handleIntentCommit(w http.ResponseWriter, r *http.Request) {
-	var bp protocol.MissionBlueprint
-	if err := json.NewDecoder(r.Body).Decode(&bp); err != nil {
+	var req protocol.CommitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
 		return
 	}
-	if bp.Intent == "" {
+	if req.Intent == "" {
 		http.Error(w, `{"error":"intent is required"}`, http.StatusBadRequest)
 		return
 	}
 
-	sensorConfigs := buildSensorConfigs(&bp)
-	s.commitAndActivate(w, &bp, sensorConfigs)
+	// CE-1: Require confirm token for Chat-to-Proposal commits
+	if req.ConfirmToken == "" {
+		respondError(w, "confirm_token is required. No token = no commit.", http.StatusForbidden)
+		return
+	}
+	proofID, err := s.validateConfirmToken(req.ConfirmToken)
+	if err != nil {
+		respondError(w, "Invalid confirm token: "+err.Error(), http.StatusForbidden)
+		return
+	}
+
+	bp := &req.MissionBlueprint
+	sensorConfigs := buildSensorConfigs(bp)
+	s.commitAndActivateWithProof(w, bp, sensorConfigs, proofID)
 }
 
 // handleSymbioticSeed commits the built-in Symbiotic Sensors blueprint.
 // Bypasses the MetaArchitect — no LLM required.
+// CE-1: Exempt from confirm tokens (system seed, not user intent).
 func (s *AdminServer) handleSymbioticSeed(w http.ResponseWriter, r *http.Request) {
 	bp := swarm.SymbioticSeedBlueprint()
 	configs := swarm.SymbioticSeedSensorConfigs()
@@ -151,6 +167,112 @@ func (s *AdminServer) commitAndActivate(w http.ResponseWriter, bp *protocol.Miss
 		Teams:      len(bp.Teams),
 		Agents:     totalAgents,
 		Activation: activation,
+	})
+}
+
+// commitAndActivateWithProof is the CE-1 variant that confirms the intent proof
+// and includes proof/audit IDs in the response. Used by handleIntentCommit.
+func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *protocol.MissionBlueprint, sensorConfigs map[string]swarm.SensorConfig, proofID string) {
+	db := s.getDB()
+	if db == nil {
+		http.Error(w, `{"error":"database not available"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("intent/commit: tx begin: %v", err)
+		http.Error(w, `{"error":"database transaction failed"}`, http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	missionID := uuid.New()
+	missionName := bp.Intent
+	if len(missionName) > 120 {
+		missionName = missionName[:120]
+	}
+
+	_, err = tx.Exec(
+		`INSERT INTO missions (id, owner_id, name, directive, status, activated_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+		missionID, rootOwnerID, missionName, bp.Intent, "active", time.Now(),
+	)
+	if err != nil {
+		log.Printf("intent/commit: insert mission: %v", err)
+		http.Error(w, fmt.Sprintf(`{"error":"insert mission: %s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	totalAgents := 0
+	for tIdx, team := range bp.Teams {
+		teamID := uuid.New()
+		teamPath := missionID.String() + "." + teamID.String()
+
+		_, err = tx.Exec(
+			`INSERT INTO teams (id, owner_id, name, role, mission_id, path) VALUES ($1, $2, $3, $4, $5, $6)`,
+			teamID, rootOwnerID, team.Name, team.Role, missionID, teamPath,
+		)
+		if err != nil {
+			log.Printf("intent/commit: insert team[%d] %s: %v", tIdx, team.Name, err)
+			http.Error(w, fmt.Sprintf(`{"error":"insert team: %s"}`, err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		for aIdx, agent := range team.Agents {
+			manifestJSON, err := json.Marshal(agent)
+			if err != nil {
+				log.Printf("intent/commit: marshal agent[%d][%d]: %v", tIdx, aIdx, err)
+				continue
+			}
+
+			manifestID := uuid.New()
+			_, err = tx.Exec(
+				`INSERT INTO service_manifests (id, team_id, name, manifest, status) VALUES ($1, $2, $3, $4, 'active')`,
+				manifestID, teamID, agent.ID, manifestJSON,
+			)
+			if err != nil {
+				log.Printf("intent/commit: insert agent %s: %v", agent.ID, err)
+				http.Error(w, fmt.Sprintf(`{"error":"insert agent: %s"}`, err.Error()), http.StatusInternalServerError)
+				return
+			}
+			totalAgents++
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Printf("intent/commit: tx commit: %v", err)
+		http.Error(w, `{"error":"transaction commit failed"}`, http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Mission committed: %s (%d teams, %d agents)", missionID, len(bp.Teams), totalAgents)
+
+	// Activation Bridge
+	var activation *swarm.ActivationResult
+	if s.Soma != nil {
+		activation = s.Soma.ActivateBlueprint(bp, sensorConfigs)
+		log.Printf("Mission activated: %d teams spawned, %d skipped, %d sensors",
+			activation.TeamsSpawned, activation.TeamsSkipped, activation.SensorsSpawned)
+	} else {
+		log.Println("WARN: Soma unavailable — mission persisted but not activated")
+	}
+
+	// CE-1: Confirm intent proof and create commit audit event
+	s.confirmIntentProof(proofID, missionID.String())
+	auditEventID, _ := s.createAuditEvent(
+		protocol.TemplateChatToProposal, "commit",
+		fmt.Sprintf("Mission committed: %s", missionID),
+		map[string]any{"mission_id": missionID.String(), "teams": len(bp.Teams), "agents": totalAgents, "proof_id": proofID},
+	)
+
+	respondJSON(w, CommitResponse{
+		Status:        "active",
+		MissionID:     missionID.String(),
+		Teams:         len(bp.Teams),
+		Agents:        totalAgents,
+		Activation:    activation,
+		IntentProofID: proofID,
+		AuditEventID:  auditEventID,
 	})
 }
 

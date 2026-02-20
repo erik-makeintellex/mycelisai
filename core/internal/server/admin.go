@@ -150,6 +150,10 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Intent Commit (Instantiate Mission into Ledger + Activate in Soma)
 	mux.HandleFunc("POST /api/v1/intent/commit", s.handleIntentCommit)
 
+	// CE-1: Orchestration Templates & Intent Proofs
+	mux.HandleFunc("GET /api/v1/templates", s.handleListTemplatesAPI)
+	mux.HandleFunc("GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
+
 	// Phase 6.0: Symbiotic Seed (built-in sensor team, no LLM required)
 	mux.HandleFunc("POST /api/v1/intent/seed/symbiotic", s.handleSymbioticSeed)
 
@@ -167,8 +171,12 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/proposals/{id}/approve", s.HandleProposalApprove)
 	mux.HandleFunc("POST /api/v1/proposals/{id}/reject", s.HandleProposalReject)
 
-	// Phase 7.0: MCP Ingress API
-	mux.HandleFunc("POST /api/v1/mcp/install", s.handleMCPInstall)
+	// Phase 7.0: MCP Ingress API — raw install disabled (Phase 0 security)
+	mux.HandleFunc("POST /api/v1/mcp/install", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(`{"error":"Raw MCP install disabled. Use POST /api/v1/mcp/library/install with a curated server name."}`))
+	})
 	mux.HandleFunc("GET /api/v1/mcp/servers", s.handleMCPList)
 	mux.HandleFunc("DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
 	mux.HandleFunc("POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
@@ -314,24 +322,48 @@ func (s *AdminServer) handleIntentNegotiate(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Try routing through Admin agent for research-enriched blueprint
+	var blueprint *protocol.MissionBlueprint
 	if s.NC != nil {
-		blueprint, err := s.negotiateViaAdmin(r.Context(), req.Intent)
-		if err == nil && blueprint != nil {
-			respondJSON(w, blueprint)
-			return
+		bp, err := s.negotiateViaAdmin(r.Context(), req.Intent)
+		if err == nil && bp != nil {
+			blueprint = bp
+		} else {
+			log.Printf("Admin-routed negotiate failed, falling back to direct MetaArchitect: %v", err)
 		}
-		log.Printf("Admin-routed negotiate failed, falling back to direct MetaArchitect: %v", err)
 	}
 
 	// Fallback: direct MetaArchitect (single-shot, no research)
-	blueprint, err := s.MetaArchitect.GenerateBlueprint(r.Context(), req.Intent)
-	if err != nil {
-		log.Printf("Intent negotiation failed: %v", err)
-		respondError(w, "Cognitive engine error: "+err.Error(), http.StatusBadGateway)
-		return
+	if blueprint == nil {
+		bp, err := s.MetaArchitect.GenerateBlueprint(r.Context(), req.Intent)
+		if err != nil {
+			log.Printf("Intent negotiation failed: %v", err)
+			respondError(w, "Cognitive engine error: "+err.Error(), http.StatusBadGateway)
+			return
+		}
+		blueprint = bp
 	}
 
-	respondJSON(w, blueprint)
+	// CE-1: Build scope validation, create intent proof + confirm token
+	scope := buildScopeFromBlueprint(blueprint)
+	auditEventID, _ := s.createAuditEvent(
+		protocol.TemplateChatToProposal, "negotiate",
+		fmt.Sprintf("Blueprint negotiation: %s", req.Intent),
+		map[string]any{"intent": req.Intent, "teams": len(blueprint.Teams), "scope": scope},
+	)
+
+	proof, _ := s.createIntentProof(protocol.TemplateChatToProposal, req.Intent, scope, auditEventID)
+	var confirmToken *protocol.ConfirmToken
+	if proof != nil {
+		confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal)
+	}
+
+	templateSpec := protocol.TemplateRegistry[protocol.TemplateChatToProposal]
+	respondJSON(w, protocol.NegotiateResponse{
+		Blueprint:    blueprint,
+		IntentProof:  proof,
+		ConfirmToken: confirmToken,
+		Template:     &templateSpec,
+	})
 }
 
 // negotiateViaAdmin sends the intent to the Admin agent via NATS request-reply.

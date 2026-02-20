@@ -255,51 +255,50 @@ func TestHandleDeleteMission_NilDB(t *testing.T) {
 }
 
 // ── POST /api/v1/intent/commit ─────────────────────────────────────
+// CE-1: handleIntentCommit now requires a confirm_token.
 
-func TestHandleIntentCommit(t *testing.T) {
+func TestHandleIntentCommit_MissingToken(t *testing.T) {
+	// CE-1 directive test: commit without confirm_token → 403
+	dbOpt, _ := withDB(t)
+	s := newTestServer(dbOpt)
+
+	body := `{
+		"intent": "Build a scraper",
+		"teams": [{"name": "t", "role": "r", "agents": []}]
+	}`
+	rr := doRequest(t, http.HandlerFunc(s.handleIntentCommit), "POST", "/api/v1/intent/commit", body)
+	assertStatus(t, rr, http.StatusForbidden)
+}
+
+func TestHandleIntentCommit_InvalidToken(t *testing.T) {
+	// CE-1 directive test: commit with invalid token format → 403
+	dbOpt, _ := withDB(t)
+	s := newTestServer(dbOpt)
+
+	body := `{
+		"intent": "Build a scraper",
+		"confirm_token": "not-a-uuid",
+		"teams": [{"name": "t", "role": "r", "agents": []}]
+	}`
+	rr := doRequest(t, http.HandlerFunc(s.handleIntentCommit), "POST", "/api/v1/intent/commit", body)
+	assertStatus(t, rr, http.StatusForbidden)
+}
+
+func TestHandleIntentCommit_TokenNotFound(t *testing.T) {
+	// CE-1 directive test: commit with nonexistent valid-format token → 403
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)
 
-	mock.ExpectBegin()
-	mock.ExpectExec("INSERT INTO missions").
-		WithArgs(sqlmock.AnyArg(), rootOwnerID, sqlmock.AnyArg(), "Build a scraper", "active", sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec("INSERT INTO teams").
-		WithArgs(sqlmock.AnyArg(), rootOwnerID, "scraper-team", "action", sqlmock.AnyArg(), sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec("INSERT INTO service_manifests").
-		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), "web-scraper", sqlmock.AnyArg()).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
+	mock.ExpectQuery("SELECT .+ FROM confirm_tokens").
+		WillReturnRows(sqlmock.NewRows([]string{"intent_proof_id", "consumed", "expires_at"}))
 
 	body := `{
-		"mission_id": "test-mission",
 		"intent": "Build a scraper",
-		"teams": [{
-			"name": "scraper-team",
-			"role": "action",
-			"agents": [{"id": "web-scraper", "role": "cognitive", "system_prompt": "Scrape"}]
-		}]
+		"confirm_token": "11111111-1111-1111-1111-111111111111",
+		"teams": [{"name": "t", "role": "r", "agents": []}]
 	}`
-
 	rr := doRequest(t, http.HandlerFunc(s.handleIntentCommit), "POST", "/api/v1/intent/commit", body)
-	assertStatus(t, rr, http.StatusOK)
-
-	var result CommitResponse
-	assertJSON(t, rr, &result)
-	if result.Status != "active" {
-		t.Errorf("Expected status 'active', got %q", result.Status)
-	}
-	if result.Teams != 1 {
-		t.Errorf("Expected 1 team, got %d", result.Teams)
-	}
-	if result.Agents != 1 {
-		t.Errorf("Expected 1 agent, got %d", result.Agents)
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unmet DB expectations: %v", err)
-	}
+	assertStatus(t, rr, http.StatusForbidden)
 }
 
 func TestHandleIntentCommit_MissingIntent(t *testing.T) {
@@ -317,13 +316,6 @@ func TestHandleIntentCommit_InvalidJSON(t *testing.T) {
 
 	rr := doRequest(t, http.HandlerFunc(s.handleIntentCommit), "POST", "/api/v1/intent/commit", "not-json")
 	assertStatus(t, rr, http.StatusBadRequest)
-}
-
-func TestHandleIntentCommit_NilDB(t *testing.T) {
-	s := newTestServer()
-	body := `{"intent":"Build","teams":[{"name":"t","role":"r","agents":[]}]}`
-	rr := doRequest(t, http.HandlerFunc(s.handleIntentCommit), "POST", "/api/v1/intent/commit", body)
-	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
 // ── POST /api/v1/intent/negotiate ──────────────────────────────────
