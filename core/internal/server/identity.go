@@ -25,13 +25,20 @@ type Team struct {
 	Role string `json:"role"` // User's role in this team
 }
 
-// HandleMe returns the current authenticated user
+// HandleMe returns the current authenticated user from context identity.
 func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
-	// Mock: Assume Admin for dev
+	identity := IdentityFromContext(r.Context())
+	if identity == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"error":"not authenticated"}`))
+		return
+	}
+
 	user := User{
-		ID:        "user-001",
-		Username:  "admin",
-		Role:      "admin",
+		ID:        identity.UserID,
+		Username:  identity.Username,
+		Role:      identity.Role,
 		Settings:  json.RawMessage(`{"theme": "aero-light", "matrix_view": "grid"}`),
 		CreatedAt: time.Now(),
 	}

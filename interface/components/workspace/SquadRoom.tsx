@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { ArrowLeft, Users, MessageSquare, FileCheck, Bot, BarChart3 } from 'lucide-react';
 import { useCortexStore, type StreamSignal } from '@/store/useCortexStore';
+import { WORKSPACE_LABELS, GOV_LABELS } from '@/lib/labels';
 import { ChartRenderer, type MycelisChartSpec } from '@/components/charts';
 
 interface SquadRoomProps {
@@ -192,7 +193,7 @@ export default function SquadRoom({ teamId }: SquadRoomProps) {
                 )}
 
                 <span className="ml-auto text-[9px] font-mono text-cortex-text-muted/60 uppercase">
-                    Squad Room
+                    {WORKSPACE_LABELS.squadRoom}
                 </span>
             </div>
 
@@ -218,7 +219,7 @@ export default function SquadRoom({ teamId }: SquadRoomProps) {
                     <div className="px-4 py-2 border-b border-cortex-border/50 flex items-center gap-2 flex-shrink-0">
                         <MessageSquare className="w-3.5 h-3.5 text-cortex-info" />
                         <span className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wide">
-                            Internal Debate
+                            {WORKSPACE_LABELS.internalDebate}
                         </span>
                         <span className="text-[9px] font-mono text-cortex-text-muted/60 ml-auto">
                             {debateSignals.length} signals
@@ -246,7 +247,7 @@ export default function SquadRoom({ teamId }: SquadRoomProps) {
                     <div className="px-4 py-2 border-b border-cortex-border/50 flex items-center gap-2 flex-shrink-0">
                         <FileCheck className="w-3.5 h-3.5 text-cortex-success" />
                         <span className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wide">
-                            Proof of Work
+                            {GOV_LABELS.proofOfWork}
                         </span>
                         <span className="text-[9px] font-mono text-cortex-text-muted/60 ml-auto">
                             {proofSignals.length} artifacts

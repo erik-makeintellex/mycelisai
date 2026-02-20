@@ -201,6 +201,20 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		ToolsUsed: agentResult.ToolsUsed,
 		Artifacts: agentResult.Artifacts,
 	}
+
+	// CE-1: Create audit event and build answer provenance
+	auditEventID, _ := s.createAuditEvent(
+		protocol.TemplateChatToAnswer, "admin",
+		"Admin chat",
+		map[string]any{"tools": agentResult.ToolsUsed},
+	)
+	chatPayload.Provenance = &protocol.AnswerProvenance{
+		ResolvedIntent:  "answer",
+		PermissionCheck: "pass",
+		PolicyDecision:  "allow",
+		AuditEventID:    auditEventID,
+	}
+
 	payloadBytes, _ := json.Marshal(chatPayload)
 
 	envelope := protocol.CTSEnvelope{
@@ -211,6 +225,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		SignalType: protocol.SignalChatResponse,
 		TrustScore: protocol.TrustScoreCognitive,
 		Payload:    payloadBytes,
+		TemplateID: protocol.TemplateChatToAnswer,
+		Mode:       protocol.ModeAnswer,
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
@@ -362,6 +378,20 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		ToolsUsed: agentResult.ToolsUsed,
 		Artifacts: agentResult.Artifacts,
 	}
+
+	// CE-1: Create audit event and build answer provenance
+	auditEventID, _ := s.createAuditEvent(
+		protocol.TemplateChatToAnswer, memberID,
+		fmt.Sprintf("Council chat with %s", memberID),
+		map[string]any{"tools": agentResult.ToolsUsed, "member": memberID, "team": teamID},
+	)
+	chatPayload.Provenance = &protocol.AnswerProvenance{
+		ResolvedIntent:  "answer",
+		PermissionCheck: "pass",
+		PolicyDecision:  "allow",
+		AuditEventID:    auditEventID,
+	}
+
 	payloadBytes, _ := json.Marshal(chatPayload)
 
 	envelope := protocol.CTSEnvelope{
@@ -372,10 +402,12 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		SignalType: protocol.SignalChatResponse,
 		TrustScore: protocol.TrustScoreCognitive,
 		Payload:    payloadBytes,
+		TemplateID: protocol.TemplateChatToAnswer,
+		Mode:       protocol.ModeAnswer,
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
-	log.Printf("Council chat: member=%s team=%s trust=%.1f tools=%v len=%d", memberID, teamID, envelope.TrustScore, agentResult.ToolsUsed, len(agentResult.Text))
+	log.Printf("Council chat: member=%s team=%s trust=%.1f tools=%v template=%s", memberID, teamID, envelope.TrustScore, agentResult.ToolsUsed, envelope.TemplateID)
 }
 
 // PUT /api/v1/cognitive/profiles

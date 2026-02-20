@@ -114,6 +114,12 @@ func (t *Team) Start() error {
 		if err != nil {
 			log.Printf("Team [%s] invalid schedule interval %q: %v", t.Manifest.Name, t.Manifest.Schedule.Interval, err)
 		} else if interval > 0 {
+			// Phase 0 safety: enforce minimum 30s interval
+			const minInterval = 30 * time.Second
+			if interval < minInterval {
+				log.Printf("WARN: Team [%s] schedule interval %s below minimum, clamping to %s", t.Manifest.Name, interval, minInterval)
+				interval = minInterval
+			}
 			schedCtx, schedCancel := context.WithCancel(t.ctx)
 			t.scheduler = &TeamScheduler{
 				teamID:   t.Manifest.ID,

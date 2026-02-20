@@ -14,7 +14,7 @@
 > | [Frontend Specification](docs/architecture/FRONTEND.md) | Working on React/Next.js, Zustand, design |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 13 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, the **Standardized Council Chat API** with CTS-enveloped responses, and **Soma Identity** with persistent chat memory, artifact pipeline, and in-character organism personality.
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 15 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, the **Standardized Council Chat API** with CTS-enveloped responses, **Soma Identity** with persistent chat memory, artifact pipeline, and in-character organism personality, **Conversation Memory & Scheduled Teams**, a **Natural Human Interface** (label translation layer), and **Phase 0 Security Containment** (API key auth, filesystem sandboxing, MCP lockdown).
 
 ## Architecture
 
@@ -24,9 +24,9 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 - **Standing Teams:** Admin/Soma (orchestrator, 18 tools, 10 ReAct iterations, persistent identity) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
 - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
 - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
-- **Internal Tool Registry:** 18 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O, NATS bus sensing, image generation, and more.
+- **Internal Tool Registry:** 20 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O (workspace-sandboxed), NATS bus sensing, image generation, summarize_conversation, research_for_blueprint, and more.
 - **Composite Tool Executor:** Unified interface routing tool calls to InternalToolRegistry or MCP ToolExecutorAdapter.
-- **MCP Ingress:** Install, manage, and invoke MCP tool servers. Curated library with one-click install.
+- **MCP Ingress:** Install, manage, and invoke MCP tool servers. Curated library with one-click install. Raw install endpoint disabled (Phase 0 security) — library-only installs enforced.
 - **Archivist:** Context engine — SitReps, auto-embed to pgvector (768-dim, nomic-embed-text), semantic search.
 - **Governance:** Policy engine with YAML rules, approval queue, trust economy (0.0–1.0 threshold).
 - **Cognitive Router:** 6 LLM providers (ollama, vllm, lmstudio, OpenAI, Anthropic, Gemini), profile-based routing, token telemetry.
@@ -127,8 +127,8 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | :--- | :--- |
 | **Council targeting** | Dropdown selector: Admin, Architect, Coder, Creative, Sentry. Each has its own system prompt, tools, and specialization. |
 | **Broadcast mode** | Toggle or `/all` prefix — sends message to ALL active teams via NATS |
-| **File I/O** | Admin + council agents can `read_file` and `write_file` on the host filesystem (no path restrictions). Sentry is read-only. |
-| **Tool access** | 18 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue |
+| **File I/O** | Admin + council agents can `read_file` and `write_file` within the workspace sandbox (`MYCELIS_WORKSPACE`, default `./workspace`). Paths must resolve inside the boundary — symlink escapes are detected. Max 1MB per write. Sentry is read-only. |
+| **Tool access** | 20 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, store_artifact, summarize_conversation |
 | **MCP tools** | Any installed MCP server tools are also available (filesystem, fetch, brave-search, etc.) |
 | **Trust scores** | Each response carries a CTS trust score (0.0–1.0), displayed as a colored badge |
 | **Multi-turn** | Full conversation history is forwarded to the agent — maintains context across turns |
@@ -170,6 +170,7 @@ These give agents immediate file and web access without manual setup. Additional
 ```bash
 cp .env.example .env
 # Edit .env — set DB credentials, OLLAMA_HOST, NATS_URL, etc.
+# REQUIRED: Set MYCELIS_API_KEY — server refuses to start without it.
 # See docs/LOCAL_DEV_WORKFLOW.md for full variable reference.
 ```
 
@@ -318,6 +319,8 @@ Three workflows run on push/PR to `main` and `develop`:
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
+| `MYCELIS_API_KEY` | *(required)* | API authentication key. Server refuses to start without this. |
+| `MYCELIS_WORKSPACE` | `./workspace` | Workspace sandbox root for agent file tools (`read_file`/`write_file`). |
 | `MYCELIS_API_HOST` | `localhost` | Core API host |
 | `MYCELIS_API_PORT` | `8081` | Core API port |
 | `MYCELIS_INTERFACE_HOST` | `localhost` | Next.js dev server host |
@@ -347,7 +350,7 @@ Three workflows run on push/PR to `main` and `develop`:
 ## Verification
 
 ```bash
-uvx inv core.test             # Go unit tests (~112 handler tests)
+uvx inv core.test             # Go unit tests (~120 handler tests)
 uvx inv interface.test        # Vitest component tests (~114 tests)
 uvx inv interface.e2e         # Playwright E2E specs (20 spec files, requires running servers)
 uvx inv interface.check       # HTTP smoke test against running dev server (9 pages)
@@ -376,6 +379,9 @@ uvx inv core.smoke            # Governance smoke tests
 | 17.0 | Legacy Migration | Complete cortex-* migration, Vuexy CSS vars removed, landing page rewritten |
 | 18.0 | Command Center | Resizable Mission Control, OpsOverview dashboard, MCP bootstrap, rich chat (markdown + inline artifacts), tools_used surfacing |
 | 18.5 | Soma Identity & Artifacts | Soma in-character identity (NEVER BREAK CHARACTER), council routing table, artifact pipeline (tool → CTS → inline render), broadcast with team replies, chat memory persistence (localStorage), tool_call JSON sanitizer, self-awareness block |
+| 19.0 | Conversation Memory & Scheduled Teams | `summarize_conversation` tool, chat session persistence (localStorage 200-msg cap), TeamScheduler (configurable interval triggers via NATS), `DelegationHint` struct (confidence/urgency/complexity/risk) |
+| 19.5 | Natural Human Interface | Label translation layer (`lib/labels.ts`), 20 tool labels, 5 council labels, governance/trust/workspace labels, trust badge `C:{score}`, recalled-memory annotation, all components migrated to human-facing names |
+| P0 | Security Containment | API key auth middleware (fail-closed, constant-time compare), filesystem sandbox (`validateToolPath` + 1MB write cap), MCP raw install disabled (library-only), schedule safety (30s min interval + atomic guard), SSE CORS wildcard removed, Next.js middleware auth injection |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)
 
@@ -388,11 +394,13 @@ Planned phases with detailed specifications are documented in the Architecture O
 | 12 | Persistent Agent Memory | Cross-mission memory, semantic recall, memory consolidation daemon |
 | 13 | Multi-Agent Collaboration | Intra-team debate protocol, consensus detection, SquadRoom live chat |
 | 14 | Hot-Reload Runtime | Live agent goroutine replacement, zero-downtime reconfiguration |
-| 15 | Advanced Governance & RBAC | Role enforcement, API keys, audit trail, policy versioning |
+| P1 | Structural Hardening | RBAC (role-based access control), Postgres RLS, memory isolation, JWT/session auth |
+| P2 | Execution Hardening | Tool execution pipeline, SCIP validator, audit logging, prompt injection defense |
+| P3 | Governance Completion | HTTP-layer governance hooks, rate limiting, advanced schedule safety |
 | 16 | Distributed Federation | Multi-node NATS, team affinity, cross-instance delegation |
 | 18 | Streaming LLM | Token-by-token streaming via SSE, mid-stream tool detection |
-| 19 | Workflow Templates | Mission template store, one-click instantiation, built-in pipelines |
 | 20 | Observability Dashboard | Historical metrics, Prometheus export, agent performance analytics |
+| CE-1 | Orchestration Templates | Input/Output template families, intent proof mechanism, doctrine-driven execution |
 
 > Full roadmap with technical details: [Architecture Overview](docs/architecture/OVERVIEW.md#vii-upcoming-architecture)
 
