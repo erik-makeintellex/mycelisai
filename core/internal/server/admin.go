@@ -149,6 +149,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Intent Commit (Instantiate Mission into Ledger + Activate in Soma)
 	mux.HandleFunc("POST /api/v1/intent/commit", s.handleIntentCommit)
+	mux.HandleFunc("POST /api/v1/intent/confirm-action", s.HandleConfirmAction)
 
 	// CE-1: Orchestration Templates & Intent Proofs
 	mux.HandleFunc("GET /api/v1/templates", s.handleListTemplatesAPI)
@@ -203,6 +204,11 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/artifacts/{id}", s.handleGetArtifact)
 	mux.HandleFunc("POST /api/v1/artifacts", s.handleStoreArtifact)
 	mux.HandleFunc("PUT /api/v1/artifacts/{id}/status", s.handleUpdateArtifactStatus)
+
+	// Phase 19: Brains API (Provider Management)
+	mux.HandleFunc("GET /api/v1/brains", s.HandleListBrains)
+	mux.HandleFunc("PUT /api/v1/brains/{id}/toggle", s.HandleToggleBrain)
+	mux.HandleFunc("PUT /api/v1/brains/{id}/policy", s.HandleUpdateBrainPolicy)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {

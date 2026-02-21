@@ -11,12 +11,13 @@ ns.add_collection(misc.ns_clean)
 ns.add_collection(misc.ns_team)
 ns.add_collection(interface.ns)
 
-from ops import device, test, db, ci, cognitive
+from ops import device, test, db, ci, cognitive, lifecycle
 ns.add_collection(device.ns)
 ns.add_collection(test.ns)
 ns.add_collection(db.ns)
 ns.add_collection(ci.ns)
 ns.add_collection(cognitive.ns)
+ns.add_collection(lifecycle.ns)
 
 
 

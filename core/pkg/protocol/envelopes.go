@@ -77,6 +77,27 @@ func (e *CTSEnvelope) Validate() error {
 	return nil
 }
 
+// BrainProvenance carries metadata about which provider/model executed a request.
+// Phase 19: Every LLM response must be traceable to its source brain.
+type BrainProvenance struct {
+	ProviderID   string `json:"provider_id"`              // "ollama", "claude"
+	ProviderName string `json:"provider_name,omitempty"`  // display name
+	ModelID      string `json:"model_id"`                 // "qwen2.5-coder:7b"
+	Location     string `json:"location"`                 // "local" | "remote"
+	DataBoundary string `json:"data_boundary"`            // "local_only" | "leaves_org"
+	TokensUsed   int    `json:"tokens_used,omitempty"`
+}
+
+// ChatProposal carries proposal metadata for chat-based mutation actions.
+// Phase 19-B: When an agent uses mutation tools, the response is tagged as a proposal.
+type ChatProposal struct {
+	Intent        string   `json:"intent"`
+	Tools         []string `json:"tools"`
+	RiskLevel     string   `json:"risk_level"`      // "low" | "medium" | "high"
+	ConfirmToken  string   `json:"confirm_token"`
+	IntentProofID string   `json:"intent_proof_id"`
+}
+
 // ChatResponsePayload is the CTS Payload for council chat responses.
 // Any endpoint returning LLM-generated content wraps it in this struct
 // inside a CTSEnvelope.
@@ -87,6 +108,10 @@ type ChatResponsePayload struct {
 	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`
 	// CE-1: Answer provenance (audit linkage for Chat-to-Answer template)
 	Provenance    *AnswerProvenance   `json:"provenance,omitempty"`
+	// Phase 19: Brain provenance (which provider/model executed this response)
+	Brain         *BrainProvenance    `json:"brain,omitempty"`
+	// Phase 19-B: Chat proposal (when agent uses mutation tools)
+	Proposal      *ChatProposal       `json:"proposal,omitempty"`
 }
 
 // ChatArtifactRef is an inline artifact reference embedded in a chat response.

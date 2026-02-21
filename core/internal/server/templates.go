@@ -268,6 +268,68 @@ func (s *AdminServer) handleGetIntentProof(w http.ResponseWriter, r *http.Reques
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(proof))
 }
 
+// POST /api/v1/intent/confirm-action — confirm a chat-based proposal action.
+// Validates the confirm token, marks the intent proof as confirmed, creates audit trail.
+// This is the lightweight counterpart to intent/commit (which requires a full blueprint).
+func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ConfirmToken string `json:"confirm_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "Bad JSON", http.StatusBadRequest)
+		return
+	}
+	if req.ConfirmToken == "" {
+		respondAPIError(w, "Missing confirm_token", http.StatusBadRequest)
+		return
+	}
+
+	// Validate + consume the single-use token
+	proofID, err := s.validateConfirmToken(req.ConfirmToken)
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Mark the intent proof as confirmed (no mission ID for chat proposals)
+	s.confirmChatProof(proofID)
+
+	// Create audit event for the confirmation
+	auditID, _ := s.createAuditEvent(
+		protocol.TemplateChatToProposal, "confirm-action",
+		"Chat proposal confirmed by user",
+		map[string]any{"proof_id": proofID},
+	)
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]any{
+		"confirmed":      true,
+		"proof_id":       proofID,
+		"audit_event_id": auditID,
+	}))
+}
+
+// confirmChatProof updates a proof's status to confirmed for chat-based proposals.
+// Unlike confirmIntentProof, this doesn't require a mission ID.
+func (s *AdminServer) confirmChatProof(proofID string) {
+	db := s.getDB()
+	if db == nil {
+		return
+	}
+
+	proofUUID, err := uuid.Parse(proofID)
+	if err != nil {
+		return
+	}
+
+	_, err = db.Exec(
+		`UPDATE intent_proofs SET status = 'confirmed', confirmed_at = $1 WHERE id = $2`,
+		time.Now(), proofUUID,
+	)
+	if err != nil {
+		log.Printf("CE-1: confirm chat proof update failed: %v", err)
+	}
+}
+
 // ── Scope Validation Helpers ────────────────────────────────────────
 
 // buildScopeFromBlueprint extracts scope validation metadata from a blueprint.

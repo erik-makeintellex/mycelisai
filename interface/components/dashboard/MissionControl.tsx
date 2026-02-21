@@ -8,6 +8,7 @@ import TelemetryRow from "./TelemetryRow";
 import MissionControlChat from "./MissionControlChat";
 import OpsOverview from "./OpsOverview";
 import SignalDetailDrawer from "../stream/SignalDetailDrawer";
+import ModeRibbon from "./ModeRibbon";
 
 const STORAGE_KEY = "mission-control-split";
 const DEFAULT_RATIO = 0.55; // 55% chat, 45% ops
@@ -109,6 +110,9 @@ function DashboardGrid() {
                     </button>
                 </div>
             </header>
+
+            {/* Mode Ribbon */}
+            <ModeRibbon />
 
             {/* Telemetry Row */}
             <TelemetryRow />
