@@ -180,3 +180,42 @@ export const MEMORY_LABELS: Record<string, string> = {
   search_memory: "Semantic search",
   recall: "Context recall",
 };
+
+// ---------------------------------------------------------------------------
+// Phase 19: Brain / Provider labels
+// ---------------------------------------------------------------------------
+
+export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  ollama: "Ollama",
+  vllm: "vLLM",
+  lmstudio: "LM Studio",
+  production_claude: "Claude",
+  production_gpt4: "GPT-4",
+  production_gemini: "Gemini",
+  "emergency-ollama": "Ollama (Emergency)",
+};
+
+export function brainDisplayName(providerId: string): string {
+  return PROVIDER_DISPLAY_NAMES[providerId] ?? providerId;
+}
+
+export function brainLocationLabel(location: string): string {
+  if (location === "remote") return "Remote";
+  return "Local";
+}
+
+export function brainBadge(providerId: string, location: string): string {
+  const name = brainDisplayName(providerId);
+  const loc = brainLocationLabel(location);
+  return `${name} (${loc})`;
+}
+
+// Tool origin classification for enhanced badges
+export const MCP_TOOL_PREFIX = "mcp.";
+export const SANDBOXED_TOOLS = new Set(["read_file", "write_file"]);
+
+export function toolOrigin(name: string): 'internal' | 'external' | 'sandboxed' {
+  if (name.startsWith(MCP_TOOL_PREFIX)) return 'external';
+  if (SANDBOXED_TOOLS.has(name)) return 'sandboxed';
+  return 'internal';
+}

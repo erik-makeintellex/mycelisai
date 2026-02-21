@@ -59,7 +59,7 @@ export default function LandingPage() {
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cortex-primary opacity-75" />
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-cortex-primary" />
                                 </span>
-                                CORTEX V7.0 ONLINE
+                                CORTEX V7.1 ONLINE — BRAIN PROVENANCE
                             </div>
 
                             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-zinc-100 leading-tight">
@@ -72,7 +72,8 @@ export default function LandingPage() {
                             <p className="text-xl text-cortex-text-muted max-w-lg leading-relaxed font-light">
                                 Mycelis is a <strong className="text-cortex-text-main">Recursive Swarm Operating System</strong> that
                                 lets you deploy, orchestrate, and govern AI agent teams — from a single localhost model
-                                to a fleet of commercial LLMs — all under one roof with zero vendor lock-in.
+                                to a fleet of commercial LLMs — with <strong className="text-cortex-text-main">full brain provenance</strong>,
+                                transparent routing, and zero vendor lock-in.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -106,13 +107,14 @@ export default function LandingPage() {
                                         <span className="text-cortex-text-main">myc blueprint &quot;Analyze quarterly sales data&quot;</span>
                                     </div>
                                     <div className="pl-4 border-l-2 border-cortex-border ml-1 space-y-1.5 py-1">
-                                        <p className="text-cortex-primary">[SOMA] Routing to council-architect via Ollama (local)...</p>
+                                        <p className="text-cortex-primary">[SOMA] Routing to council-architect...</p>
+                                        <p className="text-zinc-500">[BRAIN] Ollama (Local) · qwen2.5-coder:7b · data: local_only</p>
                                         <p className="text-cortex-text-muted">[AXON] Blueprint generated: 3 teams, 7 agents</p>
-                                        <p className="text-cortex-text-muted">[NATS] Subscriptions active on swarm.team.sales-*</p>
-                                        <p className="text-amber-400 bg-amber-500/10 inline-block px-1 rounded">[GOVERNANCE] Trust threshold 0.7 — file_write requires approval</p>
-                                        <p className="text-cortex-text-main">[AGENT] data-analyst online → querying warehouse via MCP</p>
-                                        <p className="text-cortex-text-main">[AGENT] chart-renderer online → Observable Plot pipeline</p>
-                                        <p className="text-cortex-success font-bold">✔ Mission activated. 7 agents running. ETA: 4 min</p>
+                                        <p className="text-cortex-text-muted">[MODE] ANSWER · Governance: PASSIVE · C:0.85</p>
+                                        <p className="text-amber-400 bg-amber-500/10 inline-block px-1 rounded">[GOV] Trust 0.7 — file_write requires approval</p>
+                                        <p className="text-cortex-text-main">[AGENT] data-analyst → MCP warehouse query</p>
+                                        <p className="text-cortex-text-main">[AGENT] chart-renderer → Observable Plot</p>
+                                        <p className="text-cortex-success font-bold">✔ Mission activated. 7 agents, all brains local.</p>
                                         <p className="animate-pulse w-2 h-4 bg-cortex-text-muted inline-block align-middle" />
                                     </div>
                                 </div>
@@ -135,7 +137,7 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <ConceptCard
                             title="Intent → Blueprint → Teams"
                             description="Describe a goal in natural language. The Meta-Architect decomposes it into a mission blueprint with teams, roles, and data flows. You approve the plan before any agent moves."
@@ -143,8 +145,13 @@ export default function LandingPage() {
                         />
                         <ConceptCard
                             title="Agents With Real Tools"
-                            description="Each agent runs a ReAct reasoning loop with access to 17+ built-in tools and unlimited MCP servers — file I/O, database queries, API calls, image generation, memory search, and more."
+                            description="Each agent runs a ReAct reasoning loop with access to 18+ built-in tools and unlimited MCP servers — file I/O, database queries, API calls, image generation, memory search, and more."
                             icon={<Terminal className="w-5 h-5" />}
+                        />
+                        <ConceptCard
+                            title="Brain Provenance"
+                            description="Every response shows which AI model powered it, where it ran (local or remote), and its data boundary. No silent provider switching — you always know which brain is thinking."
+                            icon={<Brain className="w-5 h-5" />}
                         />
                         <ConceptCard
                             title="Human-in-the-Loop by Default"
@@ -205,12 +212,12 @@ export default function LandingPage() {
                             </div>
                             <ul className="space-y-3 text-sm text-cortex-text-muted">
                                 <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>Mix local models with cloud APIs (OpenAI, Anthropic, Gemini)</li>
-                                <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>Cognitive Matrix: route tasks by cost, capability, and privacy</li>
+                                <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>Cognitive Matrix: route tasks by cost, capability, and data boundary</li>
                                 <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>Standing teams: architect, coder, creative, sentry — always ready</li>
                                 <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>MCP tool servers extend agents with any API or service</li>
                             </ul>
                             <div className="mt-6 pt-4 border-t border-cortex-border">
-                                <span className="text-xs font-mono text-cortex-text-muted">6 LLM providers, profile-based routing, token telemetry</span>
+                                <span className="text-xs font-mono text-cortex-text-muted">6 LLM providers, brain provenance, policy-gated routing</span>
                             </div>
                         </div>
 
@@ -229,7 +236,7 @@ export default function LandingPage() {
                                 <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>Kubernetes-native with Helm charts and Kind dev clusters</li>
                                 <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>NATS JetStream for durable, high-throughput agent messaging</li>
                                 <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>Postgres + pgvector for relational state and semantic memory</li>
-                                <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>Governance audit trails, RBAC, and policy versioning (roadmap)</li>
+                                <li className="flex gap-2"><span className="text-cortex-primary mt-0.5">▸</span>Brain provenance audit trails, RBAC, and policy-gated routing</li>
                             </ul>
                             <div className="mt-6 pt-4 border-t border-cortex-border">
                                 <span className="text-xs font-mono text-cortex-text-muted">50+ API endpoints, 30+ NATS topics, 21 DB migrations</span>
@@ -266,13 +273,13 @@ export default function LandingPage() {
                             layer="L2"
                             name="Fractal Fabric"
                             icon={<Brain className="w-5 h-5" />}
-                            items={["Soma → Axon → Teams", "17 built-in agent tools", "Overseer DAG engine", "Archivist memory"]}
+                            items={["Soma → Axon → Teams", "18 built-in agent tools", "Brain provenance pipeline", "Overseer DAG engine"]}
                         />
                         <ArchLayer
                             layer="L3"
                             name="Conscious Face"
                             icon={<Eye className="w-5 h-5" />}
-                            items={["Next.js 16 + React 19", "ReactFlow circuit board", "Real-time SSE streaming", "Midnight Cortex theme"]}
+                            items={["Next.js 16 + React 19", "ReactFlow circuit board", "Mode Ribbon + Inspector", "Midnight Cortex theme"]}
                         />
                     </div>
                 </div>
@@ -294,6 +301,10 @@ export default function LandingPage() {
                                 <GovernanceItem
                                     title="Trust Economy"
                                     description="Each CTS envelope carries a trust score (0.0–1.0). Actions above your threshold auto-execute. Below it, they queue for human review."
+                                />
+                                <GovernanceItem
+                                    title="Brain Governance"
+                                    description="Every provider has a location (local/remote), data boundary (local_only/leaves_org), and usage policy. Remote providers require explicit enablement — no silent escalation."
                                 />
                                 <GovernanceItem
                                     title="Policy-as-Code"
@@ -347,7 +358,7 @@ export default function LandingPage() {
                     <h2 className="text-4xl font-bold mb-6 text-zinc-100">Deploy Your Own Nervous System</h2>
                     <p className="text-cortex-text-muted mb-10 text-lg max-w-2xl mx-auto">
                         Self-hosted. Open source. Air-gapped or cloud-connected.
-                        Start with a single Ollama model and scale to a production swarm.
+                        Every response shows which brain powered it. Every routing decision is transparent.
                     </p>
                     <div className="flex justify-center gap-4">
                         <Link href="/dashboard" className="px-8 py-4 bg-cortex-primary text-cortex-bg font-bold rounded hover:bg-cortex-primary/90 transition-all shadow-xl shadow-cyan-900/20 ring-1 ring-cortex-primary/50">

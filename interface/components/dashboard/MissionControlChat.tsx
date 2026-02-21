@@ -21,10 +21,27 @@ import {
     ExternalLink,
     Copy,
     Check,
+    AlertTriangle,
+    Brain,
+    Globe,
+    Eye,
 } from "lucide-react";
 import { useCortexStore, type ChatMessage, type ChatArtifactRef } from "@/store/useCortexStore";
 import { ChartRenderer, type MycelisChartSpec } from "@/components/charts";
-import { sourceNodeLabel, trustBadge, trustTooltip, toolLabel, councilLabel, councilOptionLabel } from "@/lib/labels";
+import ProposedActionBlock from "./ProposedActionBlock";
+import OrchestrationInspector from "./OrchestrationInspector";
+import {
+    sourceNodeLabel,
+    trustBadge,
+    trustTooltip,
+    toolLabel,
+    councilLabel,
+    councilOptionLabel,
+    brainBadge,
+    brainDisplayName,
+    toolOrigin,
+    MODE_LABELS,
+} from "@/lib/labels";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -337,6 +354,7 @@ function MessageContent({ content }: { content: string }) {
 function MessageBubble({ msg }: { msg: ChatMessage }) {
     const isUser = msg.role === "user";
     const isBroadcast = isUser && msg.content.startsWith("[BROADCAST]");
+    const setInspected = useCortexStore((s) => s.setInspectedMessage);
 
     return (
         <div className={`flex gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}>
@@ -347,20 +365,72 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
             )}
 
             <div className="max-w-[85%] flex flex-col gap-0.5">
-                {/* Source label + trust badge */}
-                {!isUser && msg.source_node && (
-                    <div className="flex items-center gap-1.5 px-1">
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-cortex-info font-mono">
-                            {sourceNodeLabel(msg.source_node!)}
-                        </span>
-                        {msg.trust_score != null && msg.trust_score > 0 && (
-                            <span
-                                className={`text-[8px] font-mono font-bold ${trustColor(msg.trust_score)}`}
-                                title={trustTooltip(msg.trust_score)}
-                            >
-                                {trustBadge(msg.trust_score)}
+                {/* Brain provenance header bar */}
+                {!isUser && (msg.source_node || msg.brain) && (
+                    <div className="flex items-center gap-1.5 px-1 flex-wrap">
+                        {/* Source node label */}
+                        {msg.source_node && (
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-cortex-info font-mono">
+                                {sourceNodeLabel(msg.source_node!)}
                             </span>
                         )}
+                        {/* Brain provenance */}
+                        {msg.brain && (
+                            <>
+                                <span className="text-[7px] text-cortex-text-muted">&bull;</span>
+                                <span
+                                    className={`text-[8px] font-mono font-bold uppercase tracking-wide flex items-center gap-1 ${
+                                        msg.brain.location === 'remote' ? 'text-amber-400' : 'text-cortex-text-muted'
+                                    }`}
+                                    title={`Model: ${msg.brain.model_id}\nProvider: ${msg.brain.provider_id}\nLocation: ${msg.brain.location}\nData: ${msg.brain.data_boundary}`}
+                                >
+                                    {msg.brain.location === 'remote' ? (
+                                        <Globe className="w-2.5 h-2.5" />
+                                    ) : (
+                                        <Brain className="w-2.5 h-2.5" />
+                                    )}
+                                    {brainBadge(msg.brain.provider_id, msg.brain.location)}
+                                </span>
+                            </>
+                        )}
+                        {/* Mode label */}
+                        {msg.mode && (
+                            <>
+                                <span className="text-[7px] text-cortex-text-muted">&bull;</span>
+                                <span className={`text-[8px] font-mono font-bold uppercase tracking-wide ${
+                                    MODE_LABELS[msg.mode]?.color ?? 'text-cortex-text-muted'
+                                }`}>
+                                    {MODE_LABELS[msg.mode]?.label ?? msg.mode}
+                                </span>
+                            </>
+                        )}
+                        {/* Trust badge */}
+                        {msg.trust_score != null && msg.trust_score > 0 && (
+                            <>
+                                <span className="text-[7px] text-cortex-text-muted">&bull;</span>
+                                <span
+                                    className={`text-[8px] font-mono font-bold ${trustColor(msg.trust_score)}`}
+                                    title={trustTooltip(msg.trust_score)}
+                                >
+                                    {trustBadge(msg.trust_score)}
+                                </span>
+                            </>
+                        )}
+                        {/* Remote data boundary warning */}
+                        {msg.brain?.location === 'remote' && (
+                            <span className="flex items-center gap-0.5 text-[7px] font-mono text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                                <AlertTriangle className="w-2.5 h-2.5" />
+                                External
+                            </span>
+                        )}
+                        {/* Inspect orchestration button */}
+                        <button
+                            onClick={() => setInspected(msg)}
+                            className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors ml-1"
+                            title="Inspect orchestration"
+                        >
+                            <Eye className="w-3 h-3" />
+                        </button>
                     </div>
                 )}
 
@@ -380,6 +450,11 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                     )}
                 </div>
 
+                {/* Proposed action block for proposal-mode messages */}
+                {!isUser && msg.mode === "proposal" && msg.proposal && (
+                    <ProposedActionBlock message={msg} />
+                )}
+
                 {/* Inline artifacts */}
                 {!isUser && msg.artifacts && msg.artifacts.length > 0 && (
                     <div className="space-y-1">
@@ -389,18 +464,33 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                     </div>
                 )}
 
-                {/* Tools used pills */}
+                {/* Tools used pills with origin badges */}
                 {!isUser && msg.tools_used && msg.tools_used.length > 0 && (
                     <div className="flex flex-wrap gap-1 px-1 mt-0.5">
-                        {msg.tools_used.map((tool) => (
-                            <span
-                                key={tool}
-                                className="text-[7px] font-mono px-1.5 py-0.5 rounded bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/20"
-                                title={tool}
-                            >
-                                {toolLabel(tool)}
-                            </span>
-                        ))}
+                        {msg.tools_used.map((tool) => {
+                            const origin = toolOrigin(tool);
+                            return (
+                                <span
+                                    key={tool}
+                                    className={`text-[7px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                                        origin === 'external'
+                                            ? 'bg-amber-400/10 text-amber-400 border-amber-400/20'
+                                            : origin === 'sandboxed'
+                                            ? 'bg-cortex-success/10 text-cortex-success border-cortex-success/20'
+                                            : 'bg-cortex-primary/10 text-cortex-primary border-cortex-primary/20'
+                                    }`}
+                                    title={tool}
+                                >
+                                    {toolLabel(tool)}
+                                    {origin === 'external' && (
+                                        <span className="text-[6px] uppercase font-bold opacity-80">Ext</span>
+                                    )}
+                                    {origin === 'sandboxed' && (
+                                        <span className="text-[6px] uppercase font-bold opacity-80">Box</span>
+                                    )}
+                                </span>
+                            );
+                        })}
                     </div>
                 )}
 
@@ -662,6 +752,9 @@ export default function MissionControlChat() {
                     </button>
                 </div>
             </div>
+
+            {/* Orchestration Inspector drawer */}
+            <OrchestrationInspector />
         </div>
     );
 }

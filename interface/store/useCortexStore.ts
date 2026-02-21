@@ -48,6 +48,16 @@ export interface ProposalData {
     intent_proof_id: string;
 }
 
+// Phase 19: Brain provenance — which provider/model executed a response
+export interface BrainProvenance {
+    provider_id: string;
+    provider_name?: string;
+    model_id: string;
+    location: 'local' | 'remote';
+    data_boundary: 'local_only' | 'leaves_org';
+    tokens_used?: number;
+}
+
 export interface ChatMessage {
     role: 'user' | 'architect' | 'admin' | 'council';
     content: string;
@@ -62,6 +72,8 @@ export interface ChatMessage {
     mode?: ExecutionMode;
     provenance?: AnswerProvenance;
     proposal?: ProposalData;
+    // Phase 19: Brain provenance
+    brain?: BrainProvenance;
 }
 
 export interface StreamSignal {
@@ -192,7 +204,23 @@ export interface CTSChatEnvelope {
     meta: { source_node: string; timestamp: string; trace_id?: string };
     signal_type: string;
     trust_score: number;
-    payload: { text: string; consultations?: string[]; tools_used?: string[]; artifacts?: ChatArtifactRef[] };
+    template_id?: TemplateID;
+    mode?: ExecutionMode;
+    payload: {
+        text: string;
+        consultations?: string[];
+        tools_used?: string[];
+        artifacts?: ChatArtifactRef[];
+        provenance?: AnswerProvenance;
+        brain?: BrainProvenance;
+        proposal?: {
+            intent: string;
+            tools: string[];
+            risk_level: string;
+            confirm_token: string;
+            intent_proof_id: string;
+        };
+    };
 }
 
 // ── Team Manifestation Proposals ─────────────────────────────
@@ -499,6 +527,14 @@ export interface CortexState {
     // Signal Detail Drawer
     selectedSignalDetail: SignalDetail | null;
 
+    // Phase 19: Agent & Provider Orchestration
+    activeBrain: BrainProvenance | null;
+    activeMode: ExecutionMode;
+    activeRole: string;
+    governanceMode: 'passive' | 'active' | 'strict';
+    inspectedMessage: ChatMessage | null;
+    isInspectorOpen: boolean;
+
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
 
@@ -587,6 +623,9 @@ export interface CortexState {
 
     // Signal Detail Drawer
     selectSignalDetail: (detail: SignalDetail | null) => void;
+
+    // Phase 19: Agent & Provider Orchestration
+    setInspectedMessage: (msg: ChatMessage | null) => void;
 }
 
 // ── Layout Constants ──────────────────────────────────────────
@@ -902,6 +941,14 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     // Signal Detail Drawer
     selectedSignalDetail: null,
 
+    // Phase 19: Agent & Provider Orchestration
+    activeBrain: null,
+    activeMode: 'answer' as ExecutionMode,
+    activeRole: '',
+    governanceMode: 'passive' as const,
+    inspectedMessage: null,
+    isInspectorOpen: false,
+
     onNodesChange: (changes) => {
         set({ nodes: applyNodeChanges(changes, get().nodes) });
     },
@@ -1091,6 +1138,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     selectSignalDetail: (detail: SignalDetail | null) => {
         set({ selectedSignalDetail: detail });
+    },
+
+    // Phase 19: Agent & Provider Orchestration
+    setInspectedMessage: (msg: ChatMessage | null) => {
+        set({ inspectedMessage: msg, isInspectorOpen: msg !== null });
     },
 
     approveArtifact: (id: string) => {
@@ -1563,14 +1615,40 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 timestamp: envelope.meta.timestamp,
                 artifacts: envelope.payload.artifacts,
                 // CE-1: Template metadata
-                template_id: (envelope as any).template_id || 'chat-to-answer',
-                mode: (envelope as any).mode || 'answer',
+                template_id: envelope.template_id || 'chat-to-answer',
+                mode: envelope.mode || 'answer',
                 provenance: envelope.payload?.provenance,
+                // Phase 19: Brain provenance
+                brain: envelope.payload?.brain,
+                // Phase 19-B: Extract proposal from chat response
+                proposal: envelope.payload?.proposal ? {
+                    intent: envelope.payload.proposal.intent,
+                    teams: 0,
+                    agents: 0,
+                    tools: envelope.payload.proposal.tools || [],
+                    risk_level: envelope.payload.proposal.risk_level || 'medium',
+                    confirm_token: envelope.payload.proposal.confirm_token,
+                    intent_proof_id: envelope.payload.proposal.intent_proof_id,
+                } : undefined,
             };
+
+            // Phase 19: Derive governance mode from trust threshold
+            const trust = get().trustThreshold;
+            const govMode = trust >= 0.8 ? 'strict' as const : trust >= 0.5 ? 'active' as const : 'passive' as const;
 
             set((s) => ({
                 isMissionChatting: false,
                 missionChat: [...s.missionChat, chatMsg],
+                // Phase 19: Update active orchestration state
+                activeBrain: chatMsg.brain ?? null,
+                activeMode: chatMsg.mode || 'answer',
+                activeRole: chatMsg.source_node || '',
+                governanceMode: govMode,
+                // Phase 19-B: Set pending proposal if present
+                ...(chatMsg.proposal ? {
+                    pendingProposal: chatMsg.proposal,
+                    activeConfirmToken: chatMsg.proposal.confirm_token,
+                } : {}),
             }));
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Chat failed';
@@ -2009,6 +2087,30 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         } catch (err) {
             console.error('deleteMission:', err);
         }
+    },
+
+    // CE-1: Proposal confirmation — calls backend confirm-action endpoint
+    confirmProposal: async () => {
+        const { activeConfirmToken, pendingProposal } = get();
+        if (!activeConfirmToken || !pendingProposal) return;
+        try {
+            const res = await fetch('/api/v1/intent/confirm-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirm_token: activeConfirmToken }),
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('[CE-1] Confirm action failed:', text);
+            }
+        } catch (err) {
+            console.error('[CE-1] confirmProposal error:', err);
+        }
+        set({ pendingProposal: null, activeConfirmToken: null });
+    },
+
+    cancelProposal: () => {
+        set({ pendingProposal: null, activeConfirmToken: null });
     },
 }));
 

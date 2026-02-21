@@ -154,9 +154,12 @@ func (a *Agent) buildToolsBlock() string {
 // ProcessResult holds the structured output of a processMessage call,
 // including the final text and metadata about which tools were invoked.
 type ProcessResult struct {
-	Text      string                      `json:"text"`
-	ToolsUsed []string                    `json:"tools_used,omitempty"`
-	Artifacts []protocol.ChatArtifactRef  `json:"artifacts,omitempty"`
+	Text       string                      `json:"text"`
+	ToolsUsed  []string                    `json:"tools_used,omitempty"`
+	Artifacts  []protocol.ChatArtifactRef  `json:"artifacts,omitempty"`
+	// Phase 19: Brain provenance — which provider/model executed this request
+	ProviderID string                      `json:"provider_id,omitempty"`
+	ModelUsed  string                      `json:"model_used,omitempty"`
 }
 
 // processMessage handles LLM inference + ReAct tool loop, returning the response text.
@@ -286,7 +289,20 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 		go a.internalTools.AutoSummarize(a.ctx, a.Manifest.ID, histCopy)
 	}
 
-	return ProcessResult{Text: responseText, ToolsUsed: toolsUsed, Artifacts: artifacts}
+	// Capture brain provenance from the last inference response
+	var providerID, modelUsed string
+	if resp != nil {
+		providerID = resp.Provider
+		modelUsed = resp.ModelUsed
+	}
+
+	return ProcessResult{
+		Text:       responseText,
+		ToolsUsed:  toolsUsed,
+		Artifacts:  artifacts,
+		ProviderID: providerID,
+		ModelUsed:  modelUsed,
+	}
 }
 
 // stripToolCallJSON removes tool_call JSON blocks from response text.
