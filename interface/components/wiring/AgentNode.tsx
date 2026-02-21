@@ -44,11 +44,11 @@ const roleIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     executor: Zap,
 };
 
-// ── Node type → left border accent (Vuexy Dark Protocol) ──────
-// Cognitive (LLMs)     → cortex-primary (Purple #7367F0)
-// Sensory  (Ingress)   → cortex-info    (Cyan   #00CFE8)
-// Actuation (Exec)     → cortex-success (Green  #28C76F)
-// Ledger   (Memory)    → cortex-text-muted      (#7983BB)
+// ── Node type → left border accent (Midnight Cortex) ──────
+// Cognitive (LLMs)     → cortex-primary (Cyan    #06b6d4)
+// Sensory  (Ingress)   → cortex-info    (Sky     #38bdf8)
+// Actuation (Exec)     → cortex-success (Emerald #10b981)
+// Ledger   (Memory)    → cortex-text-muted       (#71717a)
 const nodeTypeBorders: Record<NodeCategory, string> = {
     cognitive: 'border-l-cortex-primary',
     sensory: 'border-l-cortex-info',
@@ -57,15 +57,15 @@ const nodeTypeBorders: Record<NodeCategory, string> = {
 };
 
 const nodeTypeGlows: Record<NodeCategory, string> = {
-    cognitive: 'shadow-[0_0_8px_rgba(115,103,240,0.15)]',
-    sensory: 'shadow-[0_0_8px_rgba(0,207,232,0.15)]',
-    actuation: 'shadow-[0_0_8px_rgba(40,199,111,0.15)]',
-    ledger: 'shadow-[0_0_8px_rgba(121,131,187,0.15)]',
+    cognitive: 'shadow-[0_0_8px_rgba(6,182,212,0.15)]',
+    sensory: 'shadow-[0_0_8px_rgba(56,189,248,0.15)]',
+    actuation: 'shadow-[0_0_8px_rgba(16,185,129,0.15)]',
+    ledger: 'shadow-[0_0_8px_rgba(113,113,122,0.15)]',
 };
 
 // ── Status indicators ──────────────────────────────────────────
 const statusColors: Record<string, string> = {
-    online: 'bg-cortex-success shadow-[0_0_6px_rgba(40,199,111,0.6)]',
+    online: 'bg-cortex-success shadow-[0_0_6px_rgba(16,185,129,0.6)]',
     busy: 'bg-cortex-warning shadow-[0_0_6px_rgba(255,159,67,0.6)]',
     error: 'bg-cortex-danger shadow-[0_0_6px_rgba(234,84,85,0.6)]',
     offline: 'bg-cortex-text-muted',
@@ -116,7 +116,7 @@ function AgentNodeComponent({ data }: NodeProps<AgentNodeData>) {
             {/* Node body — left border accent by node category */}
             <div className={`bg-cortex-surface border border-l-4 ${borderClass} rounded-lg px-4 py-3 min-w-[160px] max-w-[220px] transition-all ${
                 isThinking
-                    ? 'border-cortex-info/50 shadow-[0_0_12px_rgba(0,207,232,0.2)]'
+                    ? 'border-cortex-info/50 shadow-[0_0_12px_rgba(56,189,248,0.2)]'
                     : `border-cortex-border hover:border-cortex-text-muted ${glowClass}`
             }`}>
                 {/* Status dot + trust score */}

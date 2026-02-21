@@ -17,6 +17,47 @@ export interface ChatConsultation {
     summary: string;
 }
 
+export interface ChatArtifactRef {
+    id?: string;              // artifact table ID (for stored artifacts)
+    type: string;             // code | document | image | audio | data | chart | file
+    title: string;
+    content_type?: string;    // MIME type
+    content?: string;         // inline content (text, JSON, base64 for images)
+    url?: string;             // external URL (for links, images)
+}
+
+// CE-1: Orchestration Template types
+export type TemplateID = 'chat-to-answer' | 'chat-to-proposal';
+export type ExecutionMode = 'answer' | 'proposal';
+
+export interface AnswerProvenance {
+    resolved_intent: string;
+    permission_check: string;
+    policy_decision: string;
+    audit_event_id: string;
+    consult_chain?: string[];
+}
+
+export interface ProposalData {
+    intent: string;
+    teams: number;
+    agents: number;
+    tools: string[];
+    risk_level: string;
+    confirm_token: string;
+    intent_proof_id: string;
+}
+
+// Phase 19: Brain provenance — which provider/model executed a response
+export interface BrainProvenance {
+    provider_id: string;
+    provider_name?: string;
+    model_id: string;
+    location: 'local' | 'remote';
+    data_boundary: 'local_only' | 'leaves_org';
+    tokens_used?: number;
+}
+
 export interface ChatMessage {
     role: 'user' | 'architect' | 'admin' | 'council';
     content: string;
@@ -25,6 +66,14 @@ export interface ChatMessage {
     source_node?: string;    // e.g. "council-architect"
     trust_score?: number;    // 0.0-1.0
     timestamp?: string;      // ISO 8601
+    artifacts?: ChatArtifactRef[];
+    // CE-1: Template metadata
+    template_id?: TemplateID;
+    mode?: ExecutionMode;
+    provenance?: AnswerProvenance;
+    proposal?: ProposalData;
+    // Phase 19: Brain provenance
+    brain?: BrainProvenance;
 }
 
 export interface StreamSignal {
@@ -155,7 +204,23 @@ export interface CTSChatEnvelope {
     meta: { source_node: string; timestamp: string; trace_id?: string };
     signal_type: string;
     trust_score: number;
-    payload: { text: string; consultations?: string[]; tools_used?: string[] };
+    template_id?: TemplateID;
+    mode?: ExecutionMode;
+    payload: {
+        text: string;
+        consultations?: string[];
+        tools_used?: string[];
+        artifacts?: ChatArtifactRef[];
+        provenance?: AnswerProvenance;
+        brain?: BrainProvenance;
+        proposal?: {
+            intent: string;
+            tools: string[];
+            risk_level: string;
+            confirm_token: string;
+            intent_proof_id: string;
+        };
+    };
 }
 
 // ── Team Manifestation Proposals ─────────────────────────────
@@ -454,8 +519,21 @@ export interface CortexState {
     selectedAgentNodeId: string | null;
     isAgentEditorOpen: boolean;
 
+    // CE-1: Orchestration Templates
+    pendingProposal: ProposalData | null;
+    activeConfirmToken: string | null;
+    lastCommitProof: { intent_proof_id: string; audit_event_id: string } | null;
+
     // Signal Detail Drawer
     selectedSignalDetail: SignalDetail | null;
+
+    // Phase 19: Agent & Provider Orchestration
+    activeBrain: BrainProvenance | null;
+    activeMode: ExecutionMode;
+    activeRole: string;
+    governanceMode: 'passive' | 'active' | 'strict';
+    inspectedMessage: ChatMessage | null;
+    isInspectorOpen: boolean;
 
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
@@ -513,6 +591,10 @@ export interface CortexState {
     // Broadcast (Phase 8.0)
     broadcastToSwarm: (message: string) => Promise<void>;
 
+    // CE-1: Template-aware actions
+    confirmProposal: () => Promise<void>;
+    cancelProposal: () => void;
+
     // Team Explorer (Phase 7.6)
     fetchTeamDetails: () => Promise<void>;
 
@@ -541,6 +623,9 @@ export interface CortexState {
 
     // Signal Detail Drawer
     selectSignalDetail: (detail: SignalDetail | null) => void;
+
+    // Phase 19: Agent & Provider Orchestration
+    setInspectedMessage: (msg: ChatMessage | null) => void;
 }
 
 // ── Layout Constants ──────────────────────────────────────────
@@ -741,6 +826,33 @@ function dispatchSignalToNodes(
     return changed ? updated : null;
 }
 
+// ── Chat Persistence (localStorage) ──────────────────────────
+// Soma's memory: chat survives page refreshes. Use clearMissionChat to reset.
+
+const CHAT_STORAGE_KEY = 'mycelis-mission-chat';
+const CHAT_MAX_PERSISTED = 200; // cap to avoid localStorage quota issues
+
+function loadPersistedChat(): ChatMessage[] {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        if (!raw) return [];
+        const msgs: ChatMessage[] = JSON.parse(raw);
+        return Array.isArray(msgs) ? msgs.slice(-CHAT_MAX_PERSISTED) : [];
+    } catch {
+        return [];
+    }
+}
+
+function persistChat(messages: ChatMessage[]) {
+    if (typeof window === 'undefined') return;
+    try {
+        // Only persist the last N messages to respect localStorage limits
+        const toStore = messages.slice(-CHAT_MAX_PERSISTED);
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
+    } catch { /* quota exceeded — silently drop */ }
+}
+
 // ── Zustand Store ─────────────────────────────────────────────
 
 export const useCortexStore = create<CortexState>((set, get) => ({
@@ -788,8 +900,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     mcpLibrary: [],
     isFetchingMCPLibrary: false,
 
-    // Mission Control Chat (Phase 7.6)
-    missionChat: [],
+    // Mission Control Chat (Phase 7.6) — rehydrated from localStorage
+    missionChat: loadPersistedChat(),
     isMissionChatting: false,
     missionChatError: null,
     councilTarget: 'admin',
@@ -821,8 +933,21 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     selectedAgentNodeId: null,
     isAgentEditorOpen: false,
 
+    // CE-1: Orchestration Templates
+    pendingProposal: null,
+    activeConfirmToken: null,
+    lastCommitProof: null,
+
     // Signal Detail Drawer
     selectedSignalDetail: null,
+
+    // Phase 19: Agent & Provider Orchestration
+    activeBrain: null,
+    activeMode: 'answer' as ExecutionMode,
+    activeRole: '',
+    governanceMode: 'passive' as const,
+    inspectedMessage: null,
+    isInspectorOpen: false,
 
     onNodesChange: (changes) => {
         set({ nodes: applyNodeChanges(changes, get().nodes) });
@@ -866,7 +991,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 return;
             }
 
-            const bp = data as MissionBlueprint;
+            // CE-1: Negotiate response is now { blueprint, intent_proof, confirm_token, template }
+            const bp = (data.blueprint ?? data) as MissionBlueprint;
             const { nodes, edges } = blueprintToGraph(bp);
 
             const agentCount = bp.teams.reduce((sum, t) => sum + t.agents.length, 0);
@@ -876,9 +1002,21 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 bp.constraints && bp.constraints.length > 0
                     ? `${bp.constraints.length} constraint${bp.constraints.length !== 1 ? 's' : ''} applied.`
                     : '',
+                data.confirm_token ? 'Confirm token issued.' : '',
             ]
                 .filter(Boolean)
                 .join(' ');
+
+            // CE-1: Extract proposal data from enriched response
+            const proposalData: ProposalData | null = data.confirm_token ? {
+                intent: bp.intent,
+                teams: bp.teams.length,
+                agents: agentCount,
+                tools: data.intent_proof?.scope_validation?.tools || [],
+                risk_level: data.intent_proof?.scope_validation?.risk_level || 'medium',
+                confirm_token: data.confirm_token.token,
+                intent_proof_id: data.intent_proof?.id || '',
+            } : null;
 
             set((s) => ({
                 isDrafting: false,
@@ -886,6 +1024,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 nodes,
                 edges,
                 missionStatus: 'draft',
+                pendingProposal: proposalData,
+                activeConfirmToken: data.confirm_token?.token || null,
                 chatHistory: [...s.chatHistory, { role: 'architect', content: summary }],
             }));
         } catch (err) {
@@ -998,6 +1138,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     selectSignalDetail: (detail: SignalDetail | null) => {
         set({ selectedSignalDetail: detail });
+    },
+
+    // Phase 19: Agent & Provider Orchestration
+    setInspectedMessage: (msg: ChatMessage | null) => {
+        set({ inspectedMessage: msg, isInspectorOpen: msg !== null });
     },
 
     approveArtifact: (id: string) => {
@@ -1415,11 +1560,14 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         }));
 
         try {
-            // Build messages for backend (map non-user roles to assistant for Vercel compat)
-            const messages = [...get().missionChat].map((m) => ({
-                role: m.role === 'user' ? 'user' : 'assistant',
-                content: m.content,
-            }));
+            // Smart windowing: send only the last 20 messages to the LLM.
+            // Older context is auto-recalled from pgvector by the backend (Phase 19).
+            const messages = [...get().missionChat]
+                .slice(-20)
+                .map((m) => ({
+                    role: m.role === 'user' ? 'user' : 'assistant',
+                    content: m.content,
+                }));
 
             const res = await fetch(`/api/v1/council/${councilTarget}/chat`, {
                 method: 'POST',
@@ -1465,11 +1613,42 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 source_node: envelope.meta.source_node,
                 trust_score: envelope.trust_score,
                 timestamp: envelope.meta.timestamp,
+                artifacts: envelope.payload.artifacts,
+                // CE-1: Template metadata
+                template_id: envelope.template_id || 'chat-to-answer',
+                mode: envelope.mode || 'answer',
+                provenance: envelope.payload?.provenance,
+                // Phase 19: Brain provenance
+                brain: envelope.payload?.brain,
+                // Phase 19-B: Extract proposal from chat response
+                proposal: envelope.payload?.proposal ? {
+                    intent: envelope.payload.proposal.intent,
+                    teams: 0,
+                    agents: 0,
+                    tools: envelope.payload.proposal.tools || [],
+                    risk_level: envelope.payload.proposal.risk_level || 'medium',
+                    confirm_token: envelope.payload.proposal.confirm_token,
+                    intent_proof_id: envelope.payload.proposal.intent_proof_id,
+                } : undefined,
             };
+
+            // Phase 19: Derive governance mode from trust threshold
+            const trust = get().trustThreshold;
+            const govMode = trust >= 0.8 ? 'strict' as const : trust >= 0.5 ? 'active' as const : 'passive' as const;
 
             set((s) => ({
                 isMissionChatting: false,
                 missionChat: [...s.missionChat, chatMsg],
+                // Phase 19: Update active orchestration state
+                activeBrain: chatMsg.brain ?? null,
+                activeMode: chatMsg.mode || 'answer',
+                activeRole: chatMsg.source_node || '',
+                governanceMode: govMode,
+                // Phase 19-B: Set pending proposal if present
+                ...(chatMsg.proposal ? {
+                    pendingProposal: chatMsg.proposal,
+                    activeConfirmToken: chatMsg.proposal.confirm_token,
+                } : {}),
             }));
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Chat failed';
@@ -1483,6 +1662,9 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     clearMissionChat: () => {
         set({ missionChat: [], missionChatError: null });
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(CHAT_STORAGE_KEY);
+        }
     },
 
     // ── Broadcast (Phase 8.0) ─────────────────────────────────────
@@ -1515,13 +1697,36 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             }
 
             const data = await res.json();
+            // Build a chat message per team reply
+            const replyMessages: ChatMessage[] = [];
+            if (Array.isArray(data.replies)) {
+                for (const reply of data.replies) {
+                    if (reply.error) {
+                        replyMessages.push({
+                            role: 'architect',
+                            content: `**${reply.team_id}**: _timed out or unavailable_`,
+                            source_node: reply.team_id,
+                        });
+                    } else if (reply.content) {
+                        replyMessages.push({
+                            role: 'council',
+                            content: reply.content,
+                            source_node: reply.team_id,
+                        });
+                    }
+                }
+            }
+            // Fallback if no replies came back
+            if (replyMessages.length === 0) {
+                replyMessages.push({
+                    role: 'architect',
+                    content: `Broadcast sent to ${data.teams_hit} team(s) — no replies received.`,
+                });
+            }
             set((s) => ({
                 isBroadcasting: false,
                 lastBroadcastResult: { teams_hit: data.teams_hit },
-                missionChat: [
-                    ...s.missionChat,
-                    { role: 'architect', content: `Broadcast sent to ${data.teams_hit} active team(s).` },
-                ],
+                missionChat: [...s.missionChat, ...replyMessages],
             }));
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Broadcast failed';
@@ -1883,4 +2088,35 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             console.error('deleteMission:', err);
         }
     },
+
+    // CE-1: Proposal confirmation — calls backend confirm-action endpoint
+    confirmProposal: async () => {
+        const { activeConfirmToken, pendingProposal } = get();
+        if (!activeConfirmToken || !pendingProposal) return;
+        try {
+            const res = await fetch('/api/v1/intent/confirm-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirm_token: activeConfirmToken }),
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                console.error('[CE-1] Confirm action failed:', text);
+            }
+        } catch (err) {
+            console.error('[CE-1] confirmProposal error:', err);
+        }
+        set({ pendingProposal: null, activeConfirmToken: null });
+    },
+
+    cancelProposal: () => {
+        set({ pendingProposal: null, activeConfirmToken: null });
+    },
 }));
+
+// ── Auto-sync missionChat → localStorage ─────────────────────
+useCortexStore.subscribe((state, prevState) => {
+    if (state.missionChat !== prevState.missionChat) {
+        persistChat(state.missionChat);
+    }
+});

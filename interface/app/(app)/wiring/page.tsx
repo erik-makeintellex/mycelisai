@@ -24,7 +24,7 @@ export default function WiringPage() {
                     </p>
                 </div>
                 <div className="text-xs text-cortex-text-muted font-mono flex items-center gap-2">
-                    <span className="w-2 h-2 bg-cortex-success rounded-full inline-block shadow-[0_0_6px_rgba(40,199,111,0.5)]" />
+                    <span className="w-2 h-2 bg-cortex-success rounded-full inline-block shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
                     Live Signal Graph
                 </div>
             </header>

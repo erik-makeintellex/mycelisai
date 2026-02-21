@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, CheckCircle2, XCircle, FileCheck, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useCortexStore } from '@/store/useCortexStore';
+import { GOV_LABELS } from '@/lib/labels';
 
 export default function GovernanceModal() {
     const selectedArtifact = useCortexStore((s) => s.selectedArtifact);
@@ -51,7 +52,7 @@ export default function GovernanceModal() {
                     <ShieldCheck className="w-5 h-5 text-cortex-primary" />
                     <div className="flex-1">
                         <h2 className="text-sm font-bold text-cortex-text-main font-mono uppercase tracking-wider">
-                            Governance Review
+                            {GOV_LABELS.governanceReview}
                         </h2>
                         <p className="text-[10px] font-mono text-cortex-text-muted mt-0.5">
                             Agent: <span className="text-cortex-info">{selectedArtifact.source}</span>
@@ -74,7 +75,7 @@ export default function GovernanceModal() {
                         <div className="px-5 py-2.5 border-b border-cortex-border/50 flex items-center gap-2 flex-shrink-0">
                             <FileCheck className="w-3.5 h-3.5 text-cortex-info" />
                             <span className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wide">
-                                Agent Output
+                                {GOV_LABELS.agentOutput}
                             </span>
                             <span className="ml-auto text-[9px] font-mono text-cortex-text-muted/60 uppercase">
                                 {selectedArtifact.payload.content_type}
@@ -97,7 +98,7 @@ export default function GovernanceModal() {
                         <div className="px-5 py-2.5 border-b border-cortex-border/50 flex items-center gap-2 flex-shrink-0">
                             <ShieldCheck className="w-3.5 h-3.5 text-cortex-success" />
                             <span className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wide">
-                                Proof of Work
+                                {GOV_LABELS.proofOfWork}
                             </span>
                             {proof && (
                                 <span className={`ml-auto text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${
@@ -115,7 +116,7 @@ export default function GovernanceModal() {
                                     {/* Method */}
                                     <div className="mb-4">
                                         <span className="text-[9px] font-mono text-cortex-text-muted uppercase tracking-wider">
-                                            Verification Method
+                                            {GOV_LABELS.verificationMethod}
                                         </span>
                                         <p className="text-xs font-mono text-cortex-primary mt-1 capitalize">
                                             {proof.method}
@@ -125,7 +126,7 @@ export default function GovernanceModal() {
                                     {/* Rubric Score */}
                                     <div className="mb-4">
                                         <span className="text-[9px] font-mono text-cortex-text-muted uppercase tracking-wider">
-                                            Rubric Score
+                                            {GOV_LABELS.rubricScore}
                                         </span>
                                         <p className="text-xs font-mono text-cortex-text-main mt-1">
                                             {proof.rubric_score}
@@ -145,9 +146,9 @@ export default function GovernanceModal() {
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-cortex-text-muted">
                                     <AlertTriangle className="w-8 h-8 mb-2 opacity-30" />
-                                    <p className="text-[10px] font-mono">No proof of work provided</p>
+                                    <p className="text-[10px] font-mono">{GOV_LABELS.noProof}</p>
                                     <p className="text-[9px] font-mono opacity-60 mt-1">
-                                        This agent did not submit verification evidence
+                                        {GOV_LABELS.noProofSub}
                                     </p>
                                 </div>
                             )}
@@ -180,7 +181,7 @@ export default function GovernanceModal() {
 
                         <button
                             onClick={handleApprove}
-                            className="flex items-center gap-2.5 px-8 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-cortex-success text-cortex-bg hover:shadow-[0_0_25px_rgba(40,199,111,0.4)] hover:bg-cortex-success/90"
+                            className="flex items-center gap-2.5 px-8 py-3 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-cortex-success text-cortex-bg hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] hover:bg-cortex-success/90"
                         >
                             <CheckCircle2 className="w-4 h-4" />
                             Approve & Dispatch

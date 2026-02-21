@@ -89,17 +89,26 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	}
 
 	// 3. Dynamic Overrides (Docker Support)
+	// OLLAMA_HOST can be a bind address (e.g. "0.0.0.0") used by Ollama itself
+	// to listen on all interfaces, or a reachable endpoint (e.g. "192.168.50.156:11434").
+	// Only patch provider endpoints when the value is a routable address.
 	if host := os.Getenv("OLLAMA_HOST"); host != "" {
 		log.Printf("DEBUG: Found OLLAMA_HOST env var: %s", host)
-		if !strings.HasPrefix(host, "http") {
-			host = "http://" + host
-		}
-		// Patch all ollama-compatible endpoints (any openai_compatible provider)
-		for k, v := range config.Providers {
-			if k == "ollama" || v.Type == "openai_compatible" || v.Driver == "ollama" {
-				v.Endpoint = host + "/v1" // Standardize on /v1 for adapter
-				config.Providers[k] = v
-				log.Printf("DEBUG: Patched provider %s endpoint to %s", k, v.Endpoint)
+		stripped := strings.TrimPrefix(strings.TrimPrefix(host, "http://"), "https://")
+		stripped = strings.Split(stripped, ":")[0] // extract just the host portion
+		if stripped == "0.0.0.0" || stripped == "" {
+			log.Println("DEBUG: OLLAMA_HOST is a bind address (0.0.0.0), skipping provider patching.")
+		} else {
+			if !strings.HasPrefix(host, "http") {
+				host = "http://" + host
+			}
+			// Patch all ollama-compatible endpoints (any openai_compatible provider)
+			for k, v := range config.Providers {
+				if k == "ollama" || v.Type == "openai_compatible" || v.Driver == "ollama" {
+					v.Endpoint = host + "/v1" // Standardize on /v1 for adapter
+					config.Providers[k] = v
+					log.Printf("DEBUG: Patched provider %s endpoint to %s", k, v.Endpoint)
+				}
 			}
 		}
 	} else {

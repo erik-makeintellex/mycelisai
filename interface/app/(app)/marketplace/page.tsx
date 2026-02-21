@@ -102,45 +102,45 @@ export default function MarketplacePage() {
     };
 
     return (
-        <div className="h-full flex flex-col bg-zinc-50/50 p-8 overflow-y-auto">
+        <div className="h-full flex flex-col bg-cortex-bg p-8 overflow-y-auto">
             <header className="mb-8">
-                <h1 className="text-2xl font-bold font-mono text-zinc-800">Service Targets</h1>
-                <p className="text-zinc-500 mt-1">Configure and manage available Swarm Capabilities.</p>
+                <h1 className="text-2xl font-bold font-mono text-cortex-text-main">Service Targets</h1>
+                <p className="text-cortex-text-muted mt-1">Configure and manage available Swarm Capabilities.</p>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {templates.map(t => (
-                    <div key={t.id} className="bg-white border border-zinc-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
+                    <div key={t.id} className="bg-cortex-surface border border-cortex-border rounded-lg p-6 hover:shadow-md hover:border-cortex-primary/30 transition-all cursor-pointer"
                         onClick={() => setSelected(t)}
                     >
                         <div className="flex items-center gap-4 mb-4">
-                            <div className="w-12 h-12 bg-sky-50 text-sky-600 rounded-lg flex items-center justify-center">
+                            <div className="w-12 h-12 bg-cortex-primary/10 text-cortex-primary rounded-lg flex items-center justify-center">
                                 {t.type === 'ingress' ? <Cloud size={24} /> : <Plug size={24} />}
                             </div>
                             <div>
-                                <h3 className="font-semibold text-zinc-900">{t.name}</h3>
-                                <span className="text-xs uppercase tracking-wider text-zinc-400 font-mono">{t.type}</span>
+                                <h3 className="font-semibold text-cortex-text-main">{t.name}</h3>
+                                <span className="text-xs uppercase tracking-wider text-cortex-text-muted font-mono">{t.type}</span>
                             </div>
                         </div>
-                        <p className="text-sm text-zinc-600 line-clamp-2 min-h-[40px]">
+                        <p className="text-sm text-cortex-text-muted line-clamp-2 min-h-[40px]">
                             {t.description || "Standard connector for " + t.name}
                         </p>
-                        <div className="mt-4 pt-4 border-t border-zinc-100 flex justify-end">
-                            <button className="text-sm font-medium text-sky-600 hover:text-sky-700">Configure & Enable &rarr;</button>
+                        <div className="mt-4 pt-4 border-t border-cortex-border flex justify-end">
+                            <button className="text-sm font-medium text-cortex-primary hover:text-cortex-primary/80">Configure & Enable &rarr;</button>
                         </div>
                     </div>
                 ))}
 
                 {/* Loading State */}
                 {loading && (
-                    <div className="col-span-full py-12 text-center text-zinc-400">
+                    <div className="col-span-full py-12 text-center text-cortex-text-muted">
                         Loading Services...
                     </div>
                 )}
 
                 {/* Empty State */}
                 {!loading && templates.length === 0 && (
-                    <div className="col-span-full py-12 text-center text-zinc-400 border-2 border-dashed border-zinc-200 rounded-lg">
+                    <div className="col-span-full py-12 text-center text-cortex-text-muted border-2 border-dashed border-cortex-border rounded-lg">
                         No Service Targets available in the Registry.
                     </div>
                 )}
@@ -148,22 +148,22 @@ export default function MarketplacePage() {
 
             {/* Modal */}
             {selected && (
-                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50"
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
                     onClick={() => setSelected(null)}
                 >
-                    <div className="bg-white rounded-xl shadow-xl p-8 max-w-lg w-full" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-xl font-bold mb-4">Configure {selected.name}</h2>
+                    <div className="bg-cortex-surface border border-cortex-border rounded-xl shadow-xl p-8 max-w-lg w-full" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold text-cortex-text-main mb-4">Configure {selected.name}</h2>
                         {/* Dynamic Configuration Form */}
                         <div className="mb-6 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                            <div className="p-3 bg-zinc-50 rounded text-xs text-zinc-500 mb-2">
+                            <div className="p-3 bg-cortex-bg rounded text-xs text-cortex-text-muted mb-2">
                                 Configure the {selected.name} target before enabling.
                             </div>
 
                             {/* Team Selection */}
                             <div>
-                                <label className="block text-xs font-medium text-zinc-700 mb-1 uppercase tracking-wider">Assigned Team</label>
+                                <label className="block text-xs font-medium text-cortex-text-muted mb-1 uppercase tracking-wider">Assigned Team</label>
                                 <select
-                                    className="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black transition-shadow"
+                                    className="w-full bg-cortex-bg border border-cortex-border text-cortex-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cortex-primary transition-shadow"
                                     value={selectedTeamId}
                                     onChange={e => setSelectedTeamId(e.target.value)}
                                 >
@@ -176,20 +176,20 @@ export default function MarketplacePage() {
                                 </select>
                             </div>
 
-                            <hr className="border-zinc-100 my-4" />
+                            <hr className="border-cortex-border my-4" />
 
                             {selected.config_schema?.properties ? (
                                 Object.entries(selected.config_schema.properties).map(([key, val]: [string, any]) => (
                                     <div key={key}>
-                                        <label className="block text-xs font-medium text-zinc-700 mb-1">
+                                        <label className="block text-xs font-medium text-cortex-text-muted mb-1">
                                             {val.title || key}
-                                            {val.description && <span className="ml-2 font-normal text-zinc-400">- {val.description}</span>}
+                                            {val.description && <span className="ml-2 font-normal text-cortex-text-muted/60">- {val.description}</span>}
                                         </label>
 
                                         {val.type === 'boolean' ? (
                                             <select
                                                 name={key}
-                                                className="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                                className="w-full bg-cortex-bg border border-cortex-border text-cortex-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cortex-primary"
                                                 defaultValue={val.default?.toString() || "false"}
                                             >
                                                 <option value="true">True</option>
@@ -198,7 +198,7 @@ export default function MarketplacePage() {
                                         ) : val.enum ? (
                                             <select
                                                 name={key}
-                                                className="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                                className="w-full bg-cortex-bg border border-cortex-border text-cortex-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cortex-primary"
                                                 defaultValue={val.default || ""}
                                             >
                                                 {val.enum.map((opt: string) => (
@@ -209,7 +209,7 @@ export default function MarketplacePage() {
                                             <input
                                                 type={val.type === 'number' || val.type === 'integer' ? 'number' : 'text'}
                                                 name={key}
-                                                className="w-full bg-white border border-zinc-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                                                className="w-full bg-cortex-bg border border-cortex-border text-cortex-text-main rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cortex-primary"
                                                 placeholder={val.default ? `Default: ${val.default}` : `Enter ${key}...`}
                                                 defaultValue={val.default}
                                             />
@@ -217,16 +217,15 @@ export default function MarketplacePage() {
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-8 text-zinc-400 italic text-sm">
+                                <div className="text-center py-8 text-cortex-text-muted italic text-sm">
                                     No configuration required for this target.
                                 </div>
                             )}
                         </div>
-                        {/* Debug info removed for cleanliness */}
                         <div className="flex justify-end gap-2">
-                            <button className="px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-100 rounded" onClick={() => setSelected(null)}>Cancel</button>
+                            <button className="px-4 py-2 text-sm text-cortex-text-muted hover:bg-cortex-bg rounded" onClick={() => setSelected(null)}>Cancel</button>
                             <button
-                                className="px-4 py-2 text-sm bg-black text-white hover:bg-zinc-800 rounded disabled:opacity-50"
+                                className="px-4 py-2 text-sm bg-cortex-primary text-cortex-bg hover:bg-cortex-primary/90 rounded disabled:opacity-50"
                                 onClick={handleInstall}
                                 disabled={installing || !selectedTeamId}
                             >

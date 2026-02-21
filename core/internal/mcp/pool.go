@@ -6,12 +6,17 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 )
+
+// mcpConnectTimeout is the maximum time allowed per MCP server reconnect.
+// Prevents a single hung server from blocking the entire boot sequence.
+const mcpConnectTimeout = 15 * time.Second
 
 // ManagedClient wraps an active MCP client connection with its metadata.
 type ManagedClient struct {
@@ -265,9 +270,11 @@ func (p *ClientPool) ReconnectAll(ctx context.Context, configs []ServerConfig) {
 		}
 
 		log.Printf("mcp pool: reconnecting to %s (%s)", cfg.Name, cfg.ID)
-		if err := p.Connect(ctx, cfg); err != nil {
+		connectCtx, cancel := context.WithTimeout(ctx, mcpConnectTimeout)
+		if err := p.Connect(connectCtx, cfg); err != nil {
 			log.Printf("mcp pool: failed to reconnect %s (%s): %v", cfg.Name, cfg.ID, err)
 		}
+		cancel()
 	}
 }
 

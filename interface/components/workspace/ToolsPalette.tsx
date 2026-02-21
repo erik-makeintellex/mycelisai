@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { X, Wrench, Server, Zap, ChevronDown, ChevronRight, Play, Loader2 } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
+import { toolLabel, WORKSPACE_LABELS } from "@/lib/labels";
 
 export default function ToolsPalette() {
     const isOpen = useCortexStore((s) => s.isToolsPaletteOpen);
@@ -59,7 +60,7 @@ export default function ToolsPalette() {
                 <div className="flex items-center gap-2">
                     <Wrench className="w-4 h-4 text-cortex-primary" />
                     <span className="text-xs font-mono font-bold text-cortex-text-main uppercase">
-                        Tool Registry
+                        {WORKSPACE_LABELS.toolRegistry}
                     </span>
                     <span className="text-[9px] font-mono text-cortex-text-muted px-1.5 py-0.5 bg-cortex-bg rounded border border-cortex-border">
                         {internalTools.length + mcpTools.length}
@@ -88,7 +89,7 @@ export default function ToolsPalette() {
                         )}
                         <Zap className="w-3.5 h-3.5 text-cortex-success" />
                         <span className="text-[11px] font-mono font-bold text-cortex-text-main">
-                            Internal Tools
+                            {WORKSPACE_LABELS.internalTools}
                         </span>
                         <span className="text-[9px] font-mono text-cortex-text-muted ml-auto">
                             {internalTools.length}
@@ -102,9 +103,14 @@ export default function ToolsPalette() {
                                     className="flex items-center gap-2 px-2 py-1 rounded hover:bg-cortex-bg transition-colors group"
                                 >
                                     <div className="w-1.5 h-1.5 rounded-full bg-cortex-success flex-shrink-0" />
-                                    <span className="text-[10px] font-mono text-cortex-text-main truncate">
-                                        {name}
-                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                        <span className="text-[10px] font-mono text-cortex-text-main truncate block">
+                                            {toolLabel(name)}
+                                        </span>
+                                        <span className="text-[8px] font-mono text-cortex-text-muted/50 truncate block">
+                                            {name}
+                                        </span>
+                                    </div>
                                 </div>
                             ))}
                         </div>

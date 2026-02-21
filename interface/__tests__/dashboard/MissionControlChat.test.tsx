@@ -59,7 +59,7 @@ describe('MissionControlChat', () => {
 
             const select = screen.getByRole('combobox');
             expect(select).toBeDefined();
-            expect(select.querySelector('option')?.textContent).toContain('Admin');
+            expect(select.querySelector('option')?.textContent).toContain('Soma');
         });
 
         it('populates dropdown with council members from API', async () => {
@@ -76,8 +76,8 @@ describe('MissionControlChat', () => {
             });
 
             const options = screen.getAllByRole('option');
-            expect(options[0].textContent).toContain('ADMIN');
-            expect(options[1].textContent).toContain('ARCHITECT');
+            expect(options[0].textContent).toContain('Soma');
+            expect(options[1].textContent).toContain('Architect');
         });
 
         it('changes councilTarget when selecting a different member', async () => {
@@ -142,7 +142,7 @@ describe('MissionControlChat', () => {
 
             render(<MissionControlChat />);
 
-            const input = screen.getByPlaceholderText(/Ask the architect/i);
+            const input = screen.getByPlaceholderText(/Ask Architect/i);
             fireEvent.change(input, { target: { value: 'Design a new mission' } });
             fireEvent.keyDown(input, { key: 'Enter' });
 
@@ -181,7 +181,7 @@ describe('MissionControlChat', () => {
             render(<MissionControlChat />);
 
             expect(screen.getByText('Hello from architect')).toBeDefined();
-            expect(screen.getByText('ARCHITECT')).toBeDefined();
+            expect(screen.getByText('Architect')).toBeDefined();
         });
 
         it('renders trust badge with correct score', () => {
@@ -197,7 +197,7 @@ describe('MissionControlChat', () => {
             });
 
             render(<MissionControlChat />);
-            expect(screen.getByText('T:0.5')).toBeDefined();
+            expect(screen.getByText('C:0.5')).toBeDefined();
         });
 
         it('renders tools-used pills when present', () => {
@@ -214,8 +214,8 @@ describe('MissionControlChat', () => {
             });
 
             render(<MissionControlChat />);
-            expect(screen.getByText('search_memory')).toBeDefined();
-            expect(screen.getByText('list_teams')).toBeDefined();
+            expect(screen.getByText('Search Memory')).toBeDefined();
+            expect(screen.getByText('View Teams')).toBeDefined();
         });
 
         it('does not render tools pills when tools_used is empty', () => {
@@ -241,24 +241,24 @@ describe('MissionControlChat', () => {
     // ── Dynamic Placeholder ───────────────────────────────────
 
     describe('Dynamic Placeholder', () => {
-        it('shows "Ask the admin..." when admin is selected', () => {
+        it('shows "Ask Soma..." when admin is selected', () => {
             useCortexStore.setState({
                 councilMembers: COUNCIL_MEMBERS,
                 councilTarget: 'admin',
             });
 
             render(<MissionControlChat />);
-            expect(screen.getByPlaceholderText(/Ask the admin/i)).toBeDefined();
+            expect(screen.getByPlaceholderText(/Ask Soma/i)).toBeDefined();
         });
 
-        it('shows "Ask the architect..." when architect is selected', () => {
+        it('shows "Ask Architect..." when architect is selected', () => {
             useCortexStore.setState({
                 councilMembers: COUNCIL_MEMBERS,
                 councilTarget: 'council-architect',
             });
 
             render(<MissionControlChat />);
-            expect(screen.getByPlaceholderText(/Ask the architect/i)).toBeDefined();
+            expect(screen.getByPlaceholderText(/Ask Architect/i)).toBeDefined();
         });
 
         it('shows broadcast placeholder in broadcast mode', () => {
@@ -297,7 +297,7 @@ describe('MissionControlChat', () => {
 
             render(<MissionControlChat />);
             expect(screen.getByText(/did not respond/)).toBeDefined();
-            expect(screen.getByText('ARCHITECT')).toBeDefined();
+            expect(screen.getByText('Architect')).toBeDefined();
         });
     });
 
@@ -352,7 +352,7 @@ describe('MissionControlChat', () => {
     describe('Empty State', () => {
         it('shows shield icon and prompt in normal mode', () => {
             render(<MissionControlChat />);
-            expect(screen.getByText(/Ask the admin/i)).toBeDefined();
+            expect(screen.getByText(/Ask Soma/i)).toBeDefined();
         });
 
         it('shows megaphone icon in broadcast mode', () => {

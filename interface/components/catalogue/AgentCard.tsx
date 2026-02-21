@@ -4,7 +4,7 @@ import React from 'react';
 import { Brain, Radio, Zap, BookOpen, Trash2, Wrench } from 'lucide-react';
 import type { CatalogueAgent } from '@/store/useCortexStore';
 
-// ── Role accent borders (Vuexy Dark Protocol) ──────────────────
+// ── Role accent borders (Midnight Cortex) ──────────────────────
 const roleBorders: Record<string, string> = {
     cognitive: 'border-l-cortex-primary',
     sensory: 'border-l-cortex-info',

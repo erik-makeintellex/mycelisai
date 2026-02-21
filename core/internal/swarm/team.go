@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
@@ -30,6 +31,8 @@ type TeamManifest struct {
 	Inputs []string `yaml:"inputs"`
 	// Deliveries are the output channels
 	Deliveries []string `yaml:"deliveries"`
+	// Schedule defines optional periodic auto-triggering (V1: interval-based)
+	Schedule *protocol.ScheduleConfig `yaml:"schedule,omitempty"`
 }
 
 // Team represents a running instance of a TeamManifest.
@@ -45,6 +48,7 @@ type Team struct {
 	cancel        context.CancelFunc
 	mu            sync.Mutex
 	sensorConfigs map[string]SensorConfig  // agent.ID → config; nil = all cognitive
+	scheduler     *TeamScheduler           // Optional scheduled auto-trigger
 }
 
 // NewTeam creates a new Team instance.
@@ -104,6 +108,30 @@ func (t *Team) Start() error {
 	internalResponse := fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID)
 	t.nc.Subscribe(internalResponse, t.handleResponse)
 
+	// 4. Start scheduler if configured (Phase 19: scheduled team execution)
+	if t.Manifest.Schedule != nil && t.Manifest.Schedule.Interval != "" {
+		interval, err := time.ParseDuration(t.Manifest.Schedule.Interval)
+		if err != nil {
+			log.Printf("Team [%s] invalid schedule interval %q: %v", t.Manifest.Name, t.Manifest.Schedule.Interval, err)
+		} else if interval > 0 {
+			// Phase 0 safety: enforce minimum 30s interval
+			const minInterval = 30 * time.Second
+			if interval < minInterval {
+				log.Printf("WARN: Team [%s] schedule interval %s below minimum, clamping to %s", t.Manifest.Name, interval, minInterval)
+				interval = minInterval
+			}
+			schedCtx, schedCancel := context.WithCancel(t.ctx)
+			t.scheduler = &TeamScheduler{
+				teamID:   t.Manifest.ID,
+				interval: interval,
+				nc:       t.nc,
+				ctx:      schedCtx,
+				cancel:   schedCancel,
+			}
+			go t.scheduler.Start()
+		}
+	}
+
 	return nil
 }
 
@@ -139,7 +167,10 @@ func (t *Team) SetInternalTools(tools *InternalToolRegistry) {
 	t.internalTools = tools
 }
 
-// Stop shuts down the team.
+// Stop shuts down the team and its scheduler (if any).
 func (t *Team) Stop() {
+	if t.scheduler != nil {
+		t.scheduler.Stop()
+	}
 	t.cancel()
 }

@@ -9,7 +9,7 @@ import (
 
 func TestHandleMe(t *testing.T) {
 	s := newTestServer()
-	rr := doRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
 	assertStatus(t, rr, http.StatusOK)
 
 	var user User
@@ -23,6 +23,12 @@ func TestHandleMe(t *testing.T) {
 	if user.ID == "" {
 		t.Error("Expected non-empty user ID")
 	}
+}
+
+func TestHandleMe_Unauthenticated(t *testing.T) {
+	s := newTestServer()
+	rr := doRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
+	assertStatus(t, rr, http.StatusUnauthorized)
 }
 
 // ── GET /api/v1/teams ──────────────────────────────────────────────

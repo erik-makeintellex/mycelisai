@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Send, Loader2, Bot, User, FileJson } from 'lucide-react';
 import { useCortexStore, type ChatMessage } from '@/store/useCortexStore';
 import TrustSlider from './TrustSlider';
+import { WORKSPACE_LABELS } from '@/lib/labels';
 
 function MessageBubble({ msg }: { msg: ChatMessage }) {
     const isUser = msg.role === 'user';
@@ -64,7 +65,7 @@ export default function ArchitectChat() {
             <div className="px-4 py-3 border-b border-cortex-border flex items-center gap-2">
                 <Bot className="w-4 h-4 text-cortex-info" />
                 <span className="text-[11px] font-bold uppercase tracking-widest text-cortex-text-muted">
-                    Meta-Architect
+                    {WORKSPACE_LABELS.metaArchitect}
                 </span>
                 <div className="ml-auto flex items-center gap-2">
                     {isDrafting && (
@@ -100,7 +101,7 @@ export default function ArchitectChat() {
                         <Bot className="w-10 h-10 mb-2 opacity-20" />
                         <p className="text-xs font-mono">Describe your mission intent</p>
                         <p className="text-[10px] font-mono mt-1 opacity-60">
-                            The Meta-Architect will decompose it into teams
+                            The Mission Architect will decompose it into teams
                         </p>
                     </div>
                 ) : (

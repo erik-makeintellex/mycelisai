@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -83,6 +84,23 @@ func doRequest(t *testing.T, handler http.Handler, method, path, body string) *h
 	} else {
 		req, _ = http.NewRequest(method, path, nil)
 	}
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	return rr
+}
+
+// doAuthenticatedRequest sends an HTTP request with a test identity injected into context.
+func doAuthenticatedRequest(t *testing.T, handler http.Handler, method, path, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	var req *http.Request
+	if body != "" {
+		req, _ = http.NewRequest(method, path, strings.NewReader(body))
+	} else {
+		req, _ = http.NewRequest(method, path, nil)
+	}
+	identity := &RequestIdentity{UserID: "test-user-001", Username: "admin", Role: "admin"}
+	ctx := context.WithValue(req.Context(), ctxKeyIdentity, identity)
+	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	return rr

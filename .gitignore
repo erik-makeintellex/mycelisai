@@ -26,6 +26,12 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Build artifacts
+*.exe
+*.bin
+bin/
+core/bin/
+
 # Project specific
 *.db
 *.sqlite3
