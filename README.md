@@ -14,7 +14,7 @@
 > | [Frontend Specification](docs/architecture/FRONTEND.md) | Working on React/Next.js, Zustand, design |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 15 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, the **Standardized Council Chat API** with CTS-enveloped responses, **Soma Identity** with persistent chat memory, artifact pipeline, and in-character organism personality, **Conversation Memory & Scheduled Teams**, a **Natural Human Interface** (label translation layer), and **Phase 0 Security Containment** (API key auth, filesystem sandboxing, MCP lockdown).
+Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 17 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, the **Standardized Council Chat API** with CTS-enveloped responses, **Soma Identity** with persistent chat memory, artifact pipeline, and in-character organism personality, **Conversation Memory & Scheduled Teams**, a **Natural Human Interface** (label translation layer), **Phase 0 Security Containment** (API key auth, filesystem sandboxing, MCP lockdown), and **Agent & Provider Orchestration** (brain provenance pipeline, mutation-gated proposals, brains management, unified lifecycle ops).
 
 ## Architecture
 
@@ -29,7 +29,9 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 - **MCP Ingress:** Install, manage, and invoke MCP tool servers. Curated library with one-click install. Raw install endpoint disabled (Phase 0 security) — library-only installs enforced.
 - **Archivist:** Context engine — SitReps, auto-embed to pgvector (768-dim, nomic-embed-text), semantic search.
 - **Governance:** Policy engine with YAML rules, approval queue, trust economy (0.0–1.0 threshold).
-- **Cognitive Router:** 6 LLM providers (ollama, vllm, lmstudio, OpenAI, Anthropic, Gemini), profile-based routing, token telemetry.
+- **Cognitive Router:** 6 LLM providers (ollama, vllm, lmstudio, OpenAI, Anthropic, Gemini), profile-based routing, token telemetry. Brain provenance tracks which provider/model executed each response.
+- **CE-1 Templates:** Orchestration template engine with intent proofs, confirm tokens (15min TTL), and audit trail. Chat-to-Answer (read-only) and Chat-to-Proposal (mutation-gated) execution modes.
+- **Brains API:** Provider management with location/data_boundary/usage_policy/roles_allowed. Enable/disable toggle and policy updates persist to `cognitive.yaml`.
 
 ### Tier 2: Nervous System (NATS JetStream 2.12)
 
@@ -43,7 +45,10 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
 - **Team Management (`/teams`):** Browse standing + mission teams, agent roster, delivery targets.
 - **Memory Explorer (`/memory`):** Hot/Warm/Cold three-tier browser with semantic search.
-- **Settings (`/settings`):** Cognitive Matrix + MCP Tools (with curated library).
+- **Settings (`/settings`):** Brains (provider management with remote-enable confirmation), Cognitive Matrix, MCP Tools (curated library), Users (stub auth).
+- **Mode Ribbon:** Always-visible status bar showing current execution mode, active brain (with local/remote badge), and governance state.
+- **Proposal Blocks:** Inline chat cards for mutation-gated actions — shows intent, tools, risk level, confirm/cancel buttons wired to CE-1 confirm token flow.
+- **Orchestration Inspector:** Expandable audit panel showing template ID, intent proof, confirm token, and execution mode for each chat response.
 - **Visual Protocol:** Midnight Cortex theme — `cortex-bg #09090b`, `cortex-primary #06b6d4` (cyan). Zero `bg-white` in new code.
 
 ### Mission Control Reference
@@ -180,32 +185,33 @@ cp .env.example .env
 uvx inv k8s.reset    # Full System Reset (Cluster + Core + DB)
 ```
 
-### 3. Open the Development Bridge (Terminal 1)
+### 3. Quick Start (Recommended)
 
-Port-forwards PostgreSQL (5432), NATS (4222), and HTTP (8081) from the Kind cluster to localhost.
+The lifecycle system handles port-forwards, dependencies, and server startup in one command:
 
 ```bash
-uvx inv k8s.bridge
+uvx inv core.build           # First time only (compile Go binary)
+uvx inv lifecycle.up          # Bring up: bridge → wait deps → core (background)
+uvx inv lifecycle.up --build  # Or combine: build + bring up
 ```
 
-### 4. Initialize the Database
+Check everything:
 
 ```bash
-uvx inv db.migrate    # Apply all 21 migrations (idempotent)
+uvx inv lifecycle.status      # Dashboard: Docker, Kind, PG, NATS, Core, Frontend, Ollama
+uvx inv lifecycle.health      # Deep probe: hits actual API endpoints with auth
 ```
 
-### 5. Build + Start the Core Server (Terminal 2)
+### 3b. Manual Start (Alternative)
+
+If you prefer manual control over each service:
 
 ```bash
-uvx inv core.build   # Compile Go binary (first time + after code changes)
-uvx inv core.run     # Start server on port 8081 (foreground)
-```
-
-### 6. Launch the Cortex Console (Terminal 3)
-
-```bash
-uvx inv interface.install   # First time only
-uvx inv interface.dev       # Start dev server on port 3000
+uvx inv k8s.bridge            # Port-forward PG:5432, NATS:4222 (Terminal 1)
+uvx inv db.migrate            # Apply all migrations (idempotent)
+uvx inv core.build && uvx inv core.run   # Build + run (Terminal 2, foreground)
+uvx inv interface.install     # First time only
+uvx inv interface.dev         # Next.js dev server (Terminal 3)
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -254,6 +260,12 @@ Run from `scratch/` root using `uvx inv`:
 | `uvx inv cognitive.up` | Start vLLM + Diffusers (full stack) |
 | `uvx inv cognitive.status` | Health check providers |
 | `uvx inv cognitive.stop` | Kill cognitive processes |
+| **Lifecycle** | |
+| `uvx inv lifecycle.status` | Dashboard: Docker, Kind, PG, NATS, Core, Frontend, Ollama (with PIDs) |
+| `uvx inv lifecycle.up` | Idempotent bring-up: bridge → deps → core (background). `--frontend` `--build` |
+| `uvx inv lifecycle.down` | Clean teardown: core → frontend → port-forwards |
+| `uvx inv lifecycle.health` | Deep health probe: hits API endpoints with auth |
+| `uvx inv lifecycle.restart` | Full restart: down → settle → up. `--build` `--frontend` |
 | **CI Pipeline** | |
 | `uvx inv ci.check` | Full CI: lint → test → build (with timers) |
 | `uvx inv ci.deploy` | Full CI: lint → test → build → Docker → K8s |
@@ -284,8 +296,10 @@ Three workflows run on push/PR to `main` and `develop`:
 | `/memory` | Memory Explorer — Hot/Warm/Cold three-tier browser |
 | `/approvals` | Governance — approval queue, policy config, team proposals (3 tabs) |
 | `/missions/[id]/teams` | Team Actuation — live team drill-down |
-| `/settings` | Profile, Teams, Cognitive Matrix, MCP Tools |
+| `/settings` | Profile, Teams, Cognitive Matrix, MCP Tools, Brains, Users |
 | `/settings/brain` | Cognitive Matrix — provider routing grid |
+| `/settings/brains` | Brains — provider management (enable/disable, policy, remote confirmation) |
+| `/settings/users` | Users — stub auth, role display |
 | `/settings/tools` | MCP Tools — server management + curated library |
 | `/matrix` | Cognitive Matrix data table |
 | `/marketplace` | Skills Market — connector registry |
@@ -382,6 +396,8 @@ uvx inv core.smoke            # Governance smoke tests
 | 19.0 | Conversation Memory & Scheduled Teams | `summarize_conversation` tool, chat session persistence (localStorage 200-msg cap), TeamScheduler (configurable interval triggers via NATS), `DelegationHint` struct (confidence/urgency/complexity/risk) |
 | 19.5 | Natural Human Interface | Label translation layer (`lib/labels.ts`), 20 tool labels, 5 council labels, governance/trust/workspace labels, trust badge `C:{score}`, recalled-memory annotation, all components migrated to human-facing names |
 | P0 | Security Containment | API key auth middleware (fail-closed, constant-time compare), filesystem sandbox (`validateToolPath` + 1MB write cap), MCP raw install disabled (library-only), schedule safety (30s min interval + atomic guard), SSE CORS wildcard removed, Next.js middleware auth injection |
+| 19.A | Agent & Provider Orchestration | BrainProvenance pipeline (agent → CTS → Zustand → per-message UI header), ModeRibbon (mode/brain/governance status bar), ProposedActionBlock (inline mutation proposals with confirm/cancel), OrchestrationInspector (audit panel), BrainsPage (provider management with remote-enable confirmation), UsersPage (stub auth) |
+| 19.B | Proposal Loop & Lifecycle | Mutation detection in HandleChat/HandleCouncilChat (ModeProposal), confirmProposal wired to POST /api/v1/intent/confirm-action, brains toggle persistence to cognitive.yaml, MCP pool 15s timeout (prevents boot blocking), unified lifecycle management (`lifecycle.status/up/down/health/restart`) |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)
 
@@ -400,7 +416,6 @@ Planned phases with detailed specifications are documented in the Architecture O
 | 16 | Distributed Federation | Multi-node NATS, team affinity, cross-instance delegation |
 | 18 | Streaming LLM | Token-by-token streaming via SSE, mid-stream tool detection |
 | 20 | Observability Dashboard | Historical metrics, Prometheus export, agent performance analytics |
-| CE-1 | Orchestration Templates | Input/Output template families, intent proof mechanism, doctrine-driven execution |
 
 > Full roadmap with technical details: [Architecture Overview](docs/architecture/OVERVIEW.md#vii-upcoming-architecture)
 
