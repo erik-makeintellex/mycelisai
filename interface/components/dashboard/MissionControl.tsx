@@ -1,15 +1,33 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SignalProvider, useSignalStream } from "./SignalContext";
 import { Activity, Settings, Plus } from "lucide-react";
 import TelemetryRow from "./TelemetryRow";
-import OperationsBoard from "./OperationsBoard";
 import MissionControlChat from "./MissionControlChat";
-import SensorLibrary from "./SensorLibrary";
-import CognitiveStatusPanel from "../workspace/CognitiveStatusPanel";
+import OpsOverview from "./OpsOverview";
 import SignalDetailDrawer from "../stream/SignalDetailDrawer";
+import ModeRibbon from "./ModeRibbon";
+
+const STORAGE_KEY = "mission-control-split";
+const DEFAULT_RATIO = 0.55; // 55% chat, 45% ops
+const MIN_RATIO = 0.25;
+const MAX_RATIO = 0.80;
+
+function clamp(v: number, min: number, max: number) {
+    return Math.max(min, Math.min(max, v));
+}
+
+function loadRatio(): number {
+    if (typeof window === "undefined") return DEFAULT_RATIO;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        const n = parseFloat(saved);
+        if (!isNaN(n)) return clamp(n, MIN_RATIO, MAX_RATIO);
+    }
+    return DEFAULT_RATIO;
+}
 
 export default function MissionControlLayout() {
     return (
@@ -22,6 +40,40 @@ export default function MissionControlLayout() {
 function DashboardGrid() {
     const { isConnected } = useSignalStream();
     const router = useRouter();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [ratio, setRatio] = useState(DEFAULT_RATIO);
+    const dragging = useRef(false);
+
+    // Load persisted ratio on mount
+    useEffect(() => {
+        setRatio(loadRatio());
+    }, []);
+
+    // Persist ratio on change
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, ratio.toString());
+    }, [ratio]);
+
+    const onPointerDown = useCallback((e: React.PointerEvent) => {
+        e.preventDefault();
+        dragging.current = true;
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    }, []);
+
+    const onPointerMove = useCallback((e: React.PointerEvent) => {
+        if (!dragging.current || !containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const newRatio = clamp(y / rect.height, MIN_RATIO, MAX_RATIO);
+        setRatio(newRatio);
+    }, []);
+
+    const onPointerUp = useCallback(() => {
+        dragging.current = false;
+    }, []);
+
+    const topPercent = `${(ratio * 100).toFixed(2)}%`;
+    const bottomPercent = `${((1 - ratio) * 100).toFixed(2)}%`;
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg text-cortex-text-main relative">
@@ -59,34 +111,43 @@ function DashboardGrid() {
                 </div>
             </header>
 
+            {/* Mode Ribbon */}
+            <ModeRibbon />
+
             {/* Telemetry Row */}
             <TelemetryRow />
 
-            {/* Main 3-column grid */}
+            {/* Resizable vertical split: Chat (top) | Ops Overview (bottom) */}
             <div
-                className="flex-1 overflow-hidden"
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "minmax(200px, 280px) 1fr minmax(280px, 360px)",
-                    minHeight: 0,
-                }}
+                ref={containerRef}
+                className="flex-1 flex flex-col overflow-hidden"
+                style={{ minHeight: 0 }}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
             >
-                {/* Left: Cognitive Status + Sensor Library */}
-                <div className="h-full overflow-y-auto border-r border-cortex-border">
-                    <div className="p-3">
-                        <CognitiveStatusPanel />
-                    </div>
-                    <SensorLibrary />
-                </div>
-
-                {/* Center: Operations Board */}
-                <div className="h-full overflow-hidden border-r border-cortex-border">
-                    <OperationsBoard />
-                </div>
-
-                {/* Right: Architect Chat */}
-                <div className="h-full overflow-hidden">
+                {/* Top: Soma / Council Chat */}
+                <div className="overflow-hidden" style={{ height: topPercent, minHeight: 0 }}>
                     <MissionControlChat />
+                </div>
+
+                {/* Resize Handle */}
+                <div
+                    onPointerDown={onPointerDown}
+                    className="flex-shrink-0 flex items-center justify-center group"
+                    style={{
+                        height: 6,
+                        cursor: "row-resize",
+                        background: "#27272a",
+                        touchAction: "none",
+                        userSelect: "none",
+                    }}
+                >
+                    <div className="w-10 h-0.5 rounded-full bg-cortex-text-muted/40 group-hover:bg-cortex-primary transition-colors" />
+                </div>
+
+                {/* Bottom: Ops Overview */}
+                <div className="overflow-auto" style={{ height: bottomPercent, minHeight: 0 }}>
+                    <OpsOverview />
                 </div>
             </div>
 

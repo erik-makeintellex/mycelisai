@@ -17,7 +17,8 @@ const (
 	SignalHeartbeat      SignalType = "heartbeat"
 	SignalGovernanceHalt SignalType = "governance_halt"
 	SignalSensorData     SignalType = "sensor_data"
-	SignalChatResponse   SignalType = "chat_response"
+	SignalChatResponse      SignalType = "chat_response"
+	SignalBlueprintProposal SignalType = "blueprint_proposal" // CE-1: proposal with confirm token
 )
 
 // Trust Economy — default trust scores by node category.
@@ -47,6 +48,9 @@ type CTSEnvelope struct {
 	SignalType SignalType      `json:"signal_type"`
 	TrustScore float64         `json:"trust_score,omitempty"`
 	Payload    json.RawMessage `json:"payload"`
+	// CE-1: Orchestration template metadata (backward-compatible, omitempty)
+	TemplateID TemplateID    `json:"template_id,omitempty"`
+	Mode       ExecutionMode `json:"mode,omitempty"`
 }
 
 // HasTrustScore returns true if the envelope carries an explicit trust rating.
@@ -73,13 +77,63 @@ func (e *CTSEnvelope) Validate() error {
 	return nil
 }
 
+// BrainProvenance carries metadata about which provider/model executed a request.
+// Phase 19: Every LLM response must be traceable to its source brain.
+type BrainProvenance struct {
+	ProviderID   string `json:"provider_id"`              // "ollama", "claude"
+	ProviderName string `json:"provider_name,omitempty"`  // display name
+	ModelID      string `json:"model_id"`                 // "qwen2.5-coder:7b"
+	Location     string `json:"location"`                 // "local" | "remote"
+	DataBoundary string `json:"data_boundary"`            // "local_only" | "leaves_org"
+	TokensUsed   int    `json:"tokens_used,omitempty"`
+}
+
+// ChatProposal carries proposal metadata for chat-based mutation actions.
+// Phase 19-B: When an agent uses mutation tools, the response is tagged as a proposal.
+type ChatProposal struct {
+	Intent        string   `json:"intent"`
+	Tools         []string `json:"tools"`
+	RiskLevel     string   `json:"risk_level"`      // "low" | "medium" | "high"
+	ConfirmToken  string   `json:"confirm_token"`
+	IntentProofID string   `json:"intent_proof_id"`
+}
+
 // ChatResponsePayload is the CTS Payload for council chat responses.
 // Any endpoint returning LLM-generated content wraps it in this struct
 // inside a CTSEnvelope.
 type ChatResponsePayload struct {
-	Text          string   `json:"text"`
-	Consultations []string `json:"consultations,omitempty"`
-	ToolsUsed     []string `json:"tools_used,omitempty"`
+	Text          string              `json:"text"`
+	Consultations []string            `json:"consultations,omitempty"`
+	ToolsUsed     []string            `json:"tools_used,omitempty"`
+	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`
+	// CE-1: Answer provenance (audit linkage for Chat-to-Answer template)
+	Provenance    *AnswerProvenance   `json:"provenance,omitempty"`
+	// Phase 19: Brain provenance (which provider/model executed this response)
+	Brain         *BrainProvenance    `json:"brain,omitempty"`
+	// Phase 19-B: Chat proposal (when agent uses mutation tools)
+	Proposal      *ChatProposal       `json:"proposal,omitempty"`
+}
+
+// ChatArtifactRef is an inline artifact reference embedded in a chat response.
+// For small content (code snippets, chart specs, short documents) the Content
+// field carries the data directly. For large/binary content, ID references an
+// artifact in the artifacts table that can be fetched separately.
+type ChatArtifactRef struct {
+	ID          string `json:"id,omitempty"`           // artifact table ID (for stored artifacts)
+	Type        string `json:"type"`                   // code | document | image | audio | data | chart | file
+	Title       string `json:"title"`
+	ContentType string `json:"content_type,omitempty"` // MIME type
+	Content     string `json:"content,omitempty"`      // inline content (text, JSON, base64 for images)
+	URL         string `json:"url,omitempty"`          // external URL (for links, images)
+}
+
+// DelegationHint carries optional scoring metadata for task delegation.
+// V1: logged for observability only. Future: somatic modulation.
+type DelegationHint struct {
+	Confidence float64 `json:"confidence,omitempty"` // 0.0-1.0
+	Urgency    string  `json:"urgency,omitempty"`    // low, medium, high, critical
+	Complexity int     `json:"complexity,omitempty"` // 1-5
+	Risk       string  `json:"risk,omitempty"`       // low, medium, high
 }
 
 // APIResponse is the standard response wrapper for all Mycelis API endpoints.

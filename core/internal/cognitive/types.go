@@ -25,6 +25,13 @@ type ProviderConfig struct {
 	ModelID    string `yaml:"model_id" json:"model_id"`           // e.g. "qwen2.5-coder:7b"
 	AuthKey    string `yaml:"api_key" json:"-"`                   // NEVER expose in API responses
 	AuthKeyEnv string `yaml:"api_key_env" json:"-"`               // NEVER expose in API responses
+
+	// Phase 19: Provider orchestration metadata
+	Location     string   `yaml:"location" json:"location"`           // "local" | "remote"
+	DataBoundary string   `yaml:"data_boundary" json:"data_boundary"` // "local_only" | "leaves_org"
+	UsagePolicy  string   `yaml:"usage_policy" json:"usage_policy"`   // "local_first" | "allow_escalation" | "require_approval" | "disallowed"
+	RolesAllowed []string `yaml:"roles_allowed" json:"roles_allowed"` // ["architect","coder"] or ["all"]
+	Enabled      bool     `yaml:"enabled" json:"enabled"`
 }
 
 // --- Interfaces ---

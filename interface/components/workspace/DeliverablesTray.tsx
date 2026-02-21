@@ -10,7 +10,7 @@ function ArtifactCard({ envelope }: { envelope: CTSEnvelope }) {
     return (
         <button
             onClick={() => selectArtifact(envelope)}
-            className="flex-shrink-0 w-56 bg-cortex-bg border border-cortex-primary/30 rounded-lg p-3 text-left hover:border-cortex-primary/60 hover:shadow-[0_0_12px_rgba(115,103,240,0.2)] transition-all duration-200 group"
+            className="flex-shrink-0 w-56 bg-cortex-bg border border-cortex-primary/30 rounded-lg p-3 text-left hover:border-cortex-primary/60 hover:shadow-[0_0_12px_rgba(6,182,212,0.2)] transition-all duration-200 group"
         >
             <div className="flex items-center gap-2 mb-2">
                 <Package className="w-3.5 h-3.5 text-cortex-primary" />
@@ -60,7 +60,7 @@ export default function DeliverablesTray() {
             <div className="bg-cortex-surface border border-cortex-primary/30 rounded-t-xl rounded-b-lg px-4 py-3 shadow-lg animate-pulse-subtle">
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-2.5">
-                    <div className="w-2 h-2 rounded-full bg-cortex-success shadow-[0_0_6px_rgba(40,199,111,0.5)] animate-pulse" />
+                    <div className="w-2 h-2 rounded-full bg-cortex-success shadow-[0_0_6px_rgba(16,185,129,0.5)] animate-pulse" />
                     <span className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wider">
                         Pending Deliverables
                     </span>

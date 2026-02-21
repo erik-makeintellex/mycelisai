@@ -22,6 +22,45 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+// Phase 0 security: workspace sandbox for file tools
+const maxWriteSize = 1 << 20 // 1 MB
+
+func validateToolPath(rawPath string) (string, error) {
+	workspace := os.Getenv("MYCELIS_WORKSPACE")
+	if workspace == "" {
+		workspace = "./workspace"
+	}
+	absWorkspace, err := filepath.Abs(workspace)
+	if err != nil {
+		return "", fmt.Errorf("invalid workspace path: %w", err)
+	}
+
+	var absTarget string
+	if filepath.IsAbs(rawPath) {
+		absTarget = filepath.Clean(rawPath)
+	} else {
+		absTarget = filepath.Clean(filepath.Join(absWorkspace, rawPath))
+	}
+
+	rel, err := filepath.Rel(absWorkspace, absTarget)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return "", fmt.Errorf("path %q escapes workspace boundary", rawPath)
+	}
+
+	// Symlink escape check (best-effort for existing paths)
+	checkPath := absTarget
+	if _, statErr := os.Lstat(absTarget); os.IsNotExist(statErr) {
+		checkPath = filepath.Dir(absTarget)
+	}
+	if realPath, evalErr := filepath.EvalSymlinks(checkPath); evalErr == nil {
+		relReal, _ := filepath.Rel(absWorkspace, realPath)
+		if strings.HasPrefix(relReal, "..") {
+			return "", fmt.Errorf("symlink at %q resolves outside workspace", rawPath)
+		}
+	}
+	return absTarget, nil
+}
+
 // InternalTool describes a built-in tool available to agents without an
 // external MCP server. The Handler function is invoked during the ReAct loop.
 type InternalTool struct {
@@ -127,6 +166,16 @@ func (r *InternalToolRegistry) registerAll() {
 			"properties": map[string]any{
 				"team_id": map[string]any{"type": "string", "description": "The target team ID"},
 				"task":    map[string]any{"type": "string", "description": "The task description to send"},
+				"hint": map[string]any{
+					"type":        "object",
+					"description": "Optional scoring hints for delegation priority",
+					"properties": map[string]any{
+						"confidence": map[string]any{"type": "number", "description": "0.0-1.0 confidence this is the right team"},
+						"urgency":    map[string]any{"type": "string", "enum": []string{"low", "medium", "high", "critical"}},
+						"complexity":  map[string]any{"type": "integer", "description": "1-5 complexity rating"},
+						"risk":       map[string]any{"type": "string", "enum": []string{"low", "medium", "high"}},
+					},
+				},
 			},
 			"required": []string{"team_id", "task"},
 		},
@@ -255,6 +304,20 @@ func (r *InternalToolRegistry) registerAll() {
 		Handler: r.handlePublishSignal,
 	}
 
+	r.tools["broadcast"] = &InternalTool{
+		Name:        "broadcast",
+		Description: "Send a message to ALL active teams in the swarm. Every team's agents will process it and respond. Use when the user says 'broadcast', 'tell everyone', or 'announce to all teams'.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"message": map[string]any{"type": "string", "description": "The message to broadcast to all teams"},
+				"urgency": map[string]any{"type": "string", "description": "Optional urgency level", "enum": []string{"low", "medium", "high", "critical"}},
+			},
+			"required": []string{"message"},
+		},
+		Handler: r.handleBroadcast,
+	}
+
 	r.tools["read_signals"] = &InternalTool{
 		Name:        "read_signals",
 		Description: "Subscribe to a NATS topic pattern and collect messages for a brief window. Use to sense what's happening on a bus channel.",
@@ -272,11 +335,11 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["read_file"] = &InternalTool{
 		Name:        "read_file",
-		Description: "Read the contents of a file from the local filesystem. Use for inspecting configs, logs, artifacts, or any file the organism can access.",
+		Description: "Read the contents of a file within the workspace sandbox (MYCELIS_WORKSPACE). Relative paths resolve from the workspace root. Absolute paths must be inside the workspace boundary.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"path": map[string]any{"type": "string", "description": "Absolute or relative file path to read"},
+				"path": map[string]any{"type": "string", "description": "File path relative to workspace root, or absolute path within workspace"},
 			},
 			"required": []string{"path"},
 		},
@@ -285,11 +348,11 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["write_file"] = &InternalTool{
 		Name:        "write_file",
-		Description: "Write content to a file on the local filesystem. Creates parent directories if needed. Use for generating configs, code, reports, or any file output.",
+		Description: "Write content to a file within the workspace sandbox (MYCELIS_WORKSPACE). Creates parent directories if needed. Max 1MB per write. Paths must resolve inside the workspace boundary.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"path":    map[string]any{"type": "string", "description": "File path to write to"},
+				"path":    map[string]any{"type": "string", "description": "File path relative to workspace root, or absolute path within workspace"},
 				"content": map[string]any{"type": "string", "description": "The file content to write"},
 			},
 			"required": []string{"path", "content"},
@@ -323,6 +386,19 @@ func (r *InternalToolRegistry) registerAll() {
 		},
 		Handler: r.handleResearchForBlueprint,
 	}
+
+	r.tools["summarize_conversation"] = &InternalTool{
+		Name:        "summarize_conversation",
+		Description: "Summarize recent conversation into persistent memory. Extracts key topics, user preferences, personality notes, and data references. The summary is embedded into pgvector for future semantic recall. Call this when you want to checkpoint important conversation context.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"messages": map[string]any{"type": "string", "description": "The conversation text to summarize (last 15-20 messages)"},
+			},
+			"required": []string{"messages"},
+		},
+		Handler: r.handleSummarizeConversation,
+	}
 }
 
 // ── Tool Handlers ──────────────────────────────────────────────
@@ -346,6 +422,13 @@ func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args ma
 		return "", fmt.Errorf("council member %s did not respond: %w", member, err)
 	}
 
+	// Agent returns structured JSON (ProcessResult). Extract just the text.
+	var result struct {
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(msg.Data, &result); err == nil && result.Text != "" {
+		return result.Text, nil
+	}
 	return string(msg.Data), nil
 }
 
@@ -354,6 +437,18 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	task, _ := args["task"].(string)
 	if teamID == "" || task == "" {
 		return "", fmt.Errorf("delegate_task requires 'team_id' and 'task'")
+	}
+
+	// Log delegation hint if provided (observability only — V1)
+	if hintRaw, ok := args["hint"]; ok {
+		if hint, ok := hintRaw.(map[string]any); ok {
+			log.Printf("DelegationHint [%s]: confidence=%.2f urgency=%v complexity=%v risk=%v",
+				teamID,
+				hint["confidence"],
+				hint["urgency"],
+				hint["complexity"],
+				hint["risk"])
+		}
 	}
 
 	if r.nc == nil {
@@ -640,16 +735,31 @@ func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map
 		}
 	}
 
-	_, err := r.db.ExecContext(ctx, `
+	var artifactID string
+	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status)
 		VALUES ('internal', $1, $2, $3, $4, $5, 'pending')
-	`, artType, title, contentType, content, metaJSON)
+		RETURNING id
+	`, artType, title, contentType, content, metaJSON).Scan(&artifactID)
 	if err != nil {
 		log.Printf("store_artifact: %v", err)
 		return fmt.Sprintf("Failed to store artifact: %v", err), nil
 	}
 
-	return fmt.Sprintf("Artifact '%s' stored successfully (type: %s).", title, artType), nil
+	artifactRef := map[string]any{
+		"id": artifactID, "type": artType, "title": title, "content_type": contentType,
+	}
+	// Include inline content for text-based types (not images/audio — too large for LLM context)
+	if artType != "image" && artType != "audio" && len(content) < 500_000 {
+		artifactRef["content"] = content
+	}
+
+	result := map[string]any{
+		"message":  fmt.Sprintf("Artifact '%s' stored (type: %s, id: %s).", title, artType, artifactID),
+		"artifact": artifactRef,
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
 }
 
 func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[string]any) (string, error) {
@@ -800,6 +910,62 @@ func (r *InternalToolRegistry) handlePublishSignal(_ context.Context, args map[s
 	return fmt.Sprintf("Signal published to %s (%d bytes).", subject, len(message)), nil
 }
 
+func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[string]any) (string, error) {
+	message, _ := args["message"].(string)
+	if message == "" {
+		return "", fmt.Errorf("broadcast requires 'message'")
+	}
+
+	// Log urgency hint if provided (observability only — V1)
+	if urgency, ok := args["urgency"].(string); ok && urgency != "" {
+		log.Printf("Broadcast urgency: %s", urgency)
+	}
+
+	if r.nc == nil {
+		return "", fmt.Errorf("NATS not available")
+	}
+	if r.somaRef == nil {
+		return "", fmt.Errorf("Soma not available — cannot enumerate teams")
+	}
+
+	teams := r.somaRef.ListTeams()
+	if len(teams) == 0 {
+		return "No active teams to broadcast to.", nil
+	}
+
+	timeout := 60 * time.Second
+	type reply struct {
+		teamID  string
+		content string
+		err     error
+	}
+	ch := make(chan reply, len(teams))
+
+	for _, t := range teams {
+		go func(teamID string) {
+			subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID)
+			msg, err := r.nc.Request(subject, []byte(message), timeout)
+			if err != nil {
+				ch <- reply{teamID: teamID, err: err}
+				return
+			}
+			ch <- reply{teamID: teamID, content: string(msg.Data)}
+		}(t.ID)
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Broadcast sent to %d team(s):\n\n", len(teams)))
+	for range teams {
+		r := <-ch
+		if r.err != nil {
+			sb.WriteString(fmt.Sprintf("- **%s**: _%v_\n", r.teamID, r.err))
+		} else {
+			sb.WriteString(fmt.Sprintf("- **%s**: %s\n", r.teamID, r.content))
+		}
+	}
+	return sb.String(), nil
+}
+
 func (r *InternalToolRegistry) handleReadSignals(ctx context.Context, args map[string]any) (string, error) {
 	subject, _ := args["subject"].(string)
 	if subject == "" {
@@ -868,9 +1034,14 @@ func (r *InternalToolRegistry) handleReadFile(_ context.Context, args map[string
 		return "", fmt.Errorf("read_file requires 'path'")
 	}
 
-	data, err := os.ReadFile(path)
+	safePath, err := validateToolPath(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to read %s: %w", path, err)
+		return "", err
+	}
+
+	data, err := os.ReadFile(safePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s: %w", safePath, err)
 	}
 
 	// Truncate large files to prevent LLM context overflow
@@ -889,17 +1060,26 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 		return "", fmt.Errorf("write_file requires 'path' and 'content'")
 	}
 
+	if len(content) > maxWriteSize {
+		return "", fmt.Errorf("content size %d exceeds maximum write size of %d bytes", len(content), maxWriteSize)
+	}
+
+	safePath, err := validateToolPath(path)
+	if err != nil {
+		return "", err
+	}
+
 	// Create parent directories
-	dir := filepath.Dir(path)
+	dir := filepath.Dir(safePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		return "", fmt.Errorf("failed to write %s: %w", path, err)
+	if err := os.WriteFile(safePath, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("failed to write %s: %w", safePath, err)
 	}
 
-	return fmt.Sprintf("File written: %s (%d bytes).", path, len(content)), nil
+	return fmt.Sprintf("File written: %s (%d bytes).", safePath, len(content)), nil
 }
 
 func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map[string]any) (string, error) {
@@ -948,10 +1128,11 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		return fmt.Sprintf("Media engine error (HTTP %d): %s", resp.StatusCode, string(respBody)), nil
 	}
 
-	// Parse response to extract metadata (don't return full base64 to LLM — too large)
+	// Parse response to extract base64 image data
 	var imgResp struct {
 		Created int `json:"created"`
 		Data    []struct {
+			B64JSON       string `json:"b64_json"`
 			RevisedPrompt string `json:"revised_prompt"`
 		} `json:"data"`
 	}
@@ -959,22 +1140,157 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		return "Image generated but failed to parse response metadata.", nil
 	}
 
+	b64Content := ""
+	if len(imgResp.Data) > 0 {
+		b64Content = imgResp.Data[0].B64JSON
+	}
+
+	titleTrunc := prompt
+	if len(titleTrunc) > 80 {
+		titleTrunc = titleTrunc[:80]
+	}
+	title := fmt.Sprintf("Generated: %s", titleTrunc)
+
 	// Store the image as an artifact if DB is available
+	var artifactID string
 	if r.db != nil {
-		titleTrunc := prompt
-		if len(titleTrunc) > 80 {
-			titleTrunc = titleTrunc[:80]
-		}
-		_, storeErr := r.db.ExecContext(ctx, `
+		err := r.db.QueryRowContext(ctx, `
 			INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status)
-			VALUES ('internal', 'image', $1, 'image/png', 'base64-stored', $2, 'completed')
-		`, fmt.Sprintf("Generated: %s", titleTrunc), string(respBody))
-		if storeErr != nil {
-			log.Printf("generate_image: failed to store artifact: %v", storeErr)
+			VALUES ('internal', 'image', $1, 'image/png', $2, $3, 'completed')
+			RETURNING id
+		`, title, b64Content, string(respBody)).Scan(&artifactID)
+		if err != nil {
+			log.Printf("generate_image: failed to store artifact: %v", err)
 		}
 	}
 
-	return fmt.Sprintf("Image generated successfully for prompt: \"%s\" (size: %s). The image has been stored as an artifact.", prompt, size), nil
+	// Return structured result: message for LLM, artifact for HTTP pipeline
+	result := map[string]any{
+		"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). Stored as artifact.", prompt, size),
+		"artifact": map[string]any{
+			"id":           artifactID,
+			"type":         "image",
+			"title":        title,
+			"content_type": "image/png",
+			"content":      b64Content,
+		},
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
+}
+
+// ── Conversation Memory ─────────────────────────────────────────
+
+func (r *InternalToolRegistry) handleSummarizeConversation(ctx context.Context, args map[string]any) (string, error) {
+	messagesText, _ := args["messages"].(string)
+	if messagesText == "" {
+		return "", fmt.Errorf("summarize_conversation requires 'messages'")
+	}
+
+	if r.brain == nil {
+		return "", fmt.Errorf("cognitive engine offline — cannot summarize")
+	}
+	if r.mem == nil {
+		return "", fmt.Errorf("memory service offline — cannot store summary")
+	}
+
+	return r.summarizeAndStore(ctx, "admin", messagesText, 0)
+}
+
+// AutoSummarize compresses a chat history window into a persistent summary.
+// Called as a background goroutine from the agent's ReAct pipeline — non-blocking, non-fatal.
+func (r *InternalToolRegistry) AutoSummarize(ctx context.Context, agentID string, history []cognitive.ChatMessage) {
+	if r.brain == nil || r.mem == nil {
+		return
+	}
+
+	// Flatten last messages into a text block
+	var sb strings.Builder
+	for _, m := range history {
+		sb.WriteString(fmt.Sprintf("[%s]: %s\n", m.Role, m.Content))
+	}
+
+	summaryID, err := r.summarizeAndStore(ctx, agentID, sb.String(), len(history))
+	if err != nil {
+		log.Printf("AutoSummarize [%s]: failed: %v", agentID, err)
+		return
+	}
+	log.Printf("AutoSummarize [%s]: stored summary %s (%d messages)", agentID, summaryID, len(history))
+}
+
+// summarizeAndStore sends conversation text to the LLM for compression, parses the
+// structured output, and stores it in the conversation_summaries table + pgvector.
+func (r *InternalToolRegistry) summarizeAndStore(ctx context.Context, agentID, messagesText string, msgCount int) (string, error) {
+	compressionPrompt := `Summarize this conversation in 2-3 sentences. Then extract structured metadata.
+
+Respond with ONLY this JSON (no markdown fences):
+{
+  "summary": "2-3 sentence summary of the conversation",
+  "key_topics": ["topic1", "topic2"],
+  "user_preferences": {"preference_key": "preference_value"},
+  "personality_notes": "how the user wants to be addressed or treated",
+  "data_references": [{"type": "file/url/artifact", "ref": "the reference"}]
+}
+
+Conversation:
+` + messagesText
+
+	req := cognitive.InferRequest{
+		Profile: "chat",
+		Messages: []cognitive.ChatMessage{
+			{Role: "system", Content: "You are a conversation summarizer. Output only valid JSON."},
+			{Role: "user", Content: compressionPrompt},
+		},
+	}
+
+	resp, err := r.brain.InferWithContract(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("LLM compression failed: %w", err)
+	}
+
+	// Parse structured output from LLM
+	var parsed struct {
+		Summary          string         `json:"summary"`
+		KeyTopics        []string       `json:"key_topics"`
+		UserPreferences  map[string]any `json:"user_preferences"`
+		PersonalityNotes string         `json:"personality_notes"`
+		DataReferences   []any          `json:"data_references"`
+	}
+
+	// Strip markdown fences if present
+	text := strings.TrimSpace(resp.Text)
+	text = strings.TrimPrefix(text, "```json")
+	text = strings.TrimPrefix(text, "```")
+	text = strings.TrimSuffix(text, "```")
+	text = strings.TrimSpace(text)
+
+	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
+		// Fallback: store the raw text as the summary
+		log.Printf("summarizeAndStore: LLM output not valid JSON, using raw text: %v", err)
+		parsed.Summary = resp.Text
+	}
+
+	if parsed.Summary == "" {
+		parsed.Summary = resp.Text
+	}
+	if parsed.KeyTopics == nil {
+		parsed.KeyTopics = []string{}
+	}
+	if parsed.UserPreferences == nil {
+		parsed.UserPreferences = map[string]any{}
+	}
+	if parsed.DataReferences == nil {
+		parsed.DataReferences = []any{}
+	}
+
+	embedFunc := memory.EmbedFunc(r.brain.Embed)
+	summaryID, err := r.mem.StoreConversationSummary(ctx, embedFunc, agentID, parsed.Summary,
+		parsed.KeyTopics, parsed.UserPreferences, parsed.PersonalityNotes, parsed.DataReferences, msgCount)
+	if err != nil {
+		return "", fmt.Errorf("store summary failed: %w", err)
+	}
+
+	return summaryID, nil
 }
 
 // ── Runtime Context Builder ─────────────────────────────────────
@@ -982,7 +1298,7 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 // BuildContext generates a live system state block for injection into an agent's
 // system prompt. Gives agents awareness of active teams, NATS topology, cognitive
 // config, and installed MCP servers before they process any message.
-func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, teamDeliveries []string) string {
+func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, teamDeliveries []string, currentInput string) string {
 	var sb strings.Builder
 	sb.WriteString("\n\n## Runtime Context (Live System State)\n")
 	sb.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
@@ -999,7 +1315,10 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, 
 	// 4. Installed MCP Servers
 	r.writeMCPServers(&sb)
 
-	// 5. Interaction Protocol
+	// 5. Recalled Conversation Context (pgvector semantic recall)
+	r.writeRecalledMemory(&sb, agentID, currentInput)
+
+	// 6. Interaction Protocol
 	sb.WriteString("### Interaction Protocol\n")
 	sb.WriteString("**Pre-response** (before answering):\n")
 	sb.WriteString("1. Check if past context is relevant → `recall` or `search_memory`\n")
@@ -1029,12 +1348,19 @@ func (r *InternalToolRegistry) writeTeamRoster(sb *strings.Builder) {
 	}
 
 	for _, m := range manifests {
-		memberIDs := make([]string, len(m.Members))
-		for i, a := range m.Members {
-			memberIDs[i] = a.ID
+		desc := m.Description
+		if desc == "" {
+			desc = fmt.Sprintf("%d agent(s)", len(m.Members))
 		}
-		sb.WriteString(fmt.Sprintf("- **%s** (`%s`, %s): %d agents [%s]\n",
-			m.Name, m.ID, m.Type, len(m.Members), strings.Join(memberIDs, ", ")))
+		sb.WriteString(fmt.Sprintf("- **%s** (`%s`, %s): %s\n",
+			m.Name, m.ID, m.Type, desc))
+		for _, a := range m.Members {
+			tools := ""
+			if len(a.Tools) > 0 {
+				tools = " [" + strings.Join(a.Tools, ", ") + "]"
+			}
+			sb.WriteString(fmt.Sprintf("  - `%s` (%s)%s\n", a.ID, a.Role, tools))
+		}
 	}
 	sb.WriteString("\n")
 }
@@ -1170,6 +1496,51 @@ func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
 				sb.WriteString(fmt.Sprintf("- **%s**: %s (via %s)\n", t.name, desc, s.name))
 			}
 		}
+	}
+	sb.WriteString("\n")
+}
+
+func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID, currentInput string) {
+	if r.brain == nil || r.mem == nil || currentInput == "" {
+		return
+	}
+
+	// Embed the current input (truncated) for semantic search
+	query := currentInput
+	if len(query) > 200 {
+		query = query[:200]
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	vec, err := r.brain.Embed(ctx, query, "")
+	if err != nil {
+		return // Silent — embedding not available
+	}
+
+	summaries, err := r.mem.RecallConversations(ctx, vec, agentID, 3)
+	if err != nil || len(summaries) == 0 {
+		return
+	}
+
+	sb.WriteString("### Previous Context (from past conversations)\n")
+	for _, s := range summaries {
+		age := time.Since(s.CreatedAt)
+		var ageStr string
+		switch {
+		case age < time.Hour:
+			ageStr = fmt.Sprintf("%d min ago", int(age.Minutes()))
+		case age < 24*time.Hour:
+			ageStr = fmt.Sprintf("%d hours ago", int(age.Hours()))
+		default:
+			ageStr = fmt.Sprintf("%d days ago", int(age.Hours()/24))
+		}
+		sb.WriteString(fmt.Sprintf("- [%s] %s", ageStr, s.Summary))
+		if len(s.KeyTopics) > 0 {
+			sb.WriteString(fmt.Sprintf(" (topics: %s)", strings.Join(s.KeyTopics, ", ")))
+		}
+		sb.WriteString("\n")
 	}
 	sb.WriteString("\n")
 }

@@ -7,18 +7,33 @@ providers:
     endpoint: "http://127.0.0.1:8000/v1"
     model_id: "qwen2.5-coder"
     api_key: "mycelis-local"
+    location: "local"
+    data_boundary: "local_only"
+    usage_policy: "local_first"
+    roles_allowed: ["all"]
+    enabled: true
 
   ollama:
     type: "openai_compatible"
-    endpoint: "http://192.168.50.156:11434/v1"
+    endpoint: "http://127.0.0.1:11434/v1"
     model_id: "qwen2.5-coder:7b"
     api_key: "ollama"
+    location: "local"
+    data_boundary: "local_only"
+    usage_policy: "local_first"
+    roles_allowed: ["all"]
+    enabled: true
 
   lmstudio:
     type: "openai_compatible"
     endpoint: "http://127.0.0.1:1234/v1"
     model_id: "default"
     api_key: "lm-studio"
+    location: "local"
+    data_boundary: "local_only"
+    usage_policy: "local_first"
+    roles_allowed: ["all"]
+    enabled: true
 
   # --- Commercial (Environment Variables Required) ---
   production_gpt4:
@@ -26,16 +41,31 @@ providers:
     endpoint: "https://api.openai.com/v1"
     model_id: "gpt-4-turbo"
     api_key_env: "OPENAI_API_KEY"
+    location: "remote"
+    data_boundary: "leaves_org"
+    usage_policy: "require_approval"
+    roles_allowed: ["architect", "coder"]
+    enabled: false
 
   production_claude:
     type: "anthropic"
     model_id: "claude-3-opus-20240229"
     api_key_env: "ANTHROPIC_API_KEY"
+    location: "remote"
+    data_boundary: "leaves_org"
+    usage_policy: "require_approval"
+    roles_allowed: ["architect", "coder"]
+    enabled: false
 
   production_gemini:
     type: "google"
     model_id: "gemini-1.5-pro"
     api_key_env: "GEMINI_API_KEY"
+    location: "remote"
+    data_boundary: "leaves_org"
+    usage_policy: "require_approval"
+    roles_allowed: ["architect"]
+    enabled: false
 
 profiles:
   # Map Intents to Providers — change these to route profiles to any provider above

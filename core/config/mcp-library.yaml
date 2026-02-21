@@ -5,7 +5,7 @@ categories:
         description: "Read, write, and manage local files and directories"
         transport: stdio
         command: "npx"
-        args: ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+        args: ["-y", "@modelcontextprotocol/server-filesystem", "./workspace"]
         tags: ["files", "code", "local"]
       - name: "github"
         description: "GitHub API integration — repos, issues, PRs, code search"

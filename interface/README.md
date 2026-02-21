@@ -104,7 +104,7 @@ initializeStream() --> Zustand streamLogs[] (capped at 100)
 | `components/workspace/DeliverablesTray.tsx` | Bottom-docked pending artifact cards (CTSEnvelope[]) |
 | `components/shell/GovernanceModal.tsx` | Zone D — approval overlay: output + proof columns, approve/reject |
 | `components/shell/ShellLayout.tsx` | Shell layout: ZoneA + ZoneB + ZoneD |
-| `app/globals.css` | Vuexy Dark palette (`cortex-*` tokens), animations, ReactFlow overrides |
+| `app/globals.css` | Midnight Cortex palette (`cortex-*` tokens), animations, ReactFlow overrides |
 
 ## Development
 
@@ -139,16 +139,16 @@ Cortex palette defined via `@theme` in `app/globals.css`:
 
 | Token | Hex | Usage |
 | :--- | :--- | :--- |
-| `cortex-bg` | `#25293C` | Page background, input fields |
-| `cortex-surface` | `#2F3349` | Cards, panels, sidebar |
-| `cortex-primary` | `#7367F0` | Active nav pills, focus rings, send button |
-| `cortex-success` | `#28C76F` | Online indicators, approve button, heartbeat |
-| `cortex-warning` | `#FF9F43` | Constraints, governance badges |
-| `cortex-danger` | `#EA5455` | Errors, reject button |
-| `cortex-info` | `#00CFE8` | Architect bot avatar, drafting indicator |
-| `cortex-text-main` | `#CFD3EC` | Primary text |
-| `cortex-text-muted` | `#7983BB` | Secondary text, placeholders |
-| `cortex-border` | `#434968` | Borders, dividers |
+| `cortex-bg` | `#09090b` | Page background, input fields |
+| `cortex-surface` | `#18181b` | Cards, panels, sidebar |
+| `cortex-primary` | `#06b6d4` | Active nav pills, focus rings, send button |
+| `cortex-success` | `#10b981` | Online indicators, approve button, heartbeat |
+| `cortex-warning` | `#f59e0b` | Constraints, governance badges |
+| `cortex-danger` | `#ef4444` | Errors, reject button |
+| `cortex-info` | `#38bdf8` | Architect bot avatar, drafting indicator |
+| `cortex-text-main` | `#d4d4d8` | Primary text |
+| `cortex-text-muted` | `#71717a` | Secondary text, placeholders |
+| `cortex-border` | `#27272a` | Borders, dividers |
 
 Utilities: `.glow-stable`, `.glow-active`, `.glow-critical`, `.glow-primary`, `.glass`, `.ghost-draft`, `.activity-ring`, `.animate-pulse-subtle`
 

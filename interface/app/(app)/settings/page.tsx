@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { User, Users, BrainCircuit, Settings, Shield, Wrench } from "lucide-react";
+import { User, Users, BrainCircuit, Settings, Shield, Wrench, Brain } from "lucide-react";
 import MatrixGrid from "@/components/matrix/MatrixGrid";
+import BrainsPage from "@/components/settings/BrainsPage";
+import UsersPage from "@/components/settings/UsersPage";
 
 const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegistry"), {
     ssr: false,
@@ -31,40 +33,17 @@ export default function SettingsPage() {
             {/* Tabs */}
             <div className="max-w-5xl mx-auto w-full px-6 mt-6">
                 <div className="flex items-center gap-1 border-b border-cortex-border">
-                    <Tab
-                        id="profile"
-                        label="Profile"
-                        icon={User}
-                        active={activeTab === "profile"}
-                        onClick={() => setActiveTab("profile")}
-                    />
-                    <Tab
-                        id="teams"
-                        label="Teams"
-                        icon={Users}
-                        active={activeTab === "teams"}
-                        onClick={() => setActiveTab("teams")}
-                    />
-                    <Tab
-                        id="matrix"
-                        label="Cognitive Matrix"
-                        icon={BrainCircuit}
-                        active={activeTab === "matrix"}
-                        onClick={() => setActiveTab("matrix")}
-                    />
-                    <Tab
-                        id="tools"
-                        label="MCP Tools"
-                        icon={Wrench}
-                        active={activeTab === "tools"}
-                        onClick={() => setActiveTab("tools")}
-                    />
+                    <Tab id="profile" label="Profile" icon={User} active={activeTab === "profile"} onClick={() => setActiveTab("profile")} />
+                    <Tab id="teams" label="Teams" icon={Users} active={activeTab === "teams"} onClick={() => setActiveTab("teams")} />
+                    <Tab id="brains" label="Brains" icon={Brain} active={activeTab === "brains"} onClick={() => setActiveTab("brains")} />
+                    <Tab id="matrix" label="Cognitive Matrix" icon={BrainCircuit} active={activeTab === "matrix"} onClick={() => setActiveTab("matrix")} />
+                    <Tab id="tools" label="MCP Tools" icon={Wrench} active={activeTab === "tools"} onClick={() => setActiveTab("tools")} />
+                    <Tab id="users" label="Users" icon={Shield} active={activeTab === "users"} onClick={() => setActiveTab("users")} />
                 </div>
             </div>
 
             {/* Content */}
             {activeTab === "tools" ? (
-                /* Tools tab gets full height for the registry layout */
                 <div className="flex-1 overflow-hidden mt-2">
                     <MCPToolRegistry />
                 </div>
@@ -72,7 +51,9 @@ export default function SettingsPage() {
                 <div className="max-w-5xl mx-auto w-full px-6 py-6 min-h-[400px]">
                     {activeTab === "profile" && <ProfileSettings />}
                     {activeTab === "teams" && <TeamSettings />}
+                    {activeTab === "brains" && <BrainsPage />}
                     {activeTab === "matrix" && <div className="p-1"><MatrixGrid /></div>}
+                    {activeTab === "users" && <UsersPage />}
                 </div>
             )}
         </div>
@@ -93,7 +74,7 @@ function Tab({ id, label, icon: Icon, active, onClick }: any) {
             <Icon className="w-4 h-4" />
             {label}
         </button>
-    )
+    );
 }
 
 function ProfileSettings() {
@@ -101,17 +82,15 @@ function ProfileSettings() {
         <div className="space-y-6 max-w-lg">
             <div className="p-6 rounded-lg border border-cortex-border bg-cortex-surface shadow-sm space-y-4">
                 <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Appearance</h3>
-
                 <div className="flex items-center justify-between">
                     <span className="text-cortex-text-main text-sm">Theme</span>
                     <select className="bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-sm text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary">
-                        <option>Vuexy Dark</option>
+                        <option>Midnight Cortex</option>
                         <option>Cyber Dark</option>
                         <option>System</option>
                     </select>
                 </div>
             </div>
-
             <div className="p-6 rounded-lg border border-cortex-border bg-cortex-surface shadow-sm space-y-4">
                 <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Notifications</h3>
                 <div className="flex items-center justify-between">
@@ -122,7 +101,7 @@ function ProfileSettings() {
                 </div>
             </div>
         </div>
-    )
+    );
 }
 
 function TeamSettings() {
@@ -130,7 +109,6 @@ function TeamSettings() {
         <div className="space-y-6">
             <div className="p-6 rounded-lg border border-cortex-border bg-cortex-surface shadow-sm">
                 <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider mb-4">Operations Team</h3>
-
                 <div className="space-y-2">
                     <div className="flex items-center justify-between p-2 hover:bg-cortex-bg rounded border border-transparent hover:border-cortex-border transition-colors">
                         <div className="flex items-center gap-3">
@@ -145,5 +123,5 @@ function TeamSettings() {
                 </div>
             </div>
         </div>
-    )
+    );
 }

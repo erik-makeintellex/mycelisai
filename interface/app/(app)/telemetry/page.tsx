@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Activity, Server, Database, Shield, Cpu, Zap, Box } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Activity, Server, Cpu, Zap, Box } from 'lucide-react';
 
 interface TelemetrySnapshot {
     goroutines: number;
@@ -13,7 +13,6 @@ interface TelemetrySnapshot {
 
 export default function TelemetryPage() {
     const [data, setData] = useState<TelemetrySnapshot | null>(null);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -28,7 +27,7 @@ export default function TelemetryPage() {
                 console.error(err);
                 setError("Connection lost");
             } finally {
-                setLoading(false);
+                // fetch complete
             }
         };
 
@@ -41,46 +40,42 @@ export default function TelemetryPage() {
         <div className="p-8 max-w-7xl mx-auto space-y-8">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-zinc-900">System Telemetry</h1>
-                    <p className="text-zinc-500">Real-time infrastructure monitoring and node status.</p>
+                    <h1 className="text-2xl font-bold text-cortex-text-main">System Telemetry</h1>
+                    <p className="text-cortex-text-muted">Real-time infrastructure monitoring and node status.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className={`flex h-2 w-2 rounded-full ${error ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></span>
-                    <span className={`text-sm font-medium ${error ? 'text-red-600' : 'text-emerald-600'}`}>
+                    <span className={`text-sm font-medium ${error ? 'text-red-400' : 'text-emerald-400'}`}>
                         {error ? 'OFFLINE' : 'LIVE'}
                     </span>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatusCard 
-                    icon={Server} 
-                    label="Goroutines" 
-                    value={data ? data.goroutines.toString() : "..."} 
-                    status="success" 
+                <StatusCard
+                    icon={Server}
+                    label="Goroutines"
+                    value={data ? data.goroutines.toString() : "..."}
                 />
-                <StatusCard 
-                    icon={Box} 
-                    label="Heap Alloc" 
-                    value={data ? `${data.heap_alloc_mb.toFixed(1)} MB` : "..."} 
-                    status="success" 
+                <StatusCard
+                    icon={Box}
+                    label="Heap Alloc"
+                    value={data ? `${data.heap_alloc_mb.toFixed(1)} MB` : "..."}
                 />
-                <StatusCard 
-                    icon={Cpu} 
-                    label="Sys Memory" 
-                    value={data ? `${data.sys_mem_mb.toFixed(1)} MB` : "..."} 
-                    status="warning" 
+                <StatusCard
+                    icon={Cpu}
+                    label="Sys Memory"
+                    value={data ? `${data.sys_mem_mb.toFixed(1)} MB` : "..."}
                 />
-                <StatusCard 
-                    icon={Zap} 
-                    label="Token Rate" 
-                    value={data ? `${data.llm_tokens_sec.toFixed(1)} t/s` : "..."} 
-                    status="success" 
+                <StatusCard
+                    icon={Zap}
+                    label="Token Rate"
+                    value={data ? `${data.llm_tokens_sec.toFixed(1)} t/s` : "..."}
                 />
             </div>
 
             {/* Placeholder for future charts */}
-            <div className="bg-zinc-50 rounded-lg border border-zinc-200 h-96 flex items-center justify-center text-zinc-400">
+            <div className="bg-cortex-surface rounded-lg border border-cortex-border h-96 flex items-center justify-center text-cortex-text-muted">
                 <div className="text-center">
                     <Activity className="w-12 h-12 mx-auto mb-4 opacity-20" />
                     <p>Detailed Metrics Visualization</p>
@@ -91,22 +86,16 @@ export default function TelemetryPage() {
     );
 }
 
-function StatusCard({ icon: Icon, label, value, status }: { icon: any, label: string, value: string, status: 'success' | 'warning' | 'error' }) {
-    const colors = {
-        success: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-        warning: 'text-amber-600 bg-amber-50 border-amber-100',
-        error: 'text-red-600 bg-red-50 border-red-100'
-    };
-
+function StatusCard({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
     return (
-        <div className={`p-4 rounded-lg border flex items-center justify-between bg-white border-zinc-200`}>
+        <div className="p-4 rounded-lg border flex items-center justify-between bg-cortex-surface border-cortex-border">
             <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-md bg-zinc-100 text-zinc-600`}>
+                <div className="p-2 rounded-md bg-cortex-bg text-cortex-text-muted">
                     <Icon className="w-5 h-5" />
                 </div>
-                <span className="font-medium text-zinc-600">{label}</span>
+                <span className="font-medium text-cortex-text-muted">{label}</span>
             </div>
-            <span className="text-lg font-bold text-zinc-900 font-mono">{value}</span>
+            <span className="text-lg font-bold text-cortex-text-main font-mono">{value}</span>
         </div>
     );
 }

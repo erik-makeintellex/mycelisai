@@ -45,9 +45,12 @@ def build(c):
     return tag
 
 def _load_env():
-    """Load .env into the process environment for local execution."""
+    """Load .env into the process environment for local execution.
+    Uses override=True so .env values win over system env vars
+    (e.g. Windows User OLLAMA_HOST=0.0.0.0 bind address).
+    """
     from dotenv import load_dotenv
-    load_dotenv(str(ROOT_DIR / ".env"))
+    load_dotenv(str(ROOT_DIR / ".env"), override=True)
 
 @task
 def run(c):
@@ -57,8 +60,12 @@ def run(c):
     """
     stop(c)
     _load_env()
-    import os
+    import os, sys
     os.environ["PYTHONIOENCODING"] = "utf-8"
+    # Reconfigure stdout/stderr to UTF-8 so Go server emoji logs don't crash invoke
+    if is_windows() and hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     print("Starting Mycelis Core (Native)...")
     with c.cd(str(CORE_DIR)):
         bin_name = "server.exe" if is_windows() else "server"

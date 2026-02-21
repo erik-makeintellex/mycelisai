@@ -24,9 +24,10 @@ type ResourceRequirement struct {
 
 // BlueprintTeam defines a team within a mission blueprint.
 type BlueprintTeam struct {
-	Name   string          `json:"name"`
-	Role   string          `json:"role"`
-	Agents []AgentManifest `json:"agents"`
+	Name     string          `json:"name"`
+	Role     string          `json:"role"`
+	Agents   []AgentManifest `json:"agents"`
+	Schedule *ScheduleConfig `json:"schedule,omitempty"` // Optional: run this team on a schedule
 }
 
 // Constraint captures a mission constraint. It unmarshals flexibly:

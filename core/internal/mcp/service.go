@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -334,6 +336,112 @@ func (s *Service) FindToolByName(ctx context.Context, name string) (*ToolDef, *S
 	}
 
 	return &tool, &srv, nil
+}
+
+// FindServerByName checks if a server with the given name is already installed.
+// Returns nil if not found (no error for missing entries).
+func (s *Service) FindServerByName(ctx context.Context, name string) (*ServerConfig, error) {
+	row := s.DB.QueryRowContext(ctx, `
+		SELECT id, name, transport, command, args, env, url, headers, status, error_message, created_at, updated_at
+		FROM mcp_servers
+		WHERE name = $1
+	`, name)
+
+	var srv ServerConfig
+	var argsJSON, envJSON, headersJSON []byte
+	var errMsg sql.NullString
+
+	err := row.Scan(
+		&srv.ID, &srv.Name, &srv.Transport, &srv.Command,
+		&argsJSON, &envJSON, &srv.URL, &headersJSON,
+		&srv.Status, &errMsg, &srv.CreatedAt, &srv.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find server by name %q: %w", name, err)
+	}
+
+	if errMsg.Valid {
+		srv.Error = errMsg.String
+	}
+	if err := json.Unmarshal(argsJSON, &srv.Args); err != nil {
+		return nil, fmt.Errorf("unmarshal args: %w", err)
+	}
+	if err := json.Unmarshal(envJSON, &srv.Env); err != nil {
+		return nil, fmt.Errorf("unmarshal env: %w", err)
+	}
+	if err := json.Unmarshal(headersJSON, &srv.Headers); err != nil {
+		return nil, fmt.Errorf("unmarshal headers: %w", err)
+	}
+
+	return &srv, nil
+}
+
+// BootstrapDefaults installs and connects zero-config MCP servers from the
+// curated library if they are not already installed. Called once on server startup.
+// Logs all steps at INFO level for easy debugging of first-boot issues.
+func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool *ClientPool) {
+	log.Println("[mcp] bootstrap: starting default MCP server installation...")
+
+	defaults := []string{"filesystem", "fetch"}
+	for _, name := range defaults {
+		existing, err := s.FindServerByName(ctx, name)
+		if err != nil {
+			log.Printf("[mcp] bootstrap: DB check for %s failed (is the database reachable?): %v", name, err)
+			continue
+		}
+		if existing != nil {
+			log.Printf("[mcp] bootstrap: %s already installed (id=%s, status=%s)", name, existing.ID, existing.Status)
+			// If previously installed but in error state, try reconnecting
+			if existing.Status == "error" || existing.Status == "pending" {
+				log.Printf("[mcp] bootstrap: retrying connect for %s (was %s)", name, existing.Status)
+				if err := pool.Connect(ctx, *existing); err != nil {
+					log.Printf("[mcp] bootstrap: reconnect %s failed: %v", name, err)
+				} else {
+					log.Printf("[mcp] bootstrap: %s reconnected successfully", name)
+				}
+			}
+			continue
+		}
+		entry := library.FindByName(name)
+		if entry == nil {
+			log.Printf("[mcp] bootstrap: %s not found in library, skipping", name)
+			continue
+		}
+		cfg := entry.ToServerConfig(nil)
+		// For filesystem, resolve DATA_DIR from environment and ensure dir exists
+		if name == "filesystem" {
+			dataDir := os.Getenv("DATA_DIR")
+			if dataDir == "" {
+				dataDir = "./workspace"
+			}
+			// Ensure the directory exists
+			if err := os.MkdirAll(dataDir, 0o755); err != nil {
+				log.Printf("[mcp] bootstrap: failed to create data dir %s: %v", dataDir, err)
+			}
+			// Replace the last arg (the mount path) with the resolved directory
+			if len(cfg.Args) >= 3 {
+				cfg.Args[len(cfg.Args)-1] = dataDir
+			}
+			log.Printf("[mcp] bootstrap: filesystem mount path: %s", dataDir)
+		}
+		log.Printf("[mcp] bootstrap: installing %s (command: %s %v)", name, cfg.Command, cfg.Args)
+		installed, err := s.Install(ctx, cfg)
+		if err != nil {
+			log.Printf("[mcp] bootstrap: failed to install %s: %v", name, err)
+			continue
+		}
+		log.Printf("[mcp] bootstrap: installed %s (id=%s)", name, installed.ID)
+		// Best-effort connect (spawns subprocess, discovers tools)
+		if err := pool.Connect(ctx, *installed); err != nil {
+			log.Printf("[mcp] bootstrap: %s installed but connect failed: %v", name, err)
+		} else {
+			log.Printf("[mcp] bootstrap: %s connected and tools discovered", name)
+		}
+	}
+	log.Println("[mcp] bootstrap: default server installation complete.")
 }
 
 // scanServerConfig scans a row from the mcp_servers table into a ServerConfig.

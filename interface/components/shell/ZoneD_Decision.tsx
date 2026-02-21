@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { AlertCircle, Check, X, Loader2 } from 'lucide-react';
 import { useSignalStream, type Signal } from '../dashboard/SignalContext';
 
@@ -65,18 +65,18 @@ export function ZoneD() {
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-[rgb(var(--surface))] rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-red-100 dark:border-red-900/50">
+            <div className="bg-cortex-surface rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-red-900/50">
                 {/* Header */}
-                <div className="bg-red-50 dark:bg-[rgb(var(--status-critical-bg))] p-4 flex items-center border-b border-red-100 dark:border-red-900/50">
-                    <div className="w-10 h-10 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center mr-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                <div className="bg-red-500/10 p-4 flex items-center border-b border-red-900/50">
+                    <div className="w-10 h-10 bg-red-900/40 rounded-full flex items-center justify-center mr-3">
+                        <AlertCircle className="w-5 h-5 text-red-400" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold text-red-900 dark:text-red-300 uppercase">Governance Intercept</h3>
-                        <p className="text-xs text-red-700 dark:text-red-400">Human Approval Required</p>
+                        <h3 className="text-sm font-bold text-red-300 uppercase">Governance Intercept</h3>
+                        <p className="text-xs text-red-400">Human Approval Required</p>
                     </div>
                     {pendingRequests.length > 1 && (
-                        <span className="ml-auto text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40 px-2 py-0.5 rounded-full">
+                        <span className="ml-auto text-[10px] font-bold text-red-400 bg-red-900/40 px-2 py-0.5 rounded-full">
                             +{pendingRequests.length - 1} more
                         </span>
                     )}
@@ -84,15 +84,15 @@ export function ZoneD() {
 
                 {/* Body */}
                 <div className="p-6">
-                    <p className="text-zinc-700 dark:text-zinc-300 font-medium mb-1">
+                    <p className="text-cortex-text-main font-medium mb-1">
                         Request ID: <span className="font-mono text-sm">{activeRequest.request_id}</span>
                     </p>
                     {activeRequest.source && (
-                        <p className="text-[11px] text-zinc-400 mb-2">
+                        <p className="text-[11px] text-cortex-text-muted mb-2">
                             Source: {activeRequest.source}
                         </p>
                     )}
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded border border-zinc-100 dark:border-zinc-700 font-mono">
+                    <p className="text-sm text-cortex-text-muted mb-6 bg-cortex-bg p-3 rounded border border-cortex-border font-mono">
                         {activeRequest.message}
                     </p>
 
@@ -100,7 +100,7 @@ export function ZoneD() {
                         <button
                             onClick={() => handleAction(activeRequest.request_id, false)}
                             disabled={isLoading}
-                            className="flex-1 flex items-center justify-center py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 font-medium transition-colors disabled:opacity-50"
+                            className="flex-1 flex items-center justify-center py-2.5 bg-cortex-bg border border-cortex-border text-cortex-text-main rounded-lg hover:bg-cortex-surface font-medium transition-colors disabled:opacity-50"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -112,7 +112,7 @@ export function ZoneD() {
                         <button
                             onClick={() => handleAction(activeRequest.request_id, true)}
                             disabled={isLoading}
-                            className="flex-1 flex items-center justify-center py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors shadow-sm disabled:opacity-50"
+                            className="flex-1 flex items-center justify-center py-2.5 bg-cortex-primary text-cortex-bg rounded-lg hover:bg-cortex-primary/90 font-medium transition-colors shadow-sm disabled:opacity-50"
                         >
                             {isLoading ? (
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

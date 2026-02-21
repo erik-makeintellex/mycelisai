@@ -41,6 +41,12 @@ func main() {
 	ctx, stop := os_signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
+	// Phase 0 security: fail-closed — refuse to start without auth key
+	apiKey := os.Getenv("MYCELIS_API_KEY")
+	if apiKey == "" {
+		log.Fatal("FATAL: MYCELIS_API_KEY not set. Server refuses to start without authentication.")
+	}
+
 	// 1. Config
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
@@ -382,6 +388,11 @@ func main() {
 		log.Println("MCP Library Active.")
 	}
 
+	// Phase 18: Bootstrap default MCP servers (filesystem, fetch) on first run
+	if mcpService != nil && mcpPool != nil && mcpLibrary != nil {
+		mcpService.BootstrapDefaults(ctx, mcpLibrary, mcpPool)
+	}
+
 	// Wire system capabilities into Meta-Architect (tools, MCP servers, library)
 	if metaArchitect != nil {
 		caps := buildSystemCapabilities(ctx, internalTools, mcpService, mcpLibrary)
@@ -404,6 +415,8 @@ func main() {
 		corsOrigin = "http://localhost:3000"
 	}
 
+	// Phase 0: auth middleware wraps the mux, CORS wraps the authed mux
+	authedMux := server.AuthMiddleware(apiKey, mux)
 	corsMux := http.HandlerFunc(func(w http.ResponseWriter, hr *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", corsOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
@@ -414,7 +427,7 @@ func main() {
 			return
 		}
 
-		mux.ServeHTTP(w, hr)
+		authedMux.ServeHTTP(w, hr)
 	})
 
 	// Graceful shutdown

@@ -1,5 +1,13 @@
 package protocol
 
+// ScheduleConfig defines when a team should auto-trigger on a schedule.
+// V1 supports interval-based scheduling via Go duration strings ("5m", "1h").
+type ScheduleConfig struct {
+	Type     string `json:"type" yaml:"type"`                               // "interval" (V1); "cron" reserved for V2
+	Interval string `json:"interval,omitempty" yaml:"interval,omitempty"`   // Go duration: "5m", "1h", "24h"
+	CronExpr string `json:"cron_expr,omitempty" yaml:"cron_expr,omitempty"` // Reserved for V2
+}
+
 // VerifyStrategy defines how an agent proves its work.
 type VerifyStrategy string
 

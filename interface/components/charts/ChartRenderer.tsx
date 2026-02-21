@@ -69,7 +69,7 @@ function ObservablePlotChart({
     // Dark theme injection
     plotOptions.style = {
       background: "transparent",
-      color: "#CFD3EC",
+      color: "#d4d4d8",
       fontSize: compact ? "9px" : "11px",
     };
 
@@ -119,7 +119,7 @@ function buildPlotOptions(
       })
     : data;
 
-  const defaultColor = "#7367F0"; // cortex-primary
+  const defaultColor = "#06b6d4"; // cortex-primary
 
   const base: Plot.PlotOptions = {
     width,
