@@ -1,211 +1,266 @@
 # Mycelis V7 — Development State
 
-> **Date:** 2026-02-22
+> **Updated:** 2026-02-23
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
 
-## Where We Are
-
-The V7 architecture is a 5-team sequential execution plan built on top of a completed Phase 19 foundation. One team's work is done. Four remain.
+## Progress Summary
 
 ```
-Phase 19 (complete)  →  V7 Step 01 (complete)  →  Workspace UX (complete)  →  V7 Teams A → B → C → E  (pending)
+Phase 19 (complete)
+    → V7 Step 01 / Team D — Navigation (complete)
+    → Workspace UX — Rename, LaunchCrew, MemoryExplorer redesign (complete)
+    → V7 Team A — Event Spine (complete)
+    → V7 Soma Workflow E2E — Consultations, run_id, Run Timeline UI, OpsWidget registry (complete)
+    → In-App Docs Browser — /docs page, 30-entry manifest, 8 user guides (complete)
+    → V7 Team B — Trigger Engine (NEXT)
+    → V7 Team C — Scheduler (after B)
+    → V7 Causal Chain UI — ViewChain.tsx (after B+C)
+    → MCP Baseline — filesystem, memory, artifact-renderer, fetch (parallel)
 ```
 
-**MVP Agentry Plan:** `docs/MVP_AGENTRY_PLAN.md` — sprint-by-sprint plan from services verification through run timeline UI.
+---
 
-**Auth fix (2026-02-22):** `interface/.env.local` created, `ops/interface.py dev()` loads root `.env`. Next.js middleware now injects auth header on all proxied requests.
+## What Is Done
+
+### Phase 19 Foundation
+
+| Capability | Notes |
+|-----------|-------|
+| Agent + Provider lifecycle | Soma, Axon, Swarm fully wired |
+| Conversation memory (pgvector) | Migrations 001-022 applied |
+| Intent proof pipeline | Confirm token flow + CE-1 templates |
+| Mutation detection in chat | `mutationTools` set in cognitive.go |
+| Brains toggle persistence | SaveConfig() persists to cognitive.yaml |
+| Auth middleware | `interface/.env.local`, header injected on all proxied requests |
 
 ---
 
-## Foundation: What Phase 19 Delivered (Pre-V7)
+### V7 Step 01 — Navigation (Team D)
 
-Phase 19 is the base layer. V7 builds on top of it without modifying it.
+Collapsed 12+ architecture-surface routes into 5 workflow-first panels.
 
-| Capability | Status | Notes |
-|-----------|--------|-------|
-| Agent + Provider lifecycle management | DONE | Soma, Axon, Swarm |
-| Conversation memory (pgvector) | DONE | Migrations 001-022 applied |
-| Scheduled team activation | DONE | In-memory scheduler (pre-V7, different from V7 cron) |
-| Intent proof pipeline | DONE | Phase 19-B fixes applied |
-| Confirm token flow | DONE | HandleConfirmAction wired |
-| Mutation detection in chat handlers | DONE | `mutationTools` set in cognitive.go |
-| Brains toggle persistence | DONE | SaveConfig() calls in brains.go |
-| CE-1 orchestration templates | DONE | Templates 001-002 active |
-
----
-
-## Workspace UX Polish (COMPLETE — 2026-02-22)
-
-**Scope:** Rename Mission Control → Workspace, crew launch UX, offline guide, memory redesign, dead route fixes.
-
-| Deliverable | Status | File |
-|------------|--------|------|
-| "Mission Control" → "Workspace" rename (rail, header, loading text) | DONE | `ZoneA_Rail.tsx`, `MissionControl.tsx`, `dashboard/page.tsx` |
-| localStorage key migration (mission-chat → workspace-chat, split ratio) | DONE | `useCortexStore.ts`, `MissionControl.tsx` |
-| SomaOfflineGuide (inv lifecycle.up command + retry button) | DONE | `MissionControlChat.tsx` |
-| LaunchCrewModal (3-step guided crew launch) | DONE | `interface/components/workspace/LaunchCrewModal.tsx` |
-| MemoryExplorer redesign (2-col, Hot behind Advanced Mode) | DONE | `interface/components/memory/MemoryExplorer.tsx` |
-| OpsOverview dead routes fixed (`/missions/{id}/teams` removed, hrefs updated) | DONE | `interface/components/dashboard/OpsOverview.tsx` |
+| Deliverable | File |
+|------------|------|
+| ZoneA_Rail (5 items + Docs + Advanced toggle) | `interface/components/shell/ZoneA_Rail.tsx` |
+| Automations page (6 tabs + deep-link + advanced gate) | `interface/app/(app)/automations/page.tsx` |
+| Resources page (4 tabs + deep-link) | `interface/app/(app)/resources/page.tsx` |
+| System page (5 tabs + advanced gate) | `interface/app/(app)/system/page.tsx` |
+| DegradedState shared component | `interface/components/shared/DegradedState.tsx` |
+| PolicyTab CRUD → ApprovalsTab | `interface/components/automations/ApprovalsTab.tsx` |
+| 8 legacy routes → server redirects | `/wiring` `/architect` `/teams` `/catalogue` `/marketplace` `/approvals` `/telemetry` `/matrix` |
+| 56 unit tests passing | `interface/__tests__/pages/`, `__tests__/shared/`, `__tests__/shell/` |
 
 ---
 
-## V7 Step 01: Navigation Restructure (COMPLETE)
+### V7 Team A — Event Spine
 
-**Architecture team:** Team D (Navigation/IA Collapse)
+Persistent audit record for every mission action.
 
-**What it does:** Collapses 12+ architecture-surface routes into 5 workflow-first panels.
-
-| Deliverable | Status | File |
-|------------|--------|------|
-| ZoneA_Rail (5 nav items + advanced toggle) | DONE | `interface/components/shell/ZoneA_Rail.tsx` |
-| Automations page (6 tabs, deep-link, advanced gate) | DONE | `interface/app/(app)/automations/page.tsx` |
-| Resources page (4 tabs, deep-link) | DONE | `interface/app/(app)/resources/page.tsx` |
-| System page (5 tabs, deep-link, advanced gate) | DONE | `interface/app/(app)/system/page.tsx` |
-| DegradedState component | DONE | `interface/components/shared/DegradedState.tsx` |
-| PolicyTab CRUD migrated into ApprovalsTab | DONE | `interface/components/automations/ApprovalsTab.tsx` |
-| 8 legacy routes → server redirects | DONE | `/wiring`, `/architect`, `/teams`, `/catalogue`, `/marketplace`, `/approvals`, `/telemetry`, `/matrix` |
-| Authoritative IA doc | DONE | `docs/product/ia-v7-step-01.md` |
-| Manual verification script | DONE | `docs/verification/v7-step-01-ui.md` |
-| Unit tests (56 passing, 0 V7 failures) | DONE | `interface/__tests__/pages/`, `__tests__/shared/`, `__tests__/shell/` |
-| E2E navigation spec | DONE | `interface/e2e/specs/navigation.spec.ts` |
-| `next build` | PASSES | All 19 routes compile clean |
-
-**Tabs currently showing DegradedState (placeholders for future teams):**
-
-| Page | Tab | Waiting For |
-|------|-----|-------------|
-| Automations | Active Automations | V7 Team C (Scheduler) |
-| Automations | Draft Blueprints | V7 Team E → D integration |
-| Automations | Trigger Rules | V7 Team B (Trigger Engine) |
-| System | Event Health | V7 Team A (Event Spine live data) |
+| Deliverable | File |
+|------------|------|
+| `mission_runs` table (023) | `core/migrations/023_mission_runs.up.sql` |
+| `mission_events` table (024) | `core/migrations/024_mission_events.up.sql` |
+| MissionEventEnvelope + EventType constants | `core/pkg/protocol/events.go` |
+| events.Store (Emit, GetRunTimeline) | `core/internal/events/store.go` |
+| runs.Manager (CreateRun, UpdateRunStatus, ListRecentRuns) | `core/internal/runs/manager.go` |
+| GET /api/v1/runs/{id}/events | `core/internal/server/runs.go` |
+| GET /api/v1/runs/{id}/chain | `core/internal/server/runs.go` |
+| GET /api/v1/runs (global list) | `core/internal/server/runs.go` |
+| TypeScript types (MissionRun, MissionEvent) | `interface/types/events.ts` |
 
 ---
 
-## V7 Remaining Work — Strict Execution Order
+### V7 Soma Workflow E2E
 
-The implementation plan mandates: **A → B → C → E** (Team D already done, Team A complete)
+Complete loop from chat → consultation trace → proposal → confirm → run_id → timeline.
 
-All remaining teams are backend-first. Frontend team E depends on Team A's APIs being live.
+**Backend changes:**
+
+| Deliverable | File |
+|------------|------|
+| ConsultationEntry type in ChatResponsePayload | `core/pkg/protocol/envelopes.go` |
+| ReAct loop captures consult_council into ProcessResult.Consultations | `core/internal/swarm/agent.go` |
+| agentResult.Consultations wired into chatPayload | `core/internal/server/cognitive.go` |
+| HandleConfirmAction returns run_id in response | `core/internal/server/templates.go` |
+
+**Frontend — Chat UI:**
+
+| Deliverable | File |
+|------------|------|
+| Soma-locked header (no dropdown) | `interface/components/dashboard/MissionControlChat.tsx` |
+| DirectCouncilButton (⚡ Direct popover) | `interface/components/dashboard/MissionControlChat.tsx` |
+| DelegationTrace council cards below response | `interface/components/dashboard/MissionControlChat.tsx` |
+| SomaActivityIndicator (live tool.invoked labels) | `interface/components/dashboard/MissionControlChat.tsx` |
+| System message bubble → /runs/{id} pill | `interface/components/dashboard/MissionControlChat.tsx` |
+| LaunchCrewModal always targets Soma, clears stale proposals | `interface/components/workspace/LaunchCrewModal.tsx` |
+
+**Frontend — Runs UI:**
+
+| Deliverable | File |
+|------------|------|
+| RunTimeline.tsx (auto-poll 5s, stops on terminal events) | `interface/components/runs/RunTimeline.tsx` |
+| EventCard.tsx (colored dots, expandable payload) | `interface/components/runs/EventCard.tsx` |
+| /runs/[id] page | `interface/app/(app)/runs/[id]/page.tsx` |
+| /runs list page | `interface/app/(app)/runs/page.tsx` |
+
+**Frontend — Store:**
+
+| Deliverable | Notes |
+|------------|-------|
+| activeRunId, runTimeline, recentRuns state | Zustand slices in useCortexStore.ts |
+| confirmProposal injects system message with run_id | Replaces old stub |
+| fetchRunTimeline, fetchRecentRuns actions | Poll-ready |
+
+**Frontend — OpsOverview:**
+
+| Deliverable | File |
+|------------|------|
+| OpsWidget Registry (registerOpsWidget / getOpsWidgets) | `interface/lib/opsWidgetRegistry.ts` |
+| RecentRunsSection widget (order 60, fullWidth) | `interface/components/dashboard/OpsOverview.tsx` |
+| OpsOverview renders all 6 widgets from registry | `interface/components/dashboard/OpsOverview.tsx` |
 
 ---
 
-### Team A — Event Spine (COMPLETE — 2026-02-22)
+### In-App Docs Browser
 
-**Scope:** Persistent event record for every mission action. The authoritative audit trail that all other V7 features build on.
+Fully functional. `/docs` page with sidebar, search, and rendered markdown.
 
-| File Created | Purpose |
-|-------------|---------|
-| `core/migrations/023_mission_runs.up.sql` | `mission_runs` table — one row per execution instance |
-| `core/migrations/024_mission_events.up.sql` | `mission_events` table — 17-field event record |
-| `core/pkg/protocol/events.go` | `MissionEventEnvelope`, `EventType` constants, `EventEmitter` + `RunsManager` interfaces |
-| `core/internal/events/store.go` | `Emit()`, `publishCTS()`, `GetRunTimeline()` |
-| `core/internal/runs/manager.go` | `CreateRun()`, `CreateChildRun()`, `UpdateRunStatus()`, `GetRun()`, `ListRunsForMission()` |
-| `core/internal/server/runs.go` | `GET /api/v1/runs/{id}/events`, `GET /api/v1/runs/{id}/chain` |
-| `interface/types/events.ts` | TypeScript types: `MissionEventEnvelope`, `MissionRun`, `RunChainResponse`, `EVENT_TYPE_COLORS` |
+| Deliverable | File |
+|------------|------|
+| GET /docs-api (manifest) | `interface/app/docs-api/route.ts` |
+| GET /docs-api/[slug] (content, path-validated) | `interface/app/docs-api/[slug]/route.ts` |
+| docsManifest.ts (30 entries, 7 sections) | `interface/lib/docsManifest.ts` |
+| /docs page (sidebar + react-markdown, deep-link) | `interface/app/(app)/docs/page.tsx` |
+| Internal .md link resolution (stays in-app) | `interface/app/(app)/docs/page.tsx` |
+| Docs nav item in main rail (below Memory) | `interface/components/shell/ZoneA_Rail.tsx` |
 
-| File Modified | Change |
-|--------------|--------|
-| `core/pkg/protocol/envelopes.go` | Added `MissionEventID string` (omitempty) to `CTSEnvelope` |
-| `core/pkg/protocol/topics.go` | Added `TopicMissionEvents`, `TopicMissionEventsFmt`, `TopicMissionRunsFmt` |
-| `core/internal/server/admin.go` | Added `Events`/`Runs` fields, registered 2 new routes |
-| `core/internal/swarm/soma.go` | `SetRunsManager()` + `SetEventEmitter()` setters |
-| `core/internal/swarm/activation.go` | Creates run, emits `mission.started`, propagates emitter to teams |
-| `core/internal/swarm/team.go` | `SetEventEmitter()`, propagates to agents in `Start()` |
-| `core/internal/swarm/agent.go` | `SetEventEmitter()`, emits `tool.invoked`/`tool.completed`/`tool.failed` |
-| `core/internal/server/mission.go` | Sets `bp.MissionID`, returns `RunID` in `CommitResponse` |
-| `core/cmd/server/main.go` | Initializes `events.Store` + `runs.Manager`, wires into Soma |
+**User guide docs (docs/user/):**
 
-**Degraded mode:** NATS nil → event persists to DB, CTS publish skipped, warning logged. No panic.
-
-**Status:** `go build ./...` passes. Migrations 023-024 must be applied before first run.
+| Doc | Covers |
+|-----|--------|
+| core-concepts.md | Soma, Council, Mission, Run, Brain, Event, Trust, NATS, MCP |
+| soma-chat.md | Message → delegation trace → proposal → confirm → run link |
+| meta-agent-blueprint.md | Architect as meta-agent, blueprint structure, activation pipeline |
+| run-timeline.md | Event types, colors, common patterns |
+| automations.md | Triggers, schedules, approvals, teams, policy |
+| resources.md | Brains, Cognitive Matrix, MCP tools, workspace, catalogue |
+| memory.md | Semantic search, SitReps, artifacts, hot/warm/cold tiers |
+| governance-trust.md | Trust scores, halts, approval flow, policy config |
 
 ---
 
-### Team B — Trigger Engine (after A)
+## What Is Pending
 
-**Scope:** Declarative rules: event type + predicate → fire downstream mission. Default mode = `propose` (safe).
+### V7 Team B — Trigger Engine (NEXT)
 
-**Depends on:** `mission_events` + `mission_runs` tables, `events.Store`, `runs.Manager`.
+**Depends on:** mission_events + mission_runs tables, events.Store, runs.Manager — all live.
 
 | File to Create | Purpose |
 |---------------|---------|
-| `core/migrations/025_trigger_rules.up.sql` | `trigger_rules` table + deferred FKs onto 023/024 tables |
-| `core/migrations/026_trigger_executions.up.sql` | Audit table for every evaluation result |
-| `core/internal/triggers/store.go` | Rule CRUD + in-memory cache (`LoadRules`, `CreateRule`, etc.) |
-| `core/internal/triggers/engine.go` | Evaluation (match → cooldown guard → recursion guard → concurrency guard → fire) |
-| `core/internal/server/triggers.go` | `GET/POST/PUT/DELETE /api/v1/triggers` handlers |
+| `core/migrations/025_trigger_rules.up.sql` | trigger_rules table + deferred FKs |
+| `core/migrations/026_trigger_executions.up.sql` | Audit of every evaluation |
+| `core/internal/triggers/store.go` | Rule CRUD + in-memory cache |
+| `core/internal/triggers/engine.go` | Match → cooldown → recursion → concurrency → fire |
+| `core/internal/server/triggers.go` | GET/POST/PUT/DELETE /api/v1/triggers |
 
-**Three guards (all mandatory):**
-- **Cooldown:** skip if last execution within `cooldown_ms`
-- **Recursion:** skip if run depth ≥ `max_depth` (hard ceiling: 10)
-- **Concurrency:** skip if target mission has ≥ `max_active_runs` active runs
+Three mandatory guards: cooldown, recursion (max_depth ceiling: 10), concurrency (max_active_runs).
 
-**Team B is done when:** Trigger rules CRUD works, `mission.completed` event fires a child run, all guards pass unit tests.
+Default trigger mode: `propose` — requires human approval unless explicit `execute` policy.
 
----
-
-### Team C — Scheduler (after A)
-
-**Scope:** Cron-based mission scheduling. In-process goroutine, 1-minute resolution, Postgres-backed. Suspends on NATS disconnect.
-
-**Depends on:** `runs.Manager`, `events.Store`.
-
-| File to Create | Purpose |
-|---------------|---------|
-| `core/migrations/027_scheduled_missions.up.sql` | `scheduled_missions` table with `next_run_at` index |
-| `core/internal/scheduler/scheduler.go` | Goroutine ticker, `Suspend()`, `Resume()`, `checkDue()` |
-| `core/internal/server/schedules.go` | `GET/POST/PUT/DELETE /api/v1/schedules` + pause/resume handlers |
-
-**Team C is done when:** Schedule creates a run on tick, enforces `max_active_runs`, suspends on NATS disconnect, resumes on reconnect.
+**Done when:** Rules CRUD works, mission.completed event fires a child run, all guards pass unit tests.
 
 ---
 
-### Team E — Run Timeline + Chain UI (after A APIs live)
+### V7 Team C — Scheduler (after A)
 
-**Scope:** Frontend components that visualize the event spine data.
-
-**Depends on:** `GET /api/v1/runs/{id}/events` and `GET /api/v1/runs/{id}/chain` being live.
+**Depends on:** runs.Manager, events.Store.
 
 | File to Create | Purpose |
 |---------------|---------|
-| `interface/components/runs/RunTimeline.tsx` | Vertical timeline; color-coded by event type |
-| `interface/components/runs/EventCard.tsx` | Expandable event detail card |
-| `interface/components/runs/ViewChain.tsx` | Causal chain tree (parent → event → trigger → child run) |
-| `interface/components/runs/RunChainNode.tsx` | Recursive node component |
-| `interface/app/(app)/runs/[id]/page.tsx` | Route: `/runs/{id}` |
-| `interface/app/(app)/runs/[id]/chain/page.tsx` | Route: `/runs/{id}/chain` |
+| `core/migrations/027_scheduled_missions.up.sql` | scheduled_missions table with next_run_at index |
+| `core/internal/scheduler/scheduler.go` | Goroutine ticker, Suspend/Resume, checkDue() |
+| `core/internal/server/schedules.go` | GET/POST/PUT/DELETE /api/v1/schedules + pause/resume |
 
-**Zustand additions (`useCortexStore.ts`):**
-```typescript
-activeRunId: string | null;
-runTimeline: MissionEventEnvelope[];
-runChain: RunChainNode | null;
-isTimelineLoading: boolean;
-fetchRunTimeline: (runId: string) => Promise<void>;
-fetchRunChain: (runId: string) => Promise<void>;
-clearRunTimeline: () => void;
+**Done when:** Schedule creates a run on tick, enforces max_active_runs, suspends on NATS disconnect.
+
+---
+
+### Causal Chain UI (after B+C)
+
+| File to Create | Purpose |
+|---------------|---------|
+| `interface/components/runs/ViewChain.tsx` | Parent → event → trigger → child run traversal |
+| `interface/components/runs/RunChainNode.tsx` | Recursive tree node |
+| `interface/app/(app)/runs/[id]/chain/page.tsx` | /runs/{id}/chain route |
+
+Backend handler `GET /api/v1/runs/{id}/chain` is already live.
+
+---
+
+### MCP Baseline (Parallel — Independent of B/C)
+
+Per `docs/V7_MCP_BASELINE.md`.
+
+| Server | Status |
+|--------|--------|
+| `filesystem` MCP | NOT STARTED |
+| `memory` MCP | NOT STARTED |
+| `artifact-renderer` MCP | NOT STARTED |
+| `fetch` MCP | NOT STARTED |
+
+Resources → Workspace Explorer tab shows DegradedState until implemented.
+
+---
+
+## Current Navigation Structure
+
+```
+ZoneA_Rail
+├── [logo] → /
+├── Workspace     (Home)      → /dashboard
+├── Automations   (Workflow)  → /automations
+├── Resources     (FolderCog) → /resources
+├── Memory        (Brain)     → /memory
+├── Docs          (BookOpen)  → /docs
+├── [System       (Activity)  → /system  ← Advanced Mode only]
+└── Footer
+    ├── Advanced toggle (Eye/EyeOff)
+    └── Settings  (Settings)  → /settings
 ```
 
-**V7 Step 01 tabs that will be upgraded when Team E is done:**
-- Automations → Active Automations: shows inline run timelines
-- Automations → Trigger Rules: links to chain views for triggered runs
+---
+
+## Current Tab Map
+
+| Page | Tabs | Notes |
+|------|------|-------|
+| `/automations` | Active · Drafts · Triggers · Approvals · Teams · Wiring* | *Wiring = Advanced Mode only |
+| `/resources` | Brains · Tools · Workspace · Catalogue | |
+| `/system` | Health · NATS · Database · Matrix · Debug | Advanced Mode gated |
+
+**Tabs still showing DegradedState (real data pending):**
+
+| Page | Tab | Blocked by |
+|------|-----|------------|
+| Automations | Active Automations | Team C (Scheduler) |
+| Automations | Trigger Rules | Team B (Trigger Engine) |
+| System | Event Health | Team A live data wiring |
+| Resources | Workspace Explorer | MCP Baseline (filesystem server) |
 
 ---
 
-## MCP Baseline (Parallel Track — Independent of A/B/C/E)
+## Current Build State
 
-Per `docs/V7_MCP_BASELINE.md`. Not yet started.
-
-| Server | Status | Purpose |
-|--------|--------|---------|
-| `filesystem` MCP | NOT STARTED | Sandboxed file I/O in `/workspace` |
-| `memory` MCP | NOT STARTED | pgvector semantic store/recall |
-| `artifact-renderer` MCP | NOT STARTED | Inline structured output |
-| `fetch` MCP | NOT STARTED | Domain-allowlisted HTTP GET |
-
-**Resources → Workspace Explorer tab** shows DegradedState until this is built.
+```
+next build:         PASSES (all routes)
+vitest:             ~56 V7 tests pass (2 pre-existing DashboardPage failures, unrelated)
+Go build:           go build ./... PASSES
+Go tests:           188+ tests pass across 16 packages
+                    Migrations 023-024 must be applied for Team A tests
+Go test packages:   internal/server (157), internal/events (16), internal/runs (19), others (~80)
+```
 
 ---
 
@@ -213,22 +268,12 @@ Per `docs/V7_MCP_BASELINE.md`. Not yet started.
 
 | Gap | Location | Priority |
 |-----|---------|---------|
-| DashboardPage.test.tsx — 2 pre-existing assertion failures | `__tests__/pages/DashboardPage.test.tsx` | Low (pre-V7) |
+| 2 pre-existing DashboardPage test failures | `__tests__/pages/DashboardPage.test.tsx` | Low (pre-V7) |
 | 14 pre-existing test file transform errors | Various `__tests__/{workspace,dashboard,teams,...}` | Low (pre-V7) |
-| System → Event Health tab: static placeholder | `app/(app)/system/page.tsx` | Blocked by Team A |
+| Causal Chain UI | ViewChain.tsx + /runs/[id]/chain | After Team B+C |
 | Automations → Active Automations: DegradedState | `app/(app)/automations/page.tsx` | Blocked by Team C |
 | Automations → Trigger Rules: DegradedState | `app/(app)/automations/page.tsx` | Blocked by Team B |
-
----
-
-## Current Build State
-
-```
-next build:   PASSES  (all 19 routes)
-vitest:       54/56 V7 tests pass (2 pre-existing DashboardPage failures)
-Go build:     go build ./... passes (Team A wired, no import cycles)
-Go tests:     inv core.test passes (Phase 19 baseline; migrations 023-024 need applying for Team A tests)
-```
+| Resources → Workspace Explorer: DegradedState | `app/(app)/resources/page.tsx` | Blocked by MCP Baseline |
 
 ---
 
@@ -244,3 +289,6 @@ Go tests:     inv core.test passes (Phase 19 baseline; migrations 023-024 need a
 | Advanced mode gate | System nav + Neural Wiring tab | Reduces cognitive overload for normal users |
 | Legacy route strategy | Server-side `redirect()` | Runs at server level, no client state needed |
 | Tab deep-linking | `?tab=` URL search params + `<Suspense>` | Next.js 16 requirement for `useSearchParams()` |
+| Docs API prefix | `/docs-api/` not `/api/docs/` | `/api/*` → Go proxy rewrite would intercept |
+| Docs params | `await params` in route handler | Next.js 15+ async params requirement |
+| Nav item order | Docs below Memory in main nav | Workflow items stay together; docs is reference |
