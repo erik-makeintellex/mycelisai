@@ -902,6 +902,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **User Guides** | `docs/user/` — 7 plain-language guides for every workflow and concept | |
 | ↳ Core Concepts | [docs/user/core-concepts.md](docs/user/core-concepts.md) — Soma, Council, Mission, Run, Brain, Event, Trust | [/docs?doc=core-concepts](/docs?doc=core-concepts) |
 | ↳ Using Soma Chat | [docs/user/soma-chat.md](docs/user/soma-chat.md) — Send messages, delegation traces, confirm proposals | [/docs?doc=soma-chat](/docs?doc=soma-chat) |
+| ↳ Meta-Agent & Blueprints | [docs/user/meta-agent-blueprint.md](docs/user/meta-agent-blueprint.md) — Architect as meta-agent, blueprint structure, team/agent/tool planning | [/docs?doc=meta-agent-blueprint](/docs?doc=meta-agent-blueprint) |
 | ↳ Run Timeline | [docs/user/run-timeline.md](docs/user/run-timeline.md) — Reading execution timelines, event types, navigation | [/docs?doc=run-timeline](/docs?doc=run-timeline) |
 | ↳ Automations | [docs/user/automations.md](docs/user/automations.md) — Triggers, schedules, approvals, teams | [/docs?doc=automations-guide](/docs?doc=automations-guide) |
 | ↳ Resources | [docs/user/resources.md](docs/user/resources.md) — Brains, MCP tools, workspace, catalogue | [/docs?doc=resources-guide](/docs?doc=resources-guide) |
@@ -911,6 +912,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Local Dev Workflow** | [docs/LOCAL_DEV_WORKFLOW.md](docs/LOCAL_DEV_WORKFLOW.md) — Setup, config reference, port map, troubleshooting | [/docs?doc=local-dev](/docs?doc=local-dev) |
 | **Soma Workflow** | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — End-to-end GUI + API workflow reference | [/docs?doc=workflows](/docs?doc=workflows) |
 | **MVP Agentry Plan** | [docs/MVP_AGENTRY_PLAN.md](docs/MVP_AGENTRY_PLAN.md) — Full agentry chain map: User → Workspace → NATS → Soma | [/docs?doc=mvp-agentry](/docs?doc=mvp-agentry) |
+| **Council Chat QA** | [docs/QA_COUNCIL_CHAT_API.md](docs/QA_COUNCIL_CHAT_API.md) — QA procedures and test cases for council chat | [/docs?doc=council-chat-qa](/docs?doc=council-chat-qa) |
 | **API Reference** | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Full endpoint table (80+ routes) | [/docs?doc=api-reference](/docs?doc=api-reference) |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
 | **Backend Specification** | [docs/architecture/BACKEND.md](docs/architecture/BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines | [/docs?doc=arch-backend](/docs?doc=arch-backend) |
@@ -926,6 +928,8 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Testing** | [docs/TESTING.md](docs/TESTING.md) — Unit, integration, smoke protocols | [/docs?doc=testing](/docs?doc=testing) |
 | **V7 UI Verification** | [docs/verification/v7-step-01-ui.md](docs/verification/v7-step-01-ui.md) — Manual UI checklist for V7 Step 01 navigation | [/docs?doc=v7-ui-verification](/docs?doc=v7-ui-verification) |
 | **V7 Implementation Plan** | [docs/V7_IMPLEMENTATION_PLAN.md](docs/V7_IMPLEMENTATION_PLAN.md) — Teams A/B/C/D/E technical plan | [/docs?doc=v7-implementation-plan](/docs?doc=v7-implementation-plan) |
+| **V7 Dev State** | [V7_DEV_STATE.md](V7_DEV_STATE.md) — Authoritative map of what's done vs pending | [/docs?doc=v7-dev-state](/docs?doc=v7-dev-state) |
+| **IA Step 01** | [docs/product/ia-v7-step-01.md](docs/product/ia-v7-step-01.md) — Workflow-first navigation PRD and decisions | [/docs?doc=v7-ia-step01](/docs?doc=v7-ia-step01) |
 | **Registry** | [core/internal/registry/README.md](core/internal/registry/README.md) — Connector marketplace | — |
 | **Core API** | [core/README.md](core/README.md) — Go service architecture | — |
 | **CLI** | [cli/README.md](cli/README.md) — `myc` command-line tool | — |
