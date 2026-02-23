@@ -33,6 +33,10 @@ type Soma struct {
 	brain         *cognitive.Router
 	toolExecutor  MCPToolExecutor // composite (internal + MCP)
 	internalTools *InternalToolRegistry
+	// V7 Event Spine: optional run tracking + event audit (interfaces from pkg/protocol).
+	// Both may be nil — degraded mode: teams still activate, events just aren't recorded.
+	runsManager  protocol.RunsManager  // creates mission_run records
+	eventEmitter protocol.EventEmitter // persists + publishes events
 }
 
 // NewSoma creates a new Executive instance.
@@ -365,3 +369,11 @@ func (s *Soma) Shutdown() {
 	s.mu.RUnlock()
 	s.cancel()
 }
+
+// SetRunsManager wires the V7 run tracking manager into Soma.
+// Must be called before ActivateBlueprint for run records to be created.
+func (s *Soma) SetRunsManager(rm protocol.RunsManager) { s.runsManager = rm }
+
+// SetEventEmitter wires the V7 event store into Soma for audit trail emission.
+// Must be called before ActivateBlueprint for tool events to be recorded.
+func (s *Soma) SetEventEmitter(emitter protocol.EventEmitter) { s.eventEmitter = emitter }

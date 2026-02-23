@@ -54,7 +54,7 @@ vi.mock('@/components/memory/ColdMemoryPanel', () => ({
     default: () => <div data-testid="cold-memory-panel">Cold Memory</div>,
 }));
 
-import MemoryRoute from '@/app/memory/page';
+import MemoryRoute from '@/app/(app)/memory/page';
 
 describe('Memory Page (app/memory/page.tsx)', () => {
     beforeEach(() => {

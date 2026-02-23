@@ -21,6 +21,7 @@ import (
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/events"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
@@ -28,6 +29,7 @@ import (
 	"github.com/mycelis/core/internal/provisioning"
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
+	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/internal/server"
 	mycelis_signal "github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/swarm"
@@ -297,12 +299,28 @@ func main() {
 		})
 	}
 
+	// V7 Event Spine (Team A): initialize event store + run manager before Soma
+	var eventStore *events.Store
+	var runsManager *runs.Manager
+	if sharedDB != nil {
+		runsManager = runs.NewManager(sharedDB)
+		eventStore = events.NewStore(sharedDB, nc) // nc may be nil (degraded mode ok)
+		log.Println("V7 Event Spine Active. (runs + events stores ready)")
+	}
+
 	var soma *swarm.Soma
 	if nc != nil {
 		teamConfigPath := "config/teams"
 		swarmReg := swarm.NewRegistry(teamConfigPath)
 
 		soma = swarm.NewSoma(nc, guard, swarmReg, cogRouter, streamHandler, toolExec, internalTools)
+		// V7: wire event spine into Soma so ActivateBlueprint creates runs + emits events
+		if runsManager != nil {
+			soma.SetRunsManager(runsManager)
+		}
+		if eventStore != nil {
+			soma.SetEventEmitter(eventStore)
+		}
 		if err := soma.Start(); err != nil {
 			log.Printf("WARN: Failed to start Soma: %v", err)
 		}
@@ -400,8 +418,8 @@ func main() {
 		log.Println("Meta-Architect capabilities wired.")
 	}
 
-	// Create Admin Server
-	adminSrv := server.NewAdminServer(r, guard, memService, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService)
+	// Create Admin Server (V7: pass eventStore + runsManager for Event Spine routes)
+	adminSrv := server.NewAdminServer(r, guard, memService, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, eventStore, runsManager)
 	adminSrv.RegisterRoutes(mux)
 
 	port := os.Getenv("PORT")

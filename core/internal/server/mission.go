@@ -21,11 +21,12 @@ const rootOwnerID = "00000000-0000-0000-0000-000000000000"
 type CommitResponse struct {
 	Status        string                  `json:"status"`
 	MissionID     string                  `json:"mission_id"`
+	RunID         string                  `json:"run_id,omitempty"`  // V7: mission run id
 	Teams         int                     `json:"teams"`
 	Agents        int                     `json:"agents"`
 	Activation    *swarm.ActivationResult `json:"activation,omitempty"`
 	IntentProofID string                  `json:"intent_proof_id,omitempty"` // CE-1
-	AuditEventID  string                  `json:"audit_event_id,omitempty"` // CE-1
+	AuditEventID  string                  `json:"audit_event_id,omitempty"`  // CE-1
 }
 
 // handleIntentCommit persists a MissionBlueprint into the Ledger
@@ -152,22 +153,30 @@ func (s *AdminServer) commitAndActivate(w http.ResponseWriter, bp *protocol.Miss
 	log.Printf("Mission committed: %s (%d teams, %d agents)", missionID, len(bp.Teams), totalAgents)
 
 	// === Activation Bridge: Persist → Runtime ===
+	// V7: Set bp.MissionID to the real persisted UUID so ActivateBlueprint
+	// can create mission_run records linked to the correct mission.
+	bp.MissionID = missionID.String()
+
 	var activation *swarm.ActivationResult
 	if s.Soma != nil {
 		activation = s.Soma.ActivateBlueprint(bp, sensorConfigs)
-		log.Printf("Mission activated: %d teams spawned, %d skipped, %d sensors",
-			activation.TeamsSpawned, activation.TeamsSkipped, activation.SensorsSpawned)
+		log.Printf("Mission activated: %d teams spawned, %d skipped, %d sensors (run_id=%s)",
+			activation.TeamsSpawned, activation.TeamsSkipped, activation.SensorsSpawned, activation.RunID)
 	} else {
 		log.Println("WARN: Soma unavailable — mission persisted but not activated")
 	}
 
-	respondJSON(w, CommitResponse{
-		Status:     "active",
-		MissionID:  missionID.String(),
-		Teams:      len(bp.Teams),
-		Agents:     totalAgents,
+	resp := CommitResponse{
+		Status:    "active",
+		MissionID: missionID.String(),
+		Teams:     len(bp.Teams),
+		Agents:    totalAgents,
 		Activation: activation,
-	})
+	}
+	if activation != nil {
+		resp.RunID = activation.RunID
+	}
+	respondJSON(w, resp)
 }
 
 // commitAndActivateWithProof is the CE-1 variant that confirms the intent proof
@@ -248,11 +257,15 @@ func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *prot
 	log.Printf("Mission committed: %s (%d teams, %d agents)", missionID, len(bp.Teams), totalAgents)
 
 	// Activation Bridge
+	// V7: Set bp.MissionID to the real persisted UUID so ActivateBlueprint
+	// can create mission_run records linked to the correct mission.
+	bp.MissionID = missionID.String()
+
 	var activation *swarm.ActivationResult
 	if s.Soma != nil {
 		activation = s.Soma.ActivateBlueprint(bp, sensorConfigs)
-		log.Printf("Mission activated: %d teams spawned, %d skipped, %d sensors",
-			activation.TeamsSpawned, activation.TeamsSkipped, activation.SensorsSpawned)
+		log.Printf("Mission activated: %d teams spawned, %d skipped, %d sensors (run_id=%s)",
+			activation.TeamsSpawned, activation.TeamsSkipped, activation.SensorsSpawned, activation.RunID)
 	} else {
 		log.Println("WARN: Soma unavailable — mission persisted but not activated")
 	}
@@ -265,7 +278,7 @@ func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *prot
 		map[string]any{"mission_id": missionID.String(), "teams": len(bp.Teams), "agents": totalAgents, "proof_id": proofID},
 	)
 
-	respondJSON(w, CommitResponse{
+	commitResp := CommitResponse{
 		Status:        "active",
 		MissionID:     missionID.String(),
 		Teams:         len(bp.Teams),
@@ -273,7 +286,11 @@ func (s *AdminServer) commitAndActivateWithProof(w http.ResponseWriter, bp *prot
 		Activation:    activation,
 		IntentProofID: proofID,
 		AuditEventID:  auditEventID,
-	})
+	}
+	if activation != nil {
+		commitResp.RunID = activation.RunID
+	}
+	respondJSON(w, commitResp)
 }
 
 // handleListMissions returns all missions with team/agent counts.

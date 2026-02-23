@@ -1,5 +1,5 @@
-import MatrixGrid from "@/components/matrix/MatrixGrid";
+import { redirect } from 'next/navigation';
 
-export default function Page() {
-    return <MatrixGrid />;
+export default function MatrixRedirect() {
+    redirect('/system?tab=matrix');
 }

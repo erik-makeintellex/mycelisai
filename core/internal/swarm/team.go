@@ -49,6 +49,10 @@ type Team struct {
 	mu            sync.Mutex
 	sensorConfigs map[string]SensorConfig  // agent.ID → config; nil = all cognitive
 	scheduler     *TeamScheduler           // Optional scheduled auto-trigger
+	// V7 Event Spine: optional event emitter + run_id for tool audit trail.
+	// Set by Soma.ActivateBlueprint BEFORE team.Start() so agents receive them.
+	eventEmitter protocol.EventEmitter
+	runID        string
 }
 
 // NewTeam creates a new Team instance.
@@ -98,6 +102,10 @@ func (t *Team) Start() error {
 			// Inject internal tool registry (for runtime context) and team topology
 			if t.internalTools != nil {
 				agent.SetInternalTools(t.internalTools)
+			}
+			// V7: wire event emitter + run_id so agent can emit tool events
+			if t.eventEmitter != nil && t.runID != "" {
+				agent.SetEventEmitter(t.eventEmitter, t.runID)
 			}
 			agent.SetTeamTopology(t.Manifest.Inputs, t.Manifest.Deliveries)
 			go agent.Start()
@@ -165,6 +173,13 @@ func (t *Team) SetToolDescriptions(descs map[string]string) {
 // SetInternalTools provides the internal tool registry for runtime context building.
 func (t *Team) SetInternalTools(tools *InternalToolRegistry) {
 	t.internalTools = tools
+}
+
+// SetEventEmitter wires the V7 event emitter + run_id into this team.
+// Must be called before Start() so agents receive the emitter on creation.
+func (t *Team) SetEventEmitter(emitter protocol.EventEmitter, runID string) {
+	t.eventEmitter = emitter
+	t.runID = runID
 }
 
 // Stop shuts down the team and its scheduler (if any).

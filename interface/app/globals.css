@@ -30,6 +30,13 @@
 }
 
 @layer base {
+  /* Cortex readability: bump base from 16px to 17px so all rem-based
+     Tailwind classes scale up proportionally. text-xs → 12.75px,
+     text-sm → 14.875px, text-base → 17px. */
+  html {
+    font-size: 17px;
+  }
+
   body {
     background-color: var(--color-cortex-bg);
     color: var(--color-cortex-text-main);

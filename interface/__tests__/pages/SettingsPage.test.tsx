@@ -36,7 +36,7 @@ vi.mock('@/components/matrix/MatrixGrid', () => ({
     default: () => <div data-testid="matrix-grid">MatrixGrid</div>,
 }));
 
-import SettingsPage from '@/app/settings/page';
+import SettingsPage from '@/app/(app)/settings/page';
 
 describe('Settings Page (app/settings/page.tsx)', () => {
     beforeEach(() => {

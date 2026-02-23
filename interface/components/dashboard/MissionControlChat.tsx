@@ -435,7 +435,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                 )}
 
                 <div
-                    className={`px-3 py-2 rounded-lg text-xs font-mono leading-relaxed ${
+                    className={`px-3 py-2 rounded-lg text-sm font-mono leading-relaxed ${
                         isBroadcast
                             ? "bg-cortex-warning/10 text-cortex-text-main border border-cortex-warning/30"
                             : isUser
@@ -522,6 +522,62 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
     );
 }
 
+// ── Soma Offline Guide ────────────────────────────────────────
+
+function SomaOfflineGuide({ onRetry }: { onRetry: () => void }) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full px-6">
+            <div className="w-full max-w-sm border border-cortex-border rounded-xl bg-cortex-surface/60 p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-cortex-danger" />
+                    <span className="text-xs font-mono font-bold uppercase tracking-widest text-cortex-text-muted">
+                        Soma Offline
+                    </span>
+                </div>
+
+                <p className="text-sm font-mono text-cortex-text-main leading-relaxed">
+                    Your neural organism isn&apos;t running yet. Start it to talk with Soma, the Council, and your crews.
+                </p>
+
+                <div>
+                    <p className="text-[9px] font-mono uppercase tracking-widest text-cortex-text-muted mb-1.5">
+                        Start the organism
+                    </p>
+                    <div className="bg-cortex-bg border border-cortex-border rounded-lg px-3 py-2 font-mono text-sm text-cortex-primary select-all">
+                        inv lifecycle.up
+                    </div>
+                    <p className="text-[9px] font-mono text-cortex-text-muted/60 mt-1.5">
+                        Then verify: <span className="text-cortex-text-muted">inv lifecycle.health</span>
+                    </p>
+                </div>
+
+                <div className="space-y-1">
+                    <p className="text-[9px] font-mono uppercase tracking-widest text-cortex-text-muted mb-1">
+                        What comes online
+                    </p>
+                    {[
+                        "Soma — your orchestrator",
+                        "Council — Architect, Coder, Creative, Sentry",
+                        "Cognitive provider — Ollama (local) or remote",
+                    ].map((item) => (
+                        <div key={item} className="flex items-center gap-2">
+                            <span className="text-cortex-success text-[10px]">✓</span>
+                            <span className="text-[10px] font-mono text-cortex-text-muted">{item}</span>
+                        </div>
+                    ))}
+                </div>
+
+                <button
+                    onClick={onRetry}
+                    className="w-full py-2 rounded-lg bg-cortex-primary/10 border border-cortex-primary/30 hover:bg-cortex-primary/20 text-cortex-primary text-sm font-mono transition-all"
+                >
+                    Retry Connection
+                </button>
+            </div>
+        </div>
+    );
+}
+
 // ── Main Component ───────────────────────────────────────────
 
 export default function MissionControlChat() {
@@ -539,12 +595,13 @@ export default function MissionControlChat() {
 
     const [input, setInput] = useState("");
     const [broadcastMode, setBroadcastMode] = useState(false);
+    const [fetchedMembers, setFetchedMembers] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const isLoading = isMissionChatting || isBroadcasting;
 
     useEffect(() => {
-        fetchCouncilMembers();
+        fetchCouncilMembers().then(() => setFetchedMembers(true));
     }, [fetchCouncilMembers]);
 
     useEffect(() => {
@@ -656,18 +713,25 @@ export default function MissionControlChat() {
             {/* Chat log */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 scrollbar-thin scrollbar-thumb-cortex-border">
                 {missionChat.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-cortex-text-muted">
-                        {broadcastMode ? (
-                            <Megaphone className="w-8 h-8 mb-2 opacity-20" />
-                        ) : (
-                            <Shield className="w-8 h-8 mb-2 opacity-20" />
-                        )}
-                        <p className="text-[10px] font-mono text-center">
-                            {broadcastMode
-                                ? "Broadcast directives to all active teams"
-                                : `Ask ${targetLabel} about missions, teams, or your system`}
-                        </p>
-                    </div>
+                    fetchedMembers && councilMembers.length === 0 ? (
+                        <SomaOfflineGuide onRetry={() => {
+                            setFetchedMembers(false);
+                            fetchCouncilMembers().then(() => setFetchedMembers(true));
+                        }} />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-cortex-text-muted">
+                            {broadcastMode ? (
+                                <Megaphone className="w-8 h-8 mb-2 opacity-20" />
+                            ) : (
+                                <Shield className="w-8 h-8 mb-2 opacity-20" />
+                            )}
+                            <p className="text-[10px] font-mono text-center">
+                                {broadcastMode
+                                    ? "Broadcast directives to all active teams"
+                                    : `Ask ${targetLabel} about missions, teams, or your system`}
+                            </p>
+                        </div>
+                    )
                 ) : (
                     missionChat.map((msg, i) => <MessageBubble key={i} msg={msg} />)
                 )}
@@ -733,7 +797,7 @@ export default function MissionControlChat() {
                                 : `Ask ${targetLabel}... (or /all to broadcast)`
                         }
                         disabled={isLoading}
-                        className={`flex-1 bg-cortex-bg border rounded-lg px-2.5 py-1.5 text-xs text-cortex-text-main placeholder-cortex-text-muted/50 font-mono focus:outline-none focus:ring-1 disabled:opacity-50 ${
+                        className={`flex-1 bg-cortex-bg border rounded-lg px-2.5 py-1.5 text-sm text-cortex-text-main placeholder-cortex-text-muted/50 font-mono focus:outline-none focus:ring-1 disabled:opacity-50 ${
                             broadcastMode
                                 ? "border-cortex-warning/40 focus:border-cortex-warning focus:ring-cortex-warning/30"
                                 : "border-cortex-border focus:border-cortex-primary focus:ring-cortex-primary/30"

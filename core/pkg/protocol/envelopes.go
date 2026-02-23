@@ -51,6 +51,9 @@ type CTSEnvelope struct {
 	// CE-1: Orchestration template metadata (backward-compatible, omitempty)
 	TemplateID TemplateID    `json:"template_id,omitempty"`
 	Mode       ExecutionMode `json:"mode,omitempty"`
+	// V7 Event Spine: links this CTS signal to the persistent audit record in mission_events.
+	// Set by events.Store.publishCTS. Consumers use this ID to fetch full event detail.
+	MissionEventID string `json:"mission_event_id,omitempty"`
 }
 
 // HasTrustScore returns true if the envelope carries an explicit trust rating.

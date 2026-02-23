@@ -2,9 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Network, Cpu, Settings, Shield, BrainCircuit, Cable, Store, BookOpen, Brain, Users, Home } from 'lucide-react';
+import { Network, Settings, Home, Workflow, FolderCog, Brain, Activity, Eye, EyeOff } from 'lucide-react';
+import { useCortexStore } from '@/store/useCortexStore';
 
 export function ZoneA() {
+    const advancedMode = useCortexStore((s) => s.advancedMode);
+    const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
+
     return (
         <div className="w-16 md:w-64 bg-cortex-surface text-cortex-text-main flex flex-col border-r border-cortex-border z-50 flex-shrink-0 transition-all duration-300">
             {/* 1. Identity / Logo → Home */}
@@ -17,21 +21,33 @@ export function ZoneA() {
                 </span>
             </Link>
 
-            {/* 2. Navigation Items */}
+            {/* 2. Workflow-First Navigation (V7) */}
             <div className="flex-1 flex flex-col py-4 gap-1 px-2">
-                <NavItem href="/dashboard" icon={Home} label="Mission Control" />
-                <NavItem href="/wiring" icon={Cable} label="Neural Wiring" />
-                <NavItem href="/matrix" icon={BrainCircuit} label="Cognitive Matrix" />
-                <NavItem href="/teams" icon={Users} label="Team Management" />
-                <NavItem href="/catalogue" icon={BookOpen} label="Agent Catalogue" />
-                <NavItem href="/marketplace" icon={Store} label="Skills Market" />
+                <NavItem href="/dashboard" icon={Home} label="Workspace" />
+                <NavItem href="/automations" icon={Workflow} label="Automations" />
+                <NavItem href="/resources" icon={FolderCog} label="Resources" />
                 <NavItem href="/memory" icon={Brain} label="Memory" />
-                <NavItem href="/telemetry" icon={Cpu} label="System Status" />
-                <NavItem href="/approvals" icon={Shield} label="Governance" />
+                {advancedMode && (
+                    <NavItem href="/system" icon={Activity} label="System" />
+                )}
             </div>
 
-            {/* 3. Footer / Settings */}
-            <div className="p-2 border-t border-cortex-border">
+            {/* 3. Footer: Advanced Toggle + Settings */}
+            <div className="p-2 border-t border-cortex-border space-y-1">
+                <button
+                    onClick={toggleAdvancedMode}
+                    className="flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg"
+                    title={advancedMode ? 'Hide advanced panels' : 'Show advanced panels'}
+                >
+                    {advancedMode ? (
+                        <EyeOff className="w-5 h-5 flex-shrink-0" />
+                    ) : (
+                        <Eye className="w-5 h-5 flex-shrink-0" />
+                    )}
+                    <span className="hidden md:block ml-3 text-sm font-medium">
+                        {advancedMode ? 'Advanced: On' : 'Advanced: Off'}
+                    </span>
+                </button>
                 <NavItem href="/settings" icon={Settings} label="Settings" />
             </div>
         </div>
@@ -40,7 +56,7 @@ export function ZoneA() {
 
 function NavItem({ icon: Icon, label, href }: { icon: any; label: string; href: string }) {
     const pathname = usePathname();
-    const isActive = pathname === href;
+    const isActive = pathname === href || pathname.startsWith(href + '/');
 
     return (
         <Link
