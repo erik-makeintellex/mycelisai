@@ -46,6 +46,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Step-by-step: send messages, read delegation traces, confirm proposals",
             },
             {
+                slug: "meta-agent-blueprint",
+                label: "Meta-Agent & Blueprints",
+                path: "docs/user/meta-agent-blueprint.md",
+                description: "How Architect generates mission blueprints — teams, agents, tools, I/O contracts",
+            },
+            {
                 slug: "run-timeline",
                 label: "Run Timeline",
                 path: "docs/user/run-timeline.md",
