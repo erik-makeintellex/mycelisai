@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -116,110 +116,144 @@ function Sidebar({
     );
 }
 
-// ── Markdown Renderer ─────────────────────────────────────────
+// ── Markdown link resolution ───────────────────────────────────
+//
+// When a doc contains a relative .md link (e.g. `[API](API_REFERENCE.md)`)
+// we resolve it to the matching manifest entry so navigation stays in-app.
+// Returns the DocEntry if found, null otherwise.
 
-const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
-    h1: ({ children }) => (
-        <h1 className="text-xl font-bold text-cortex-text-main font-mono mt-6 mb-3 pb-2 border-b border-cortex-border">
-            {children}
-        </h1>
-    ),
-    h2: ({ children }) => (
-        <h2 className="text-base font-bold text-cortex-text-main font-mono mt-5 mb-2 pb-1 border-b border-cortex-border/50">
-            {children}
-        </h2>
-    ),
-    h3: ({ children }) => (
-        <h3 className="text-sm font-bold text-cortex-text-main font-mono mt-4 mb-1.5">
-            {children}
-        </h3>
-    ),
-    h4: ({ children }) => (
-        <h4 className="text-sm font-semibold text-cortex-text-muted font-mono mt-3 mb-1">
-            {children}
-        </h4>
-    ),
-    p: ({ children }) => (
-        <p className="text-sm text-cortex-text-main font-mono leading-relaxed mb-3">
-            {children}
-        </p>
-    ),
-    ul: ({ children }) => (
-        <ul className="list-disc list-inside space-y-1 mb-3 pl-2">{children}</ul>
-    ),
-    ol: ({ children }) => (
-        <ol className="list-decimal list-inside space-y-1 mb-3 pl-2">{children}</ol>
-    ),
-    li: ({ children }) => (
-        <li className="text-sm text-cortex-text-main font-mono leading-relaxed">{children}</li>
-    ),
-    code: ({ children, className }) => {
-        const isBlock = className?.startsWith("language-");
-        if (isBlock) {
+function resolveDocLink(href: string | undefined, sections: DocSection[]): DocEntry | null {
+    if (!href || href.startsWith("http") || href.startsWith("#")) return null;
+    // Normalise: strip query/hash, get the bare filename
+    const bare = href.split("?")[0].split("#")[0];
+    if (!bare.endsWith(".md")) return null;
+    const filename = bare.split("/").pop()!.toLowerCase();
+    const allDocs = sections.flatMap((s) => s.docs);
+    return allDocs.find((d) => d.path.split("/").pop()!.toLowerCase() === filename) ?? null;
+}
+
+// ── Markdown Renderer (built inside component — needs loadDoc + sections) ──
+
+function buildMdComponents(
+    sections: DocSection[],
+    loadDoc: (entry: DocEntry) => void
+): React.ComponentProps<typeof ReactMarkdown>["components"] {
+    return {
+        h1: ({ children }) => (
+            <h1 className="text-xl font-bold text-cortex-text-main font-mono mt-6 mb-3 pb-2 border-b border-cortex-border">
+                {children}
+            </h1>
+        ),
+        h2: ({ children }) => (
+            <h2 className="text-base font-bold text-cortex-text-main font-mono mt-5 mb-2 pb-1 border-b border-cortex-border/50">
+                {children}
+            </h2>
+        ),
+        h3: ({ children }) => (
+            <h3 className="text-sm font-bold text-cortex-text-main font-mono mt-4 mb-1.5">
+                {children}
+            </h3>
+        ),
+        h4: ({ children }) => (
+            <h4 className="text-sm font-semibold text-cortex-text-muted font-mono mt-3 mb-1">
+                {children}
+            </h4>
+        ),
+        p: ({ children }) => (
+            <p className="text-sm text-cortex-text-main font-mono leading-relaxed mb-3">
+                {children}
+            </p>
+        ),
+        ul: ({ children }) => (
+            <ul className="list-disc list-inside space-y-1 mb-3 pl-2">{children}</ul>
+        ),
+        ol: ({ children }) => (
+            <ol className="list-decimal list-inside space-y-1 mb-3 pl-2">{children}</ol>
+        ),
+        li: ({ children }) => (
+            <li className="text-sm text-cortex-text-main font-mono leading-relaxed">{children}</li>
+        ),
+        code: ({ children, className }) => {
+            const isBlock = className?.startsWith("language-");
+            if (isBlock) {
+                return (
+                    <code className="block text-[11px] font-mono text-cortex-text-main leading-relaxed">
+                        {children}
+                    </code>
+                );
+            }
             return (
-                <code className="block text-[11px] font-mono text-cortex-text-main leading-relaxed">
+                <code className="text-[11px] font-mono text-cortex-primary bg-cortex-primary/10 px-1 py-0.5 rounded">
                     {children}
                 </code>
             );
-        }
-        return (
-            <code className="text-[11px] font-mono text-cortex-primary bg-cortex-primary/10 px-1 py-0.5 rounded">
+        },
+        pre: ({ children }) => (
+            <pre className="bg-cortex-bg border border-cortex-border rounded p-3 overflow-x-auto mb-3 text-[11px] font-mono text-cortex-text-main leading-relaxed">
                 {children}
-            </code>
-        );
-    },
-    pre: ({ children }) => (
-        <pre className="bg-cortex-bg border border-cortex-border rounded p-3 overflow-x-auto mb-3 text-[11px] font-mono text-cortex-text-main leading-relaxed">
-            {children}
-        </pre>
-    ),
-    blockquote: ({ children }) => (
-        <blockquote className="border-l-4 border-cortex-primary/40 pl-3 my-3 text-cortex-text-muted">
-            {children}
-        </blockquote>
-    ),
-    a: ({ href, children }) => (
-        <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-cortex-primary hover:underline inline-flex items-center gap-0.5"
-        >
-            {children}
-            <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-        </a>
-    ),
-    table: ({ children }) => (
-        <div className="overflow-x-auto mb-4">
-            <table className="w-full text-[11px] font-mono border-collapse border border-cortex-border">
+            </pre>
+        ),
+        blockquote: ({ children }) => (
+            <blockquote className="border-l-4 border-cortex-primary/40 pl-3 my-3 text-cortex-text-muted">
                 {children}
-            </table>
-        </div>
-    ),
-    thead: ({ children }) => (
-        <thead className="bg-cortex-bg/80">{children}</thead>
-    ),
-    th: ({ children }) => (
-        <th className="border border-cortex-border px-3 py-1.5 text-left text-cortex-text-muted font-bold uppercase tracking-wider text-[9px]">
-            {children}
-        </th>
-    ),
-    td: ({ children }) => (
-        <td className="border border-cortex-border px-3 py-1.5 text-cortex-text-main">
-            {children}
-        </td>
-    ),
-    tr: ({ children }) => (
-        <tr className="hover:bg-cortex-bg/40 transition-colors">{children}</tr>
-    ),
-    strong: ({ children }) => (
-        <strong className="font-bold text-cortex-text-main">{children}</strong>
-    ),
-    em: ({ children }) => (
-        <em className="italic text-cortex-text-muted">{children}</em>
-    ),
-    hr: () => <hr className="border-cortex-border my-4" />,
-};
+            </blockquote>
+        ),
+        a: ({ href, children }) => {
+            const internalEntry = resolveDocLink(href, sections);
+            if (internalEntry) {
+                return (
+                    <button
+                        onClick={() => loadDoc(internalEntry)}
+                        className="text-cortex-primary hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                    >
+                        {children}
+                    </button>
+                );
+            }
+            return (
+                <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cortex-primary hover:underline inline-flex items-center gap-0.5"
+                >
+                    {children}
+                    <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                </a>
+            );
+        },
+        table: ({ children }) => (
+            <div className="overflow-x-auto mb-4">
+                <table className="w-full text-[11px] font-mono border-collapse border border-cortex-border">
+                    {children}
+                </table>
+            </div>
+        ),
+        thead: ({ children }) => (
+            <thead className="bg-cortex-bg/80">{children}</thead>
+        ),
+        th: ({ children }) => (
+            <th className="border border-cortex-border px-3 py-1.5 text-left text-cortex-text-muted font-bold uppercase tracking-wider text-[9px]">
+                {children}
+            </th>
+        ),
+        td: ({ children }) => (
+            <td className="border border-cortex-border px-3 py-1.5 text-cortex-text-main">
+                {children}
+            </td>
+        ),
+        tr: ({ children }) => (
+            <tr className="hover:bg-cortex-bg/40 transition-colors">{children}</tr>
+        ),
+        strong: ({ children }) => (
+            <strong className="font-bold text-cortex-text-main">{children}</strong>
+        ),
+        em: ({ children }) => (
+            <em className="italic text-cortex-text-muted">{children}</em>
+        ),
+        hr: () => <hr className="border-cortex-border my-4" />,
+    };
+}
 
 // ── Main Page ─────────────────────────────────────────────────
 
@@ -271,6 +305,12 @@ export default function DocsPage() {
             .catch((err) => setError(`Failed to load "${entry.label}": ${err.message}`))
             .finally(() => setLoadingContent(false));
     }, []);
+
+    // Rebuild when sections load so the link resolver has the full manifest
+    const mdComponents = useMemo(
+        () => buildMdComponents(sections, loadDoc),
+        [sections, loadDoc]
+    );
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg text-cortex-text-main overflow-hidden">
