@@ -25,8 +25,9 @@ import {
     Brain,
     Globe,
     Eye,
+    Zap,
 } from "lucide-react";
-import { useCortexStore, type ChatMessage, type ChatArtifactRef } from "@/store/useCortexStore";
+import { useCortexStore, type ChatMessage, type ChatArtifactRef, type ChatConsultation } from "@/store/useCortexStore";
 import { ChartRenderer, type MycelisChartSpec } from "@/components/charts";
 import ProposedActionBlock from "./ProposedActionBlock";
 import OrchestrationInspector from "./OrchestrationInspector";
@@ -36,7 +37,6 @@ import {
     trustTooltip,
     toolLabel,
     councilLabel,
-    councilOptionLabel,
     brainBadge,
     brainDisplayName,
     toolOrigin,
@@ -51,6 +51,13 @@ function trustColor(score?: number): string {
     if (score >= 0.5) return "text-cortex-warning";
     return "text-cortex-danger";
 }
+
+const COUNCIL_META: Record<string, { label: string; color: string }> = {
+    'council-architect': { label: 'Architect', color: 'text-cortex-info' },
+    'council-coder':     { label: 'Coder',     color: 'text-cortex-success' },
+    'council-creative':  { label: 'Creative',  color: 'text-cortex-warning' },
+    'council-sentry':    { label: 'Sentry',    color: 'text-cortex-danger' },
+};
 
 function artifactIcon(type: string) {
     switch (type) {
@@ -349,12 +356,176 @@ function MessageContent({ content }: { content: string }) {
     );
 }
 
+// ── Delegation Trace ─────────────────────────────────────────
+
+function DelegationTrace({ consultations }: { consultations: ChatConsultation[] }) {
+    if (!consultations?.length) return null;
+    return (
+        <div className="mt-2 pt-2 border-t border-cortex-border/40">
+            <div className="text-[9px] font-mono text-cortex-text-muted uppercase tracking-wider mb-1.5">
+                Soma consulted
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+                {consultations.map((c, i) => {
+                    const meta = COUNCIL_META[c.member];
+                    return (
+                        <div
+                            key={i}
+                            className="bg-cortex-surface/60 border border-cortex-border/60 rounded px-2 py-1.5 max-w-[180px]"
+                        >
+                            <div className={`text-[9px] font-mono font-bold mb-0.5 ${meta?.color ?? 'text-cortex-text-muted'}`}>
+                                {meta?.label ?? c.member}
+                            </div>
+                            <div className="text-[9px] text-cortex-text-muted leading-tight line-clamp-2">
+                                {c.summary}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+// ── Soma Activity Indicator ───────────────────────────────────
+
+function toolToActivity(log: { type?: string; payload?: Record<string, string>; message?: string }): string {
+    const payload = (log.payload ?? {}) as Record<string, string>;
+    const tool = payload.tool ?? payload.tool_name ?? '';
+    switch (tool) {
+        case 'consult_council':        return `Consulting ${payload.member ?? 'council'}...`;
+        case 'generate_blueprint':     return 'Generating mission blueprint...';
+        case 'research_for_blueprint': return 'Researching past missions...';
+        case 'write_file':             return `Writing ${payload.path ?? 'file'}...`;
+        case 'read_file':              return `Reading ${payload.path ?? 'file'}...`;
+        case 'search_memory':          return 'Searching memory...';
+        case 'recall':                 return 'Recalling context...';
+        case 'store_artifact':         return 'Storing artifact...';
+        case 'list_teams':             return 'Checking active teams...';
+        case 'get_system_status':      return 'Reading system status...';
+        default:                       return tool ? `${tool.replace(/_/g, ' ')}...` : (log.message ?? 'Working...');
+    }
+}
+
+function SomaActivityIndicator({ isBroadcasting }: { isBroadcasting: boolean }) {
+    const streamLogs = useCortexStore((s) => s.streamLogs);
+
+    const recentTool = isBroadcasting
+        ? null
+        : [...streamLogs].reverse().find((l) => l.type === 'tool.invoked');
+
+    const label = isBroadcasting
+        ? 'Broadcasting to all teams...'
+        : recentTool
+        ? toolToActivity(recentTool)
+        : 'Soma is thinking...';
+
+    return (
+        <div className="flex items-center gap-2 px-3 py-2.5">
+            <Loader2 className={`w-3 h-3 animate-spin flex-shrink-0 ${isBroadcasting ? 'text-cortex-warning' : 'text-cortex-primary'}`} />
+            <span className={`text-sm font-mono ${isBroadcasting ? 'text-cortex-warning/70' : 'text-cortex-text-muted'}`}>
+                {label}
+            </span>
+            <span className="flex gap-0.5 ml-0.5">
+                {[0, 1, 2].map((i) => (
+                    <span
+                        key={i}
+                        className={`inline-block w-1 h-1 rounded-full animate-bounce ${isBroadcasting ? 'bg-cortex-warning/60' : 'bg-cortex-primary/60'}`}
+                        style={{ animationDelay: `${i * 150}ms` }}
+                    />
+                ))}
+            </span>
+        </div>
+    );
+}
+
+// ── Direct Council Button ─────────────────────────────────────
+
+function DirectCouncilButton({
+    councilMembers,
+    directTarget,
+    setDirectTarget,
+    setCouncilTarget,
+}: {
+    councilMembers: { id: string; role: string }[];
+    directTarget: string | null;
+    setDirectTarget: (id: string | null) => void;
+    setCouncilTarget: (id: string) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const members = councilMembers.filter((m) => m.id !== 'admin');
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setOpen((p) => !p)}
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono transition-colors ${
+                    directTarget
+                        ? 'bg-cortex-warning/10 text-cortex-warning border border-cortex-warning/30'
+                        : 'text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-border'
+                }`}
+                title="Direct message to a specific council member"
+            >
+                <Zap className="w-2.5 h-2.5" />
+                Direct
+            </button>
+            {open && (
+                <div className="absolute top-full left-0 mt-1 bg-cortex-surface border border-cortex-border rounded-lg shadow-xl z-50 min-w-[140px] py-1">
+                    <button
+                        className="w-full px-3 py-1.5 text-left text-[10px] font-mono text-cortex-primary hover:bg-cortex-border/50 transition-colors"
+                        onClick={() => { setDirectTarget(null); setCouncilTarget('admin'); setOpen(false); }}
+                    >
+                        ← Soma
+                    </button>
+                    <div className="border-t border-cortex-border/40 my-0.5" />
+                    {members.map((m) => {
+                        const meta = COUNCIL_META[m.id];
+                        return (
+                            <button
+                                key={m.id}
+                                className={`w-full px-3 py-1.5 text-left text-[10px] font-mono hover:bg-cortex-border/50 transition-colors ${
+                                    directTarget === m.id ? 'font-bold' : ''
+                                } ${meta?.color ?? 'text-cortex-text-muted'}`}
+                                onClick={() => { setDirectTarget(m.id); setCouncilTarget(m.id); setOpen(false); }}
+                            >
+                                {meta?.label ?? m.role}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Message Bubble ───────────────────────────────────────────
 
 function MessageBubble({ msg }: { msg: ChatMessage }) {
     const isUser = msg.role === "user";
     const isBroadcast = isUser && msg.content.startsWith("[BROADCAST]");
     const setInspected = useCortexStore((s) => s.setInspectedMessage);
+
+    // System message: render as centered pill/link
+    if (msg.role === 'system') {
+        return (
+            <div className="flex justify-center my-2">
+                {msg.run_id ? (
+                    <a
+                        href={`/runs/${msg.run_id}`}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-cortex-success/30 bg-cortex-success/5 text-cortex-success text-[10px] font-mono hover:bg-cortex-success/10 transition-colors"
+                    >
+                        <Zap className="w-3 h-3" />
+                        Mission activated — {msg.run_id.slice(0, 8)}...
+                        <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                    </a>
+                ) : (
+                    <span className="text-[9px] font-mono text-cortex-text-muted px-3 py-1 rounded-full border border-cortex-border">
+                        {msg.content}
+                    </span>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className={`flex gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}>
@@ -449,6 +620,13 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                         <MessageContent content={msg.content} />
                     )}
                 </div>
+
+                {/* Delegation trace — which council members Soma consulted */}
+                {!isUser && msg.consultations && msg.consultations.length > 0 && (
+                    <div className="px-3 pb-2">
+                        <DelegationTrace consultations={msg.consultations} />
+                    </div>
+                )}
 
                 {/* Proposed action block for proposal-mode messages */}
                 {!isUser && msg.mode === "proposal" && msg.proposal && (
@@ -596,9 +774,15 @@ export default function MissionControlChat() {
     const [input, setInput] = useState("");
     const [broadcastMode, setBroadcastMode] = useState(false);
     const [fetchedMembers, setFetchedMembers] = useState(false);
+    const [directTarget, setDirectTarget] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const isLoading = isMissionChatting || isBroadcasting;
+
+    // Ensure Soma is the default target on mount
+    useEffect(() => {
+        setCouncilTarget('admin');
+    }, [setCouncilTarget]);
 
     useEffect(() => {
         fetchCouncilMembers().then(() => setFetchedMembers(true));
@@ -629,8 +813,6 @@ export default function MissionControlChat() {
         setInput("");
     };
 
-    const targetLabel = councilLabel(councilTarget).name;
-
     return (
         <div className="h-full flex flex-col" data-testid="mission-chat">
             {/* Header */}
@@ -644,23 +826,21 @@ export default function MissionControlChat() {
                     </>
                 ) : (
                     <>
-                        <Shield className="w-3.5 h-3.5 text-cortex-info" />
-                        <select
-                            value={councilTarget}
-                            onChange={(e) => setCouncilTarget(e.target.value)}
-                            title="Select council member or Soma to direct your message"
-                            className="bg-transparent text-[9px] font-bold uppercase tracking-widest text-cortex-text-muted border-none outline-none cursor-pointer font-mono"
-                        >
-                            {councilMembers.length === 0 ? (
-                                <option value="admin">Soma — Executive Cortex</option>
-                            ) : (
-                                councilMembers.map((m) => (
-                                    <option key={m.id} value={m.id}>
-                                        {councilOptionLabel(m.id, m.role)}
-                                    </option>
-                                ))
-                            )}
-                        </select>
+                        <Brain className="w-3.5 h-3.5 text-cortex-primary" />
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-cortex-primary font-mono">
+                            Soma
+                        </span>
+                        {directTarget && (
+                            <span className="text-[9px] font-mono text-cortex-warning">
+                                → {councilLabel(directTarget).name}
+                            </span>
+                        )}
+                        <DirectCouncilButton
+                            councilMembers={councilMembers}
+                            directTarget={directTarget}
+                            setDirectTarget={setDirectTarget}
+                            setCouncilTarget={setCouncilTarget}
+                        />
                     </>
                 )}
 
@@ -728,7 +908,9 @@ export default function MissionControlChat() {
                             <p className="text-[10px] font-mono text-center">
                                 {broadcastMode
                                     ? "Broadcast directives to all active teams"
-                                    : `Ask ${targetLabel} about missions, teams, or your system`}
+                                    : directTarget
+                                    ? `Direct message to ${councilLabel(directTarget).name}...`
+                                    : "Ask Soma about missions, teams, or your system"}
                             </p>
                         </div>
                     )
@@ -743,41 +925,23 @@ export default function MissionControlChat() {
                             className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${
                                 isBroadcasting
                                     ? "bg-cortex-warning/10 border border-cortex-warning/20"
-                                    : "bg-cortex-info/10 border border-cortex-info/20"
+                                    : "bg-cortex-primary/10 border border-cortex-primary/20"
                             }`}
                         >
                             {isBroadcasting ? (
                                 <Megaphone className="w-3.5 h-3.5 text-cortex-warning animate-pulse" />
                             ) : (
-                                <Bot className="w-3.5 h-3.5 text-cortex-info animate-pulse" />
+                                <Brain className="w-3.5 h-3.5 text-cortex-primary animate-pulse" />
                             )}
                         </div>
                         <div
-                            className={`px-3 py-2 rounded-lg ${
+                            className={`rounded-lg ${
                                 isBroadcasting
                                     ? "bg-cortex-warning/5 border border-cortex-warning/20"
-                                    : "bg-cortex-info/5 border border-cortex-info/20"
+                                    : "bg-cortex-primary/5 border border-cortex-primary/20"
                             }`}
                         >
-                            <span className={`text-[10px] font-mono block mb-1 ${isBroadcasting ? "text-cortex-warning/70" : "text-cortex-info/70"}`}>
-                                {isBroadcasting
-                                    ? "Broadcasting to all teams..."
-                                    : `${targetLabel} is recalling context...`}
-                            </span>
-                            <div className="flex gap-1">
-                                <span
-                                    className={`w-1.5 h-1.5 rounded-full animate-bounce ${isBroadcasting ? "bg-cortex-warning" : "bg-cortex-info"}`}
-                                    style={{ animationDelay: "0ms" }}
-                                />
-                                <span
-                                    className={`w-1.5 h-1.5 rounded-full animate-bounce ${isBroadcasting ? "bg-cortex-warning" : "bg-cortex-info"}`}
-                                    style={{ animationDelay: "150ms" }}
-                                />
-                                <span
-                                    className={`w-1.5 h-1.5 rounded-full animate-bounce ${isBroadcasting ? "bg-cortex-warning" : "bg-cortex-info"}`}
-                                    style={{ animationDelay: "300ms" }}
-                                />
-                            </div>
+                            <SomaActivityIndicator isBroadcasting={isBroadcasting} />
                         </div>
                     </div>
                 )}
@@ -794,7 +958,9 @@ export default function MissionControlChat() {
                         placeholder={
                             broadcastMode
                                 ? "Broadcast to all teams..."
-                                : `Ask ${targetLabel}... (or /all to broadcast)`
+                                : directTarget
+                                ? `Direct to ${councilLabel(directTarget).name}... (or /all to broadcast)`
+                                : "Ask Soma... (or /all to broadcast)"
                         }
                         disabled={isLoading}
                         className={`flex-1 bg-cortex-bg border rounded-lg px-2.5 py-1.5 text-sm text-cortex-text-main placeholder-cortex-text-muted/50 font-mono focus:outline-none focus:ring-1 disabled:opacity-50 ${

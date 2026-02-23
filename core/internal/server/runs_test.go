@@ -174,3 +174,70 @@ func TestHandleGetRunChain_NilStore(t *testing.T) {
 	rr := doRequest(t, mux, "GET", "/api/v1/runs/run-1/chain", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
+
+// ── GET /api/v1/runs ───────────────────────────────────────────────
+
+func TestHandleListRuns(t *testing.T) {
+	runsOpt, mock := withRunsManager(t)
+	s := newTestServer(runsOpt)
+
+	now := time.Now()
+	mock.ExpectQuery("SELECT .+ FROM mission_runs").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "mission_id", "tenant_id", "status", "run_depth",
+			"parent_run_id", "started_at", "completed_at",
+		}).
+			AddRow("run-b", "m-2", "default", "running", 0, "", now, nil).
+			AddRow("run-a", "m-1", "default", "completed", 0, "", now, now))
+
+	mux := setupMux(t, "GET /api/v1/runs", s.handleListRuns)
+	rr := doRequest(t, mux, "GET", "/api/v1/runs", "")
+
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["ok"] != true {
+		t.Errorf("expected ok=true, got %v", resp["ok"])
+	}
+	data, ok := resp["data"].([]any)
+	if !ok {
+		t.Fatalf("expected data array, got %T", resp["data"])
+	}
+	if len(data) != 2 {
+		t.Errorf("expected 2 runs, got %d", len(data))
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet DB expectations: %v", err)
+	}
+}
+
+func TestHandleListRuns_Empty(t *testing.T) {
+	runsOpt, mock := withRunsManager(t)
+	s := newTestServer(runsOpt)
+
+	mock.ExpectQuery("SELECT .+ FROM mission_runs").
+		WillReturnRows(sqlmock.NewRows(nil))
+
+	mux := setupMux(t, "GET /api/v1/runs", s.handleListRuns)
+	rr := doRequest(t, mux, "GET", "/api/v1/runs", "")
+
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data, ok := resp["data"].([]any)
+	if !ok {
+		t.Fatalf("expected data array, got %T", resp["data"])
+	}
+	if len(data) != 0 {
+		t.Errorf("expected empty array, got %d runs", len(data))
+	}
+}
+
+func TestHandleListRuns_NilStore(t *testing.T) {
+	s := newTestServer() // no Runs wired → s.Runs == nil
+	mux := setupMux(t, "GET /api/v1/runs", s.handleListRuns)
+	rr := doRequest(t, mux, "GET", "/api/v1/runs", "")
+	assertStatus(t, rr, http.StatusServiceUnavailable)
+}

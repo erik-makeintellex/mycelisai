@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Network, Settings, Home, Workflow, FolderCog, Brain, Activity, Eye, EyeOff } from 'lucide-react';
+import { Network, Settings, Home, Workflow, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen } from 'lucide-react';
 import { useCortexStore } from '@/store/useCortexStore';
 
 export function ZoneA() {
@@ -27,6 +27,7 @@ export function ZoneA() {
                 <NavItem href="/automations" icon={Workflow} label="Automations" />
                 <NavItem href="/resources" icon={FolderCog} label="Resources" />
                 <NavItem href="/memory" icon={Brain} label="Memory" />
+                <NavItem href="/docs" icon={BookOpen} label="Docs" />
                 {advancedMode && (
                     <NavItem href="/system" icon={Activity} label="System" />
                 )}

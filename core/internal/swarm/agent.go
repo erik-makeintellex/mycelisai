@@ -172,6 +172,8 @@ type ProcessResult struct {
 	// Phase 19: Brain provenance — which provider/model executed this request
 	ProviderID string                      `json:"provider_id,omitempty"`
 	ModelUsed  string                      `json:"model_used,omitempty"`
+	// V7: Council consultations made during the ReAct loop (for frontend delegation trace)
+	Consultations []protocol.ConsultationEntry `json:"consultations,omitempty"`
 }
 
 // processMessage handles LLM inference + ReAct tool loop, returning the response text.
@@ -235,6 +237,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	responseText := resp.Text
 	var toolsUsed []string
 	var artifacts []protocol.ChatArtifactRef
+	var consultations []protocol.ConsultationEntry
 	if a.toolExecutor != nil && len(a.Manifest.Tools) > 0 {
 		maxIter := a.Manifest.EffectiveMaxIterations()
 		for i := 0; i < maxIter; i++ {
@@ -289,6 +292,21 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 					map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1})
 			}
 
+			// Capture consult_council calls for frontend delegation trace
+			if toolCall.Name == "consult_council" {
+				member, _ := toolCall.Arguments["member"].(string)
+				if member != "" {
+					summary := strings.TrimSpace(toolResult)
+					if len(summary) > 300 {
+						summary = summary[:300] + "..."
+					}
+					consultations = append(consultations, protocol.ConsultationEntry{
+						Member:  member,
+						Summary: summary,
+					})
+				}
+			}
+
 			// Extract artifact from structured tool result (side-channel).
 			// Only the text message goes back to the LLM — large payloads
 			// like base64 images are captured here for the HTTP response.
@@ -338,11 +356,12 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	}
 
 	return ProcessResult{
-		Text:       responseText,
-		ToolsUsed:  toolsUsed,
-		Artifacts:  artifacts,
-		ProviderID: providerID,
-		ModelUsed:  modelUsed,
+		Text:          responseText,
+		ToolsUsed:     toolsUsed,
+		Artifacts:     artifacts,
+		ProviderID:    providerID,
+		ModelUsed:     modelUsed,
+		Consultations: consultations,
 	}
 }
 

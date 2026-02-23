@@ -217,11 +217,12 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	// Agent returns structured JSON (ProcessResult with text, tools_used, artifacts, brain info).
 	// Wrap in CTS envelope so artifacts flow to the frontend.
 	var agentResult struct {
-		Text       string                     `json:"text"`
-		ToolsUsed  []string                   `json:"tools_used,omitempty"`
-		Artifacts  []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
-		ProviderID string                     `json:"provider_id,omitempty"`
-		ModelUsed  string                     `json:"model_used,omitempty"`
+		Text          string                       `json:"text"`
+		ToolsUsed     []string                     `json:"tools_used,omitempty"`
+		Artifacts     []protocol.ChatArtifactRef   `json:"artifacts,omitempty"`
+		ProviderID    string                       `json:"provider_id,omitempty"`
+		ModelUsed     string                       `json:"model_used,omitempty"`
+		Consultations []protocol.ConsultationEntry `json:"consultations,omitempty"`
 	}
 	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
 		agentResult.Text = string(msg.Data)
@@ -230,9 +231,10 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chatPayload := protocol.ChatResponsePayload{
-		Text:      agentResult.Text,
-		ToolsUsed: agentResult.ToolsUsed,
-		Artifacts: agentResult.Artifacts,
+		Text:          agentResult.Text,
+		ToolsUsed:     agentResult.ToolsUsed,
+		Artifacts:     agentResult.Artifacts,
+		Consultations: agentResult.Consultations,
 	}
 
 	// Phase 19: Build brain provenance from agent's inference metadata
@@ -467,11 +469,12 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	// Parse structured agent response (ProcessResult JSON with text, tools_used, artifacts, brain info).
 	// Falls back gracefully to raw text if the agent returns plain text.
 	var agentResult struct {
-		Text       string                     `json:"text"`
-		ToolsUsed  []string                   `json:"tools_used,omitempty"`
-		Artifacts  []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
-		ProviderID string                     `json:"provider_id,omitempty"`
-		ModelUsed  string                     `json:"model_used,omitempty"`
+		Text          string                       `json:"text"`
+		ToolsUsed     []string                     `json:"tools_used,omitempty"`
+		Artifacts     []protocol.ChatArtifactRef   `json:"artifacts,omitempty"`
+		ProviderID    string                       `json:"provider_id,omitempty"`
+		ModelUsed     string                       `json:"model_used,omitempty"`
+		Consultations []protocol.ConsultationEntry `json:"consultations,omitempty"`
 	}
 	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
 		// Fallback: treat entire response as plain text
@@ -482,9 +485,10 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 
 	// Wrap response in CTS envelope with trust score, provenance, and tool metadata
 	chatPayload := protocol.ChatResponsePayload{
-		Text:      agentResult.Text,
-		ToolsUsed: agentResult.ToolsUsed,
-		Artifacts: agentResult.Artifacts,
+		Text:          agentResult.Text,
+		ToolsUsed:     agentResult.ToolsUsed,
+		Artifacts:     agentResult.Artifacts,
+		Consultations: agentResult.Consultations,
 	}
 
 	// Phase 19: Build brain provenance from agent's inference metadata

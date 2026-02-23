@@ -18,10 +18,13 @@ import {
     ChevronDown,
     ChevronRight,
     Plus,
+    Zap,
+    Activity,
 } from "lucide-react";
-import { useCortexStore, type TeamDetailEntry } from "@/store/useCortexStore";
+import { useCortexStore, type TeamDetailEntry, type MissionRun } from "@/store/useCortexStore";
 import { useSignalStream, type Signal } from "./SignalContext";
 import { streamSignalToDetail } from "@/lib/signalNormalize";
+import { registerOpsWidget, getOpsWidgets } from "@/lib/opsWidgetRegistry";
 
 // ── Shared Helpers ───────────────────────────────────────────
 
@@ -423,21 +426,120 @@ function MCPToolsSection() {
     );
 }
 
+// ── Recent Runs ───────────────────────────────────────────────
+
+function runStatusDot(status: MissionRun['status']): string {
+    switch (status) {
+        case 'running':   return 'bg-cortex-primary animate-pulse';
+        case 'completed': return 'bg-cortex-success';
+        case 'failed':    return 'bg-cortex-danger';
+        default:          return 'bg-cortex-text-muted/40';
+    }
+}
+
+function runStatusLabel(status: MissionRun['status']): string {
+    switch (status) {
+        case 'running':   return 'text-cortex-primary';
+        case 'completed': return 'text-cortex-success';
+        case 'failed':    return 'text-cortex-danger';
+        default:          return 'text-cortex-text-muted';
+    }
+}
+
+function timeAgo(iso: string): string {
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60)   return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    return `${Math.floor(diff / 3600)}h ago`;
+}
+
+function RecentRunsSection() {
+    const router = useRouter();
+    const recentRuns = useCortexStore((s) => s.recentRuns);
+    const fetchRecentRuns = useCortexStore((s) => s.fetchRecentRuns);
+
+    useEffect(() => {
+        fetchRecentRuns();
+        const interval = setInterval(fetchRecentRuns, 10000);
+        return () => clearInterval(interval);
+    }, [fetchRecentRuns]);
+
+    const active = recentRuns.filter((r) => r.status === 'running');
+
+    return (
+        <SectionCard
+            title="Runs"
+            subtitle={active.length > 0 ? `${active.length} active` : "Mission execution history"}
+            icon={Activity}
+            href="/runs"
+        >
+            {recentRuns.length === 0 ? (
+                <div className="px-4 py-5 text-center">
+                    <p className="text-sm font-mono text-cortex-text-muted">No runs yet</p>
+                    <p className="text-xs font-mono text-cortex-text-muted/50 mt-1">
+                        Ask Soma to launch a crew to start a run
+                    </p>
+                </div>
+            ) : (
+                <div className="max-h-48 overflow-y-auto">
+                    {recentRuns.slice(0, 10).map((run) => (
+                        <button
+                            key={run.id}
+                            onClick={() => router.push(`/runs/${run.id}`)}
+                            className="w-full px-4 py-2 flex items-center gap-3 text-left hover:bg-cortex-border/30 transition-colors group"
+                        >
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${runStatusDot(run.status)}`} />
+                            <span className="text-[11px] font-mono text-cortex-text-main group-hover:text-cortex-primary transition-colors flex-1 truncate">
+                                {run.id.slice(0, 8)}...
+                            </span>
+                            <span className={`text-[9px] font-mono font-bold uppercase ${runStatusLabel(run.status)}`}>
+                                {run.status}
+                            </span>
+                            <span className="text-[9px] font-mono text-cortex-text-muted/60 flex-shrink-0">
+                                {timeAgo(run.started_at)}
+                            </span>
+                            <Zap className="w-2.5 h-2.5 text-cortex-text-muted/40 group-hover:text-cortex-primary transition-colors flex-shrink-0" />
+                        </button>
+                    ))}
+                </div>
+            )}
+        </SectionCard>
+    );
+}
+
+// ── Widget Registration ───────────────────────────────────────
+//
+// Built-in widgets are registered here using multiples of 10 so
+// third-party widgets can slot between them (e.g. order: 15).
+// To add a new widget: create a component above, call registerOpsWidget().
+// OpsOverview renders all registered widgets automatically.
+
+registerOpsWidget({ id: "system",    order: 10, layout: "grid",      Component: SystemStatus });
+registerOpsWidget({ id: "alerts",    order: 20, layout: "grid",      Component: PriorityAlerts });
+registerOpsWidget({ id: "teams",     order: 30, layout: "grid",      Component: TeamsSection });
+registerOpsWidget({ id: "mcp",       order: 40, layout: "grid",      Component: MCPToolsSection });
+registerOpsWidget({ id: "missions",  order: 50, layout: "fullWidth", Component: MissionsSection });
+registerOpsWidget({ id: "runs",      order: 60, layout: "fullWidth", Component: RecentRunsSection });
+
 // ── Main Component ───────────────────────────────────────────
 
 export default function OpsOverview() {
+    const gridWidgets = getOpsWidgets().filter((w) => w.layout === "grid");
+    const fullWidthWidgets = getOpsWidgets().filter((w) => w.layout === "fullWidth");
+
     return (
         <div className="h-full overflow-hidden bg-cortex-surface flex flex-col">
             <div className="flex-1 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-cortex-border space-y-3">
                 {/* Top row: compact status cards in auto-fit grid */}
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3">
-                    <SystemStatus />
-                    <PriorityAlerts />
-                    <TeamsSection />
-                    <MCPToolsSection />
+                    {gridWidgets.map(({ id, Component }) => (
+                        <Component key={id} />
+                    ))}
                 </div>
-                {/* Bottom: Missions full-width so outputs are readable */}
-                <MissionsSection />
+                {/* Full-width sections: Missions + Runs and any future additions */}
+                {fullWidthWidgets.map(({ id, Component }) => (
+                    <Component key={id} />
+                ))}
             </div>
         </div>
     );

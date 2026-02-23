@@ -325,3 +325,91 @@ func TestListRunsForMission_DefaultLimit(t *testing.T) {
 		t.Fatalf("ListRunsForMission error: %v", err)
 	}
 }
+
+// ── ListRecentRuns ─────────────────────────────────────────────────
+
+func TestListRecentRuns(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+	m := NewManager(db)
+
+	now := time.Now()
+	mock.ExpectQuery("SELECT .+ FROM mission_runs").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "mission_id", "tenant_id", "status", "run_depth",
+			"parent_run_id", "started_at", "completed_at",
+		}).
+			AddRow("run-3", "m-1", "default", StatusRunning, 0, "", now, nil).
+			AddRow("run-2", "m-2", "default", StatusCompleted, 0, "", now, now).
+			AddRow("run-1", "m-1", "default", StatusFailed, 0, "", now, now))
+
+	runs, err := m.ListRecentRuns(context.Background(), "default", 10)
+	if err != nil {
+		t.Fatalf("ListRecentRuns error: %v", err)
+	}
+	if len(runs) != 3 {
+		t.Errorf("expected 3 runs, got %d", len(runs))
+	}
+	// Newest first
+	if runs[0].ID != "run-3" {
+		t.Errorf("expected newest run first, got %s", runs[0].ID)
+	}
+	// Active run has nil completed_at
+	if runs[0].CompletedAt != nil {
+		t.Error("expected nil completed_at for running run")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unmet DB expectations: %v", err)
+	}
+}
+
+func TestListRecentRuns_Empty(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+	m := NewManager(db)
+
+	mock.ExpectQuery("SELECT .+ FROM mission_runs").
+		WillReturnRows(sqlmock.NewRows(nil))
+
+	runs, err := m.ListRecentRuns(context.Background(), "default", 20)
+	if err != nil {
+		t.Fatalf("ListRecentRuns error: %v", err)
+	}
+	if runs == nil {
+		t.Error("expected non-nil empty slice, got nil")
+	}
+	if len(runs) != 0 {
+		t.Errorf("expected 0 runs, got %d", len(runs))
+	}
+}
+
+func TestListRecentRuns_NilDB(t *testing.T) {
+	m := &Manager{db: nil}
+	_, err := m.ListRecentRuns(context.Background(), "default", 20)
+	if err == nil {
+		t.Error("expected error for nil DB")
+	}
+}
+
+func TestListRecentRuns_DefaultLimit(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+	m := NewManager(db)
+
+	// limit <= 0 should be clamped to 20, empty tenant → "default"
+	mock.ExpectQuery("SELECT .+ FROM mission_runs").
+		WillReturnRows(sqlmock.NewRows(nil))
+
+	if _, err := m.ListRecentRuns(context.Background(), "", 0); err != nil {
+		t.Fatalf("ListRecentRuns error: %v", err)
+	}
+}

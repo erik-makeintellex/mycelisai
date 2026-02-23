@@ -2,6 +2,8 @@ package server
 
 import (
 	"net/http"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 // handleGetRunEvents returns the chronological event timeline for a run.
@@ -23,6 +25,22 @@ func (s *AdminServer) handleGetRunEvents(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	respondJSON(w, timeline)
+}
+
+// handleListRuns returns recent runs across all missions for the default tenant, newest first.
+// GET /api/v1/runs
+func (s *AdminServer) handleListRuns(w http.ResponseWriter, r *http.Request) {
+	if s.Runs == nil {
+		respondAPIError(w, "run store not initialized", http.StatusServiceUnavailable)
+		return
+	}
+
+	recentRuns, err := s.Runs.ListRecentRuns(r.Context(), "default", 20)
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(recentRuns))
 }
 
 // handleGetRunChain returns the causal chain for a run:
