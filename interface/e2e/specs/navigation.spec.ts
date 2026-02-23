@@ -1,88 +1,84 @@
 import { test, expect } from '@playwright/test';
 
-const NAV_ENTRIES = [
-    { href: '/', label: 'Mission Control' },
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/architect', label: 'Swarm Architect' },
-    { href: '/matrix', label: 'Cognitive Matrix' },
-    { href: '/wiring', label: 'Neural Wiring' },
-    { href: '/teams', label: 'Team Management' },
-    { href: '/catalogue', label: 'Agent Catalogue' },
-    { href: '/marketplace', label: 'Skills Market' },
+const V7_NAV_ENTRIES = [
+    { href: '/dashboard', label: 'Mission Control' },
+    { href: '/automations', label: 'Automations' },
+    { href: '/resources', label: 'Resources' },
     { href: '/memory', label: 'Memory' },
-    { href: '/telemetry', label: 'System Status' },
-    { href: '/approvals', label: 'Governance' },
     { href: '/settings', label: 'Settings' },
 ];
 
-test.describe('Panel D — ZoneA Rail Navigation', () => {
+test.describe('V7 Workflow-First Navigation', () => {
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/dashboard');
         await page.waitForLoadState('networkidle');
     });
 
     test('ZoneA rail is visible on page load', async ({ page }) => {
-        // Rail has the Mycelis logo and brand name
         await expect(page.locator('text=Mycelis')).toBeVisible();
     });
 
-    test('all navigation entries are present', async ({ page }) => {
-        for (const entry of NAV_ENTRIES) {
+    test('all V7 navigation entries are present', async ({ page }) => {
+        for (const entry of V7_NAV_ENTRIES) {
             const link = page.locator(`a[href="${entry.href}"]`);
             await expect(link).toBeVisible();
-            // Label visible at md+ breakpoint
             await expect(link.locator(`text=${entry.label}`)).toBeVisible();
         }
     });
 
     test('active route gets primary highlight', async ({ page }) => {
-        // Home route should be active on /
-        const homeLink = page.locator('a[href="/"]');
-        await expect(homeLink).toHaveClass(/bg-cortex-primary/);
-        await expect(homeLink).toHaveClass(/text-white/);
+        const dashboardLink = page.locator('a[href="/dashboard"]');
+        await expect(dashboardLink).toHaveClass(/bg-cortex-primary/);
     });
 
-    test('navigating to /teams highlights Team Management', async ({ page }) => {
-        const teamsLink = page.locator('a[href="/teams"]');
-        await teamsLink.click();
+    test('navigating to /automations highlights Automations', async ({ page }) => {
+        const link = page.locator('a[href="/automations"]');
+        await link.click();
         await page.waitForLoadState('networkidle');
-
-        // Teams link should now be active
-        await expect(teamsLink).toHaveClass(/bg-cortex-primary/);
-        await expect(teamsLink).toHaveClass(/text-white/);
-
-        // Page content loads
-        await expect(page.locator('text=Team Management')).toBeVisible();
+        await expect(link).toHaveClass(/bg-cortex-primary/);
+        await expect(page.locator('text=Automations').first()).toBeVisible();
     });
 
-    test('navigating to /wiring highlights Neural Wiring', async ({ page }) => {
-        const wiringLink = page.locator('a[href="/wiring"]');
-        await wiringLink.click();
+    test('navigating to /resources highlights Resources', async ({ page }) => {
+        const link = page.locator('a[href="/resources"]');
+        await link.click();
         await page.waitForLoadState('networkidle');
-
-        await expect(wiringLink).toHaveClass(/bg-cortex-primary/);
+        await expect(link).toHaveClass(/bg-cortex-primary/);
+        await expect(page.locator('text=Resources').first()).toBeVisible();
     });
 
-    test('navigating to /catalogue highlights Agent Catalogue', async ({ page }) => {
-        const catalogueLink = page.locator('a[href="/catalogue"]');
-        await catalogueLink.click();
+    test('navigating to /memory highlights Memory', async ({ page }) => {
+        const link = page.locator('a[href="/memory"]');
+        await link.click();
         await page.waitForLoadState('networkidle');
-
-        await expect(catalogueLink).toHaveClass(/bg-cortex-primary/);
+        await expect(link).toHaveClass(/bg-cortex-primary/);
     });
 
     test('inactive nav items have muted text', async ({ page }) => {
-        // Non-active links should have muted styling
-        const wiringLink = page.locator('a[href="/wiring"]');
-        await expect(wiringLink).toHaveClass(/text-cortex-text-muted/);
+        const resourcesLink = page.locator('a[href="/resources"]');
+        await expect(resourcesLink).toHaveClass(/text-cortex-text-muted/);
     });
 
-    test('nav order matches design spec', async ({ page }) => {
-        // All nav links in the sidebar
-        const navLinks = page.locator('a[href^="/"], a[href="/"]');
+    test('System tab is hidden by default (advanced mode off)', async ({ page }) => {
+        const systemLink = page.locator('a[href="/system"]');
+        await expect(systemLink).not.toBeVisible();
+    });
 
-        // Collect hrefs in order
+    test('Advanced toggle shows/hides System tab', async ({ page }) => {
+        const advancedToggle = page.locator('text=Advanced: Off');
+        await advancedToggle.click();
+
+        const systemLink = page.locator('a[href="/system"]');
+        await expect(systemLink).toBeVisible();
+
+        const advancedOnToggle = page.locator('text=Advanced: On');
+        await advancedOnToggle.click();
+        await expect(systemLink).not.toBeVisible();
+    });
+
+    test('nav order matches V7 spec', async ({ page }) => {
+        const navLinks = page.locator('a[href^="/"]');
         const hrefs: string[] = [];
         const count = await navLinks.count();
         for (let i = 0; i < count; i++) {
@@ -90,20 +86,55 @@ test.describe('Panel D — ZoneA Rail Navigation', () => {
             if (href) hrefs.push(href);
         }
 
-        // Verify /teams comes after /wiring and before /catalogue
-        const wiringIdx = hrefs.indexOf('/wiring');
-        const teamsIdx = hrefs.indexOf('/teams');
-        const catalogueIdx = hrefs.indexOf('/catalogue');
+        const dashboardIdx = hrefs.indexOf('/dashboard');
+        const automationsIdx = hrefs.indexOf('/automations');
+        const resourcesIdx = hrefs.indexOf('/resources');
+        const memoryIdx = hrefs.indexOf('/memory');
 
-        expect(wiringIdx).toBeGreaterThan(-1);
-        expect(teamsIdx).toBeGreaterThan(-1);
-        expect(catalogueIdx).toBeGreaterThan(-1);
-        expect(teamsIdx).toBe(wiringIdx + 1);
-        expect(catalogueIdx).toBe(teamsIdx + 1);
+        expect(dashboardIdx).toBeGreaterThan(-1);
+        expect(automationsIdx).toBe(dashboardIdx + 1);
+        expect(resourcesIdx).toBe(automationsIdx + 1);
+        expect(memoryIdx).toBe(resourcesIdx + 1);
     });
 
     test('no bg-white leak in navigation rail', async ({ page }) => {
-        const railHtml = await page.locator('nav, [class*="flex-col"]').first().innerHTML();
+        const railHtml = await page.locator('[class*="flex-col"]').first().innerHTML();
         expect(railHtml).not.toContain('bg-white');
+    });
+
+    test('legacy /wiring URL redirects to /automations', async ({ page }) => {
+        await page.goto('/wiring');
+        await page.waitForLoadState('networkidle');
+        expect(page.url()).toContain('/automations');
+    });
+
+    test('legacy /teams URL redirects to /automations', async ({ page }) => {
+        await page.goto('/teams');
+        await page.waitForLoadState('networkidle');
+        expect(page.url()).toContain('/automations');
+    });
+
+    test('legacy /catalogue URL redirects to /resources', async ({ page }) => {
+        await page.goto('/catalogue');
+        await page.waitForLoadState('networkidle');
+        expect(page.url()).toContain('/resources');
+    });
+
+    test('legacy /approvals URL redirects to /automations', async ({ page }) => {
+        await page.goto('/approvals');
+        await page.waitForLoadState('networkidle');
+        expect(page.url()).toContain('/automations');
+    });
+
+    test('legacy /telemetry URL redirects to /system', async ({ page }) => {
+        await page.goto('/telemetry');
+        await page.waitForLoadState('networkidle');
+        expect(page.url()).toContain('/system');
+    });
+
+    test('legacy /matrix URL redirects to /system', async ({ page }) => {
+        await page.goto('/matrix');
+        await page.waitForLoadState('networkidle');
+        expect(page.url()).toContain('/system');
     });
 });

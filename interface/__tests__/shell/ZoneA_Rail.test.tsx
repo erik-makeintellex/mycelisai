@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 // Mock next/navigation with a configurable pathname
-const mockPathname = vi.fn(() => '/');
+const mockPathname = vi.fn(() => '/dashboard');
 vi.mock('next/navigation', () => ({
     useRouter: () => ({
         push: vi.fn(),
@@ -13,26 +13,32 @@ vi.mock('next/navigation', () => ({
     usePathname: () => mockPathname(),
 }));
 
+// Mock Zustand store
+const mockAdvancedMode = vi.fn(() => false);
+const mockToggleAdvancedMode = vi.fn();
+vi.mock('@/store/useCortexStore', () => ({
+    useCortexStore: (selector: any) => {
+        const state = {
+            advancedMode: mockAdvancedMode(),
+            toggleAdvancedMode: mockToggleAdvancedMode,
+        };
+        return selector(state);
+    },
+}));
+
 import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
-const NAV_ENTRIES = [
-    { href: '/', label: 'Mission Control' },
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/architect', label: 'Swarm Architect' },
-    { href: '/matrix', label: 'Cognitive Matrix' },
-    { href: '/wiring', label: 'Neural Wiring' },
-    { href: '/teams', label: 'Team Management' },
-    { href: '/catalogue', label: 'Agent Catalogue' },
-    { href: '/marketplace', label: 'Skills Market' },
+const V7_NAV_ENTRIES = [
+    { href: '/dashboard', label: 'Mission Control' },
+    { href: '/automations', label: 'Automations' },
+    { href: '/resources', label: 'Resources' },
     { href: '/memory', label: 'Memory' },
-    { href: '/telemetry', label: 'System Status' },
-    { href: '/approvals', label: 'Governance' },
-    { href: '/settings', label: 'Settings' },
 ];
 
-describe('ZoneA_Rail', () => {
+describe('ZoneA_Rail (V7 Workflow-First Navigation)', () => {
     beforeEach(() => {
-        mockPathname.mockReturnValue('/');
+        mockPathname.mockReturnValue('/dashboard');
+        mockAdvancedMode.mockReturnValue(false);
     });
 
     it('renders the Mycelis brand name', () => {
@@ -40,37 +46,67 @@ describe('ZoneA_Rail', () => {
         expect(screen.getByText('Mycelis')).toBeDefined();
     });
 
-    it('renders all navigation links', () => {
+    it('renders all primary navigation links', () => {
         render(<ZoneA />);
-        for (const entry of NAV_ENTRIES) {
+        for (const entry of V7_NAV_ENTRIES) {
             expect(screen.getByText(entry.label)).toBeDefined();
         }
     });
 
+    it('renders Settings in footer', () => {
+        render(<ZoneA />);
+        expect(screen.getByText('Settings')).toBeDefined();
+    });
+
     it('highlights active route with cortex-primary', () => {
-        mockPathname.mockReturnValue('/');
+        mockPathname.mockReturnValue('/dashboard');
         const { container } = render(<ZoneA />);
-        const homeLink = container.querySelector('a[href="/"]');
-        expect(homeLink?.className).toContain('bg-cortex-primary');
-        expect(homeLink?.className).toContain('text-white');
+        const dashboardLink = container.querySelector('a[href="/dashboard"]');
+        expect(dashboardLink?.className).toContain('bg-cortex-primary');
     });
 
     it('uses muted text for inactive routes', () => {
-        mockPathname.mockReturnValue('/');
+        mockPathname.mockReturnValue('/dashboard');
         const { container } = render(<ZoneA />);
-        const teamsLink = container.querySelector('a[href="/teams"]');
-        expect(teamsLink?.className).toContain('text-cortex-text-muted');
+        const automationsLink = container.querySelector('a[href="/automations"]');
+        expect(automationsLink?.className).toContain('text-cortex-text-muted');
     });
 
-    it('highlights /teams when active', () => {
-        mockPathname.mockReturnValue('/teams');
+    it('highlights /automations when active', () => {
+        mockPathname.mockReturnValue('/automations');
         const { container } = render(<ZoneA />);
-        const teamsLink = container.querySelector('a[href="/teams"]');
-        expect(teamsLink?.className).toContain('bg-cortex-primary');
+        const automationsLink = container.querySelector('a[href="/automations"]');
+        expect(automationsLink?.className).toContain('bg-cortex-primary');
+    });
+
+    it('does not show System tab when advancedMode is off', () => {
+        mockAdvancedMode.mockReturnValue(false);
+        const { container } = render(<ZoneA />);
+        const systemLink = container.querySelector('a[href="/system"]');
+        expect(systemLink).toBeNull();
+    });
+
+    it('shows System tab when advancedMode is on', () => {
+        mockAdvancedMode.mockReturnValue(true);
+        render(<ZoneA />);
+        expect(screen.getByText('System')).toBeDefined();
+    });
+
+    it('renders Advanced toggle button', () => {
+        render(<ZoneA />);
+        expect(screen.getByText('Advanced: Off')).toBeDefined();
     });
 
     it('does not use bg-white', () => {
         const { container } = render(<ZoneA />);
         expect(container.innerHTML).not.toContain('bg-white');
+    });
+
+    it('does not show old navigation entries', () => {
+        render(<ZoneA />);
+        const oldLabels = ['Neural Wiring', 'Team Management', 'Agent Catalogue', 'Skills Market', 'Governance', 'System Status', 'Cognitive Matrix'];
+        for (const label of oldLabels) {
+            expect(screen.queryByText(label)).toBeNull();
+        }
     });
 });

@@ -1,7 +1,17 @@
 from invoke import task, Collection
-from .config import is_windows, powershell, INTERFACE_HOST, INTERFACE_PORT
+from .config import is_windows, powershell, INTERFACE_HOST, INTERFACE_PORT, ROOT_DIR
 
 ns = Collection("interface")
+
+def _load_env():
+    """Load root .env into the process environment so Next.js middleware
+    can read MYCELIS_API_KEY (used to inject Authorization headers into
+    proxied /api/* requests). Uses override=True so .env wins over system env."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(str(ROOT_DIR / ".env"), override=True)
+    except ImportError:
+        pass  # python-dotenv not installed — env vars must be set manually
 
 # ── Lifecycle ────────────────────────────────────────────────
 
@@ -9,6 +19,7 @@ ns = Collection("interface")
 def dev(c):
     """Start Interface (Next.js) in Dev Mode. Stops existing instance first."""
     stop(c)
+    _load_env()
     c.run("npm run dev --prefix interface", pty=not is_windows())
 
 @task

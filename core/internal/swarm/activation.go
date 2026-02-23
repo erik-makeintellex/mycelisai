@@ -1,6 +1,7 @@
 package swarm
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -13,6 +14,7 @@ type ActivationResult struct {
 	TeamsSpawned   int      `json:"teams_spawned"`
 	TeamsSkipped   int      `json:"teams_skipped"`
 	SensorsSpawned int      `json:"sensors_spawned"`
+	RunID          string   `json:"run_id,omitempty"` // V7: the mission_run id for this activation
 	Errors         []string `json:"errors,omitempty"`
 }
 
@@ -20,6 +22,9 @@ type ActivationResult struct {
 // them in the Soma runtime. Sensor agents (role containing "sensor") are spawned
 // as SensorAgents instead of cognitive Agents. Idempotent: teams already active
 // in Soma are skipped.
+//
+// V7 Event Spine: if runsManager is wired, creates a mission_run before spawning teams.
+// If eventEmitter is wired, passes it to all spawned teams so agents can emit tool events.
 func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs map[string]SensorConfig) *ActivationResult {
 	result := &ActivationResult{}
 
@@ -32,6 +37,30 @@ func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs ma
 	if len(manifests) == 0 {
 		result.Errors = append(result.Errors, "blueprint produced zero team manifests")
 		return result
+	}
+
+	// V7: Create mission_run record before spawning teams.
+	// runID is empty if runsManager is not wired (pre-V7 mode — silent degradation).
+	var runID string
+	if s.runsManager != nil && bp.MissionID != "" {
+		if id, err := s.runsManager.CreateRun(context.Background(), bp.MissionID); err != nil {
+			log.Printf("ActivateBlueprint: failed to create mission run: %v (continuing without run tracking)", err)
+		} else {
+			runID = id
+			result.RunID = runID
+		}
+	}
+
+	// V7: Emit mission.started event now that we have a run_id.
+	if s.eventEmitter != nil && runID != "" {
+		if _, err := s.eventEmitter.Emit(context.Background(), runID,
+			protocol.EventMissionStarted, protocol.SeverityInfo,
+			"soma", "", map[string]interface{}{
+				"mission_id": bp.MissionID,
+				"teams":      len(bp.Teams),
+			}); err != nil {
+			log.Printf("ActivateBlueprint: failed to emit mission.started: %v", err)
+		}
 	}
 
 	s.mu.Lock()
@@ -67,6 +96,10 @@ func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs ma
 		}
 		if len(teamSensorConfigs) > 0 {
 			team.SetSensorConfigs(teamSensorConfigs)
+		}
+		// V7: wire event emitter + run_id into team so agents can emit tool events.
+		if s.eventEmitter != nil && runID != "" {
+			team.SetEventEmitter(s.eventEmitter, runID)
 		}
 
 		if err := team.Start(); err != nil {

@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { SignalProvider, useSignalStream } from "./SignalContext";
-import { Activity, Settings, Plus } from "lucide-react";
+import { Layers, Settings, Plus } from "lucide-react";
 import TelemetryRow from "./TelemetryRow";
 import MissionControlChat from "./MissionControlChat";
 import OpsOverview from "./OpsOverview";
 import SignalDetailDrawer from "../stream/SignalDetailDrawer";
 import ModeRibbon from "./ModeRibbon";
+import LaunchCrewModal from "../workspace/LaunchCrewModal";
 
-const STORAGE_KEY = "mission-control-split";
+const STORAGE_KEY = "workspace-split";
+const STORAGE_KEY_LEGACY = "mission-control-split";
 const DEFAULT_RATIO = 0.55; // 55% chat, 45% ops
 const MIN_RATIO = 0.25;
 const MAX_RATIO = 0.80;
@@ -21,7 +22,8 @@ function clamp(v: number, min: number, max: number) {
 
 function loadRatio(): number {
     if (typeof window === "undefined") return DEFAULT_RATIO;
-    const saved = localStorage.getItem(STORAGE_KEY);
+    // Try new key first; fall back to legacy key for migration
+    const saved = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(STORAGE_KEY_LEGACY);
     if (saved) {
         const n = parseFloat(saved);
         if (!isNaN(n)) return clamp(n, MIN_RATIO, MAX_RATIO);
@@ -39,9 +41,9 @@ export default function MissionControlLayout() {
 
 function DashboardGrid() {
     const { isConnected } = useSignalStream();
-    const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
     const [ratio, setRatio] = useState(DEFAULT_RATIO);
+    const [isLaunchCrewOpen, setIsLaunchCrewOpen] = useState(false);
     const dragging = useRef(false);
 
     // Load persisted ratio on mount
@@ -81,8 +83,8 @@ function DashboardGrid() {
             <header className="h-12 border-b border-cortex-border flex items-center justify-between px-4 bg-cortex-surface/50 backdrop-blur-sm flex-shrink-0">
                 <div className="flex items-center gap-4">
                     <h1 className="font-mono font-bold text-lg text-cortex-success flex items-center gap-2">
-                        <Activity className="w-4 h-4" />
-                        MISSION CONTROL
+                        <Layers className="w-4 h-4" />
+                        Workspace
                     </h1>
                     <span className="text-xs text-cortex-text-muted font-mono">
                         SIGNAL:{" "}
@@ -95,19 +97,19 @@ function DashboardGrid() {
                 </div>
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => router.push("/wiring")}
-                        className="px-3 py-1.5 rounded bg-cortex-primary/10 border border-cortex-primary/30 hover:bg-cortex-primary/20 text-cortex-primary text-xs font-mono flex items-center gap-2 transition-all"
+                        onClick={() => setIsLaunchCrewOpen(true)}
+                        className="px-3 py-1.5 rounded bg-cortex-primary/10 border border-cortex-primary/30 hover:bg-cortex-primary/20 text-cortex-primary text-sm font-mono flex items-center gap-2 transition-all"
                     >
                         <Plus className="w-3 h-3" />
-                        NEW MISSION
+                        Launch Crew
                     </button>
                     <div className="h-4 w-px bg-cortex-border" />
-                    <button
-                        onClick={() => router.push("/settings")}
+                    <a
+                        href="/settings"
                         className="p-1.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main transition-colors"
                     >
                         <Settings className="w-4 h-4" />
-                    </button>
+                    </a>
                 </div>
             </header>
 
@@ -153,6 +155,11 @@ function DashboardGrid() {
 
             {/* Signal Detail Drawer */}
             <SignalDetailDrawer />
+
+            {/* Launch Crew Modal */}
+            {isLaunchCrewOpen && (
+                <LaunchCrewModal onClose={() => setIsLaunchCrewOpen(false)} />
+            )}
         </div>
     );
 }

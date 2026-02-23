@@ -453,6 +453,10 @@ export interface CortexState {
     savedBlueprints: MissionBlueprint[];
     isBlueprintDrawerOpen: boolean;
 
+    // V7: Advanced Mode toggle — controls System tab + advanced surfaces visibility
+    advancedMode: boolean;
+    toggleAdvancedMode: () => void;
+
     // Tools Palette (Phase 7.7) — workspace tool browser
     isToolsPaletteOpen: boolean;
 
@@ -829,13 +833,16 @@ function dispatchSignalToNodes(
 // ── Chat Persistence (localStorage) ──────────────────────────
 // Soma's memory: chat survives page refreshes. Use clearMissionChat to reset.
 
-const CHAT_STORAGE_KEY = 'mycelis-mission-chat';
+const CHAT_STORAGE_KEY = 'mycelis-workspace-chat';
+const CHAT_STORAGE_KEY_LEGACY = 'mycelis-mission-chat'; // migrate old key
 const CHAT_MAX_PERSISTED = 200; // cap to avoid localStorage quota issues
 
 function loadPersistedChat(): ChatMessage[] {
     if (typeof window === 'undefined') return [];
     try {
-        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        // Try new key first, fall back to legacy key on first load (migration)
+        const raw = localStorage.getItem(CHAT_STORAGE_KEY)
+            ?? localStorage.getItem(CHAT_STORAGE_KEY_LEGACY);
         if (!raw) return [];
         const msgs: ChatMessage[] = JSON.parse(raw);
         return Array.isArray(msgs) ? msgs.slice(-CHAT_MAX_PERSISTED) : [];
@@ -876,6 +883,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     isSyncingThreshold: false,
     savedBlueprints: [],
     isBlueprintDrawerOpen: false,
+    advancedMode: typeof window !== 'undefined' ? localStorage.getItem('mycelis-advanced-mode') === 'true' : false,
     isToolsPaletteOpen: false,
     sensorFeeds: [],
     isFetchingSensors: false,
@@ -1194,6 +1202,16 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     toggleBlueprintDrawer: () => {
         set((s) => ({ isBlueprintDrawerOpen: !s.isBlueprintDrawerOpen }));
+    },
+
+    toggleAdvancedMode: () => {
+        set((s) => {
+            const next = !s.advancedMode;
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('mycelis-advanced-mode', String(next));
+            }
+            return { advancedMode: next };
+        });
     },
 
     toggleToolsPalette: () => {

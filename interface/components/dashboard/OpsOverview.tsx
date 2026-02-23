@@ -233,7 +233,6 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 function MissionsSection() {
-    const router = useRouter();
     const missions = useCortexStore((s) => s.missions);
     const fetchMissions = useCortexStore((s) => s.fetchMissions);
     const teamsDetail = useCortexStore((s) => s.teamsDetail);
@@ -272,11 +271,11 @@ function MissionsSection() {
     };
 
     return (
-        <SectionCard title="Missions" subtitle="Active agent swarms executing user-defined objectives" icon={Radar} href="/wiring">
+        <SectionCard title="Missions" subtitle="Active agent swarms executing user-defined objectives" icon={Radar} href="/automations?tab=active">
             {sortedMissions.length === 0 ? (
                 <div className="px-4 py-5 text-center">
                     <p className="text-sm font-mono text-cortex-text-muted">No active missions</p>
-                    <p className="text-xs font-mono text-cortex-text-muted/50 mt-1">Ask Soma to create one, or use the Wiring page</p>
+                    <p className="text-xs font-mono text-cortex-text-muted/50 mt-1">Launch a crew from Workspace, or ask Soma</p>
                 </div>
             ) : (
                 <div className="max-h-64 overflow-y-auto">
@@ -286,10 +285,9 @@ function MissionsSection() {
                         const status = allAgents.length > 0 ? aggregateStatus(allAgents) : "offline";
 
                         return (
-                            <button
+                            <div
                                 key={mission.id}
-                                onClick={() => router.push(`/missions/${mission.id}/teams`)}
-                                className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-cortex-bg/30 transition-colors text-left group"
+                                className="w-full px-4 py-2.5 flex items-center gap-3 text-left"
                             >
                                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_DOT[status]}`} />
                                 <span className="text-[13px] font-mono font-bold text-cortex-text-main truncate flex-1">
@@ -301,8 +299,7 @@ function MissionsSection() {
                                 <span className="text-xs font-mono text-cortex-text-muted">
                                     {mission.teams}T / {mission.agents}A
                                 </span>
-                                <ExternalLink className="w-3.5 h-3.5 text-cortex-text-muted opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </button>
+                            </div>
                         );
                     })}
                 </div>
@@ -320,7 +317,7 @@ function TeamsSection() {
     if (standingTeams.length === 0) return null;
 
     return (
-        <SectionCard title="Teams" subtitle="Standing teams always online — Soma, Council, and more" icon={Users} href="/teams">
+        <SectionCard title="Teams" subtitle="Standing teams always online — Soma, Council, and more" icon={Users} href="/automations?tab=teams">
             <div className="max-h-44 overflow-y-auto">
                 {standingTeams.map((team) => {
                     const status = aggregateStatus(team.agents);

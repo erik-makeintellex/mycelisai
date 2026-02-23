@@ -13,8 +13,11 @@
 > | [Backend Specification](docs/architecture/BACKEND.md) | Working on Go code, APIs, DB, NATS |
 > | [Frontend Specification](docs/architecture/FRONTEND.md) | Working on React/Next.js, Zustand, design |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
+> | [V7 PRD](mycelis-architecture-v7.md) | Event spine, triggers, scheduler, workflow-first IA |
 
-Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex tasks. Built through 17 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, the **Standardized Council Chat API** with CTS-enveloped responses, **Soma Identity** with persistent chat memory, artifact pipeline, and in-character organism personality, **Conversation Memory & Scheduled Teams**, a **Natural Human Interface** (label translation layer), **Phase 0 Security Containment** (API key auth, filesystem sandboxing, MCP lockdown), and **Agent & Provider Orchestration** (brain provenance pipeline, mutation-gated proposals, brains management, unified lifecycle ops).
+Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
+
+Built through 19 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, **Soma Identity & Artifacts**, **Conversation Memory**, **Natural Human Interface**, **Phase 0 Security Containment**, **Agent & Provider Orchestration** — and now executing **V7: Event Spine & Workflow-First Orchestration**. V7 Team A (Event Spine) is complete: persistent mission runs, `MissionEventEnvelope` audit records, tool event emission, and run timeline APIs. Team B (Trigger Engine), Team C (Scheduler), and Team E (Run Timeline UI) follow in strict order.
 
 ## Architecture
 
@@ -32,32 +35,45 @@ Mycelis is a "Neural Organism" that orchestrates AI agents to solve complex task
 - **Cognitive Router:** 6 LLM providers (ollama, vllm, lmstudio, OpenAI, Anthropic, Gemini), profile-based routing, token telemetry. Brain provenance tracks which provider/model executed each response.
 - **CE-1 Templates:** Orchestration template engine with intent proofs, confirm tokens (15min TTL), and audit trail. Chat-to-Answer (read-only) and Chat-to-Proposal (mutation-gated) execution modes.
 - **Brains API:** Provider management with location/data_boundary/usage_policy/roles_allowed. Enable/disable toggle and policy updates persist to `cognitive.yaml`.
+- **Event Spine (V7):** Dual-layer event architecture — CTS for real-time signal transport, MissionEventEnvelope for persistent audit-grade records. Every execution creates a `mission_run` with unique `run_id`. Events persisted to `mission_events` before CTS publish. CTS payloads reference `mission_event_id` for timeline reconstruction.
+- **Trigger Rules Engine (V7):** Declarative IF/THEN trigger rules evaluated on event ingest. Supports cooldown, recursion guard (max depth), and concurrency guard. Default mode: propose-only. Auto-execute requires explicit policy allowance.
+- **Scheduler (V7):** In-process goroutine scheduler backed by `scheduled_missions` table. Enforces max_active_runs, suspends when NATS offline. Cron expressions for recurring missions.
 
 ### Tier 2: Nervous System (NATS JetStream 2.12)
 
 - 30+ topics: heartbeat, audit trace, team internals, council request-reply, sensor ingress, mission DAG.
 - All topics use constants from `pkg/protocol/topics.go` — never hardcode.
 
+### Tier 4: Event & Scheduling Layer (V7)
+
+- **mission_runs (023):** Execution identity — `run_id`, `mission_id`, `intent_proof_id`, `triggered_by_rule_id`, `parent_run_id`, `depth`, `status`. Anchors all timelines and chains.
+- **mission_events (024):** MissionEventEnvelope persistence — 17-field audit-grade event records with causal linking (`parent_event_id`, `parent_run_id`, `trigger_rule_id`).
+- **trigger_rules (025):** Declarative event → action rules with cooldown, recursion guard, concurrency guard. Default mode: propose.
+- **trigger_executions (026):** Audit log of rule evaluations — evaluated/fired/skipped with reason.
+- **scheduled_missions (027):** Cron-backed recurring execution with `max_active_runs` guard.
+
 ### Tier 3: The Face (Next.js 16 + React 19 + Zustand 5)
 
-- **Mission Control (`/dashboard`):** The admin's primary command interface — see [Mission Control Reference](#mission-control-reference) below.
-- **Neural Wiring (`/wiring`):** ArchitectChat + CircuitBoard (ReactFlow) + ToolsPalette + NatsWaterfall. Interactive edit/delete: click agent nodes to modify manifests, delete agents, discard drafts, or terminate active missions.
+- **Workspace (`/dashboard`):** The admin's primary command interface — renamed from "Mission Control". See [Workspace Reference](#workspace-reference) below.
+- **V7 Navigation (Workflow-First):** 5 primary panels — Workspace (chat, proposals, timelines), Automations (scheduled missions, triggers, drafts, approvals, teams, Neural Wiring), Resources (brains, tools, catalogue), Memory (semantic search, recall events), System (health, debug — Advanced Mode toggle). Architecture-surface routes (`/wiring`, `/architect`, `/teams`, `/catalogue`, `/approvals`, `/telemetry`, `/matrix`) redirect server-side to their workflow parent with `?tab=` deep-linking.
+- **Neural Wiring (Automations → Wiring tab, Advanced Mode):** ArchitectChat + CircuitBoard (ReactFlow) + ToolsPalette + NatsWaterfall. Interactive edit/delete: click agent nodes to modify manifests, delete agents, discard drafts, or terminate active missions.
 - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
-- **Team Management (`/teams`):** Browse standing + mission teams, agent roster, delivery targets.
-- **Memory Explorer (`/memory`):** Hot/Warm/Cold three-tier browser with semantic search.
-- **Settings (`/settings`):** Brains (provider management with remote-enable confirmation), Cognitive Matrix, MCP Tools (curated library), Users (stub auth).
+- **Memory Explorer (`/memory`):** Two-column redesign — Warm (sitreps + artifacts, 40%) + Cold semantic search (60%). Hot signal stream hidden behind Advanced Mode toggle (collapsible). Human-facing labels throughout.
+- **Settings (`/settings`):** Brains (provider management with remote-enable confirmation, LOCAL/LEAVES_ORG boundary badge), Cognitive Matrix, MCP Tools (curated library), Users (stub auth). Policy/approval rules now in Automations → Approvals tab.
+- **Run Timeline (V7, backend ready):** Vertical event timeline per mission run — policy decisions, tool invocations, trigger firings, artifacts, completion. UI components pending Team E.
+- **Causal Chain View (V7, backend ready):** Parent run → event → trigger → child run traversal. UI components pending Team E.
 - **Mode Ribbon:** Always-visible status bar showing current execution mode, active brain (with local/remote badge), and governance state.
 - **Proposal Blocks:** Inline chat cards for mutation-gated actions — shows intent, tools, risk level, confirm/cancel buttons wired to CE-1 confirm token flow.
 - **Orchestration Inspector:** Expandable audit panel showing template ID, intent proof, confirm token, and execution mode for each chat response.
-- **Visual Protocol:** Midnight Cortex theme — `cortex-bg #09090b`, `cortex-primary #06b6d4` (cyan). Zero `bg-white` in new code.
+- **Visual Protocol:** Midnight Cortex theme — `cortex-bg #09090b`, `cortex-primary #06b6d4` (cyan). Zero `bg-white` in new code. Base font-size 17px for rem-proportional readability across all Tailwind utility classes.
 
-### Mission Control Reference
+### Workspace Reference
 
-Mission Control (`/dashboard`) is the admin's primary interface — a resizable two-panel layout where 80% of work happens in conversation.
+Workspace (`/dashboard`) is the admin's primary interface — a resizable two-panel layout where 80% of work happens in conversation.
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│  MISSION CONTROL          SIGNAL: LIVE       [+ NEW] [⚙]     │
+│  Workspace                SIGNAL: LIVE   [Launch Crew] [⚙]   │
 ├─── Telemetry Row ─────────────────────────────────────────────┤
 │  [Goroutines: 42] [Heap: 18MB] [System: 52MB] [LLM: 3.2t/s] │
 ├───────────────────────────────────────────────────────────────┤
@@ -69,6 +85,7 @@ Mission Control (`/dashboard`) is the admin's primary interface — a resizable 
 │   │  Inline artifacts: charts, images, audio, data        │   │
 │   │  Trust score badges + tool-use pills                  │   │
 │   │  /all prefix or broadcast toggle for swarm-wide msgs  │   │
+│   │  Soma Offline Guide when no council members reachable │   │
 │   └───────────────────────────────────────────────────────┘   │
 │                                                               │
 ├═══════════════════ drag to resize ════════════════════════════─┤
@@ -83,7 +100,7 @@ Mission Control (`/dashboard`) is the admin's primary interface — a resizable 
 │   ┌──────────────────────────────────────────────────────────┐│
 │   │ ACTIVE MISSIONS (full width)                             ││
 │   │ mission-abc ●LIVE  2T/6A    mission-xyz ●DONE  1T/3A    ││
-│   └── ↗ ────────────────────────────────────────────────────┘│
+│   └──────────────────────────────────────────────────────────┘│
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -91,10 +108,10 @@ Mission Control (`/dashboard`) is the admin's primary interface — a resizable 
 
 | Zone | Component | Description |
 | :--- | :--- | :--- |
-| **Header** | `MissionControl` | Signal status (SSE live/offline), NEW MISSION button (→ `/wiring`), Settings gear (→ `/settings`) |
+| **Header** | `MissionControl` | Signal status (SSE live/offline), **Launch Crew** button (opens `LaunchCrewModal` — guided 3-step crew intent → proposal → confirm), Settings gear (→ `/settings`) |
 | **Telemetry Row** | `TelemetryRow` | 4 sparkline cards — Goroutines, Heap, System Memory, LLM Tokens/s. Polls `/api/v1/telemetry/compute` every 5s. Shows offline banner after 3 failures. |
-| **Chat (top)** | `MissionControlChat` | The primary interaction surface — see Chat section below |
-| **Resize Handle** | custom drag | Pointer-event drag handler. Split ratio persisted to localStorage (`mission-control-split`). Clamped 25%–80%. |
+| **Chat (top)** | `MissionControlChat` | The primary interaction surface — see Chat section below. Shows `SomaOfflineGuide` with startup instructions + retry button when no council members are reachable. |
+| **Resize Handle** | custom drag | Pointer-event drag handler. Split ratio persisted to localStorage (`workspace-split`). Clamped 25%–80%. |
 | **Ops Overview (bottom)** | `OpsOverview` | Responsive auto-fit grid of compact dashboard cards — see Ops section below |
 | **Signal Drawer** | `SignalDetailDrawer` | Right-side slide-over for signal inspection (type badge, metadata grid, raw JSON). Opened by clicking alert rows. |
 
@@ -137,7 +154,7 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | **MCP tools** | Any installed MCP server tools are also available (filesystem, fetch, brave-search, etc.) |
 | **Trust scores** | Each response carries a CTS trust score (0.0–1.0), displayed as a colored badge |
 | **Multi-turn** | Full conversation history is forwarded to the agent — maintains context across turns |
-| **Chat memory** | Conversation persists to localStorage (survives page refresh, 200-message cap). Use `clearMissionChat` to reset. |
+| **Chat memory** | Conversation persists to localStorage key `mycelis-workspace-chat` (survives page refresh, 200-message cap). Use `clearMissionChat` to reset. Migrates transparently from legacy `mycelis-mission-chat` key. |
 | **Broadcast replies** | Broadcast collects responses from all active teams via NATS request-reply (60s timeout per team) |
 | **Artifact pipeline** | Tool results with artifacts (images, charts, code) flow through CTS envelope to frontend for inline rendering |
 
@@ -149,21 +166,41 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | **Priority Alerts** | SSE signal stream (governance_halt, error, task_complete, artifact) | Signal Detail Drawer (click row) | Real-time |
 | **Standing Teams** | `GET /api/v1/teams/detail` (filtered: `type === "standing"`) | `/teams` | 10s |
 | **MCP Tools** | `GET /api/v1/mcp/servers` | `/settings/tools` | On mount |
-| **Active Missions** *(full-width below grid)* | `GET /api/v1/missions` + `GET /api/v1/teams/detail` | `/missions/{id}/teams` per row | 15s / 10s |
+| **Active Missions** *(full-width below grid)* | `GET /api/v1/missions` + `GET /api/v1/teams/detail` | `/automations?tab=active` (header) | 15s / 10s |
 
-Top 4 cards sit in an auto-fit grid; Active Missions spans full width below for better output readability. Each card header has an ↗ icon linking to its detail page. The MCP card also shows a **Recommended** banner for `brave-search` and `github` if not installed.
+Top 4 cards sit in an auto-fit grid; Active Missions spans full width below for better output readability. Each card header has an ↗ icon linking to its detail page. The MCP card also shows a **Recommended** banner for `brave-search` and `github` if not installed. Mission rows are display-only in V7 — run timeline deep-links will be added in Team E.
 
-#### MCP Bootstrap (Zero-Config)
+#### MCP Baseline Operating Profile (V7 MVOS)
 
-On first server boot, two MCP servers are automatically installed and connected:
+V7 ships a **Minimum Viable Operational Stack** — users can create files, generate artifacts, run research, schedule jobs, chain missions, and inspect results immediately after install, with no manual MCP configuration.
 
-| Server | Purpose | Config |
-| :--- | :--- | :--- |
-| `filesystem` | Read/write files from a mounted data directory | Path: `DATA_DIR` env (default `./workspace`) |
-| `fetch` | HTTP fetch — hit any URL for APIs, web pages, data | No config needed |
+| Server | Purpose | Default Config | Risk |
+| :--- | :--- | :--- | :--- |
+| `filesystem` | Sandboxed file I/O (read, write, list, create, append) | Root: `/workspace` — no escape | Low (read) / Medium (write) |
+| `memory` | Semantic store + recall (pgvector-backed) | Scoped to `tenant_id`, linked to `run_id` | Low |
+| `artifact-renderer` | Render structured outputs (markdown, JSON, tables, images) | Inline rendering via CTS pipeline | Low |
+| `fetch` | Controlled web research (HTTP GET, domain allowlist) | Max response size limited, no script exec | Medium |
 
-These give agents immediate file and web access without manual setup. Additional servers (brave-search, github, etc.) can be installed via Settings → MCP Tools.
+**Default workspace structure** (auto-created on first run):
 
+```text
+/workspace
+  /projects
+  /research
+  /artifacts
+  /reports
+  /exports
+```
+
+**Tool risk classification:**
+
+- **Low:** read_file, semantic_search, render_artifact — no confirm required
+- **Medium:** write_file, scheduling — confirm required
+- **High:** remote provider usage, trigger rule creation, MCP install — always confirm
+
+**All MCP tools emit MissionEventEnvelope events:** `tool.invoked`, `tool.completed`, `tool.failed`, `artifact.created`. Every tool action is traceable in the Run Timeline.
+
+> Detailed specification: [V7 MCP Baseline](docs/V7_MCP_BASELINE.md)
 > Full architecture details: [Architecture Overview](docs/architecture/OVERVIEW.md) | [Backend Spec](docs/architecture/BACKEND.md) | [Frontend Spec](docs/architecture/FRONTEND.md) | [Operations Manual](docs/architecture/OPERATIONS.md)
 
 ## Getting Started
@@ -285,25 +322,27 @@ Three workflows run on push/PR to `main` and `develop`:
 
 ## Frontend Routes
 
+> **V7 Navigation (Active):** 5 workflow-first panels — Mission Control, Automations, Resources, Memory, System (advanced). Legacy architecture-surface routes (`/wiring`, `/catalogue`, `/matrix`, etc.) redirect to their workflow parent with tab deep-linking.
+
 | Route | Description |
 | :--- | :--- |
 | `/` | Product landing page (marketing) — links to `/dashboard` to launch console |
-| `/dashboard` | Mission Control — Resizable chat-dominant layout, OpsOverview dashboard, telemetry sparklines |
-| `/wiring` | Neural Wiring — ArchitectChat + CircuitBoard (edit/delete agents) + NatsWaterfall |
-| `/architect` | Redirects to `/wiring` |
-| `/teams` | Team Management — browse standing + mission teams, agent roster, delivery targets |
-| `/catalogue` | Agent Catalogue — CRUD for agent blueprints |
-| `/memory` | Memory Explorer — Hot/Warm/Cold three-tier browser |
-| `/approvals` | Governance — approval queue, policy config, team proposals (3 tabs) |
-| `/missions/[id]/teams` | Team Actuation — live team drill-down |
-| `/settings` | Profile, Teams, Cognitive Matrix, MCP Tools, Brains, Users |
-| `/settings/brain` | Cognitive Matrix — provider routing grid |
-| `/settings/brains` | Brains — provider management (enable/disable, policy, remote confirmation) |
-| `/settings/users` | Users — stub auth, role display |
-| `/settings/tools` | MCP Tools — server management + curated library |
-| `/matrix` | Cognitive Matrix data table |
-| `/marketplace` | Skills Market — connector registry |
-| `/telemetry` | System Status — infrastructure monitoring |
+| `/dashboard` | **Workspace** — Resizable chat-dominant layout (Launch Crew button, SomaOfflineGuide, council chat), OpsOverview dashboard, telemetry sparklines |
+| `/automations` | **Automations** — 6 tabs: Active Automations, Draft Blueprints, Trigger Rules, Approvals + Policy, Teams, Neural Wiring (Advanced Mode only) |
+| `/resources` | **Resources** — 4 tabs: Brains, MCP Tools, Workspace Explorer, Capabilities |
+| `/memory` | **Memory** — 2-column: Warm sitreps/artifacts (left) + Cold semantic search (right). Hot signal stream collapsible under Advanced Mode. |
+| `/system` | **System** (Advanced Mode only) — 5 tabs: Event Health, NATS Status, Database, Cognitive Matrix, Debug |
+| `/settings` | Settings — Brains, Cognitive Matrix, MCP Tools, Users |
+| `/runs/[id]` | Run Timeline — vertical event timeline for a mission execution (V7 — backend ready, UI pending Team E) |
+| `/runs/[id]/chain` | Causal Chain View — parent/child run traversal (V7 — backend ready, UI pending Team E) |
+| `/wiring` | Server redirect → `/automations?tab=wiring` |
+| `/architect` | Server redirect → `/automations?tab=wiring` |
+| `/teams` | Server redirect → `/automations?tab=teams` |
+| `/catalogue` | Server redirect → `/resources?tab=catalogue` |
+| `/marketplace` | Server redirect → `/resources?tab=catalogue` |
+| `/approvals` | Server redirect → `/automations?tab=approvals` |
+| `/telemetry` | Server redirect → `/system?tab=health` |
+| `/matrix` | Server redirect → `/system?tab=matrix` |
 
 ## Stack Versions (Locked)
 
@@ -364,12 +403,21 @@ Three workflows run on push/PR to `main` and `develop`:
 ## Verification
 
 ```bash
-uvx inv core.test             # Go unit tests (~120 handler tests)
-uvx inv interface.test        # Vitest component tests (~114 tests)
-uvx inv interface.e2e         # Playwright E2E specs (20 spec files, requires running servers)
+uvx inv core.test             # Go unit tests (181 tests across 16 packages — server, events, runs, swarm, governance, ...)
+uvx inv interface.test        # Vitest component tests (~70 V7 tests, 56 pass, 2 pre-existing DashboardPage failures)
+uvx inv interface.e2e         # Playwright E2E specs (requires running servers)
 uvx inv interface.check       # HTTP smoke test against running dev server (9 pages)
 uvx inv core.smoke            # Governance smoke tests
 ```
+
+**Go test breakdown (V7 additions):**
+
+| Package | Tests | Coverage |
+| :--- | :--- | :--- |
+| `internal/server` | 154 | Handler tests: missions, governance, templates, MCP, council, runs, artifacts, proposals |
+| `internal/events` | 16 | Emit (happy/nil-db/empty-run-id), GetRunTimeline (multi-row/empty/nil-db), summarizePayload |
+| `internal/runs` | 15 | CreateRun, CreateChildRun, UpdateRunStatus (running/completed/failed), GetRun, ListRunsForMission |
+| Other packages | ~80 | artifacts, bootstrap, catalogue, cognitive, governance, memory, overseer, scip, state, swarm, protocol |
 
 > Full testing documentation: [docs/TESTING.md](docs/TESTING.md)
 
@@ -398,6 +446,9 @@ uvx inv core.smoke            # Governance smoke tests
 | P0 | Security Containment | API key auth middleware (fail-closed, constant-time compare), filesystem sandbox (`validateToolPath` + 1MB write cap), MCP raw install disabled (library-only), schedule safety (30s min interval + atomic guard), SSE CORS wildcard removed, Next.js middleware auth injection |
 | 19.A | Agent & Provider Orchestration | BrainProvenance pipeline (agent → CTS → Zustand → per-message UI header), ModeRibbon (mode/brain/governance status bar), ProposedActionBlock (inline mutation proposals with confirm/cancel), OrchestrationInspector (audit panel), BrainsPage (provider management with remote-enable confirmation), UsersPage (stub auth) |
 | 19.B | Proposal Loop & Lifecycle | Mutation detection in HandleChat/HandleCouncilChat (ModeProposal), confirmProposal wired to POST /api/v1/intent/confirm-action, brains toggle persistence to cognitive.yaml, MCP pool 15s timeout (prevents boot blocking), unified lifecycle management (`lifecycle.status/up/down/health/restart`) |
+| Workspace UX | Workspace Rename + Crew Launch + Memory Redesign | "Mission Control" → "Workspace" across rail/header/loading. `LaunchCrewModal` (3-step intent → proposal → confirm). `SomaOfflineGuide` (startup command, retry button). `MemoryExplorer` redesigned to 2-col (Warm+Cold primary, Hot behind Advanced Mode). `OpsOverview` dead route fix (`/missions/{id}/teams` removed). Auth fix: `interface/.env.local` + `ops/interface.py _load_env()`. |
+| V7 Step 01 | Workflow-First Navigation (Team D) | Nav collapsed from 12+ routes to 5 workflow-first panels. `ZoneA_Rail` (5 items + Advanced Mode toggle). `/automations` (6 tabs + deep-link + advanced gate). `/resources` (4 tabs + deep-link). `/system` (5 tabs + advanced gate). 8 legacy routes → server-side `redirect()`. `PolicyTab` CRUD migrated from `/approvals` into `ApprovalsTab`. 56 unit tests pass. |
+| V7 Team A | Event Spine | `mission_runs` (023) + `mission_events` (024) migrations. `protocol.MissionEventEnvelope` + 17 `EventType` constants. `events.Store` (Emit — DB-first + async CTS publish). `runs.Manager` (CreateRun, CreateChildRun, UpdateRunStatus). `GET /api/v1/runs/{id}/events` + `GET /api/v1/runs/{id}/chain` handlers. Propagation chain: Soma → activation → team → agent. Agent emits `tool.invoked`/`tool.completed`/`tool.failed` per ReAct iteration. `CommitResponse.RunID` returned to UI. TypeScript types in `interface/types/events.ts`. |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)
 
@@ -407,6 +458,7 @@ Planned phases with detailed specifications are documented in the Architecture O
 
 | Phase | Name | Summary |
 | :--- | :--- | :--- |
+| **V7** | **Event Spine & Workflow-First Orchestration** | **IN PROGRESS** — Team D (nav) ✓, Workspace UX ✓, Team A (Event Spine) ✓. **Next:** Team B (Trigger Engine: migrations 025-026, rules CRUD, evaluation engine with cooldown/recursion/concurrency guards) → Team C (Scheduler: migration 027, cron goroutine, NATS suspend/resume) → Team E (Run Timeline + Causal Chain UI) |
 | 12 | Persistent Agent Memory | Cross-mission memory, semantic recall, memory consolidation daemon |
 | 13 | Multi-Agent Collaboration | Intra-team debate protocol, consensus detection, SquadRoom live chat |
 | 14 | Hot-Reload Runtime | Live agent goroutine replacement, zero-downtime reconfiguration |

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function ArchitectPage() {
-    redirect('/wiring');
+export default function ArchitectRedirect() {
+    redirect('/automations?tab=wiring');
 }

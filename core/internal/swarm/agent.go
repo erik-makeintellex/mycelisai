@@ -38,6 +38,11 @@ type Agent struct {
 	internalTools  *InternalToolRegistry // live system state + context builder
 	ctx            context.Context
 	cancel         context.CancelFunc
+	// V7 Event Spine: optional event emitter for tool audit trail.
+	// Set by team.Start() propagating from Soma.ActivateBlueprint.
+	// Nil = no emission (pre-V7 or degraded mode — silent, no panic).
+	eventEmitter protocol.EventEmitter
+	runID        string
 }
 
 // NewAgent creates a new Agent instance with lifecycle context.
@@ -64,6 +69,13 @@ func (a *Agent) SetToolDescriptions(descs map[string]string) {
 // SetInternalTools wires the internal tool registry for runtime context and tool execution.
 func (a *Agent) SetInternalTools(tools *InternalToolRegistry) {
 	a.internalTools = tools
+}
+
+// SetEventEmitter wires the V7 event emitter + run_id for tool audit trail emission.
+// Called by team.Start() before the agent goroutine is launched.
+func (a *Agent) SetEventEmitter(emitter protocol.EventEmitter, runID string) {
+	a.eventEmitter = emitter
+	a.runID = runID
 }
 
 // SetTeamTopology provides the agent with its team's NATS I/O contracts.
@@ -234,9 +246,24 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, maxIter, toolCall.Name)
 			toolsUsed = append(toolsUsed, toolCall.Name)
 
+			// V7: emit tool.invoked before execution (best-effort, non-blocking)
+			if a.eventEmitter != nil && a.runID != "" {
+				go a.eventEmitter.Emit(a.ctx, a.runID, //nolint:errcheck
+					protocol.EventToolInvoked, protocol.SeverityInfo,
+					a.Manifest.ID, a.TeamID,
+					map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1})
+			}
+
 			serverID, _, err := a.toolExecutor.FindToolByName(a.ctx, toolCall.Name)
 			if err != nil {
 				log.Printf("Agent [%s] tool lookup failed: %v", a.Manifest.ID, err)
+				// V7: emit tool.failed
+				if a.eventEmitter != nil && a.runID != "" {
+					go a.eventEmitter.Emit(a.ctx, a.runID, //nolint:errcheck
+						protocol.EventToolFailed, protocol.SeverityError,
+						a.Manifest.ID, a.TeamID,
+						map[string]interface{}{"tool": toolCall.Name, "error": err.Error(), "phase": "lookup"})
+				}
 				responseText = fmt.Sprintf("Tool '%s' is not available: %v", toolCall.Name, err)
 				break
 			}
@@ -244,8 +271,22 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			toolResult, err := a.toolExecutor.CallTool(a.ctx, serverID, toolCall.Name, toolCall.Arguments)
 			if err != nil {
 				log.Printf("Agent [%s] tool call failed: %v", a.Manifest.ID, err)
+				// V7: emit tool.failed
+				if a.eventEmitter != nil && a.runID != "" {
+					go a.eventEmitter.Emit(a.ctx, a.runID, //nolint:errcheck
+						protocol.EventToolFailed, protocol.SeverityError,
+						a.Manifest.ID, a.TeamID,
+						map[string]interface{}{"tool": toolCall.Name, "error": err.Error(), "phase": "execute"})
+				}
 				responseText = fmt.Sprintf("Tool %s failed: %v", toolCall.Name, err)
 				break
+			}
+			// V7: emit tool.completed
+			if a.eventEmitter != nil && a.runID != "" {
+				go a.eventEmitter.Emit(a.ctx, a.runID, //nolint:errcheck
+					protocol.EventToolCompleted, protocol.SeverityInfo,
+					a.Manifest.ID, a.TeamID,
+					map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1})
 			}
 
 			// Extract artifact from structured tool result (side-channel).

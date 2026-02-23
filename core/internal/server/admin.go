@@ -12,6 +12,7 @@ import (
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/events"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
@@ -19,6 +20,7 @@ import (
 	"github.com/mycelis/core/internal/provisioning"
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
+	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
 	"github.com/mycelis/core/internal/swarm"
@@ -46,9 +48,12 @@ type AdminServer struct {
 	MCPLibrary    *mcp.Library        // Phase 7.7: Curated MCP Library
 	Catalogue     *catalogue.Service  // Phase 7.5: Agent Catalogue
 	Artifacts     *artifacts.Service  // Phase 7.5: Agent Outputs
+	// V7 Event Spine (Team A)
+	Events        *events.Store       // V7: persistent mission event audit trail
+	Runs          *runs.Manager       // V7: mission run lifecycle management
 }
 
-func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
 	return &AdminServer{
 		Router:        r,
 		Guard:         guard,
@@ -68,6 +73,8 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		MCPLibrary:    mcpLib,
 		Catalogue:     cat,
 		Artifacts:     art,
+		Events:        evStore,
+		Runs:          runsManager,
 	}
 }
 
@@ -209,6 +216,10 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/brains", s.HandleListBrains)
 	mux.HandleFunc("PUT /api/v1/brains/{id}/toggle", s.HandleToggleBrain)
 	mux.HandleFunc("PUT /api/v1/brains/{id}/policy", s.HandleUpdateBrainPolicy)
+
+	// V7 Event Spine (Team A): Run Timeline + Causal Chain
+	mux.HandleFunc("GET /api/v1/runs/{id}/events", s.handleGetRunEvents)
+	mux.HandleFunc("GET /api/v1/runs/{id}/chain", s.handleGetRunChain)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {
