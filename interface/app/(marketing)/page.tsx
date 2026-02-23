@@ -34,6 +34,7 @@ export default function LandingPage() {
                         <Link href="#spectrum" className="hover:text-cortex-primary transition-colors">SPECTRUM</Link>
                         <Link href="#architecture" className="hover:text-cortex-primary transition-colors">ARCHITECTURE</Link>
                         <Link href="#governance" className="hover:text-cortex-primary transition-colors">GOVERNANCE</Link>
+                        <Link href="/docs" className="hover:text-cortex-primary transition-colors">DOCS</Link>
                     </div>
                     <div className="flex items-center gap-4">
                         <Link href="/dashboard" className="px-4 py-2 text-xs font-mono border border-cortex-border hover:border-cortex-primary/50 hover:text-cortex-primary hover:bg-cortex-primary/10 transition-all rounded text-cortex-text-muted font-medium">
@@ -364,7 +365,7 @@ export default function LandingPage() {
                         <Link href="/dashboard" className="px-8 py-4 bg-cortex-primary text-cortex-bg font-bold rounded hover:bg-cortex-primary/90 transition-all shadow-xl shadow-cyan-900/20 ring-1 ring-cortex-primary/50">
                             Launch Console
                         </Link>
-                        <Link href="https://github.com/erik-makeintellex/mycelisai" target="_blank" className="px-8 py-4 border border-cortex-border text-cortex-text-main font-bold rounded hover:bg-cortex-surface transition-all">
+                        <Link href="/docs" className="px-8 py-4 border border-cortex-border text-cortex-text-main font-bold rounded hover:bg-cortex-surface transition-all">
                             Read the Docs
                         </Link>
                     </div>
@@ -378,7 +379,7 @@ export default function LandingPage() {
                         &copy; 2026 Mycelis AI. All systems nominal.
                     </div>
                     <div className="flex gap-6 text-sm">
-                        <Link href="https://github.com/erik-makeintellex/mycelisai#readme" target="_blank" className="hover:text-cortex-text-main transition-colors">Documentation</Link>
+                        <Link href="/docs" className="hover:text-cortex-text-main transition-colors">Documentation</Link>
                         <Link href="/dashboard" className="hover:text-cortex-text-main transition-colors">Dashboard</Link>
                         <Link href="/telemetry" className="hover:text-cortex-text-main transition-colors">Status</Link>
                     </div>
