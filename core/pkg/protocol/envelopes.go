@@ -101,12 +101,20 @@ type ChatProposal struct {
 	IntentProofID string   `json:"intent_proof_id"`
 }
 
+// ConsultationEntry records a single council member consultation made by an agent
+// during its ReAct loop. Member is the agent ID (e.g. "council-architect"),
+// Summary is the first 300 chars of the member's response.
+type ConsultationEntry struct {
+	Member  string `json:"member"`
+	Summary string `json:"summary"`
+}
+
 // ChatResponsePayload is the CTS Payload for council chat responses.
 // Any endpoint returning LLM-generated content wraps it in this struct
 // inside a CTSEnvelope.
 type ChatResponsePayload struct {
 	Text          string              `json:"text"`
-	Consultations []string            `json:"consultations,omitempty"`
+	Consultations []ConsultationEntry `json:"consultations,omitempty"`
 	ToolsUsed     []string            `json:"tools_used,omitempty"`
 	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`
 	// CE-1: Answer provenance (audit linkage for Chat-to-Answer template)

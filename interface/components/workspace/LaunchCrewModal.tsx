@@ -74,14 +74,20 @@ export default function LaunchCrewModal({ onClose }: Props) {
     const pendingProposal = useCortexStore((s) => s.pendingProposal);
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
+    const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
 
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [intent, setIntent] = useState("");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Auto-focus textarea on open
+    // Clear stale proposal and reset to Soma on open
     useEffect(() => {
+        cancelProposal();
+        setCouncilTarget('admin');
+        setStep(1);
+        setIntent('');
         textareaRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Advance to step 3 when Soma has a proposal ready
@@ -94,6 +100,7 @@ export default function LaunchCrewModal({ onClose }: Props) {
     const handleSend = () => {
         const trimmed = intent.trim();
         if (!trimmed || isMissionChatting) return;
+        setCouncilTarget('admin'); // always route to Soma
         sendMissionChat(trimmed);
         setStep(2);
     };

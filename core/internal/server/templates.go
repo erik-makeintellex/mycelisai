@@ -305,6 +305,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		"confirmed":      true,
 		"proof_id":       proofID,
 		"audit_event_id": auditID,
+		"run_id":         nil, // populated by /api/v1/intent/commit for blueprint activations
 	}))
 }
 

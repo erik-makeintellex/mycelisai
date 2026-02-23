@@ -60,8 +60,9 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
 - **Memory Explorer (`/memory`):** Two-column redesign — Warm (sitreps + artifacts, 40%) + Cold semantic search (60%). Hot signal stream hidden behind Advanced Mode toggle (collapsible). Human-facing labels throughout.
 - **Settings (`/settings`):** Brains (provider management with remote-enable confirmation, LOCAL/LEAVES_ORG boundary badge), Cognitive Matrix, MCP Tools (curated library), Users (stub auth). Policy/approval rules now in Automations → Approvals tab.
-- **Run Timeline (V7, backend ready):** Vertical event timeline per mission run — policy decisions, tool invocations, trigger firings, artifacts, completion. UI components pending Team E.
-- **Causal Chain View (V7, backend ready):** Parent run → event → trigger → child run traversal. UI components pending Team E.
+- **Run Timeline (V7):** Vertical event timeline per mission run — policy decisions, tool invocations, trigger firings, artifacts, completion. `RunTimeline.tsx` + `EventCard.tsx` + `/runs/[id]` page. Auto-polls every 5s; stops on terminal events.
+- **Run List (V7):** `/runs` page listing all recent runs across missions, with status dots and timestamps. Also surfaced in OpsOverview as a `Recent Runs` widget.
+- **Causal Chain View (V7, backend ready):** Parent run → event → trigger → child run traversal. `GET /api/v1/runs/{id}/chain` handler complete; UI pending.
 - **Mode Ribbon:** Always-visible status bar showing current execution mode, active brain (with local/remote badge), and governance state.
 - **Proposal Blocks:** Inline chat cards for mutation-gated actions — shows intent, tools, risk level, confirm/cancel buttons wired to CE-1 confirm token flow.
 - **Orchestration Inspector:** Expandable audit panel showing template ID, intent proof, confirm token, and execution mode for each chat response.
@@ -80,9 +81,10 @@ Workspace (`/dashboard`) is the admin's primary interface — a resizable two-pa
 │                                                               │
 │   ADMIN / COUNCIL CHAT  (55% — resizable)                     │
 │   ┌───────────────────────────────────────────────────────┐   │
-│   │  Council target selector: [ARCHITECT ▾]               │   │
+│   │  ● Soma  [⚡ Direct ▾]  (Soma is always primary)      │   │
 │   │  Rich messages: markdown, code blocks, tables, links  │   │
 │   │  Inline artifacts: charts, images, audio, data        │   │
+│   │  DelegationTrace: council members Soma consulted      │   │
 │   │  Trust score badges + tool-use pills                  │   │
 │   │  /all prefix or broadcast toggle for swarm-wide msgs  │   │
 │   │  Soma Offline Guide when no council members reachable │   │
@@ -98,8 +100,13 @@ Workspace (`/dashboard`) is the admin's primary interface — a resizable two-pa
 │   │ Sensors:3/5 │ │            │ │          │ │ +brave     │ │
 │   └── ↗ ───────┘ └────────────┘ └── ↗ ────┘ └── ↗ ───────┘ │
 │   ┌──────────────────────────────────────────────────────────┐│
-│   │ ACTIVE MISSIONS (full width)                             ││
+│   │ MISSIONS (full width)  — registerOpsWidget order:50      ││
 │   │ mission-abc ●LIVE  2T/6A    mission-xyz ●DONE  1T/3A    ││
+│   └──────────────────────────────────────────────────────────┘│
+│   ┌──────────────────────────────────────────────────────────┐│
+│   │ RUNS (full width)  — registerOpsWidget order:60          ││
+│   │ ● abc1234  running   12s ago  ⚡                         ││
+│   │ ● def5678  completed  5m ago  ⚡                         ││
 │   └──────────────────────────────────────────────────────────┘│
 └───────────────────────────────────────────────────────────────┘
 ```
@@ -147,7 +154,9 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 
 | Feature | Details |
 | :--- | :--- |
-| **Council targeting** | Dropdown selector: Admin, Architect, Coder, Creative, Sentry. Each has its own system prompt, tools, and specialization. |
+| **Soma-first header** | Soma is always the primary target — locked in the header. A `⚡ Direct` popover allows advanced users to target a specific council member directly (shown in amber when active). Resets to Soma on page load and on `LaunchCrewModal` open. |
+| **Delegation Trace** | When Soma calls `consult_council` during its ReAct loop, a `DelegationTrace` card appears below the response showing which council members were consulted and a 300-char summary of their contribution. Color-coded per member (Architect=info, Coder=success, Creative=warning, Sentry=danger). |
+| **Live activity** | While Soma processes, a `SomaActivityIndicator` reads `streamLogs` for `tool.invoked` events and shows contextual text: "Consulting Coder...", "Generating blueprint...", "Searching memory..." instead of a static spinner. |
 | **Broadcast mode** | Toggle or `/all` prefix — sends message to ALL active teams via NATS |
 | **File I/O** | Admin + council agents can `read_file` and `write_file` within the workspace sandbox (`MYCELIS_WORKSPACE`, default `./workspace`). Paths must resolve inside the boundary — symlink escapes are detected. Max 1MB per write. Sentry is read-only. |
 | **Tool access** | 20 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, store_artifact, summarize_conversation |
@@ -160,15 +169,18 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 
 #### Ops Overview Cards
 
-| Card | Data Source | Deep Link | Refresh |
-| :--- | :--- | :--- | :--- |
-| **System Status** | `GET /api/v1/cognitive/status` + `GET /api/v1/sensors` | `/settings/brain` | 15s / 60s |
-| **Priority Alerts** | SSE signal stream (governance_halt, error, task_complete, artifact) | Signal Detail Drawer (click row) | Real-time |
-| **Standing Teams** | `GET /api/v1/teams/detail` (filtered: `type === "standing"`) | `/teams` | 10s |
-| **MCP Tools** | `GET /api/v1/mcp/servers` | `/settings/tools` | On mount |
-| **Active Missions** *(full-width below grid)* | `GET /api/v1/missions` + `GET /api/v1/teams/detail` | `/automations?tab=active` (header) | 15s / 10s |
+| Card | Layout | Data Source | Deep Link | Refresh |
+| :--- | :--- | :--- | :--- | :--- |
+| **System Status** | grid (order 10) | `GET /api/v1/cognitive/status` + `GET /api/v1/sensors` | `/settings/brain` | 15s / 60s |
+| **Priority Alerts** | grid (order 20) | SSE signal stream (governance_halt, error, task_complete, artifact) | Signal Detail Drawer (click row) | Real-time |
+| **Standing Teams** | grid (order 30) | `GET /api/v1/teams/detail` (filtered: `type === "standing"`) | `/automations?tab=teams` | 10s |
+| **MCP Tools** | grid (order 40) | `GET /api/v1/mcp/servers` | `/settings/tools` | On mount |
+| **Missions** | fullWidth (order 50) | `GET /api/v1/missions` + `GET /api/v1/teams/detail` | `/automations?tab=active` | 15s / 10s |
+| **Runs** | fullWidth (order 60) | `GET /api/v1/runs` | `/runs` | 10s |
 
-Top 4 cards sit in an auto-fit grid; Active Missions spans full width below for better output readability. Each card header has an ↗ icon linking to its detail page. The MCP card also shows a **Recommended** banner for `brave-search` and `github` if not installed. Mission rows are display-only in V7 — run timeline deep-links will be added in Team E.
+The top 4 grid cards use `grid-cols-[repeat(auto-fit,minmax(240px,1fr))]`; full-width sections stack below. Each card has an ↗ deep-link. The MCP card shows a **Recommended** banner for `brave-search` and `github` if not installed. Mission rows link to run timelines via `/runs/{id}`.
+
+**Widget Registry:** All sections are registered via `registerOpsWidget()` in `lib/opsWidgetRegistry.ts`. Adding a new widget: create a React component, call `registerOpsWidget({ id, order, layout, Component })` — OpsOverview renders all registered widgets automatically. Use `order` multiples of 10 to slot between existing widgets.
 
 #### MCP Baseline Operating Profile (V7 MVOS)
 
@@ -202,6 +214,506 @@ V7 ships a **Minimum Viable Operational Stack** — users can create files, gene
 
 > Detailed specification: [V7 MCP Baseline](docs/V7_MCP_BASELINE.md)
 > Full architecture details: [Architecture Overview](docs/architecture/OVERVIEW.md) | [Backend Spec](docs/architecture/BACKEND.md) | [Frontend Spec](docs/architecture/FRONTEND.md) | [Operations Manual](docs/architecture/OPERATIONS.md)
+
+---
+
+## Soma Workflow — End-to-End Reference
+
+This section documents the complete interaction loop from user intent to mission execution, covering both the **GUI path** (browser) and the **API path** (direct HTTP). All paths converge on the same backend — the GUI is a thin consumer of the same endpoints available to any API client.
+
+### Quick Reference
+
+| Step | GUI Component | HTTP Endpoint | Go Handler | Reference |
+| :--- | :--- | :--- | :--- | :--- |
+| 1. Send message | `MissionControlChat` input | `POST /api/v1/council/admin/chat` | `HandleCouncilChat` | [Chat Panel](#chat-panel--rich-message-rendering) |
+| 2. Live activity | `SomaActivityIndicator` | SSE `GET /api/v1/stream` | `HandleSSEStream` | [Chat Capabilities](#chat-capabilities) |
+| 3. View delegation | `DelegationTrace` in bubble | ← in chat response body | `processMessageStructured` | [Chat Capabilities](#chat-capabilities) |
+| 4. View proposal | `ProposedActionBlock` | ← in chat response body (`mode: proposal`) | `HandleCouncilChat` mutation detector | [Proposal Blocks](#workspace-reference) |
+| 5. Confirm mutation | `ProposedActionBlock` confirm btn | `POST /api/v1/intent/confirm-action` | `HandleConfirmAction` | [Confirm API](#5-confirm-action-post-apiv1intentconfirm-action) |
+| 6. Mission activated | system message pill in chat | ← in confirm response (`run_id`) | `HandleConfirmAction` | [System Message](#6-mission-activated--system-message) |
+| 7. Run timeline | `RunTimeline` at `/runs/{id}` | `GET /api/v1/runs/{id}/events` | `handleGetRunEvents` | [Run Timeline API](#7-run-events-get-apiv1runsid-events) |
+| 8. All runs | `RecentRunsSection` in OpsOverview | `GET /api/v1/runs` | `handleListRuns` | [Runs List API](#8-all-runs-get-apiv1runs) |
+| 9. Causal chain | `/runs/{id}/chain` (UI pending) | `GET /api/v1/runs/{id}/chain` | `handleGetRunChain` | [Chain API](#9-causal-chain-get-apiv1runsidchain) |
+
+---
+
+### GUI Execution Path
+
+The browser workflow from intent to run timeline — every numbered step corresponds to a distinct UI state.
+
+#### 1. Open Workspace
+
+Navigate to `http://localhost:3000/dashboard`.
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│  Workspace              SIGNAL: LIVE    [Launch Crew]  [⚙]   │
+├───────────────────────────────────────────────────────────────┤
+│  Chat header:  ● Soma  [⚡ Direct ▾]                         │
+│  (Soma is always primary — [⚡ Direct ▾] opens council list)  │
+```
+
+- Component: `MissionControlChat` — Soma header is **locked**; no dropdown
+- On mount: `setCouncilTarget('admin')` is called — always resets to Soma
+- `LaunchCrewModal` also calls `setCouncilTarget('admin')` on open, clearing stale proposals
+
+#### 2. Send a Message
+
+Type intent in the textarea and press Enter or click Send.
+
+```
+You: "Write me a Python CSV parser that handles quoted fields"
+```
+
+- Store action: `sendMissionChat(text)` → `POST /api/v1/council/admin/chat`
+- NATS routes to Soma (`swarm.council.admin.request`)
+
+#### 3. Live Activity — SomaActivityIndicator
+
+While Soma processes its ReAct loop, the loading state reads `streamLogs` for `tool.invoked` events:
+
+```
+⟳  Consulting Coder...       ● ● ●
+```
+
+| Tool invoked | Activity label |
+| :--- | :--- |
+| `consult_council` | `Consulting {member}...` |
+| `generate_blueprint` | `Generating mission blueprint...` |
+| `research_for_blueprint` | `Researching past missions...` |
+| `write_file` | `Writing {path}...` |
+| `read_file` | `Reading {path}...` |
+| `search_memory` | `Searching memory...` |
+| `recall` | `Recalling context...` |
+| `store_artifact` | `Storing artifact...` |
+| `list_teams` | `Checking active teams...` |
+| `get_system_status` | `Reading system status...` |
+| *(other)* | `{tool name with underscores as spaces}...` |
+
+- Component: `SomaActivityIndicator` in `MissionControlChat.tsx`
+- Data source: `useCortexStore(s => s.streamLogs)` — SSE events from `GET /api/v1/stream`
+
+#### 4. Response Arrives — DelegationTrace
+
+When Soma completes, the message bubble renders:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Here's a robust CSV parser that handles quoted fields...    │
+│                                                             │
+│ [markdown content rendered by react-markdown + remark-gfm] │
+│                                                             │
+│ ─── Soma consulted ─────────────────────────────────────── │
+│ ┌──────────────┐  ┌────────────────────────────────────┐   │
+│ │ Coder        │  │ ...                                │   │
+│ │ Here is a    │  │ (summary of each member's reply)   │   │
+│ │ Python CSV   │  │                                    │   │
+│ └──────────────┘  └────────────────────────────────────┘   │
+│                                                             │
+│  [consult_council]  [read_file]           C:0.82  answer   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- **DelegationTrace:** renders `msg.consultations[]` — each entry: `{ member, summary }`
+- Member color coding: Architect=`cortex-info`, Coder=`cortex-success`, Creative=`cortex-warning`, Sentry=`cortex-danger`
+- Summary is first 300 chars of the council member's response
+- Tool-use pills show every tool Soma invoked in its ReAct iterations
+- Trust badge `C:{score}` from CTS `trust_score` field
+- Mode badge: `answer` (read-only) or `proposal` (mutation pending)
+
+#### 5. Confirm a Mutation — ProposedActionBlock
+
+If Soma detects a mutation in its response (file write, mission activation, trigger rule, etc.), the mode is `proposal` and a block appears below the message:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ ⚠ PROPOSED ACTION                                           │
+│ Intent: Write Python CSV parser to /workspace/csv_parser.py │
+│ Tools:  write_file                           Risk: MEDIUM   │
+│                                                             │
+│    [✗ Cancel]                [✓ Confirm & Execute]          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- Component: `ProposedActionBlock` in `MissionControlChat.tsx`
+- Store: `pendingProposal` + `activeConfirmToken` hold the CE-1 confirm token (15min TTL)
+- "Cancel" → `cancelProposal()` clears both
+- "Confirm" → `confirmProposal()` → `POST /api/v1/intent/confirm-action`
+
+#### 6. Mission Activated — System Message
+
+After confirm, a green pill appears in chat:
+
+```
+         ⚡ Mission activated — abc1234...  ↗
+```
+
+- Role: `system` in `ChatMessage` — renders centered, not as a normal bubble
+- Clicking navigates to `/runs/{run_id}`
+- If `run_id` is null (lightweight chat proposal, no blueprint), pill shows plain "Mission activated" text
+
+#### 7. Run Timeline — `/runs/{id}`
+
+Full-page vertical event timeline. Auto-polls every 5 seconds.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ← Workspace    Run: abc1234-aaaa-...    ● running          │
+│  Started: 12s ago    [↺ Refresh]    (auto-refresh)         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ●────── mission.started        soma · admin-core   12s    │
+│  │       {"mission_id": "m-abc1234"}                       │
+│  │                                                          │
+│  ●────── tool.invoked           coder · council    10s     │
+│  │       write_file → /workspace/csv_parser.py             │
+│  │                                                          │
+│  ●────── tool.completed         coder · council     8s     │
+│  │       write_file ✓  [▸ show payload]                    │
+│  │                                                          │
+│  ●        mission.completed     soma · admin-core    4s    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- Component: `RunTimeline.tsx` → `EventCard.tsx` per event
+- Polling: `setInterval(fetch, 5000)` — clears when `mission.completed`, `mission.failed`, or `mission.cancelled` is detected
+- Event dot colors: `mission.*` → green/red, `tool.invoked` → cyan, `tool.completed` → info, `tool.failed` → red, `memory.*` → amber, `artifact.created` → amber
+
+#### 8. OpsOverview Runs Widget
+
+The Runs card in the dashboard lower pane shows all recent runs, polling every 10s:
+
+```
+┌─────────────────────────────────────────── Runs  ↗ ─────┐
+│  ● abc1234  running   12s ago  ⚡                        │
+│  ● def5678  completed  5m ago  ⚡                        │
+│  ● ghi9012  failed    12m ago  ⚡                        │
+└──────────────────────────────────────────────────────────┘
+```
+
+Clicking any row navigates to `/runs/{id}`.
+
+#### LaunchCrewModal Alternative Path
+
+A guided 3-step modal — use when you want to define intent before committing to a conversation thread:
+
+1. **Step 1:** "Launch Crew" button → modal opens → type mission intent → Send
+   - `setCouncilTarget('admin')` called before `sendMissionChat` — always Soma
+   - `cancelProposal()` called on open — clears any stale pending proposal
+2. **Step 2:** Waiting for Soma to process (SomaActivityIndicator in modal)
+3. **Step 3:** ProposedActionBlock appears inside modal → review → "Launch Crew" button
+
+---
+
+### API Execution Path
+
+The same workflow executed via direct HTTP. All endpoints require `Authorization: Bearer {MYCELIS_API_KEY}`.
+
+#### 1. Send Message — `POST /api/v1/council/admin/chat`
+
+```http
+POST /api/v1/council/admin/chat
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{
+  "message": "Write me a Python CSV parser that handles quoted fields",
+  "history": []
+}
+```
+
+Response (CTS envelope wrapping `ChatResponsePayload`):
+
+```json
+{
+  "signal_type": "chat.response",
+  "source": "admin-core",
+  "trust_score": 0.82,
+  "payload": {
+    "text": "Here's a robust CSV parser...",
+    "tools_used": ["consult_council", "write_file"],
+    "consultations": [
+      {
+        "member": "council-coder",
+        "summary": "Here is a Python CSV parser implementation that handles..."
+      }
+    ],
+    "mode": "answer",
+    "provider_id": "ollama",
+    "model_used": "qwen2.5-coder:7b",
+    "artifacts": [],
+    "brain_provenance": {
+      "provider_id": "ollama",
+      "model_id": "qwen2.5-coder:7b",
+      "profile": "admin"
+    }
+  }
+}
+```
+
+When Soma detects a mutation (`mode: "proposal"`), the response also includes:
+
+```json
+{
+  "payload": {
+    "mode": "proposal",
+    "proposed_action": {
+      "template_id": "write-file-v1",
+      "intent_proof_id": "ip-xyz",
+      "confirm_token": "ct-abc123",
+      "description": "Write /workspace/csv_parser.py",
+      "tools": ["write_file"],
+      "risk_level": "medium"
+    }
+  }
+}
+```
+
+> **Note:** The admin chat endpoint is `POST /api/v1/council/admin/chat`. Other council members are `POST /api/v1/council/{member}/chat` where `{member}` is `architect`, `coder`, `creative`, or `sentry`. Use `GET /api/v1/council/members` to list all available members dynamically.
+
+#### 2. Get Available Council Members — `GET /api/v1/council/members`
+
+```http
+GET /api/v1/council/members
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+```json
+{
+  "ok": true,
+  "data": [
+    { "id": "admin", "name": "Admin", "team": "admin-core", "online": true },
+    { "id": "architect", "name": "Architect", "team": "council-core", "online": true },
+    { "id": "coder", "name": "Coder", "team": "council-core", "online": true },
+    { "id": "creative", "name": "Creative", "team": "council-core", "online": true },
+    { "id": "sentry", "name": "Sentry", "team": "council-core", "online": true }
+  ]
+}
+```
+
+#### 3. Direct Council Chat — `POST /api/v1/council/{member}/chat`
+
+Skip Soma entirely and send directly to a specialist:
+
+```http
+POST /api/v1/council/coder/chat
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{
+  "message": "Review this Go code for race conditions",
+  "history": []
+}
+```
+
+Response shape is identical to admin chat, but `consultations[]` will be empty (Coder doesn't delegate back).
+
+#### 4. Broadcast to All Teams — `POST /api/v1/chat` with `/all` prefix
+
+```http
+POST /api/v1/chat
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{
+  "message": "/all What is the current system status?"
+}
+```
+
+Sends to every active team via NATS; collects all responses (60s timeout per team).
+
+#### 5. Confirm Action — `POST /api/v1/intent/confirm-action`
+
+```http
+POST /api/v1/intent/confirm-action
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{
+  "confirm_token": "ct-abc123"
+}
+```
+
+```json
+{
+  "status": "confirmed",
+  "run_id": "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+}
+```
+
+`run_id` is `null` for lightweight chat proposals that don't activate a mission blueprint. For full blueprint executions it will be a UUID — use it to poll the run timeline.
+
+#### 6. Mission Activated — System Message
+
+> GUI only — the system message pill is a frontend construct. In the API path, the `run_id` from the confirm response is your handle.
+
+#### 7. Run Events — `GET /api/v1/runs/{id}/events`
+
+```http
+GET /api/v1/runs/aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa/events
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+```json
+[
+  {
+    "id": "ev-1",
+    "run_id": "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "tenant_id": "default",
+    "event_type": "mission.started",
+    "severity": "info",
+    "source_agent": "soma",
+    "source_team": "admin-core",
+    "payload": { "mission_id": "m-abc1234" },
+    "audit_event_id": "",
+    "emitted_at": "2026-02-23T10:15:00Z"
+  },
+  {
+    "id": "ev-2",
+    "run_id": "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "tenant_id": "default",
+    "event_type": "tool.invoked",
+    "severity": "info",
+    "source_agent": "coder",
+    "source_team": "council-core",
+    "payload": { "tool": "write_file", "path": "/workspace/csv_parser.py" },
+    "audit_event_id": "",
+    "emitted_at": "2026-02-23T10:15:01Z"
+  }
+]
+```
+
+Poll this endpoint every 5s until you see `mission.completed`, `mission.failed`, or `mission.cancelled`.
+
+**Event types and their meaning:**
+
+| event_type | Emitter | Meaning |
+| :--- | :--- | :--- |
+| `mission.started` | Soma/activation | A mission run began |
+| `mission.completed` | Soma | Run finished successfully |
+| `mission.failed` | Soma | Run ended with error |
+| `tool.invoked` | Any agent | ReAct loop called a tool |
+| `tool.completed` | Any agent | Tool returned successfully |
+| `tool.failed` | Any agent | Tool returned an error |
+| `agent.started` | Team manager | An agent goroutine started |
+| `memory.stored` | Archivist / MCP memory | Fact persisted to pgvector |
+| `memory.recalled` | Any agent | Semantic search returned results |
+| `artifact.created` | Any agent | File/chart/code artifact stored |
+| `trigger.fired` | Trigger engine | A trigger rule activated |
+| `schedule.fired` | Scheduler | A scheduled mission launched |
+
+#### 8. All Runs — `GET /api/v1/runs`
+
+```http
+GET /api/v1/runs
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "mission_id": "m-abc1234",
+      "tenant_id": "default",
+      "status": "completed",
+      "run_depth": 0,
+      "parent_run_id": "",
+      "started_at": "2026-02-23T10:15:00Z",
+      "completed_at": "2026-02-23T10:15:08Z"
+    }
+  ]
+}
+```
+
+Returns the 20 most recent runs for `tenant_id = "default"`, newest first.
+
+#### 9. Causal Chain — `GET /api/v1/runs/{id}/chain`
+
+```http
+GET /api/v1/runs/aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa/chain
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+```json
+{
+  "run_id": "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "mission_id": "m-abc1234",
+  "chain": [
+    {
+      "id": "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "mission_id": "m-abc1234",
+      "status": "running",
+      "run_depth": 0,
+      "started_at": "2026-02-23T10:15:00Z"
+    },
+    {
+      "id": "bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "mission_id": "m-abc1234",
+      "status": "completed",
+      "run_depth": 0,
+      "started_at": "2026-02-23T09:00:00Z",
+      "completed_at": "2026-02-23T09:01:00Z"
+    }
+  ]
+}
+```
+
+Returns all runs for the same `mission_id` as the target run — newest first. Use `parent_run_id` and `run_depth` fields to reconstruct trigger-chain trees. UI: `ViewChain.tsx` (pending).
+
+---
+
+### Workflow State Diagram
+
+```
+User input
+    │
+    ▼
+POST /api/v1/council/admin/chat
+    │
+    ├─── NATS: swarm.council.admin.request ──► Soma ReAct loop
+    │                                              │
+    │                                    ┌─────────┴──────────┐
+    │                                    │  tool: consult_council
+    │                                    │  NATS: swarm.council.{member}.request
+    │                                    │  ◄── council reply (summary)
+    │                                    │  ConsultationEntry appended
+    │                                    └─────────┬──────────┘
+    │                                              │
+    │                                    Soma synthesizes
+    │                                    mode = answer | proposal
+    │
+    ◄── ChatResponsePayload (CTS envelope)
+         │
+         ├── consultations[] → DelegationTrace in UI
+         ├── tools_used[]    → tool-use pills in UI
+         │
+         └── mode == "proposal"?
+                │
+                ▼
+         ProposedActionBlock shown
+                │
+         User clicks Confirm
+                │
+                ▼
+         POST /api/v1/intent/confirm-action
+                │ { confirm_token }
+                │
+                ◄── { status: "confirmed", run_id: "uuid" }
+                │
+                ├── system message pill in chat ──► click ──► /runs/{id}
+                │
+                └── run_id ──► GET /api/v1/runs/{id}/events (poll 5s)
+                                   │
+                                   └── EventCard timeline in RunTimeline.tsx
+                                           │
+                                   Poll until terminal event:
+                                   mission.completed | mission.failed | mission.cancelled
+```
+
+---
 
 ## Getting Started
 
@@ -332,9 +844,11 @@ Three workflows run on push/PR to `main` and `develop`:
 | `/resources` | **Resources** — 4 tabs: Brains, MCP Tools, Workspace Explorer, Capabilities |
 | `/memory` | **Memory** — 2-column: Warm sitreps/artifacts (left) + Cold semantic search (right). Hot signal stream collapsible under Advanced Mode. |
 | `/system` | **System** (Advanced Mode only) — 5 tabs: Event Health, NATS Status, Database, Cognitive Matrix, Debug |
+| `/docs` | **In-App Docs** — Two-column documentation browser (sidebar + rendered markdown). Serves docs via `GET /docs-api` (manifest) + `GET /docs-api/[slug]` (content). `/docs-api` prefix avoids the `/api/*` → Go proxy rewrite. Curated sections: User Guides, Getting Started, Soma Workflow, API Reference, Architecture, Governance & Testing, V7 Development. Add entries to `lib/docsManifest.ts`. Deep-link: `/docs?doc={slug}`. |
 | `/settings` | Settings — Brains, Cognitive Matrix, MCP Tools, Users |
-| `/runs/[id]` | Run Timeline — vertical event timeline for a mission execution (V7 — backend ready, UI pending Team E) |
-| `/runs/[id]/chain` | Causal Chain View — parent/child run traversal (V7 — backend ready, UI pending Team E) |
+| `/runs` | Run List — all recent runs across missions, status dots, timestamps. Navigates to timeline on click. |
+| `/runs/[id]` | Run Timeline — vertical `EventCard` timeline, auto-polls every 5s, stops on terminal events (`mission.completed/failed`). |
+| `/runs/[id]/chain` | Causal Chain View — parent/child run traversal (V7 — backend `GET /api/v1/runs/{id}/chain` complete; UI pending). |
 | `/wiring` | Server redirect → `/automations?tab=wiring` |
 | `/architect` | Server redirect → `/automations?tab=wiring` |
 | `/teams` | Server redirect → `/automations?tab=teams` |
@@ -381,29 +895,46 @@ Three workflows run on push/PR to `main` and `develop`:
 
 ## Documentation Hub
 
-| Topic | Document |
-| :--- | :--- |
-| **Local Dev Workflow** | [docs/LOCAL_DEV_WORKFLOW.md](docs/LOCAL_DEV_WORKFLOW.md) — Setup, config reference, port map, troubleshooting |
-| **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap |
-| **Backend Specification** | [docs/architecture/BACKEND.md](docs/architecture/BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines |
-| **Frontend Specification** | [docs/architecture/FRONTEND.md](docs/architecture/FRONTEND.md) — Routes, components, Zustand, design system |
-| **Operations Manual** | [docs/architecture/OPERATIONS.md](docs/architecture/OPERATIONS.md) — Deployment, config, testing, CI/CD |
-| **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance |
-| **API Reference** | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Full endpoint table (80+ routes) |
-| **Cognitive Architecture** | [docs/COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md) — Providers, profiles, matrix UI, embedding |
-| **Memory Specs** | [docs/architecture/DIRECTIVE_MEMORY_SERVICE.md](docs/architecture/DIRECTIVE_MEMORY_SERVICE.md) — Event store & memory architecture |
-| **Governance** | [docs/governance.md](docs/governance.md) — Policy enforcement, approvals, security |
-| **Registry** | [core/internal/registry/README.md](core/internal/registry/README.md) — Connector marketplace |
-| **Telemetry** | [docs/logging.md](docs/logging.md) — SCIP log structure |
-| **Testing** | [docs/TESTING.md](docs/TESTING.md) — Unit, integration, smoke protocols |
-| **Core API** | [core/README.md](core/README.md) — Go service architecture |
-| **CLI** | [cli/README.md](cli/README.md) — `myc` command-line tool |
-| **Interface** | [interface/README.md](interface/README.md) — Next.js frontend architecture |
+> **In-app doc browser:** Navigate to `/docs` in the running UI to browse all docs below with rendered markdown, sidebar navigation, and search. Add new entries to [interface/lib/docsManifest.ts](interface/lib/docsManifest.ts).
+
+| Topic | Document | In-App |
+| :--- | :--- | :--- |
+| **User Guides** | `docs/user/` — 7 plain-language guides for every workflow and concept | |
+| ↳ Core Concepts | [docs/user/core-concepts.md](docs/user/core-concepts.md) — Soma, Council, Mission, Run, Brain, Event, Trust | [/docs?doc=core-concepts](/docs?doc=core-concepts) |
+| ↳ Using Soma Chat | [docs/user/soma-chat.md](docs/user/soma-chat.md) — Send messages, delegation traces, confirm proposals | [/docs?doc=soma-chat](/docs?doc=soma-chat) |
+| ↳ Run Timeline | [docs/user/run-timeline.md](docs/user/run-timeline.md) — Reading execution timelines, event types, navigation | [/docs?doc=run-timeline](/docs?doc=run-timeline) |
+| ↳ Automations | [docs/user/automations.md](docs/user/automations.md) — Triggers, schedules, approvals, teams | [/docs?doc=automations-guide](/docs?doc=automations-guide) |
+| ↳ Resources | [docs/user/resources.md](docs/user/resources.md) — Brains, MCP tools, workspace, catalogue | [/docs?doc=resources-guide](/docs?doc=resources-guide) |
+| ↳ Memory | [docs/user/memory.md](docs/user/memory.md) — Semantic search, SitReps, artifacts, hot/warm/cold | [/docs?doc=memory-guide](/docs?doc=memory-guide) |
+| ↳ Governance & Trust | [docs/user/governance-trust.md](docs/user/governance-trust.md) — Trust scores, approvals, policy, propose vs execute | [/docs?doc=governance-trust](/docs?doc=governance-trust) |
+| **Overview** | [README.md](README.md) — Architecture, stack, commands, current phase | [/docs?doc=readme](/docs?doc=readme) |
+| **Local Dev Workflow** | [docs/LOCAL_DEV_WORKFLOW.md](docs/LOCAL_DEV_WORKFLOW.md) — Setup, config reference, port map, troubleshooting | [/docs?doc=local-dev](/docs?doc=local-dev) |
+| **Soma Workflow** | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — End-to-end GUI + API workflow reference | [/docs?doc=workflows](/docs?doc=workflows) |
+| **MVP Agentry Plan** | [docs/MVP_AGENTRY_PLAN.md](docs/MVP_AGENTRY_PLAN.md) — Full agentry chain map: User → Workspace → NATS → Soma | [/docs?doc=mvp-agentry](/docs?doc=mvp-agentry) |
+| **API Reference** | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Full endpoint table (80+ routes) | [/docs?doc=api-reference](/docs?doc=api-reference) |
+| **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
+| **Backend Specification** | [docs/architecture/BACKEND.md](docs/architecture/BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines | [/docs?doc=arch-backend](/docs?doc=arch-backend) |
+| **Frontend Specification** | [docs/architecture/FRONTEND.md](docs/architecture/FRONTEND.md) — Routes, components, Zustand, design system | [/docs?doc=arch-frontend](/docs?doc=arch-frontend) |
+| **Operations Manual** | [docs/architecture/OPERATIONS.md](docs/architecture/OPERATIONS.md) — Deployment, config, testing, CI/CD | [/docs?doc=arch-operations](/docs?doc=arch-operations) |
+| **Memory Service** | [docs/architecture/DIRECTIVE_MEMORY_SERVICE.md](docs/architecture/DIRECTIVE_MEMORY_SERVICE.md) — State Engine, event projection, pgvector schema | [/docs?doc=arch-memory-service](/docs?doc=arch-memory-service) |
+| **V7 Architecture PRD** | [mycelis-architecture-v7.md](mycelis-architecture-v7.md) — V7 product requirements: event spine, mission graph, observability | [/docs?doc=v7-architecture-prd](/docs?doc=v7-architecture-prd) |
+| **V7 MCP Baseline** | [docs/V7_MCP_BASELINE.md](docs/V7_MCP_BASELINE.md) — MVOS: filesystem, memory, artifact-renderer, fetch | [/docs?doc=v7-mcp-baseline](/docs?doc=v7-mcp-baseline) |
+| **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance | [/docs?doc=swarm-operations](/docs?doc=swarm-operations) |
+| **Cognitive Architecture** | [docs/COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md) — Providers, profiles, matrix UI, embedding | [/docs?doc=cognitive-architecture](/docs?doc=cognitive-architecture) |
+| **Signal Log Schema** | [docs/logging.md](docs/logging.md) — LogEntry format, NATS cortex.logs subject, field reference | [/docs?doc=logging-schema](/docs?doc=logging-schema) |
+| **Governance** | [docs/governance.md](docs/governance.md) — Policy enforcement, approvals, security | [/docs?doc=governance](/docs?doc=governance) |
+| **Testing** | [docs/TESTING.md](docs/TESTING.md) — Unit, integration, smoke protocols | [/docs?doc=testing](/docs?doc=testing) |
+| **V7 UI Verification** | [docs/verification/v7-step-01-ui.md](docs/verification/v7-step-01-ui.md) — Manual UI checklist for V7 Step 01 navigation | [/docs?doc=v7-ui-verification](/docs?doc=v7-ui-verification) |
+| **V7 Implementation Plan** | [docs/V7_IMPLEMENTATION_PLAN.md](docs/V7_IMPLEMENTATION_PLAN.md) — Teams A/B/C/D/E technical plan | [/docs?doc=v7-implementation-plan](/docs?doc=v7-implementation-plan) |
+| **Registry** | [core/internal/registry/README.md](core/internal/registry/README.md) — Connector marketplace | — |
+| **Core API** | [core/README.md](core/README.md) — Go service architecture | — |
+| **CLI** | [cli/README.md](cli/README.md) — `myc` command-line tool | — |
+| **Interface** | [interface/README.md](interface/README.md) — Next.js frontend architecture | — |
 
 ## Verification
 
 ```bash
-uvx inv core.test             # Go unit tests (181 tests across 16 packages — server, events, runs, swarm, governance, ...)
+uvx inv core.test             # Go unit tests (188 tests across 16 packages — server, events, runs, swarm, governance, ...)
 uvx inv interface.test        # Vitest component tests (~70 V7 tests, 56 pass, 2 pre-existing DashboardPage failures)
 uvx inv interface.e2e         # Playwright E2E specs (requires running servers)
 uvx inv interface.check       # HTTP smoke test against running dev server (9 pages)
@@ -414,9 +945,9 @@ uvx inv core.smoke            # Governance smoke tests
 
 | Package | Tests | Coverage |
 | :--- | :--- | :--- |
-| `internal/server` | 154 | Handler tests: missions, governance, templates, MCP, council, runs, artifacts, proposals |
+| `internal/server` | 157 | Handler tests: missions, governance, templates, MCP, council, runs (list/events/chain), artifacts, proposals |
 | `internal/events` | 16 | Emit (happy/nil-db/empty-run-id), GetRunTimeline (multi-row/empty/nil-db), summarizePayload |
-| `internal/runs` | 15 | CreateRun, CreateChildRun, UpdateRunStatus (running/completed/failed), GetRun, ListRunsForMission |
+| `internal/runs` | 19 | CreateRun, CreateChildRun, UpdateRunStatus (running/completed/failed), GetRun, ListRunsForMission, ListRecentRuns (multi-row/empty/nil-db/default-limit) |
 | Other packages | ~80 | artifacts, bootstrap, catalogue, cognitive, governance, memory, overseer, scip, state, swarm, protocol |
 
 > Full testing documentation: [docs/TESTING.md](docs/TESTING.md)
@@ -449,6 +980,8 @@ uvx inv core.smoke            # Governance smoke tests
 | Workspace UX | Workspace Rename + Crew Launch + Memory Redesign | "Mission Control" → "Workspace" across rail/header/loading. `LaunchCrewModal` (3-step intent → proposal → confirm). `SomaOfflineGuide` (startup command, retry button). `MemoryExplorer` redesigned to 2-col (Warm+Cold primary, Hot behind Advanced Mode). `OpsOverview` dead route fix (`/missions/{id}/teams` removed). Auth fix: `interface/.env.local` + `ops/interface.py _load_env()`. |
 | V7 Step 01 | Workflow-First Navigation (Team D) | Nav collapsed from 12+ routes to 5 workflow-first panels. `ZoneA_Rail` (5 items + Advanced Mode toggle). `/automations` (6 tabs + deep-link + advanced gate). `/resources` (4 tabs + deep-link). `/system` (5 tabs + advanced gate). 8 legacy routes → server-side `redirect()`. `PolicyTab` CRUD migrated from `/approvals` into `ApprovalsTab`. 56 unit tests pass. |
 | V7 Team A | Event Spine | `mission_runs` (023) + `mission_events` (024) migrations. `protocol.MissionEventEnvelope` + 17 `EventType` constants. `events.Store` (Emit — DB-first + async CTS publish). `runs.Manager` (CreateRun, CreateChildRun, UpdateRunStatus). `GET /api/v1/runs/{id}/events` + `GET /api/v1/runs/{id}/chain` handlers. Propagation chain: Soma → activation → team → agent. Agent emits `tool.invoked`/`tool.completed`/`tool.failed` per ReAct iteration. `CommitResponse.RunID` returned to UI. TypeScript types in `interface/types/events.ts`. |
+| V7 Soma Workflow | End-to-End Working Flow | **Backend:** `ConsultationEntry` type in `protocol.ChatResponsePayload`; ReAct loop captures `consult_council` calls into `ProcessResult.Consultations`; `agentResult.Consultations` wired into `chatPayload`; `GET /api/v1/runs` global listing endpoint (`runs.Manager.ListRecentRuns`). **Store:** `MissionRun` + `MissionEvent` types; `activeRunId`, `runTimeline`, `recentRuns` state; `confirmProposal` injects `role:'system'` message with `run_id`; `fetchRunTimeline` + `fetchRecentRuns` actions. **Chat UI:** Soma-locked header (no dropdown), `DirectCouncilButton` popover, `DelegationTrace` council cards, `SomaActivityIndicator` (live `streamLogs` activity), system message bubble linking to `/runs/{id}`. **Runs UI:** `RunTimeline.tsx` (auto-poll 5s), `EventCard.tsx`, `/runs/[id]` page, `/runs` list page, `RecentRunsSection` in OpsOverview. **OpsWidget Registry:** `lib/opsWidgetRegistry.ts` — `registerOpsWidget()` / `getOpsWidgets()` / `unregisterOpsWidget()` plugin API; OpsOverview renders from registry. **LaunchCrewModal:** Always targets Soma on open; clears stale proposals. **Tests:** 7 new passing Go tests (4 `ListRecentRuns`, 3 `handleListRuns`). |
+| In-App Docs Browser | `/docs` + Doc Registry | **Next.js Route Handlers:** `GET /docs-api` (manifest) + `GET /docs-api/[slug]` (file content, path-validated against manifest). `/docs-api` prefix avoids the `/api/*` → Go backend proxy rewrite; `params` awaited for Next.js 15+ async param requirement. **Manifest:** `lib/docsManifest.ts` — 29 entries across 7 curated sections; `DOC_BY_SLUG` flat map for O(1) slug validation; add a doc by adding one `DocEntry`. **User Guides (new):** 7 plain-language guides in `docs/user/` — Core Concepts, Using Soma Chat, Run Timeline, Automations, Resources, Memory, Governance & Trust — covering every implemented workflow and concept. **UI:** `/docs` page — two-column layout: sidebar (grouped nav, filter search, active state) + content pane (react-markdown + remark-gfm, Midnight Cortex styled). `?doc={slug}` deep-link; URL synced on every sidebar click. **Nav:** `BookOpen` Docs link in main nav directly below Memory (not in footer). |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)
 
@@ -458,7 +991,7 @@ Planned phases with detailed specifications are documented in the Architecture O
 
 | Phase | Name | Summary |
 | :--- | :--- | :--- |
-| **V7** | **Event Spine & Workflow-First Orchestration** | **IN PROGRESS** — Team D (nav) ✓, Workspace UX ✓, Team A (Event Spine) ✓. **Next:** Team B (Trigger Engine: migrations 025-026, rules CRUD, evaluation engine with cooldown/recursion/concurrency guards) → Team C (Scheduler: migration 027, cron goroutine, NATS suspend/resume) → Team E (Run Timeline + Causal Chain UI) |
+| **V7** | **Event Spine & Workflow-First Orchestration** | **IN PROGRESS** — Team D (nav) ✓, Workspace UX ✓, Team A (Event Spine) ✓, Soma Workflow E2E ✓ (consultation traces, run_id confirmation, Run Timeline UI, OpsWidget registry, GET /api/v1/runs). **Next:** Team B (Trigger Engine: migrations 025-026, rules CRUD, evaluation engine with cooldown/recursion/concurrency guards) → Team C (Scheduler: migration 027, cron goroutine, NATS suspend/resume) → Causal Chain UI (`ViewChain.tsx`) |
 | 12 | Persistent Agent Memory | Cross-mission memory, semantic recall, memory consolidation daemon |
 | 13 | Multi-Agent Collaboration | Intra-team debate protocol, consensus detection, SquadRoom live chat |
 | 14 | Hot-Reload Runtime | Live agent goroutine replacement, zero-downtime reconfiguration |

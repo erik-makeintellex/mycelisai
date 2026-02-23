@@ -200,3 +200,57 @@ func (m *Manager) ListRunsForMission(ctx context.Context, missionID string, limi
 	}
 	return runs, nil
 }
+
+// ListRecentRuns returns the most recent runs across all missions for a tenant, newest first.
+// Used by GET /api/v1/runs to populate the dashboard runs widget.
+func (m *Manager) ListRecentRuns(ctx context.Context, tenantID string, limit int) ([]MissionRun, error) {
+	if m.db == nil {
+		return nil, fmt.Errorf("runs: database not available")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if tenantID == "" {
+		tenantID = "default"
+	}
+
+	rows, err := m.db.QueryContext(ctx, `
+		SELECT id, mission_id, tenant_id, status, run_depth,
+		       COALESCE(parent_run_id::text, ''), started_at, completed_at
+		FROM mission_runs
+		WHERE tenant_id = $1
+		ORDER BY started_at DESC
+		LIMIT $2
+	`, tenantID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("runs: list recent query failed: %w", err)
+	}
+	defer rows.Close()
+
+	var recentRuns []MissionRun
+	for rows.Next() {
+		var run MissionRun
+		var parentRunID sql.NullString
+		var completedAt sql.NullTime
+		if err := rows.Scan(
+			&run.ID, &run.MissionID, &run.TenantID, &run.Status, &run.RunDepth,
+			&parentRunID, &run.StartedAt, &completedAt,
+		); err != nil {
+			log.Printf("[runs] scan error: %v", err)
+			continue
+		}
+		if parentRunID.Valid {
+			run.ParentRunID = parentRunID.String
+		}
+		if completedAt.Valid {
+			t := completedAt.Time
+			run.CompletedAt = &t
+		}
+		recentRuns = append(recentRuns, run)
+	}
+
+	if recentRuns == nil {
+		recentRuns = []MissionRun{}
+	}
+	return recentRuns, nil
+}

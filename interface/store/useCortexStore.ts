@@ -59,7 +59,7 @@ export interface BrainProvenance {
 }
 
 export interface ChatMessage {
-    role: 'user' | 'architect' | 'admin' | 'council';
+    role: 'user' | 'architect' | 'admin' | 'council' | 'system';
     content: string;
     consultations?: ChatConsultation[];
     tools_used?: string[];
@@ -74,6 +74,8 @@ export interface ChatMessage {
     proposal?: ProposalData;
     // Phase 19: Brain provenance
     brain?: BrainProvenance;
+    // V7: run link for system messages
+    run_id?: string;
 }
 
 export interface StreamSignal {
@@ -208,7 +210,7 @@ export interface CTSChatEnvelope {
     mode?: ExecutionMode;
     payload: {
         text: string;
-        consultations?: string[];
+        consultations?: ChatConsultation[];
         tools_used?: string[];
         artifacts?: ChatArtifactRef[];
         provenance?: AnswerProvenance;
@@ -376,6 +378,35 @@ export interface MCPLibraryCategory {
     servers: MCPLibraryEntry[];
 }
 
+// ── V7: Mission Runs ─────────────────────────────────────────
+
+export interface MissionRun {
+    id: string;
+    mission_id: string;
+    tenant_id: string;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    run_depth: number;
+    parent_run_id?: string;
+    started_at: string;
+    completed_at?: string;
+    metadata?: Record<string, unknown>;
+}
+
+// ── V7: Mission Events (Run Timeline) ───────────────────────
+
+export interface MissionEvent {
+    id: string;
+    run_id: string;
+    tenant_id: string;
+    event_type: string;
+    severity: string;
+    source_agent?: string;
+    source_team?: string;
+    payload?: Record<string, unknown>;
+    audit_event_id?: string;
+    emitted_at: string;
+}
+
 // ── Governance Policy (Phase 7.7) ────────────────────────────
 
 export interface PolicyRule {
@@ -528,6 +559,15 @@ export interface CortexState {
     activeConfirmToken: string | null;
     lastCommitProof: { intent_proof_id: string; audit_event_id: string } | null;
 
+    // V7: Run Timeline
+    activeRunId: string | null;
+    runTimeline: MissionEvent[] | null;
+    isFetchingTimeline: boolean;
+
+    // V7: Recent Runs (dashboard widget)
+    recentRuns: MissionRun[];
+    isFetchingRuns: boolean;
+
     // Signal Detail Drawer
     selectedSignalDetail: SignalDetail | null;
 
@@ -598,6 +638,8 @@ export interface CortexState {
     // CE-1: Template-aware actions
     confirmProposal: () => Promise<void>;
     cancelProposal: () => void;
+    fetchRunTimeline: (runId: string) => Promise<void>;
+    fetchRecentRuns: () => Promise<void>;
 
     // Team Explorer (Phase 7.6)
     fetchTeamDetails: () => Promise<void>;
@@ -945,6 +987,15 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     pendingProposal: null,
     activeConfirmToken: null,
     lastCommitProof: null,
+
+    // V7: Run Timeline
+    activeRunId: null,
+    runTimeline: null,
+    isFetchingTimeline: false,
+
+    // V7: Recent Runs
+    recentRuns: [],
+    isFetchingRuns: false,
 
     // Signal Detail Drawer
     selectedSignalDetail: null,
@@ -1626,7 +1677,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             const chatMsg: ChatMessage = {
                 role: 'council',
                 content: envelope.payload.text,
-                consultations: envelope.payload.consultations?.map((c) => ({ member: c, summary: c })),
+                consultations: envelope.payload.consultations,
                 tools_used: envelope.payload.tools_used,
                 source_node: envelope.meta.source_node,
                 trust_score: envelope.trust_score,
@@ -2117,7 +2168,20 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ confirm_token: activeConfirmToken }),
             });
-            if (!res.ok) {
+            if (res.ok) {
+                const body = await res.json();
+                const runId: string | null = body?.data?.run_id ?? body?.run_id ?? null;
+                const systemMsg: ChatMessage = {
+                    role: 'system',
+                    content: 'Mission activated',
+                    run_id: runId ?? undefined,
+                    timestamp: new Date().toISOString(),
+                };
+                set((s) => ({
+                    activeRunId: runId,
+                    missionChat: [...s.missionChat, systemMsg],
+                }));
+            } else {
                 const text = await res.text();
                 console.error('[CE-1] Confirm action failed:', text);
             }
@@ -2129,6 +2193,30 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     cancelProposal: () => {
         set({ pendingProposal: null, activeConfirmToken: null });
+    },
+
+    // V7: Fetch run timeline from event store
+    fetchRunTimeline: async (runId: string) => {
+        set({ isFetchingTimeline: true });
+        try {
+            const res = await fetch(`/api/v1/runs/${runId}/events`);
+            if (!res.ok) return;
+            const body = await res.json();
+            set({ runTimeline: body.data ?? body ?? [] });
+        } catch { /* offline — silent */ }
+        finally { set({ isFetchingTimeline: false }); }
+    },
+
+    // V7: Fetch recent runs for the dashboard widget
+    fetchRecentRuns: async () => {
+        set({ isFetchingRuns: true });
+        try {
+            const res = await fetch('/api/v1/runs');
+            if (!res.ok) return;
+            const body = await res.json();
+            set({ recentRuns: body.data ?? body ?? [] });
+        } catch { /* offline — silent */ }
+        finally { set({ isFetchingRuns: false }); }
     },
 }));
 

@@ -218,6 +218,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/v1/brains/{id}/policy", s.HandleUpdateBrainPolicy)
 
 	// V7 Event Spine (Team A): Run Timeline + Causal Chain
+	mux.HandleFunc("GET /api/v1/runs", s.handleListRuns)
 	mux.HandleFunc("GET /api/v1/runs/{id}/events", s.handleGetRunEvents)
 	mux.HandleFunc("GET /api/v1/runs/{id}/chain", s.handleGetRunChain)
 }
