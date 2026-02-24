@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { User, Users, BrainCircuit, Settings, Shield, Wrench, Brain } from "lucide-react";
+import { User, Users, BrainCircuit, Settings, Shield, Wrench, Brain, Layers } from "lucide-react";
 import MatrixGrid from "@/components/matrix/MatrixGrid";
 import BrainsPage from "@/components/settings/BrainsPage";
 import UsersPage from "@/components/settings/UsersPage";
+import MissionProfilesPage from "@/components/settings/MissionProfilesPage";
 
 const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegistry"), {
     ssr: false,
@@ -37,6 +38,7 @@ export default function SettingsPage() {
                     <Tab id="teams" label="Teams" icon={Users} active={activeTab === "teams"} onClick={() => setActiveTab("teams")} />
                     <Tab id="brains" label="Brains" icon={Brain} active={activeTab === "brains"} onClick={() => setActiveTab("brains")} />
                     <Tab id="matrix" label="Cognitive Matrix" icon={BrainCircuit} active={activeTab === "matrix"} onClick={() => setActiveTab("matrix")} />
+                    <Tab id="profiles" label="Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => setActiveTab("profiles")} />
                     <Tab id="tools" label="MCP Tools" icon={Wrench} active={activeTab === "tools"} onClick={() => setActiveTab("tools")} />
                     <Tab id="users" label="Users" icon={Shield} active={activeTab === "users"} onClick={() => setActiveTab("users")} />
                 </div>
@@ -52,6 +54,7 @@ export default function SettingsPage() {
                     {activeTab === "profile" && <ProfileSettings />}
                     {activeTab === "teams" && <TeamSettings />}
                     {activeTab === "brains" && <BrainsPage />}
+                    {activeTab === "profiles" && <MissionProfilesPage />}
                     {activeTab === "matrix" && <div className="p-1"><MatrixGrid /></div>}
                     {activeTab === "users" && <UsersPage />}
                 </div>

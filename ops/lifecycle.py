@@ -163,8 +163,8 @@ def _ensure_bridge():
         print(f"  Starting {label} port-forward (:{port})...")
         _start_port_forward(svc["kind_svc"], svc["forward"])
 
-        if not _wait_for_port(port, label, timeout=15):
-            print(f"  WARN: {label} bridge failed to come up")
+        if not _wait_for_port(port, label, timeout=30):
+            print(f"  WARN: {label} bridge slow to start — Core will retry for 90s")
 
 
 def _kill_bridges():
@@ -301,33 +301,35 @@ def up(c, frontend=False, build=False):
     _ensure_bridge()
     print()
 
-    # 2. Wait for dependencies
+    # 2. Wait for dependencies — Core will also retry internally (up to 90s each),
+    #    so these timeouts are just for the console status message, not hard gates.
     print("[2/4] Waiting for dependencies...")
-    pg_ok = _wait_for_port(5432, "PostgreSQL", timeout=15)
-    nats_ok = _wait_for_port(4222, "NATS", timeout=15)
+    pg_ok = _wait_for_port(5432, "PostgreSQL", timeout=30)
+    nats_ok = _wait_for_port(4222, "NATS", timeout=30)
 
     if not pg_ok:
-        print("  FATAL: PostgreSQL not reachable. Is the Kind cluster running?")
-        print("  Try: uvx inv k8s.status")
-        return
-    print("  PostgreSQL ready")
+        print("  WARN: PostgreSQL not yet reachable — Core will retry for 90s after start.")
+        print("        If this persists, check: uvx inv k8s.status")
+    else:
+        print("  PostgreSQL ready")
 
     if not nats_ok:
-        print("  WARN: NATS not reachable. Core will run in degraded mode.")
+        print("  WARN: NATS not yet reachable — Core will retry for 90s after start.")
+        print("        Real-time features will activate automatically when NATS connects.")
     else:
         print("  NATS ready")
     print()
 
-    # 3. Core server
+    # 3. Core server — allow up to 120s since Core waits up to 90s for its own deps
     print("[3/4] Starting Core server...")
     if _port_open(API_PORT):
         print(f"  Core already running on :{API_PORT}")
     else:
         if _start_core_background():
-            if _wait_for_port(API_PORT, "Core API", timeout=45):
+            if _wait_for_port(API_PORT, "Core API", timeout=120):
                 print(f"  Core online on :{API_PORT}")
             else:
-                print("  WARN: Core did not come up in time. Check logs.")
+                print("  WARN: Core did not come up in time. Check logs with: uvx inv core.run")
     print()
 
     # 4. Frontend (optional)
