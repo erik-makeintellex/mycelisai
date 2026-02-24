@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, Server, Database, BrainCircuit, Bug, Loader2 } from "lucide-react";
+import { Activity, Server, Database, BrainCircuit, Bug, Loader2, LayoutGrid, CheckCircle, XCircle, AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
 import MatrixGrid from "@/components/matrix/MatrixGrid";
 
-type TabId = "health" | "nats" | "database" | "matrix" | "debug";
-const VALID_TABS: TabId[] = ["health", "nats", "database", "matrix", "debug"];
+type TabId = "health" | "nats" | "database" | "services" | "matrix" | "debug";
+const VALID_TABS: TabId[] = ["health", "nats", "database", "services", "matrix", "debug"];
 
 interface HealthStatus {
     goroutines: number;
@@ -52,6 +52,7 @@ function SystemContent() {
                     <TabButton active={activeTab === "health"} onClick={() => setActiveTab("health")} icon={<Activity size={14} />} label="Event Health" />
                     <TabButton active={activeTab === "nats"} onClick={() => setActiveTab("nats")} icon={<Server size={14} />} label="NATS Status" />
                     <TabButton active={activeTab === "database"} onClick={() => setActiveTab("database")} icon={<Database size={14} />} label="Database" />
+                    <TabButton active={activeTab === "services"} onClick={() => setActiveTab("services")} icon={<LayoutGrid size={14} />} label="Services" />
                     <TabButton active={activeTab === "matrix"} onClick={() => setActiveTab("matrix")} icon={<BrainCircuit size={14} />} label="Cognitive Matrix" />
                     <TabButton active={activeTab === "debug"} onClick={() => setActiveTab("debug")} icon={<Bug size={14} />} label="Debug" />
                 </div>
@@ -66,6 +67,7 @@ function SystemContent() {
                         <MatrixGrid />
                     </div>
                 )}
+                {activeTab === "services" && <ServicesTab />}
                 {activeTab === "debug" && <DebugTab />}
             </div>
         </div>
@@ -229,6 +231,215 @@ function DebugTab() {
                     <p>Store: Zustand 5.0.11</p>
                     <p>Graph: ReactFlow 11.11.4</p>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Services Tab ───────────────────────────────────────────────────────────────
+
+interface ServiceStatus {
+    name: string;
+    status: "online" | "offline" | "degraded";
+    detail?: string;
+    latency_ms?: number;
+}
+
+const SERVICE_LABELS: Record<string, string> = {
+    nats: "NATS JetStream",
+    postgres: "PostgreSQL + pgvector",
+    cognitive: "Cognitive Engine",
+    reactive: "Reactive Engine",
+};
+
+const SERVICE_COMMANDS: Record<string, { up: string; down: string; restart: string }> = {
+    nats: {
+        up: "uvx inv k8s.bridge",
+        down: "uvx inv lifecycle.down",
+        restart: "uvx inv k8s.bridge",
+    },
+    postgres: {
+        up: "uvx inv k8s.bridge",
+        down: "uvx inv lifecycle.down",
+        restart: "uvx inv k8s.bridge",
+    },
+    cognitive: {
+        up: "uvx inv lifecycle.up",
+        down: "uvx inv lifecycle.down",
+        restart: "uvx inv core.restart",
+    },
+    reactive: {
+        up: "uvx inv lifecycle.up",
+        down: "uvx inv lifecycle.down",
+        restart: "uvx inv core.restart",
+    },
+};
+
+function CopyButton({ text }: { text: string }) {
+    const [copied, setCopied] = React.useState(false);
+    const copy = () => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        });
+    };
+    return (
+        <button
+            onClick={copy}
+            className="p-1 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors"
+            title="Copy"
+        >
+            {copied ? <Check className="w-3 h-3 text-cortex-success" /> : <Copy className="w-3 h-3" />}
+        </button>
+    );
+}
+
+function ServiceCard({ svc }: { svc: ServiceStatus }) {
+    const cmds = SERVICE_COMMANDS[svc.name];
+    const statusCls =
+        svc.status === "online"
+            ? "text-cortex-success border-cortex-success/30 bg-cortex-success/5"
+            : svc.status === "degraded"
+            ? "text-amber-400 border-amber-400/30 bg-amber-400/5"
+            : "text-red-400 border-red-400/30 bg-red-400/5";
+
+    const statusDot =
+        svc.status === "online"
+            ? "bg-cortex-success animate-pulse"
+            : svc.status === "degraded"
+            ? "bg-amber-400 animate-pulse"
+            : "bg-red-400";
+
+    const Icon =
+        svc.status === "online"
+            ? CheckCircle
+            : svc.status === "degraded"
+            ? AlertTriangle
+            : XCircle;
+
+    return (
+        <div className={`rounded-lg border p-4 space-y-3 ${statusCls}`}>
+            <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot}`} />
+                    <span className="text-sm font-semibold text-cortex-text-main">
+                        {SERVICE_LABELS[svc.name] ?? svc.name}
+                    </span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <Icon className="w-4 h-4" />
+                    <span className="text-xs font-mono uppercase">{svc.status}</span>
+                </div>
+            </div>
+
+            {svc.detail && (
+                <p className="text-xs text-cortex-text-muted">{svc.detail}</p>
+            )}
+            {svc.latency_ms !== undefined && svc.latency_ms > 0 && (
+                <p className="text-[10px] text-cortex-text-muted font-mono">{svc.latency_ms}ms latency</p>
+            )}
+
+            {/* Lifecycle commands */}
+            {cmds && svc.status !== "online" && (
+                <div className="space-y-1 pt-1 border-t border-current/20">
+                    <p className="text-[10px] text-cortex-text-muted uppercase tracking-wider">Restart command</p>
+                    <div className="flex items-center gap-1 bg-cortex-bg rounded px-2 py-1 border border-cortex-border">
+                        <code className="text-[10px] text-cortex-primary font-mono flex-1">{cmds.restart}</code>
+                        <CopyButton text={cmds.restart} />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ServicesTab() {
+    const [services, setServices] = React.useState<ServiceStatus[]>([]);
+    const [loading, setLoading] = React.useState(true);
+    const [lastChecked, setLastChecked] = React.useState<Date | null>(null);
+
+    const fetchStatus = React.useCallback(async () => {
+        try {
+            const res = await fetch("/api/v1/services/status");
+            if (res.ok) {
+                const body = await res.json();
+                setServices(body.data ?? []);
+                setLastChecked(new Date());
+            }
+        } catch { /* offline */ }
+        finally { setLoading(false); }
+    }, []);
+
+    React.useEffect(() => {
+        fetchStatus();
+        const interval = setInterval(fetchStatus, 10000);
+        return () => clearInterval(interval);
+    }, [fetchStatus]);
+
+    const online = services.filter((s) => s.status === "online").length;
+    const total = services.length;
+
+    return (
+        <div className="p-6 max-w-4xl mx-auto space-y-4">
+            {/* Summary bar */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold ${
+                        online === total && total > 0 ? "text-cortex-success" :
+                        online === 0 ? "text-red-400" : "text-amber-400"
+                    }`}>
+                        {loading ? "Checking…" : `${online}/${total} services online`}
+                    </span>
+                </div>
+                <div className="flex items-center gap-2">
+                    {lastChecked && (
+                        <span className="text-[10px] text-cortex-text-muted">
+                            Last checked: {lastChecked.toLocaleTimeString()}
+                        </span>
+                    )}
+                    <button
+                        onClick={fetchStatus}
+                        className="p-1.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main transition-colors"
+                        title="Refresh"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Service cards */}
+            {loading ? (
+                <div className="flex items-center justify-center py-10 text-cortex-text-muted text-xs">
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" /> Probing services…
+                </div>
+            ) : services.length === 0 ? (
+                <div className="text-center py-10 text-cortex-text-muted text-xs">
+                    Core API unreachable — run <code className="text-cortex-primary">uvx inv lifecycle.up</code> to start.
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {services.map((svc) => <ServiceCard key={svc.name} svc={svc} />)}
+                </div>
+            )}
+
+            {/* Global lifecycle commands */}
+            <div className="rounded-lg border border-cortex-border bg-cortex-surface/50 p-4 space-y-2">
+                <h4 className="text-[10px] uppercase tracking-wider text-cortex-text-muted font-semibold">Lifecycle Commands</h4>
+                {[
+                    { label: "Start all", cmd: "uvx inv lifecycle.up --build --frontend" },
+                    { label: "Stop all", cmd: "uvx inv lifecycle.down" },
+                    { label: "Restart", cmd: "uvx inv lifecycle.restart --build --frontend" },
+                    { label: "Status", cmd: "uvx inv lifecycle.status" },
+                    { label: "Health check", cmd: "uvx inv lifecycle.health" },
+                ].map(({ label, cmd }) => (
+                    <div key={cmd} className="flex items-center gap-2">
+                        <span className="text-[10px] text-cortex-text-muted w-24 flex-shrink-0">{label}</span>
+                        <div className="flex-1 flex items-center gap-1 bg-cortex-bg rounded px-2 py-1 border border-cortex-border">
+                            <code className="text-[10px] text-cortex-primary font-mono flex-1">{cmd}</code>
+                            <CopyButton text={cmd} />
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

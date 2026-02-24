@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,6 +21,10 @@ type Router struct {
 	Config     *BrainConfig
 	ConfigPath string // path to cognitive.yaml for persistence
 	Adapters   map[string]LLMProvider
+
+	// mu guards concurrent reads/writes to Config.Providers and Adapters
+	// during hot-reload operations (AddProvider, UpdateProvider, RemoveProvider).
+	mu sync.RWMutex
 
 	// Token telemetry — sliding window for rate calculation
 	totalTokens  atomic.Int64 // cumulative tokens processed
@@ -455,6 +460,81 @@ func (r *Router) Embed(ctx context.Context, text string, model string) ([]float6
 	}
 
 	return nil, fmt.Errorf("no embedding provider available (need OpenAI-compatible adapter)")
+}
+
+// buildAdapter constructs an LLMProvider for the given provider config.
+// Extracted from NewRouter init logic so it can be reused by hot-reload methods.
+func (r *Router) buildAdapter(id string, cfg ProviderConfig) (LLMProvider, error) {
+	inputType := cfg.Type
+	if inputType == "" {
+		inputType = cfg.Driver
+	}
+	switch inputType {
+	case "openai", "openai_compatible":
+		return NewOpenAIAdapter(cfg)
+	case "anthropic":
+		return NewAnthropicAdapter(cfg)
+	case "google":
+		return NewGoogleAdapter(cfg)
+	case "ollama":
+		cfg.Type = "openai_compatible"
+		return NewOpenAIAdapter(cfg)
+	default:
+		return nil, fmt.Errorf("unknown provider type %q for provider %q", inputType, id)
+	}
+}
+
+// AddProvider hot-injects a new provider without requiring a restart.
+// Builds and probes the adapter, then persists the updated config.
+func (r *Router) AddProvider(id string, cfg ProviderConfig) error {
+	adapter, err := r.buildAdapter(id, cfg)
+	if err != nil {
+		return fmt.Errorf("build adapter: %w", err)
+	}
+	r.mu.Lock()
+	if r.Config.Providers == nil {
+		r.Config.Providers = make(map[string]ProviderConfig)
+	}
+	r.Config.Providers[id] = cfg
+	r.Adapters[id] = adapter
+	r.mu.Unlock()
+	return r.SaveConfig()
+}
+
+// UpdateProvider replaces an existing adapter in-place without restart.
+// If api_key is empty, the existing key is preserved.
+func (r *Router) UpdateProvider(id string, cfg ProviderConfig) error {
+	r.mu.RLock()
+	existing, exists := r.Config.Providers[id]
+	r.mu.RUnlock()
+	if !exists {
+		return fmt.Errorf("provider %q not found", id)
+	}
+	// Preserve auth key if caller omitted it (edit form leaves key blank)
+	if cfg.AuthKey == "" {
+		cfg.AuthKey = existing.AuthKey
+	}
+	if cfg.AuthKeyEnv == "" {
+		cfg.AuthKeyEnv = existing.AuthKeyEnv
+	}
+	adapter, err := r.buildAdapter(id, cfg)
+	if err != nil {
+		return fmt.Errorf("build adapter: %w", err)
+	}
+	r.mu.Lock()
+	r.Config.Providers[id] = cfg
+	r.Adapters[id] = adapter
+	r.mu.Unlock()
+	return r.SaveConfig()
+}
+
+// RemoveProvider deletes a provider and its adapter, then persists.
+func (r *Router) RemoveProvider(id string) error {
+	r.mu.Lock()
+	delete(r.Config.Providers, id)
+	delete(r.Adapters, id)
+	r.mu.Unlock()
+	return r.SaveConfig()
 }
 
 // SaveConfig persists the current BrainConfig back to the YAML file.

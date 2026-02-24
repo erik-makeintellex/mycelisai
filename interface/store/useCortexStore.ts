@@ -48,6 +48,39 @@ export interface ProposalData {
     intent_proof_id: string;
 }
 
+// Mission Profiles — named provider-routing configs with optional reactive NATS watches
+export interface MissionProfile {
+    id: string;
+    name: string;
+    description?: string;
+    role_providers: Record<string, string>;          // {"architect":"vllm","coder":"ollama"}
+    subscriptions: { topic: string; condition?: string }[];
+    context_strategy: 'fresh' | 'warm' | string;    // "fresh"|"warm"|"snapshot:<uuid>"
+    auto_start: boolean;
+    is_active: boolean;
+    tenant_id: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface MissionProfileCreate {
+    name: string;
+    description?: string;
+    role_providers: Record<string, string>;
+    subscriptions: { topic: string; condition?: string }[];
+    context_strategy: string;
+    auto_start: boolean;
+}
+
+export interface ContextSnapshot {
+    id: string;
+    name: string;
+    description?: string;
+    source_profile?: string;
+    tenant_id: string;
+    created_at: string;
+}
+
 // Phase 19: Brain provenance — which provider/model executed a response
 export interface BrainProvenance {
     provider_id: string;
@@ -672,6 +705,19 @@ export interface CortexState {
 
     // Phase 19: Agent & Provider Orchestration
     setInspectedMessage: (msg: ChatMessage | null) => void;
+
+    // Mission Profiles & Context Snapshots
+    missionProfiles: MissionProfile[];
+    activeProfileId: string | null;
+    contextSnapshots: ContextSnapshot[];
+
+    fetchMissionProfiles: () => Promise<void>;
+    createMissionProfile: (p: MissionProfileCreate) => Promise<MissionProfile | null>;
+    updateMissionProfile: (id: string, p: MissionProfileCreate) => Promise<void>;
+    deleteMissionProfile: (id: string) => Promise<void>;
+    activateMissionProfile: (id: string) => Promise<void>;
+    fetchContextSnapshots: () => Promise<void>;
+    createContextSnapshot: (name: string) => Promise<ContextSnapshot | null>;
 }
 
 // ── Layout Constants ──────────────────────────────────────────
@@ -1007,6 +1053,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     governanceMode: 'passive' as const,
     inspectedMessage: null,
     isInspectorOpen: false,
+
+    // Mission Profiles & Context Snapshots
+    missionProfiles: [],
+    activeProfileId: null,
+    contextSnapshots: [],
 
     onNodesChange: (changes) => {
         set({ nodes: applyNodeChanges(changes, get().nodes) });
@@ -2217,6 +2268,141 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             set({ recentRuns: body.data ?? body ?? [] });
         } catch { /* offline — silent */ }
         finally { set({ isFetchingRuns: false }); }
+    },
+
+    // ── Mission Profiles ─────────────────────────────────────────
+
+    fetchMissionProfiles: async () => {
+        try {
+            const res = await fetch('/api/v1/mission-profiles');
+            if (!res.ok) return;
+            const body = await res.json();
+            const profiles: MissionProfile[] = body.data ?? [];
+            const active = profiles.find((p) => p.is_active);
+            set({ missionProfiles: profiles, activeProfileId: active?.id ?? null });
+        } catch { /* degraded — silent */ }
+    },
+
+    createMissionProfile: async (p: MissionProfileCreate) => {
+        try {
+            const res = await fetch('/api/v1/mission-profiles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p),
+            });
+            if (!res.ok) {
+                console.error('[PROFILES] Create failed:', await res.text());
+                return null;
+            }
+            const body = await res.json();
+            const created: MissionProfile = body.data;
+            set((s) => ({ missionProfiles: [...s.missionProfiles, created] }));
+            return created;
+        } catch (err) {
+            console.error('[PROFILES] Create error:', err);
+            return null;
+        }
+    },
+
+    updateMissionProfile: async (id: string, p: MissionProfileCreate) => {
+        try {
+            const res = await fetch(`/api/v1/mission-profiles/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p),
+            });
+            if (!res.ok) {
+                console.error('[PROFILES] Update failed:', await res.text());
+                return;
+            }
+            const body = await res.json();
+            const updated: MissionProfile = body.data;
+            set((s) => ({
+                missionProfiles: s.missionProfiles.map((mp) => mp.id === id ? updated : mp),
+            }));
+        } catch (err) {
+            console.error('[PROFILES] Update error:', err);
+        }
+    },
+
+    deleteMissionProfile: async (id: string) => {
+        try {
+            const res = await fetch(`/api/v1/mission-profiles/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                console.error('[PROFILES] Delete failed:', await res.text());
+                return;
+            }
+            set((s) => ({
+                missionProfiles: s.missionProfiles.filter((mp) => mp.id !== id),
+                activeProfileId: s.activeProfileId === id ? null : s.activeProfileId,
+            }));
+        } catch (err) {
+            console.error('[PROFILES] Delete error:', err);
+        }
+    },
+
+    activateMissionProfile: async (id: string) => {
+        try {
+            const res = await fetch(`/api/v1/mission-profiles/${id}/activate`, { method: 'POST' });
+            if (!res.ok) {
+                console.error('[PROFILES] Activate failed:', await res.text());
+                return;
+            }
+            const body = await res.json();
+            const activated: MissionProfile = body.data;
+            set((s) => ({
+                activeProfileId: id,
+                missionProfiles: s.missionProfiles.map((mp) =>
+                    mp.id === id
+                        ? activated
+                        : mp.auto_start ? mp : { ...mp, is_active: false }
+                ),
+            }));
+        } catch (err) {
+            console.error('[PROFILES] Activate error:', err);
+        }
+    },
+
+    // ── Context Snapshots ────────────────────────────────────────
+
+    fetchContextSnapshots: async () => {
+        try {
+            const res = await fetch('/api/v1/context/snapshots');
+            if (!res.ok) return;
+            const body = await res.json();
+            set({ contextSnapshots: body.data ?? [] });
+        } catch { /* degraded — silent */ }
+    },
+
+    createContextSnapshot: async (name: string) => {
+        const { missionChat, activeRunId, missionProfiles, activeProfileId } = get();
+        // Build role_providers map from active profile
+        const activeProfile = missionProfiles.find((p) => p.id === activeProfileId);
+        const roleProviders = activeProfile?.role_providers ?? {};
+        try {
+            const res = await fetch('/api/v1/context/snapshot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    messages: missionChat,
+                    run_state: { run_id: activeRunId },
+                    role_providers: roleProviders,
+                    source_profile: activeProfileId ?? undefined,
+                }),
+            });
+            if (!res.ok) {
+                console.error('[SNAPSHOTS] Create failed:', await res.text());
+                return null;
+            }
+            const body = await res.json();
+            const snap: ContextSnapshot = body.data;
+            set((s) => ({ contextSnapshots: [snap, ...s.contextSnapshots] }));
+            return snap;
+        } catch (err) {
+            console.error('[SNAPSHOTS] Create error:', err);
+            return null;
+        }
     },
 }));
 

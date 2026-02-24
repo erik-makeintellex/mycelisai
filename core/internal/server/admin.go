@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -18,6 +19,7 @@ import (
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/overseer"
 	"github.com/mycelis/core/internal/provisioning"
+	"github.com/mycelis/core/internal/reactive"
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/runs"
@@ -33,6 +35,7 @@ type AdminServer struct {
 	Router        *router.Router
 	Guard         *governance.Guard
 	Mem           *memory.Service
+	DB            *sql.DB             // direct DB for context snapshots + mission profiles
 	Cognitive     *cognitive.Router
 	Provisioner   *provisioning.Engine
 	Registry      *registry.Service
@@ -51,13 +54,24 @@ type AdminServer struct {
 	// V7 Event Spine (Team A)
 	Events        *events.Store       // V7: persistent mission event audit trail
 	Runs          *runs.Manager       // V7: mission run lifecycle management
+	// Mission Profiles & Reactive Subscriptions
+	Reactive      *reactive.Engine    // watches NATS topics for active profiles
 }
 
-func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
+	// Reactive engine: routes subscribed NATS messages to Soma for evaluation.
+	// nc may be nil (NATS offline); engine degrades gracefully.
+	reactiveEngine := reactive.New(nc, func(profileID, topic string, msg []byte) {
+		// Log the reactive event — Soma routing is a future enhancement
+		// (requires server reference; wired post-construction if needed).
+		log.Printf("[reactive] profile %s received msg on %s (%d bytes)", profileID, topic, len(msg))
+	})
+
 	return &AdminServer{
 		Router:        r,
 		Guard:         guard,
 		Mem:           mem,
+		DB:            db,
 		Cognitive:     cog,
 		Provisioner:   prov,
 		Registry:      reg,
@@ -75,6 +89,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		Artifacts:     art,
 		Events:        evStore,
 		Runs:          runsManager,
+		Reactive:      reactiveEngine,
 	}
 }
 
@@ -216,11 +231,31 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/brains", s.HandleListBrains)
 	mux.HandleFunc("PUT /api/v1/brains/{id}/toggle", s.HandleToggleBrain)
 	mux.HandleFunc("PUT /api/v1/brains/{id}/policy", s.HandleUpdateBrainPolicy)
+	// Provider CRUD + probe (hot-reload, no restart required)
+	mux.HandleFunc("POST /api/v1/brains", s.HandleAddBrain)
+	mux.HandleFunc("PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
+	mux.HandleFunc("DELETE /api/v1/brains/{id}", s.HandleDeleteBrain)
+	mux.HandleFunc("POST /api/v1/brains/{id}/probe", s.HandleProbeBrain)
+
+	// Context Snapshots (save/restore conversation context on profile switch)
+	mux.HandleFunc("GET /api/v1/context/snapshots", s.HandleListSnapshots)
+	mux.HandleFunc("POST /api/v1/context/snapshot", s.HandleCreateSnapshot)
+	mux.HandleFunc("GET /api/v1/context/snapshots/{id}", s.HandleGetSnapshot)
+
+	// Mission Profiles (role→provider routing + reactive NATS subscriptions)
+	mux.HandleFunc("GET /api/v1/mission-profiles", s.HandleListMissionProfiles)
+	mux.HandleFunc("POST /api/v1/mission-profiles", s.HandleCreateMissionProfile)
+	mux.HandleFunc("PUT /api/v1/mission-profiles/{id}", s.HandleUpdateMissionProfile)
+	mux.HandleFunc("DELETE /api/v1/mission-profiles/{id}", s.HandleDeleteMissionProfile)
+	mux.HandleFunc("POST /api/v1/mission-profiles/{id}/activate", s.HandleActivateMissionProfile)
 
 	// V7 Event Spine (Team A): Run Timeline + Causal Chain
 	mux.HandleFunc("GET /api/v1/runs", s.handleListRuns)
 	mux.HandleFunc("GET /api/v1/runs/{id}/events", s.handleGetRunEvents)
 	mux.HandleFunc("GET /api/v1/runs/{id}/chain", s.handleGetRunChain)
+
+	// Service health dashboard
+	mux.HandleFunc("GET /api/v1/services/status", s.HandleServicesStatus)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {

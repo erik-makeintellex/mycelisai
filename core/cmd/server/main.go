@@ -69,14 +69,33 @@ func main() {
 		"cortex",
 	)
 
-	// Open Shared DB Connection
+	// Open Shared DB Connection — retry up to 90s to let Postgres come up in parallel.
 	sharedDB, err := sql.Open("pgx", dbURL)
 	if err != nil {
-		log.Printf("WARN: Shared DB Init Failed: %v", err)
-	} else if err := sharedDB.Ping(); err != nil {
-		log.Printf("WARN: Shared DB Ping Failed: %v", err)
+		log.Printf("WARN: Shared DB Init Failed: %v — running without persistence.", err)
+		sharedDB = nil
 	} else {
-		log.Println("Shared Database Connection Active.")
+		sharedDB.SetMaxOpenConns(10)
+		sharedDB.SetMaxIdleConns(5)
+		sharedDB.SetConnMaxLifetime(5 * time.Minute)
+		var pingErr error
+		for i := 1; i <= 45; i++ {
+			pingCtx, pingCancel := context.WithTimeout(ctx, 2*time.Second)
+			pingErr = sharedDB.PingContext(pingCtx)
+			pingCancel()
+			if pingErr == nil {
+				log.Println("Shared Database Connection Active.")
+				break
+			}
+			if i == 1 || i%10 == 0 {
+				log.Printf("[db] waiting for PostgreSQL (attempt %d/45): %v", i, pingErr)
+			}
+			time.Sleep(2 * time.Second)
+		}
+		if pingErr != nil {
+			log.Printf("WARN: PostgreSQL unreachable after 90s: %v — running without persistence.", pingErr)
+			sharedDB = nil
+		}
 	}
 
 	// 1b. Load Cognitive Engine
@@ -114,24 +133,28 @@ func main() {
 	var ncWrapper *mycelis_nats.Client
 	var connErr error
 
-	// Simple retry loop
-	for i := 0; i < 10; i++ {
-		log.Printf("Connecting to NATS at %s (Attempt %d/10)...", natsURL, i+1)
+	// Retry up to 90s to let NATS come up in parallel with Core during lifecycle.up.
+	// After startup, the nats.go client retries indefinitely on transient drops.
+	for i := 1; i <= 45; i++ {
 		ncWrapper, connErr = mycelis_nats.Connect(natsURL)
 		if connErr == nil {
 			break
 		}
-		log.Printf("NATS connection failed: %v. Retrying in 2s...", connErr)
+		if i == 1 || i%10 == 0 {
+			log.Printf("[nats] waiting for NATS at %s (attempt %d/45): %v", natsURL, i, connErr)
+		}
 		time.Sleep(2 * time.Second)
 	}
 
-	// Graceful degradation: if NATS is unreachable, run in degraded mode
+	// Graceful degradation: if NATS is still unreachable after 90s, run in degraded mode.
+	// Real-time features (Soma, Reactive Engine, Overseer) are disabled until NATS is available.
 	var nc *nats.Conn
 	if connErr != nil {
-		log.Printf("WARN: NATS unreachable after retries: %v. Running in DEGRADED mode (no messaging).", connErr)
+		log.Printf("WARN: NATS unreachable after 90s: %v. Running in DEGRADED mode (no messaging).", connErr)
 	} else {
 		defer ncWrapper.Drain()
 		nc = ncWrapper.Conn
+		log.Printf("[nats] connected to %s", nc.ConnectedUrl())
 	}
 
 	// 3. Start Router (requires NATS)
@@ -419,8 +442,22 @@ func main() {
 	}
 
 	// Create Admin Server (V7: pass eventStore + runsManager for Event Spine routes)
-	adminSrv := server.NewAdminServer(r, guard, memService, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, eventStore, runsManager)
+	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, eventStore, runsManager)
 	adminSrv.RegisterRoutes(mux)
+
+	// Wire DB into reactive engine so it can re-subscribe active profiles after
+	// a NATS reconnect. Then reactivate any profiles that were active in the DB
+	// at startup (covers the case where profiles were set before this boot).
+	if adminSrv.Reactive != nil && sharedDB != nil {
+		adminSrv.Reactive.SetDB(sharedDB)
+		go func() {
+			if err := adminSrv.Reactive.ReactivateFromDB(ctx); err != nil {
+				log.Printf("[reactive] startup reactivation: %v", err)
+			} else {
+				log.Println("[reactive] active profile subscriptions restored.")
+			}
+		}()
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

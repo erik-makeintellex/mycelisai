@@ -12,20 +12,27 @@ type Client struct {
 	Conn *nats.Conn
 }
 
-// Connect establishes a connection to the NATS server with automatic reconnects
+// Connect establishes a connection to the NATS server with automatic reconnects.
+// MaxReconnects(-1) means unlimited — the process will keep retrying indefinitely
+// so that transient infrastructure drops (k8s pod restart, bridge flap) are healed
+// without requiring a Core restart.
 func Connect(url string) (*Client, error) {
 	opts := []nats.Option{
 		nats.Name("Mycelis Core"),
 		nats.ReconnectWait(2 * time.Second),
-		nats.MaxReconnects(50),
+		nats.MaxReconnects(-1), // unlimited — heal automatically
+		nats.PingInterval(20 * time.Second),
+		nats.MaxPingsOutstanding(3),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-			log.Printf("Disconnected from NATS: %v", err)
+			if err != nil {
+				log.Printf("[nats] disconnected: %v — will retry", err)
+			}
 		}),
 		nats.ReconnectHandler(func(nc *nats.Conn) {
-			log.Printf("Reconnected to NATS [%s]", nc.ConnectedUrl())
+			log.Printf("[nats] reconnected to %s", nc.ConnectedUrl())
 		}),
 		nats.ClosedHandler(func(nc *nats.Conn) {
-			log.Printf("NATS connection closed")
+			log.Printf("[nats] connection permanently closed")
 		}),
 	}
 
