@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-02-23
+> **Updated:** 2026-02-24
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
@@ -14,6 +14,7 @@ Phase 19 (complete)
     → V7 Team A — Event Spine (complete)
     → V7 Soma Workflow E2E — Consultations, run_id, Run Timeline UI, OpsWidget registry (complete)
     → In-App Docs Browser — /docs page, 30-entry manifest, 8 user guides (complete)
+    → Provider CRUD + Mission Profiles + Reactive Subscriptions + Service Management (complete)
     → V7 Team B — Trigger Engine (NEXT)
     → V7 Team C — Scheduler (after B)
     → V7 Causal Chain UI — ViewChain.tsx (after B+C)
@@ -151,6 +152,44 @@ Fully functional. `/docs` page with sidebar, search, and rendered markdown.
 
 ---
 
+### Provider CRUD, Mission Profiles & Reactive Subscriptions
+
+Full hot-reload provider management, named workflow profiles with role→provider routing, context snapshot/restore, reactive NATS subscriptions, and service health dashboard.
+
+**Migrations:**
+
+| Migration | Table | File |
+|-----------|-------|------|
+| 028 | `context_snapshots` | `core/migrations/028_context_snapshots.up.sql` |
+| 029 | `mission_profiles` | `core/migrations/029_mission_profiles.up.sql` |
+
+**Backend:**
+
+| Deliverable | File |
+|------------|------|
+| `AddProvider` / `UpdateProvider` / `RemoveProvider` with `RWMutex` | `core/internal/cognitive/router.go` |
+| `POST /api/v1/brains` (add), `PUT /api/v1/brains/{id}` (update), `DELETE /api/v1/brains/{id}` (delete), `POST /api/v1/brains/{id}/probe` | `core/internal/server/brains.go` |
+| Context snapshot CRUD — `POST /api/v1/context/snapshot`, `GET /api/v1/context/snapshots`, `GET /api/v1/context/snapshots/{id}` | `core/internal/server/context.go` |
+| Mission profile CRUD + activate — `GET/POST/PUT/DELETE /api/v1/mission-profiles`, `POST /api/v1/mission-profiles/{id}/activate` | `core/internal/server/profiles.go` |
+| Reactive NATS subscription engine — `Subscribe`, `Unsubscribe`, `ReactivateFromDB`, `Connected`, `ActiveSubscriptionCount` | `core/internal/reactive/engine.go` |
+| `GET /api/v1/services/status` — NATS, PostgreSQL, Cognitive, Reactive health aggregation | `core/internal/server/services.go` |
+| `MaxReconnects(-1)` unlimited NATS reconnects + ping interval | `core/internal/transport/nats/client.go` |
+| DB startup retry loop (45×2s), NATS startup retry (45×2s), connection pool config, reactive reactivation on boot | `core/cmd/server/main.go` |
+| Longer port-forward wait (30s), Core API wait (120s), WARN instead of FATAL for infra slow-start | `ops/lifecycle.py` |
+
+**Frontend:**
+
+| Deliverable | File |
+|------------|------|
+| Provider Add/Edit/Delete/Probe UI with type presets (Ollama, vLLM, LM Studio, OpenAI, Anthropic, Google, Custom) | `interface/components/settings/BrainsPage.tsx` |
+| ContextSwitchModal — Cache & Transfer / Start Fresh / Load Snapshot strategies | `interface/components/settings/ContextSwitchModal.tsx` |
+| MissionProfilesPage — role→provider table, NATS subscriptions editor, context strategy, auto-start | `interface/components/settings/MissionProfilesPage.tsx` |
+| Profiles tab in Settings | `interface/app/(app)/settings/page.tsx` |
+| Services tab in System — live polling, service cards, restart command reference with copy | `interface/app/(app)/system/page.tsx` |
+| Mission profile + context snapshot types, state, and all async actions | `interface/store/useCortexStore.ts` |
+
+---
+
 ## What Is Pending
 
 ### V7 Team B — Trigger Engine (NEXT)
@@ -238,7 +277,7 @@ ZoneA_Rail
 |------|------|-------|
 | `/automations` | Active · Drafts · Triggers · Approvals · Teams · Wiring* | *Wiring = Advanced Mode only |
 | `/resources` | Brains · Tools · Workspace · Catalogue | |
-| `/system` | Health · NATS · Database · Matrix · Debug | Advanced Mode gated |
+| `/system` | Health · NATS · Database · Matrix · Debug · Services | Advanced Mode gated |
 
 **Tabs still showing DegradedState (real data pending):**
 
@@ -258,7 +297,7 @@ next build:         PASSES (all routes)
 vitest:             ~56 V7 tests pass (2 pre-existing DashboardPage failures, unrelated)
 Go build:           go build ./... PASSES
 Go tests:           188+ tests pass across 16 packages
-                    Migrations 023-024 must be applied for Team A tests
+                    Migrations 023-029 must be applied for full test coverage
 Go test packages:   internal/server (157), internal/events (16), internal/runs (19), others (~80)
 ```
 
