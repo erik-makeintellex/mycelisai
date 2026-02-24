@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-02-24
+> **Updated:** 2026-02-25
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
@@ -15,9 +15,9 @@ Phase 19 (complete)
     → V7 Soma Workflow E2E — Consultations, run_id, Run Timeline UI, OpsWidget registry (complete)
     → In-App Docs Browser — /docs page, 30-entry manifest, 8 user guides (complete)
     → Provider CRUD + Mission Profiles + Reactive Subscriptions + Service Management (complete)
-    → V7 Team B — Trigger Engine (NEXT)
-    → V7 Team C — Scheduler (after B)
-    → V7 Causal Chain UI — ViewChain.tsx (after B+C)
+    → V7 Team B — Trigger Engine (complete)
+    → V7 Team C — Scheduler (NEXT)
+    → V7 Causal Chain UI — ViewChain.tsx (after C)
     → MCP Baseline — filesystem, memory, artifact-renderer, fetch (parallel)
 ```
 
@@ -190,29 +190,47 @@ Full hot-reload provider management, named workflow profiles with role→provide
 
 ---
 
-## What Is Pending
+### V7 Team B — Trigger Engine
 
-### V7 Team B — Trigger Engine (NEXT)
+Declarative IF/THEN rules evaluated on CTS event ingest. Four guards: cooldown, recursion depth, concurrency, condition (reserved). Default mode `propose` — auto-execute requires explicit policy.
 
-**Depends on:** mission_events + mission_runs tables, events.Store, runs.Manager — all live.
+**Migrations:**
 
-| File to Create | Purpose |
-|---------------|---------|
-| `core/migrations/025_trigger_rules.up.sql` | trigger_rules table + deferred FKs |
-| `core/migrations/026_trigger_executions.up.sql` | Audit of every evaluation |
-| `core/internal/triggers/store.go` | Rule CRUD + in-memory cache |
-| `core/internal/triggers/engine.go` | Match → cooldown → recursion → concurrency → fire |
-| `core/internal/server/triggers.go` | GET/POST/PUT/DELETE /api/v1/triggers |
+| Migration | Table | File |
+|-----------|-------|------|
+| 025 | `trigger_rules` | `core/migrations/025_trigger_rules.up.sql` |
+| 026 | `trigger_executions` | `core/migrations/026_trigger_executions.up.sql` |
 
-Three mandatory guards: cooldown, recursion (max_depth ceiling: 10), concurrency (max_active_runs).
+**Backend:**
 
-Default trigger mode: `propose` — requires human approval unless explicit `execute` policy.
+| Deliverable | File |
+|------------|------|
+| TriggerRule + TriggerExecution types, in-memory cache, CRUD, LogExecution, ActiveCount | `core/internal/triggers/store.go` |
+| Engine — CTS subscription, 4-guard evaluateRule, fireTrigger (child run), proposeTrigger | `core/internal/triggers/engine.go` |
+| 6 HTTP handlers — List, Create, Update, Delete, Toggle, History | `core/internal/server/triggers.go` |
+| AdminServer wiring — Triggers + TriggerEngine fields, 6 routes | `core/internal/server/admin.go` |
+| main.go — trigger store + engine init, graceful shutdown | `core/cmd/server/main.go` |
 
-**Done when:** Rules CRUD works, mission.completed event fires a child run, all guards pass unit tests.
+**Frontend:**
+
+| Deliverable | File |
+|------------|------|
+| TriggerRulesTab — full CRUD UI, RuleCard, CreateRuleForm, guard badges, mode warnings | `interface/components/automations/TriggerRulesTab.tsx` |
+| Trigger types + state + 5 async actions (fetch, create, update, delete, toggle) | `interface/store/useCortexStore.ts` |
+| Automations → Triggers tab now renders live TriggerRulesTab (was DegradedState) | `interface/app/(app)/automations/page.tsx` |
+
+**Bug fixes (pre-existing, discovered during build verification):**
+
+| Fix | File |
+|-----|------|
+| Added `"use client"` + `use(params)` for Next.js 15+ async params | `interface/app/(app)/runs/[id]/page.tsx` |
+| Wrapped `useSearchParams()` in Suspense boundary | `interface/app/(app)/docs/page.tsx` |
 
 ---
 
-### V7 Team C — Scheduler (after A)
+## What Is Pending
+
+### V7 Team C — Scheduler (NEXT)
 
 **Depends on:** runs.Manager, events.Store.
 
@@ -284,7 +302,6 @@ ZoneA_Rail
 | Page | Tab | Blocked by |
 |------|-----|------------|
 | Automations | Active Automations | Team C (Scheduler) |
-| Automations | Trigger Rules | Team B (Trigger Engine) |
 | System | Event Health | Team A live data wiring |
 | Resources | Workspace Explorer | MCP Baseline (filesystem server) |
 
@@ -295,10 +312,10 @@ ZoneA_Rail
 ```
 next build:         PASSES (all routes)
 vitest:             ~56 V7 tests pass (2 pre-existing DashboardPage failures, unrelated)
-Go build:           go build ./... PASSES
+Go build:           go build ./... PASSES (includes triggers package)
 Go tests:           188+ tests pass across 16 packages
                     Migrations 023-029 must be applied for full test coverage
-Go test packages:   internal/server (157), internal/events (16), internal/runs (19), others (~80)
+Go test packages:   internal/server (157), internal/events (16), internal/runs (19), internal/triggers (new), others (~80)
 ```
 
 ---
@@ -309,9 +326,8 @@ Go test packages:   internal/server (157), internal/events (16), internal/runs (
 |-----|---------|---------|
 | 2 pre-existing DashboardPage test failures | `__tests__/pages/DashboardPage.test.tsx` | Low (pre-V7) |
 | 14 pre-existing test file transform errors | Various `__tests__/{workspace,dashboard,teams,...}` | Low (pre-V7) |
-| Causal Chain UI | ViewChain.tsx + /runs/[id]/chain | After Team B+C |
+| Causal Chain UI | ViewChain.tsx + /runs/[id]/chain | After Team C |
 | Automations → Active Automations: DegradedState | `app/(app)/automations/page.tsx` | Blocked by Team C |
-| Automations → Trigger Rules: DegradedState | `app/(app)/automations/page.tsx` | Blocked by Team B |
 | Resources → Workspace Explorer: DegradedState | `app/(app)/resources/page.tsx` | Blocked by MCP Baseline |
 
 ---

@@ -23,6 +23,7 @@ import (
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/runs"
+	"github.com/mycelis/core/internal/triggers"
 	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
 	"github.com/mycelis/core/internal/swarm"
@@ -56,6 +57,9 @@ type AdminServer struct {
 	Runs          *runs.Manager       // V7: mission run lifecycle management
 	// Mission Profiles & Reactive Subscriptions
 	Reactive      *reactive.Engine    // watches NATS topics for active profiles
+	// V7 Team B: Trigger Engine
+	Triggers      *triggers.Store     // trigger rule CRUD + in-memory cache
+	TriggerEngine *triggers.Engine    // evaluates rules against CTS events
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -253,6 +257,14 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/runs", s.handleListRuns)
 	mux.HandleFunc("GET /api/v1/runs/{id}/events", s.handleGetRunEvents)
 	mux.HandleFunc("GET /api/v1/runs/{id}/chain", s.handleGetRunChain)
+
+	// V7 Team B: Trigger Rules Engine
+	mux.HandleFunc("GET /api/v1/triggers", s.HandleListTriggers)
+	mux.HandleFunc("POST /api/v1/triggers", s.HandleCreateTrigger)
+	mux.HandleFunc("PUT /api/v1/triggers/{id}", s.HandleUpdateTrigger)
+	mux.HandleFunc("DELETE /api/v1/triggers/{id}", s.HandleDeleteTrigger)
+	mux.HandleFunc("POST /api/v1/triggers/{id}/toggle", s.HandleToggleTrigger)
+	mux.HandleFunc("GET /api/v1/triggers/{id}/history", s.HandleTriggerHistory)
 
 	// Service health dashboard
 	mux.HandleFunc("GET /api/v1/services/status", s.HandleServicesStatus)
