@@ -22,6 +22,11 @@ const TeamsContent = dynamic(() => import("@/components/teams/TeamsPage"), {
     loading: () => <TabLoading label="teams" />,
 });
 
+const TriggersContent = dynamic(() => import("@/components/automations/TriggerRulesTab"), {
+    ssr: false,
+    loading: () => <TabLoading label="trigger rules" />,
+});
+
 type TabId = "active" | "drafts" | "triggers" | "approvals" | "wiring" | "teams";
 const VALID_TABS: TabId[] = ["active", "drafts", "triggers", "approvals", "wiring", "teams"];
 
@@ -92,17 +97,7 @@ function AutomationsContent() {
                         />
                     </div>
                 )}
-                {effectiveTab === "triggers" && (
-                    <div className="h-full p-6">
-                        <DegradedState
-                            title="Trigger Rules"
-                            reason="The trigger rules engine is being implemented in V7 Step 02."
-                            unavailable={["Event-based triggers", "Completion triggers", "Trigger rule CRUD"]}
-                            available={["Manual mission activation", "Governance approvals"]}
-                            action="Trigger rules will be available after V7 Event Spine is complete."
-                        />
-                    </div>
-                )}
+                {effectiveTab === "triggers" && <TriggersContent />}
                 {effectiveTab === "approvals" && <ApprovalsContent />}
                 {effectiveTab === "teams" && <TeamsContent />}
                 {effectiveTab === "wiring" && <WiringContent />}

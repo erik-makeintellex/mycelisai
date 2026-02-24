@@ -440,6 +440,49 @@ export interface MissionEvent {
     emitted_at: string;
 }
 
+// ── V7: Trigger Rules (Team B) ───────────────────────────────
+
+export interface TriggerRule {
+    id: string;
+    tenant_id: string;
+    name: string;
+    description?: string;
+    event_pattern: string;
+    condition: Record<string, unknown>;
+    target_mission_id: string;
+    mode: 'propose' | 'auto_execute';
+    cooldown_seconds: number;
+    max_depth: number;
+    max_active_runs: number;
+    is_active: boolean;
+    last_fired_at?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface TriggerRuleCreate {
+    name: string;
+    description?: string;
+    event_pattern: string;
+    condition?: Record<string, unknown>;
+    target_mission_id: string;
+    mode?: 'propose' | 'auto_execute';
+    cooldown_seconds?: number;
+    max_depth?: number;
+    max_active_runs?: number;
+    is_active?: boolean;
+}
+
+export interface TriggerExecution {
+    id: string;
+    rule_id: string;
+    event_id: string;
+    run_id?: string;
+    status: 'fired' | 'skipped' | 'proposed';
+    skip_reason?: string;
+    executed_at: string;
+}
+
 // ── Governance Policy (Phase 7.7) ────────────────────────────
 
 export interface PolicyRule {
@@ -601,6 +644,10 @@ export interface CortexState {
     recentRuns: MissionRun[];
     isFetchingRuns: boolean;
 
+    // V7: Trigger Rules (Team B)
+    triggerRules: TriggerRule[];
+    isFetchingTriggers: boolean;
+
     // Signal Detail Drawer
     selectedSignalDetail: SignalDetail | null;
 
@@ -718,6 +765,13 @@ export interface CortexState {
     activateMissionProfile: (id: string) => Promise<void>;
     fetchContextSnapshots: () => Promise<void>;
     createContextSnapshot: (name: string) => Promise<ContextSnapshot | null>;
+
+    // V7 Trigger Rules (Team B)
+    fetchTriggerRules: () => Promise<void>;
+    createTriggerRule: (r: TriggerRuleCreate) => Promise<TriggerRule | null>;
+    updateTriggerRule: (id: string, r: TriggerRuleCreate) => Promise<void>;
+    deleteTriggerRule: (id: string) => Promise<void>;
+    toggleTriggerRule: (id: string, isActive: boolean) => Promise<void>;
 }
 
 // ── Layout Constants ──────────────────────────────────────────
@@ -1042,6 +1096,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     // V7: Recent Runs
     recentRuns: [],
     isFetchingRuns: false,
+
+    // V7: Trigger Rules (Team B)
+    triggerRules: [],
+    isFetchingTriggers: false,
 
     // Signal Detail Drawer
     selectedSignalDetail: null,
@@ -2402,6 +2460,94 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         } catch (err) {
             console.error('[SNAPSHOTS] Create error:', err);
             return null;
+        }
+    },
+
+    // ── V7: Trigger Rules (Team B) ──────────────────────────────
+
+    fetchTriggerRules: async () => {
+        set({ isFetchingTriggers: true });
+        try {
+            const res = await fetch('/api/v1/triggers');
+            if (!res.ok) return;
+            const body = await res.json();
+            set({ triggerRules: body.data ?? [] });
+        } catch { /* degraded — silent */ }
+        finally { set({ isFetchingTriggers: false }); }
+    },
+
+    createTriggerRule: async (r: TriggerRuleCreate) => {
+        try {
+            const res = await fetch('/api/v1/triggers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(r),
+            });
+            if (!res.ok) {
+                console.error('[TRIGGERS] Create failed:', await res.text());
+                return null;
+            }
+            const body = await res.json();
+            const created: TriggerRule = body.data;
+            set((s) => ({ triggerRules: [created, ...s.triggerRules] }));
+            return created;
+        } catch (err) {
+            console.error('[TRIGGERS] Create error:', err);
+            return null;
+        }
+    },
+
+    updateTriggerRule: async (id: string, r: TriggerRuleCreate) => {
+        try {
+            const res = await fetch(`/api/v1/triggers/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(r),
+            });
+            if (!res.ok) {
+                console.error('[TRIGGERS] Update failed:', await res.text());
+                return;
+            }
+            // Refetch to get fresh data
+            get().fetchTriggerRules();
+        } catch (err) {
+            console.error('[TRIGGERS] Update error:', err);
+        }
+    },
+
+    deleteTriggerRule: async (id: string) => {
+        try {
+            const res = await fetch(`/api/v1/triggers/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                console.error('[TRIGGERS] Delete failed:', await res.text());
+                return;
+            }
+            set((s) => ({
+                triggerRules: s.triggerRules.filter((t) => t.id !== id),
+            }));
+        } catch (err) {
+            console.error('[TRIGGERS] Delete error:', err);
+        }
+    },
+
+    toggleTriggerRule: async (id: string, isActive: boolean) => {
+        try {
+            const res = await fetch(`/api/v1/triggers/${id}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: isActive }),
+            });
+            if (!res.ok) {
+                console.error('[TRIGGERS] Toggle failed:', await res.text());
+                return;
+            }
+            set((s) => ({
+                triggerRules: s.triggerRules.map((t) =>
+                    t.id === id ? { ...t, is_active: isActive } : t
+                ),
+            }));
+        } catch (err) {
+            console.error('[TRIGGERS] Toggle error:', err);
         }
     },
 }));

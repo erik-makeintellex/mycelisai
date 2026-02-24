@@ -17,7 +17,7 @@
 
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
 
-Built through 19 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, **Soma Identity & Artifacts**, **Conversation Memory**, **Natural Human Interface**, **Phase 0 Security Containment**, **Agent & Provider Orchestration** — and now executing **V7: Event Spine & Workflow-First Orchestration**. V7 Team A (Event Spine) is complete: persistent mission runs, `MissionEventEnvelope` audit records, tool event emission, and run timeline APIs. Team B (Trigger Engine), Team C (Scheduler), and Team E (Run Timeline UI) follow in strict order.
+Built through 19 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, **Soma Identity & Artifacts**, **Conversation Memory**, **Natural Human Interface**, **Phase 0 Security Containment**, **Agent & Provider Orchestration** — and now executing **V7: Event Spine & Workflow-First Orchestration**. V7 Team A (Event Spine) and Team B (Trigger Engine) are complete: persistent mission runs, `MissionEventEnvelope` audit records, tool event emission, run timeline APIs, and declarative trigger rules with cooldown/recursion/concurrency guards. Team C (Scheduler) and Causal Chain UI follow next.
 
 ## Architecture
 
@@ -669,6 +669,330 @@ Returns all runs for the same `mission_id` as the target run — newest first. U
 
 ---
 
+### Trigger Rules — Automation Workflow
+
+Trigger rules let you wire missions into reactive chains: "when event X happens, launch mission Y." This section covers creating rules, understanding how they fire, viewing execution history, and building multi-mission chains.
+
+#### Overview
+
+```
+Mission A completes
+    │
+    ▼
+CTS event: mission.completed  ──► Trigger Engine evaluates rules
+    │                                    │
+    │                         ┌──────────┼──────────────┐
+    │                         ▼          ▼              ▼
+    │                    Guard 1     Guard 2        Guard 3
+    │                    Cooldown    Recursion      Concurrency
+    │                    (min secs)  (max depth)    (max active)
+    │                         │          │              │
+    │                         └──────────┼──────────────┘
+    │                                    │
+    │                           All guards pass?
+    │                            ╱          ╲
+    │                         Yes            No
+    │                          │              │
+    │                 mode=propose?      logSkip()
+    │                  ╱        ╲         (audit record)
+    │               Yes          No
+    │                │            │
+    │         proposeTrigger  fireTrigger
+    │         (await human    (auto-create
+    │          approval)       child run)
+    │                            │
+    │                            ▼
+    │                    Mission B starts
+    │                    (run_depth + 1)
+```
+
+#### 10. List Trigger Rules — `GET /api/v1/triggers`
+
+```http
+GET /api/v1/triggers
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "tenant_id": "default",
+      "name": "On CSV parse complete → analyze",
+      "description": "When a CSV parsing mission completes, trigger the analysis mission",
+      "event_pattern": "mission.completed",
+      "condition": {},
+      "target_mission_id": "m-analyze-csv",
+      "mode": "propose",
+      "cooldown_seconds": 60,
+      "max_depth": 5,
+      "max_active_runs": 3,
+      "is_active": true,
+      "last_fired_at": "2026-02-25T10:30:00Z",
+      "created_at": "2026-02-25T10:00:00Z",
+      "updated_at": "2026-02-25T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### 11. Create Trigger Rule — `POST /api/v1/triggers`
+
+```http
+POST /api/v1/triggers
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{
+  "name": "On file write → run tests",
+  "description": "When any tool writes a file, propose running the test suite",
+  "event_pattern": "tool.completed",
+  "target_mission_id": "m-run-tests",
+  "mode": "propose",
+  "cooldown_seconds": 120,
+  "max_depth": 3,
+  "max_active_runs": 2,
+  "is_active": true
+}
+```
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    "name": "On file write → run tests",
+    "event_pattern": "tool.completed",
+    "target_mission_id": "m-run-tests",
+    "mode": "propose",
+    "cooldown_seconds": 120,
+    "max_depth": 3,
+    "max_active_runs": 2,
+    "is_active": true,
+    "created_at": "2026-02-25T11:00:00Z",
+    "updated_at": "2026-02-25T11:00:00Z"
+  }
+}
+```
+
+**Required fields:** `name`, `event_pattern`, `target_mission_id`.
+
+**Defaults applied if omitted:** `mode` → `"propose"`, `cooldown_seconds` → `60`, `max_depth` → `5`, `max_active_runs` → `3`, `condition` → `{}`.
+
+**Available event patterns:**
+
+| event_pattern | Fires when |
+| :--- | :--- |
+| `mission.started` | A mission run begins |
+| `mission.completed` | A mission run finishes successfully |
+| `mission.failed` | A mission run ends with an error |
+| `tool.invoked` | Any agent invokes a tool in its ReAct loop |
+| `tool.completed` | A tool returns successfully |
+| `tool.failed` | A tool returns an error |
+| `agent.started` | An agent goroutine starts within a team |
+| `memory.stored` | A fact is persisted to pgvector |
+| `memory.recalled` | Semantic search returns results |
+| `artifact.created` | A file, chart, or code artifact is stored |
+| `schedule.fired` | A scheduled mission launches |
+
+**Mode values:**
+
+| Mode | Behavior | Use when |
+| :--- | :--- | :--- |
+| `propose` (default) | Logs as "proposed" — awaits human approval before creating a child run | Normal operation — human-in-the-loop |
+| `auto_execute` | Immediately creates a child run and fires the target mission | Trusted chains — e.g. test suite after build |
+
+> **Safety:** `auto_execute` requires explicit intent. Any other value (including omitted or invalid) defaults to `propose`.
+
+#### 12. Update Trigger Rule — `PUT /api/v1/triggers/{id}`
+
+```http
+PUT /api/v1/triggers/bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{
+  "name": "On file write → run tests (v2)",
+  "event_pattern": "tool.completed",
+  "target_mission_id": "m-run-tests-v2",
+  "mode": "auto_execute",
+  "cooldown_seconds": 60,
+  "max_depth": 5,
+  "max_active_runs": 3,
+  "is_active": true
+}
+```
+
+```json
+{ "ok": true, "data": { "id": "bbbb2222-...", "updated": true } }
+```
+
+#### 13. Delete Trigger Rule — `DELETE /api/v1/triggers/{id}`
+
+```http
+DELETE /api/v1/triggers/bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+```json
+{ "ok": true, "data": { "id": "bbbb2222-...", "deleted": true } }
+```
+
+#### 14. Toggle Rule Active/Inactive — `POST /api/v1/triggers/{id}/toggle`
+
+```http
+POST /api/v1/triggers/bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb/toggle
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{ "is_active": false }
+```
+
+```json
+{ "ok": true, "data": { "id": "bbbb2222-...", "is_active": false } }
+```
+
+Deactivated rules stay in the database but are removed from the in-memory evaluation cache — zero cost on event ingest.
+
+#### 15. Trigger Execution History — `GET /api/v1/triggers/{id}/history`
+
+Every evaluation is logged — whether it fired, proposed, or skipped.
+
+```http
+GET /api/v1/triggers/bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb/history
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": "exec-1",
+      "rule_id": "bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "event_id": "ev-aaa",
+      "run_id": "run-child-1",
+      "status": "fired",
+      "skip_reason": "",
+      "executed_at": "2026-02-25T11:05:00Z"
+    },
+    {
+      "id": "exec-2",
+      "rule_id": "bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "event_id": "ev-bbb",
+      "run_id": "",
+      "status": "skipped",
+      "skip_reason": "cooldown: 30s since last fire, cooldown is 120s",
+      "executed_at": "2026-02-25T11:05:30Z"
+    },
+    {
+      "id": "exec-3",
+      "rule_id": "bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "event_id": "ev-ccc",
+      "run_id": "",
+      "status": "proposed",
+      "skip_reason": "",
+      "executed_at": "2026-02-25T11:07:00Z"
+    }
+  ]
+}
+```
+
+**Status values:**
+
+| Status | Meaning | `run_id` |
+| :--- | :--- | :--- |
+| `fired` | Guards passed, child run created | Set — the child run |
+| `proposed` | Guards passed, awaiting human approval | Empty — no run yet |
+| `skipped` | A guard blocked execution | Empty |
+
+**Skip reasons:**
+
+| Reason | Explanation |
+| :--- | :--- |
+| `cooldown: Xs since last fire, cooldown is Ys` | Rule fired too recently |
+| `recursion_limit: source run depth X >= max Y` | Trigger chain too deep |
+| `concurrency_limit: X active runs >= max Y` | Too many runs already in-flight |
+
+#### Guard Reference
+
+Three mandatory guards protect every trigger evaluation:
+
+| Guard | Config field | Default | Purpose |
+| :--- | :--- | :--- | :--- |
+| Cooldown | `cooldown_seconds` | 60 | Minimum seconds between firings — prevents rapid-fire loops |
+| Recursion | `max_depth` | 5 (ceiling: 10) | Maximum trigger chain depth — A triggers B triggers C... stops at depth limit |
+| Concurrency | `max_active_runs` | 3 | Maximum in-flight runs for the target mission — prevents resource exhaustion |
+
+Guards are evaluated in order: cooldown → recursion → concurrency. First failure skips the rule; all must pass.
+
+#### GUI Path — Automations → Trigger Rules Tab
+
+Navigate to `/automations?tab=triggers`:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Automations    Active · Drafts · [Triggers] · Approvals · ...   │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  [+ Create Trigger Rule]                                         │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  On file write → run tests              ● active           │  │
+│  │  mission.completed → m-run-tests        propose            │  │
+│  │  ⏱ 120s   ↕ max 3   ⚡ max 2                              │  │
+│  │                                    [Toggle] [Delete]       │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  Nightly report chain                    ○ inactive        │  │
+│  │  schedule.fired → m-generate-report      auto_execute      │  │
+│  │  ⏱ 3600s  ↕ max 2   ⚡ max 1                              │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+- **Guard badges:** ⏱ cooldown, ↕ max depth, ⚡ max active runs
+- **Mode badge:** `propose` (cyan) or `auto_execute` (amber with warning)
+- **Create form:** name, description, event pattern dropdown (11 types), target mission ID, mode, guard values
+- **Auto-execute warning:** banner shown when selecting `auto_execute` mode — requires explicit acknowledgment
+
+#### Typical Workflows
+
+**One-shot trigger (propose mode):**
+
+1. Create rule: `event_pattern = "mission.completed"`, `mode = "propose"`, `is_active = true`
+2. Run a mission — when it completes, the trigger engine logs a proposal
+3. Review in Automations → Approvals tab → confirm or reject
+4. On confirm, child run is created with `run_depth + 1`
+
+**Automated chain (auto_execute mode):**
+
+1. Create rule: `event_pattern = "tool.completed"`, `mode = "auto_execute"`, `is_active = true`
+2. When any tool completes, the engine immediately creates a child run
+3. The child run starts at `run_depth = parent_depth + 1`
+4. If the child mission also completes and another trigger matches, the chain continues
+5. Recursion guard stops at `max_depth` — prevents infinite loops
+
+**Monitoring trigger health:**
+
+1. `GET /api/v1/triggers/{id}/history` — view every evaluation (fired/skipped/proposed)
+2. Filter by `status = "skipped"` to identify over-aggressive cooldowns or depth limits
+3. Use `GET /api/v1/runs` to see child runs with `parent_run_id` set
+4. Use `GET /api/v1/runs/{child_id}/events` to view the child run's event timeline
+5. Use `GET /api/v1/runs/{id}/chain` to traverse the full parent → child → grandchild tree
+
+**Combining triggers with the scheduler (Team C — pending):**
+
+1. Scheduler fires `schedule.fired` events on cron intervals
+2. A trigger rule on `event_pattern = "schedule.fired"` chains into a mission
+3. This creates recurring → reactive chains: scheduler fires → trigger evaluates → mission runs → outputs become events for more triggers
+
+---
+
 ### Workflow State Diagram
 
 ```
@@ -849,7 +1173,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | `/memory` | **Memory** — 2-column: Warm sitreps/artifacts (left) + Cold semantic search (right). Hot signal stream collapsible under Advanced Mode. |
 | `/system` | **System** (Advanced Mode only) — 5 tabs: Event Health, NATS Status, Database, Cognitive Matrix, Debug |
 | `/docs` | **In-App Docs** — Two-column documentation browser (sidebar + rendered markdown). Serves docs via `GET /docs-api` (manifest) + `GET /docs-api/[slug]` (content). `/docs-api` prefix avoids the `/api/*` → Go proxy rewrite. Curated sections: User Guides, Getting Started, Soma Workflow, API Reference, Architecture, Governance & Testing, V7 Development. Add entries to `lib/docsManifest.ts`. Deep-link: `/docs?doc={slug}`. |
-| `/settings` | Settings — Brains, Cognitive Matrix, MCP Tools, Users |
+| `/settings` | Settings — Brains (provider CRUD), Profiles (mission profiles + activate), Cognitive Matrix, MCP Tools, Users |
 | `/runs` | Run List — all recent runs across missions, status dots, timestamps. Navigates to timeline on click. |
 | `/runs/[id]` | Run Timeline — vertical `EventCard` timeline, auto-polls every 5s, stops on terminal events (`mission.completed/failed`). |
 | `/runs/[id]/chain` | Causal Chain View — parent/child run traversal (V7 — backend `GET /api/v1/runs/{id}/chain` complete; UI pending). |
@@ -989,6 +1313,8 @@ uvx inv core.smoke            # Governance smoke tests
 | V7 Step 01 | Workflow-First Navigation (Team D) | Nav collapsed from 12+ routes to 5 workflow-first panels. `ZoneA_Rail` (5 items + Advanced Mode toggle). `/automations` (6 tabs + deep-link + advanced gate). `/resources` (4 tabs + deep-link). `/system` (5 tabs + advanced gate). 8 legacy routes → server-side `redirect()`. `PolicyTab` CRUD migrated from `/approvals` into `ApprovalsTab`. 56 unit tests pass. |
 | V7 Team A | Event Spine | `mission_runs` (023) + `mission_events` (024) migrations. `protocol.MissionEventEnvelope` + 17 `EventType` constants. `events.Store` (Emit — DB-first + async CTS publish). `runs.Manager` (CreateRun, CreateChildRun, UpdateRunStatus). `GET /api/v1/runs/{id}/events` + `GET /api/v1/runs/{id}/chain` handlers. Propagation chain: Soma → activation → team → agent. Agent emits `tool.invoked`/`tool.completed`/`tool.failed` per ReAct iteration. `CommitResponse.RunID` returned to UI. TypeScript types in `interface/types/events.ts`. |
 | V7 Soma Workflow | End-to-End Working Flow | **Backend:** `ConsultationEntry` type in `protocol.ChatResponsePayload`; ReAct loop captures `consult_council` calls into `ProcessResult.Consultations`; `agentResult.Consultations` wired into `chatPayload`; `GET /api/v1/runs` global listing endpoint (`runs.Manager.ListRecentRuns`). **Store:** `MissionRun` + `MissionEvent` types; `activeRunId`, `runTimeline`, `recentRuns` state; `confirmProposal` injects `role:'system'` message with `run_id`; `fetchRunTimeline` + `fetchRecentRuns` actions. **Chat UI:** Soma-locked header (no dropdown), `DirectCouncilButton` popover, `DelegationTrace` council cards, `SomaActivityIndicator` (live `streamLogs` activity), system message bubble linking to `/runs/{id}`. **Runs UI:** `RunTimeline.tsx` (auto-poll 5s), `EventCard.tsx`, `/runs/[id]` page, `/runs` list page, `RecentRunsSection` in OpsOverview. **OpsWidget Registry:** `lib/opsWidgetRegistry.ts` — `registerOpsWidget()` / `getOpsWidgets()` / `unregisterOpsWidget()` plugin API; OpsOverview renders from registry. **LaunchCrewModal:** Always targets Soma on open; clears stale proposals. **Tests:** 7 new passing Go tests (4 `ListRecentRuns`, 3 `handleListRuns`). |
+| Provider CRUD + Profiles | Provider Management + Mission Profiles + Reactive | **Backend:** `AddProvider`/`UpdateProvider`/`RemoveProvider` with `RWMutex` hot-reload on `cognitive.Router`. `POST/PUT/DELETE /api/v1/brains` + `POST /api/v1/brains/{id}/probe`. Context snapshot CRUD (`context_snapshots` migration 028). Mission profile CRUD + activate (`mission_profiles` migration 029). Reactive NATS subscription engine (`core/internal/reactive/engine.go`). `GET /api/v1/services/status` health aggregation. `MaxReconnects(-1)` + DB/NATS startup retry loops (45×2s). **Frontend:** `BrainsPage.tsx` (add/edit/delete/probe with type presets), `ContextSwitchModal.tsx` (Cache & Transfer / Start Fresh / Load Snapshot), `MissionProfilesPage.tsx` (role→provider table, NATS subscriptions, context strategy), Profiles tab in Settings, Services tab in System. |
+| V7 Team B | Trigger Engine | **Migrations:** `trigger_rules` (025) + `trigger_executions` (026). **Backend:** `triggers.Store` (rule CRUD, in-memory cache, `LogExecution`, `ActiveCount`). `triggers.Engine` (CTS subscription on `swarm.mission.events.*`, 4-guard `evaluateRule` — cooldown, recursion depth, concurrency, condition — `fireTrigger` creates child run, `proposeTrigger` logs for approval). 6 HTTP handlers (`GET/POST/PUT/DELETE /api/v1/triggers`, `POST /toggle`, `GET /history`). Wired into `AdminServer` + `main.go` with graceful shutdown. **Frontend:** `TriggerRulesTab.tsx` (full CRUD UI — RuleCard, CreateRuleForm, guard badges, mode warnings). Trigger types + 5 async actions in `useCortexStore`. Automations → Triggers tab now live (was DegradedState). **Bug fixes:** `/runs/[id]/page.tsx` (`"use client"` + `use(params)` for Next.js 15+), `/docs/page.tsx` (Suspense boundary for `useSearchParams`). |
 | In-App Docs Browser | `/docs` + Doc Registry | **Next.js Route Handlers:** `GET /docs-api` (manifest) + `GET /docs-api/[slug]` (file content, path-validated against manifest). `/docs-api` prefix avoids the `/api/*` → Go backend proxy rewrite; `params` awaited for Next.js 15+ async param requirement. **Manifest:** `lib/docsManifest.ts` — 29 entries across 7 curated sections; `DOC_BY_SLUG` flat map for O(1) slug validation; add a doc by adding one `DocEntry`. **User Guides (new):** 7 plain-language guides in `docs/user/` — Core Concepts, Using Soma Chat, Run Timeline, Automations, Resources, Memory, Governance & Trust — covering every implemented workflow and concept. **UI:** `/docs` page — two-column layout: sidebar (grouped nav, filter search, active state) + content pane (react-markdown + remark-gfm, Midnight Cortex styled). `?doc={slug}` deep-link; URL synced on every sidebar click. **Nav:** `BookOpen` Docs link in main nav directly below Memory (not in footer). |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)
@@ -999,7 +1325,7 @@ Planned phases with detailed specifications are documented in the Architecture O
 
 | Phase | Name | Summary |
 | :--- | :--- | :--- |
-| **V7** | **Event Spine & Workflow-First Orchestration** | **IN PROGRESS** — Team D (nav) ✓, Workspace UX ✓, Team A (Event Spine) ✓, Soma Workflow E2E ✓ (consultation traces, run_id confirmation, Run Timeline UI, OpsWidget registry, GET /api/v1/runs). **Next:** Team B (Trigger Engine: migrations 025-026, rules CRUD, evaluation engine with cooldown/recursion/concurrency guards) → Team C (Scheduler: migration 027, cron goroutine, NATS suspend/resume) → Causal Chain UI (`ViewChain.tsx`) |
+| **V7** | **Event Spine & Workflow-First Orchestration** | **IN PROGRESS** — Team D (nav) ✓, Workspace UX ✓, Team A (Event Spine) ✓, Soma Workflow E2E ✓, Provider CRUD + Mission Profiles ✓, Team B (Trigger Engine) ✓ (migrations 025-026, rules CRUD, 4-guard evaluation engine, TriggerRulesTab UI). **Next:** Team C (Scheduler: migration 027, cron goroutine, NATS suspend/resume) → Causal Chain UI (`ViewChain.tsx`) |
 | 12 | Persistent Agent Memory | Cross-mission memory, semantic recall, memory consolidation daemon |
 | 13 | Multi-Agent Collaboration | Intra-team debate protocol, consensus detection, SquadRoom live chat |
 | 14 | Hot-Reload Runtime | Live agent goroutine replacement, zero-downtime reconfiguration |

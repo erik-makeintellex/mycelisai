@@ -33,6 +33,7 @@ import (
 	"github.com/mycelis/core/internal/server"
 	mycelis_signal "github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/swarm"
+	"github.com/mycelis/core/internal/triggers"
 	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
 )
 
@@ -445,6 +446,23 @@ func main() {
 	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, eventStore, runsManager)
 	adminSrv.RegisterRoutes(mux)
 
+	// V7 Team B: Trigger Engine — evaluates rules against CTS event stream.
+	// Requires: sharedDB (for trigger_rules table) + eventStore + runsManager.
+	if sharedDB != nil && eventStore != nil && runsManager != nil {
+		triggerStore := triggers.NewStore(sharedDB)
+		triggerEngine := triggers.NewEngine(triggerStore, eventStore, runsManager, nc)
+		adminSrv.Triggers = triggerStore
+		adminSrv.TriggerEngine = triggerEngine
+		go func() {
+			if err := triggerEngine.Start(ctx); err != nil {
+				log.Printf("[triggers] engine start error: %v", err)
+			}
+		}()
+		log.Println("V7 Trigger Engine Active.")
+	} else {
+		log.Println("WARN: Trigger Engine disabled (missing DB, events, or runs).")
+	}
+
 	// Wire DB into reactive engine so it can re-subscribe active profiles after
 	// a NATS reconnect. Then reactivate any profiles that were active in the DB
 	// at startup (covers the case where profiles were set before this boot).
@@ -500,6 +518,10 @@ func main() {
 
 		if soma != nil {
 			soma.Shutdown()
+		}
+
+		if adminSrv.TriggerEngine != nil {
+			adminSrv.TriggerEngine.Stop()
 		}
 
 		if mcpPool != nil {

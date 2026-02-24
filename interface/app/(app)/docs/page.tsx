@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -258,6 +258,14 @@ function buildMdComponents(
 // ── Main Page ─────────────────────────────────────────────────
 
 export default function DocsPage() {
+    return (
+        <Suspense fallback={<div className="h-full bg-cortex-bg" />}>
+            <DocsContent />
+        </Suspense>
+    );
+}
+
+function DocsContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [sections, setSections] = useState<DocSection[]>([]);
