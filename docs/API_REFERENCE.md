@@ -78,3 +78,31 @@
 | `/api/v1/user/me` | GET | Current user identity |
 | `/api/v1/user/settings` | PUT | Update user settings |
 | `/healthz` | GET | Health check |
+| **Brains (Provider CRUD)** | | |
+| `/api/v1/brains` | GET | List all providers with health status, location, data boundary |
+| `/api/v1/brains` | POST | Add a new provider — hot-injects into running router, immediate probe |
+| `/api/v1/brains/{id}` | PUT | Update provider config — empty api_key keeps existing |
+| `/api/v1/brains/{id}` | DELETE | Remove provider — rejected if last remaining |
+| `/api/v1/brains/{id}/toggle` | PUT | Enable/disable provider — persists to cognitive.yaml |
+| `/api/v1/brains/{id}/policy` | PUT | Update usage_policy + roles_allowed — persists to cognitive.yaml |
+| `/api/v1/brains/{id}/probe` | POST | Live health check — returns `{"alive":bool,"latency_ms":int}` |
+| **Mission Profiles** | | |
+| `/api/v1/mission-profiles` | GET | List all profiles (role_providers, subscriptions, active flag) |
+| `/api/v1/mission-profiles` | POST | Create profile — name, role_providers, subscriptions, context_strategy, auto_start |
+| `/api/v1/mission-profiles/{id}` | PUT | Update profile config |
+| `/api/v1/mission-profiles/{id}` | DELETE | Delete profile — unsubscribes reactive engine first |
+| `/api/v1/mission-profiles/{id}/activate` | POST | Activate profile — applies role routing, registers NATS subscriptions, marks active in DB |
+| **Context Snapshots** | | |
+| `/api/v1/context/snapshot` | POST | Save a context snapshot (messages, run_state, role_providers, source_profile) |
+| `/api/v1/context/snapshots` | GET | List 20 most recent snapshots (no messages payload) |
+| `/api/v1/context/snapshots/{id}` | GET | Full snapshot including messages array |
+| **Service Health** | | |
+| `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive (N/M enabled), Reactive (subscription count) |
+| **Mission Runs & Events (V7)** | | |
+| `/api/v1/runs` | GET | List recent runs across all missions — status, timing, trigger source |
+| `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (MissionEventEnvelope records) |
+| `/api/v1/runs/{id}/chain` | GET | Causal chain — parent run → event → trigger → child run traversal |
+| **Intent (CE-1)** | | |
+| `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return run_id |
+| `/api/v1/intent/proof/{id}` | GET | Retrieve intent proof bundle by ID |
+| `/api/v1/templates` | GET | List CE-1 orchestration templates |

@@ -1,9 +1,19 @@
 # V7 Implementation Plan — Event Spine, Mission Runs, Trigger Engine, Scheduler, Workflow-First IA
 
-> **Status:** Pre-Implementation Blueprint
-> **Date:** 2026-02-20
-> **Scope:** Migrations 023-027, 5 new Go packages, 6 new API route groups, 10+ new frontend components, navigation restructure
-> **Execution Order:** Team A -> Team B -> Team C -> Team E -> Team D (strict sequential, no parallel overlap on shared tables)
+> **Status:** In Progress — Team B (Trigger Engine) is NEXT
+> **Date:** 2026-02-20 | **Updated:** 2026-02-24
+> **Scope:** Migrations 023-029, 6 new Go packages, 8 new API route groups, 10+ new frontend components, navigation restructure
+> **Execution Order:** Team A → Team B → Team C → Team E → Team D (strict sequential, no parallel overlap on shared tables)
+>
+> | Team | Scope | Status |
+> |------|-------|--------|
+> | Team D | V7 Navigation restructure | ✅ COMPLETE |
+> | Team A | Event Spine — migrations 023-024, events, runs, timeline APIs | ✅ COMPLETE |
+> | Provider/Profile | Migrations 028-029, provider CRUD, mission profiles, reactive engine, services dashboard | ✅ COMPLETE |
+> | Team B | Trigger Engine — migrations 025-026, triggers/store.go, engine.go, handlers | 🔲 NEXT |
+> | Team C | Scheduler — migration 027, scheduler.go, schedules handlers | 🔲 PENDING |
+> | Team E | Causal Chain UI — ViewChain.tsx, RunChainNode.tsx, /runs/[id]/chain page | 🔲 PENDING |
+> | MCP Baseline | filesystem, memory, artifact-renderer, fetch MCP servers | 🔲 PARALLEL |
 
 ---
 
