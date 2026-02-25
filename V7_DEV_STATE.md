@@ -228,6 +228,22 @@ Declarative IF/THEN rules evaluated on CTS event ingest. Four guards: cooldown, 
 
 ---
 
+### MCP Test Hardening (Service + Handlers)
+
+Comprehensive MCP coverage added across service, adapter, and HTTP handler layers.
+
+| Deliverable | File |
+|------------|------|
+| Library tests (YAML load, lookup, config conversion) | `core/internal/mcp/library_test.go` |
+| Service tests (Install/List/Get/Delete/UpdateStatus/CacheTools/ListTools/ListAllTools/Find*) | `core/internal/mcp/service_test.go` |
+| Tool set service tests (CRUD, FindByName, ResolveRefs, nil DB guards) | `core/internal/mcp/toolsets_test.go` |
+| Executor adapter tests (`FindToolByName`, `CallTool`, text formatting edge cases) | `core/internal/mcp/executor_test.go` |
+| MCP handler DB-backed happy paths (`/servers`, `/tools`, `/library/install`) + raw install forbidden route | `core/internal/server/mcp_test.go` |
+| Tool set handler update-path tests (happy, bad UUID, missing name, nil service) | `core/internal/server/mcp_toolsets_test.go` |
+| Update not-found HTTP semantics for tool set update | `core/internal/server/mcp_toolsets.go` (`404` when tool set not found) |
+
+---
+
 ## What Is Pending
 
 ### V7 Team C — Scheduler (NEXT)
@@ -262,10 +278,10 @@ Per `docs/V7_MCP_BASELINE.md`.
 
 | Server | Status |
 |--------|--------|
-| `filesystem` MCP | NOT STARTED |
-| `memory` MCP | NOT STARTED |
-| `artifact-renderer` MCP | NOT STARTED |
-| `fetch` MCP | NOT STARTED |
+| `filesystem` MCP | BOOTSTRAP DEFAULT (auto-install/connect path present) |
+| `fetch` MCP | BOOTSTRAP DEFAULT (auto-install/connect path present) |
+| `memory` MCP | CURATED LIBRARY INSTALL (available, not bootstrap default) |
+| `artifact-renderer` MCP | PLANNED (not bootstrap default yet) |
 
 Resources → Workspace Explorer tab shows DegradedState until implemented.
 
@@ -316,6 +332,11 @@ Go build:           go build ./... PASSES (includes triggers package)
 Go tests:           188+ tests pass across 16 packages
                     Migrations 023-029 must be applied for full test coverage
 Go test packages:   internal/server (157), internal/events (16), internal/runs (19), internal/triggers (new), others (~80)
+MCP verification:   `go test ./internal/mcp/ -count=1` PASSES
+                    `go test ./internal/server/ -run TestHandleMCP -count=1` PASSES
+                    `go test ./internal/swarm/ -run TestScoped -count=1` PASSES
+                    `go test ./... -count=1` has unrelated root-package conflict:
+                    `probe.go` and `probe_test.go` both declare `main`
 ```
 
 ---
@@ -329,8 +350,20 @@ Go test packages:   internal/server (157), internal/events (16), internal/runs (
 | Causal Chain UI | ViewChain.tsx + /runs/[id]/chain | After Team C |
 | Automations → Active Automations: DegradedState | `app/(app)/automations/page.tsx` | Blocked by Team C |
 | Resources → Workspace Explorer: DegradedState | `app/(app)/resources/page.tsx` | Blocked by MCP Baseline |
+| Full `go test ./...` root-package conflict | `core/probe.go`, `core/probe_test.go` | Medium |
 
 ---
+
+## Next Potential Steps
+
+1. Resolve full-suite blocker:
+   - Fix root package build conflict (`probe.go` and `probe_test.go` both declare `main`) so `go test ./...` is clean.
+2. Extend MCP test coverage into connection lifecycle:
+   - Add seam/stubs for `ClientPool.Connect/ReconnectAll/ShutdownAll` to validate status updates and degraded behavior without real subprocesses.
+3. Harden API semantics consistency:
+   - Ensure not-found cases across MCP handlers/toolset handlers map to `404` consistently (currently update-path is corrected).
+4. Update `/resources` Workspace Explorer out of DegradedState:
+   - Wire filesystem MCP-backed file browsing and actions into the tab.
 
 ## Decision Log (Locked)
 

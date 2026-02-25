@@ -28,6 +28,7 @@ uvx inv interface.check       # HTTP smoke test against running dev server
 | `core/internal/server/telemetry_test.go` | Runtime telemetry, trust threshold GET/PUT/range |
 | `core/internal/server/mission_test.go` | Mission CRUD, intent commit TX, negotiate, sensor configs, blueprint extraction |
 | `core/internal/server/mcp_test.go` | MCP install validation, list, delete, tool call, library |
+| `core/internal/server/mcp_toolsets_test.go` | MCP tool set list/create/update/delete paths + nil guards |
 | `core/internal/server/memory_search_test.go` | Memory search, sitreps, sensors |
 | `core/internal/server/proposals_test.go` | Proposal CRUD, approve/reject, conflict detection |
 | `core/internal/server/identity_test.go` | Identity, teams, settings |
@@ -50,7 +51,13 @@ uvx inv interface.check       # HTTP smoke test against running dev server
 uvx inv core.test                          # All packages
 go test -v ./internal/server/...           # Server handlers only
 go test -v -run TestHandleGovernance ./internal/server/...  # Single test pattern
+go test -v ./internal/mcp/ -count=1        # MCP service/library/executor/toolset suites
+go test -v -run TestHandleMCP ./internal/server/... -count=1
+go test -v -run TestHandleUpdateToolSet ./internal/server/... -count=1
+go test -v -run TestScoped ./internal/swarm/... -count=1
 ```
+
+> Note: `go test ./...` currently includes an unrelated root-package conflict (`core/probe.go` and `core/probe_test.go` both declare `main`).
 
 ---
 
