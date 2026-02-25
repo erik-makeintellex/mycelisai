@@ -17,6 +17,7 @@ import (
 
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
@@ -78,6 +79,7 @@ type InternalToolRegistry struct {
 	mem       *memory.Service
 	architect *cognitive.MetaArchitect
 	catalogue *catalogue.Service
+	inception *inception.Store
 	db        *sql.DB
 	// somaRef is set after Soma is constructed — allows list_teams etc.
 	somaRef *Soma
@@ -90,6 +92,7 @@ type InternalToolDeps struct {
 	Mem       *memory.Service
 	Architect *cognitive.MetaArchitect
 	Catalogue *catalogue.Service
+	Inception *inception.Store
 	DB        *sql.DB
 }
 
@@ -102,6 +105,7 @@ func NewInternalToolRegistry(deps InternalToolDeps) *InternalToolRegistry {
 		mem:       deps.Mem,
 		architect: deps.Architect,
 		catalogue: deps.Catalogue,
+		inception: deps.Inception,
 		db:        deps.DB,
 	}
 	r.registerAll()
@@ -399,6 +403,40 @@ func (r *InternalToolRegistry) registerAll() {
 		},
 		Handler: r.handleSummarizeConversation,
 	}
+
+	r.tools["store_inception_recipe"] = &InternalTool{
+		Name:        "store_inception_recipe",
+		Description: "Store a structured inception recipe — a pattern for how to ask for or create a specific thing. Use after successfully completing a complex task to capture the approach for future reuse. The recipe is dual-persisted: RDBMS (structured query) + pgvector (semantic recall).",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"category":       map[string]any{"type": "string", "description": "Recipe category: blueprint, analysis, team_setup, deployment, research, configuration, migration, etc."},
+				"title":          map[string]any{"type": "string", "description": "Short descriptive title: 'How to create a microservices blueprint'"},
+				"intent_pattern": map[string]any{"type": "string", "description": "The structured way to phrase this request. Be specific about parameters, constraints, and expected format."},
+				"parameters":     map[string]any{"type": "object", "description": "Key parameters as name→description pairs. E.g. {\"service_count\": \"number of services to deploy\"}"},
+				"example_prompt": map[string]any{"type": "string", "description": "A concrete example prompt that successfully produced the desired outcome"},
+				"outcome_shape":  map[string]any{"type": "string", "description": "What the successful outcome looks like (format, structure, key sections)"},
+				"tags":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Searchable tags for filtering"},
+			},
+			"required": []string{"category", "title", "intent_pattern"},
+		},
+		Handler: r.handleStoreInceptionRecipe,
+	}
+
+	r.tools["recall_inception_recipes"] = &InternalTool{
+		Name:        "recall_inception_recipes",
+		Description: "Recall inception recipes — structured patterns for how to ask for or create specific things. Search by keyword or category to find proven approaches from past successful tasks. Use before starting complex tasks to leverage existing knowledge.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"query":    map[string]any{"type": "string", "description": "Search query (keyword or semantic)"},
+				"category": map[string]any{"type": "string", "description": "Optional category filter: blueprint, analysis, team_setup, etc."},
+				"limit":    map[string]any{"type": "integer", "description": "Max results (default 5)"},
+			},
+			"required": []string{"query"},
+		},
+		Handler: r.handleRecallInceptionRecipes,
+	}
 }
 
 // ── Tool Handlers ──────────────────────────────────────────────
@@ -676,6 +714,12 @@ func (r *InternalToolRegistry) handleResearchForBlueprint(ctx context.Context, a
 	missions, err := r.handleListMissions(ctx, nil)
 	if err == nil && missions != "" {
 		research.WriteString("## Active Missions\n" + missions + "\n\n")
+	}
+
+	// 5. Recall inception recipes — proven patterns for similar tasks
+	recipes, err := r.handleRecallInceptionRecipes(ctx, map[string]any{"query": intent, "limit": float64(3)})
+	if err == nil && recipes != "" && recipes != "[]" {
+		research.WriteString("## Inception Recipes (Proven Patterns)\n" + recipes + "\n\n")
 	}
 
 	research.WriteString("Use this research to inform the blueprint you generate with generate_blueprint.\n")
@@ -1293,6 +1337,156 @@ Conversation:
 	return summaryID, nil
 }
 
+// ── Inception Recipe Handlers ────────────────────────────────────
+
+func (r *InternalToolRegistry) handleStoreInceptionRecipe(ctx context.Context, args map[string]any) (string, error) {
+	category, _ := args["category"].(string)
+	title, _ := args["title"].(string)
+	intentPattern, _ := args["intent_pattern"].(string)
+
+	if category == "" || title == "" || intentPattern == "" {
+		return "", fmt.Errorf("store_inception_recipe requires 'category', 'title', and 'intent_pattern'")
+	}
+
+	if r.inception == nil {
+		return "", fmt.Errorf("inception store not available")
+	}
+
+	recipe := inception.Recipe{
+		Category:      category,
+		Title:         title,
+		IntentPattern: intentPattern,
+		AgentID:       "admin",
+	}
+
+	if params, ok := args["parameters"].(map[string]any); ok {
+		recipe.Parameters = params
+	}
+	if example, ok := args["example_prompt"].(string); ok {
+		recipe.ExamplePrompt = example
+	}
+	if outcome, ok := args["outcome_shape"].(string); ok {
+		recipe.OutcomeShape = outcome
+	}
+	if tags, ok := args["tags"].([]any); ok {
+		for _, t := range tags {
+			if s, ok := t.(string); ok {
+				recipe.Tags = append(recipe.Tags, s)
+			}
+		}
+	}
+
+	id, err := r.inception.CreateRecipe(ctx, recipe)
+	if err != nil {
+		return "", fmt.Errorf("store inception recipe failed: %w", err)
+	}
+
+	// Best-effort: embed into pgvector for semantic recall
+	if r.brain != nil && r.mem != nil {
+		embeddingText := fmt.Sprintf("[inception:%s] %s — %s", category, title, intentPattern)
+		vec, err := r.brain.Embed(ctx, embeddingText, "")
+		if err == nil {
+			meta := map[string]any{
+				"category":  category,
+				"source":    "inception_recipe",
+				"recipe_id": id,
+			}
+			if insertErr := r.mem.StoreVector(ctx, embeddingText, vec, meta); insertErr != nil {
+				log.Printf("store_inception_recipe: vector insert failed (non-fatal): %v", insertErr)
+			}
+		} else {
+			log.Printf("store_inception_recipe: embedding failed (non-fatal): %v", err)
+		}
+	}
+
+	result := map[string]any{
+		"message":   fmt.Sprintf("Inception recipe stored: '%s' (category: %s, id: %s)", title, category, id),
+		"recipe_id": id,
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
+}
+
+func (r *InternalToolRegistry) handleRecallInceptionRecipes(ctx context.Context, args map[string]any) (string, error) {
+	query, _ := args["query"].(string)
+	if query == "" {
+		return "", fmt.Errorf("recall_inception_recipes requires 'query'")
+	}
+
+	category, _ := args["category"].(string)
+	limit := 5
+	if l, ok := args["limit"].(float64); ok && l > 0 {
+		limit = int(l)
+	}
+
+	type recipeResult struct {
+		ID            string         `json:"id"`
+		Category      string         `json:"category"`
+		Title         string         `json:"title"`
+		IntentPattern string         `json:"intent_pattern"`
+		Parameters    map[string]any `json:"parameters,omitempty"`
+		ExamplePrompt string         `json:"example_prompt,omitempty"`
+		OutcomeShape  string         `json:"outcome_shape,omitempty"`
+		QualityScore  float64        `json:"quality_score"`
+		UsageCount    int            `json:"usage_count"`
+		Source        string         `json:"source"` // "rdbms" or "vector"
+	}
+
+	var results []recipeResult
+
+	// 1. RDBMS keyword/title search
+	if r.inception != nil {
+		var recipes []inception.Recipe
+		var err error
+		if category != "" {
+			recipes, err = r.inception.ListRecipes(ctx, category, "", limit)
+		} else {
+			recipes, err = r.inception.SearchByTitle(ctx, query, limit)
+		}
+		if err == nil {
+			for _, rec := range recipes {
+				results = append(results, recipeResult{
+					ID: rec.ID, Category: rec.Category, Title: rec.Title,
+					IntentPattern: rec.IntentPattern, Parameters: rec.Parameters,
+					ExamplePrompt: rec.ExamplePrompt, OutcomeShape: rec.OutcomeShape,
+					QualityScore: rec.QualityScore, UsageCount: rec.UsageCount,
+					Source: "rdbms",
+				})
+				// Bump usage count asynchronously
+				go func(id string) { _ = r.inception.IncrementUsage(context.Background(), id) }(rec.ID)
+			}
+		}
+	}
+
+	// 2. Semantic vector search for inception recipes (complements keyword search)
+	if r.brain != nil && r.mem != nil {
+		vec, err := r.brain.Embed(ctx, fmt.Sprintf("[inception] %s", query), "")
+		if err == nil {
+			vecResults, err := r.mem.SemanticSearch(ctx, vec, limit)
+			if err == nil {
+				for _, vr := range vecResults {
+					// Only include inception recipe vectors
+					if src, ok := vr.Metadata["source"].(string); ok && src == "inception_recipe" {
+						results = append(results, recipeResult{
+							ID:       fmt.Sprintf("%v", vr.Metadata["recipe_id"]),
+							Category: fmt.Sprintf("%v", vr.Metadata["category"]),
+							Title:    vr.Content,
+							Source:   "vector",
+						})
+					}
+				}
+			}
+		}
+	}
+
+	if results == nil {
+		results = []recipeResult{}
+	}
+
+	data, _ := json.Marshal(results)
+	return string(data), nil
+}
+
 // ── Runtime Context Builder ─────────────────────────────────────
 
 // BuildContext generates a live system state block for injection into an agent's
@@ -1329,7 +1523,8 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, 
 	sb.WriteString("**Post-response** (after completing a task):\n")
 	sb.WriteString("1. Store important learnings or decisions → `remember`\n")
 	sb.WriteString("2. Store significant outputs → `store_artifact`\n")
-	sb.WriteString("3. Report actions taken and outcomes clearly to the user\n")
+	sb.WriteString("3. Distill successful complex approaches → `store_inception_recipe` (for future reuse)\n")
+	sb.WriteString("4. Report actions taken and outcomes clearly to the user\n")
 
 	return sb.String()
 }

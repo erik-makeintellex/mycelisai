@@ -112,7 +112,7 @@ def _kill_pid(pid: int):
     """Kill a process by PID."""
     if is_windows():
         subprocess.run(["taskkill", "/F", "/PID", str(pid)],
-                       capture_output=True, timeout=5)
+                       capture_output=True, timeout=15)
     else:
         subprocess.run(["kill", "-9", str(pid)],
                        capture_output=True, timeout=5)

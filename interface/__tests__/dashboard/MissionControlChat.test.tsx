@@ -40,6 +40,7 @@ function resetStore() {
         councilMembers: [],
         isBroadcasting: false,
         lastBroadcastResult: null,
+        streamLogs: [],
     });
 }
 
@@ -48,72 +49,54 @@ function resetStore() {
 describe('MissionControlChat', () => {
     beforeEach(() => {
         resetStore();
+        // Default: council members fetch returns the members
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({ ok: true, data: COUNCIL_MEMBERS }),
+        });
     });
 
-    // ── Council Selector ──────────────────────────────────────
+    // ── Header & Target Display ────────────────────────────────
 
-    describe('Council Member Selector', () => {
-        it('shows fallback "Admin" when members not loaded', () => {
-            mockFetch.mockResolvedValue({ ok: false });
+    describe('Header & Target Display', () => {
+        it('shows "Soma" header by default', async () => {
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
-            const select = screen.getByRole('combobox');
-            expect(select).toBeDefined();
-            expect(select.querySelector('option')?.textContent).toContain('Soma');
+            // The header shows "Soma" as the default target
+            expect(screen.getByText('Soma')).toBeDefined();
         });
 
-        it('populates dropdown with council members from API', async () => {
-            mockFetch.mockResolvedValue({
-                ok: true,
-                json: async () => ({ ok: true, data: COUNCIL_MEMBERS }),
-            });
-
+        it('shows "Broadcast" header in broadcast mode', async () => {
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
-            await waitFor(() => {
-                const options = screen.getAllByRole('option');
-                expect(options).toHaveLength(5);
-            });
-
-            const options = screen.getAllByRole('option');
-            expect(options[0].textContent).toContain('Soma');
-            expect(options[1].textContent).toContain('Architect');
-        });
-
-        it('changes councilTarget when selecting a different member', async () => {
-            // Pre-populate members
-            useCortexStore.setState({ councilMembers: COUNCIL_MEMBERS });
-
-            render(<MissionControlChat />);
-
-            const select = screen.getByRole('combobox');
-            fireEvent.change(select, { target: { value: 'council-architect' } });
-
-            expect(useCortexStore.getState().councilTarget).toBe('council-architect');
-        });
-
-        it('hides selector in broadcast mode', () => {
-            useCortexStore.setState({ councilMembers: COUNCIL_MEMBERS });
-            render(<MissionControlChat />);
-
-            // Toggle broadcast
-            const broadcastBtn = screen.getByTitle(/Toggle broadcast/);
+            // Toggle broadcast mode via the Megaphone button
+            const broadcastBtn = screen.getByTitle(/Broadcast mode/);
             fireEvent.click(broadcastBtn);
 
-            // Selector should be gone, "Broadcast" label should appear
-            expect(screen.queryByRole('combobox')).toBeNull();
             expect(screen.getByText('Broadcast')).toBeDefined();
         });
 
-        it('restores selector when exiting broadcast mode', () => {
+        it('shows Direct council button for targeting specific members', async () => {
             useCortexStore.setState({ councilMembers: COUNCIL_MEMBERS });
-            render(<MissionControlChat />);
 
-            const broadcastBtn = screen.getByTitle(/Toggle broadcast/);
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            // "Direct" button exists for targeting specific council members
+            expect(screen.getByText('Direct')).toBeDefined();
+        });
+
+        it('shows Soma header when exiting broadcast mode', async () => {
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const broadcastBtn = screen.getByTitle(/Broadcast mode/);
             fireEvent.click(broadcastBtn); // ON
             fireEvent.click(broadcastBtn); // OFF
 
-            expect(screen.getByRole('combobox')).toBeDefined();
+            expect(screen.getByText('Soma')).toBeDefined();
         });
     });
 
@@ -123,10 +106,9 @@ describe('MissionControlChat', () => {
         it('sends message to council endpoint with selected target', async () => {
             useCortexStore.setState({
                 councilMembers: COUNCIL_MEMBERS,
-                councilTarget: 'council-architect',
+                councilTarget: 'admin',
             });
 
-            // First call: fetchCouncilMembers, second: sendMissionChat
             mockFetch
                 .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
                 .mockResolvedValueOnce({
@@ -135,22 +117,22 @@ describe('MissionControlChat', () => {
                         ok: true,
                         data: {
                             ...CTS_CHAT_RESPONSE.data,
-                            meta: { ...CTS_CHAT_RESPONSE.data.meta, source_node: 'council-architect' },
+                            meta: { ...CTS_CHAT_RESPONSE.data.meta, source_node: 'admin' },
                         },
                     }),
                 });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
-            const input = screen.getByPlaceholderText(/Ask Architect/i);
+            const input = screen.getByPlaceholderText(/Ask Soma/i);
             fireEvent.change(input, { target: { value: 'Design a new mission' } });
             fireEvent.keyDown(input, { key: 'Enter' });
 
             await waitFor(() => {
-                // Verify fetch was called with council endpoint
                 const calls = mockFetch.mock.calls;
                 const chatCall = calls.find((c: any[]) =>
-                    typeof c[0] === 'string' && c[0].includes('/council/council-architect/chat')
+                    typeof c[0] === 'string' && c[0].includes('/council/admin/chat')
                 );
                 expect(chatCall).toBeDefined();
             });
@@ -162,10 +144,11 @@ describe('MissionControlChat', () => {
             });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByText('Hello world')).toBeDefined();
         });
 
-        it('renders council response with source label', () => {
+        it('renders council response with source label', async () => {
             useCortexStore.setState({
                 missionChat: [
                     { role: 'user', content: 'Hi' },
@@ -179,12 +162,13 @@ describe('MissionControlChat', () => {
             });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
             expect(screen.getByText('Hello from architect')).toBeDefined();
             expect(screen.getByText('Architect')).toBeDefined();
         });
 
-        it('renders trust badge with correct score', () => {
+        it('renders trust badge with correct score', async () => {
             useCortexStore.setState({
                 missionChat: [
                     {
@@ -197,10 +181,11 @@ describe('MissionControlChat', () => {
             });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByText('C:0.5')).toBeDefined();
         });
 
-        it('renders tools-used pills when present', () => {
+        it('renders tools-used pills when present', async () => {
             useCortexStore.setState({
                 missionChat: [
                     {
@@ -214,11 +199,12 @@ describe('MissionControlChat', () => {
             });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByText('Search Memory')).toBeDefined();
             expect(screen.getByText('View Teams')).toBeDefined();
         });
 
-        it('does not render tools pills when tools_used is empty', () => {
+        it('does not render tools pills when tools_used is empty', async () => {
             useCortexStore.setState({
                 missionChat: [
                     {
@@ -232,6 +218,7 @@ describe('MissionControlChat', () => {
             });
 
             const { container } = render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             // No tool pills should be rendered
             const pills = container.querySelectorAll('[class*="cortex-primary/10"]');
             expect(pills).toHaveLength(0);
@@ -241,30 +228,22 @@ describe('MissionControlChat', () => {
     // ── Dynamic Placeholder ───────────────────────────────────
 
     describe('Dynamic Placeholder', () => {
-        it('shows "Ask Soma..." when admin is selected', () => {
+        it('shows "Ask Soma..." when admin is selected', async () => {
             useCortexStore.setState({
                 councilMembers: COUNCIL_MEMBERS,
                 councilTarget: 'admin',
             });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByPlaceholderText(/Ask Soma/i)).toBeDefined();
         });
 
-        it('shows "Ask Architect..." when architect is selected', () => {
-            useCortexStore.setState({
-                councilMembers: COUNCIL_MEMBERS,
-                councilTarget: 'council-architect',
-            });
-
+        it('shows broadcast placeholder in broadcast mode', async () => {
             render(<MissionControlChat />);
-            expect(screen.getByPlaceholderText(/Ask Architect/i)).toBeDefined();
-        });
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
-        it('shows broadcast placeholder in broadcast mode', () => {
-            render(<MissionControlChat />);
-
-            const broadcastBtn = screen.getByTitle(/Toggle broadcast/);
+            const broadcastBtn = screen.getByTitle(/Broadcast mode/);
             fireEvent.click(broadcastBtn);
 
             expect(screen.getByPlaceholderText(/Broadcast to all teams/i)).toBeDefined();
@@ -274,16 +253,17 @@ describe('MissionControlChat', () => {
     // ── Error States ──────────────────────────────────────────
 
     describe('Error States', () => {
-        it('displays error bar when missionChatError is set', () => {
+        it('displays error bar when missionChatError is set', async () => {
             useCortexStore.setState({
                 missionChatError: 'Swarm offline',
             });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByText('Swarm offline')).toBeDefined();
         });
 
-        it('shows error as chat bubble with source_node on API failure', () => {
+        it('shows error as chat bubble with source_node on API failure', async () => {
             useCortexStore.setState({
                 councilTarget: 'council-architect',
                 missionChat: [
@@ -296,6 +276,7 @@ describe('MissionControlChat', () => {
             });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByText(/did not respond/)).toBeDefined();
             expect(screen.getByText('Architect')).toBeDefined();
         });
@@ -304,7 +285,7 @@ describe('MissionControlChat', () => {
     // ── Clear Chat ────────────────────────────────────────────
 
     describe('Clear Chat', () => {
-        it('clears messages when trash button is clicked', () => {
+        it('clears messages when trash button is clicked', async () => {
             useCortexStore.setState({
                 missionChat: [
                     { role: 'user', content: 'Hello' },
@@ -313,6 +294,7 @@ describe('MissionControlChat', () => {
             });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByText('Hello')).toBeDefined();
 
             const clearBtn = screen.getByTitle('Clear chat');
@@ -321,8 +303,9 @@ describe('MissionControlChat', () => {
             expect(useCortexStore.getState().missionChat).toHaveLength(0);
         });
 
-        it('hides trash button when chat is empty', () => {
+        it('hides trash button when chat is empty', async () => {
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.queryByTitle('Clear chat')).toBeNull();
         });
     });
@@ -330,18 +313,20 @@ describe('MissionControlChat', () => {
     // ── Loading State ─────────────────────────────────────────
 
     describe('Loading State', () => {
-        it('shows bouncing dots while chatting', () => {
+        it('shows bouncing dots while chatting', async () => {
             useCortexStore.setState({ isMissionChatting: true });
 
             const { container } = render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             const dots = container.querySelectorAll('.animate-bounce');
             expect(dots.length).toBe(3);
         });
 
-        it('disables input while loading', () => {
+        it('disables input while loading', async () => {
             useCortexStore.setState({ isMissionChatting: true });
 
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             const input = screen.getByRole('textbox');
             expect(input.hasAttribute('disabled')).toBe(true);
         });
@@ -350,15 +335,17 @@ describe('MissionControlChat', () => {
     // ── Empty State ───────────────────────────────────────────
 
     describe('Empty State', () => {
-        it('shows shield icon and prompt in normal mode', () => {
+        it('shows prompt about asking Soma in normal mode', async () => {
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByText(/Ask Soma/i)).toBeDefined();
         });
 
-        it('shows megaphone icon in broadcast mode', () => {
+        it('shows broadcast directive text in broadcast mode', async () => {
             render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
-            const broadcastBtn = screen.getByTitle(/Toggle broadcast/);
+            const broadcastBtn = screen.getByTitle(/Broadcast mode/);
             fireEvent.click(broadcastBtn);
 
             expect(screen.getByText(/Broadcast directives/i)).toBeDefined();

@@ -36,7 +36,7 @@ describe('GovernanceModal', () => {
     it('renders when selectedArtifact is set', () => {
         useCortexStore.setState({ selectedArtifact: MOCK_ARTIFACT as any });
         render(<GovernanceModal />);
-        expect(screen.getByText('Governance Review')).toBeDefined();
+        expect(screen.getByText('Review Required')).toBeDefined();
         expect(screen.getByText('agent-alpha')).toBeDefined();
     });
 
@@ -59,7 +59,7 @@ describe('GovernanceModal', () => {
         const noProof = { ...MOCK_ARTIFACT, proof: null };
         useCortexStore.setState({ selectedArtifact: noProof as any });
         render(<GovernanceModal />);
-        expect(screen.getByText('No proof of work provided')).toBeDefined();
+        expect(screen.getByText('No verification evidence provided')).toBeDefined();
     });
 
     it('calls selectArtifact(null) on close button click', () => {

@@ -4,14 +4,19 @@ from .config import is_windows, powershell, INTERFACE_HOST, INTERFACE_PORT, ROOT
 ns = Collection("interface")
 
 def _load_env():
-    """Load root .env into the process environment so Next.js middleware
+    """Load root .env into the process environment so Next.js proxy
     can read MYCELIS_API_KEY (used to inject Authorization headers into
-    proxied /api/* requests). Uses override=True so .env wins over system env."""
+    proxied /api/* requests). Uses override=True so .env wins over system env.
+    Removes PORT afterwards — the root .env sets PORT=8081 for Go Core,
+    but Next.js would read it and try to listen on 8081 instead of 3000."""
+    import os
     try:
         from dotenv import load_dotenv
         load_dotenv(str(ROOT_DIR / ".env"), override=True)
     except ImportError:
         pass  # python-dotenv not installed — env vars must be set manually
+    # Don't let Go Core's PORT leak into Next.js
+    os.environ.pop("PORT", None)
 
 # ── Lifecycle ────────────────────────────────────────────────
 

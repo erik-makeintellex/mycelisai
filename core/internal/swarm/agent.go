@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -43,6 +44,15 @@ type Agent struct {
 	// Nil = no emission (pre-V7 or degraded mode — silent, no panic).
 	eventEmitter protocol.EventEmitter
 	runID        string
+	// V7 Conversation Log: optional full-fidelity turn logger.
+	// Set by team.Start() propagating from Soma. Nil = silent mode.
+	conversationLogger protocol.ConversationLogger
+	sessionID          string // groups turns for a single request cycle
+	turnIndex          int    // monotonic counter within session
+	// V7 Interjection: buffered user redirect message.
+	interjectionMu  sync.Mutex
+	interjection    string
+	interjectionSub *nats.Subscription
 }
 
 // NewAgent creates a new Agent instance with lifecycle context.
@@ -78,6 +88,71 @@ func (a *Agent) SetEventEmitter(emitter protocol.EventEmitter, runID string) {
 	a.runID = runID
 }
 
+// SetConversationLogger wires the V7 conversation logger for full-fidelity turn persistence.
+// Called by team.Start() before the agent goroutine is launched.
+func (a *Agent) SetConversationLogger(logger protocol.ConversationLogger) {
+	a.conversationLogger = logger
+}
+
+// logTurn is a non-blocking helper that persists a conversation turn.
+// Follows the same go-routine pattern as event emission.
+func (a *Agent) logTurn(role, content, providerID, modelUsed, toolName string, toolArgs map[string]interface{}, parentTurnID, consultationOf string) {
+	if a.conversationLogger == nil || a.sessionID == "" {
+		return
+	}
+	idx := a.turnIndex
+	a.turnIndex++
+	go func() {
+		_, err := a.conversationLogger.LogTurn(a.ctx, protocol.ConversationTurnData{
+			RunID:          a.runID,
+			SessionID:      a.sessionID,
+			TenantID:       "default",
+			AgentID:        a.Manifest.ID,
+			TeamID:         a.TeamID,
+			TurnIndex:      idx,
+			Role:           role,
+			Content:        content,
+			ProviderID:     providerID,
+			ModelUsed:      modelUsed,
+			ToolName:       toolName,
+			ToolArgs:       toolArgs,
+			ParentTurnID:   parentTurnID,
+			ConsultationOf: consultationOf,
+		})
+		if err != nil {
+			log.Printf("[conversation] Agent [%s] log turn failed: %v", a.Manifest.ID, err)
+		}
+	}()
+}
+
+// checkInterjection returns and clears any buffered user interjection.
+func (a *Agent) checkInterjection() string {
+	a.interjectionMu.Lock()
+	defer a.interjectionMu.Unlock()
+	msg := a.interjection
+	a.interjection = ""
+	return msg
+}
+
+// subscribeInterjection sets up the NATS subscription for user interjections.
+func (a *Agent) subscribeInterjection() {
+	if a.nc == nil {
+		return
+	}
+	subject := fmt.Sprintf(protocol.TopicAgentInterjectionFmt, a.Manifest.ID)
+	sub, err := a.nc.Subscribe(subject, func(msg *nats.Msg) {
+		a.interjectionMu.Lock()
+		a.interjection = string(msg.Data)
+		a.interjectionMu.Unlock()
+		log.Printf("Agent [%s] received interjection: %s", a.Manifest.ID, truncateLog(string(msg.Data), 100))
+	})
+	if err != nil {
+		log.Printf("Agent [%s] interjection subscribe failed: %v", a.Manifest.ID, err)
+		return
+	}
+	a.interjectionSub = sub
+}
+
 // SetTeamTopology provides the agent with its team's NATS I/O contracts.
 func (a *Agent) SetTeamTopology(inputs, deliveries []string) {
 	a.TeamInputs = inputs
@@ -95,6 +170,9 @@ func (a *Agent) Start() {
 	personalSubject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, a.Manifest.ID)
 	a.nc.Subscribe(personalSubject, a.handleDirectRequest)
 	log.Printf("Agent [%s] listening for direct requests on [%s]", a.Manifest.ID, personalSubject)
+
+	// V7: Subscribe to interjection topic for user redirects during active runs
+	a.subscribeInterjection()
 
 	// Start heartbeat goroutine
 	go a.StartHeartbeat()
@@ -192,6 +270,12 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 		return ProcessResult{}
 	}
 
+	// V7 Conversation Log: generate a new session for this request cycle
+	if a.conversationLogger != nil {
+		a.sessionID = uuid.New().String()
+		a.turnIndex = 0
+	}
+
 	// Build system prompt: static prompt + runtime context + tools block
 	sys := a.Manifest.SystemPrompt
 	if sys == "" {
@@ -213,6 +297,10 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 		messages = append(messages, priorHistory...)
 	}
 	messages = append(messages, cognitive.ChatMessage{Role: "user", Content: input})
+
+	// V7 Conversation Log: emit system prompt + user input
+	a.logTurn("system", sys, "", "", "", nil, "", "")
+	a.logTurn("user", input, "", "", "", nil, "", "")
 
 	profile := "chat"
 	if a.Manifest.Model != "" {
@@ -241,6 +329,24 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	if a.toolExecutor != nil && len(a.Manifest.Tools) > 0 {
 		maxIter := a.Manifest.EffectiveMaxIterations()
 		for i := 0; i < maxIter; i++ {
+			// V7 Interjection: check for user redirect between ReAct iterations
+			if interjection := a.checkInterjection(); interjection != "" {
+				messages = append(messages, cognitive.ChatMessage{
+					Role:    "user",
+					Content: "[OPERATOR INTERJECTION]: " + interjection,
+				})
+				req.Messages = messages
+				a.logTurn("interjection", interjection, "", "", "", nil, "", "")
+				log.Printf("Agent [%s] processing interjection: %s", a.Manifest.ID, truncateLog(interjection, 100))
+				// Re-infer with interjection injected
+				resp, err = a.brain.InferWithContract(a.ctx, req)
+				if err != nil {
+					log.Printf("Agent [%s] interjection re-inference failed: %v", a.Manifest.ID, err)
+					break
+				}
+				responseText = resp.Text
+			}
+
 			toolCall := parseToolCall(responseText)
 			if toolCall == nil {
 				break
@@ -256,6 +362,14 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 					a.Manifest.ID, a.TeamID,
 					map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1})
 			}
+
+			// V7 Conversation Log: emit tool_call
+			toolCallTurnID := ""
+			if a.conversationLogger != nil {
+				// Capture the turn index for this tool_call so tool_result can reference it
+				toolCallTurnID = fmt.Sprintf("%s-%d", a.sessionID, a.turnIndex)
+			}
+			a.logTurn("tool_call", responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 
 			serverID, _, err := a.toolExecutor.FindToolByName(a.ctx, toolCall.Name)
 			if err != nil {
@@ -293,9 +407,11 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			}
 
 			// Capture consult_council calls for frontend delegation trace
+			consultMember := ""
 			if toolCall.Name == "consult_council" {
 				member, _ := toolCall.Arguments["member"].(string)
 				if member != "" {
+					consultMember = member
 					summary := strings.TrimSpace(toolResult)
 					if len(summary) > 300 {
 						summary = summary[:300] + "..."
@@ -306,6 +422,9 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 					})
 				}
 			}
+
+			// V7 Conversation Log: emit tool_result (full content, not truncated)
+			a.logTurn("tool_result", toolResult, "", "", toolCall.Name, nil, toolCallTurnID, consultMember)
 
 			// Extract artifact from structured tool result (side-channel).
 			// Only the text message goes back to the LLM — large payloads
@@ -354,6 +473,9 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 		providerID = resp.Provider
 		modelUsed = resp.ModelUsed
 	}
+
+	// V7 Conversation Log: emit final assistant response with brain provenance
+	a.logTurn("assistant", responseText, providerID, modelUsed, "", nil, "", "")
 
 	return ProcessResult{
 		Text:          responseText,

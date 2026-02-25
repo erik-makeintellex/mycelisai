@@ -15,16 +15,21 @@ vi.mock('next/navigation', () => ({
     useSearchParams: () => mockSearchParams,
 }));
 
-// Mock next/dynamic — eagerly resolve the loader for testing
+// Mock next/dynamic — return a sync wrapper that renders the loading fallback
+// then the resolved component. Since vi.mock is hoisted, child mocks are ready.
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any, _opts?: any) => {
-        let Resolved: any = null;
-        loader().then((mod: any) => { Resolved = mod.default || mod; });
-        return (props: any) => {
-            const React = require('react');
-            return Resolved ? React.createElement(Resolved, props) : null;
+    default: (loader: any, opts?: any) => {
+        // Store for lazy resolution
+        let Comp: any = null;
+        const p = loader().then((mod: any) => { Comp = mod.default || mod; }).catch(() => {});
+        const Dynamic = (props: any) => {
+            if (Comp) return <Comp {...props} />;
+            return opts?.loading ? opts.loading() : null;
         };
+        // Attach the resolution promise so tests can await it
+        (Dynamic as any).__resolvePromise = p;
+        return Dynamic;
     },
 }));
 
@@ -40,6 +45,14 @@ vi.mock('@/components/teams/TeamsPage', () => ({
 vi.mock('@/components/automations/ApprovalsTab', () => ({
     __esModule: true,
     default: () => <div data-testid="approvals-tab">ApprovalsTab</div>,
+}));
+vi.mock('@/components/automations/TriggerRulesTab', () => ({
+    __esModule: true,
+    default: () => <div data-testid="triggers-tab">TriggerRulesTab</div>,
+}));
+vi.mock('@/components/shared/DegradedState', () => ({
+    __esModule: true,
+    default: ({ title }: any) => <div data-testid="degraded-state">{title}</div>,
 }));
 
 // Mock Zustand store
@@ -95,7 +108,11 @@ describe('Automations Page (V7)', () => {
 
     it('deep-links to approvals tab via search param', async () => {
         mockSearchParams.set('tab', 'approvals');
+        // Allow dynamic import promises to resolve
+        await new Promise((r) => setTimeout(r, 10));
         await act(async () => { render(<AutomationsPage />); });
+        // If dynamic hasn't resolved yet, flush again
+        await act(async () => { await new Promise((r) => setTimeout(r, 10)); });
         expect(screen.getByTestId('approvals-tab')).toBeDefined();
     });
 });

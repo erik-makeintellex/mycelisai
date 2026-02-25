@@ -101,6 +101,10 @@ func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs ma
 		if s.eventEmitter != nil && runID != "" {
 			team.SetEventEmitter(s.eventEmitter, runID)
 		}
+		// V7: wire conversation logger into blueprint-activated teams.
+		if s.conversationLogger != nil {
+			team.SetConversationLogger(s.conversationLogger)
+		}
 
 		if err := team.Start(); err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("team %s: %v", manifest.ID, err))

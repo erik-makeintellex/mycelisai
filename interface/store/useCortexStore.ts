@@ -9,6 +9,7 @@ import {
     Position,
 } from 'reactflow';
 import type { AgentNodeData } from '@/components/wiring/AgentNode';
+import type { ConversationTurn } from '@/types/conversations';
 
 // ── Domain Types ──────────────────────────────────────────────
 
@@ -648,6 +649,10 @@ export interface CortexState {
     triggerRules: TriggerRule[];
     isFetchingTriggers: boolean;
 
+    // V7: Conversation Log
+    conversationTurns: ConversationTurn[] | null;
+    isFetchingConversation: boolean;
+
     // Signal Detail Drawer
     selectedSignalDetail: SignalDetail | null;
 
@@ -772,6 +777,10 @@ export interface CortexState {
     updateTriggerRule: (id: string, r: TriggerRuleCreate) => Promise<void>;
     deleteTriggerRule: (id: string) => Promise<void>;
     toggleTriggerRule: (id: string, isActive: boolean) => Promise<void>;
+
+    // V7: Conversation Log
+    fetchRunConversation: (runId: string, agentFilter?: string) => Promise<void>;
+    interjectInRun: (runId: string, message: string, agentId?: string) => Promise<void>;
 }
 
 // ── Layout Constants ──────────────────────────────────────────
@@ -1025,7 +1034,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     isSyncingThreshold: false,
     savedBlueprints: [],
     isBlueprintDrawerOpen: false,
-    advancedMode: typeof window !== 'undefined' ? localStorage.getItem('mycelis-advanced-mode') === 'true' : false,
+    advancedMode: typeof window !== 'undefined' && typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function' ? localStorage.getItem('mycelis-advanced-mode') === 'true' : false,
     isToolsPaletteOpen: false,
     sensorFeeds: [],
     isFetchingSensors: false,
@@ -1100,6 +1109,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     // V7: Trigger Rules (Team B)
     triggerRules: [],
     isFetchingTriggers: false,
+
+    // V7: Conversation Log
+    conversationTurns: null,
+    isFetchingConversation: false,
 
     // Signal Detail Drawer
     selectedSignalDetail: null,
@@ -2548,6 +2561,50 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             }));
         } catch (err) {
             console.error('[TRIGGERS] Toggle error:', err);
+        }
+    },
+
+    // ── V7: Conversation Log ─────────────────────────────────────
+
+    fetchRunConversation: async (runId: string, agentFilter?: string) => {
+        set({ isFetchingConversation: true });
+        try {
+            const params = new URLSearchParams();
+            if (agentFilter) params.set('agent', agentFilter);
+            const qs = params.toString();
+            const url = `/api/v1/runs/${runId}/conversation${qs ? `?${qs}` : ''}`;
+            const res = await fetch(url);
+            if (!res.ok) {
+                console.error('[CONVERSATION] Fetch failed:', res.status);
+                return;
+            }
+            const body = await res.json();
+            const turns = body.data?.turns ?? body.data ?? [];
+            set({ conversationTurns: Array.isArray(turns) ? turns : [] });
+        } catch (err) {
+            console.error('[CONVERSATION] Fetch error:', err);
+        } finally {
+            set({ isFetchingConversation: false });
+        }
+    },
+
+    interjectInRun: async (runId: string, message: string, agentId?: string) => {
+        try {
+            const payload: Record<string, string> = { message };
+            if (agentId) payload.agent_id = agentId;
+            const res = await fetch(`/api/v1/runs/${runId}/interject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                console.error('[CONVERSATION] Interject failed:', await res.text());
+                return;
+            }
+            // Re-fetch conversation to include the new interjection
+            get().fetchRunConversation(runId);
+        } catch (err) {
+            console.error('[CONVERSATION] Interject error:', err);
         }
     },
 }));

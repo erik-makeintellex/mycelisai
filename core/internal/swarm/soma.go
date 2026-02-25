@@ -37,6 +37,8 @@ type Soma struct {
 	// Both may be nil — degraded mode: teams still activate, events just aren't recorded.
 	runsManager  protocol.RunsManager  // creates mission_run records
 	eventEmitter protocol.EventEmitter // persists + publishes events
+	// V7 Conversation Log: optional full-fidelity turn logger.
+	conversationLogger protocol.ConversationLogger
 }
 
 // NewSoma creates a new Executive instance.
@@ -96,6 +98,10 @@ func (s *Soma) Start() error {
 		if s.internalTools != nil {
 			team.SetInternalTools(s.internalTools)
 		}
+		// V7: wire conversation logger into standing teams
+		if s.conversationLogger != nil {
+			team.SetConversationLogger(s.conversationLogger)
+		}
 		s.teams[m.ID] = team
 		if err := team.Start(); err != nil {
 			log.Printf("ERR: Failed to start team %s: %v", m.ID, err)
@@ -151,6 +157,10 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 	}
 	if s.internalTools != nil {
 		team.SetInternalTools(s.internalTools)
+	}
+	// V7: wire conversation logger into dynamically spawned teams
+	if s.conversationLogger != nil {
+		team.SetConversationLogger(s.conversationLogger)
 	}
 	if err := team.Start(); err != nil {
 		return err
@@ -377,3 +387,9 @@ func (s *Soma) SetRunsManager(rm protocol.RunsManager) { s.runsManager = rm }
 // SetEventEmitter wires the V7 event store into Soma for audit trail emission.
 // Must be called before ActivateBlueprint for tool events to be recorded.
 func (s *Soma) SetEventEmitter(emitter protocol.EventEmitter) { s.eventEmitter = emitter }
+
+// SetConversationLogger wires the V7 conversation logger into Soma.
+// Must be called before Start() so standing teams receive the logger.
+func (s *Soma) SetConversationLogger(logger protocol.ConversationLogger) {
+	s.conversationLogger = logger
+}

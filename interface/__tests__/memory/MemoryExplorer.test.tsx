@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { mockFetch } from '../setup';
 
+// Mock Zustand store
+const mockAdvancedMode = vi.fn(() => false);
+vi.mock('@/store/useCortexStore', () => ({
+    useCortexStore: (selector: any) => {
+        const state = { advancedMode: mockAdvancedMode() };
+        return selector(state);
+    },
+}));
+
 // Mock the three sub-panels to isolate MemoryExplorer layout tests
 vi.mock('@/components/memory/HotMemoryPanel', () => ({
     __esModule: true,
@@ -33,21 +42,38 @@ vi.mock('@/components/memory/ColdMemoryPanel', () => ({
 import MemoryExplorer from '@/components/memory/MemoryExplorer';
 
 describe('MemoryExplorer', () => {
-    it('renders the three-tier layout with Hot, Warm, and Cold panels', () => {
+    beforeEach(() => {
+        mockAdvancedMode.mockReturnValue(false);
+    });
+
+    it('renders the Memory header and section labels', () => {
         render(<MemoryExplorer />);
 
-        // Header should display the three-tier memory title
-        expect(screen.getByText('THREE-TIER MEMORY')).toBeDefined();
+        // Header displays "Memory"
+        expect(screen.getByText('Memory')).toBeDefined();
 
-        // Tier chips should be visible in the header
-        expect(screen.getByText('Hot')).toBeDefined();
-        expect(screen.getByText('Warm')).toBeDefined();
-        expect(screen.getByText('Cold')).toBeDefined();
+        // Section headers for the two-column layout
+        expect(screen.getByText('Recent Work')).toBeDefined();
+        expect(screen.getByText('Search Memory')).toBeDefined();
 
-        // All three panels should be mounted
-        expect(screen.getByTestId('hot-panel')).toBeDefined();
+        // Warm and Cold panels should be mounted
         expect(screen.getByTestId('warm-panel')).toBeDefined();
         expect(screen.getByTestId('cold-panel')).toBeDefined();
+    });
+
+    it('does not show Signal Stream when advancedMode is off', () => {
+        mockAdvancedMode.mockReturnValue(false);
+        render(<MemoryExplorer />);
+
+        expect(screen.queryByText('Signal Stream')).toBeNull();
+        expect(screen.queryByTestId('hot-panel')).toBeNull();
+    });
+
+    it('shows Signal Stream toggle when advancedMode is on', () => {
+        mockAdvancedMode.mockReturnValue(true);
+        render(<MemoryExplorer />);
+
+        expect(screen.getByText('Signal Stream')).toBeDefined();
     });
 
     it('passes search query from WarmMemoryPanel to ColdMemoryPanel', async () => {

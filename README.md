@@ -17,7 +17,7 @@
 
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
 
-Built through 19 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, **Soma Identity & Artifacts**, **Conversation Memory**, **Natural Human Interface**, **Phase 0 Security Containment**, **Agent & Provider Orchestration** — and now executing **V7: Event Spine & Workflow-First Orchestration**. V7 Team A (Event Spine) and Team B (Trigger Engine) are complete: persistent mission runs, `MissionEventEnvelope` audit records, tool event emission, run timeline APIs, and declarative trigger rules with cooldown/recursion/concurrency guards. Team C (Scheduler) and Causal Chain UI follow next.
+Built through 19 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, **Soma Identity & Artifacts**, **Conversation Memory**, **Natural Human Interface**, **Phase 0 Security Containment**, **Agent & Provider Orchestration** — and now executing **V7: Event Spine & Workflow-First Orchestration**. V7 Team A (Event Spine), Team B (Trigger Engine), Agent Conversation Log, and Inception Recipes are complete: persistent mission runs, `MissionEventEnvelope` audit records, tool event emission, run timeline APIs, declarative trigger rules with cooldown/recursion/concurrency guards, full-fidelity agent conversation transcripts with operator interjection, and structured inception recipe patterns for RAG-based knowledge reuse. Team C (Scheduler) and Causal Chain UI follow next.
 
 ## Architecture
 
@@ -27,7 +27,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Standing Teams:** Admin/Soma (orchestrator, 18 tools, 10 ReAct iterations, persistent identity) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
 - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
 - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
-- **Internal Tool Registry:** 20 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O (workspace-sandboxed), NATS bus sensing, image generation, summarize_conversation, research_for_blueprint, and more.
+- **Internal Tool Registry:** 22 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O (workspace-sandboxed), NATS bus sensing, image generation, summarize_conversation, research_for_blueprint, store_inception_recipe, recall_inception_recipes, and more.
 - **Composite Tool Executor:** Unified interface routing tool calls to InternalToolRegistry or MCP ToolExecutorAdapter.
 - **MCP Ingress:** Install, manage, and invoke MCP tool servers. Curated library with one-click install. Raw install endpoint disabled (Phase 0 security) — library-only installs enforced.
 - **Archivist:** Context engine — SitReps, auto-embed to pgvector (768-dim, nomic-embed-text), semantic search.
@@ -41,6 +41,9 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Self-Healing Connectivity:** NATS client uses `MaxReconnects(-1)` (unlimited) with 20s ping interval for stale connection detection. Core startup retries DB and NATS for up to 90s (45×2s) before failing. Reactive engine re-subscribes all active profiles on NATS reconnect.
 - **Event Spine (V7):** Dual-layer event architecture — CTS for real-time signal transport, MissionEventEnvelope for persistent audit-grade records. Every execution creates a `mission_run` with unique `run_id`. Events persisted to `mission_events` before CTS publish. CTS payloads reference `mission_event_id` for timeline reconstruction.
 - **Trigger Rules Engine (V7):** Declarative IF/THEN trigger rules evaluated on event ingest. Supports cooldown, recursion guard (max depth), and concurrency guard. Default mode: propose-only. Auto-execute requires explicit policy allowance.
+- **Conversation Log (V7):** Full-fidelity agent conversation persistence — every system prompt, user message, tool call, tool result, and assistant response stored in `conversation_turns` table (migration 030). Separate from lightweight `mission_events` — turns are full-text blobs (10KB+). Session-scoped with `session_id`; run-linked when available. `ConversationLogger` interface propagated Soma → Team → Agent, matching `EventEmitter` pattern.
+- **Operator Interjection (V7):** Mid-run user redirection via NATS mailbox (`swarm.agent.{id}.interjection`). Agents check a mutex-protected buffer between ReAct iterations. Interjections are injected as `[OPERATOR INTERJECTION]` messages and logged as `role=interjection` turns. Only applies to in-progress runs with active agents.
+- **Inception Recipes (V7):** Structured prompt pattern library for knowledge reuse. When Soma completes a complex task, it can distill an inception recipe capturing: intent pattern, key parameters, example prompt, and outcome shape. Recipes are dual-persisted — RDBMS (`inception_recipes` table, migration 031) for structured queries + pgvector (`context_vectors`) for semantic recall. Quality feedback loop (`quality_score` 0.0–1.0) + usage tracking. Automatically recalled during `research_for_blueprint` pipeline.
 - **Scheduler (V7):** In-process goroutine scheduler backed by `scheduled_missions` table. Enforces max_active_runs, suspends when NATS offline. Cron expressions for recurring missions.
 
 ### Tier 2: Nervous System (NATS JetStream 2.12)
@@ -55,6 +58,8 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **trigger_rules (025):** Declarative event → action rules with cooldown, recursion guard, concurrency guard. Default mode: propose.
 - **trigger_executions (026):** Audit log of rule evaluations — evaluated/fired/skipped with reason.
 - **scheduled_missions (027):** Cron-backed recurring execution with `max_active_runs` guard.
+- **conversation_turns (030):** Full-fidelity agent conversation log — session-scoped, role-typed (system/user/assistant/tool_call/tool_result/interjection), with provider/model provenance and tool call threading via `parent_turn_id`.
+- **inception_recipes (031):** Structured prompt patterns for RAG recall — category-indexed, trigram-searchable titles, dual-persisted (RDBMS + pgvector), quality/usage tracking.
 
 ### Tier 3: The Face (Next.js 16 + React 19 + Zustand 5)
 
@@ -64,7 +69,8 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
 - **Memory Explorer (`/memory`):** Two-column redesign — Warm (sitreps + artifacts, 40%) + Cold semantic search (60%). Hot signal stream hidden behind Advanced Mode toggle (collapsible). Human-facing labels throughout.
 - **Settings (`/settings`):** Brains (full provider CRUD — Add/Edit/Delete/Probe with type presets, remote-enable confirmation, LOCAL/LEAVES_ORG boundary badge), Profiles (mission profile CRUD + activate + Context Switch Modal), Cognitive Matrix, MCP Tools (curated library), Users (stub auth). Policy/approval rules in Automations → Approvals tab.
-- **Run Timeline (V7):** Vertical event timeline per mission run — policy decisions, tool invocations, trigger firings, artifacts, completion. `RunTimeline.tsx` + `EventCard.tsx` + `/runs/[id]` page. Auto-polls every 5s; stops on terminal events.
+- **Run Timeline (V7):** Vertical event timeline per mission run — policy decisions, tool invocations, trigger firings, artifacts, completion. `RunTimeline.tsx` + `EventCard.tsx` + `/runs/[id]` page. Auto-polls every 5s; stops on terminal events. Tab bar switches between Conversation and Events views.
+- **Conversation Log (V7):** Full agent transcript viewer per run — `ConversationLog.tsx` + `TurnCard.tsx`. Role-based coloring (system gray, user cyan, assistant green, tool_call violet, tool_result amber, interjection red). Agent filter bar for multi-agent runs. System prompts collapsed by default. Provider/model badges on assistant turns. Tool name badges on tool_call turns. Auto-polls 5s while run is active. Operator interjection input bar visible when run status is `running`.
 - **Run List (V7):** `/runs` page listing all recent runs across missions, with status dots and timestamps. Also surfaced in OpsOverview as a `Recent Runs` widget.
 - **Causal Chain View (V7, backend ready):** Parent run → event → trigger → child run traversal. `GET /api/v1/runs/{id}/chain` handler complete; UI pending.
 - **Mode Ribbon:** Always-visible status bar showing current execution mode, active brain (with local/remote badge), and governance state.
@@ -916,6 +922,110 @@ Authorization: Bearer mycelis-dev-key-change-in-prod
 | `recursion_limit: source run depth X >= max Y` | Trigger chain too deep |
 | `concurrency_limit: X active runs >= max Y` | Too many runs already in-flight |
 
+### Conversation Log & Interjection — Agent Transcript Browsing
+
+Full-fidelity agent conversation transcripts stored per run, with operator interjection for mid-run redirection.
+
+#### 16. Run Conversation — `GET /api/v1/runs/{id}/conversation`
+
+Returns all conversation turns for a run, ordered chronologically. Optional `?agent=X` filter.
+
+```http
+GET /api/v1/runs/aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa/conversation?agent=admin
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+```json
+{
+  "ok": true,
+  "data": [
+    { "id": "...", "session_id": "...", "agent_id": "admin", "turn_index": 0,
+      "role": "user", "content": "Analyze our deployment status", "created_at": "..." },
+    { "id": "...", "agent_id": "admin", "turn_index": 1,
+      "role": "tool_call", "tool_name": "consult_council",
+      "tool_args": {"member":"council-architect","question":"..."}, "created_at": "..." },
+    { "id": "...", "agent_id": "admin", "turn_index": 2,
+      "role": "assistant", "content": "Based on my analysis...",
+      "provider_id": "ollama", "model_used": "qwen2.5-coder:7b", "created_at": "..." }
+  ]
+}
+```
+
+#### 17. Session Conversation — `GET /api/v1/conversations/{session_id}`
+
+Returns turns for a specific session (useful for standing-team chats without a run).
+
+#### 18. Operator Interjection — `POST /api/v1/runs/{id}/interject`
+
+Redirects active agents mid-run by publishing to their NATS interjection mailbox.
+
+```http
+POST /api/v1/runs/aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa/interject
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{ "message": "Focus on database schema, not deployment", "agent_id": "admin" }
+```
+
+If `agent_id` is empty, the interjection is broadcast to all agents on the run's teams. The interjection is also logged as a `role=interjection` conversation turn.
+
+### Inception Recipes — Structured Prompt Patterns
+
+Inception recipes capture proven "how to ask for X" patterns that agents distill after completing complex tasks.
+
+#### 19. List Recipes — `GET /api/v1/inception/recipes`
+
+```http
+GET /api/v1/inception/recipes?category=blueprint&limit=10
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+Optional query params: `category`, `agent`, `limit` (default 20). Results ordered by usage count + quality score.
+
+#### 20. Search Recipes — `GET /api/v1/inception/recipes/search`
+
+Trigram text search on recipe titles and intent patterns.
+
+```http
+GET /api/v1/inception/recipes/search?q=microservices&limit=5
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
+#### 21. Get Recipe — `GET /api/v1/inception/recipes/{id}`
+
+Returns a single recipe with all fields including parameters, example prompt, and outcome shape.
+
+#### 22. Create Recipe — `POST /api/v1/inception/recipes`
+
+Manual recipe creation (agents also create recipes via the `store_inception_recipe` internal tool).
+
+```http
+POST /api/v1/inception/recipes
+Authorization: Bearer mycelis-dev-key-change-in-prod
+Content-Type: application/json
+
+{
+  "category": "blueprint",
+  "title": "How to create a microservices deployment blueprint",
+  "intent_pattern": "Create a blueprint for deploying N microservices with load balancing...",
+  "parameters": { "service_count": "number of services", "orchestrator": "k8s or docker-compose" },
+  "example_prompt": "I need a blueprint to deploy 5 microservices on Kubernetes with Istio...",
+  "outcome_shape": "A structured blueprint with service definitions, networking, and scaling policies",
+  "tags": ["blueprint", "deployment", "kubernetes"]
+}
+```
+
+#### 23. Quality Feedback — `PATCH /api/v1/inception/recipes/{id}/quality`
+
+Updates the quality score (0.0–1.0) for a recipe. Usage count is incremented automatically on recall.
+
+```http
+PATCH /api/v1/inception/recipes/cccc3333-.../quality
+Content-Type: application/json
+
+{ "score": 0.85 }
+```
+
 #### Guard Reference
 
 Three mandatory guards protect every trigger evaluation:
@@ -1315,6 +1425,8 @@ uvx inv core.smoke            # Governance smoke tests
 | V7 Soma Workflow | End-to-End Working Flow | **Backend:** `ConsultationEntry` type in `protocol.ChatResponsePayload`; ReAct loop captures `consult_council` calls into `ProcessResult.Consultations`; `agentResult.Consultations` wired into `chatPayload`; `GET /api/v1/runs` global listing endpoint (`runs.Manager.ListRecentRuns`). **Store:** `MissionRun` + `MissionEvent` types; `activeRunId`, `runTimeline`, `recentRuns` state; `confirmProposal` injects `role:'system'` message with `run_id`; `fetchRunTimeline` + `fetchRecentRuns` actions. **Chat UI:** Soma-locked header (no dropdown), `DirectCouncilButton` popover, `DelegationTrace` council cards, `SomaActivityIndicator` (live `streamLogs` activity), system message bubble linking to `/runs/{id}`. **Runs UI:** `RunTimeline.tsx` (auto-poll 5s), `EventCard.tsx`, `/runs/[id]` page, `/runs` list page, `RecentRunsSection` in OpsOverview. **OpsWidget Registry:** `lib/opsWidgetRegistry.ts` — `registerOpsWidget()` / `getOpsWidgets()` / `unregisterOpsWidget()` plugin API; OpsOverview renders from registry. **LaunchCrewModal:** Always targets Soma on open; clears stale proposals. **Tests:** 7 new passing Go tests (4 `ListRecentRuns`, 3 `handleListRuns`). |
 | Provider CRUD + Profiles | Provider Management + Mission Profiles + Reactive | **Backend:** `AddProvider`/`UpdateProvider`/`RemoveProvider` with `RWMutex` hot-reload on `cognitive.Router`. `POST/PUT/DELETE /api/v1/brains` + `POST /api/v1/brains/{id}/probe`. Context snapshot CRUD (`context_snapshots` migration 028). Mission profile CRUD + activate (`mission_profiles` migration 029). Reactive NATS subscription engine (`core/internal/reactive/engine.go`). `GET /api/v1/services/status` health aggregation. `MaxReconnects(-1)` + DB/NATS startup retry loops (45×2s). **Frontend:** `BrainsPage.tsx` (add/edit/delete/probe with type presets), `ContextSwitchModal.tsx` (Cache & Transfer / Start Fresh / Load Snapshot), `MissionProfilesPage.tsx` (role→provider table, NATS subscriptions, context strategy), Profiles tab in Settings, Services tab in System. |
 | V7 Team B | Trigger Engine | **Migrations:** `trigger_rules` (025) + `trigger_executions` (026). **Backend:** `triggers.Store` (rule CRUD, in-memory cache, `LogExecution`, `ActiveCount`). `triggers.Engine` (CTS subscription on `swarm.mission.events.*`, 4-guard `evaluateRule` — cooldown, recursion depth, concurrency, condition — `fireTrigger` creates child run, `proposeTrigger` logs for approval). 6 HTTP handlers (`GET/POST/PUT/DELETE /api/v1/triggers`, `POST /toggle`, `GET /history`). Wired into `AdminServer` + `main.go` with graceful shutdown. **Frontend:** `TriggerRulesTab.tsx` (full CRUD UI — RuleCard, CreateRuleForm, guard badges, mode warnings). Trigger types + 5 async actions in `useCortexStore`. Automations → Triggers tab now live (was DegradedState). **Bug fixes:** `/runs/[id]/page.tsx` (`"use client"` + `use(params)` for Next.js 15+), `/docs/page.tsx` (Suspense boundary for `useSearchParams`). |
+| V7 Conversation Log | Agent Transcript Browsing + Interjection | **Migration 030** (`conversation_turns`). **Backend:** `conversations.Store` (LogTurn, GetRunConversation, GetSessionTurns). `ConversationLogger` interface in `protocol/events.go` propagated Soma → Team → Agent (mirrors EventEmitter). 6 emission points in `processMessageStructured()` (system, user, tool_call, tool_result, interjection, assistant). Interjection via NATS mailbox `swarm.agent.{id}.interjection` — agent checks between ReAct iterations. 3 HTTP handlers (run conversation, session turns, interject). **Frontend:** `ConversationLog.tsx` (agent filter, 5s auto-poll, interjection input), `TurnCard.tsx` (role-based colors/icons/badges), `types/conversations.ts`. `/runs/[id]` tab bar (Conversation + Events). **Tests:** 13 Go store tests, 11 Go handler tests, 9 frontend tests. |
+| V7 Inception Recipes | Structured Prompt Patterns for RAG | **Migration 031** (`inception_recipes`). **Backend:** `inception.Store` (CreateRecipe, GetRecipe, ListRecipes, SearchByTitle, IncrementUsage, UpdateQuality). `store_inception_recipe` + `recall_inception_recipes` internal tools (dual-persist: RDBMS + pgvector). Recipe recall integrated into `research_for_blueprint` pipeline (step 5). Interaction protocol updated: agents prompted to store recipes after complex tasks. 5 HTTP handlers (list, search, get, create, quality feedback). **Tests:** 16 Go store tests, 10 Go handler tests. |
 | In-App Docs Browser | `/docs` + Doc Registry | **Next.js Route Handlers:** `GET /docs-api` (manifest) + `GET /docs-api/[slug]` (file content, path-validated against manifest). `/docs-api` prefix avoids the `/api/*` → Go backend proxy rewrite; `params` awaited for Next.js 15+ async param requirement. **Manifest:** `lib/docsManifest.ts` — 29 entries across 7 curated sections; `DOC_BY_SLUG` flat map for O(1) slug validation; add a doc by adding one `DocEntry`. **User Guides (new):** 7 plain-language guides in `docs/user/` — Core Concepts, Using Soma Chat, Run Timeline, Automations, Resources, Memory, Governance & Trust — covering every implemented workflow and concept. **UI:** `/docs` page — two-column layout: sidebar (grouped nav, filter search, active state) + content pane (react-markdown + remark-gfm, Midnight Cortex styled). `?doc={slug}` deep-link; URL synced on every sidebar click. **Nav:** `BookOpen` Docs link in main nav directly below Memory (not in footer). |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)
@@ -1325,7 +1437,7 @@ Planned phases with detailed specifications are documented in the Architecture O
 
 | Phase | Name | Summary |
 | :--- | :--- | :--- |
-| **V7** | **Event Spine & Workflow-First Orchestration** | **IN PROGRESS** — Team D (nav) ✓, Workspace UX ✓, Team A (Event Spine) ✓, Soma Workflow E2E ✓, Provider CRUD + Mission Profiles ✓, Team B (Trigger Engine) ✓ (migrations 025-026, rules CRUD, 4-guard evaluation engine, TriggerRulesTab UI). **Next:** Team C (Scheduler: migration 027, cron goroutine, NATS suspend/resume) → Causal Chain UI (`ViewChain.tsx`) |
+| **V7** | **Event Spine & Workflow-First Orchestration** | **IN PROGRESS** — Team D (nav) ✓, Workspace UX ✓, Team A (Event Spine) ✓, Soma Workflow E2E ✓, Provider CRUD + Mission Profiles ✓, Team B (Trigger Engine) ✓, Conversation Log + Interjection ✓ (migration 030, full transcript persistence, operator redirect), Inception Recipes ✓ (migration 031, dual-persist RAG patterns, quality feedback). **Next:** Team C (Scheduler: migration 027, cron goroutine, NATS suspend/resume) → Causal Chain UI (`ViewChain.tsx`) |
 | 12 | Persistent Agent Memory | Cross-mission memory, semantic recall, memory consolidation daemon |
 | 13 | Multi-Agent Collaboration | Intra-team debate protocol, consensus detection, SquadRoom live chat |
 | 14 | Hot-Reload Runtime | Live agent goroutine replacement, zero-downtime reconfiguration |
