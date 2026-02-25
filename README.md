@@ -30,6 +30,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Internal Tool Registry:** 22 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O (workspace-sandboxed), NATS bus sensing, image generation, summarize_conversation, research_for_blueprint, store_inception_recipe, recall_inception_recipes, and more.
 - **Composite Tool Executor:** Unified interface routing tool calls to InternalToolRegistry or MCP ToolExecutorAdapter.
 - **MCP Ingress:** Install, manage, and invoke MCP tool servers. Curated library with one-click install. Raw install endpoint disabled (Phase 0 security) — library-only installs enforced.
+- **MCP Test Coverage:** Service/toolset/library/executor suites plus DB-backed MCP handler tests; toolset update not-found now returns HTTP 404.
 - **Archivist:** Context engine — SitReps, auto-embed to pgvector (768-dim, nomic-embed-text), semantic search.
 - **Governance:** Policy engine with YAML rules, approval queue, trust economy (0.0–1.0 threshold).
 - **Cognitive Router:** 6 LLM providers (ollama, vllm, lmstudio, OpenAI, Anthropic, Gemini), profile-based routing, token telemetry. Brain provenance tracks which provider/model executed each response.
@@ -194,14 +195,19 @@ The top 4 grid cards use `grid-cols-[repeat(auto-fit,minmax(240px,1fr))]`; full-
 
 #### MCP Baseline Operating Profile (V7 MVOS)
 
-V7 ships a **Minimum Viable Operational Stack** — users can create files, generate artifacts, run research, schedule jobs, chain missions, and inspect results immediately after install, with no manual MCP configuration.
+V7 ships a **Minimum Viable Operational Stack** for MCP with curated defaults and library installs.
+Current runtime behavior:
+- Bootstrap defaults: `filesystem` + `fetch` are auto-installed/connected when available.
+- Tool sets seeded at bootstrap: `workspace` (`mcp:filesystem/*`) and `research` (`mcp:fetch/*`).
+- Additional curated servers (for example `memory`) are installed from library on demand.
+- `artifact-renderer` remains planned in MCP baseline docs and is not currently a default auto-installed server.
 
 | Server | Purpose | Default Config | Risk |
 | :--- | :--- | :--- | :--- |
-| `filesystem` | Sandboxed file I/O (read, write, list, create, append) | Root: `/workspace` — no escape | Low (read) / Medium (write) |
-| `memory` | Semantic store + recall (pgvector-backed) | Scoped to `tenant_id`, linked to `run_id` | Low |
-| `artifact-renderer` | Render structured outputs (markdown, JSON, tables, images) | Inline rendering via CTS pipeline | Low |
-| `fetch` | Controlled web research (HTTP GET, domain allowlist) | Max response size limited, no script exec | Medium |
+| `filesystem` | Sandboxed file I/O (read, write, list, create, append) | Auto-bootstrap default | Low (read) / Medium (write) |
+| `fetch` | Controlled web research (HTTP GET, domain allowlist) | Auto-bootstrap default | Medium |
+| `memory` | Semantic store + recall (pgvector-backed) | Curated library install (manual) | Low |
+| `artifact-renderer` | Render structured outputs (markdown, JSON, tables, images) | Planned baseline component | Low |
 
 **Default workspace structure** (auto-created on first run):
 
@@ -1381,7 +1387,12 @@ uvx inv interface.test        # Vitest component tests (~70 V7 tests, 56 pass, 2
 uvx inv interface.e2e         # Playwright E2E specs (requires running servers)
 uvx inv interface.check       # HTTP smoke test against running dev server (9 pages)
 uvx inv core.smoke            # Governance smoke tests
+cd core && go test ./internal/mcp/ -count=1
+cd core && go test ./internal/server/ -run TestHandleMCP -count=1
+cd core && go test ./internal/swarm/ -run TestScoped -count=1
 ```
+
+> Note: `cd core && go test ./... -count=1` currently fails due to an existing root-package conflict (`probe.go` and `probe_test.go` both declare `main`).
 
 **Go test breakdown (V7 additions):**
 
@@ -1427,6 +1438,7 @@ uvx inv core.smoke            # Governance smoke tests
 | V7 Team B | Trigger Engine | **Migrations:** `trigger_rules` (025) + `trigger_executions` (026). **Backend:** `triggers.Store` (rule CRUD, in-memory cache, `LogExecution`, `ActiveCount`). `triggers.Engine` (CTS subscription on `swarm.mission.events.*`, 4-guard `evaluateRule` — cooldown, recursion depth, concurrency, condition — `fireTrigger` creates child run, `proposeTrigger` logs for approval). 6 HTTP handlers (`GET/POST/PUT/DELETE /api/v1/triggers`, `POST /toggle`, `GET /history`). Wired into `AdminServer` + `main.go` with graceful shutdown. **Frontend:** `TriggerRulesTab.tsx` (full CRUD UI — RuleCard, CreateRuleForm, guard badges, mode warnings). Trigger types + 5 async actions in `useCortexStore`. Automations → Triggers tab now live (was DegradedState). **Bug fixes:** `/runs/[id]/page.tsx` (`"use client"` + `use(params)` for Next.js 15+), `/docs/page.tsx` (Suspense boundary for `useSearchParams`). |
 | V7 Conversation Log | Agent Transcript Browsing + Interjection | **Migration 030** (`conversation_turns`). **Backend:** `conversations.Store` (LogTurn, GetRunConversation, GetSessionTurns). `ConversationLogger` interface in `protocol/events.go` propagated Soma → Team → Agent (mirrors EventEmitter). 6 emission points in `processMessageStructured()` (system, user, tool_call, tool_result, interjection, assistant). Interjection via NATS mailbox `swarm.agent.{id}.interjection` — agent checks between ReAct iterations. 3 HTTP handlers (run conversation, session turns, interject). **Frontend:** `ConversationLog.tsx` (agent filter, 5s auto-poll, interjection input), `TurnCard.tsx` (role-based colors/icons/badges), `types/conversations.ts`. `/runs/[id]` tab bar (Conversation + Events). **Tests:** 13 Go store tests, 11 Go handler tests, 9 frontend tests. |
 | V7 Inception Recipes | Structured Prompt Patterns for RAG | **Migration 031** (`inception_recipes`). **Backend:** `inception.Store` (CreateRecipe, GetRecipe, ListRecipes, SearchByTitle, IncrementUsage, UpdateQuality). `store_inception_recipe` + `recall_inception_recipes` internal tools (dual-persist: RDBMS + pgvector). Recipe recall integrated into `research_for_blueprint` pipeline (step 5). Interaction protocol updated: agents prompted to store recipes after complex tasks. 5 HTTP handlers (list, search, get, create, quality feedback). **Tests:** 16 Go store tests, 10 Go handler tests. |
+| MCP Test Hardening | Service + Handler Coverage | **Backend Tests:** new suites for MCP library loading/config conversion, registry service CRUD/cache/find flows, toolset CRUD/ref resolution, and executor adapter result formatting. **Handler Tests:** DB-backed happy paths for MCP list/delete/tools/library-install plus toolset update matrix (happy/not-found/bad UUID/missing name/nil service). **Semantics:** `handleUpdateToolSet` returns `404` when the tool set does not exist. |
 | In-App Docs Browser | `/docs` + Doc Registry | **Next.js Route Handlers:** `GET /docs-api` (manifest) + `GET /docs-api/[slug]` (file content, path-validated against manifest). `/docs-api` prefix avoids the `/api/*` → Go backend proxy rewrite; `params` awaited for Next.js 15+ async param requirement. **Manifest:** `lib/docsManifest.ts` — 29 entries across 7 curated sections; `DOC_BY_SLUG` flat map for O(1) slug validation; add a doc by adding one `DocEntry`. **User Guides (new):** 7 plain-language guides in `docs/user/` — Core Concepts, Using Soma Chat, Run Timeline, Automations, Resources, Memory, Governance & Trust — covering every implemented workflow and concept. **UI:** `/docs` page — two-column layout: sidebar (grouped nav, filter search, active state) + content pane (react-markdown + remark-gfm, Midnight Cortex styled). `?doc={slug}` deep-link; URL synced on every sidebar click. **Nav:** `BookOpen` Docs link in main nav directly below Memory (not in footer). |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)

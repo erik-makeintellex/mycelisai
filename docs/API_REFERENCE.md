@@ -57,13 +57,17 @@
 | `/api/v1/artifacts/{id}` | GET | Artifact detail |
 | `/api/v1/artifacts/{id}/status` | PUT | Update artifact status |
 | **MCP Ingress** | | |
-| `/api/v1/mcp/install` | POST | Install MCP server |
+| `/api/v1/mcp/install` | POST | Raw MCP install endpoint — **disabled by Phase 0 security** (`403`), use library install |
 | `/api/v1/mcp/servers` | GET | List installed MCP servers |
 | `/api/v1/mcp/servers/{id}` | DELETE | Remove MCP server |
 | `/api/v1/mcp/tools` | GET | List all MCP tools across servers |
 | `/api/v1/mcp/servers/{id}/tools/{tool}/call` | POST | Invoke a specific MCP tool |
 | `/api/v1/mcp/library` | GET | Browse curated MCP server library (categorized) |
 | `/api/v1/mcp/library/install` | POST | One-click install from library by name |
+| `/api/v1/mcp/toolsets` | GET | List MCP tool sets (`tenant_id='default'`) |
+| `/api/v1/mcp/toolsets` | POST | Create MCP tool set (name, description, tool_refs) |
+| `/api/v1/mcp/toolsets/{id}` | PUT | Update MCP tool set by ID (`404` if not found) |
+| `/api/v1/mcp/toolsets/{id}` | DELETE | Delete MCP tool set by ID |
 | **Governance Policy** | | |
 | `/api/v1/governance/policy` | GET/PUT | Read/update governance policy rules |
 | `/api/v1/governance/pending` | GET | List pending governance approvals |
