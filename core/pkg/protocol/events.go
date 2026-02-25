@@ -84,3 +84,30 @@ type RunsManager interface {
 	CreateRun(ctx context.Context, missionID string) (string, error)
 	UpdateRunStatus(ctx context.Context, runID string, status string) error
 }
+
+// ConversationTurnData holds all fields for a single conversation turn.
+// Used by ConversationLogger.LogTurn to persist full-fidelity agent transcripts.
+type ConversationTurnData struct {
+	RunID          string                 `json:"run_id,omitempty"`     // nullable: standing-team chats
+	SessionID      string                 `json:"session_id"`
+	TenantID       string                 `json:"tenant_id"`
+	AgentID        string                 `json:"agent_id"`
+	TeamID         string                 `json:"team_id,omitempty"`
+	TurnIndex      int                    `json:"turn_index"`
+	Role           string                 `json:"role"`                 // system|user|assistant|tool_call|tool_result|interjection
+	Content        string                 `json:"content"`
+	ProviderID     string                 `json:"provider_id,omitempty"`
+	ModelUsed      string                 `json:"model_used,omitempty"`
+	ToolName       string                 `json:"tool_name,omitempty"`
+	ToolArgs       map[string]interface{} `json:"tool_args,omitempty"`
+	ParentTurnID   string                 `json:"parent_turn_id,omitempty"` // links tool_result → tool_call
+	ConsultationOf string                 `json:"consultation_of,omitempty"`
+}
+
+// ConversationLogger allows optional conversation turn persistence.
+// Analogous to EventEmitter — agents receive it via SetConversationLogger().
+// nil = silent mode (no panic, no recording).
+// Implemented by internal/conversations.Store.
+type ConversationLogger interface {
+	LogTurn(ctx context.Context, turn ConversationTurnData) (string, error)
+}

@@ -53,6 +53,8 @@ type Team struct {
 	// Set by Soma.ActivateBlueprint BEFORE team.Start() so agents receive them.
 	eventEmitter protocol.EventEmitter
 	runID        string
+	// V7 Conversation Log: optional full-fidelity turn logger.
+	conversationLogger protocol.ConversationLogger
 }
 
 // NewTeam creates a new Team instance.
@@ -106,6 +108,10 @@ func (t *Team) Start() error {
 			// V7: wire event emitter + run_id so agent can emit tool events
 			if t.eventEmitter != nil && t.runID != "" {
 				agent.SetEventEmitter(t.eventEmitter, t.runID)
+			}
+			// V7: wire conversation logger so agent can persist full transcripts
+			if t.conversationLogger != nil {
+				agent.SetConversationLogger(t.conversationLogger)
 			}
 			agent.SetTeamTopology(t.Manifest.Inputs, t.Manifest.Deliveries)
 			go agent.Start()
@@ -180,6 +186,12 @@ func (t *Team) SetInternalTools(tools *InternalToolRegistry) {
 func (t *Team) SetEventEmitter(emitter protocol.EventEmitter, runID string) {
 	t.eventEmitter = emitter
 	t.runID = runID
+}
+
+// SetConversationLogger wires the V7 conversation logger into this team.
+// Must be called before Start() so agents receive the logger on creation.
+func (t *Team) SetConversationLogger(logger protocol.ConversationLogger) {
+	t.conversationLogger = logger
 }
 
 // Stop shuts down the team and its scheduler (if any).

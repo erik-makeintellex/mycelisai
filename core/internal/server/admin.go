@@ -13,7 +13,9 @@ import (
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/internal/events"
+	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
@@ -60,6 +62,10 @@ type AdminServer struct {
 	// V7 Team B: Trigger Engine
 	Triggers      *triggers.Store     // trigger rule CRUD + in-memory cache
 	TriggerEngine *triggers.Engine    // evaluates rules against CTS events
+	// V7 Conversation Log
+	Conversations *conversations.Store // full-fidelity agent conversation turns
+	// V7 Inception Recipes — structured prompt patterns for RAG recall
+	Inception     *inception.Store     // inception recipe CRUD + search
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -268,6 +274,18 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Service health dashboard
 	mux.HandleFunc("GET /api/v1/services/status", s.HandleServicesStatus)
+
+	// V7 Conversation Log: agent transcript browsing + user interjection
+	mux.HandleFunc("GET /api/v1/runs/{id}/conversation", s.HandleGetRunConversation)
+	mux.HandleFunc("GET /api/v1/conversations/{session_id}", s.HandleGetSessionConversation)
+	mux.HandleFunc("POST /api/v1/runs/{id}/interject", s.HandleRunInterject)
+
+	// V7 Inception Recipes: structured prompt patterns for RAG recall
+	mux.HandleFunc("GET /api/v1/inception/recipes", s.HandleListInceptionRecipes)
+	mux.HandleFunc("GET /api/v1/inception/recipes/search", s.HandleSearchInceptionRecipes)
+	mux.HandleFunc("GET /api/v1/inception/recipes/{id}", s.HandleGetInceptionRecipe)
+	mux.HandleFunc("POST /api/v1/inception/recipes", s.HandleCreateInceptionRecipe)
+	mux.HandleFunc("PATCH /api/v1/inception/recipes/{id}/quality", s.HandleUpdateRecipeQuality)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {

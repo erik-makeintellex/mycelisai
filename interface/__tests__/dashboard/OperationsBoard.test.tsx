@@ -84,6 +84,19 @@ function resetStore() {
     });
 }
 
+// Helper to configure mockFetch to return the right data based on URL
+function setupFetchResponses(teams: any[] = [], missions: any[] = []) {
+    mockFetch.mockImplementation((url: string) => {
+        if (typeof url === 'string' && url.includes('/teams/detail')) {
+            return Promise.resolve({ ok: true, json: async () => teams });
+        }
+        if (typeof url === 'string' && url.includes('/missions')) {
+            return Promise.resolve({ ok: true, json: async () => missions });
+        }
+        return Promise.resolve({ ok: true, json: async () => [] });
+    });
+}
+
 // ── Tests ─────────────────────────────────────────────────────
 
 describe('OperationsBoard', () => {
@@ -92,7 +105,7 @@ describe('OperationsBoard', () => {
         resetStore();
         mockSignals.length = 0;
         // Default: fetch returns empty for teams and missions
-        mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
+        setupFetchResponses([], []);
     });
 
     afterEach(() => {
@@ -122,7 +135,7 @@ describe('OperationsBoard', () => {
     // ── Standing Workloads ────────────────────────────────────
 
     it('renders standing teams when present', async () => {
-        useCortexStore.setState({ teamsDetail: STANDING_TEAMS as any });
+        setupFetchResponses(STANDING_TEAMS, []);
 
         render(<OperationsBoard />);
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });
@@ -132,7 +145,7 @@ describe('OperationsBoard', () => {
     });
 
     it('shows agent counts for standing teams', async () => {
-        useCortexStore.setState({ teamsDetail: STANDING_TEAMS as any });
+        setupFetchResponses(STANDING_TEAMS, []);
 
         render(<OperationsBoard />);
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });
@@ -148,7 +161,7 @@ describe('OperationsBoard', () => {
     });
 
     it('excludes mission teams from standing workloads', async () => {
-        useCortexStore.setState({ teamsDetail: [...STANDING_TEAMS, ...MISSION_TEAMS] as any });
+        setupFetchResponses([...STANDING_TEAMS, ...MISSION_TEAMS], []);
 
         render(<OperationsBoard />);
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });
@@ -162,7 +175,7 @@ describe('OperationsBoard', () => {
     // ── Missions ──────────────────────────────────────────────
 
     it('renders missions when present', async () => {
-        useCortexStore.setState({ missions: MISSIONS as any });
+        setupFetchResponses([], MISSIONS);
 
         render(<OperationsBoard />);
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });
@@ -172,7 +185,7 @@ describe('OperationsBoard', () => {
     });
 
     it('shows mission intent text', async () => {
-        useCortexStore.setState({ missions: MISSIONS as any });
+        setupFetchResponses([], MISSIONS);
 
         render(<OperationsBoard />);
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });
@@ -181,7 +194,7 @@ describe('OperationsBoard', () => {
     });
 
     it('shows LIVE badge for active missions', async () => {
-        useCortexStore.setState({ missions: MISSIONS as any });
+        setupFetchResponses([], MISSIONS);
 
         render(<OperationsBoard />);
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });
@@ -197,7 +210,7 @@ describe('OperationsBoard', () => {
 
     it('sorts missions active-first', async () => {
         const reversed = [...MISSIONS].reverse(); // completed first
-        useCortexStore.setState({ missions: reversed as any });
+        setupFetchResponses([], reversed);
 
         render(<OperationsBoard />);
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });
@@ -208,7 +221,7 @@ describe('OperationsBoard', () => {
     });
 
     it('shows team/agent counts on mission rows', async () => {
-        useCortexStore.setState({ missions: MISSIONS as any });
+        setupFetchResponses([], MISSIONS);
 
         render(<OperationsBoard />);
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });

@@ -1,5 +1,18 @@
 import { vi, beforeEach, afterEach } from 'vitest';
 
+// ── localStorage polyfill (jsdom sometimes lacks proper methods) ──
+if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.getItem !== 'function') {
+    const store: Record<string, string> = {};
+    (globalThis as any).localStorage = {
+        getItem: (key: string) => store[key] ?? null,
+        setItem: (key: string, value: string) => { store[key] = String(value); },
+        removeItem: (key: string) => { delete store[key]; },
+        clear: () => { for (const k in store) delete store[k]; },
+        get length() { return Object.keys(store).length; },
+        key: (i: number) => Object.keys(store)[i] ?? null,
+    };
+}
+
 // ── Global fetch mock ────────────────────────────────────────
 // Each test file configures its own fetch responses via mockFetch.
 export const mockFetch = vi.fn();

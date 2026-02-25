@@ -49,4 +49,8 @@ const (
 	TopicMissionEvents    = "swarm.mission.events"
 	TopicMissionEventsFmt = "swarm.mission.events.%s" // run_id
 	TopicMissionRunsFmt   = "swarm.mission.runs.%s"   // mission_id
+
+	// V7 Conversation Log: user interjection into in-progress agent runs.
+	// Published by HTTP handler, consumed by agent between ReAct iterations.
+	TopicAgentInterjectionFmt = "swarm.agent.%s.interjection" // agent_id
 )

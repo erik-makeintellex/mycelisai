@@ -21,7 +21,9 @@ import (
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/internal/events"
+	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
@@ -310,6 +312,13 @@ func main() {
 	}
 
 	// Build Internal Tool Registry (built-in tools for agents)
+	// V7 Inception Recipes: structured prompt patterns for RAG recall
+	var inceptionStore *inception.Store
+	if sharedDB != nil {
+		inceptionStore = inception.NewStore(sharedDB)
+		log.Println("V7 Inception Recipe Store Active.")
+	}
+
 	// Hoisted outside NATS block so MetaArchitect can read tool descriptions even in degraded mode.
 	var internalTools *swarm.InternalToolRegistry
 	if nc != nil {
@@ -319,6 +328,7 @@ func main() {
 			Mem:       memService,
 			Architect: metaArchitect,
 			Catalogue: catService,
+			Inception: inceptionStore,
 			DB:        sharedDB,
 		})
 	}
@@ -330,6 +340,13 @@ func main() {
 		runsManager = runs.NewManager(sharedDB)
 		eventStore = events.NewStore(sharedDB, nc) // nc may be nil (degraded mode ok)
 		log.Println("V7 Event Spine Active. (runs + events stores ready)")
+	}
+
+	// V7 Conversation Log: full-fidelity agent transcript persistence
+	var convStore *conversations.Store
+	if sharedDB != nil {
+		convStore = conversations.NewStore(sharedDB)
+		log.Println("V7 Conversation Store Active.")
 	}
 
 	var soma *swarm.Soma
@@ -344,6 +361,10 @@ func main() {
 		}
 		if eventStore != nil {
 			soma.SetEventEmitter(eventStore)
+		}
+		// V7: wire conversation logger into Soma so agents persist full transcripts
+		if convStore != nil {
+			soma.SetConversationLogger(convStore)
 		}
 		if err := soma.Start(); err != nil {
 			log.Printf("WARN: Failed to start Soma: %v", err)
@@ -444,6 +465,14 @@ func main() {
 
 	// Create Admin Server (V7: pass eventStore + runsManager for Event Spine routes)
 	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, eventStore, runsManager)
+	// V7: wire conversation store into AdminServer for transcript browsing + interjection
+	if convStore != nil {
+		adminSrv.Conversations = convStore
+	}
+	// V7: wire inception store into AdminServer for recipe browsing + creation
+	if inceptionStore != nil {
+		adminSrv.Inception = inceptionStore
+	}
 	adminSrv.RegisterRoutes(mux)
 
 	// V7 Team B: Trigger Engine — evaluates rules against CTS event stream.

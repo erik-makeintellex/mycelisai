@@ -20,6 +20,14 @@ vi.mock('next/dynamic', () => ({
     },
 }));
 
+// Mock Zustand store (MemoryExplorer reads advancedMode)
+vi.mock('@/store/useCortexStore', () => ({
+    useCortexStore: (selector: any) => {
+        const state = { advancedMode: false };
+        return selector(state);
+    },
+}));
+
 // Mock lucide-react icons used by MemoryExplorer
 vi.mock('lucide-react', () => ({
     Brain: (props: any) => <svg data-testid="brain-icon" {...props} />,
@@ -36,9 +44,10 @@ vi.mock('lucide-react', () => ({
     AlertCircle: (props: any) => <svg data-testid="alert-icon" {...props} />,
     Zap: (props: any) => <svg data-testid="zap-icon" {...props} />,
     MessageSquare: (props: any) => <svg data-testid="msg-icon" {...props} />,
+    Radio: (props: any) => <svg data-testid="radio-icon" {...props} />,
 }));
 
-// Mock the three memory panels (they fetch data and have complex rendering)
+// Mock the memory panels (they fetch data and have complex rendering)
 vi.mock('@/components/memory/HotMemoryPanel', () => ({
     __esModule: true,
     default: () => <div data-testid="hot-memory-panel">Hot Memory</div>,
@@ -85,11 +94,11 @@ describe('Memory Page (app/memory/page.tsx)', () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByText('THREE-TIER MEMORY')).toBeDefined();
+            expect(screen.getByText('Memory')).toBeDefined();
         });
     });
 
-    it('renders tier legend chips', async () => {
+    it('renders section headers for two-column layout', async () => {
         await act(async () => {
             render(<MemoryRoute />);
         });
@@ -98,9 +107,8 @@ describe('Memory Page (app/memory/page.tsx)', () => {
         });
 
         await waitFor(() => {
-            expect(screen.getByText('Hot')).toBeDefined();
-            expect(screen.getByText('Warm')).toBeDefined();
-            expect(screen.getByText('Cold')).toBeDefined();
+            expect(screen.getByText('Recent Work')).toBeDefined();
+            expect(screen.getByText('Search Memory')).toBeDefined();
         });
     });
 });
