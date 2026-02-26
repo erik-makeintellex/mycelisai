@@ -1,8 +1,14 @@
 # Documentation
 
-This directory has been cleaned as part of the Phase 3 "Absolute Architecture" transition.
+Primary documentation entry points for V7:
 
-- **Main Documentation**: See `../README.md`
-- **Architecture**: See `../myclis_v3_arch.md`
-- **Core Internals**: See `../core/docs/`
-- **Legacy Docs**: See `../legacy_archive/docs/`
+- **Master State Authority**: `../README.md`
+- **V7 Architecture PRD**: `../mycelis-architecture-v7.md`
+- **V7 Development State**: `../V7_DEV_STATE.md`
+- **V7 UI Framework (Canonical v2.0)**: `./UI_FRAMEWORK_V7.md`
+- **V7 UI Parallel Delivery**: `./ui-delivery/PARALLEL_DELIVERY_BOARD.md`
+- **Architecture Specs**: `./architecture/` (`OVERVIEW.md`, `BACKEND.md`, `FRONTEND.md`, `OPERATIONS.md`)
+- **Testing Guide**: `./TESTING.md`
+- **Implementation Blueprint**: `./V7_IMPLEMENTATION_PLAN.md`
+
+User-facing guides live in `./user/`.

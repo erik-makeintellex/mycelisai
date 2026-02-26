@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/signal"
@@ -31,8 +32,12 @@ type Soma struct {
 	cancel        context.CancelFunc
 	registry      *Registry
 	brain         *cognitive.Router
-	toolExecutor  MCPToolExecutor // composite (internal + MCP)
+	toolExecutor  MCPToolExecutor         // composite (internal + MCP) — interface for backward compat
+	compositeExec *CompositeToolExecutor  // concrete type for ScopedToolExecutor wrapping
 	internalTools *InternalToolRegistry
+	// MCP agent-scoped binding: server name map + tool descriptions for per-agent filtering.
+	mcpServerNames map[uuid.UUID]string  // serverID → server name
+	mcpToolDescs   map[string]string     // MCP tool name → description
 	// V7 Event Spine: optional run tracking + event audit (interfaces from pkg/protocol).
 	// Both may be nil — degraded mode: teams still activate, events just aren't recorded.
 	runsManager  protocol.RunsManager  // creates mission_run records
@@ -46,7 +51,7 @@ type Soma struct {
 // CompositeToolExecutor that is passed to all teams and agents.
 func NewSoma(nc *nats.Conn, guard *governance.Guard, registry *Registry, brain *cognitive.Router, stream *signal.StreamHandler, mcpExec MCPToolExecutor, internalTools *InternalToolRegistry) *Soma {
 	// Build composite tool executor (internal first, MCP fallback)
-	var composite MCPToolExecutor
+	var composite *CompositeToolExecutor
 	if internalTools != nil || mcpExec != nil {
 		composite = NewCompositeToolExecutor(internalTools, mcpExec)
 	}
@@ -59,6 +64,7 @@ func NewSoma(nc *nats.Conn, guard *governance.Guard, registry *Registry, brain *
 		registry:      registry,
 		brain:         brain,
 		toolExecutor:  composite,
+		compositeExec: composite,
 		internalTools: internalTools,
 		teams:         make(map[string]*Team),
 		ctx:           ctx,
@@ -97,6 +103,10 @@ func (s *Soma) Start() error {
 		}
 		if s.internalTools != nil {
 			team.SetInternalTools(s.internalTools)
+		}
+		// MCP agent-scoped binding: pass concrete executor + server names + tool descs
+		if s.compositeExec != nil {
+			team.SetMCPBinding(s.compositeExec, s.mcpServerNames, s.mcpToolDescs)
 		}
 		// V7: wire conversation logger into standing teams
 		if s.conversationLogger != nil {
@@ -157,6 +167,10 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 	}
 	if s.internalTools != nil {
 		team.SetInternalTools(s.internalTools)
+	}
+	// MCP agent-scoped binding
+	if s.compositeExec != nil {
+		team.SetMCPBinding(s.compositeExec, s.mcpServerNames, s.mcpToolDescs)
 	}
 	// V7: wire conversation logger into dynamically spawned teams
 	if s.conversationLogger != nil {
@@ -392,4 +406,16 @@ func (s *Soma) SetEventEmitter(emitter protocol.EventEmitter) { s.eventEmitter =
 // Must be called before Start() so standing teams receive the logger.
 func (s *Soma) SetConversationLogger(logger protocol.ConversationLogger) {
 	s.conversationLogger = logger
+}
+
+// SetMCPServerNames provides the serverID→name mapping for agent-scoped MCP tool filtering.
+// Must be called before Start() so teams can build ScopedToolExecutors.
+func (s *Soma) SetMCPServerNames(names map[uuid.UUID]string) {
+	s.mcpServerNames = names
+}
+
+// SetMCPToolDescs provides MCP tool name→description pairs for agent prompt injection.
+// Must be called before Start() so teams can inject MCP tool descriptions into agent prompts.
+func (s *Soma) SetMCPToolDescs(descs map[string]string) {
+	s.mcpToolDescs = descs
 }

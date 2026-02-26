@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-02-25
+> **Updated:** 2026-02-26
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
@@ -24,6 +24,38 @@ Phase 19 (complete)
 ---
 
 ## What Is Done
+
+### UI Parallel Delivery Engagement (Activated)
+
+Parallelized UI delivery is now explicitly engaged with lane-level playbooks and gate-based merges.
+
+| Deliverable | File |
+|------------|------|
+| Parallel board with active gate model (A/B/C/RC) | `docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md` |
+| Lane A playbook (Global Ops UX) | `docs/ui-delivery/LANE_A_GLOBAL_OPS.md` |
+| Lane B playbook (Workspace Reliability UX) | `docs/ui-delivery/LANE_B_WORKSPACE_RELIABILITY.md` |
+| Lane C playbook (Workflow Surfaces UX) | `docs/ui-delivery/LANE_C_WORKFLOW_SURFACES.md` |
+| Lane D playbook (System + Observability UX) | `docs/ui-delivery/LANE_D_SYSTEM_OBSERVABILITY.md` |
+| Lane Q playbook (QA reliability/regression) | `docs/ui-delivery/LANE_Q_QA_REGRESSION.md` |
+| Canonical UI framework v2.0 (I/O contract, state transitions, component templates, gate checklists) | `docs/UI_FRAMEWORK_V7.md` |
+
+Execution policy:
+- Lanes run in parallel.
+- Merges are gate-sequenced (`P0 -> P1 -> P2 -> RC`).
+- Lane Q evidence is required at every gate.
+
+Gate A baseline progress:
+- Added/updated UI tests for `StatusDrawer`, `DegradedModeBanner`, `CouncilCallErrorCard`, `MissionControlChat` error UX, `ShellLayout` status action wiring, and Automations landing expectations.
+- Verified targeted gate suite: `46` tests passing across dashboard/pages/shell/teams subsets.
+- Added Playwright Gate A operational UX suite scaffold:
+  - `interface/e2e/specs/v7-operational-ux.spec.ts` (6 scenarios: degraded banner lifecycle, status drawer access, council reroute via Soma, automations actionable hub, system quick checks, focus mode toggle).
+  - Run attempt currently blocked locally until Playwright browsers are installed (`npx playwright install`).
+- Framework hardening completed:
+  - `docs/UI_FRAMEWORK_V7.md` upgraded as canonical UI source with explicit input/output model, global operational state contract, required state transitions, component instantiation templates, telemetry contract, and release gates.
+- Recovery UX hardening completed:
+  - `DegradedModeBanner` Retry now re-checks services, refreshes council/missions, and re-initializes SSE when disconnected.
+  - Workspace council direct-target indicator now synchronizes with global `councilTarget` (including one-click fallback to Soma from banner/error card).
+  - `StatusDrawer` council failure highlighting now resolves from recent failed council message source instead of only current target selection.
 
 ### Phase 19 Foundation
 
@@ -244,6 +276,18 @@ Comprehensive MCP coverage added across service, adapter, and HTTP handler layer
 
 ---
 
+### Swarm Parallel Activation
+
+Blueprint activation now fans out team startup in parallel where safe, with idempotent race-safe insertion into active runtime state.
+
+| Deliverable | File |
+|------------|------|
+| Bounded parallel team startup in `ActivateBlueprint` | `core/internal/swarm/activation.go` |
+| Idempotent duplicate-skip under concurrent activation | `core/internal/swarm/activation.go` |
+| New tests: idempotent repeat activation + concurrent activation no-dup | `core/internal/swarm/activation_test.go` |
+
+---
+
 ## What Is Pending
 
 ### V7 Team C — Scheduler (NEXT)
@@ -358,11 +402,13 @@ MCP verification:   `go test ./internal/mcp/ -count=1` PASSES
 
 1. Resolve full-suite blocker:
    - Fix root package build conflict (`probe.go` and `probe_test.go` both declare `main`) so `go test ./...` is clean.
-2. Extend MCP test coverage into connection lifecycle:
+2. Execute UI Gate A to completion:
+   - Close Lane A + B P0 acceptance tests and attach evidence in lane files.
+3. Extend MCP test coverage into connection lifecycle:
    - Add seam/stubs for `ClientPool.Connect/ReconnectAll/ShutdownAll` to validate status updates and degraded behavior without real subprocesses.
-3. Harden API semantics consistency:
+4. Harden API semantics consistency:
    - Ensure not-found cases across MCP handlers/toolset handlers map to `404` consistently (currently update-path is corrected).
-4. Update `/resources` Workspace Explorer out of DegradedState:
+5. Update `/resources` Workspace Explorer out of DegradedState:
    - Wire filesystem MCP-backed file browsing and actions into the tab.
 
 ## Decision Log (Locked)

@@ -233,9 +233,35 @@ func (a *Agent) buildToolsBlock() string {
 	sb.WriteString(`{"tool_call": {"name": "TOOL_NAME", "arguments": {"key": "value"}}}`)
 	sb.WriteString("\n\nThe system executes the tool and returns the result to you. ONE tool per response.\n")
 	sb.WriteString("NEVER show tool_call JSON to the user as an example. NEVER say \"you can use\". Just call it.\n\n")
+	seen := make(map[string]bool) // avoid duplicate tool entries
 	for _, toolName := range a.Manifest.Tools {
-		if desc, ok := a.toolDescs[toolName]; ok {
+		displayName := toolName
+		// Handle mcp: prefixed tool names — strip prefix for display
+		if strings.HasPrefix(toolName, "mcp:") {
+			body := toolName[4:]
+			if slash := strings.IndexByte(body, '/'); slash >= 0 {
+				displayName = body[slash+1:]
+			} else {
+				displayName = body // "mcp:filesystem" → "filesystem"
+			}
+			// Wildcards: descriptions were already expanded into toolDescs by Team.Start()
+			if displayName == "*" {
+				continue
+			}
+		}
+		// Skip toolset: references (expanded at construction time, not displayed)
+		if strings.HasPrefix(toolName, "toolset:") {
+			continue
+		}
+		if seen[displayName] {
+			continue
+		}
+		if desc, ok := a.toolDescs[displayName]; ok {
+			sb.WriteString(fmt.Sprintf("- **%s**: %s\n", displayName, desc))
+			seen[displayName] = true
+		} else if desc, ok := a.toolDescs[toolName]; ok {
 			sb.WriteString(fmt.Sprintf("- **%s**: %s\n", toolName, desc))
+			seen[toolName] = true
 		}
 	}
 	return sb.String()

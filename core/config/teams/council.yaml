@@ -50,6 +50,7 @@ members:
       - read_signals
       - read_file
       - write_file
+      - mcp:filesystem/*
 
   - id: council-coder
     role: coder
@@ -76,6 +77,7 @@ members:
       - write_file
       - publish_signal
       - read_signals
+      - mcp:filesystem/*
 
   - id: council-creative
     role: creative

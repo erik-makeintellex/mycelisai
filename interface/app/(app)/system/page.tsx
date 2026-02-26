@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Activity, Server, Database, BrainCircuit, Bug, Loader2, LayoutGrid, CheckCircle, XCircle, AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
 import MatrixGrid from "@/components/matrix/MatrixGrid";
+import SystemQuickChecks from "@/components/system/SystemQuickChecks";
 
 type TabId = "health" | "nats" | "database" | "services" | "matrix" | "debug";
 const VALID_TABS: TabId[] = ["health", "nats", "database", "services", "matrix", "debug"];
@@ -111,6 +112,16 @@ function EventHealthTab() {
                 <MetricCard label="Sys Memory" value={data ? `${data.sys_mem_mb.toFixed(1)} MB` : "..."} />
                 <MetricCard label="Token Rate" value={data ? `${data.llm_tokens_sec.toFixed(1)} t/s` : "..."} />
             </div>
+
+            <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4">
+                <h3 className="text-sm font-semibold text-cortex-text-main mb-1">What This Means</h3>
+                <p className="text-xs text-cortex-text-muted">
+                    Event Health indicates runtime stability and signal propagation across the orchestration spine.
+                    If checks degrade, automations may pause while Workspace chat remains available.
+                </p>
+            </div>
+
+            <SystemQuickChecks />
 
             {error && (
                 <div className="bg-cortex-surface border border-cortex-border rounded-xl p-6 text-center">

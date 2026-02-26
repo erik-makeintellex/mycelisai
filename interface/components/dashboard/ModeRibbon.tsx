@@ -11,6 +11,7 @@ export default function ModeRibbon() {
     const activeRole = useCortexStore((s) => s.activeRole);
     const governanceMode = useCortexStore((s) => s.governanceMode);
     const isConnected = useCortexStore((s) => s.isStreamConnected);
+    const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
 
     const modeInfo = MODE_LABELS[activeMode] || MODE_LABELS.answer;
     const govInfo = GOV_POSTURE_LABELS[governanceMode] || GOV_POSTURE_LABELS.passive;
@@ -26,7 +27,11 @@ export default function ModeRibbon() {
     const isRemote = activeBrain?.location === "remote";
 
     return (
-        <div className="h-8 border-b border-cortex-border bg-cortex-surface/30 flex items-center px-4 gap-4 flex-shrink-0 font-mono text-[11px]">
+        <button
+            onClick={() => setStatusDrawerOpen(true)}
+            className="h-8 border-b border-cortex-border bg-cortex-surface/30 flex items-center px-4 gap-4 flex-shrink-0 font-mono text-[11px] w-full text-left hover:bg-cortex-surface/50 transition-colors"
+            title="Open Status Drawer"
+        >
             {/* Mode */}
             <RibbonChip
                 icon={Zap}
@@ -81,7 +86,7 @@ export default function ModeRibbon() {
                     {isConnected ? "LIVE" : "OFFLINE"}
                 </span>
             </div>
-        </div>
+        </button>
     );
 }
 

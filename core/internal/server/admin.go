@@ -66,6 +66,8 @@ type AdminServer struct {
 	Conversations *conversations.Store // full-fidelity agent conversation turns
 	// V7 Inception Recipes — structured prompt patterns for RAG recall
 	Inception     *inception.Store     // inception recipe CRUD + search
+	// MCP Tool Sets — agent-scoped MCP tool bundles
+	MCPToolSets   *mcp.ToolSetService  // tool set CRUD
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -286,6 +288,12 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/inception/recipes/{id}", s.HandleGetInceptionRecipe)
 	mux.HandleFunc("POST /api/v1/inception/recipes", s.HandleCreateInceptionRecipe)
 	mux.HandleFunc("PATCH /api/v1/inception/recipes/{id}/quality", s.HandleUpdateRecipeQuality)
+
+	// MCP Tool Sets: agent-scoped MCP tool bundles
+	mux.HandleFunc("GET /api/v1/mcp/toolsets", s.handleListToolSets)
+	mux.HandleFunc("POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
+	mux.HandleFunc("PUT /api/v1/mcp/toolsets/{id}", s.handleUpdateToolSet)
+	mux.HandleFunc("DELETE /api/v1/mcp/toolsets/{id}", s.handleDeleteToolSet)
 }
 
 func respondJSON(w http.ResponseWriter, data interface{}) {

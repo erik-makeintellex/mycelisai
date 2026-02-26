@@ -16,6 +16,7 @@ type LibraryEntry struct {
 	Args        []string          `json:"args" yaml:"args"`
 	Env         map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	Tags        []string          `json:"tags" yaml:"tags"`
+	ToolSet     string            `json:"tool_set,omitempty" yaml:"tool_set,omitempty"` // suggested tool set name
 }
 
 // LibraryCategory groups related MCP servers.

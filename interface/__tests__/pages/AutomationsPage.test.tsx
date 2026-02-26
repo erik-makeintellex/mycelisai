@@ -82,11 +82,11 @@ describe('Automations Page (V7)', () => {
 
     it('renders all standard tabs', async () => {
         await act(async () => { render(<AutomationsPage />); });
-        expect(screen.getByText('Active Automations')).toBeDefined();
-        expect(screen.getByText('Draft Blueprints')).toBeDefined();
-        expect(screen.getByText('Trigger Rules')).toBeDefined();
-        expect(screen.getByText('Approvals')).toBeDefined();
-        expect(screen.getByText('Teams')).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Active Automations' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Draft Blueprints' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Trigger Rules' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Approvals' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Teams' })).toBeDefined();
     });
 
     it('hides Neural Wiring tab when advancedMode is off', async () => {
@@ -98,12 +98,12 @@ describe('Automations Page (V7)', () => {
     it('shows Neural Wiring tab when advancedMode is on', async () => {
         mockAdvancedMode.mockReturnValue(true);
         await act(async () => { render(<AutomationsPage />); });
-        expect(screen.getByText('Neural Wiring')).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Neural Wiring' })).toBeDefined();
     });
 
     it('defaults to Active Automations tab', async () => {
         await act(async () => { render(<AutomationsPage />); });
-        expect(screen.getByText('Scheduled Missions')).toBeDefined();
+        expect(screen.getByText('Set Up Your First Automation Chain')).toBeDefined();
     });
 
     it('deep-links to approvals tab via search param', async () => {

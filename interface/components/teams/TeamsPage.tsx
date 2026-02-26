@@ -123,6 +123,14 @@ export default function TeamsPage() {
                                 ? `No ${teamsFilter} teams — try changing the filter`
                                 : 'Start the Core server to see standing teams'}
                         </p>
+                        <div className="mt-3 flex items-center gap-2">
+                            <button onClick={fetchTeamsDetail} className="px-2.5 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-[10px] font-mono hover:bg-cortex-primary/10">
+                                Refresh
+                            </button>
+                            <a href="/dashboard" className="px-2.5 py-1.5 rounded border border-cortex-border text-cortex-text-main text-[10px] font-mono hover:bg-cortex-border">
+                                Open Workspace
+                            </a>
+                        </div>
                     </div>
                 )}
             </div>

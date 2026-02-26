@@ -101,6 +101,8 @@ members:
       - write_file
       - research_for_blueprint
       - generate_blueprint
+      - mcp:filesystem/*
+      - mcp:fetch/*
 inputs:
   - swarm.global.broadcast
   - swarm.global.input.user

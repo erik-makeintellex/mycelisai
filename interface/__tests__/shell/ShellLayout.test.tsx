@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 // Mock child zones to isolate ShellLayout testing
 vi.mock('@/components/shell/ZoneA_Rail', () => ({
@@ -12,6 +12,19 @@ vi.mock('@/components/shell/ZoneB_Workspace', () => ({
 }));
 vi.mock('@/components/shell/ZoneD_Decision', () => ({
     ZoneD: () => <div data-testid="zone-d">ZoneD</div>,
+}));
+vi.mock('@/components/dashboard/DegradedModeBanner', () => ({
+    __esModule: true,
+    default: () => <div data-testid="degraded-banner">DegradedBanner</div>,
+}));
+vi.mock('@/components/dashboard/StatusDrawer', () => ({
+    __esModule: true,
+    default: () => <div data-testid="status-drawer">StatusDrawer</div>,
+}));
+
+const setStatusDrawerOpen = vi.fn();
+vi.mock('@/store/useCortexStore', () => ({
+    useCortexStore: (selector: any) => selector({ setStatusDrawerOpen }),
 }));
 
 import { ShellLayout } from '@/components/shell/ShellLayout';
@@ -38,5 +51,11 @@ describe('ShellLayout', () => {
         );
         const zoneB = screen.getByTestId('zone-b');
         expect(zoneB.querySelector('[data-testid="child-content"]')).toBeDefined();
+    });
+
+    it('opens status drawer from floating status button', () => {
+        render(<ShellLayout />);
+        fireEvent.click(screen.getByTitle('Open Status Drawer'));
+        expect(setStatusDrawerOpen).toHaveBeenCalledWith(true);
     });
 });

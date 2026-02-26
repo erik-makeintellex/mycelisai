@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { ScrollText, Cable, Users, ShieldCheck, Clock } from "lucide-react";
 import DegradedState from "@/components/shared/DegradedState";
 import { useCortexStore } from "@/store/useCortexStore";
+import AutomationHub from "@/components/automations/AutomationHub";
 
 const ApprovalsContent = dynamic(() => import("@/components/automations/ApprovalsTab"), {
     ssr: false,
@@ -77,23 +78,18 @@ function AutomationsContent() {
 
             <div className="flex-1 overflow-hidden">
                 {effectiveTab === "active" && (
-                    <div className="h-full p-6">
-                        <DegradedState
-                            title="Scheduled Missions"
-                            reason="The scheduler engine is being implemented in V7 Step 03."
-                            unavailable={["Cron scheduling", "Recurring mission execution"]}
-                            available={["Manual mission activation via Neural Wiring", "One-time mission execution"]}
-                            action="Scheduled missions will be available after V7 Event Spine is complete."
-                        />
-                    </div>
+                    <AutomationHub
+                        advancedMode={advancedMode}
+                        openTab={(tab) => setActiveTab(tab)}
+                    />
                 )}
                 {effectiveTab === "drafts" && (
                     <div className="h-full p-6">
                         <DegradedState
                             title="Draft Blueprints"
                             reason="Blueprint drafts are managed through Neural Wiring."
-                            available={["Create blueprints via Neural Wiring tab", "Negotiate intent via Mission Control"]}
-                            action="Switch to the Neural Wiring tab to create and manage blueprint drafts."
+                            available={["Open Teams to inspect available execution targets", "Use Trigger Rules to chain existing workflows", "Negotiate intent from Workspace to generate new drafts"]}
+                            action="Next step: create a trigger rule, route to a team, then return here for scheduler rollout."
                         />
                     </div>
                 )}

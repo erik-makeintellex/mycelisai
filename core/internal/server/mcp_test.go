@@ -3,7 +3,10 @@ package server
 import (
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/mcp"
 )
 
@@ -14,6 +17,31 @@ func withMCPStubs() func(*AdminServer) {
 		s.MCP = mcp.NewService(nil)
 		s.MCPPool = mcp.NewClientPool(s.MCP)
 	}
+}
+
+func withMCPDB(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
+	t.Helper()
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Failed to create sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+	return func(s *AdminServer) {
+		s.MCP = mcp.NewService(db)
+		s.MCPPool = mcp.NewClientPool(s.MCP)
+	}, mock
+}
+
+func mcpServerColumns() []string {
+	return []string{"id", "name", "transport", "command", "args", "env", "url", "headers", "status", "error_message", "created_at", "updated_at"}
+}
+
+func mcpToolColumns() []string {
+	return []string{"id", "server_id", "name", "description", "input_schema"}
+}
+
+func mcpToolWithServerColumns() []string {
+	return []string{"id", "server_id", "server_name", "name", "description", "input_schema"}
 }
 
 // ── POST /api/v1/mcp/install ───────────────────────────────────────
@@ -140,4 +168,99 @@ func TestHandleMCPLibraryInstall_NotFoundInLibrary(t *testing.T) {
 	})
 	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"nonexistent"}`)
 	assertStatus(t, rr, http.StatusNotFound)
+}
+
+// ── Happy-path DB-backed tests ───────────────────────────────────────
+
+func TestHandleMCPList_HappyPath(t *testing.T) {
+	opt, mock := withMCPDB(t)
+	s := newTestServer(opt)
+	now := time.Now()
+
+	serverID := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	serverUUID := uuid.MustParse(serverID)
+	mock.ExpectQuery("SELECT .+ FROM mcp_servers").
+		WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
+			AddRow(serverID, "filesystem", "stdio", "npx", `[]`, `{}`, "", `{}`, "connected", nil, now, now))
+	mock.ExpectQuery("SELECT .+ FROM mcp_tools").
+		WithArgs(serverUUID).
+		WillReturnRows(sqlmock.NewRows(mcpToolColumns()).
+			AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", serverID, "read_file", "Read file", []byte(`{}`)))
+
+	rr := doRequest(t, http.HandlerFunc(s.handleMCPList), "GET", "/api/v1/mcp/servers", "")
+	assertStatus(t, rr, http.StatusOK)
+}
+
+func TestHandleMCPList_EmptyDB(t *testing.T) {
+	opt, mock := withMCPDB(t)
+	s := newTestServer(opt)
+
+	mock.ExpectQuery("SELECT .+ FROM mcp_servers").
+		WillReturnRows(sqlmock.NewRows(mcpServerColumns()))
+
+	rr := doRequest(t, http.HandlerFunc(s.handleMCPList), "GET", "/api/v1/mcp/servers", "")
+	assertStatus(t, rr, http.StatusOK)
+}
+
+func TestHandleMCPDelete_HappyPath(t *testing.T) {
+	opt, mock := withMCPDB(t)
+	s := newTestServer(opt)
+	serverUUID := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+
+	mock.ExpectExec("DELETE FROM mcp_servers WHERE id = \\$1").
+		WithArgs(serverUUID).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mux := setupMux(t, "DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
+	rr := doRequest(t, mux, "DELETE", "/api/v1/mcp/servers/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "")
+	assertStatus(t, rr, http.StatusOK)
+}
+
+func TestHandleMCPToolsList_HappyPath(t *testing.T) {
+	opt, mock := withMCPDB(t)
+	s := newTestServer(opt)
+
+	mock.ExpectQuery("SELECT .+ FROM mcp_tools .+ JOIN mcp_servers").
+		WillReturnRows(sqlmock.NewRows(mcpToolWithServerColumns()).
+			AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "filesystem", "read_file", "Read file", []byte(`{}`)))
+
+	rr := doRequest(t, http.HandlerFunc(s.handleMCPToolsList), "GET", "/api/v1/mcp/tools", "")
+	assertStatus(t, rr, http.StatusOK)
+}
+
+func TestHandleMCPInstall_Forbidden(t *testing.T) {
+	s := newTestServer()
+	mux := http.NewServeMux()
+	s.RegisterRoutes(mux)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/mcp/install", `{"name":"test"}`)
+	assertStatus(t, rr, http.StatusForbidden)
+}
+
+func TestHandleMCPLibraryInstall_HappyPath(t *testing.T) {
+	opt, mock := withMCPDB(t)
+	s := newTestServer(opt, func(s *AdminServer) {
+		s.MCPLibrary = &mcp.Library{
+			Categories: []mcp.LibraryCategory{
+				{
+					Name: "Default",
+					Servers: []mcp.LibraryEntry{
+						{Name: "fetch", Transport: "unsupported"},
+					},
+				},
+			},
+		}
+	})
+	now := time.Now()
+
+	mock.ExpectQuery("INSERT INTO mcp_servers").
+		WithArgs("fetch", "unsupported", "", sqlmock.AnyArg(), sqlmock.AnyArg(), "", sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
+			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "fetch", "unsupported", "", `[]`, `{}`, "", `{}`, "installed", nil, now, now))
+	mock.ExpectQuery("SELECT .+ FROM mcp_tools").
+		WithArgs("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
+		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))
+
+	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"fetch"}`)
+	assertStatus(t, rr, http.StatusOK)
 }

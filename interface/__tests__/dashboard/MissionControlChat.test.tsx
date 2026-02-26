@@ -253,14 +253,15 @@ describe('MissionControlChat', () => {
     // ── Error States ──────────────────────────────────────────
 
     describe('Error States', () => {
-        it('displays error bar when missionChatError is set', async () => {
+        it('displays structured council error card when missionChatError is set', async () => {
             useCortexStore.setState({
                 missionChatError: 'Swarm offline',
             });
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-            expect(screen.getByText('Swarm offline')).toBeDefined();
+            expect(screen.getByText('Council Call Failed')).toBeDefined();
+            expect(screen.getByText('Copy Diagnostics')).toBeDefined();
         });
 
         it('shows error as chat bubble with source_node on API failure', async () => {

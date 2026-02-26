@@ -134,7 +134,7 @@ export const DOC_MANIFEST: DocSection[] = [
             {
                 slug: "mvp-agentry",
                 label: "MVP Agentry Plan",
-                path: "docs/MVP_AGENTRY_PLAN.md",
+                path: "docs/archive/MVP_AGENTRY_PLAN.md",
                 description: "Full agentry chain map — User → Workspace → NATS → Soma",
             },
         ],
@@ -254,6 +254,18 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "IA Step 01 (Nav)",
                 path: "docs/product/ia-v7-step-01.md",
                 description: "Workflow-first navigation PRD and decisions",
+            },
+            {
+                slug: "v7-ui-framework",
+                label: "UI Framework V7",
+                path: "docs/UI_FRAMEWORK_V7.md",
+                description: "Trusted continuous UI framework: state model, failure templates, testing matrix, PR gate",
+            },
+            {
+                slug: "v7-ui-parallel-delivery",
+                label: "UI Parallel Delivery Board",
+                path: "docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md",
+                description: "Active lanes (A/B/C/D/Q), gate sequencing, dependencies, and evidence tracking",
             },
         ],
     },

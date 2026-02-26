@@ -40,7 +40,8 @@ type ToolDef struct {
 
 // Service manages MCP server and tool registration in the database.
 type Service struct {
-	DB *sql.DB
+	DB       *sql.DB
+	ToolSets *ToolSetService // optional: for seeding default tool sets during bootstrap
 }
 
 // NewService creates a new MCP registry service.
@@ -442,6 +443,24 @@ func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool 
 		}
 	}
 	log.Println("[mcp] bootstrap: default server installation complete.")
+
+	// Seed default tool sets if ToolSetService is available
+	if s.ToolSets != nil {
+		defaultSets := []ToolSet{
+			{Name: "workspace", Description: "File I/O and workspace management", ToolRefs: []string{"mcp:filesystem/*"}},
+			{Name: "research", Description: "Web fetch and search tools", ToolRefs: []string{"mcp:fetch/*"}},
+		}
+		for _, ts := range defaultSets {
+			existing, _ := s.ToolSets.FindByName(ctx, ts.Name)
+			if existing == nil {
+				if created, err := s.ToolSets.Create(ctx, ts); err != nil {
+					log.Printf("[mcp] bootstrap: failed to create tool set %q: %v", ts.Name, err)
+				} else {
+					log.Printf("[mcp] bootstrap: seeded tool set %q (id=%s)", ts.Name, created.ID)
+				}
+			}
+		}
+	}
 }
 
 // scanServerConfig scans a row from the mcp_servers table into a ServerConfig.

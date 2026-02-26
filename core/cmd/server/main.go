@@ -11,6 +11,7 @@ import (
 	os_signal "os/signal"
 	"time"
 
+	"github.com/google/uuid"
 	pb "github.com/mycelis/core/pkg/pb/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
@@ -252,8 +253,11 @@ func main() {
 	// Phase 7.0: MCP Ingress
 	var mcpService *mcp.Service
 	var mcpPool *mcp.ClientPool
+	var mcpToolSets *mcp.ToolSetService
 	if sharedDB != nil {
 		mcpService = mcp.NewService(sharedDB)
+		mcpToolSets = mcp.NewToolSetService(sharedDB)
+		mcpService.ToolSets = mcpToolSets // wire for BootstrapDefaults seeding
 		mcpPool = mcp.NewClientPool(mcpService)
 		// Reconnect persisted servers on startup (best-effort)
 		if servers, err := mcpService.List(ctx); err == nil {
@@ -366,6 +370,23 @@ func main() {
 		if convStore != nil {
 			soma.SetConversationLogger(convStore)
 		}
+		// MCP agent-scoped binding: build server name map + tool descriptions for per-agent filtering
+		if mcpService != nil {
+			if servers, err := mcpService.List(ctx); err == nil {
+				serverNames := make(map[uuid.UUID]string, len(servers))
+				toolDescs := make(map[string]string)
+				for _, srv := range servers {
+					serverNames[srv.ID] = srv.Name
+					if tools, err := mcpService.ListTools(ctx, srv.ID); err == nil {
+						for _, t := range tools {
+							toolDescs[t.Name] = t.Description
+						}
+					}
+				}
+				soma.SetMCPServerNames(serverNames)
+				soma.SetMCPToolDescs(toolDescs)
+			}
+		}
 		if err := soma.Start(); err != nil {
 			log.Printf("WARN: Failed to start Soma: %v", err)
 		}
@@ -472,6 +493,10 @@ func main() {
 	// V7: wire inception store into AdminServer for recipe browsing + creation
 	if inceptionStore != nil {
 		adminSrv.Inception = inceptionStore
+	}
+	// MCP Tool Sets: wire into AdminServer for CRUD API
+	if mcpToolSets != nil {
+		adminSrv.MCPToolSets = mcpToolSets
 	}
 	adminSrv.RegisterRoutes(mux)
 
