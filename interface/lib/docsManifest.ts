@@ -131,11 +131,24 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/QA_COUNCIL_CHAT_API.md",
                 description: "QA procedures and test cases for the council chat API",
             },
+        ],
+    },
+
+    // ── Archive (Historical / Non-authoritative) ────────────────────────────
+    {
+        section: "Archive",
+        docs: [
+            {
+                slug: "archive-index",
+                label: "Archive Index",
+                path: "docs/archive/README.md",
+                description: "Historical documents only — not implementation authority",
+            },
             {
                 slug: "mvp-agentry",
-                label: "MVP Agentry Plan",
+                label: "MVP Agentry Plan (Archive)",
                 path: "docs/archive/MVP_AGENTRY_PLAN.md",
-                description: "Full agentry chain map — User → Workspace → NATS → Soma",
+                description: "Historical agentry chain map retained for context",
             },
         ],
     },
@@ -260,6 +273,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "UI Framework V7",
                 path: "docs/UI_FRAMEWORK_V7.md",
                 description: "Trusted continuous UI framework: state model, failure templates, testing matrix, PR gate",
+            },
+            {
+                slug: "v7-ui-elements-planning",
+                label: "UI Elements Planning V7",
+                path: "docs/UI_ELEMENTS_PLANNING_V7.md",
+                description: "Research-backed UI element planning, Soma interface patterns, and standard management workflow",
             },
             {
                 slug: "v7-ui-parallel-delivery",

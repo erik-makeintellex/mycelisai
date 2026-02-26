@@ -611,7 +611,8 @@ A feature set is “fully delivered” only if:
 ## “Trusted Continuous UI Framework”
 
 Implementation authority for this section is maintained in `docs/UI_FRAMEWORK_V7.md` (canonical v2.0).
-If wording diverges, follow `docs/UI_FRAMEWORK_V7.md` for active delivery and review gates.
+Element planning authority (research-backed standards and Soma interaction patterns) is maintained in `docs/UI_ELEMENTS_PLANNING_V7.md`.
+If wording diverges, follow those docs for active delivery and review gates.
 
 This section defines the default, reusable way to instantiate UI elements across Mycelis.
 All future UI surfaces MUST conform unless explicitly exempted in a decision log.

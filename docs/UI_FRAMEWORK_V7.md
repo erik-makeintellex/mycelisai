@@ -9,6 +9,9 @@ Scope: `interface/*` and all docs that define UI behavior
 This document is the single UI framework source of truth.  
 If another document conflicts with this file, this file wins for UI implementation rules.
 
+Planning companion:
+- `docs/UI_ELEMENTS_PLANNING_V7.md` (research-backed element planning, Soma interaction patterns, and element management workflow)
+
 ---
 
 ## Table of Contents
@@ -478,4 +481,3 @@ Diagnostics:
 - subsystem:
 - timestamp:
 ```
-
