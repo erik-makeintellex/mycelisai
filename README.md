@@ -15,7 +15,9 @@
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 > | [V7 PRD](mycelis-architecture-v7.md) | Event spine, triggers, scheduler, workflow-first IA |
 > | [V7 UI Framework](docs/UI_FRAMEWORK_V7.md) | Canonical UI element/state/testing framework |
+> | [V7 UI Elements Planning](docs/UI_ELEMENTS_PLANNING_V7.md) | Research-backed UI element planning and Soma interaction model |
 > | [V7 UI Parallel Delivery Board](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) | Active lane plan, merge gates, evidence checklist |
+> | [Archive Index](docs/archive/README.md) | Historical docs only (non-authoritative) |
 
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
 
@@ -1359,7 +1361,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Overview** | [README.md](README.md) — Architecture, stack, commands, current phase | [/docs?doc=readme](/docs?doc=readme) |
 | **Local Dev Workflow** | [docs/LOCAL_DEV_WORKFLOW.md](docs/LOCAL_DEV_WORKFLOW.md) — Setup, config reference, port map, troubleshooting | [/docs?doc=local-dev](/docs?doc=local-dev) |
 | **Soma Workflow** | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — End-to-end GUI + API workflow reference | [/docs?doc=workflows](/docs?doc=workflows) |
-| **MVP Agentry Plan** | [docs/archive/MVP_AGENTRY_PLAN.md](docs/archive/MVP_AGENTRY_PLAN.md) — Full agentry chain map: User → Workspace → NATS → Soma | [/docs?doc=mvp-agentry](/docs?doc=mvp-agentry) |
+| **Archive Index** | [docs/archive/README.md](docs/archive/README.md) — Historical docs only; not implementation authority | [/docs?doc=archive-index](/docs?doc=archive-index) |
 | **Council Chat QA** | [docs/QA_COUNCIL_CHAT_API.md](docs/QA_COUNCIL_CHAT_API.md) — QA procedures and test cases for council chat | [/docs?doc=council-chat-qa](/docs?doc=council-chat-qa) |
 | **API Reference** | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Full endpoint table (80+ routes) | [/docs?doc=api-reference](/docs?doc=api-reference) |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
@@ -1369,6 +1371,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Memory Service** | [docs/architecture/DIRECTIVE_MEMORY_SERVICE.md](docs/architecture/DIRECTIVE_MEMORY_SERVICE.md) — State Engine, event projection, pgvector schema | [/docs?doc=arch-memory-service](/docs?doc=arch-memory-service) |
 | **V7 Architecture PRD** | [mycelis-architecture-v7.md](mycelis-architecture-v7.md) — V7 product requirements: event spine, mission graph, observability | [/docs?doc=v7-architecture-prd](/docs?doc=v7-architecture-prd) |
 | **V7 UI Framework** | [docs/UI_FRAMEWORK_V7.md](docs/UI_FRAMEWORK_V7.md) — Default UI instantiation contract (state model, failure templates, testing matrix, PR gate) | [/docs?doc=v7-ui-framework](/docs?doc=v7-ui-framework) |
+| **V7 UI Elements Planning** | [docs/UI_ELEMENTS_PLANNING_V7.md](docs/UI_ELEMENTS_PLANNING_V7.md) — Research-backed element standards, Soma interaction patterns, and planning workflow | [/docs?doc=v7-ui-elements-planning](/docs?doc=v7-ui-elements-planning) |
 | **V7 UI Parallel Delivery** | [docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) — Active gate model + lane matrix (A/B/C/D/Q) with evidence tracking | [/docs?doc=v7-ui-parallel-delivery](/docs?doc=v7-ui-parallel-delivery) |
 | **V7 MCP Baseline** | [docs/V7_MCP_BASELINE.md](docs/V7_MCP_BASELINE.md) — MVOS: filesystem, memory, artifact-renderer, fetch | [/docs?doc=v7-mcp-baseline](/docs?doc=v7-mcp-baseline) |
 | **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance | [/docs?doc=swarm-operations](/docs?doc=swarm-operations) |

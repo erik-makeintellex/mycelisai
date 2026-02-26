@@ -52,6 +52,9 @@ Gate A baseline progress:
   - Run attempt currently blocked locally until Playwright browsers are installed (`npx playwright install`).
 - Framework hardening completed:
   - `docs/UI_FRAMEWORK_V7.md` upgraded as canonical UI source with explicit input/output model, global operational state contract, required state transitions, component instantiation templates, telemetry contract, and release gates.
+- UI element planning baseline completed:
+  - `docs/UI_ELEMENTS_PLANNING_V7.md` added as research-backed planning authority for UI element management and Soma interaction patterns.
+  - In-app docs manifest updated to include UI element planning and explicit Archive section labeling for non-authoritative historical docs.
 - Recovery UX hardening completed:
   - `DegradedModeBanner` Retry now re-checks services, refreshes council/missions, and re-initializes SSE when disconnected.
   - Workspace council direct-target indicator now synchronizes with global `councilTarget` (including one-click fallback to Soma from banner/error card).
