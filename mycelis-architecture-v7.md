@@ -1,547 +1,907 @@
-# Mycelis PRD — Orchestration Core, Event-Driven Mission Graph, and Non-Black-Box Observability
-## Product Requirements Document (PRD) — Highly Detailed Implementation Doctrine
-
-**Owner:** Principal Architect (Erik)  
-**Audience:** Claude Dev Agentry (team spawner), Lead Engineer, Frontend, Backend, Security, QA  
-**Primary References (Must Consult):**  
-- `mycelis-architecture-v6.2.md` (Master State Authority)  
-- `README.md` (Usage and general behavior)  
-**Scope:** Product workflow and UI/UX aligned to Orchestration Templates, local-first providers, multi-user default, event-triggerable missions, and flight-recorder observability.  
-**Non-Goal:** Building every “architecture surface” as a first-class user panel. We prioritize workflow usability.
+Execution Target: Codex / Web Agentry  
+Priority: High (Foundational UX Stabilization)  
+Architecture Context: V7 (Event Spine + Runs + Triggers + Governance + Provider Profiles Live)
 
 ---
 
-# 0. Summary (Why This Exists)
+# PART I — CENTRAL DESCRIPTIVE INDEX
+## “How to Fully Utilize the Stack”
 
-Mycelis is a governed orchestration system (“Neural Organism”) where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated; they can emit events that trigger other missions. Observability is not optional: execution must never be a black box.
+This is the canonical mental model that all agents (human or AI) must align to.
 
-This PRD defines:
-- core user workflows (conversation → proposal → confirm → execute → report),
-- mission chaining via event triggers (end-of-mission and mid-stream),
-- provider routing (local Ollama default, remote Claude optional),
-- multi-user posture (Linux-like startup),
-- and a unified monitoring model (run timeline / flight recorder + causal chains).
-
-This document is specific enough that Claude dev agentry can spawn the right team, execute tasks, and prove completion.
+Mycelis Stack Layers:
 
 ---
 
-# 1. Goals and Non-Goals
+## 1️⃣ Intent Layer (User / API Entry)
 
-## 1.1 Goals
-1. **Workflow-first product**: UI follows user workflows, not architecture surfaces.
-2. **Two-phase mutation**: No state change without Proposal → Confirm Token → Intent Proof → Execute.
-3. **Event-driven mission graph**: Missions emit structured events; triggers link missions.
-4. **Non-black-box execution**: Every run has a visible timeline; every trigger is traceable.
-5. **Local-first**: Default provider is local Ollama; remote providers are explicit, gated, and visible.
-6. **Multi-user default**: Every install supports multiple users; single-user is “create one user”.
-7. **Security-first**: Tool gating, MCP install approval, scope restrictions, audit logging.
+Surfaces:
+- Workspace (chat / soma)
+- REST API
+- Trigger Engine
+- Scheduler (pending completion)
 
-## 1.2 Non-Goals (for this PRD cycle)
-- Full enterprise RBAC matrix and SSO integrations (later)
-- Full DAG editor as primary UX (advanced view only)
-- Prometheus/Grafana-grade telemetry dashboards (later)
-- Automatic policy changes or automatic tool installs
-- “Magic autonomous execution” without confirm/approval
+Purpose:
+Capture structured intent and generate a Mission.
 
----
+Core Objects:
+- mission_runs
+- mission_events
+- team_id
+- origin (workspace / trigger / schedule / api)
 
-# 2. Personas and Roles
-
-## 2.1 Personas
-- **Owner/Admin**: Sets up providers, policies, tools, and enables remote.
-- **Operator**: Runs missions, confirms proposals, manages automations within policy.
-- **Viewer**: Observes, audits, reads outcomes. Cannot mutate state.
-
-## 2.2 Multi-User Default (“Linux Startup”)
-- First-run creates an Owner/Admin.
-- System supports additional users and roles from day one.
-- Single-user = only one account created.
+UI Responsibilities:
+- Make origin visible
+- Make routing decision visible
+- Make governance visible
 
 ---
 
-# 3. User Workflows (End-to-End)
+## 2️⃣ Orchestration Layer (Cognitive Decomposition)
 
-## 3.1 Workflow A — Conversation → Answer (Read-Only)
-**User story:** “I ask questions and get trustworthy responses with provenance.”
+Components:
+- Council teams
+- Provider profiles
+- Brain selection
+- Governance rules
 
-### Steps
-1. User opens **Mission Control**.
-2. User sends message to Soma/council member.
-3. System classifies intent as Answer (no mutation).
-4. System responds with:
-   - answer
-   - provenance (brain/provider, consult chain)
-   - trust/confidence
-   - tools used (if any)
-5. User can open **Inspector** for details.
+Purpose:
+Convert intent → execution plan.
 
-### Success criteria
-- Response clearly indicates: Mode = Answer, Brain used, Role used, Provenance available.
-- Audit event recorded and linked to response.
+UI Responsibilities:
+- Show which team handled it
+- Show which model/provider handled it
+- Show why governance required approval (if so)
+- Link to Run Detail
 
 ---
 
-## 3.2 Workflow B — Conversation → Proposal → Confirm → Execute (Mutation)
-**User story:** “I ask the system to do something, it proposes safely, I confirm, it executes.”
+## 3️⃣ Event Spine (NATS)
 
-### Steps
-1. User sends actionable request.
-2. System detects mutation risk (tool risk / operation risk).
-3. System responds with **Proposed Action Block**:
-   - resolved intent
-   - operations list
-   - tools involved
-   - providers/roles planned
-   - scope constraints
-   - governance requirement status
-4. User clicks **Confirm & Execute**.
-5. System validates confirm token.
-6. System creates **Intent Proof** bundle.
-7. Execution starts and emits events.
-8. System ends with **Execution Report**.
-9. Artifacts and audit links are visible.
+Purpose:
+Pub/Sub backbone for:
+- Mission events
+- System health
+- Hardware channels
+- Trigger dispatch
 
-### Success criteria
-- No execution occurs without confirm token validation.
-- Intent Proof ID + Audit Event ID visible to user.
-- Run timeline shows what happened and why.
+UI Responsibilities:
+- Surface health state
+- Surface degraded mode clearly
+- Allow quick diagnostics
+- Never silently fail
 
 ---
 
-## 3.3 Workflow C — Create Automation (Scheduled Mission)
-**User story:** “I want recurring execution on a schedule with governance and visibility.”
+## 4️⃣ Execution Layer (Tools / MCP / Hardware)
 
-### Steps
-1. User asks for scheduled behavior (e.g., “Daily research and summarize”).
-2. System generates proposal including schedule constraints and concurrency guard.
-3. Confirm required.
-4. Mission is created with schedule.
-5. Runs emit events; outcomes visible in timelines and automations view.
-6. User can pause/disable/edit (via proposal flow).
+Components:
+- MCP servers
+- Toolsets
+- Filesystem
+- Sensors (future)
+- Actuators (future)
 
-### Success criteria
-- Schedules enforce safety: min interval, concurrency limits, recursion detection.
-- Each run has a trace; failures and retries visible.
+Purpose:
+Act on the world (digital or physical).
 
----
-
-## 3.4 Workflow D — Mission Chaining (Event-Triggered Missions)
-**User story:** “When research completes, generate variant media; when a signal appears, trigger a review.”
-
-### Steps
-1. Mission A emits events during execution and on completion.
-2. Trigger rules evaluate events.
-3. If matched, system:
-   - creates proposal for downstream mission OR executes automatically if policy allows
-4. Trigger firing is logged and visible:
-   - parent mission run → event → trigger → child mission run
-5. User can view chain as a causal graph/timeline.
-
-### Success criteria
-- Triggers are visible, inspectable, and auditable.
-- No hidden cascades.
-- Governance can require approval for trigger-based mutations.
+UI Responsibilities:
+- Show what tools are connected
+- Show governance gating
+- Link actuation to Run ID
+- Allow operator halt
 
 ---
 
-# 4. Product Information Architecture (Workflow-First Navigation)
+## 5️⃣ Observability Layer (Runs & Chain)
 
-## 4.1 Primary Navigation (User-Facing)
-1. **Mission Control** (primary): chat, proposals, confirms, execution reports, timelines
-2. **Automations**: scheduled missions + triggers + drafts + approvals (workflow focus)
-3. **Resources**: brains/providers + tool library + service targets + capabilities
-4. **Memory**: what the organism knows, sources, recall events, scoped search
-5. **System** (advanced): health, event health, debug (hidden behind “Advanced”)
+Components:
+- Run Timeline
+- Event log
+- Causal Chain
+- Artifacts
 
-## 4.2 Remove/De-emphasize as top-level panels (move under Automations/Resources/System)
-- Neural Wiring (advanced view inside Automations)
-- Cognitive Matrix (System or Resources)
-- Skills Market (Resources)
-- Agent Catalogue (Resources)
-- Governance (integrated into Automations + Mission Control + System)
+Purpose:
+Explain what happened and why.
 
-**Requirement:** Panels must not show meaningless error states. If dependencies offline, show a clear degraded message and what still works.
-
----
-
-# 5. Orchestration Templates (First-Class Primitive)
-
-## 5.1 Template Families (v1)
-- **Chat-to-Answer** (read-only)
-- **Chat-to-Proposal** (mutation gating)
-- **Confirm-Action** (token validation + proof)
-- **Execute-Action** (state mutation & event emission)
-- **Schedule** (recurring execution)
-- **Trigger-Rule** (event routing)
-
-## 5.2 Two Mandatory v1 Templates
-1. `chat_to_answer.v1`
-2. `chat_to_proposal.v1`
-
-**Rule:** If ambiguous, default to Proposal (least privilege).
+UI Responsibilities:
+- Runs are first-class
+- Timeline & Chain are easily reachable
+- Saved Views for operators
+- Clear axis conventions
 
 ---
 
-# 6. Event System (Mission Graph + Observability Spine)
+## Canonical System Principle
 
-## 6.1 Principle
-**Events are both:**
-- orchestration triggers
-- monitoring visibility
+Intent → Decomposition → Governance → Execution → Event → Observability → Feedback
 
-If we have events, we automatically have observability.
-
-## 6.2 Canonical Event Envelope: `MissionEventEnvelope`
-**Required fields**
-- `event_id` (uuid)
-- `timestamp`
-- `tenant_id`
-- `user_id`
-- `mission_id`
-- `run_id` (unique per execution)
-- `event_type` (enum)
-- `severity` (info/warn/error)
-- `provider_id` (ollama/claude/etc)
-- `model_used`
-- `role`
-- `mode` (answer/proposal/execution)
-- `payload` (typed JSON)
-- `artifact_refs[]` (ids/urls)
-- `cause` (optional)
-  - `parent_event_id`
-  - `parent_run_id`
-  - `trigger_rule_id`
-- `audit_event_id` (link to authoritative audit record)
-- `intent_proof_id` (if mutation path)
-
-## 6.3 Minimum Event Types (v1)
-- `mission.started`
-- `mission.completed`
-- `mission.failed`
-- `mission.step.started`
-- `mission.step.completed`
-- `tool.invoked`
-- `tool.completed`
-- `tool.failed`
-- `policy.evaluated`
-- `approval.requested`
-- `approval.granted`
-- `approval.denied`
-- `trigger.rule.evaluated`
-- `trigger.fired`
-- `artifact.created`
-- `memory.recalled`
-- `memory.stored`
-
-## 6.4 Trigger Rules (Simple, Declarative)
-A trigger rule is:
-
-**IF** `event_type` matches AND optional predicates pass  
-**THEN** initiate downstream mission (proposal or execution)
-
-**Rule format (v1 fields)**
-- `trigger_rule_id`
-- `tenant_id`
-- `enabled`
-- `source_mission_id` (optional, can be any)
-- `event_type`
-- `predicate` (optional JSON logic, minimal)
-- `action`:
-  - `target_mission_blueprint_id` OR `target_mission_template`
-  - `mode`: propose | execute
-  - `requires_approval`: boolean override (or derived from policy)
-- `cooldown_ms`
-- `recursion_guard`:
-  - max_depth
-  - cycle_detect (on/off)
-- `concurrency_guard`:
-  - max_active_runs_for_target
-
-**Important:** Start simple. Do not build a full rules engine in v1.
+The UI must make that loop obvious.
 
 ---
 
-# 7. Observability UX (Non-Black-Box)
+# PART II — EXECUTION TASK PACK
 
-## 7.1 “Run Timeline” (Flight Recorder) — Required UI Component
-Every mission run renders a vertical timeline:
-
-- Policy decision events
-- Approval events
-- Provider routing decisions
-- Tool invocations and results
-- Trigger firings
-- Artifact creation
-- Completion/failure
-
-Each item is expandable and links to:
-- audit event
-- related artifacts
-- trigger rule
-- child run (if fired)
-
-## 7.2 “Causal Chain View” — Required
-A button: **View Chain**
-Shows:
-
-Mission A Run → Event → Trigger → Mission B Run → Event → Trigger → Mission C Run
-
-This can be a simple expandable list in v1.
-Graph view is optional later.
-
-## 7.3 “Event Health” (Replace empty telemetry dashboards)
-System page must show:
-- NATS connected/disconnected
-- events/sec
-- trigger queue length
-- failed triggers count
-- last error summary
-- degraded mode notices (what works / what doesn’t)
-
-**If offline:** show clear degraded capability statement.
+This is structured sequentially.
+Each task has:
+- Objective
+- Files/Areas
+- Required Expertise
+- Acceptance Criteria
 
 ---
 
-# 8. Provider Routing (Local-First, Transparent)
+# TASK 001 — GLOBAL STATUS DRAWER
 
-## 8.1 Provider Policy Model
-- Provider: id, location (local/remote), data_boundary, enabled, usage_policy, roles_allowed
-- Default provider: local Ollama
-- Remote provider: disabled by default; enable requires explicit modal confirmation
+## Objective
+Implement a globally accessible Status Drawer that reflects real system state.
 
-## 8.2 Routing Decision Record
-Every chat/run records:
-- provider chosen
-- model used
-- reason (policy/user/escalation)
-- data boundary classification
-- constraints applied
+## Areas
+- Layout shell
+- Global store
+- `/api/v1/services/status`
 
-## 8.3 UI Requirements
-- Mode ribbon always shows:
-  - MODE / ROLE / BRAIN / GOV
-- Per-message header shows:
-  - provider + local/remote badge
-  - role
-  - confidence/trust
-- Inspector reveals:
-  - provider/model routing reasons
-  - tool chain
+## Required Expertise
+- React global state management
+- SSE / polling integration
+- Operational UI design
 
----
-
-# 9. Security & Governance Requirements (Workflow-Scoped)
-
-## 9.1 No mutation without confirm + proof
-- Confirm endpoint must reject invalid/replayed/mismatched tokens.
-- Mutation tools must be gated by allowlist and scope.
-- MCP install requires approval.
-- Filesystem is sandboxed; no arbitrary paths.
-
-## 9.2 Governance integration
-If policy requires approval:
-- Proposal is generated
-- Execution blocked until approval granted
-- Approval events emitted and appear in timeline
-
-## 9.3 Degraded mode rules (offline components)
-If NATS offline:
-- No trigger firing
-- No scheduled execution
-- Chat-to-Answer may still operate if inference available
-- UI must show offline and which functions are disabled
-
----
-
-# 10. Functional Requirements (Detailed)
-
-## 10.1 Mission Control (Primary Surface)
-Must support:
-- Conversation
-- Proposal cards
-- Confirm action
-- Execution reports
-- Run timelines per run
-- Inspector per message
-- Clear offline/degraded messaging
-
-## 10.2 Automations
-Must support:
-- Active automations list (scheduled missions)
-- Trigger rules list
-- Draft blueprints list
-- Approvals queue (if used)
-- Per automation:
-  - emits (event types)
-  - triggers (rules)
-  - recent runs + timeline access
-
-## 10.3 Resources
-Must support:
-- Brains/providers management
-- MCP tools/library management
-- Service targets/capabilities
-- Access policies per role (even if minimal v1)
-
-## 10.4 Memory
-Must support:
-- tenant-scoped semantic search
-- show sources ingested
-- show recall events
-- show store events
-- link memory usage to run timelines
-
-## 10.5 System (Advanced)
-Must support:
-- Event health
-- Core status
+## Must Show
 - NATS status
 - DB status
-- “what is degraded” messages
+- SSE status
+- Trigger engine
+- Scheduler
+- Council reachability
+- Active runs count
+- Recent errors
+
+## Acceptance Criteria
+- Drawer opens from header click
+- Updates live without reload
+- Degraded subsystems highlighted
+- Copy diagnostics button works
 
 ---
 
-# 11. UX Requirements (Strict)
+# TASK 002 — DEGRADED MODE BANNER
 
-## 11.1 No meaningless empty panels
-If a panel cannot function due to offline core:
-- must show:
-  - why
-  - what is unavailable
-  - what remains usable
-  - next step to restore
+## Objective
+Add actionable degraded-state UX.
 
-## 11.2 Reduce cognitive overload
-- Workflows first; advanced views hidden behind toggles.
-- Default path: Mission Control → Proposal → Confirm → Report.
+## Behavior
+Trigger when:
+- Any critical subsystem down
+- Council unreachable
+- SSE broken
 
-## 11.3 Avoid architecture-surface navigation
-Navigation must reflect user tasks, not internal architecture layers.
+## Required Expertise
+- UX for failure handling
+- Resilient UI states
 
----
+## Must Include Actions
+- Retry
+- Open Status Drawer
+- Switch to Soma-only
+- Copy diagnostics
 
-# 12. Implementation Plan (Team Spawn Guidance)
-
-Claude dev agentry must spawn teams with zero overlap:
-
-## Team A — Event Emission + Storage (Backend)
-- Implement MissionEventEnvelope (schema)
-- Emit minimum event set at key points
-- Persist events and link to audit/intent proof
-- Expose event query APIs:
-  - get run timeline by run_id
-  - get chain by intent_proof_id / parent_event_id
-- Ensure degraded behavior when NATS offline
-
-## Team B — Trigger Rules Engine (Backend)
-- Implement trigger rules data model (simple)
-- Evaluate rules on event ingest
-- Enforce cooldown, recursion guard, concurrency guard
-- On match:
-  - propose downstream OR execute if policy allows
-- Emit trigger events: evaluated, fired
-
-## Team C — Run Timeline + Chain UI (Frontend)
-- Build RunTimeline component
-- Wire to event query APIs
-- Build ViewChain UI (list-based v1)
-- Integrate into Mission Control and Automations pages
-
-## Team D — Information Architecture & Panel Consolidation (Frontend)
-- Collapse navigation to workflow-first IA
-- Move/merge panels under Automations/Resources/System
-- Replace error pages with degraded-mode messaging
-- Hide advanced panels behind “Advanced” toggle
-
-## Team E — Acceptance Tests + Verification Harness (QA/Dev)
-- Add integration tests:
-  - proposal → confirm → execute emits events
-  - trigger fired creates downstream run
-  - degraded mode prevents triggers when NATS offline
-  - remote provider visibility and gating
-- Provide manual verification scripts + screenshots
+## Acceptance Criteria
+- Appears automatically
+- Disappears automatically
+- Does not block UI interaction
 
 ---
 
-# 13. Acceptance Criteria (Proven Completion)
+# TASK 003 — RUNS AS FIRST-CLASS OBJECT
 
-## 13.1 Workflow Proof
-- User can:
-  - ask question → get answer with provenance
-  - request action → receive proposal card
-  - confirm → execution starts
-  - see outcome report
-  - view run timeline
-  - see triggered downstream mission
+## Objective
+Create a full Runs page with filters and multi-lens detail.
 
-## 13.2 Non-Black-Box Proof
-- For any run:
-  - timeline shows policy decisions, tool usage, trigger firings, artifacts, completion
-  - inspector links to audit and intent proof
-- Trigger firings show causal links:
-  - parent run → event → trigger rule → child run
+## Areas
+- `/runs`
+- `/runs/[id]`
 
-## 13.3 Safety Proof
-- No mutation without confirm token validation
-- Trigger loops prevented by guards
-- NATS offline disables triggers and schedules safely with clear UI notice
-- Remote provider use is explicit, gated, and visible
+## Required Expertise
+- Data-heavy UI
+- Table virtualization
+- Timeline rendering
+- Graph visualization
 
-## 13.4 UX Proof
-- Navigation is reduced to workflow-first panels
-- No major panel shows blank errors without explanation
-- Advanced internals are not front-and-center for normal users
+## Runs List Must Include
+- Status
+- Origin
+- Team
+- Provider
+- Duration
+- Created time
 
----
+Filters:
+- status
+- origin
+- team
+- provider
+- time range
 
-# 14. Verification Steps (Manual Script)
-
-1. Start system with NATS online.
-2. Mission Control: ask a read-only question.
-   - Verify provenance shown; inspect opens; audit ID exists.
-3. Mission Control: request a mutation action.
-   - Verify proposal card; confirm token present.
-4. Confirm action.
-   - Verify intent proof + audit IDs displayed.
-5. Verify run timeline shows:
-   - mission.started → tool.invoked → artifact.created → mission.completed
-6. Create a trigger rule:
-   - IF mission.completed THEN start downstream mission (propose or execute per policy)
-7. Run mission again.
-   - Verify trigger evaluated + fired events.
-   - Verify downstream mission run created and chain view links them.
-8. Stop NATS / simulate offline.
-   - Verify triggers do not fire; UI shows degraded mode.
+Saved Views:
+- Local storage (v1)
 
 ---
 
-# 15. Open Decisions (Must Resolve Before Full Build)
+## Run Detail Tabs
 
-1. Trigger execution mode default:
-   - propose-only (safer)
-   - or allow auto-execute for low-risk triggers under policy
-2. Event storage volume strategy:
-   - retention duration per tenant
-   - summarization (later)
-3. Artifact model:
-   - minimum metadata fields
-   - storage location pattern
+1. Summary
+2. Timeline (time axis)
+3. Full Event Log
+4. Chain (dependency axis)
+5. Artifacts
 
----
+Axis Rules:
+- Timeline = horizontal time
+- Chain = dependency, not time
 
-# 16. Deliverable Format From Claude Dev Agentry
-
-Return output as:
-
-1. Architecture alignment notes (what docs were referenced)
-2. Team spawn plan (A–E) with file ownership and boundaries
-3. Incremental implementation tasks (small steps, verifiable)
-4. APIs to add/change (routes, payloads)
-5. UI components to add/change (file paths, state)
-6. Tests + manual verification scripts
-7. “Definition of Done” mapped to acceptance criteria
+## Acceptance Criteria
+- Any run reachable in < 2 clicks from workspace
+- Chain clearly shows parent trigger
+- Timeline scrolls smoothly with 1000+ events
 
 ---
 
-End of PRD.
+# TASK 004 — AUTOMATIONS HUB REDESIGN
+
+## Objective
+Remove dead state from Automations page.
+
+## Layout
+
+Left:
+- Triggers
+- Templates
+- Approvals
+
+Right:
+- Scheduler (status + explanation)
+
+Primary CTA:
+- Create Automation Chain
+
+## Required Expertise
+- Empty-state UX
+- Progressive enhancement design
+
+## Acceptance Criteria
+- Page never empty
+- Trigger creation reachable in 1 click
+- Links to Run history exist
+
+---
+
+# TASK 005 — STRUCTURED ERROR CARD
+
+## Objective
+Replace generic 500 errors in Workspace.
+
+## Required Expertise
+- Failure UX
+- Inline action injection
+
+## Error Block Must Show
+- What happened
+- Likely cause
+- Impact
+- Actions:
+  - Retry
+  - Reroute via Soma
+  - Switch team
+  - Copy diagnostics
+
+## Acceptance Criteria
+- Reroute replays message
+- Retry preserves context
+- No raw 500 visible
+
+---
+
+# TASK 006 — FOCUS MODE
+
+## Objective
+Collapse Ops pane without losing health visibility.
+
+## Behavior
+Key: `F`
+
+Collapsed view shows:
+- Alert count
+- Active runs
+- Health badge
+
+## Acceptance Criteria
+- State persists in session
+- No layout break
+- Zero reload
+
+---
+
+# TASK 007 — SYSTEM QUICK CHECKS PANEL
+
+## Objective
+Make System page operational.
+
+## Must Include
+- NATS
+- DB
+- SSE
+- Trigger engine
+- Scheduler
+
+Each row:
+- Status badge
+- Last checked time
+- Run check
+- Copy snippet
+
+## Acceptance Criteria
+- User can diagnose degraded system without docs
+
+---
+
+# TASK 008 — TEAMS ENRICHMENT
+
+## Objective
+Make Teams infrastructural.
+
+## Card Must Show
+- Agents online
+- Last heartbeat
+- Health badge
+- Quick actions:
+  - Open chat
+  - View runs
+  - View logs
+
+## Acceptance Criteria
+- Council unreachable traceable from Teams
+
+---
+
+# TASK 009 — RESOURCES PANEL (MCP VISIBILITY)
+
+## Objective
+Expose execution capabilities.
+
+## Must Show
+- MCP servers
+- Toolsets
+- Governance requirements
+- Permission levels
+
+## Acceptance Criteria
+- User understands what system can access
+
+---
+
+# TASK 010 — HARDWARE CHANNELS (V1 SCAFFOLD)
+
+## Objective
+Prepare UI for sensor/motor embodiment.
+
+## Sections
+
+Sensors:
+- Topic
+- Last message
+- Sample payload
+
+Actuators:
+- Topic
+- Allowed action schema
+- Governance requirement
+
+Safety:
+- Emergency halt
+- Kill switch state
+
+## Acceptance Criteria
+- Every actuator intent links to Run ID
+- Sensor events display live
+
+---
+
+# PART III — EXPERTISE ASSERTION MATRIX
+
+When invoking an AI agentry to execute these tasks, explicitly assert:
+
+### UX Architect
+- Control plane IA
+- Failure state design
+- Observability visualization patterns
+
+### Frontend Systems Engineer
+- Global state architecture
+- SSE integration
+- Virtualized tables
+- Graph rendering
+
+### Observability Engineer
+- Timeline UX
+- Event log filtering
+- Causal graph semantics
+
+### Reliability UX Specialist
+- Structured error modeling
+- Retry/fallback flows
+- Diagnostics bundling
+
+### QA Automation Engineer
+- Playwright E2E
+- Degraded state mocking
+- Event-heavy test scenarios
+
+---
+
+# PART IV — NON-NEGOTIABLE QUALITY BARS
+
+- No dead pages
+- No unexplained 500
+- All failures actionable
+- Runs linkable everywhere
+- Governance visible, not hidden
+- Performance under 1.5s initial load
+- Timeline handles 1000+ events smoothly
+
+---
+
+# PART V — CORE LEVEL TEST ASSURANCE MATRIX
+## “Full Delivery Requires Proof, Not Visual Completion”
+
+Every core layer must pass all test classes below before delivery is considered complete.
+
+Test classes:
+- Unit (component/store/handler behavior)
+- Integration (API + state + data shaping)
+- E2E (workflow proof in browser)
+- Reliability (degraded/timeout/retry/fallback)
+- Performance (latency/load/large payload)
+
+---
+
+## Level 1 — Intent Layer (Workspace / API Entry)
+
+Required coverage:
+- Unit:
+  - intent submission, origin tagging, routing label display
+  - workspace controls (focus toggle, status open, retry actions)
+- Integration:
+  - `/api/v1/chat` and `/api/v1/council/{member}/chat` response mapping
+  - origin propagation (`workspace` / `trigger` / `schedule` / `api`)
+- E2E:
+  - user message -> response path with visible mode/role/brain/gov
+  - council failure -> inline recovery actions (retry/reroute) without retyping
+- Reliability:
+  - council timeout/unreachable/server error variants
+  - graceful fallback to Soma-only mode
+- Performance:
+  - first interaction render under target budget
+
+Delivery gate:
+- No raw 500 in UI for intent paths
+- All intent failures provide at least 2 next actions
+
+---
+
+## Level 2 — Orchestration Layer (Council / Provider / Governance)
+
+Required coverage:
+- Unit:
+  - provider badges, governance badge mapping, council reachability rendering
+  - proposal/approval status transitions in UI state
+- Integration:
+  - provider provenance displayed from backend payload
+  - governance-required paths correctly gate mutation actions
+- E2E:
+  - proposal -> approval -> execution flow with visible rationale
+  - direct council call + reroute via Soma
+- Reliability:
+  - provider offline/degraded handling with actionable copy
+  - governance strict mode behavior under partial failures
+- Performance:
+  - orchestration metadata renders without blocking primary chat flow
+
+Delivery gate:
+- Governance state visible on every mutation-capable surface
+- Provider/model used is visible in run/workspace details
+
+---
+
+## Level 3 — Event Spine (NATS / SSE / Trigger Dispatch)
+
+Required coverage:
+- Unit:
+  - stream state transitions (`live`/`offline`/`degraded`)
+  - banner/drawer health status mapping
+- Integration:
+  - `/api/v1/services/status` -> global status components
+  - trigger health and event delivery indicators
+- E2E:
+  - degraded banner appears/disappears automatically on outage/recovery
+  - status drawer updates live without page reload
+- Reliability:
+  - NATS disconnected, SSE broken, reconnect jitter scenarios
+  - retry controls recover state without navigation
+- Performance:
+  - stream event bursts do not freeze workspace interaction
+
+Delivery gate:
+- Degraded mode must self-heal visually after subsystem recovery
+- No silent stream failure allowed
+
+---
+
+## Level 4 — Execution Layer (Tools / MCP / Toolsets / Hardware Scaffolds)
+
+Required coverage:
+- Unit:
+  - MCP visibility cards, permission badges, governance requirement display
+  - actuator/sensor scaffold rendering contracts
+- Integration:
+  - MCP servers/toolsets endpoint wiring and status rendering
+  - permission model displayed correctly from API payloads
+- E2E:
+  - operator can identify accessible capabilities in <= 2 clicks
+  - execution capability state remains visible during degraded mode
+- Reliability:
+  - tool offline and permission-denied states with clear recovery actions
+  - emergency halt/kill-switch visual state transitions (when scaffolded)
+- Performance:
+  - capability surfaces remain responsive with larger MCP catalogs
+
+Delivery gate:
+- User can determine “what the system can access” without docs
+- All execution failures include impact + next action
+
+---
+
+## Level 5 — Observability Layer (Runs / Timeline / Chain / Artifacts)
+
+Required coverage:
+- Unit:
+  - run list filters, tab switching, timeline/chain render logic
+  - axis semantics enforced (time vs dependency)
+- Integration:
+  - `/api/v1/runs`, `/api/v1/runs/{id}/events`, `/api/v1/runs/{id}/chain`
+  - artifact links and provenance badges
+- E2E:
+  - from workspace to target run in <= 2 clicks
+  - trace parent trigger -> child run chain correctness
+- Reliability:
+  - missing/partial event payloads still render non-fatally
+  - chain/timeline panels handle backend partial outage states
+- Performance:
+  - timeline smooth at 1000+ events
+  - list/table interactions remain responsive under large run volumes
+
+Delivery gate:
+- Every run must be explainable through visible timeline + chain context
+- Observability surfaces cannot degrade into blank states
+
+---
+
+## Cross-Layer Regression Suite (Mandatory)
+
+Must run for every release candidate:
+1. Workspace intent failure recovery suite
+2. Degraded mode auto-appearance and auto-clear suite
+3. Runs discoverability and chain correctness suite
+4. Automations hub actionable-state suite
+5. Teams diagnostics in <= 2 clicks suite
+
+---
+
+## Release Exit Criteria
+
+A feature set is “fully delivered” only if:
+1. All five levels pass Unit + Integration + E2E
+2. Reliability cases are proven with degraded-state tests
+3. Performance thresholds are met for critical surfaces
+4. No non-actionable failure copy remains
+5. QA signoff includes captured evidence (videos/screenshots + logs)
+
+---
+
+# PART VI — DEFAULT UI ELEMENT INSTANTIATION FRAMEWORK
+## “Trusted Continuous UI Framework”
+
+Implementation authority for this section is maintained in `docs/UI_FRAMEWORK_V7.md` (canonical v2.0).
+If wording diverges, follow `docs/UI_FRAMEWORK_V7.md` for active delivery and review gates.
+
+This section defines the default, reusable way to instantiate UI elements across Mycelis.
+All future UI surfaces MUST conform unless explicitly exempted in a decision log.
+
+---
+
+## 1. UI Element Taxonomy (Required)
+
+Every new UI element must be classified as one of:
+
+1. Primitive
+- Badge, pill, button, icon status, text block, input row.
+- No direct data fetching.
+- Purely presentational.
+
+2. Composite
+- Cards, list rows, drawers, tool panels, tab content blocks.
+- May transform data received via props.
+- No direct backend calls unless explicitly documented.
+
+3. Surface
+- Route-level views (`/dashboard`, `/automations`, `/system`, `/runs`, etc.).
+- Responsible for data orchestration, not low-level rendering.
+
+Rule:
+- Fetch at Surface level first.
+- Pass normalized data down to Composite/Primitive levels.
+
+---
+
+## 2. Standard State Model (Every Element)
+
+Each Composite/Surface must explicitly define:
+- `loading`
+- `ready`
+- `empty`
+- `degraded`
+- `error`
+
+No element may skip state declaration.
+No element may collapse degraded/error into generic empty.
+
+Required state contract shape:
+```ts
+type UIState<T> = {
+  status: "loading" | "ready" | "empty" | "degraded" | "error";
+  data?: T;
+  reason?: string;
+  next_actions?: Array<{ id: string; label: string }>;
+  diagnostics?: Record<string, unknown>;
+};
+```
+
+---
+
+## 3. Status Semantics (Global Canonical)
+
+Must be consistent everywhere:
+- Green = `healthy`
+- Yellow = `degraded`
+- Red = `failure`
+- Gray = `offline`
+- Blue = `informational`
+
+Never redefine these by page.
+Never use alternative color meaning in local components.
+
+---
+
+## 4. Required UX Blocks Per Surface
+
+Every Surface must include:
+1. Purpose line
+- One sentence: what this page does.
+
+2. System state line
+- Current health summary relevant to this page.
+
+3. Primary next action
+- Single most likely operator step.
+
+4. Secondary actions
+- 1–3 fallback actions.
+
+5. Diagnostics path
+- Link/button to inspect status, runs, or logs.
+
+If any are missing, surface is incomplete.
+
+---
+
+## 5. Failure and Degraded Templates (Mandatory)
+
+All failure/degraded blocks must include:
+1. What happened
+2. Likely cause
+3. Impact
+4. Next actions (2+)
+5. Copy diagnostics
+
+Canonical action set:
+- Retry
+- Open Status Drawer
+- Continue in degraded mode (if possible)
+- Route via Soma/default path
+
+No raw backend error string may be the only user-facing output.
+
+---
+
+## 6. Data Instantiation Pattern
+
+Default pattern for route surfaces:
+
+1. Read from Zustand store snapshot
+2. Start fetch/poll in `useEffect`
+3. Normalize payload to local view model
+4. Render by state contract
+5. Provide inline retries (no forced page switches)
+
+Polling default:
+- Critical ops status: 5–10s
+- Moderate telemetry: 10–15s
+- Reference data: 30–60s
+
+SSE behavior:
+- If disconnected, degrade gracefully and show fallback timestamp + retry path.
+
+---
+
+## 7. Component Construction Contract
+
+Each new component must define:
+- `Props` interface
+- `State` source (store, props, local)
+- Rendering states map
+- Action handlers
+- Diagnostics output
+- Test IDs for key interactions
+
+Required naming:
+- `XxxCard`, `XxxDrawer`, `XxxBanner`, `XxxPanel`, `XxxTab`
+
+Required folder alignment:
+- `components/dashboard/*` for workspace operational elements
+- `components/automations/*` for workflow controls
+- `components/system/*` for infra health
+- `components/shared/*` for reusable primitives/composites
+
+---
+
+## 8. Accessibility and Interaction Baseline
+
+All interactive elements must support:
+- Keyboard access
+- Focus-visible state
+- `aria-label` where icon-only
+- Escape/close behavior for drawers/modals
+- Live region updates for high-priority degraded/failure changes
+
+Focus Mode and status interactions must not trap keyboard navigation.
+
+---
+
+## 9. Performance Instantiation Rules
+
+For list/timeline/log-heavy elements:
+- Virtualize when data can exceed 300 rows.
+- Debounce expensive filters.
+- Avoid re-render storms from stream updates.
+- Keep first meaningful render under target budget.
+
+For run timeline/chain:
+- Time axis and dependency axis logic must be separated.
+- Expand/collapse should be O(visible nodes), not O(total dataset).
+
+---
+
+## 10. Testing Framework Per UI Element
+
+Every new Composite/Surface requires:
+
+1. Unit tests
+- Rendering by state (`loading/ready/empty/degraded/error`)
+- Action handlers fire expected callbacks
+
+2. Integration tests
+- Store + API path produces expected visual state
+- Diagnostics and CTA visibility correctness
+
+3. E2E tests
+- Operator can recover from degraded/failure in <= 2 interactions
+- Primary flow remains available without reload
+
+4. Reliability tests
+- Simulated timeout/unreachable/500 behavior
+- Auto-recovery visibility after health restore
+
+5. Performance checks
+- Interaction latency under stress scenario for that component class
+
+---
+
+## 11. UI PR Gate (Mandatory Checklist)
+
+A UI PR is not merge-ready unless it includes:
+1. State map declaration (`loading/ready/empty/degraded/error`)
+2. Failure template compliance
+3. Status semantic compliance (global palette)
+4. At least one test per new state path
+5. Accessibility checks for all new controls
+6. Link to next action from empty/degraded/error states
+7. Update to docs/state if behavior changed
+
+---
+
+## 12. Expansion Rule
+
+When adding a new product area:
+1. Start from this framework
+2. Reuse existing primitives first
+3. Add new primitive only if no existing one fits
+4. Record any deviation in decision log with rationale
+
+This ensures continuity, trust, and operational clarity at scale.
+
+---
+
+# PART VII - PARALLELIZED DELIVERY ENGAGEMENT
+## “From Framework to Active Execution”
+
+Parallel delivery is active as of `2026-02-26`.
+
+Execution board and lane playbooks:
+- `docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md`
+- `docs/ui-delivery/LANE_A_GLOBAL_OPS.md`
+- `docs/ui-delivery/LANE_B_WORKSPACE_RELIABILITY.md`
+- `docs/ui-delivery/LANE_C_WORKFLOW_SURFACES.md`
+- `docs/ui-delivery/LANE_D_SYSTEM_OBSERVABILITY.md`
+- `docs/ui-delivery/LANE_Q_QA_REGRESSION.md`
+
+---
+
+## Priority and Gate Sequence
+
+1. Gate A (`P0`):
+- Lane A + Lane B + Lane Q `P0` reliability suite green
+- Required outcomes:
+  - global status truth is coherent
+  - workspace failures are actionable and recoverable inline
+
+2. Gate B (`P1`):
+- Lane C + Lane Q workflow suite green
+- Required outcomes:
+  - automations/teams/resources surfaces always provide a next action
+
+3. Gate C (`P2`):
+- Lane D + Lane Q observability/performance suite green
+- Required outcomes:
+  - system and run surfaces remain operational under load and partial failure
+
+4. Gate RC:
+- Full cross-layer regression suite green with evidence
+
+---
+
+## Parallel Execution Rules
+
+1. Lanes execute in parallel; gates merge in sequence.
+2. No lane may merge without:
+- framework state contract compliance (`loading/ready/empty/degraded/error`)
+- failure template compliance
+- lane evidence block completed
+3. Lane Q validates every gate before promotion.
+
+---
+
+# END STATE
+
+After completing this task pack:
+
+Mycelis will feel like:
+- A governed AI control plane
+- An operational substrate
+- An infrastructure product
+- A trustworthy soma interface
+- A recoverable, observable system
+
+Not:
+- A chat wrapper
+- A swarm toy
+- A dark dashboard
+- An experimental demo

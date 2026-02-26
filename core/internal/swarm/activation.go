@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+const maxParallelTeamStarts = 4
 
 // ActivationResult reports on teams spawned (or skipped) during blueprint activation.
 type ActivationResult struct {
@@ -63,58 +66,127 @@ func (s *Soma) ActivateBlueprint(bp *protocol.MissionBlueprint, sensorConfigs ma
 		}
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	// First pass: idempotency check against currently active teams.
+	// Keep lock scope short so team startups can happen in parallel.
+	s.mu.RLock()
+	active := make(map[string]struct{}, len(s.teams))
+	for id := range s.teams {
+		active[id] = struct{}{}
+	}
+	s.mu.RUnlock()
 
+	toStart := make([]*TeamManifest, 0, len(manifests))
 	for _, manifest := range manifests {
-		// Idempotency: skip already-active teams
-		if _, exists := s.teams[manifest.ID]; exists {
+		if _, exists := active[manifest.ID]; exists {
 			result.TeamsSkipped++
 			log.Printf("ActivateBlueprint: team %s already active, skipping", manifest.ID)
 			continue
 		}
+		toStart = append(toStart, manifest)
+	}
 
-		// Build sensor config subset for this team's members
-		teamSensorConfigs := make(map[string]SensorConfig)
-		for _, member := range manifest.Members {
-			if cfg, ok := sensorConfigs[member.ID]; ok {
-				teamSensorConfigs[member.ID] = cfg
-				result.SensorsSpawned++
-			} else if strings.Contains(strings.ToLower(member.Role), "sensor") {
-				// Auto-detect: role contains "sensor" but no explicit config provided
-				teamSensorConfigs[member.ID] = SensorConfig{
-					Type:     SensorTypeHTTP,
-					Endpoint: "", // heartbeat-only
+	type startOutcome struct {
+		spawned bool
+		skipped bool
+		sensors int
+		err     string
+	}
+
+	workers := maxParallelTeamStarts
+	if len(toStart) < workers {
+		workers = len(toStart)
+	}
+	if workers == 0 {
+		return result
+	}
+
+	sem := make(chan struct{}, workers)
+	outcomes := make(chan startOutcome, len(toStart))
+	var wg sync.WaitGroup
+
+	for _, manifest := range toStart {
+		wg.Add(1)
+		go func(m *TeamManifest) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// Build sensor config subset for this team's members.
+			teamSensorConfigs := make(map[string]SensorConfig)
+			sensorCount := 0
+			for _, member := range m.Members {
+				if cfg, ok := sensorConfigs[member.ID]; ok {
+					teamSensorConfigs[member.ID] = cfg
+					sensorCount++
+				} else if strings.Contains(strings.ToLower(member.Role), "sensor") {
+					// Auto-detect: role contains "sensor" but no explicit config provided
+					teamSensorConfigs[member.ID] = SensorConfig{
+						Type:     SensorTypeHTTP,
+						Endpoint: "", // heartbeat-only
+					}
+					sensorCount++
 				}
-				result.SensorsSpawned++
 			}
-		}
 
-		team := NewTeam(manifest, s.nc, s.brain, s.toolExecutor)
-		if s.internalTools != nil {
-			team.SetToolDescriptions(s.internalTools.ListDescriptions())
-		}
-		if len(teamSensorConfigs) > 0 {
-			team.SetSensorConfigs(teamSensorConfigs)
-		}
-		// V7: wire event emitter + run_id into team so agents can emit tool events.
-		if s.eventEmitter != nil && runID != "" {
-			team.SetEventEmitter(s.eventEmitter, runID)
-		}
-		// V7: wire conversation logger into blueprint-activated teams.
-		if s.conversationLogger != nil {
-			team.SetConversationLogger(s.conversationLogger)
-		}
+			team := NewTeam(m, s.nc, s.brain, s.toolExecutor)
+			if s.internalTools != nil {
+				team.SetToolDescriptions(s.internalTools.ListDescriptions())
+			}
+			if len(teamSensorConfigs) > 0 {
+				team.SetSensorConfigs(teamSensorConfigs)
+			}
+			// MCP agent-scoped binding
+			if s.compositeExec != nil {
+				team.SetMCPBinding(s.compositeExec, s.mcpServerNames, s.mcpToolDescs)
+			}
+			// V7: wire event emitter + run_id into team so agents can emit tool events.
+			if s.eventEmitter != nil && runID != "" {
+				team.SetEventEmitter(s.eventEmitter, runID)
+			}
+			// V7: wire conversation logger into blueprint-activated teams.
+			if s.conversationLogger != nil {
+				team.SetConversationLogger(s.conversationLogger)
+			}
 
-		if err := team.Start(); err != nil {
-			result.Errors = append(result.Errors, fmt.Sprintf("team %s: %v", manifest.ID, err))
-			continue
-		}
+			if err := team.Start(); err != nil {
+				outcomes <- startOutcome{err: fmt.Sprintf("team %s: %v", m.ID, err)}
+				return
+			}
 
-		s.teams[manifest.ID] = team
-		result.TeamsSpawned++
-		log.Printf("ActivateBlueprint: spawned team %s (%d members, %d sensors)",
-			manifest.ID, len(manifest.Members), len(teamSensorConfigs))
+			// Race-safe insertion in case another activation call added this team.
+			s.mu.Lock()
+			if _, exists := s.teams[m.ID]; exists {
+				s.mu.Unlock()
+				team.Stop()
+				outcomes <- startOutcome{skipped: true}
+				log.Printf("ActivateBlueprint: team %s already active during parallel insert, skipping", m.ID)
+				return
+			}
+			s.teams[m.ID] = team
+			s.mu.Unlock()
+
+			log.Printf("ActivateBlueprint: spawned team %s (%d members, %d sensors)",
+				m.ID, len(m.Members), len(teamSensorConfigs))
+			outcomes <- startOutcome{spawned: true, sensors: sensorCount}
+		}(manifest)
+	}
+
+	wg.Wait()
+	close(outcomes)
+
+	for out := range outcomes {
+		if out.spawned {
+			result.TeamsSpawned++
+		}
+		if out.skipped {
+			result.TeamsSkipped++
+		}
+		if out.sensors > 0 {
+			result.SensorsSpawned += out.sensors
+		}
+		if out.err != "" {
+			result.Errors = append(result.Errors, out.err)
+		}
 	}
 
 	return result

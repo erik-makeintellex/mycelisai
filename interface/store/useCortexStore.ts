@@ -663,6 +663,7 @@ export interface CortexState {
     governanceMode: 'passive' | 'active' | 'strict';
     inspectedMessage: ChatMessage | null;
     isInspectorOpen: boolean;
+    isStatusDrawerOpen: boolean;
 
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
@@ -681,6 +682,7 @@ export interface CortexState {
     fetchTrustThreshold: () => Promise<void>;
     toggleBlueprintDrawer: () => void;
     toggleToolsPalette: () => void;
+    setStatusDrawerOpen: (open: boolean) => void;
     saveBlueprint: (bp: MissionBlueprint) => void;
     loadBlueprint: (bp: MissionBlueprint) => void;
     fetchSensors: () => Promise<void>;
@@ -1124,6 +1126,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     governanceMode: 'passive' as const,
     inspectedMessage: null,
     isInspectorOpen: false,
+    isStatusDrawerOpen: false,
 
     // Mission Profiles & Context Snapshots
     missionProfiles: [],
@@ -1389,6 +1392,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     toggleToolsPalette: () => {
         set((s) => ({ isToolsPaletteOpen: !s.isToolsPaletteOpen }));
+    },
+
+    setStatusDrawerOpen: (open: boolean) => {
+        set({ isStatusDrawerOpen: open });
     },
 
     saveBlueprint: (bp: MissionBlueprint) => {

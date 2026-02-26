@@ -81,7 +81,7 @@ While `running`, the timeline polls for new events every 5 seconds automatically
 
 ## Navigation
 
-- **← Workspace** link in the header returns to Mission Control
+- **<- Workspace** link in the header returns to Workspace (`/dashboard`)
 - The run URL (`/runs/{run_id}`) is bookmarkable and shareable — anyone with access can view the same timeline
 - Each event card's expanded JSON is a complete audit record
 

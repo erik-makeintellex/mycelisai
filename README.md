@@ -6,7 +6,7 @@
 > **MASTER STATE AUTHORITY**
 > This README is the **Single Source of Truth** for project state, architecture, and operational commands.
 >
-> **Architecture PRD:** The detailed architecture specification lives in 4 focused documents:
+> **Architecture PRD:** The detailed architecture specification lives in core documents:
 > | Document | Load When |
 > | :--- | :--- |
 > | [Architecture Overview](docs/architecture/OVERVIEW.md) | Planning phases, architectural decisions |
@@ -14,6 +14,8 @@
 > | [Frontend Specification](docs/architecture/FRONTEND.md) | Working on React/Next.js, Zustand, design |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 > | [V7 PRD](mycelis-architecture-v7.md) | Event spine, triggers, scheduler, workflow-first IA |
+> | [V7 UI Framework](docs/UI_FRAMEWORK_V7.md) | Canonical UI element/state/testing framework |
+> | [V7 UI Parallel Delivery Board](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) | Active lane plan, merge gates, evidence checklist |
 
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
 
@@ -24,6 +26,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 ### Tier 1: Core (Go 1.26 + Postgres + pgvector)
 
 - **Soma → Axon → Teams → Agents:** Mission activation pipeline with heartbeat + proof-of-work.
+- **Parallel Team Activation:** `ActivateBlueprint` starts eligible teams concurrently (bounded worker pool), then inserts them race-safely into Soma's team map. Duplicate IDs are skipped idempotently even under concurrent activation calls.
 - **Standing Teams:** Admin/Soma (orchestrator, 18 tools, 10 ReAct iterations, persistent identity) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
 - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
 - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
@@ -75,6 +78,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Run List (V7):** `/runs` page listing all recent runs across missions, with status dots and timestamps. Also surfaced in OpsOverview as a `Recent Runs` widget.
 - **Causal Chain View (V7, backend ready):** Parent run → event → trigger → child run traversal. `GET /api/v1/runs/{id}/chain` handler complete; UI pending.
 - **Mode Ribbon:** Always-visible status bar showing current execution mode, active brain (with local/remote badge), and governance state.
+- **Operational Reliability UX (V7 Gate A):** Global `DegradedModeBanner`, global `StatusDrawer` (opened from Mode Ribbon or floating status action), structured `CouncilCallErrorCard` with retry/reroute/copy diagnostics actions, Workspace Focus Mode (`F` key), and `SystemQuickChecks` panel on `/system`.
 - **Proposal Blocks:** Inline chat cards for mutation-gated actions — shows intent, tools, risk level, confirm/cancel buttons wired to CE-1 confirm token flow.
 - **Orchestration Inspector:** Expandable audit panel showing template ID, intent proof, confirm token, and execution mode for each chat response.
 - **Visual Protocol:** Midnight Cortex theme — `cortex-bg #09090b`, `cortex-primary #06b6d4` (cyan). Zero `bg-white` in new code. Base font-size 17px for rem-proportional readability across all Tailwind utility classes.
@@ -1278,7 +1282,7 @@ Three workflows run on push/PR to `main` and `develop`:
 
 ## Frontend Routes
 
-> **V7 Navigation (Active):** 5 workflow-first panels — Mission Control, Automations, Resources, Memory, System (advanced). Legacy architecture-surface routes (`/wiring`, `/catalogue`, `/matrix`, etc.) redirect to their workflow parent with tab deep-linking.
+> **V7 Navigation (Active):** 5 workflow-first panels — Workspace, Automations, Resources, Memory, System (advanced). Legacy architecture-surface routes (`/wiring`, `/catalogue`, `/matrix`, etc.) redirect to their workflow parent with tab deep-linking.
 
 | Route | Description |
 | :--- | :--- |
@@ -1355,7 +1359,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Overview** | [README.md](README.md) — Architecture, stack, commands, current phase | [/docs?doc=readme](/docs?doc=readme) |
 | **Local Dev Workflow** | [docs/LOCAL_DEV_WORKFLOW.md](docs/LOCAL_DEV_WORKFLOW.md) — Setup, config reference, port map, troubleshooting | [/docs?doc=local-dev](/docs?doc=local-dev) |
 | **Soma Workflow** | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — End-to-end GUI + API workflow reference | [/docs?doc=workflows](/docs?doc=workflows) |
-| **MVP Agentry Plan** | [docs/MVP_AGENTRY_PLAN.md](docs/MVP_AGENTRY_PLAN.md) — Full agentry chain map: User → Workspace → NATS → Soma | [/docs?doc=mvp-agentry](/docs?doc=mvp-agentry) |
+| **MVP Agentry Plan** | [docs/archive/MVP_AGENTRY_PLAN.md](docs/archive/MVP_AGENTRY_PLAN.md) — Full agentry chain map: User → Workspace → NATS → Soma | [/docs?doc=mvp-agentry](/docs?doc=mvp-agentry) |
 | **Council Chat QA** | [docs/QA_COUNCIL_CHAT_API.md](docs/QA_COUNCIL_CHAT_API.md) — QA procedures and test cases for council chat | [/docs?doc=council-chat-qa](/docs?doc=council-chat-qa) |
 | **API Reference** | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Full endpoint table (80+ routes) | [/docs?doc=api-reference](/docs?doc=api-reference) |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
@@ -1364,6 +1368,8 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Operations Manual** | [docs/architecture/OPERATIONS.md](docs/architecture/OPERATIONS.md) — Deployment, config, testing, CI/CD | [/docs?doc=arch-operations](/docs?doc=arch-operations) |
 | **Memory Service** | [docs/architecture/DIRECTIVE_MEMORY_SERVICE.md](docs/architecture/DIRECTIVE_MEMORY_SERVICE.md) — State Engine, event projection, pgvector schema | [/docs?doc=arch-memory-service](/docs?doc=arch-memory-service) |
 | **V7 Architecture PRD** | [mycelis-architecture-v7.md](mycelis-architecture-v7.md) — V7 product requirements: event spine, mission graph, observability | [/docs?doc=v7-architecture-prd](/docs?doc=v7-architecture-prd) |
+| **V7 UI Framework** | [docs/UI_FRAMEWORK_V7.md](docs/UI_FRAMEWORK_V7.md) — Default UI instantiation contract (state model, failure templates, testing matrix, PR gate) | [/docs?doc=v7-ui-framework](/docs?doc=v7-ui-framework) |
+| **V7 UI Parallel Delivery** | [docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) — Active gate model + lane matrix (A/B/C/D/Q) with evidence tracking | [/docs?doc=v7-ui-parallel-delivery](/docs?doc=v7-ui-parallel-delivery) |
 | **V7 MCP Baseline** | [docs/V7_MCP_BASELINE.md](docs/V7_MCP_BASELINE.md) — MVOS: filesystem, memory, artifact-renderer, fetch | [/docs?doc=v7-mcp-baseline](/docs?doc=v7-mcp-baseline) |
 | **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance | [/docs?doc=swarm-operations](/docs?doc=swarm-operations) |
 | **Cognitive Architecture** | [docs/COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md) — Providers, profiles, matrix UI, embedding | [/docs?doc=cognitive-architecture](/docs?doc=cognitive-architecture) |
@@ -1387,9 +1393,11 @@ uvx inv interface.test        # Vitest component tests (~70 V7 tests, 56 pass, 2
 uvx inv interface.e2e         # Playwright E2E specs (requires running servers)
 uvx inv interface.check       # HTTP smoke test against running dev server (9 pages)
 uvx inv core.smoke            # Governance smoke tests
+cd interface && npx playwright test e2e/specs/v7-operational-ux.spec.ts  # Gate A operational UX E2E (degraded banner, status drawer, council reroute, automations hub, quick checks, focus mode)
 cd core && go test ./internal/mcp/ -count=1
 cd core && go test ./internal/server/ -run TestHandleMCP -count=1
 cd core && go test ./internal/swarm/ -run TestScoped -count=1
+cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/shell/ShellLayout.test.tsx  # Gate A UI reliability baseline (38 pass on 2026-02-26)
 ```
 
 > Note: `cd core && go test ./... -count=1` currently fails due to an existing root-package conflict (`probe.go` and `probe_test.go` both declare `main`).
@@ -1439,6 +1447,7 @@ cd core && go test ./internal/swarm/ -run TestScoped -count=1
 | V7 Conversation Log | Agent Transcript Browsing + Interjection | **Migration 030** (`conversation_turns`). **Backend:** `conversations.Store` (LogTurn, GetRunConversation, GetSessionTurns). `ConversationLogger` interface in `protocol/events.go` propagated Soma → Team → Agent (mirrors EventEmitter). 6 emission points in `processMessageStructured()` (system, user, tool_call, tool_result, interjection, assistant). Interjection via NATS mailbox `swarm.agent.{id}.interjection` — agent checks between ReAct iterations. 3 HTTP handlers (run conversation, session turns, interject). **Frontend:** `ConversationLog.tsx` (agent filter, 5s auto-poll, interjection input), `TurnCard.tsx` (role-based colors/icons/badges), `types/conversations.ts`. `/runs/[id]` tab bar (Conversation + Events). **Tests:** 13 Go store tests, 11 Go handler tests, 9 frontend tests. |
 | V7 Inception Recipes | Structured Prompt Patterns for RAG | **Migration 031** (`inception_recipes`). **Backend:** `inception.Store` (CreateRecipe, GetRecipe, ListRecipes, SearchByTitle, IncrementUsage, UpdateQuality). `store_inception_recipe` + `recall_inception_recipes` internal tools (dual-persist: RDBMS + pgvector). Recipe recall integrated into `research_for_blueprint` pipeline (step 5). Interaction protocol updated: agents prompted to store recipes after complex tasks. 5 HTTP handlers (list, search, get, create, quality feedback). **Tests:** 16 Go store tests, 10 Go handler tests. |
 | MCP Test Hardening | Service + Handler Coverage | **Backend Tests:** new suites for MCP library loading/config conversion, registry service CRUD/cache/find flows, toolset CRUD/ref resolution, and executor adapter result formatting. **Handler Tests:** DB-backed happy paths for MCP list/delete/tools/library-install plus toolset update matrix (happy/not-found/bad UUID/missing name/nil service). **Semantics:** `handleUpdateToolSet` returns `404` when the tool set does not exist. |
+| V7 UI Gate A | Parallel UI Framework + Reliability Baseline | **Docs:** `docs/UI_FRAMEWORK_V7.md` + `docs/ui-delivery/*` lane playbooks and board. **UX:** `StatusDrawer`, `DegradedModeBanner`, `CouncilCallErrorCard`, `FocusModeToggle`, `SystemQuickChecks`, and `AutomationHub` baseline integrated. **Tests:** Added/updated Vitest suites for dashboard/pages/shell with targeted Gate A run passing (`38` tests). |
 | In-App Docs Browser | `/docs` + Doc Registry | **Next.js Route Handlers:** `GET /docs-api` (manifest) + `GET /docs-api/[slug]` (file content, path-validated against manifest). `/docs-api` prefix avoids the `/api/*` → Go backend proxy rewrite; `params` awaited for Next.js 15+ async param requirement. **Manifest:** `lib/docsManifest.ts` — 29 entries across 7 curated sections; `DOC_BY_SLUG` flat map for O(1) slug validation; add a doc by adding one `DocEntry`. **User Guides (new):** 7 plain-language guides in `docs/user/` — Core Concepts, Using Soma Chat, Run Timeline, Automations, Resources, Memory, Governance & Trust — covering every implemented workflow and concept. **UI:** `/docs` page — two-column layout: sidebar (grouped nav, filter search, active state) + content pane (react-markdown + remark-gfm, Midnight Cortex styled). `?doc={slug}` deep-link; URL synced on every sidebar click. **Nav:** `BookOpen` Docs link in main nav directly below Memory (not in footer). |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)

@@ -1,111 +1,105 @@
 # Using Soma Chat
 
-> The primary way to interact with Mycelis Cortex — type natural language, Soma orchestrates everything.
+> Workspace-first interaction model: you send intent, Soma orchestrates execution.
 
 ---
 
 ## Overview
 
-**Workspace** (the first item in the nav rail) is your command interface. Type anything — Soma receives it, reasons about it, consults specialists as needed, and responds.
+Open `Workspace` (`/dashboard`) and type naturally.
+Soma receives every message and coordinates the rest.
 
 ```
-You type → Soma receives → Soma thinks (ReAct loop, up to 5 steps)
-         → Soma may consult council (Architect, Coder, Creative, Sentry)
-         → Response arrives with optional DelegationTrace + Proposal
+You type -> Soma reasons (ReAct, up to 10 iterations)
+         -> optional council consultation
+         -> answer and/or governed proposal
 ```
 
 ---
 
-## Sending a Message
+## Sending Messages
 
-1. Navigate to **Workspace** (home icon or `/dashboard`)
-2. Type your intent in the input at the bottom of the chat panel
-3. Press **Enter** or click the send button
+1. Go to `Workspace` (`/dashboard`).
+2. Enter your intent in the bottom input.
+3. Press `Enter` or click send.
 
-While Soma is processing, a live activity indicator shows what's happening:
-
-| Display | Meaning |
-|---------|---------|
-| "Soma is thinking" | Initial reasoning |
-| "Consulting Architect..." | Soma delegated to the Architect |
-| "Generating mission blueprint..." | Blueprint generation tool running |
-| "Searching memory..." | Semantic recall in progress |
-| "Writing file.py..." | File write tool executing |
+Live activity text indicates current steps (thinking, consulting, searching memory, invoking tools).
 
 ---
 
-## Reading a Response
+## Reading Responses
 
-Soma's reply appears as a **council message bubble** in the chat. It contains:
+Soma responses can include:
 
-### 1. The Answer
-Plain text or markdown — rendered with syntax highlighting for code blocks, tables, links.
+1. **Primary answer**
+- markdown text, code blocks, links, and tables
 
-### 2. Delegation Trace (when present)
-If Soma consulted council members, a compact trace appears beneath the text:
+2. **Delegation Trace**
+- compact cards showing which council members were consulted
 
-```
-Soma consulted
-┌──────────────┐  ┌──────────────┐
-│  Architect   │  │    Coder     │
-│ Designed the │  │ Wrote the    │
-│ module layout│  │ initial impl │
-└──────────────┘  └──────────────┘
-```
+3. **Proposal block (mutation paths)**
+- explicit action preview with confirm/cancel
 
-Each card shows the member's name and a brief excerpt of their contribution.
-
-### 3. Proposed Action Block (when present)
-If your message triggered a system mutation (create files, spawn teams, schedule tasks), a **ProposedActionBlock** appears with:
-- Action type and description
-- Estimated impact
-- **Confirm & Execute** and **Dismiss** buttons
-
-> **Nothing executes until you confirm.** Soma proposes; you decide.
+No mutation executes until you confirm.
 
 ---
 
-## Confirming a Proposal
+## Council Failure Recovery
 
-1. Review the ProposedActionBlock
-2. Click **Confirm & Execute** (or **Launch Crew** for crew missions)
-3. The system shows a **"Mission activated"** pill in the chat:
+If a council call fails, Workspace shows a structured error card instead of a raw error.
 
-   ```
-   ⚡ Mission activated — abc1234... →
-   ```
+The card includes:
+- what failed
+- likely cause
+- next actions
 
-4. Click the pill to open the **Run Timeline** at `/runs/{run_id}`
+Available actions:
+- `Retry`
+- `Switch to Soma`
+- `Continue with Soma Only`
+- `Copy Diagnostics`
+
+This keeps recovery inline without retyping or page switching.
 
 ---
 
 ## Direct Council Access
 
-To bypass Soma's synthesis and talk directly to a specialist:
+To send directly to a specialist:
 
-1. Click the **⚡ Direct** button in the chat header
-2. Select a council member: Architect, Coder, Creative, or Sentry
-3. The header shows `→ Architect` in amber — messages now route directly
-4. Click **← Soma** to return to Soma-first mode
-
-Direct mode is useful when you want raw specialist output without orchestration — for example, asking the Coder to write a specific function without Soma's architectural framing.
+1. Click `Direct` in chat header.
+2. Pick Architect, Coder, Creative, or Sentry.
+3. Send your message.
+4. Use `Soma` option to return to default orchestration.
 
 ---
 
-## LaunchCrew Modal
+## Launch Crew Flow
 
-For structured multi-step missions, use the **LaunchCrew** button (rocket icon):
+For multi-step execution:
 
-1. **Step 1 — Intent**: Describe the mission goal in detail
-2. **Step 2 — Wait**: Soma generates and returns a blueprint proposal
-3. **Step 3 — Confirm**: Review and click **Launch Crew**
-4. A "Mission activated" link appears in chat → click to open the Run Timeline
+1. Click `Launch Crew` in Workspace header.
+2. Provide mission intent.
+3. Review generated proposal.
+4. Confirm execution.
+
+On success, a system message includes a run link (`/runs/{run_id}`).
 
 ---
 
-## Tips
+## Operational Helpers
 
-- **Be specific**: "Write a Python CSV parser that handles quoted fields and emits a dict per row" gets better results than "write a parser"
-- **Reference context**: "Based on the plan you just outlined, implement step 2" — Soma has full chat history
-- **Check the trace**: The DelegationTrace tells you which specialist contributed what — useful for understanding how Soma decomposed your request
-- **Mutations are safe**: Until you click Confirm, nothing in the system changes. Soma proposes all structural changes explicitly.
+While chatting, you can use:
+- **Status Drawer** (global health visibility)
+- **Degraded Mode Banner** actions
+- **Focus Mode** (`F`) to prioritize chat height
+
+---
+
+## Good Prompting Practices
+
+- be explicit about desired outputs
+- reference recent context ("continue from step 2")
+- review delegation trace to understand specialist contributions
+- confirm only when proposal intent matches your goal
+

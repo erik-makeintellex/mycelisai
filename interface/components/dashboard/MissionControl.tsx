@@ -9,9 +9,12 @@ import OpsOverview from "./OpsOverview";
 import SignalDetailDrawer from "../stream/SignalDetailDrawer";
 import ModeRibbon from "./ModeRibbon";
 import LaunchCrewModal from "../workspace/LaunchCrewModal";
+import FocusModeToggle from "./FocusModeToggle";
+import { useCortexStore } from "@/store/useCortexStore";
 
 const STORAGE_KEY = "workspace-split";
 const STORAGE_KEY_LEGACY = "mission-control-split";
+const FOCUS_KEY = "workspace-focus-mode";
 const DEFAULT_RATIO = 0.55; // 55% chat, 45% ops
 const MIN_RATIO = 0.25;
 const MAX_RATIO = 0.80;
@@ -41,8 +44,12 @@ export default function MissionControlLayout() {
 
 function DashboardGrid() {
     const { isConnected } = useSignalStream();
+    const missions = useCortexStore((s) => s.missions);
+    const streamLogs = useCortexStore((s) => s.streamLogs);
     const containerRef = useRef<HTMLDivElement>(null);
     const [ratio, setRatio] = useState(DEFAULT_RATIO);
+    const [focusMode, setFocusMode] = useState(false);
+    const [natsStatus, setNatsStatus] = useState<"online" | "offline" | "degraded" | "unknown">("unknown");
     const [isLaunchCrewOpen, setIsLaunchCrewOpen] = useState(false);
     const dragging = useRef(false);
 
@@ -55,6 +62,44 @@ function DashboardGrid() {
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, ratio.toString());
     }, [ratio]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        setFocusMode(localStorage.getItem(FOCUS_KEY) === "true");
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        localStorage.setItem(FOCUS_KEY, String(focusMode));
+    }, [focusMode]);
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key.toLowerCase() === "f" && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+                setFocusMode((v) => !v);
+            }
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, []);
+
+    useEffect(() => {
+        const poll = async () => {
+            try {
+                const res = await fetch("/api/v1/services/status");
+                if (!res.ok) return;
+                const body = await res.json();
+                const list: Array<{ name: string; status: "online" | "offline" | "degraded" }> = body.data ?? [];
+                const nats = list.find((s) => s.name === "nats");
+                setNatsStatus(nats?.status ?? "unknown");
+            } catch {
+                setNatsStatus("unknown");
+            }
+        };
+        poll();
+        const i = setInterval(poll, 10000);
+        return () => clearInterval(i);
+    }, []);
 
     const onPointerDown = useCallback((e: React.PointerEvent) => {
         e.preventDefault();
@@ -74,8 +119,11 @@ function DashboardGrid() {
         dragging.current = false;
     }, []);
 
-    const topPercent = `${(ratio * 100).toFixed(2)}%`;
-    const bottomPercent = `${((1 - ratio) * 100).toFixed(2)}%`;
+    const effectiveRatio = focusMode ? 0.92 : ratio;
+    const topPercent = `${(effectiveRatio * 100).toFixed(2)}%`;
+    const bottomPercent = `${((1 - effectiveRatio) * 100).toFixed(2)}%`;
+    const alertCount = streamLogs.filter((l) => l.level === "error" || l.type === "governance_halt").length;
+    const activeMissions = missions.filter((m) => m.status === "active").length;
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg text-cortex-text-main relative">
@@ -104,6 +152,7 @@ function DashboardGrid() {
                         Launch Crew
                     </button>
                     <div className="h-4 w-px bg-cortex-border" />
+                    <FocusModeToggle focused={focusMode} onToggle={() => setFocusMode((v) => !v)} />
                     <a
                         href="/settings"
                         className="p-1.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main transition-colors"
@@ -133,24 +182,36 @@ function DashboardGrid() {
                 </div>
 
                 {/* Resize Handle */}
-                <div
-                    onPointerDown={onPointerDown}
-                    className="flex-shrink-0 flex items-center justify-center group"
-                    style={{
-                        height: 6,
-                        cursor: "row-resize",
-                        background: "#27272a",
-                        touchAction: "none",
-                        userSelect: "none",
-                    }}
-                >
-                    <div className="w-10 h-0.5 rounded-full bg-cortex-text-muted/40 group-hover:bg-cortex-primary transition-colors" />
-                </div>
+                {!focusMode && (
+                    <div
+                        onPointerDown={onPointerDown}
+                        className="flex-shrink-0 flex items-center justify-center group"
+                        style={{
+                            height: 6,
+                            cursor: "row-resize",
+                            background: "#27272a",
+                            touchAction: "none",
+                            userSelect: "none",
+                        }}
+                    >
+                        <div className="w-10 h-0.5 rounded-full bg-cortex-text-muted/40 group-hover:bg-cortex-primary transition-colors" />
+                    </div>
+                )}
 
                 {/* Bottom: Ops Overview */}
-                <div className="overflow-auto" style={{ height: bottomPercent, minHeight: 0 }}>
-                    <OpsOverview />
-                </div>
+                {focusMode ? (
+                    <div className="h-8 border-t border-cortex-border bg-cortex-surface/40 px-3 flex items-center gap-3 text-[10px] font-mono text-cortex-text-muted">
+                        <span>Alerts: {alertCount}</span>
+                        <span>Active missions: {activeMissions}</span>
+                        <span>Signal: {isConnected ? "live" : "offline"}</span>
+                        <span>NATS: {natsStatus}</span>
+                        <span>Press F to toggle</span>
+                    </div>
+                ) : (
+                    <div className="overflow-auto" style={{ height: bottomPercent, minHeight: 0 }}>
+                        <OpsOverview />
+                    </div>
+                )}
             </div>
 
             {/* Signal Detail Drawer */}

@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
@@ -55,6 +57,10 @@ type Team struct {
 	runID        string
 	// V7 Conversation Log: optional full-fidelity turn logger.
 	conversationLogger protocol.ConversationLogger
+	// MCP agent-scoped binding: concrete executor + server names + MCP tool descriptions.
+	compositeExec  *CompositeToolExecutor  // concrete type for ScopedToolExecutor wrapping
+	mcpServerNames map[uuid.UUID]string    // serverID → server name
+	mcpToolDescs   map[string]string       // MCP tool name → description
 }
 
 // NewTeam creates a new Team instance.
@@ -90,13 +96,33 @@ func (t *Team) Start() error {
 			sensor := NewSensorAgent(t.ctx, manifest, cfg, t.Manifest.ID, t.nc)
 			go sensor.Start()
 		} else {
-			agent := NewAgent(t.ctx, manifest, t.Manifest.ID, t.nc, t.brain, t.toolExecutor)
+			// Build per-agent scoped tool executor if MCP binding is available
+			var agentToolExec MCPToolExecutor = t.toolExecutor
+			if t.compositeExec != nil {
+				mcpRefs := mcp.ExtractMCPRefs(manifest.Tools)
+				agentToolExec = NewScopedToolExecutor(t.compositeExec, mcpRefs, t.mcpServerNames)
+			}
+			agent := NewAgent(t.ctx, manifest, t.Manifest.ID, t.nc, t.brain, agentToolExec)
 			// Inject tool descriptions for the agent's bound tools
 			if len(manifest.Tools) > 0 && len(t.toolDescs) > 0 {
 				agentDescs := make(map[string]string, len(manifest.Tools))
 				for _, name := range manifest.Tools {
 					if desc, ok := t.toolDescs[name]; ok {
 						agentDescs[name] = desc
+					}
+					// For mcp: refs, look up the tool description from MCP descs
+					if mcp.IsMCPRef(name) {
+						ref := mcp.ParseToolRef(name)
+						if ref != nil && ref.ToolName != "*" {
+							if desc, ok := t.mcpToolDescs[ref.ToolName]; ok {
+								agentDescs[ref.ToolName] = desc
+							}
+						} else if ref != nil && ref.ToolName == "*" {
+							// Wildcard: include all MCP tool descs for this server
+							for toolName, desc := range t.mcpToolDescs {
+								agentDescs[toolName] = desc
+							}
+						}
 					}
 				}
 				agent.SetToolDescriptions(agentDescs)
@@ -192,6 +218,15 @@ func (t *Team) SetEventEmitter(emitter protocol.EventEmitter, runID string) {
 // Must be called before Start() so agents receive the logger on creation.
 func (t *Team) SetConversationLogger(logger protocol.ConversationLogger) {
 	t.conversationLogger = logger
+}
+
+// SetMCPBinding provides the concrete CompositeToolExecutor, server name mapping,
+// and MCP tool descriptions for per-agent scoped tool filtering.
+// Must be called before Start() so agents receive scoped executors.
+func (t *Team) SetMCPBinding(exec *CompositeToolExecutor, serverNames map[uuid.UUID]string, toolDescs map[string]string) {
+	t.compositeExec = exec
+	t.mcpServerNames = serverNames
+	t.mcpToolDescs = toolDescs
 }
 
 // Stop shuts down the team and its scheduler (if any).

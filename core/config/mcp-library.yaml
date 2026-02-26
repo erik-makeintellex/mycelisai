@@ -7,6 +7,7 @@ categories:
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-filesystem", "./workspace"]
         tags: ["files", "code", "local"]
+        tool_set: "workspace"
       - name: "github"
         description: "GitHub API integration — repos, issues, PRs, code search"
         transport: stdio
@@ -15,6 +16,7 @@ categories:
         env:
           GITHUB_PERSONAL_ACCESS_TOKEN: ""
         tags: ["git", "code", "vcs"]
+        tool_set: "development"
 
   - name: "Data & Search"
     servers:
@@ -46,6 +48,7 @@ categories:
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-fetch"]
         tags: ["web", "scraping"]
+        tool_set: "research"
 
   - name: "Communication"
     servers:

@@ -42,6 +42,7 @@ import {
     toolOrigin,
     MODE_LABELS,
 } from "@/lib/labels";
+import CouncilCallErrorCard from "./CouncilCallErrorCard";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -778,11 +779,17 @@ export default function MissionControlChat() {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const isLoading = isMissionChatting || isBroadcasting;
+    const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
 
     // Ensure Soma is the default target on mount
     useEffect(() => {
         setCouncilTarget('admin');
     }, [setCouncilTarget]);
+
+    // Keep local direct-target label synchronized with global council target.
+    useEffect(() => {
+        setDirectTarget(councilTarget === "admin" ? null : councilTarget);
+    }, [councilTarget]);
 
     useEffect(() => {
         fetchCouncilMembers().then(() => setFetchedMembers(true));
@@ -811,6 +818,12 @@ export default function MissionControlChat() {
             sendMissionChat(content);
         }
         setInput("");
+    };
+
+    const retryLastMessage = () => {
+        if (!lastUserMessage) return;
+        const content = lastUserMessage.content.replace(/^\[BROADCAST\]\s*/i, "");
+        if (content.trim()) sendMissionChat(content);
     };
 
     return (
@@ -883,15 +896,24 @@ export default function MissionControlChat() {
                 </div>
             )}
 
-            {/* Error bar */}
-            {missionChatError && (
-                <div className="px-3 py-1 bg-cortex-danger/10 border-b border-cortex-danger/30">
-                    <p className="text-[9px] text-cortex-danger font-mono">{missionChatError}</p>
-                </div>
-            )}
-
             {/* Chat log */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 scrollbar-thin scrollbar-thumb-cortex-border">
+                {missionChatError && (
+                    <CouncilCallErrorCard
+                        member={directTarget || councilTarget}
+                        errorMessage={missionChatError}
+                        onRetry={retryLastMessage}
+                        onSwitchToSoma={() => {
+                            setDirectTarget(null);
+                            setCouncilTarget("admin");
+                            retryLastMessage();
+                        }}
+                        onContinueWithSoma={() => {
+                            setDirectTarget(null);
+                            setCouncilTarget("admin");
+                        }}
+                    />
+                )}
                 {missionChat.length === 0 ? (
                     fetchedMembers && councilMembers.length === 0 ? (
                         <SomaOfflineGuide onRetry={() => {

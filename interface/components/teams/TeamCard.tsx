@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Users, Radio, Cpu, Eye, BookOpen, Activity } from 'lucide-react';
+import { Users, Radio, Cpu, Eye, BookOpen, Activity, MessageSquare, Route, Network, ScrollText } from 'lucide-react';
 import type { TeamDetailEntry } from '@/store/useCortexStore';
 
 const roleConfig: Record<string, { color: string; icon: typeof Cpu }> = {
@@ -24,6 +24,29 @@ function getAggregateStatus(agents: TeamDetailEntry['agents']): 'online' | 'busy
     return 'offline';
 }
 
+function statusBadge(status: 'online' | 'busy' | 'offline' | 'error'): string {
+    if (status === 'online') return 'bg-cortex-success/10 text-cortex-success border-cortex-success/30';
+    if (status === 'busy') return 'bg-cortex-primary/10 text-cortex-primary border-cortex-primary/30';
+    if (status === 'error') return 'bg-cortex-danger/10 text-cortex-danger border-cortex-danger/30';
+    return 'bg-cortex-surface text-cortex-text-muted border-cortex-border';
+}
+
+function statusLabel(status: 'online' | 'busy' | 'offline' | 'error'): string {
+    if (status === 'online') return 'Healthy';
+    if (status === 'busy') return 'Degraded';
+    if (status === 'error') return 'Offline';
+    return 'Offline';
+}
+
+function relativeTime(ts?: string): string {
+    if (!ts) return 'never';
+    const diff = Date.now() - new Date(ts).getTime();
+    if (diff < 5000) return 'just now';
+    if (diff < 60000) return `${Math.floor(diff / 1000)}s ago`;
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    return `${Math.floor(diff / 3600000)}h ago`;
+}
+
 const statusDot: Record<string, string> = {
     online: 'bg-cortex-success',
     busy: 'bg-cortex-primary animate-pulse',
@@ -42,6 +65,11 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
     const Icon = cfg.icon;
     const status = getAggregateStatus(team.agents);
     const onlineCount = team.agents.filter((a) => a.status >= 1).length;
+    const lastHeartbeat = team.agents
+        .map((a) => a.last_heartbeat)
+        .filter(Boolean)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+    const summary = team.mission_intent || `${team.role} team handling ${team.type} workflows`;
 
     return (
         <button
@@ -68,13 +96,23 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
                 </span>
             </div>
 
+            <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-mono uppercase ${statusBadge(status)}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${statusDot[status]}`} />
+                {statusLabel(status)}
+            </div>
+
             {/* Agent count */}
-            <div className="flex items-center gap-1.5 mb-2">
+            <div className="flex items-center gap-1.5 mt-2 mb-1">
                 <Users className="w-3 h-3 text-cortex-text-muted" />
                 <span className="text-[10px] font-mono text-cortex-text-muted">
                     {onlineCount}/{team.agents.length} agent{team.agents.length !== 1 ? 's' : ''} online
                 </span>
             </div>
+            <div className="text-[10px] font-mono text-cortex-text-muted mb-2">
+                Last heartbeat: {relativeTime(lastHeartbeat)}
+            </div>
+
+            <p className="text-[10px] text-cortex-text-main/80 line-clamp-1 mb-2">{summary}</p>
 
             {/* Delivery topics (max 2) */}
             {team.deliveries.length > 0 && (
@@ -103,6 +141,25 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
                     </span>
                 </div>
             )}
+
+            <div className="pt-2 mt-2 border-t border-cortex-border/40 grid grid-cols-2 gap-1">
+                <a href="/dashboard" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1">
+                    <MessageSquare className="w-3 h-3" />
+                    Open chat
+                </a>
+                <a href="/runs" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1">
+                    <Route className="w-3 h-3" />
+                    View runs
+                </a>
+                <a href="/automations?tab=wiring" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1">
+                    <Network className="w-3 h-3" />
+                    View wiring
+                </a>
+                <a href="/system?tab=debug" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1">
+                    <ScrollText className="w-3 h-3" />
+                    View logs
+                </a>
+            </div>
         </button>
     );
 }
