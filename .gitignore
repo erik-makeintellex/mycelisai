@@ -51,3 +51,7 @@ scripts/__pycache__/
 kubeconfig.yaml
 
 uv.lock
+
+# Local agent/session artifacts
+.claude/settings.local.json
+interface/test-results/
