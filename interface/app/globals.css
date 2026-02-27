@@ -2,31 +2,26 @@
 @import "leaflet/dist/leaflet.css";
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: var(--font-ui), "Segoe UI", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: var(--font-code), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Cortex Palette — Midnight Cortex */
-  --color-cortex-bg: #09090b;
-  /* zinc-950 */
-  --color-cortex-surface: #18181b;
-  /* zinc-900 */
-  --color-cortex-primary: #06b6d4;
+  /* Cortex Palette — Midnight (Lifted Contrast) */
+  --color-cortex-bg: #111821;
+  --color-cortex-surface: #1a2430;
+  --color-cortex-primary: #1ab4cf;
   /* cyan-500 */
-  --color-cortex-primary-glow: rgba(6, 182, 212, 0.39);
-  --color-cortex-success: #10b981;
+  --color-cortex-primary-glow: rgba(26, 180, 207, 0.39);
+  --color-cortex-success: #23b26f;
   /* emerald-500 */
-  --color-cortex-warning: #f59e0b;
+  --color-cortex-warning: #e6a63d;
   /* amber-500 */
-  --color-cortex-danger: #ef4444;
+  --color-cortex-danger: #df5d5d;
   /* red-500 */
-  --color-cortex-info: #3b82f6;
+  --color-cortex-info: #4f8ef7;
   /* blue-500 */
-  --color-cortex-text-main: #d4d4d8;
-  /* zinc-300 */
-  --color-cortex-text-muted: #71717a;
-  /* zinc-500 */
-  --color-cortex-border: #27272a;
-  /* zinc-800 */
+  --color-cortex-text-main: #e8eff7;
+  --color-cortex-text-muted: #9fb0c2;
+  --color-cortex-border: #324353;
 }
 
 @layer base {
@@ -41,7 +36,24 @@
     background-color: var(--color-cortex-bg);
     color: var(--color-cortex-text-main);
     font-family: var(--font-sans);
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1, "liga" 1;
     -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--color-cortex-text-main);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  p, li {
+    line-height: 1.58;
+  }
+
+  code, pre, kbd, samp {
+    font-family: var(--font-mono);
   }
 }
 
@@ -63,7 +75,7 @@
   /* Glass Morphism */
   .glass {
     @apply backdrop-blur-md border;
-    background-color: rgba(24, 24, 27, 0.7);
+    background-color: rgba(26, 36, 48, 0.78);
     border-color: var(--color-cortex-border);
   }
 
@@ -154,7 +166,7 @@
 
 /* Override ReactFlow's default canvas background */
 .react-flow {
-  background-color: #09090b !important;
+  background-color: var(--color-cortex-bg) !important;
 }
 
 /* Agent Activity Ring — orbiting glow when agent is "thinking" */

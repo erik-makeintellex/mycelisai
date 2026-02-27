@@ -9,7 +9,7 @@ The conscious face of the Mycelis Swarm OS. Built with Next.js 16, React 19, Tai
 | Framework | Next.js 16.1.6 (Turbopack) | App Router, SSR, API routes |
 | State | Zustand 5.0.11 | Atomic store (`useCortexStore`) — single source of truth |
 | Graph | ReactFlow 11.11.4 | DAG visualization (agent nodes, data wires) |
-| Styling | Tailwind CSS v4 | Utility-first, dark theme, custom animations |
+| Styling | Tailwind CSS v4 | Utility-first midnight theme (lifted contrast), custom animations |
 | Icons | Lucide React | Consistent icon set |
 
 ## Architecture
@@ -139,16 +139,16 @@ Cortex palette defined via `@theme` in `app/globals.css`:
 
 | Token | Hex | Usage |
 | :--- | :--- | :--- |
-| `cortex-bg` | `#09090b` | Page background, input fields |
-| `cortex-surface` | `#18181b` | Cards, panels, sidebar |
-| `cortex-primary` | `#06b6d4` | Active nav pills, focus rings, send button |
-| `cortex-success` | `#10b981` | Online indicators, approve button, heartbeat |
-| `cortex-warning` | `#f59e0b` | Constraints, governance badges |
-| `cortex-danger` | `#ef4444` | Errors, reject button |
-| `cortex-info` | `#38bdf8` | Architect bot avatar, drafting indicator |
-| `cortex-text-main` | `#d4d4d8` | Primary text |
-| `cortex-text-muted` | `#71717a` | Secondary text, placeholders |
-| `cortex-border` | `#27272a` | Borders, dividers |
+| `cortex-bg` | `#111821` | Page background, input fields |
+| `cortex-surface` | `#1a2430` | Cards, panels, sidebar |
+| `cortex-primary` | `#1ab4cf` | Active nav pills, focus rings, send button |
+| `cortex-success` | `#23b26f` | Online indicators, approve button, heartbeat |
+| `cortex-warning` | `#e6a63d` | Constraints, governance badges |
+| `cortex-danger` | `#df5d5d` | Errors, reject button |
+| `cortex-info` | `#4f8ef7` | Architect bot avatar, drafting indicator |
+| `cortex-text-main` | `#e8eff7` | Primary text |
+| `cortex-text-muted` | `#9fb0c2` | Secondary text, placeholders |
+| `cortex-border` | `#324353` | Borders, dividers |
 
 Utilities: `.glow-stable`, `.glow-active`, `.glow-critical`, `.glow-primary`, `.glass`, `.ghost-draft`, `.activity-ring`, `.animate-pulse-subtle`
 
