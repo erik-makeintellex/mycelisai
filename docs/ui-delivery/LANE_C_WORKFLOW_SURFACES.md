@@ -1,7 +1,7 @@
 # Lane C - Workflow Surfaces UX
 
 Priority: `P1`  
-Status: `Planned`  
+Status: `In Progress`  
 Primary goal: make automations, teams, and resources operationally actionable.
 Owner team: `Team Helios + Team Argus`
 
@@ -14,10 +14,13 @@ Owner team: `Team Helios + Team Argus`
 ## Files
 
 - `interface/components/automations/AutomationHub.tsx`
+- `interface/components/automations/TeamInstantiationWizard.tsx`
+- `interface/components/automations/CapabilityReadinessGateCard.tsx`
 - `interface/app/(app)/automations/page.tsx`
 - `interface/components/teams/TeamCard.tsx`
 - `interface/components/teams/TeamsPage.tsx`
 - `interface/app/(app)/resources/page.tsx`
+- `interface/lib/workflowContracts.ts`
 
 ## Deliverables
 
@@ -58,5 +61,8 @@ Owner team: `Team Helios + Team Argus`
 ## Evidence
 
 - Test output:
+  - `cd interface; npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/teams/TeamsPage.test.tsx`
+  - Result: pass (`11` tests)
 - Video/screenshot:
 - Notes:
+  - Sprint 0 scaffolds added for guided instantiation and readiness gate contracts.

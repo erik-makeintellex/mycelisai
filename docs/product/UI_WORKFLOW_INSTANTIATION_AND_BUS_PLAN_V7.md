@@ -1,7 +1,7 @@
 # UI Workflow Instantiation and Bus Plan (V7)
 
 > Purpose: define how users instantiate and manage teams with minimal manual effort, how UI handles input/output channels, and how NATS is exposed safely without overwhelming operators.
-> Status: execution authority for kickoff.
+> Status: execution authority for kickoff (Sprint 0 scaffolding in progress).
 > Companion docs: `docs/UI_FRAMEWORK_V7.md`, `docs/UI_ELEMENTS_PLANNING_V7.md`, `docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md`
 
 ---
@@ -346,6 +346,13 @@ Each profile auto-fills:
   - add test plan matrix for wizard, readiness, and bus recovery paths
   - lock gate criteria for Gate A -> Gate B transition
 
+Sprint 0 implementation status (2026-02-27):
+- done: shared workflow contracts (`workflowContracts.ts`)
+- done: `CapabilityReadinessGateCard` scaffold
+- done: `TeamInstantiationWizard` scaffold and Automations integration
+- done: baseline wizard tests in `TeamInstantiationWizard.test.tsx`
+- pending: API-backed launch persistence and guided bus route template UI
+
 ### Sprint 1 - First Usable Vertical Slice
 
 - deliver instantiate -> launch -> run -> diagnose happy path
@@ -402,4 +409,3 @@ Release gating:
 - no feature merges without reduced manual burden evidence
 - no bus-facing UX merges without Basic mode validation
 - no instantiation feature merges without readiness gate tests
-
