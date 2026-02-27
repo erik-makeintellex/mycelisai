@@ -350,8 +350,11 @@ Sprint 0 implementation status (2026-02-27):
 - done: shared workflow contracts (`workflowContracts.ts`)
 - done: `CapabilityReadinessGateCard` scaffold
 - done: `TeamInstantiationWizard` scaffold and Automations integration
+- done: `RouteTemplatePicker` scaffold with Basic/Guided/Expert modes and rollback
+- done: mission profile persistence + activation wired into launch/propose actions
 - done: baseline wizard tests in `TeamInstantiationWizard.test.tsx`
-- pending: API-backed launch persistence and guided bus route template UI
+- done: route template tests in `RouteTemplatePicker.test.tsx`
+- pending: run-launch binding to scheduler/trigger execution path and full E2E reliability coverage
 
 ### Sprint 1 - First Usable Vertical Slice
 

@@ -16,11 +16,13 @@ Owner team: `Team Helios + Team Argus`
 - `interface/components/automations/AutomationHub.tsx`
 - `interface/components/automations/TeamInstantiationWizard.tsx`
 - `interface/components/automations/CapabilityReadinessGateCard.tsx`
+- `interface/components/automations/RouteTemplatePicker.tsx`
 - `interface/app/(app)/automations/page.tsx`
 - `interface/components/teams/TeamCard.tsx`
 - `interface/components/teams/TeamsPage.tsx`
 - `interface/app/(app)/resources/page.tsx`
 - `interface/lib/workflowContracts.ts`
+- `interface/__tests__/automations/RouteTemplatePicker.test.tsx`
 
 ## Deliverables
 
@@ -61,8 +63,9 @@ Owner team: `Team Helios + Team Argus`
 ## Evidence
 
 - Test output:
-  - `cd interface; npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/teams/TeamsPage.test.tsx`
-  - Result: pass (`11` tests)
+  - `cd interface; npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/automations/RouteTemplatePicker.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/teams/TeamsPage.test.tsx`
+  - Result: pass (`13` tests)
 - Video/screenshot:
 - Notes:
-  - Sprint 0 scaffolds added for guided instantiation and readiness gate contracts.
+  - Sprint 0 scaffolds added for guided instantiation, readiness gate contracts, and NATS route exposure mode controls.
+  - Launch and propose-only actions now persist mission profiles and activate selected profile routes.

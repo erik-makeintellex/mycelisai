@@ -1,5 +1,6 @@
 export type WorkflowInputChannel = "workspace" | "trigger" | "schedule" | "api" | "sensor";
 export type WorkflowOutputChannel = "chat" | "proposal" | "timeline" | "artifact" | "approval";
+export type BusExposureMode = "basic" | "guided" | "expert";
 
 export type WorkflowGovernanceMode = "passive" | "approval_required" | "halted";
 
@@ -35,6 +36,14 @@ export interface WorkflowIOEnvelope<T = unknown> {
         team_id: string;
         timestamp: string;
     };
+}
+
+export interface RouteTemplateOption {
+    id: string;
+    label: string;
+    description: string;
+    subjects: string[];
+    impactPreview: string;
 }
 
 export const TEAM_PROFILE_TEMPLATES: TeamProfileTemplate[] = [
@@ -81,5 +90,47 @@ export const TEAM_PROFILE_TEMPLATES: TeamProfileTemplate[] = [
         suggestedRoutes: ["swarm.governance.*", "swarm.approvals.*"],
         inputChannels: ["workspace", "trigger", "api"],
         outputChannels: ["proposal", "approval", "timeline"],
+    },
+];
+
+export const BUS_EXPOSURE_MODES: Array<{ id: BusExposureMode; label: string; description: string }> = [
+    {
+        id: "basic",
+        label: "Basic",
+        description: "View health and activity without editing subjects directly.",
+    },
+    {
+        id: "guided",
+        label: "Guided",
+        description: "Apply route templates with safety preview and rollback.",
+    },
+    {
+        id: "expert",
+        label: "Expert",
+        description: "Inspect and edit raw subjects in advanced mode.",
+    },
+];
+
+export const ROUTE_TEMPLATE_OPTIONS: RouteTemplateOption[] = [
+    {
+        id: "research-default",
+        label: "Research default",
+        description: "Mission research chain with team-scoped fanout.",
+        subjects: ["swarm.mission.events.research.*", "swarm.team.research.*"],
+        impactPreview: "Subscribes synthesis and reference events for research teams.",
+    },
+    {
+        id: "incident-recovery",
+        label: "Incident recovery",
+        description: "Incident alert path with remediation signal follow-up.",
+        subjects: ["swarm.alerts.*", "swarm.team.incident.*", "swarm.health.*"],
+        impactPreview: "Routes degradation alerts and health recovery events to incident teams.",
+    },
+    {
+        id: "delivery-run-trace",
+        label: "Delivery run trace",
+        description: "Delivery execution path with run-level trace subscriptions.",
+        subjects: ["swarm.team.delivery.*", "swarm.runs.*", "swarm.mission.events.*"],
+        impactPreview: "Adds run trace observability for delivery workflows.",
     },
 ];

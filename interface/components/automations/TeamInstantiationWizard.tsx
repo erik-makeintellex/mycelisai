@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Check, Play, Save } from "lucide-react";
 import CapabilityReadinessGateCard from "@/components/automations/CapabilityReadinessGateCard";
+import RouteTemplatePicker from "@/components/automations/RouteTemplatePicker";
 import {
     TEAM_PROFILE_TEMPLATES,
+    type BusExposureMode,
     type ReadinessSnapshot,
     type TeamProfileTemplate,
 } from "@/lib/workflowContracts";
+import { useCortexStore, type MissionProfileCreate } from "@/store/useCortexStore";
 
 const STEPS = ["Objective", "Profile", "Readiness", "Launch"] as const;
 type StepIndex = 0 | 1 | 2 | 3;
@@ -69,16 +72,33 @@ function ProfileCard({
 }
 
 export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWizardProps) {
+    const createMissionProfile = useCortexStore((s) => s.createMissionProfile);
+    const activateMissionProfile = useCortexStore((s) => s.activateMissionProfile);
+    const fetchMissionProfiles = useCortexStore((s) => s.fetchMissionProfiles);
+    const missionProfiles = useCortexStore((s) => s.missionProfiles);
+
     const [step, setStep] = useState<StepIndex>(0);
     const [objective, setObjective] = useState("");
     const [profileId, setProfileId] = useState<string>(TEAM_PROFILE_TEMPLATES[0].id);
     const [readiness, setReadiness] = useState<ReadinessSnapshot | null>(null);
+    const [routes, setRoutes] = useState<string[]>(TEAM_PROFILE_TEMPLATES[0].suggestedRoutes);
+    const [busMode, setBusMode] = useState<BusExposureMode>("basic");
+    const [isBusy, setIsBusy] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
     const [lastAction, setLastAction] = useState("");
 
     const selectedProfile = useMemo(
         () => TEAM_PROFILE_TEMPLATES.find((p) => p.id === profileId) ?? TEAM_PROFILE_TEMPLATES[0],
         [profileId]
     );
+
+    useEffect(() => {
+        setRoutes(selectedProfile.suggestedRoutes);
+    }, [selectedProfile.id, selectedProfile.suggestedRoutes]);
+
+    useEffect(() => {
+        fetchMissionProfiles();
+    }, [fetchMissionProfiles]);
 
     const nextDisabled = useMemo(() => {
         if (step === 0) return objective.trim().length < 12;
@@ -90,13 +110,49 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
     const next = () => setStep((prev) => (prev < 3 ? ((prev + 1) as StepIndex) : prev));
     const back = () => setStep((prev) => (prev > 0 ? ((prev - 1) as StepIndex) : prev));
 
+    const buildProfilePayload = useCallback(
+        (autoStart: boolean): MissionProfileCreate => {
+            const activeProviders = missionProfiles.find((p) => p.is_active)?.role_providers ?? {};
+            const nowLabel = new Date().toISOString().slice(11, 19).replace(/:/g, "");
+            return {
+                name: `${selectedProfile.name}-${nowLabel}`,
+                description: objective.trim(),
+                role_providers: activeProviders,
+                subscriptions: routes.map((topic) => ({ topic })),
+                context_strategy: "fresh",
+                auto_start: autoStart,
+            };
+        },
+        [missionProfiles, objective, routes, selectedProfile.name]
+    );
+
+    const createProfile = useCallback(
+        async (autoStart: boolean) => {
+            setActionError(null);
+            setIsBusy(true);
+            try {
+                const payload = buildProfilePayload(autoStart);
+                const created = await createMissionProfile(payload);
+                if (!created) {
+                    setActionError("Failed to create mission profile.");
+                    return null;
+                }
+                await fetchMissionProfiles();
+                return created.id;
+            } finally {
+                setIsBusy(false);
+            }
+        },
+        [buildProfilePayload, createMissionProfile, fetchMissionProfiles]
+    );
+
     return (
         <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4 space-y-4">
             <div className="flex items-center justify-between gap-2">
                 <div>
                     <h3 className="text-sm font-semibold text-cortex-text-main">Team Instantiation Wizard</h3>
                     <p className="text-[11px] text-cortex-text-muted mt-1">
-                        Sprint 0 scaffold: objective, profile, readiness, and governed launch review.
+                        Guided objective, profile, readiness, and governed launch review.
                     </p>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -150,6 +206,11 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                             ))}
                         </div>
                     </div>
+                    <RouteTemplatePicker
+                        profile={selectedProfile}
+                        onRoutesChange={setRoutes}
+                        onBusModeChange={setBusMode}
+                    />
                 </div>
             )}
 
@@ -173,12 +234,21 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                             <span className="text-cortex-text-muted">Readiness blockers:</span>{" "}
                             {readiness?.blockers.length ? readiness.blockers.length : 0}
                         </p>
+                        <p className="text-xs text-cortex-text-main">
+                            <span className="text-cortex-text-muted">NATS exposure:</span> {busMode}
+                        </p>
+                        <p className="text-xs text-cortex-text-main">
+                            <span className="text-cortex-text-muted">Routes:</span> {routes.length}
+                        </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <button
-                            disabled={!canLaunchNow}
-                            onClick={() => {
-                                setLastAction("Launch-now scaffolded. Next: open Teams and monitor run creation.");
+                            disabled={!canLaunchNow || isBusy}
+                            onClick={async () => {
+                                const profileRef = await createProfile(true);
+                                if (!profileRef) return;
+                                await activateMissionProfile(profileRef);
+                                setLastAction(`Launch-now profile activated (${profileRef}). Opening Teams.`);
                                 openTab("teams");
                             }}
                             className="px-3 py-2 rounded border border-cortex-success/30 text-cortex-success text-xs font-mono hover:bg-cortex-success/10 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1"
@@ -187,8 +257,12 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                             Launch Now
                         </button>
                         <button
-                            onClick={() => {
-                                setLastAction("Propose-only route selected. Next: open Approvals to review release.");
+                            disabled={isBusy}
+                            onClick={async () => {
+                                const profileRef = await createProfile(false);
+                                if (!profileRef) return;
+                                await activateMissionProfile(profileRef);
+                                setLastAction(`Propose-only profile activated (${profileRef}). Opening Approvals.`);
                                 openTab("approvals");
                             }}
                             className="px-3 py-2 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10 inline-flex items-center justify-center gap-1"
@@ -197,8 +271,11 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                             Launch Propose-Only
                         </button>
                         <button
-                            onClick={() => {
-                                setLastAction("Template save scaffolded. Next: finalize profile persistence API wiring.");
+                            disabled={isBusy}
+                            onClick={async () => {
+                                const profileRef = await createProfile(false);
+                                if (!profileRef) return;
+                                setLastAction(`Template saved as mission profile (${profileRef}).`);
                             }}
                             className="px-3 py-2 rounded border border-cortex-border text-cortex-text-main text-xs font-mono hover:bg-cortex-border inline-flex items-center justify-center gap-1"
                         >
@@ -209,6 +286,11 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                     {lastAction ? (
                         <div className="rounded-md border border-cortex-primary/30 bg-cortex-primary/10 px-2.5 py-2 text-[11px] text-cortex-text-main">
                             {lastAction}
+                        </div>
+                    ) : null}
+                    {actionError ? (
+                        <div className="rounded-md border border-cortex-danger/30 bg-cortex-danger/10 px-2.5 py-2 text-[11px] text-cortex-text-main">
+                            {actionError}
                         </div>
                     ) : null}
                 </div>
@@ -224,7 +306,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                 </button>
                 <button
                     onClick={next}
-                    disabled={step === 3 || nextDisabled}
+                    disabled={step === 3 || nextDisabled || isBusy}
                     className="px-2.5 py-1.5 rounded border border-cortex-primary/30 text-[11px] font-mono text-cortex-primary hover:bg-cortex-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Continue

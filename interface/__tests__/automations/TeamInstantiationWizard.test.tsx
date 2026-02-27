@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
 vi.mock("reactflow", async () => {
@@ -28,8 +28,29 @@ vi.mock("@/components/automations/CapabilityReadinessGateCard", async () => {
 });
 
 import TeamInstantiationWizard from "@/components/automations/TeamInstantiationWizard";
+import { useCortexStore } from "@/store/useCortexStore";
 
 describe("TeamInstantiationWizard", () => {
+    const createMissionProfile = vi.fn();
+    const activateMissionProfile = vi.fn();
+    const fetchMissionProfiles = vi.fn();
+
+    beforeEach(() => {
+        createMissionProfile.mockReset();
+        activateMissionProfile.mockReset();
+        fetchMissionProfiles.mockReset();
+        createMissionProfile.mockResolvedValue({ id: "profile-1" });
+        activateMissionProfile.mockResolvedValue(undefined);
+        fetchMissionProfiles.mockResolvedValue(undefined);
+
+        useCortexStore.setState({
+            missionProfiles: [],
+            createMissionProfile,
+            activateMissionProfile,
+            fetchMissionProfiles,
+        });
+    });
+
     it("requires objective text before step progression", () => {
         render(<TeamInstantiationWizard openTab={vi.fn()} />);
         const continueButton = screen.getByRole("button", { name: "Continue" });
@@ -42,7 +63,7 @@ describe("TeamInstantiationWizard", () => {
         expect((continueButton as HTMLButtonElement).disabled).toBe(false);
     });
 
-    it("reaches launch step and enables launch actions", () => {
+    it("reaches launch step and runs propose-only launch flow", async () => {
         const openTab = vi.fn();
         render(<TeamInstantiationWizard openTab={openTab} />);
 
@@ -59,6 +80,9 @@ describe("TeamInstantiationWizard", () => {
         expect(screen.getByRole("button", { name: "Launch Propose-Only" })).toBeDefined();
 
         fireEvent.click(screen.getByRole("button", { name: "Launch Propose-Only" }));
+        await screen.findByText(/Propose-only profile activated/);
         expect(openTab).toHaveBeenCalledWith("approvals");
+        expect(createMissionProfile).toHaveBeenCalledTimes(1);
+        expect(activateMissionProfile).toHaveBeenCalledWith("profile-1");
     });
 });
