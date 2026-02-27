@@ -3,6 +3,7 @@
 Priority: `P1`  
 Status: `Planned`  
 Primary goal: make automations, teams, and resources operationally actionable.
+Owner team: `Team Helios + Team Argus`
 
 ## Scope
 
@@ -48,9 +49,14 @@ Primary goal: make automations, teams, and resources operationally actionable.
 2. Teams and resources maintain diagnostics path under degraded states
 3. Gate B tests pass with evidence attached
 
+## Sprint 0 Focus
+
+1. scaffold `TeamInstantiationWizard` and `CapabilityReadinessGateCard`
+2. define shared readiness and channel metadata contracts for surfaces
+3. add team-card quick pivots to latest run and logs
+
 ## Evidence
 
 - Test output:
 - Video/screenshot:
 - Notes:
-

@@ -286,6 +286,24 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md",
                 description: "Active lanes (A/B/C/D/Q), gate sequencing, dependencies, and evidence tracking",
             },
+            {
+                slug: "v7-ui-optimal-workflow-prds",
+                label: "UI Optimal Workflow PRDs",
+                path: "docs/product/UI_OPTIMAL_WORKFLOW_PRDS_V7.md",
+                description: "Planning PRDs for optimal user workflows across Workspace, Automations, Resources, System, Teams, and Runs",
+            },
+            {
+                slug: "v7-ui-engagement-actuation-review",
+                label: "UI Engagement & Actuation Review",
+                path: "docs/product/UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md",
+                description: "Planning review of existing UI with directed engagement and actuation improvements",
+            },
+            {
+                slug: "v7-ui-instantiation-bus-plan",
+                label: "UI Instantiation + Bus Plan",
+                path: "docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md",
+                description: "Execution plan for team instantiation, I/O contracts, and user-safe NATS exposure",
+            },
         ],
     },
 ];

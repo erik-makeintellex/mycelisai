@@ -3,6 +3,7 @@
 Priority: `Cross-cutting`  
 Status: `In Progress`  
 Primary goal: enforce release gates across all UI lanes with evidence-backed reliability.
+Owner team: `Team Sentinel`
 
 ## Scope
 
@@ -45,6 +46,12 @@ Primary goal: enforce release gates across all UI lanes with evidence-backed rel
 1. Every gate includes test output and visual evidence
 2. No known non-actionable failure copy remains
 3. Regression checklist signed before merge window closes
+
+## Sprint 0 Focus
+
+1. formalize Gate A and Gate B evidence format for all lanes
+2. add reliability cases for readiness gate partial data and bus reconnect churn
+3. enforce cross-lane handoff checks for state-shape drift
 
 ## Evidence
 
