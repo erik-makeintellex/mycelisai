@@ -3,6 +3,7 @@
 Priority: `P2`  
 Status: `Planned`  
 Primary goal: expose deep run/system observability without reducing operational clarity.
+Owner team: `Team Argus`
 
 ## Scope
 
@@ -49,9 +50,14 @@ Primary goal: expose deep run/system observability without reducing operational 
 2. Observability pages avoid blank/dead states under partial outages
 3. Gate C tests pass with evidence attached
 
+## Sprint 0 Focus
+
+1. define run pivot contract consumed by teams and workspace surfaces
+2. tighten quick-check action responses for degraded services
+3. establish timeline performance baseline fixture for Gate C
+
 ## Evidence
 
 - Test output:
 - Video/screenshot:
 - Notes:
-

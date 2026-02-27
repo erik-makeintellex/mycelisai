@@ -13,7 +13,7 @@ Phase 19 (complete)
     → Workspace UX — Rename, LaunchCrew, MemoryExplorer redesign (complete)
     → V7 Team A — Event Spine (complete)
     → V7 Soma Workflow E2E — Consultations, run_id, Run Timeline UI, OpsWidget registry (complete)
-    → In-App Docs Browser — /docs page, 30-entry manifest, 8 user guides (complete)
+    → In-App Docs Browser — /docs page, 31-entry manifest, 8 user guides (complete)
     → Provider CRUD + Mission Profiles + Reactive Subscriptions + Service Management (complete)
     → V7 Team B — Trigger Engine (complete)
     → V7 Team C — Scheduler (NEXT)
@@ -39,11 +39,13 @@ Parallelized UI delivery is now explicitly engaged with lane-level playbooks and
 | Lane D playbook (System + Observability UX) | `docs/ui-delivery/LANE_D_SYSTEM_OBSERVABILITY.md` |
 | Lane Q playbook (QA reliability/regression) | `docs/ui-delivery/LANE_Q_QA_REGRESSION.md` |
 | Canonical UI framework v2.0 (I/O contract, state transitions, component templates, gate checklists) | `docs/UI_FRAMEWORK_V7.md` |
+| UI workflow instantiation + bus plan (execution authority) | `docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md` |
 
 Execution policy:
 - Lanes run in parallel.
 - Merges are gate-sequenced (`P0 -> P1 -> P2 -> RC`).
 - Lane Q evidence is required at every gate.
+- Team ownership model: Circuit (Lane A), Atlas (Lane B), Helios + Argus (Lane C), Argus (Lane D), Sentinel (Lane Q).
 
 Gate A baseline progress:
 - Added/updated UI tests for `StatusDrawer`, `DegradedModeBanner`, `CouncilCallErrorCard`, `MissionControlChat` error UX, `ShellLayout` status action wiring, and Automations landing expectations.
@@ -60,6 +62,18 @@ Gate A baseline progress:
   - `DegradedModeBanner` Retry now re-checks services, refreshes council/missions, and re-initializes SSE when disconnected.
   - Workspace council direct-target indicator now synchronizes with global `councilTarget` (including one-click fallback to Soma from banner/error card).
   - `StatusDrawer` council failure highlighting now resolves from recent failed council message source instead of only current target selection.
+
+### UI Instantiation + Bus Planning (Kickoff Complete)
+
+Execution-grade planning is now defined for:
+- guided team instantiation workflows
+- shared channel input/output envelopes
+- user-safe NATS exposure (Basic/Guided/Expert)
+- parallel Sprint 0 and Sprint 1 work packages across Atlas/Helios/Circuit/Argus/Sentinel
+
+Planning source:
+- `docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md`
+- `docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md`
 
 ### Resource API Standardization + Workspace Explorer (Current)
 
@@ -185,7 +199,7 @@ Fully functional. `/docs` page with sidebar, search, and rendered markdown.
 |------------|------|
 | GET /docs-api (manifest) | `interface/app/docs-api/route.ts` |
 | GET /docs-api/[slug] (content, path-validated) | `interface/app/docs-api/[slug]/route.ts` |
-| docsManifest.ts (30 entries, 7 sections) | `interface/lib/docsManifest.ts` |
+| docsManifest.ts (31 entries, 7 sections) | `interface/lib/docsManifest.ts` |
 | /docs page (sidebar + react-markdown, deep-link) | `interface/app/(app)/docs/page.tsx` |
 | Internal .md link resolution (stays in-app) | `interface/app/(app)/docs/page.tsx` |
 | Docs nav item in main rail (below Memory) | `interface/components/shell/ZoneA_Rail.tsx` |

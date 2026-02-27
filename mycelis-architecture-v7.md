@@ -853,6 +853,10 @@ Execution board and lane playbooks:
 - `docs/ui-delivery/LANE_C_WORKFLOW_SURFACES.md`
 - `docs/ui-delivery/LANE_D_SYSTEM_OBSERVABILITY.md`
 - `docs/ui-delivery/LANE_Q_QA_REGRESSION.md`
+- `docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md`
+
+Named team ownership model:
+- Team Circuit (Lane A), Team Atlas (Lane B), Team Helios + Team Argus (Lane C), Team Argus (Lane D), Team Sentinel (Lane Q)
 
 ---
 

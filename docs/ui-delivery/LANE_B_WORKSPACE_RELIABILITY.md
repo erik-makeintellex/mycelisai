@@ -3,6 +3,7 @@
 Priority: `P0`  
 Status: `In Progress`  
 Primary goal: remove non-actionable failure paths from workspace interactions.
+Owner team: `Team Atlas`
 
 ## Scope
 
@@ -47,6 +48,12 @@ Primary goal: remove non-actionable failure paths from workspace interactions.
 1. No raw 500 strings visible in workspace failure UX
 2. User can recover from council failure in <= 2 actions
 3. P0 Gate A tests pass with evidence attached
+
+## Sprint 0 Focus
+
+1. preserve message context across retry and reroute actions
+2. ensure structured error card copy is consistent for timeout/unreachable/server error
+3. lock focus mode behavior with session persistence coverage
 
 ## Evidence
 

@@ -17,6 +17,7 @@
 > | [V7 UI Framework](docs/UI_FRAMEWORK_V7.md) | Canonical UI element/state/testing framework |
 > | [V7 UI Elements Planning](docs/UI_ELEMENTS_PLANNING_V7.md) | Research-backed UI element planning and Soma interaction model |
 > | [V7 UI Parallel Delivery Board](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) | Active lane plan, merge gates, evidence checklist |
+> | [V7 UI Instantiation + Bus Plan](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) | Detailed operator workflow for team instantiation, I/O channels, and user-safe NATS exposure |
 > | [Archive Index](docs/archive/README.md) | Historical docs only (non-authoritative) |
 
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
@@ -1374,6 +1375,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **V7 UI Framework** | [docs/UI_FRAMEWORK_V7.md](docs/UI_FRAMEWORK_V7.md) — Default UI instantiation contract (state model, failure templates, testing matrix, PR gate) | [/docs?doc=v7-ui-framework](/docs?doc=v7-ui-framework) |
 | **V7 UI Elements Planning** | [docs/UI_ELEMENTS_PLANNING_V7.md](docs/UI_ELEMENTS_PLANNING_V7.md) — Research-backed element standards, Soma interaction patterns, and planning workflow | [/docs?doc=v7-ui-elements-planning](/docs?doc=v7-ui-elements-planning) |
 | **V7 UI Parallel Delivery** | [docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) — Active gate model + lane matrix (A/B/C/D/Q) with evidence tracking | [/docs?doc=v7-ui-parallel-delivery](/docs?doc=v7-ui-parallel-delivery) |
+| **V7 UI Instantiation + Bus Plan** | [docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) — Execution-grade plan for team lifecycle, channel I/O contracts, and Basic/Guided/Expert NATS UX | [/docs?doc=v7-ui-instantiation-bus-plan](/docs?doc=v7-ui-instantiation-bus-plan) |
 | **V7 MCP Baseline** | [docs/V7_MCP_BASELINE.md](docs/V7_MCP_BASELINE.md) — MVOS: filesystem, memory, artifact-renderer, fetch | [/docs?doc=v7-mcp-baseline](/docs?doc=v7-mcp-baseline) |
 | **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance | [/docs?doc=swarm-operations](/docs?doc=swarm-operations) |
 | **Cognitive Architecture** | [docs/COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md) — Providers, profiles, matrix UI, embedding | [/docs?doc=cognitive-architecture](/docs?doc=cognitive-architecture) |

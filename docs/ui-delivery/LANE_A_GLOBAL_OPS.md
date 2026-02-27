@@ -3,6 +3,7 @@
 Priority: `P0`  
 Status: `In Progress`  
 Primary goal: reliable global operational truth across all routes.
+Owner team: `Team Circuit`
 
 ## Scope
 
@@ -47,6 +48,12 @@ Primary goal: reliable global operational truth across all routes.
 1. No global status dead-end states
 2. Banner and drawer remain in sync under reconnect churn
 3. P0 Gate A tests pass with evidence attached
+
+## Sprint 0 Focus
+
+1. unify health-state mapping across banner, drawer, and system checks
+2. finalize reconnect action behavior for NATS and SSE degraded states
+3. publish stable health selectors for dependent lanes
 
 ## Evidence
 
