@@ -1,17 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 
-interface ServiceStatus {
-    name: string;
-    status: "online" | "offline" | "degraded";
-}
-
 export default function DegradedModeBanner() {
-    const [services, setServices] = useState<ServiceStatus[]>([]);
-    const [loading, setLoading] = useState(false);
+    const services = useCortexStore((s) => s.servicesStatus);
+    const loading = useCortexStore((s) => s.isFetchingServicesStatus);
+    const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
     const missionChatError = useCortexStore((s) => s.missionChatError);
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
@@ -20,28 +16,8 @@ export default function DegradedModeBanner() {
     const initializeStream = useCortexStore((s) => s.initializeStream);
     const fetchMissions = useCortexStore((s) => s.fetchMissions);
 
-    const fetchHealth = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch("/api/v1/services/status");
-            if (!res.ok) return;
-            const body = await res.json();
-            setServices(body.data ?? []);
-        } catch {
-            // degraded mode: leave last values
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchHealth();
-        const i = setInterval(fetchHealth, 6000);
-        return () => clearInterval(i);
-    }, []);
-
     const retryAll = async () => {
-        await fetchHealth();
+        await fetchServicesStatus();
         fetchCouncilMembers();
         fetchMissions();
         if (!isStreamConnected) {

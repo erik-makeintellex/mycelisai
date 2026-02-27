@@ -1,15 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { X, Brain, Shield, Wifi, Database, Radio, Users, AlertTriangle } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 
 type Health = "healthy" | "degraded" | "failure" | "offline" | "info";
-
-interface ServiceStatus {
-    name: string;
-    status: "online" | "offline" | "degraded";
-}
 
 const HEALTH_CLASS: Record<Health, string> = {
     healthy: "text-cortex-success border-cortex-success/30 bg-cortex-success/10",
@@ -39,30 +34,18 @@ export default function StatusDrawer() {
     const governanceMode = useCortexStore((s) => s.governanceMode);
     const missions = useCortexStore((s) => s.missions);
     const fetchMissions = useCortexStore((s) => s.fetchMissions);
-
-    const [services, setServices] = useState<ServiceStatus[]>([]);
+    const services = useCortexStore((s) => s.servicesStatus);
+    const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
 
     useEffect(() => {
         if (!isOpen) return;
         fetchCouncilMembers();
         fetchMissions();
-        const poll = async () => {
-            try {
-                const res = await fetch("/api/v1/services/status");
-                if (!res.ok) return;
-                const body = await res.json();
-                setServices(body.data ?? []);
-            } catch {
-                // degraded mode: keep last state
-            }
-        };
-        poll();
-        const i = setInterval(poll, 6000);
-        return () => clearInterval(i);
-    }, [isOpen, fetchCouncilMembers, fetchMissions]);
+        fetchServicesStatus();
+    }, [isOpen, fetchCouncilMembers, fetchMissions, fetchServicesStatus]);
 
     const serviceMap = useMemo(() => {
-        const map = new Map<string, ServiceStatus>();
+        const map = new Map<string, (typeof services)[number]>();
         services.forEach((s) => map.set(s.name, s));
         return map;
     }, [services]);

@@ -10,6 +10,7 @@ import {
 } from 'reactflow';
 import type { AgentNodeData } from '@/components/wiring/AgentNode';
 import type { ConversationTurn } from '@/types/conversations';
+import { extractApiData } from '@/lib/apiContracts';
 
 // ── Domain Types ──────────────────────────────────────────────
 
@@ -525,6 +526,13 @@ export interface CognitiveStatus {
     media: CognitiveEngineStatus;
 }
 
+export interface ServiceHealthStatus {
+    name: string;
+    status: "online" | "offline" | "degraded";
+    detail?: string;
+    latency_ms?: number;
+}
+
 // ── Store Contract ────────────────────────────────────────────
 
 export interface CortexState {
@@ -619,6 +627,9 @@ export interface CortexState {
 
     // Cognitive Engine Status (Phase 7.7 vLLM)
     cognitiveStatus: CognitiveStatus | null;
+    servicesStatus: ServiceHealthStatus[];
+    isFetchingServicesStatus: boolean;
+    servicesStatusUpdatedAt: string | null;
 
     // Team Management (Phase 11)
     teamsDetail: TeamDetailEntry[];
@@ -739,6 +750,7 @@ export interface CortexState {
 
     // Cognitive Engine Status (Phase 7.7 vLLM)
     fetchCognitiveStatus: () => Promise<void>;
+    fetchServicesStatus: () => Promise<ServiceHealthStatus[]>;
 
     // Team Management (Phase 11)
     fetchTeamsDetail: () => Promise<void>;
@@ -1082,6 +1094,9 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     isFetchingPolicy: false,
     isFetchingApprovals: false,
     cognitiveStatus: null,
+    servicesStatus: [],
+    isFetchingServicesStatus: false,
+    servicesStatusUpdatedAt: null,
 
     // Team Management (Phase 11)
     teamsDetail: [],
@@ -1639,7 +1654,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         try {
             const res = await fetch('/api/v1/mcp/servers');
             if (res.ok) {
-                const data = await res.json();
+                const payload = await res.json();
+                const data = extractApiData<MCPServerWithTools[] | unknown>(payload);
                 set({ mcpServers: Array.isArray(data) ? data : [], isFetchingMCPServers: false });
             } else {
                 set({ mcpServers: [], isFetchingMCPServers: false });
@@ -1682,7 +1698,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         try {
             const res = await fetch('/api/v1/mcp/tools');
             if (res.ok) {
-                const data = await res.json();
+                const payload = await res.json();
+                const data = extractApiData<MCPTool[] | unknown>(payload);
                 set({ mcpTools: Array.isArray(data) ? data : [] });
             }
         } catch {
@@ -1697,7 +1714,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         try {
             const res = await fetch('/api/v1/mcp/library');
             if (res.ok) {
-                const data = await res.json();
+                const payload = await res.json();
+                const data = extractApiData<MCPLibraryCategory[] | unknown>(payload);
                 set({ mcpLibrary: Array.isArray(data) ? data : [], isFetchingMCPLibrary: false });
             } else {
                 set({ mcpLibrary: [], isFetchingMCPLibrary: false });
@@ -2028,6 +2046,29 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 set({ cognitiveStatus: data });
             }
         } catch { /* silently fail — dashboard gauge will show offline */ }
+    },
+
+    fetchServicesStatus: async () => {
+        set({ isFetchingServicesStatus: true });
+        try {
+            const res = await fetch('/api/v1/services/status');
+            if (!res.ok) {
+                set({ isFetchingServicesStatus: false });
+                return [];
+            }
+            const payload = await res.json();
+            const data = extractApiData<ServiceHealthStatus[] | unknown>(payload);
+            const next = Array.isArray(data) ? data : [];
+            set({
+                servicesStatus: next,
+                isFetchingServicesStatus: false,
+                servicesStatusUpdatedAt: new Date().toISOString(),
+            });
+            return next;
+        } catch {
+            set({ isFetchingServicesStatus: false });
+            return [];
+        }
     },
 
     instantiateMission: async () => {

@@ -46,10 +46,10 @@ function DashboardGrid() {
     const { isConnected } = useSignalStream();
     const missions = useCortexStore((s) => s.missions);
     const streamLogs = useCortexStore((s) => s.streamLogs);
+    const servicesStatus = useCortexStore((s) => s.servicesStatus);
     const containerRef = useRef<HTMLDivElement>(null);
     const [ratio, setRatio] = useState(DEFAULT_RATIO);
     const [focusMode, setFocusMode] = useState(false);
-    const [natsStatus, setNatsStatus] = useState<"online" | "offline" | "degraded" | "unknown">("unknown");
     const [isLaunchCrewOpen, setIsLaunchCrewOpen] = useState(false);
     const dragging = useRef(false);
 
@@ -83,23 +83,7 @@ function DashboardGrid() {
         return () => window.removeEventListener("keydown", onKey);
     }, []);
 
-    useEffect(() => {
-        const poll = async () => {
-            try {
-                const res = await fetch("/api/v1/services/status");
-                if (!res.ok) return;
-                const body = await res.json();
-                const list: Array<{ name: string; status: "online" | "offline" | "degraded" }> = body.data ?? [];
-                const nats = list.find((s) => s.name === "nats");
-                setNatsStatus(nats?.status ?? "unknown");
-            } catch {
-                setNatsStatus("unknown");
-            }
-        };
-        poll();
-        const i = setInterval(poll, 10000);
-        return () => clearInterval(i);
-    }, []);
+    const natsStatus = servicesStatus.find((s) => s.name === "nats")?.status ?? "unknown";
 
     const onPointerDown = useCallback((e: React.PointerEvent) => {
         e.preventDefault();

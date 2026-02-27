@@ -151,3 +151,15 @@ Baseline profile (V7):
 - `memory` is curated install
 - `artifact-renderer` remains planned
 
+---
+
+## Standardized Resource API Contract
+
+Mycelis resource surfaces are converging on one API envelope pattern:
+- payloads may arrive as either `{ ok, data, error }` or raw data
+- UI store/actions normalize both into typed state before rendering
+- component-level parsing is minimized so new channels can reuse the same contract
+
+Why this matters:
+- adding new AI resource channels (tools, services, hardware, future RAG paths) does not require bespoke parsing logic per screen
+- degraded/error behavior stays consistent across Workspace, Resources, and System surfaces

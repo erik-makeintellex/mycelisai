@@ -4,7 +4,6 @@ import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Brain, Wrench, BookOpen, FolderOpen } from "lucide-react";
-import DegradedState from "@/components/shared/DegradedState";
 import BrainsPage from "@/components/settings/BrainsPage";
 
 const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegistry"), {
@@ -15,6 +14,11 @@ const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegis
 const CataloguePage = dynamic(() => import("@/components/catalogue/CataloguePage"), {
     ssr: false,
     loading: () => <TabLoading label="catalogue" />,
+});
+
+const WorkspaceExplorer = dynamic(() => import("@/components/resources/WorkspaceExplorer"), {
+    ssr: false,
+    loading: () => <TabLoading label="workspace" />,
 });
 
 type TabId = "brains" | "tools" | "workspace" | "catalogue";
@@ -67,15 +71,7 @@ function ResourcesContent() {
                 )}
                 {activeTab === "tools" && <MCPToolRegistry />}
                 {activeTab === "workspace" && (
-                    <div className="h-full p-6">
-                        <DegradedState
-                            title="Workspace Explorer"
-                            reason="The workspace file explorer is being implemented as part of the V7 MCP Baseline."
-                            unavailable={["File browser", "Artifact viewer"]}
-                            available={["Agent file I/O via chat (read_file, write_file)", "Artifact rendering in Mission Control"]}
-                            action="Workspace files are accessible through agent tools in Mission Control."
-                        />
-                    </div>
+                    <WorkspaceExplorer onOpenToolsTab={() => setActiveTab("tools")} />
                 )}
                 {activeTab === "catalogue" && <CataloguePage />}
             </div>

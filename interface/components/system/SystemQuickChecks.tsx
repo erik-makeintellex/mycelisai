@@ -2,6 +2,7 @@
 
 import React, { useCallback, useMemo, useState } from "react";
 import { CheckCircle2, AlertTriangle, XCircle, RefreshCw, Copy, Check } from "lucide-react";
+import { useCortexStore } from "@/store/useCortexStore";
 
 type CheckStatus = "healthy" | "degraded" | "failure" | "unknown";
 
@@ -27,50 +28,49 @@ function statusIcon(status: CheckStatus) {
 }
 
 export default function SystemQuickChecks() {
-    const [checks, setChecks] = useState<CheckItem[]>([
-        { id: "nats", label: "NATS connected", status: "unknown" },
-        { id: "postgres", label: "Database reachable", status: "unknown" },
-        { id: "sse", label: "SSE stream live", status: "unknown" },
-        { id: "triggers", label: "Trigger engine active", status: "unknown" },
-        { id: "scheduler", label: "Scheduler state", status: "unknown" },
-    ]);
+    const servicesStatus = useCortexStore((s) => s.servicesStatus);
+    const isFetchingServicesStatus = useCortexStore((s) => s.isFetchingServicesStatus);
+    const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
+    const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
+
+    const [checkedAt, setCheckedAt] = useState<Record<string, Date | undefined>>({});
     const [busy, setBusy] = useState<string | null>(null);
     const [copied, setCopied] = useState<string | null>(null);
+
+    const statusByService = useMemo(() => {
+        return new Map(servicesStatus.map((svc) => [svc.name, svc.status]));
+    }, [servicesStatus]);
+
+    const checks = useMemo<CheckItem[]>(() => {
+        const mapStatus = (name: string): CheckStatus => {
+            const state = statusByService.get(name);
+            if (state === "online") return "healthy";
+            if (state === "degraded") return "degraded";
+            if (state === "offline") return "failure";
+            return "unknown";
+        };
+        return [
+            { id: "nats", label: "NATS connected", status: mapStatus("nats"), checkedAt: checkedAt.nats },
+            { id: "postgres", label: "Database reachable", status: mapStatus("postgres"), checkedAt: checkedAt.postgres },
+            { id: "sse", label: "SSE stream live", status: isStreamConnected ? "healthy" : "failure", checkedAt: checkedAt.sse },
+            { id: "triggers", label: "Trigger engine active", status: mapStatus("reactive"), checkedAt: checkedAt.triggers },
+            { id: "scheduler", label: "Scheduler state", status: "degraded", checkedAt: checkedAt.scheduler },
+        ];
+    }, [statusByService, checkedAt, isStreamConnected]);
 
     const runCheck = useCallback(async (id: string) => {
         setBusy(id);
         try {
-            if (id === "sse") {
-                const res = await fetch("/api/v1/telemetry/compute");
-                const ok = res.ok;
-                setChecks((prev) => prev.map((c) => (c.id === id ? { ...c, status: ok ? "healthy" : "failure", checkedAt: new Date() } : c)));
-                return;
+            if (id !== "scheduler") {
+                await fetchServicesStatus();
             }
-            const res = await fetch("/api/v1/services/status");
-            if (!res.ok) {
-                setChecks((prev) => prev.map((c) => (c.id === id ? { ...c, status: "failure", checkedAt: new Date() } : c)));
-                return;
-            }
-            const body = await res.json();
-            const data: Array<{ name: string; status: "online" | "offline" | "degraded" }> = body.data ?? [];
-            const map = new Map(data.map((d) => [d.name, d.status]));
-            let status: CheckStatus = "unknown";
-            if (id === "scheduler") {
-                status = "degraded";
-            } else if (id === "triggers") {
-                const s = map.get("reactive");
-                status = s === "online" ? "healthy" : s === "degraded" ? "degraded" : "failure";
-            } else {
-                const s = map.get(id);
-                status = s === "online" ? "healthy" : s === "degraded" ? "degraded" : s === "offline" ? "failure" : "unknown";
-            }
-            setChecks((prev) => prev.map((c) => (c.id === id ? { ...c, status, checkedAt: new Date() } : c)));
+            setCheckedAt((prev) => ({ ...prev, [id]: new Date() }));
         } catch {
-            setChecks((prev) => prev.map((c) => (c.id === id ? { ...c, status: "failure", checkedAt: new Date() } : c)));
+            setCheckedAt((prev) => ({ ...prev, [id]: new Date() }));
         } finally {
             setBusy(null);
         }
-    }, []);
+    }, [fetchServicesStatus]);
 
     const summary = useMemo(() => {
         const ok = checks.filter((c) => c.status === "healthy").length;
@@ -111,7 +111,7 @@ export default function SystemQuickChecks() {
                                 onClick={() => runCheck(check.id)}
                                 className="px-2 py-1 rounded border border-cortex-border text-[10px] font-mono hover:bg-cortex-border flex items-center gap-1"
                             >
-                                <RefreshCw className={`w-3 h-3 ${busy === check.id ? "animate-spin" : ""}`} />
+                                <RefreshCw className={`w-3 h-3 ${busy === check.id || isFetchingServicesStatus ? "animate-spin" : ""}`} />
                                 Run Check
                             </button>
                             <button

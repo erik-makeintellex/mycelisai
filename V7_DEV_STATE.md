@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-02-26
+> **Updated:** 2026-02-27
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
@@ -19,6 +19,7 @@ Phase 19 (complete)
     → V7 Team C — Scheduler (NEXT)
     → V7 Causal Chain UI — ViewChain.tsx (after C)
     → MCP Baseline — filesystem, memory, artifact-renderer, fetch (parallel)
+    → Resource API standardization + Workspace Explorer activation (in progress)
 ```
 
 ---
@@ -59,6 +60,23 @@ Gate A baseline progress:
   - `DegradedModeBanner` Retry now re-checks services, refreshes council/missions, and re-initializes SSE when disconnected.
   - Workspace council direct-target indicator now synchronizes with global `councilTarget` (including one-click fallback to Soma from banner/error card).
   - `StatusDrawer` council failure highlighting now resolves from recent failed council message source instead of only current target selection.
+
+### Resource API Standardization + Workspace Explorer (Current)
+
+| Deliverable | File |
+|------------|------|
+| Shared API contract helpers (`extractApiData`, `extractApiError`, MCP result formatter) | `interface/lib/apiContracts.ts` |
+| Store-level standardized parsing for MCP + services status endpoints | `interface/store/useCortexStore.ts` |
+| Global services-status polling moved into shell/store path | `interface/components/shell/ShellLayout.tsx` |
+| Degraded banner/status drawer/quick checks now consume shared store status | `interface/components/dashboard/DegradedModeBanner.tsx`, `interface/components/dashboard/StatusDrawer.tsx`, `interface/components/system/SystemQuickChecks.tsx` |
+| Services tab now uses centralized status contract | `interface/app/(app)/system/page.tsx` |
+| Workspace Explorer activated in Resources tab (filesystem MCP tool calls) | `interface/components/resources/WorkspaceExplorer.tsx`, `interface/app/(app)/resources/page.tsx` |
+| Focus mode NATS status now sourced from global services status state | `interface/components/dashboard/MissionControl.tsx` |
+
+Verification run:
+- `cd interface && npm run build` -> pass
+- `cd interface && npx vitest run __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/ResourcesPage.test.tsx __tests__/pages/SystemPage.test.tsx` -> pass (18 tests)
+- `cd interface && npx vitest run __tests__/store/useCortexStore.test.ts` -> pass (25 tests)
 
 ### Phase 19 Foundation
 
@@ -366,7 +384,6 @@ ZoneA_Rail
 |------|-----|------------|
 | Automations | Active Automations | Team C (Scheduler) |
 | System | Event Health | Team A live data wiring |
-| Resources | Workspace Explorer | MCP Baseline (filesystem server) |
 
 ---
 
@@ -396,7 +413,6 @@ MCP verification:   `go test ./internal/mcp/ -count=1` PASSES
 | 14 pre-existing test file transform errors | Various `__tests__/{workspace,dashboard,teams,...}` | Low (pre-V7) |
 | Causal Chain UI | ViewChain.tsx + /runs/[id]/chain | After Team C |
 | Automations → Active Automations: DegradedState | `app/(app)/automations/page.tsx` | Blocked by Team C |
-| Resources → Workspace Explorer: DegradedState | `app/(app)/resources/page.tsx` | Blocked by MCP Baseline |
 | Full `go test ./...` root-package conflict | `core/probe.go`, `core/probe_test.go` | Medium |
 
 ---
@@ -411,8 +427,8 @@ MCP verification:   `go test ./internal/mcp/ -count=1` PASSES
    - Add seam/stubs for `ClientPool.Connect/ReconnectAll/ShutdownAll` to validate status updates and degraded behavior without real subprocesses.
 4. Harden API semantics consistency:
    - Ensure not-found cases across MCP handlers/toolset handlers map to `404` consistently (currently update-path is corrected).
-5. Update `/resources` Workspace Explorer out of DegradedState:
-   - Wire filesystem MCP-backed file browsing and actions into the tab.
+5. Expand Workspace Explorer capabilities:
+   - Add inline save for edited file previews and add basic delete/rename flows with governed safety prompts.
 
 ## Decision Log (Locked)
 

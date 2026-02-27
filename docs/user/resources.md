@@ -14,7 +14,7 @@ Current tabs:
 |-----|---------|
 | Brains | Provider configuration and health |
 | MCP Tools | Installed MCP servers and tool capability visibility |
-| Workspace Explorer | Workspace file visibility (currently partial/degraded while baseline completes) |
+| Workspace Explorer | Filesystem MCP-backed browsing and file operations inside workspace boundary |
 | Capabilities | Agent catalogue/templates |
 
 ---
@@ -51,10 +51,18 @@ Operators should be able to determine "what the system can access" directly from
 
 ## Workspace Explorer
 
-Workspace Explorer is present but still in staged rollout.
-Some file-browser features remain under MCP baseline completion work.
+Workspace Explorer now uses the `filesystem` MCP server directly from Resources.
 
-Even when explorer is partial, agents can still use workspace file tools through Workspace chat.
+Supported operator actions:
+- browse directories (`list_dir`)
+- read files (`read_file`)
+- create directories (`create_dir`)
+- write files (`write_file`)
+
+Operational behavior:
+- if `filesystem` is not installed or not connected, explorer shows actionable recovery controls
+- all tool calls run through the same API request contract used by other resource channels
+- workspace boundaries still apply (sandboxed filesystem rules)
 
 ---
 
@@ -78,4 +86,3 @@ Use `Resources` to answer these operator questions quickly:
 2. Which tools are accessible right now?
 3. Are workspace file operations available?
 4. Which capability templates are available for wiring?
-
