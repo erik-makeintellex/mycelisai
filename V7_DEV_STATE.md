@@ -49,7 +49,7 @@ Execution policy:
 
 Gate A baseline progress:
 - Added/updated UI tests for `StatusDrawer`, `DegradedModeBanner`, `CouncilCallErrorCard`, `MissionControlChat` error UX, `ShellLayout` status action wiring, and Automations landing expectations.
-- Verified targeted gate suite: `48` tests passing across dashboard/pages/shell/teams/automations subsets.
+- Verified targeted gate suite: `50` tests passing across dashboard/pages/shell/teams/automations subsets.
 - Added Playwright Gate A operational UX suite scaffold:
   - `interface/e2e/specs/v7-operational-ux.spec.ts` (6 scenarios: degraded banner lifecycle, status drawer access, council reroute via Soma, automations actionable hub, system quick checks, focus mode toggle).
   - Run attempt currently blocked locally until Playwright browsers are installed (`npx playwright install`).
@@ -84,11 +84,13 @@ Implemented Sprint 0 scaffolds for guided team instantiation and readiness gatin
 | Team instantiation contract models (`TeamProfileTemplate`, `ReadinessSnapshot`, I/O envelope) | `interface/lib/workflowContracts.ts` |
 | Capability readiness gate UI | `interface/components/automations/CapabilityReadinessGateCard.tsx` |
 | Guided wizard scaffold (Objective -> Profile -> Readiness -> Launch) | `interface/components/automations/TeamInstantiationWizard.tsx` |
+| NATS route exposure picker (Basic/Guided/Expert + rollback) | `interface/components/automations/RouteTemplatePicker.tsx` |
 | Wizard integration into Automations hub | `interface/components/automations/AutomationHub.tsx` |
 | Wizard tests | `interface/__tests__/automations/TeamInstantiationWizard.test.tsx` |
+| Route template tests | `interface/__tests__/automations/RouteTemplatePicker.test.tsx` |
 
 Verification run:
-- `cd interface && npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/teams/TeamsPage.test.tsx __tests__/pages/SystemPage.test.tsx` -> pass (48 tests)
+- `cd interface && npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/automations/RouteTemplatePicker.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/teams/TeamsPage.test.tsx __tests__/pages/SystemPage.test.tsx` -> pass (50 tests)
 - `cd interface && npm run build` -> pass
 - `cd core && go test ./internal/mcp/ -count=1` -> pass
 - `cd core && go test ./internal/server/ -run TestHandleMCP -count=1` -> pass
@@ -424,7 +426,7 @@ ZoneA_Rail
 
 ```
 next build:         PASSES (all routes)
-vitest:             Gate A + Sprint 0 suite passes (48 tests)
+vitest:             Gate A + Sprint 0 suite passes (50 tests)
 Go build:           go build ./... PASSES (includes triggers package)
 Go tests:           188+ tests pass across 16 packages
                     Migrations 023-029 must be applied for full test coverage

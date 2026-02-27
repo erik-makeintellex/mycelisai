@@ -56,8 +56,8 @@ Owner team: `Team Sentinel`
 ## Evidence
 
 - Unit/Integration:
-  - `cd interface; npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/SystemPage.test.tsx __tests__/teams/TeamsPage.test.tsx --reporter=dot`
-  - Result: pass (`48` tests)
+  - `cd interface; npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/automations/RouteTemplatePicker.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/SystemPage.test.tsx __tests__/teams/TeamsPage.test.tsx --reporter=dot`
+  - Result: pass (`50` tests)
 - E2E:
   - Gate A Playwright suite scaffolded: `interface/e2e/specs/v7-operational-ux.spec.ts` (6 tests)
   - Parse/list check completed:
