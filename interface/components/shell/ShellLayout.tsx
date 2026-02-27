@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { ZoneA } from "./ZoneA_Rail";
 import { ZoneB } from "./ZoneB_Workspace";
 import { ZoneD } from "./ZoneD_Decision";
@@ -15,6 +15,16 @@ interface ShellLayoutProps {
 
 export function ShellLayout({ children }: ShellLayoutProps) {
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
+    const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
+
+    useEffect(() => {
+        fetchServicesStatus();
+        const interval = setInterval(() => {
+            fetchServicesStatus();
+        }, 6000);
+        return () => clearInterval(interval);
+    }, [fetchServicesStatus]);
+
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-cortex-bg text-cortex-text-main font-sans selection:bg-cortex-primary/30 selection:text-white">
 

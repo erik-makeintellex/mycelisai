@@ -81,6 +81,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Causal Chain View (V7, backend ready):** Parent run → event → trigger → child run traversal. `GET /api/v1/runs/{id}/chain` handler complete; UI pending.
 - **Mode Ribbon:** Always-visible status bar showing current execution mode, active brain (with local/remote badge), and governance state.
 - **Operational Reliability UX (V7 Gate A):** Global `DegradedModeBanner`, global `StatusDrawer` (opened from Mode Ribbon or floating status action), structured `CouncilCallErrorCard` with retry/reroute/copy diagnostics actions, Workspace Focus Mode (`F` key), and `SystemQuickChecks` panel on `/system`.
+- **Standardized Resource API Contract:** Resource surfaces normalize both raw and enveloped payloads (`{ ok, data, error }`) through shared contract helpers/store actions, so new AI resource channels can be added without per-screen parsing drift.
 - **Proposal Blocks:** Inline chat cards for mutation-gated actions — shows intent, tools, risk level, confirm/cancel buttons wired to CE-1 confirm token flow.
 - **Orchestration Inspector:** Expandable audit panel showing template ID, intent proof, confirm token, and execution mode for each chat response.
 - **Visual Protocol:** Midnight Cortex theme — `cortex-bg #09090b`, `cortex-primary #06b6d4` (cyan). Zero `bg-white` in new code. Base font-size 17px for rem-proportional readability across all Tailwind utility classes.

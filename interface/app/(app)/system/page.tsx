@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Activity, Server, Database, BrainCircuit, Bug, Loader2, LayoutGrid, CheckCircle, XCircle, AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
 import MatrixGrid from "@/components/matrix/MatrixGrid";
 import SystemQuickChecks from "@/components/system/SystemQuickChecks";
+import { useCortexStore } from "@/store/useCortexStore";
 
 type TabId = "health" | "nats" | "database" | "services" | "matrix" | "debug";
 const VALID_TABS: TabId[] = ["health", "nats", "database", "services", "matrix", "debug"];
@@ -365,27 +366,20 @@ function ServiceCard({ svc }: { svc: ServiceStatus }) {
 }
 
 function ServicesTab() {
-    const [services, setServices] = React.useState<ServiceStatus[]>([]);
-    const [loading, setLoading] = React.useState(true);
-    const [lastChecked, setLastChecked] = React.useState<Date | null>(null);
-
-    const fetchStatus = React.useCallback(async () => {
-        try {
-            const res = await fetch("/api/v1/services/status");
-            if (res.ok) {
-                const body = await res.json();
-                setServices(body.data ?? []);
-                setLastChecked(new Date());
-            }
-        } catch { /* offline */ }
-        finally { setLoading(false); }
-    }, []);
+    const services = useCortexStore((s) => s.servicesStatus as ServiceStatus[]);
+    const loading = useCortexStore((s) => s.isFetchingServicesStatus);
+    const lastCheckedRaw = useCortexStore((s) => s.servicesStatusUpdatedAt);
+    const fetchStatus = useCortexStore((s) => s.fetchServicesStatus);
 
     React.useEffect(() => {
         fetchStatus();
-        const interval = setInterval(fetchStatus, 10000);
+        const interval = setInterval(() => {
+            fetchStatus();
+        }, 10000);
         return () => clearInterval(interval);
     }, [fetchStatus]);
+
+    const lastChecked = lastCheckedRaw ? new Date(lastCheckedRaw) : null;
 
     const online = services.filter((s) => s.status === "online").length;
     const total = services.length;

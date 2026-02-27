@@ -906,3 +906,58 @@ Not:
 - A swarm toy
 - A dark dashboard
 - An experimental demo
+
+---
+
+# PART VIII - STANDARDIZED AI RESOURCE API CONTRACT
+## “Channel-safe expansion without UI parsing drift”
+
+All AI resource implementations (existing and new) must follow a shared contract model so new transaction channels can be added without reworking every surface.
+
+## 1. Canonical Payload Shape
+
+Preferred backend envelope:
+
+```json
+{
+  "ok": true,
+  "data": { "...": "..." },
+  "error": ""
+}
+```
+
+Backward-compatible acceptance:
+- UI must also tolerate raw payloads (`data` omitted) for legacy endpoints.
+- Normalization is handled at shared contract/store layers, not route components.
+
+## 2. Frontend Normalization Rule
+
+Required flow:
+1. Surface/store fetches endpoint.
+2. Shared contract helper normalizes envelope/raw.
+3. Store writes typed state.
+4. Components render from typed state only.
+
+No component-level ad hoc JSON-shape branching for the same endpoint class.
+
+## 3. Channel Expansion Contract
+
+When adding a new transaction channel (voice, hardware, RAG state, external buses):
+- define request/response DTOs in shared contract module first
+- map channel status into global operational state (healthy/degraded/failure/offline/info)
+- expose diagnostics and retry actions through existing degraded/status primitives
+- add tests at Unit + Integration + E2E for channel-specific degraded/recovery paths
+
+## 4. Operational Health Source-of-Truth
+
+Global health indicators must consume centralized store status state.
+Direct per-component polling of health endpoints is non-compliant unless explicitly approved in a decision log.
+
+## 5. Delivery Gate for New Channels
+
+No channel is considered production-ready until:
+1. API contract is documented
+2. shared normalization path is implemented
+3. degraded/error UX follows failure template
+4. observability links to run/status diagnostics are present
+5. regression tests prove degraded -> recovery lifecycle
