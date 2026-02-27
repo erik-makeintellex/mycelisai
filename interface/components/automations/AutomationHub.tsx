@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
-import { ArrowRight, Cable, ShieldCheck, Users, Clock3 } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowRight, Cable, ShieldCheck, Users, Clock3, Sparkles } from "lucide-react";
+import TeamInstantiationWizard from "@/components/automations/TeamInstantiationWizard";
 
 function ActionCard({
     title,
@@ -39,6 +40,8 @@ export default function AutomationHub({
     openTab: (tab: "triggers" | "approvals" | "teams" | "wiring") => void;
     advancedMode: boolean;
 }) {
+    const [showWizard, setShowWizard] = useState(false);
+
     return (
         <div className="h-full p-6 overflow-y-auto">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -70,6 +73,26 @@ export default function AutomationHub({
                             onView={() => openTab("wiring")}
                         />
                     )}
+                    <div className="rounded-xl border border-cortex-primary/25 bg-cortex-primary/10 p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                            <div>
+                                <h3 className="text-sm font-semibold text-cortex-text-main flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-cortex-primary" />
+                                    Sprint 0 Team Instantiation
+                                </h3>
+                                <p className="text-xs text-cortex-text-muted mt-1">
+                                    Scaffold the guided objective {"->"} profile {"->"} readiness {"->"} launch workflow.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowWizard((s) => !s)}
+                                className="px-2.5 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10"
+                            >
+                                {showWizard ? "Hide Wizard" : "Open Wizard"}
+                            </button>
+                        </div>
+                        {showWizard ? <TeamInstantiationWizard openTab={openTab} /> : null}
+                    </div>
                 </section>
 
                 <section className="space-y-4">
@@ -103,4 +126,3 @@ export default function AutomationHub({
         </div>
     );
 }
-
