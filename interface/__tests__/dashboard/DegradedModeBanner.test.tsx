@@ -47,6 +47,8 @@ describe("DegradedModeBanner", () => {
             missionChatError: "Council timeout",
             isStreamConnected: false,
             councilTarget: "council-architect",
+            disconnectStream: vi.fn(),
+            initializeStream: vi.fn(),
         });
 
         mockFetch
@@ -80,6 +82,7 @@ describe("DegradedModeBanner", () => {
         await waitFor(() => {
             expect(mockFetch.mock.calls.length).toBeGreaterThan(callsBeforeRetry);
         });
+        expect(useCortexStore.getState().disconnectStream).toHaveBeenCalled();
+        expect(useCortexStore.getState().initializeStream).toHaveBeenCalledWith(true);
     });
 });
-

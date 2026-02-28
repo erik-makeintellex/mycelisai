@@ -682,7 +682,7 @@ export interface CortexState {
     submitIntent: (text: string) => Promise<void>;
     instantiateMission: () => Promise<void>;
     fetchMissions: () => Promise<void>;
-    initializeStream: () => void;
+    initializeStream: (force?: boolean) => void;
     disconnectStream: () => void;
     enterSquadRoom: (teamId: string) => void;
     exitSquadRoom: () => void;
@@ -1240,8 +1240,12 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         }
     },
 
-    initializeStream: () => {
-        if (_eventSource) return; // Already connected
+    initializeStream: (force = false) => {
+        if (_eventSource) {
+            if (!force) return; // Already connected
+            _eventSource.close();
+            _eventSource = null;
+        }
 
         const es = new EventSource('/api/v1/stream');
 

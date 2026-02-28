@@ -14,6 +14,7 @@ export default function DegradedModeBanner() {
     const fetchCouncilMembers = useCortexStore((s) => s.fetchCouncilMembers);
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
     const initializeStream = useCortexStore((s) => s.initializeStream);
+    const disconnectStream = useCortexStore((s) => s.disconnectStream);
     const fetchMissions = useCortexStore((s) => s.fetchMissions);
 
     const retryAll = async () => {
@@ -21,7 +22,8 @@ export default function DegradedModeBanner() {
         fetchCouncilMembers();
         fetchMissions();
         if (!isStreamConnected) {
-            initializeStream();
+            disconnectStream();
+            initializeStream(true);
         }
     };
 

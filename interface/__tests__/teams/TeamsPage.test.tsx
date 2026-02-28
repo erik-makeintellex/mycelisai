@@ -1,19 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { mockFetch } from '../setup';
 
 // Mock child components to isolate TeamsPage logic
-vi.mock('@/components/teams/TeamCard', () => ({
-    __esModule: true,
-    default: ({ team, onClick, isSelected }: any) => (
-        <div data-testid={`team-card-${team.id}`} onClick={onClick}>
-            <span>{team.name}</span>
-            <span>{team.type}</span>
-            {isSelected && <span data-testid="selected-marker">selected</span>}
-        </div>
-    ),
-}));
-
 vi.mock('@/components/teams/TeamDetailDrawer', () => ({
     __esModule: true,
     default: ({ team, onClose }: any) => (
@@ -80,8 +68,8 @@ describe('TeamsPage', () => {
         render(<TeamsPage />);
 
         // Both team cards should be rendered
-        expect(screen.getByTestId('team-card-team-alpha')).toBeDefined();
-        expect(screen.getByTestId('team-card-team-bravo')).toBeDefined();
+        expect(screen.getByText('Alpha Squad')).toBeDefined();
+        expect(screen.getByText('Bravo Ops')).toBeDefined();
 
         // Header should show team count
         expect(screen.getByText(/2 teams/)).toBeDefined();
@@ -98,16 +86,16 @@ describe('TeamsPage', () => {
         render(<TeamsPage />);
 
         // Initially shows all teams
-        expect(screen.getByTestId('team-card-team-alpha')).toBeDefined();
-        expect(screen.getByTestId('team-card-team-bravo')).toBeDefined();
+        expect(screen.getByText('Alpha Squad')).toBeDefined();
+        expect(screen.getByText('Bravo Ops')).toBeDefined();
 
         // Change filter to "standing"
         const filterSelect = screen.getByDisplayValue('All Teams');
         fireEvent.change(filterSelect, { target: { value: 'standing' } });
 
         // Only standing team should remain
-        expect(screen.getByTestId('team-card-team-alpha')).toBeDefined();
-        expect(screen.queryByTestId('team-card-team-bravo')).toBeNull();
+        expect(screen.getByText('Alpha Squad')).toBeDefined();
+        expect(screen.queryByText('Bravo Ops')).toBeNull();
     });
 
     it('clicking a team card opens the detail drawer', () => {
@@ -123,11 +111,24 @@ describe('TeamsPage', () => {
         expect(screen.queryByTestId('team-detail-drawer')).toBeNull();
 
         // Click on team-alpha card
-        fireEvent.click(screen.getByTestId('team-card-team-alpha'));
+        fireEvent.click(screen.getByRole('button', { name: /Alpha Squad/i }));
 
         // The store's selectTeam should set the selectedTeamId + open the drawer
         // Since we're using real store actions, check that the drawer opens
         expect(screen.getByTestId('team-detail-drawer')).toBeDefined();
         expect(screen.getByText('Drawer: Alpha Squad')).toBeDefined();
+    });
+
+    it('renders team quick action links', () => {
+        useCortexStore.setState({
+            teamsDetail: mockTeams,
+        });
+
+        render(<TeamsPage />);
+
+        expect(screen.getByTestId('team-team-alpha-open-chat')).toBeDefined();
+        expect(screen.getByTestId('team-team-alpha-view-runs')).toBeDefined();
+        expect(screen.getByTestId('team-team-alpha-view-wiring')).toBeDefined();
+        expect(screen.getByTestId('team-team-alpha-view-logs')).toBeDefined();
     });
 });

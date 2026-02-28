@@ -1406,6 +1406,34 @@ cd core && go test ./internal/swarm/ -run TestScoped -count=1
 cd interface && npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/automations/RouteTemplatePicker.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/SystemPage.test.tsx __tests__/teams/TeamsPage.test.tsx  # Gate A + Sprint 0 baseline (50 pass on 2026-02-27)
 ```
 
+If Playwright reports a missing browser executable, run: `cd interface && npx playwright install chromium`.
+
+### Remote GUI Agent Preflight (Required)
+
+When using browser agents running outside this host, do **not** assume `http://localhost:3000` targets the same runtime. Use the host LAN URL (example: `http://192.168.50.156:3000`) and run this preflight before functional assertions:
+
+```js
+(async () => {
+  const rpc = await fetch('/api/rpc/consult_council').then(r => r.status);
+  const members = await fetch('/api/v1/council/members').then(r => r.status);
+  const html = await fetch('/automations', { cache: 'no-store' }).then(r => r.text());
+  return {
+    rpcStatus: rpc,
+    membersStatus: members,
+    hasBaseline: html.includes('automations-hub-baseline'),
+    hasWizard: html.includes('open-instantiation-wizard')
+  };
+})().then(console.log).catch(console.error);
+```
+
+Expected values:
+- `rpcStatus: 404`
+- `membersStatus: 200`
+- `hasBaseline: true`
+- `hasWizard: true`
+
+If preflight fails, mark the run `INVALID_ENV` and stop. Do not file product regressions from that run.
+
 > Note: `cd core && go test ./... -count=1` currently fails due to an existing root-package conflict (`probe.go` and `probe_test.go` both declare `main`).
 
 **Go test breakdown (V7 additions):**

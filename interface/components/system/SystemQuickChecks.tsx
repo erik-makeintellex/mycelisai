@@ -34,6 +34,7 @@ export default function SystemQuickChecks() {
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
 
     const [checkedAt, setCheckedAt] = useState<Record<string, Date | undefined>>({});
+    const [manualStatus, setManualStatus] = useState<Record<string, CheckStatus | undefined>>({});
     const [busy, setBusy] = useState<string | null>(null);
     const [copied, setCopied] = useState<string | null>(null);
 
@@ -50,22 +51,51 @@ export default function SystemQuickChecks() {
             return "unknown";
         };
         return [
-            { id: "nats", label: "NATS connected", status: mapStatus("nats"), checkedAt: checkedAt.nats },
-            { id: "postgres", label: "Database reachable", status: mapStatus("postgres"), checkedAt: checkedAt.postgres },
-            { id: "sse", label: "SSE stream live", status: isStreamConnected ? "healthy" : "failure", checkedAt: checkedAt.sse },
-            { id: "triggers", label: "Trigger engine active", status: mapStatus("reactive"), checkedAt: checkedAt.triggers },
-            { id: "scheduler", label: "Scheduler state", status: "degraded", checkedAt: checkedAt.scheduler },
+            { id: "nats", label: "NATS connected", status: manualStatus.nats ?? mapStatus("nats"), checkedAt: checkedAt.nats },
+            { id: "postgres", label: "Database reachable", status: manualStatus.postgres ?? mapStatus("postgres"), checkedAt: checkedAt.postgres },
+            { id: "sse", label: "SSE stream live", status: manualStatus.sse ?? (isStreamConnected ? "healthy" : "failure"), checkedAt: checkedAt.sse },
+            { id: "triggers", label: "Trigger engine active", status: manualStatus.triggers ?? mapStatus("reactive"), checkedAt: checkedAt.triggers },
+            { id: "scheduler", label: "Scheduler state", status: manualStatus.scheduler ?? "degraded", checkedAt: checkedAt.scheduler },
         ];
-    }, [statusByService, checkedAt, isStreamConnected]);
+    }, [statusByService, checkedAt, manualStatus, isStreamConnected]);
 
     const runCheck = useCallback(async (id: string) => {
         setBusy(id);
         try {
+            if (id === "sse") {
+                const sseStatus = await new Promise<CheckStatus>((resolve) => {
+                    let settled = false;
+                    let source: EventSource | null = null;
+                    const finish = (status: CheckStatus) => {
+                        if (settled) return;
+                        settled = true;
+                        clearTimeout(timeout);
+                        if (source) source.close();
+                        resolve(status);
+                    };
+                    const timeout = setTimeout(() => finish("failure"), 5000);
+                    try {
+                        source = new EventSource("/api/v1/stream");
+                        source.onopen = () => finish("healthy");
+                        source.onerror = () => finish("failure");
+                    } catch {
+                        finish("failure");
+                    }
+                });
+                setManualStatus((prev) => ({ ...prev, sse: sseStatus }));
+                setCheckedAt((prev) => ({ ...prev, sse: new Date() }));
+                return;
+            }
+
             if (id !== "scheduler") {
                 await fetchServicesStatus();
+                setManualStatus((prev) => ({ ...prev, [id]: undefined }));
             }
             setCheckedAt((prev) => ({ ...prev, [id]: new Date() }));
         } catch {
+            if (id === "sse") {
+                setManualStatus((prev) => ({ ...prev, sse: "failure" }));
+            }
             setCheckedAt((prev) => ({ ...prev, [id]: new Date() }));
         } finally {
             setBusy(null);
@@ -101,7 +131,11 @@ export default function SystemQuickChecks() {
             </div>
             <div className="space-y-2">
                 {checks.map((check) => (
-                    <div key={check.id} className={`rounded-md border px-3 py-2 ${statusBadge(check.status)}`}>
+                    <div
+                        key={check.id}
+                        data-testid={`quick-check-${check.id}`}
+                        className={`rounded-md border px-3 py-2 ${statusBadge(check.status)}`}
+                    >
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                                 {statusIcon(check.status)}
@@ -109,6 +143,7 @@ export default function SystemQuickChecks() {
                             </div>
                             <button
                                 onClick={() => runCheck(check.id)}
+                                data-testid={`quick-check-${check.id}-run`}
                                 className="px-2 py-1 rounded border border-cortex-border text-[10px] font-mono hover:bg-cortex-border flex items-center gap-1"
                             >
                                 <RefreshCw className={`w-3 h-3 ${busy === check.id || isFetchingServicesStatus ? "animate-spin" : ""}`} />
@@ -116,6 +151,7 @@ export default function SystemQuickChecks() {
                             </button>
                             <button
                                 onClick={() => copySnippet(check)}
+                                data-testid={`quick-check-${check.id}-copy`}
                                 className="px-2 py-1 rounded border border-cortex-border text-[10px] font-mono hover:bg-cortex-border flex items-center gap-1"
                             >
                                 {copied === check.id ? <Check className="w-3 h-3 text-cortex-success" /> : <Copy className="w-3 h-3" />}

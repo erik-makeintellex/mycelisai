@@ -55,6 +55,17 @@
   code, pre, kbd, samp {
     font-family: var(--font-mono);
   }
+
+  /* Readability safety net: legacy micro text utilities are too small in ops UIs. */
+  .text-\[9px\] {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+  }
+
+  .text-\[10px\] {
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+  }
 }
 
 @layer components {

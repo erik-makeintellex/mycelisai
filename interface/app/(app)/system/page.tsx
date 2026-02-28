@@ -135,25 +135,27 @@ function EventHealthTab() {
 }
 
 function NatsStatusTab() {
-    const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+    const services = useCortexStore((s) => s.servicesStatus as ServiceStatus[]);
+    const loading = useCortexStore((s) => s.isFetchingServicesStatus);
+    const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
 
     useEffect(() => {
-        const check = async () => {
-            try {
-                const res = await fetch('/api/v1/healthz');
-                if (res.ok) {
-                    setStatus('connected');
-                } else {
-                    setStatus('disconnected');
-                }
-            } catch {
-                setStatus('disconnected');
-            }
-        };
-        check();
-        const interval = setInterval(check, 10000);
+        fetchServicesStatus();
+        const interval = setInterval(() => {
+            fetchServicesStatus();
+        }, 10000);
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchServicesStatus]);
+
+    const nats = services.find((s) => s.name === 'nats');
+    const status: 'checking' | 'connected' | 'degraded' | 'disconnected' =
+        loading && !nats
+            ? 'checking'
+            : nats?.status === 'online'
+                ? 'connected'
+                : nats?.status === 'degraded'
+                    ? 'degraded'
+                    : 'disconnected';
 
     return (
         <div className="p-6 max-w-4xl mx-auto">
@@ -165,9 +167,18 @@ function NatsStatusTab() {
                 <div className="flex items-center gap-2">
                     {status === 'checking' && <Loader2 size={14} className="text-cortex-text-muted animate-spin" />}
                     {status === 'connected' && <span className="w-2 h-2 rounded-full bg-cortex-success" />}
+                    {status === 'degraded' && <span className="w-2 h-2 rounded-full bg-cortex-warning animate-pulse" />}
                     {status === 'disconnected' && <span className="w-2 h-2 rounded-full bg-cortex-danger" />}
-                    <span className={`text-sm font-mono ${status === 'connected' ? 'text-cortex-success' : status === 'disconnected' ? 'text-cortex-danger' : 'text-cortex-text-muted'}`}>
-                        {status === 'checking' ? 'Checking...' : status === 'connected' ? 'Connected' : 'Disconnected'}
+                    <span className={`text-sm font-mono ${
+                        status === 'connected'
+                            ? 'text-cortex-success'
+                            : status === 'degraded'
+                                ? 'text-cortex-warning'
+                                : status === 'disconnected'
+                                    ? 'text-cortex-danger'
+                                    : 'text-cortex-text-muted'
+                    }`}>
+                        {status === 'checking' ? 'Checking...' : status === 'connected' ? 'Connected' : status === 'degraded' ? 'Degraded' : 'Disconnected'}
                     </span>
                 </div>
                 {status === 'disconnected' && (

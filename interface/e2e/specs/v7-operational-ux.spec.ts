@@ -100,7 +100,7 @@ test.describe('V7 Operational UX Gate A', () => {
         await expect(page.getByRole('dialog', { name: 'System status drawer' })).toBeVisible();
         await expect(page.getByText('System Status')).toBeVisible();
 
-        await page.getByLabel('Close status drawer').click();
+        await page.getByRole('button', { name: 'Close status drawer', exact: true }).click();
         await expect(page.getByRole('dialog', { name: 'System status drawer' })).toBeHidden();
     });
 
@@ -179,7 +179,7 @@ test.describe('V7 Operational UX Gate A', () => {
         await input.press('Enter');
 
         await expect(page.getByText('Council Call Failed')).toBeVisible();
-        await page.getByRole('button', { name: 'Switch to Soma' }).click();
+        await page.getByTestId('mission-chat').getByRole('button', { name: 'Switch to Soma' }).click();
 
         await expect(page.getByText('Recovered via Soma')).toBeVisible();
         expect(adminCalls).toBeGreaterThan(0);
@@ -229,8 +229,8 @@ test.describe('V7 Operational UX Gate A', () => {
 
         await expect(page.getByText('Quick Checks')).toBeVisible();
 
-        const natsRow = page.locator('div').filter({ hasText: 'NATS connected' }).first();
-        await natsRow.getByRole('button', { name: 'Run Check' }).click();
+        const natsRow = page.getByTestId('quick-check-nats');
+        await page.getByTestId('quick-check-nats-run').click();
         await expect(natsRow).toContainText('Last checked:');
         await expect(natsRow).not.toContainText('never');
     });
@@ -266,4 +266,3 @@ test.describe('V7 Operational UX Gate A', () => {
         expect(page.url()).toBe(before);
     });
 });
-

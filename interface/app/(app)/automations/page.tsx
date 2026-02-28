@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ScrollText, Cable, Users, ShieldCheck, Clock } from "lucide-react";
@@ -42,13 +42,16 @@ export default function AutomationsPage() {
 function AutomationsContent() {
     const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);
+    const [isHydrated, setIsHydrated] = useState(false);
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
+    const effectiveAdvancedMode = isHydrated ? advancedMode : false;
     const tabParam = searchParams.get("tab") as TabId | null;
     const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "active";
-    const [activeTab, setActiveTab] = useState<TabId>(
-        initialTab === "wiring" && !advancedMode ? "active" : initialTab
-    );
+    const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 
-    const effectiveTab = activeTab === "wiring" && !advancedMode ? "active" : activeTab;
+    const effectiveTab = activeTab === "wiring" && !effectiveAdvancedMode ? "active" : activeTab;
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg">
@@ -70,7 +73,7 @@ function AutomationsContent() {
                     <TabButton active={effectiveTab === "triggers"} onClick={() => setActiveTab("triggers")} icon={<ScrollText size={14} />} label="Trigger Rules" />
                     <TabButton active={effectiveTab === "approvals"} onClick={() => setActiveTab("approvals")} icon={<ShieldCheck size={14} />} label="Approvals" />
                     <TabButton active={effectiveTab === "teams"} onClick={() => setActiveTab("teams")} icon={<Users size={14} />} label="Teams" />
-                    {advancedMode && (
+                    {effectiveAdvancedMode && (
                         <TabButton active={effectiveTab === "wiring"} onClick={() => setActiveTab("wiring")} icon={<Cable size={14} />} label="Neural Wiring" />
                     )}
                 </div>
@@ -79,7 +82,7 @@ function AutomationsContent() {
             <div className="flex-1 overflow-hidden">
                 {effectiveTab === "active" && (
                     <AutomationHub
-                        advancedMode={advancedMode}
+                        advancedMode={effectiveAdvancedMode}
                         openTab={(tab) => setActiveTab(tab)}
                     />
                 )}
