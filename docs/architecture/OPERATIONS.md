@@ -357,9 +357,33 @@ Trunk-based development with ephemeral feature branches.
 | Chore | `chore/` | `chore/infra-reset` |
 | Docs | `docs/` | `docs/api-spec` |
 
-1. Branch off `main`
-2. Commit often (conventional commits)
-3. Merge via squash
+Branch rules:
+1. Start every non-hotfix change from a fresh branch off `main`.
+2. Keep branch scope single-purpose (one feature/fix lane per branch).
+3. Merge via squash after tests/docs are complete.
+
+Commit rules (required):
+1. Use conventional commit subject lines: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`.
+2. Add commit commentary in the body for non-trivial changes:
+   - `Why:` reason for change
+   - `What:` key files/surfaces changed
+   - `Validation:` exact tests/checks run
+3. Do not commit without at least one validation command unless the change is docs-only.
+
+Commit template:
+
+```text
+feat(scope): short summary
+
+Why:
+- ...
+
+What:
+- ...
+
+Validation:
+- ...
+```
 
 ---
 
