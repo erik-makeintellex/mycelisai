@@ -71,9 +71,19 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
     const summary = team.mission_intent || `${team.role} team handling ${team.type} workflows`;
 
+    const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+        }
+    };
+
     return (
-        <button
+        <div
+            role="button"
+            tabIndex={0}
             onClick={onClick}
+            onKeyDown={onKeyDown}
             className={`w-full text-left rounded-xl border-l-4 ${cfg.color} border border-cortex-border bg-cortex-surface p-4 transition-all duration-200 hover:bg-cortex-bg hover:border-cortex-text-muted/50 ${isSelected ? 'ring-1 ring-cortex-primary' : ''}`}
         >
             {/* Header row */}
@@ -143,23 +153,23 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
             )}
 
             <div className="pt-2 mt-2 border-t border-cortex-border/40 grid grid-cols-2 gap-1">
-                <a href="/dashboard" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1">
+                <a href="/dashboard" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-open-chat`}>
                     <MessageSquare className="w-3 h-3" />
                     Open chat
                 </a>
-                <a href="/runs" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1">
+                <a href="/runs" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-runs`}>
                     <Route className="w-3 h-3" />
                     View runs
                 </a>
-                <a href="/automations?tab=wiring" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1">
+                <a href="/automations?tab=wiring" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-wiring`}>
                     <Network className="w-3 h-3" />
                     View wiring
                 </a>
-                <a href="/system?tab=debug" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1">
+                <a href="/system?tab=debug" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-logs`}>
                     <ScrollText className="w-3 h-3" />
                     View logs
                 </a>
             </div>
-        </button>
+        </div>
     );
 }

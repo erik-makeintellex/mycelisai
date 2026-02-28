@@ -103,6 +103,7 @@ describe('Automations Page (V7)', () => {
 
     it('defaults to Active Automations tab', async () => {
         await act(async () => { render(<AutomationsPage />); });
+        expect(screen.getByTestId('automations-hub-baseline')).toBeDefined();
         expect(screen.getByText('Set Up Your First Automation Chain')).toBeDefined();
     });
 

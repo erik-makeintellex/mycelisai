@@ -46,6 +46,7 @@ export default function AutomationHub({
         <div className="h-full p-6 overflow-y-auto">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <section className="space-y-4">
+                    <div data-testid="automations-hub-baseline" className="sr-only">automations-hub-baseline</div>
                     <h2 className="text-sm font-mono font-bold uppercase tracking-wide text-cortex-text-main">Available Now</h2>
                     <ActionCard
                         title="Trigger Rules"
@@ -86,6 +87,7 @@ export default function AutomationHub({
                             </div>
                             <button
                                 onClick={() => setShowWizard((s) => !s)}
+                                data-testid="open-instantiation-wizard"
                                 className="px-2.5 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10"
                             >
                                 {showWizard ? "Hide Wizard" : "Open Wizard"}

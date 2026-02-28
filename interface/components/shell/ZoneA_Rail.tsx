@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Network, Settings, Home, Workflow, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen } from 'lucide-react';
@@ -8,6 +9,13 @@ import { useCortexStore } from '@/store/useCortexStore';
 export function ZoneA() {
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
+
+    const effectiveAdvancedMode = isHydrated ? advancedMode : false;
 
     return (
         <div className="w-16 md:w-64 bg-cortex-surface text-cortex-text-main flex flex-col border-r border-cortex-border z-50 flex-shrink-0 transition-all duration-300">
@@ -28,7 +36,7 @@ export function ZoneA() {
                 <NavItem href="/resources" icon={FolderCog} label="Resources" />
                 <NavItem href="/memory" icon={Brain} label="Memory" />
                 <NavItem href="/docs" icon={BookOpen} label="Docs" />
-                {advancedMode && (
+                {effectiveAdvancedMode && (
                     <NavItem href="/system" icon={Activity} label="System" />
                 )}
             </div>
@@ -38,15 +46,15 @@ export function ZoneA() {
                 <button
                     onClick={toggleAdvancedMode}
                     className="flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg"
-                    title={advancedMode ? 'Hide advanced panels' : 'Show advanced panels'}
+                    title={effectiveAdvancedMode ? 'Hide advanced panels' : 'Show advanced panels'}
                 >
-                    {advancedMode ? (
+                    {effectiveAdvancedMode ? (
                         <EyeOff className="w-5 h-5 flex-shrink-0" />
                     ) : (
                         <Eye className="w-5 h-5 flex-shrink-0" />
                     )}
                     <span className="hidden md:block ml-3 text-sm font-medium">
-                        {advancedMode ? 'Advanced: On' : 'Advanced: Off'}
+                        {effectiveAdvancedMode ? 'Advanced: On' : 'Advanced: Off'}
                     </span>
                 </button>
                 <NavItem href="/settings" icon={Settings} label="Settings" />
