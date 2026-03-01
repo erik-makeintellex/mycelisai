@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-02-27
+> **Updated:** 2026-03-01
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
@@ -40,6 +40,15 @@ Parallelized UI delivery is now explicitly engaged with lane-level playbooks and
 | Lane Q playbook (QA reliability/regression) | `docs/ui-delivery/LANE_Q_QA_REGRESSION.md` |
 | Canonical UI framework v2.0 (I/O contract, state transitions, component templates, gate checklists) | `docs/UI_FRAMEWORK_V7.md` |
 | UI workflow instantiation + bus plan (execution authority) | `docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md` |
+| Soma team + channel architecture (inter-team/process/MCP/memory contracts) | `docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md` |
+| MCP service configuration standard (local-first onboarding + remote exception controls) | `docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md` |
+| Universal action interface architecture (MCP/OpenAPI/Python + dynamic service APIs) | `docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md` |
+| Actualization architecture beyond MCP (OpenClaw-inspired gateway patterns + A2A/ACP integration posture) | `docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md` |
+| Team lifecycle profile architecture updated (ephemeral/persistent/auto + schedule repeat + low-level IoT path) | `docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md` |
+| Secure gateway + remote actuation security profile (self-hosted default + remote hardening gates) | `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
+| Hardware interface API + direct channel architecture (common protocol support + IoT pathways) | `docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md` |
+| Soma symbiote growth + host actuation architecture (thought profiles, learning loop, localhost execution path) | `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` |
+| Integrated timeline alignment for architecture expansion (Wave 0-4) | `docs/V7_IMPLEMENTATION_PLAN.md` |
 
 Execution policy:
 - Lanes run in parallel.
@@ -112,6 +121,18 @@ Verification run:
 - `cd interface && npm run build` -> pass
 - `cd interface && npx vitest run __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/ResourcesPage.test.tsx __tests__/pages/SystemPage.test.tsx` -> pass (18 tests)
 - `cd interface && npx vitest run __tests__/store/useCortexStore.test.ts` -> pass (25 tests)
+
+### Soma Extension-of-Self Architecture + PRD (Planning Authority Added)
+
+Detailed architecture and delivery planning is now locked for extension-of-self growth beyond baseline MCP operations.
+
+| Deliverable | File |
+|------------|------|
+| V7 architecture update with extension-of-self modes, local Ollama contract, and parallel tracks | `mycelis-architecture-v7.md` (Part X) |
+| Detailed execution PRD for extension-of-self program (sprints, lanes, gates, tests) | `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md` |
+| Soma symbiote architecture expanded with explicit local Ollama communication contract | `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` |
+| Inception "harsh-truth" guardrails codified (heartbeat budgets, single-use-case ratchet, staged self-update, sandbox-first skill injection) | `mycelis-architecture-v7.md` (Part X), `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`, `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
+| Integrated implementation-plan section for parallel package execution | `docs/V7_IMPLEMENTATION_PLAN.md` (Section 9) |
 
 ### Phase 19 Foundation
 
@@ -387,6 +408,37 @@ Resources → Workspace Explorer tab shows DegradedState until implemented.
 
 ---
 
+### Soma Extension-of-Self Runtime (Parallel with Team C, gated by contracts)
+
+| Track | Status |
+|------|--------|
+| Decision frame contracts (`direct|manifest_team|propose|scheduled_repeat`) | IN PROGRESS (P0 contract types + API bundle scaffolded) |
+| Local Ollama readiness and fallback status contract | IN PROGRESS (`GET /api/v1/services/status` now emits `ollama` status row) |
+| Universal action adapter parity (MCP + non-MCP pilot) | PLANNED |
+| Repeat-promotion policy (`one-off` -> `scheduled`) | PLANNED |
+| Host/hardware governed actuation scaffolds | PLANNED |
+
+P0 backend slice delivered on 2026-03-01:
+- Added frozen protocol contract bundle in `core/pkg/protocol/inception_contracts.go`:
+  - `SomaDecisionFrame`
+  - `HeartbeatBudget`
+  - `UniversalInvokeResult`
+  - allowed decision paths and team lifetime enums.
+- Added API endpoint:
+  - `GET /api/v1/inception/contracts` (served by `HandleInceptionContracts`).
+- Registered route in `core/internal/server/admin.go`.
+- Extended services health contract:
+  - `GET /api/v1/services/status` now includes explicit `ollama` service readiness semantics.
+- Test coverage added/updated:
+  - `core/internal/server/inception_test.go` (`TestHandleInceptionContracts_HappyPath`)
+  - `core/internal/server/provider_crud_test.go` service status suite extended for `ollama`.
+- Verification:
+  - `cd core && go test ./pkg/protocol -count=1` -> pass
+  - `cd core && go test ./internal/server -count=1` -> pass
+  - `cd core && go test ./... -count=1` -> pass
+
+---
+
 ## Current Navigation Structure
 
 ```
@@ -457,16 +509,16 @@ TypeScript check:   `cd interface && npx tsc --noEmit` currently fails on pre-ex
 
 ## Next Potential Steps
 
-1. Resolve full-suite blocker:
-   - Fix root package build conflict (`probe.go` and `probe_test.go` both declare `main`) so `go test ./...` is clean.
-2. Execute UI Gate A to completion:
-   - Close Lane A + B P0 acceptance tests and attach evidence in lane files.
-3. Extend MCP test coverage into connection lifecycle:
-   - Add seam/stubs for `ClientPool.Connect/ReconnectAll/ShutdownAll` to validate status updates and degraded behavior without real subprocesses.
-4. Harden API semantics consistency:
-   - Ensure not-found cases across MCP handlers/toolset handlers map to `404` consistently (currently update-path is corrected).
-5. Expand Workspace Explorer capabilities:
-   - Add inline save for edited file previews and add basic delete/rename flows with governed safety prompts.
+1. Finish Team C scheduler runtime (critical path):
+   - Complete recurring schedule execution, NATS-offline suspension, and pause/resume API behavior.
+2. Lock extension-of-self contract freeze (Sprint 0):
+   - Freeze decision frame DTOs, universal action envelope, and local Ollama readiness fields.
+3. Deliver first extension-of-self vertical slice (Sprint 1):
+   - Ship direct-vs-team decision path + Workspace decision trace + run-linked evidence.
+4. Raise test depth for execution channels:
+   - Add adapter contract tests (MCP + one non-MCP pilot) and replay/idempotency side-effect protections.
+5. Expand governed capability surfaces:
+   - Add repeat-promotion path (`one-off` to scheduled) and prepare host/hardware proposal flow scaffolds with approval gates.
 
 ## Decision Log (Locked)
 
@@ -483,3 +535,4 @@ TypeScript check:   `cd interface && npx tsc --noEmit` currently fails on pre-ex
 | Docs API prefix | `/docs-api/` not `/api/docs/` | `/api/*` → Go proxy rewrite would intercept |
 | Docs params | `await params` in route handler | Next.js 15+ async params requirement |
 | Nav item order | Docs below Memory in main nav | Workflow items stay together; docs is reference |
+

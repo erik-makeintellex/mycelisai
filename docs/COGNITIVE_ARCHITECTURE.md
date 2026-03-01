@@ -1,6 +1,6 @@
 # Cognitive Architecture
 
-> Back to [README](../README.md) | See also: [Swarm Operations](SWARM_OPERATIONS.md) | [API Reference](API_REFERENCE.md)
+> Back to [README](../README.md) | See also: [Swarm Operations](SWARM_OPERATIONS.md) | [API Reference](API_REFERENCE.md) | [Agent Source Instantiation Template](architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md)
 
 Mycelis supports **multiple self-hosted and commercial inference engines** — configure any combination of vLLM, Ollama, LM Studio, OpenAI, Anthropic, and Google via `cognitive.yaml` or the Cognitive Matrix UI.
 

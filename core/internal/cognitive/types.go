@@ -58,7 +58,8 @@ type ChatMessage struct {
 
 type InferRequest struct {
 	Profile  string        `json:"profile"`
-	Prompt   string        `json:"prompt"` // Legacy
+	Provider string        `json:"provider,omitempty"` // Optional explicit provider override (bypasses profile routing)
+	Prompt   string        `json:"prompt"`             // Legacy
 	Messages []ChatMessage `json:"messages,omitempty"`
 }
 

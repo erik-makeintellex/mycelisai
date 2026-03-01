@@ -32,18 +32,23 @@ type Soma struct {
 	cancel        context.CancelFunc
 	registry      *Registry
 	brain         *cognitive.Router
-	toolExecutor  MCPToolExecutor         // composite (internal + MCP) — interface for backward compat
-	compositeExec *CompositeToolExecutor  // concrete type for ScopedToolExecutor wrapping
+	toolExecutor  MCPToolExecutor        // composite (internal + MCP) — interface for backward compat
+	compositeExec *CompositeToolExecutor // concrete type for ScopedToolExecutor wrapping
 	internalTools *InternalToolRegistry
 	// MCP agent-scoped binding: server name map + tool descriptions for per-agent filtering.
-	mcpServerNames map[uuid.UUID]string  // serverID → server name
-	mcpToolDescs   map[string]string     // MCP tool name → description
+	mcpServerNames map[uuid.UUID]string // serverID → server name
+	mcpToolDescs   map[string]string    // MCP tool name → description
 	// V7 Event Spine: optional run tracking + event audit (interfaces from pkg/protocol).
 	// Both may be nil — degraded mode: teams still activate, events just aren't recorded.
 	runsManager  protocol.RunsManager  // creates mission_run records
 	eventEmitter protocol.EventEmitter // persists + publishes events
 	// V7 Conversation Log: optional full-fidelity turn logger.
 	conversationLogger protocol.ConversationLogger
+	// Provider overrides for multi-host routing.
+	// teamProviderOverrides applies to all members in a team unless member override exists.
+	// agentProviderOverrides applies directly to one agent ID and takes precedence.
+	teamProviderOverrides  map[string]string
+	agentProviderOverrides map[string]string
 }
 
 // NewSoma creates a new Executive instance.
@@ -97,7 +102,7 @@ func (s *Soma) Start() error {
 		log.Printf("WARN: Failed to load team manifests: %v", err)
 	}
 	for _, m := range manifests {
-		team := NewTeam(m, s.nc, s.brain, s.toolExecutor)
+		team := NewTeam(s.applyProviderOverrides(m), s.nc, s.brain, s.toolExecutor)
 		if len(toolDescs) > 0 {
 			team.SetToolDescriptions(toolDescs)
 		}
@@ -161,7 +166,7 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 	// Persist? For now, just runtime spawn.
 	// TODO: Save to Registry (YAML)
 
-	team := NewTeam(manifest, s.nc, s.brain, s.toolExecutor)
+	team := NewTeam(s.applyProviderOverrides(manifest), s.nc, s.brain, s.toolExecutor)
 	if s.internalTools != nil {
 		team.SetToolDescriptions(s.internalTools.ListDescriptions())
 	}
@@ -418,4 +423,40 @@ func (s *Soma) SetMCPServerNames(names map[uuid.UUID]string) {
 // Must be called before Start() so teams can inject MCP tool descriptions into agent prompts.
 func (s *Soma) SetMCPToolDescs(descs map[string]string) {
 	s.mcpToolDescs = descs
+}
+
+// SetProviderOverrides wires team/agent provider targets for multi-host routing.
+// agentProviders take precedence over teamProviders.
+func (s *Soma) SetProviderOverrides(teamProviders, agentProviders map[string]string) {
+	s.teamProviderOverrides = teamProviders
+	s.agentProviderOverrides = agentProviders
+}
+
+func (s *Soma) applyProviderOverrides(manifest *TeamManifest) *TeamManifest {
+	if manifest == nil {
+		return nil
+	}
+	if len(s.teamProviderOverrides) == 0 && len(s.agentProviderOverrides) == 0 {
+		return manifest
+	}
+
+	out := *manifest
+	out.Members = make([]protocol.AgentManifest, len(manifest.Members))
+	copy(out.Members, manifest.Members)
+
+	if provider, ok := s.teamProviderOverrides[manifest.ID]; ok && provider != "" {
+		out.Provider = provider
+	}
+
+	for i := range out.Members {
+		member := out.Members[i]
+		if member.Provider == "" && out.Provider != "" {
+			member.Provider = out.Provider
+		}
+		if p, ok := s.agentProviderOverrides[member.ID]; ok && p != "" {
+			member.Provider = p
+		}
+		out.Members[i] = member
+	}
+	return &out
 }

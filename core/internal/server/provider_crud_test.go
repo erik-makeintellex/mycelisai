@@ -1201,9 +1201,9 @@ func TestHandleServicesStatus_AllOffline(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected data array, got %T", resp["data"])
 	}
-	// Should have 4 services: nats, postgres, cognitive, reactive
-	if len(data) != 4 {
-		t.Fatalf("expected 4 services, got %d", len(data))
+	// Should have 6 services: nats, postgres, cognitive, ollama, reactive, comms
+	if len(data) != 6 {
+		t.Fatalf("expected 6 services, got %d", len(data))
 	}
 
 	// All should be offline since nothing is wired
@@ -1222,8 +1222,14 @@ func TestHandleServicesStatus_AllOffline(t *testing.T) {
 	if statusMap["cognitive"] != "offline" {
 		t.Errorf("expected cognitive=offline, got %v", statusMap["cognitive"])
 	}
+	if statusMap["ollama"] != "offline" {
+		t.Errorf("expected ollama=offline, got %v", statusMap["ollama"])
+	}
 	if statusMap["reactive"] != "offline" {
 		t.Errorf("expected reactive=offline, got %v", statusMap["reactive"])
+	}
+	if statusMap["comms"] != "offline" {
+		t.Errorf("expected comms=offline, got %v", statusMap["comms"])
 	}
 }
 
@@ -1262,10 +1268,12 @@ func TestHandleServicesStatus_CognitiveDegraded(t *testing.T) {
 func TestHandleServicesStatus_CognitiveOnline(t *testing.T) {
 	cogOpt := withCognitive(t,
 		map[string]cognitive.ProviderConfig{
-			"ollama": {Type: "openai_compatible", Enabled: true},
+			"ollama": {Type: "openai_compatible", Endpoint: "http://localhost:11434/v1", ModelID: "qwen2.5-coder:7b", Enabled: true},
 			"vllm":   {Type: "openai_compatible", Enabled: true},
 		},
-		map[string]cognitive.LLMProvider{},
+		map[string]cognitive.LLMProvider{
+			"ollama": &stubAdapter{healthy: true},
+		},
 	)
 	s := newTestServer(cogOpt)
 
@@ -1292,6 +1300,132 @@ func TestHandleServicesStatus_CognitiveOnline(t *testing.T) {
 		}
 	}
 	t.Error("cognitive service entry not found")
+}
+
+func TestHandleServicesStatus_OllamaDegradedWhenMissingProvider(t *testing.T) {
+	cogOpt := withCognitive(t,
+		map[string]cognitive.ProviderConfig{
+			"vllm": {Type: "openai_compatible", Enabled: true},
+		},
+		map[string]cognitive.LLMProvider{
+			"vllm": &stubAdapter{healthy: true},
+		},
+	)
+	s := newTestServer(cogOpt)
+
+	mux := setupMux(t, "GET /api/v1/services/status", s.HandleServicesStatus)
+	rr := doRequest(t, mux, "GET", "/api/v1/services/status", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data := resp["data"].([]any)
+
+	for _, item := range data {
+		svc := item.(map[string]any)
+		if svc["name"] == "ollama" {
+			if svc["status"] != "degraded" {
+				t.Errorf("expected ollama=degraded when provider missing, got %v", svc["status"])
+			}
+			return
+		}
+	}
+	t.Error("ollama service entry not found")
+}
+
+func TestHandleServicesStatus_OllamaDegradedWhenDisabled(t *testing.T) {
+	cogOpt := withCognitive(t,
+		map[string]cognitive.ProviderConfig{
+			"ollama": {Type: "openai_compatible", Endpoint: "http://localhost:11434/v1", ModelID: "qwen2.5-coder:7b", Enabled: false},
+		},
+		map[string]cognitive.LLMProvider{
+			"ollama": &stubAdapter{healthy: true},
+		},
+	)
+	s := newTestServer(cogOpt)
+
+	mux := setupMux(t, "GET /api/v1/services/status", s.HandleServicesStatus)
+	rr := doRequest(t, mux, "GET", "/api/v1/services/status", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data := resp["data"].([]any)
+
+	for _, item := range data {
+		svc := item.(map[string]any)
+		if svc["name"] == "ollama" {
+			if svc["status"] != "degraded" {
+				t.Errorf("expected ollama=degraded when provider disabled, got %v", svc["status"])
+			}
+			return
+		}
+	}
+	t.Error("ollama service entry not found")
+}
+
+func TestHandleServicesStatus_OllamaDegradedWhenAdapterMissing(t *testing.T) {
+	cogOpt := withCognitive(t,
+		map[string]cognitive.ProviderConfig{
+			"ollama": {Type: "openai_compatible", Endpoint: "http://localhost:11434/v1", ModelID: "qwen2.5-coder:7b", Enabled: true},
+		},
+		map[string]cognitive.LLMProvider{},
+	)
+	s := newTestServer(cogOpt)
+
+	mux := setupMux(t, "GET /api/v1/services/status", s.HandleServicesStatus)
+	rr := doRequest(t, mux, "GET", "/api/v1/services/status", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data := resp["data"].([]any)
+
+	for _, item := range data {
+		svc := item.(map[string]any)
+		if svc["name"] == "ollama" {
+			if svc["status"] != "degraded" {
+				t.Errorf("expected ollama=degraded when adapter missing, got %v", svc["status"])
+			}
+			return
+		}
+	}
+	t.Error("ollama service entry not found")
+}
+
+func TestHandleServicesStatus_OllamaOnline(t *testing.T) {
+	cogOpt := withCognitive(t,
+		map[string]cognitive.ProviderConfig{
+			"ollama": {Type: "openai_compatible", Endpoint: "http://localhost:11434/v1", ModelID: "qwen2.5-coder:7b", Enabled: true},
+		},
+		map[string]cognitive.LLMProvider{
+			"ollama": &stubAdapter{healthy: true},
+		},
+	)
+	s := newTestServer(cogOpt)
+
+	mux := setupMux(t, "GET /api/v1/services/status", s.HandleServicesStatus)
+	rr := doRequest(t, mux, "GET", "/api/v1/services/status", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	data := resp["data"].([]any)
+
+	for _, item := range data {
+		svc := item.(map[string]any)
+		if svc["name"] == "ollama" {
+			if svc["status"] != "online" {
+				t.Errorf("expected ollama=online, got %v", svc["status"])
+			}
+			detail, _ := svc["detail"].(string)
+			if detail == "" {
+				t.Errorf("expected non-empty detail for ollama online status")
+			}
+			return
+		}
+	}
+	t.Error("ollama service entry not found")
 }
 
 func TestHandleServicesStatus_PostgresOnline(t *testing.T) {

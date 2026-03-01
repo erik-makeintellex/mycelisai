@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -73,6 +74,31 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 	}
 	services = append(services, cogStatus)
 
+	// ── Local Ollama (Ollama-first runtime contract) ─────────────────────────
+	ollamaStatus := ServiceStatus{Name: "ollama"}
+	if s.Cognitive == nil || s.Cognitive.Config == nil {
+		ollamaStatus.Status = "offline"
+		ollamaStatus.Detail = "Cognitive router not initialised"
+	} else if cfg, ok := s.Cognitive.Config.Providers["ollama"]; !ok {
+		ollamaStatus.Status = "degraded"
+		ollamaStatus.Detail = "Ollama provider not configured"
+	} else if !cfg.Enabled {
+		ollamaStatus.Status = "degraded"
+		ollamaStatus.Detail = "Ollama provider disabled"
+	} else if s.Cognitive.Adapters == nil || s.Cognitive.Adapters["ollama"] == nil {
+		ollamaStatus.Status = "degraded"
+		ollamaStatus.Detail = "Ollama enabled but adapter not initialized"
+	} else {
+		ollamaStatus.Status = "online"
+		detail := "Model " + cfg.ModelID
+		if cfg.Endpoint != "" {
+			detail += " @ " + cfg.Endpoint
+		}
+		// Keep details compact to avoid noisy UI status cards.
+		ollamaStatus.Detail = strings.TrimSpace(detail)
+	}
+	services = append(services, ollamaStatus)
+
 	// ── Reactive Engine ───────────────────────────────────────────────────
 	reactiveStatus := ServiceStatus{Name: "reactive"}
 	if s.Reactive == nil {
@@ -87,6 +113,34 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 		reactiveStatus.Detail = itoa(n) + " active subscription(s)"
 	}
 	services = append(services, reactiveStatus)
+
+	// ── Communications Gateway ────────────────────────────────────────────
+	commsStatus := ServiceStatus{Name: "comms"}
+	if s.Comms == nil {
+		commsStatus.Status = "offline"
+		commsStatus.Detail = "Communications gateway not initialized"
+	} else {
+		providers := s.Comms.ListProviders()
+		if len(providers) == 0 {
+			commsStatus.Status = "degraded"
+			commsStatus.Detail = "No communication providers registered"
+		} else {
+			configured := 0
+			for _, p := range providers {
+				if p.Configured {
+					configured++
+				}
+			}
+			if configured == 0 {
+				commsStatus.Status = "degraded"
+				commsStatus.Detail = "0/" + itoa(len(providers)) + " providers configured"
+			} else {
+				commsStatus.Status = "online"
+				commsStatus.Detail = itoa(configured) + "/" + itoa(len(providers)) + " providers configured"
+			}
+		}
+	}
+	services = append(services, commsStatus)
 
 	respondJSON(w, map[string]any{"ok": true, "data": services})
 }

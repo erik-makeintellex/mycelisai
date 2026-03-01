@@ -270,12 +270,12 @@ func (a *Agent) buildToolsBlock() string {
 // ProcessResult holds the structured output of a processMessage call,
 // including the final text and metadata about which tools were invoked.
 type ProcessResult struct {
-	Text       string                      `json:"text"`
-	ToolsUsed  []string                    `json:"tools_used,omitempty"`
-	Artifacts  []protocol.ChatArtifactRef  `json:"artifacts,omitempty"`
+	Text      string                     `json:"text"`
+	ToolsUsed []string                   `json:"tools_used,omitempty"`
+	Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
 	// Phase 19: Brain provenance — which provider/model executed this request
-	ProviderID string                      `json:"provider_id,omitempty"`
-	ModelUsed  string                      `json:"model_used,omitempty"`
+	ProviderID string `json:"provider_id,omitempty"`
+	ModelUsed  string `json:"model_used,omitempty"`
 	// V7: Council consultations made during the ReAct loop (for frontend delegation trace)
 	Consultations []protocol.ConsultationEntry `json:"consultations,omitempty"`
 }
@@ -310,7 +310,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 	// Inject live system state (active teams, MCP servers, NATS topology, cognitive config)
 	if a.internalTools != nil {
-		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.TeamInputs, a.TeamDeliveries, input)
+		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
 	}
 
 	sys += a.buildToolsBlock()
@@ -335,6 +335,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 	req := cognitive.InferRequest{
 		Profile:  profile,
+		Provider: a.Manifest.Provider,
 		Messages: messages,
 	}
 
@@ -456,8 +457,8 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			// Only the text message goes back to the LLM — large payloads
 			// like base64 images are captured here for the HTTP response.
 			var toolOutput struct {
-				Message  string                     `json:"message"`
-				Artifact *protocol.ChatArtifactRef  `json:"artifact"`
+				Message  string                    `json:"message"`
+				Artifact *protocol.ChatArtifactRef `json:"artifact"`
 			}
 			if json.Unmarshal([]byte(toolResult), &toolOutput) == nil && toolOutput.Artifact != nil {
 				artifacts = append(artifacts, *toolOutput.Artifact)

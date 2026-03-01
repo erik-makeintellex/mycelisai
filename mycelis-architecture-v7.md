@@ -965,3 +965,276 @@ No channel is considered production-ready until:
 3. degraded/error UX follows failure template
 4. observability links to run/status diagnostics are present
 5. regression tests prove degraded -> recovery lifecycle
+
+---
+
+# PART IX - ARCHITECTURE ROLLOUT FIT
+## “Where new architecture concepts land in development sequence”
+
+The following rollout sequence aligns new architecture tracks with current delivery momentum and risk posture.
+
+## Wave 0 - Core Continuity (Current)
+- Complete Scheduler critical path and ensure stable run lifecycle continuity.
+- Wire team lifetime profiles (`ephemeral` / `persistent` / `auto`) into orchestration contracts.
+
+## Wave 1 - Runs + Workflow UX Hardening
+- Complete Causal Chain and run observability UX paths.
+- Finalize workflow surfaces and degraded-state recovery polish.
+
+## Wave 2 - Universal Action Runtime Scaffolding (Parallel)
+- Introduce universal action registry and gateway API scaffolds.
+- Keep MCP as first adapter while adding OpenAPI/Python adapter interfaces.
+
+## Wave 3 - Security-Gated Remote Actuation (Parallel, Gated)
+- Implement secure gateway controls: scoped handshake, idempotency/replay protections, private mesh posture.
+- Remote actuation remains disabled until all high-risk security tests pass.
+
+## Wave 4 - Repeat + Low-Level IoT Expansion
+- Promote one-off actions to scheduled repeat when requested.
+- Route low-level IoT/watch-control pathways through persistent teams with strict governance controls.
+
+## Execution Policy
+- Direct Soma path remains default for low-risk one-off actions.
+- Team manifestation is selected for complexity, risk, repeat intent, and IoT pathways.
+- External protocols and UIs are additive integrations; governance authority remains in Mycelis.
+
+## Companion Specifications
+- `docs/V7_IMPLEMENTATION_PLAN.md` (integrated Wave 0-4 execution map)
+- `docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md`
+- `docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md`
+- `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md`
+- `docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md`
+- `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md`
+
+---
+
+# PART X - SOMA EXTENSION-OF-SELF PROGRAM
+## "OpenClaw-inspired depth, Mycelis-governed execution"
+
+This part defines the next architecture layer: Soma as a governed extension-of-self that can reason, choose execution strategy, learn safely, and actuate locally with transparent controls.
+
+## 1. Pattern Assimilation (What We Adopt, What We Do Not)
+
+Adopt:
+- explicit persona contracts (identity + behavior policy)
+- layered memory (episodic, distilled, retrieval, procedural)
+- scheduled maintenance/automation loops
+- strict treatment of external content as untrusted input
+
+Do not adopt:
+- unconstrained shell-level autonomy
+- hidden policy drift without operator review
+- remote actuation defaults
+
+## 2. Extension-of-Self Operating Modes
+
+For every intent, Soma must choose one execution mode:
+1. `direct_action`
+- default for low-risk, bounded actions with available capabilities
+2. `manifest_team`
+- used for complex, multi-step, multi-role, or uncertain tasks
+3. `propose_only`
+- used when governance requires approval or confidence is low
+4. `scheduled_repeat`
+- promoted from direct/team flows when user requests recurrence or policy infers stable repeat value
+
+Required decision outputs:
+- selected mode
+- confidence score
+- risk level
+- approval requirement
+- fallback plan
+- team lifetime (`ephemeral|persistent|auto`)
+
+## 3. Local Ollama First-Class Contract
+
+Local Ollama is not a hidden dependency. It is a visible runtime substrate.
+
+Required runtime checks:
+1. host reachability (`OLLAMA_HOST`)
+2. model availability for configured role routes
+3. inference latency and throughput
+4. recent failure ratio
+5. fallback route state (active/inactive)
+
+Policy behavior:
+- if healthy: prefer local routing where allowed
+- if degraded: apply explicit fallback profile and expose reason
+- if unavailable: block risky auto-execution unless policy explicitly allows remote fallback
+
+UI exposure requirements:
+- active provider/model and local/remote badge
+- last successful local inference timestamp
+- fallback-active indicator with next action
+- degraded banner + status drawer alignment
+
+## 4. Memory and Growth Architecture Requirements
+
+Soma growth must be artifact-backed and reversible.
+
+Required memory layers:
+1. Episodic: run and conversation records
+2. Distilled: recipe abstractions and reviewed heuristics
+3. Retrieval: vector-indexed semantic memory
+4. Procedural: approved execution playbooks
+
+Growth controls:
+- no silent mutation of policy or approval thresholds
+- promotion of new behavior requires reviewable artifact
+- rollback path required for every profile/recipe promotion
+
+## 5. Multi-User + Multi-Host Routing Contract
+
+Enterprise deployment requires both:
+1. multi-user tenancy boundaries
+2. multi-host model routing for Soma/Council/teams
+
+### 5.1 Tenancy boundaries
+
+Required controls:
+- namespace all runtime records with `tenant_id`
+- apply tenant guards to temp memory channels, proposals, and mission runs
+- ensure user identity is carried in API and event metadata for auditability
+- prevent cross-tenant toolset/channel reads by default
+
+### 5.2 Provider-target routing hierarchy
+
+Each agent request resolves backend target in this order:
+1. `agent.provider` override
+2. `team.provider` default
+3. `cognitive.profiles[role_or_profile]`
+4. fallback (`sentry` or first healthy provider)
+
+Provider IDs map to explicit hosts in `cognitive.providers` (Ollama, vLLM, LM Studio, Claude, Gemini, ChatGPT-compatible endpoints).
+
+### 5.3 Runtime override controls (deployment-level)
+
+For host-level routing without editing manifests:
+- `MYCELIS_TEAM_PROVIDER_MAP` (JSON: team ID -> provider ID)
+- `MYCELIS_AGENT_PROVIDER_MAP` (JSON: agent ID -> provider ID)
+
+Default policy remains local-first:
+- unpinned agents route to local Ollama profiles where healthy
+- remote routes require explicit provider config and policy allowance
+
+### 5.4 NATS multi-host collaboration requirement
+
+Even when agents execute against different model hosts, collaboration is unified through the shared NATS bus:
+- ingress: `swarm.global.input.*`
+- team trigger/response: `swarm.team.<team>.internal.*`
+- direct council addressing: `swarm.council.<agent>.request`
+
+Cross-host reliability requirements:
+- deterministic envelope format for all subjects
+- reconnect-safe subscriptions
+- backpressure-safe retries and dead-letter path for failed actuation
+- status drawer exposure of per-channel and per-provider health
+
+## 6. Universal Action + Channel Strategy
+
+All execution channels must converge through universal action contracts:
+- MCP (default local-first adapter)
+- OpenAPI service adapters
+- Python runtime management adapters
+- hardware interface and direct channel adapters
+
+Channel onboarding is valid only when:
+1. typed request/response schemas exist
+2. idempotency/replay protections exist for side effects
+3. degraded/recovery UX is implemented
+4. test evidence exists for failure and recovery paths
+
+## 7. Parallel Architecture Delivery Tracks
+
+Track A - Soma Decision + Memory Contracts:
+- decision frame structs/APIs
+- growth signal capture and review endpoints
+
+Track B - Universal Action Runtime:
+- action registry APIs
+- adapter lifecycle and invocation contracts
+
+Track C - Scheduler + Team Lifetime Runtime:
+- repeat promotion and persistent-team pathways
+- schedule reliability under degraded conditions
+
+Track D - UI Operationalization:
+- decision transparency in Workspace
+- readiness diagnostics and next-action guidance
+
+Track Q - QA and Reliability Gates:
+- cross-layer contract tests
+- degraded/recovery verification
+- release evidence packaging
+
+Merge policy:
+- A/B/C/D can execute in parallel.
+- promotion gates are sequential (`P0 -> P1 -> P2 -> RC`).
+- no promotion without Track Q evidence.
+
+## 7. Asserted Next Steps (Detailed)
+
+Immediate (Sprint 0):
+1. freeze decision frame and universal action DTOs
+2. freeze Ollama readiness API contract and system-status mapping
+3. add integration tests for local readiness -> fallback transitions
+
+Near-term (Sprint 1):
+1. ship direct-vs-team decision endpoint and UI trace exposure
+2. complete team instantiation + lifecycle path from wizard to run evidence
+3. bind run timeline/chain to decision artifacts
+
+Mid-term (Sprint 2):
+1. complete scheduler + repeat promotion paths
+2. introduce reviewed adaptation signals (recipe feedback loop)
+3. run reliability drills for NATS/SSE/Ollama degradation scenarios
+
+Expansion (Sprint 3):
+1. add one non-MCP adapter in production-shape parity
+2. expose governed host/hardware action scaffolds
+3. complete security-gated remote actuation preconditions (still disabled by default)
+
+## 8. Controlling PRD
+
+Execution authority for this program:
+- `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
+
+That document defines:
+- sprint-by-sprint delivery
+- lane ownership
+- acceptance tests by core layer
+- integration handoff expectations for parallel agent teams
+
+## 9. Inception Harsh-Truth Guardrails
+
+The following controls are mandatory during early extension-of-self rollout.
+
+1. Single-use-case ratchet:
+- no broad autonomy at inception
+- start with one stable pipeline (for example: morning brief, research digest) and prove "worth it" before expanding permissions
+
+2. Heartbeat autonomy budget:
+- long-horizon jobs run under bounded heartbeat budgets (time window, action count, spend cap, and escalation cap)
+- every heartbeat cycle must emit auditable progress + next action intent
+- kill-switch can pause all autonomous loops immediately
+
+3. Self-update isolation:
+- Tier 1 runtime cannot patch its own production control plane directly
+- updates must go through staging, verification, and rollback checkpoints
+- "overnight self-update" without guardrails is non-compliant
+
+4. Marketplace/skill injection governance:
+- external skills/adapters are treated as untrusted until verified
+- require signed manifests, scope mapping, sandbox execution profile, and policy review before activation
+- no direct import of skill packages into high-privilege lanes
+
+5. Trojan-horse and credential overreach defense:
+- external data and discovered local artifacts are treated as potentially malicious
+- deterministic secret redaction in logs and traces is mandatory
+- no brute-force probing or broad credential discovery workflows are allowed in default policy
+
+6. Sandbox-first runtime boundary:
+- autonomy loops and dynamic adapters run in sandboxed execution contexts by default
+- host filesystem and network access are allowlisted, not inherited
+- escape attempts trigger immediate halt + audit event
+

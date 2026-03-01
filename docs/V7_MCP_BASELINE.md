@@ -273,6 +273,8 @@ These belong in V8+ under enterprise control profiles.
 
 ## 11. Acceptance Criteria
 
+Configuration and onboarding companion: `docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md`
+
 V7 MCP Baseline is considered operational when:
 
 - [ ] Install → Login → User can immediately create artifacts (no setup beyond starting Ollama)

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	os_signal "os/signal"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,10 +23,11 @@ import (
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/internal/events"
-	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/overseer"
@@ -36,11 +38,20 @@ import (
 	"github.com/mycelis/core/internal/server"
 	mycelis_signal "github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/swarm"
-	"github.com/mycelis/core/internal/triggers"
 	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
+	"github.com/mycelis/core/internal/triggers"
 )
 
 func main() {
+	// Action CLI mode: use the same binary to call Mycelis API endpoints.
+	// Example: server action GET /api/v1/services/status
+	if len(os.Args) > 1 && os.Args[1] == "action" {
+		if err := runActionCLI(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	log.Println("Starting Mycelis Core [System]...")
 
 	// Root context with signal-based cancellation for graceful shutdown
@@ -325,6 +336,16 @@ func main() {
 
 	// Hoisted outside NATS block so MetaArchitect can read tool descriptions even in degraded mode.
 	var internalTools *swarm.InternalToolRegistry
+	commsGateway := comms.NewGatewayFromEnv()
+	if providers := commsGateway.ListProviders(); len(providers) > 0 {
+		ready := 0
+		for _, p := range providers {
+			if p.Configured {
+				ready++
+			}
+		}
+		log.Printf("Communications Gateway Active. %d/%d providers configured.", ready, len(providers))
+	}
 	if nc != nil {
 		internalTools = swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
 			NC:        nc,
@@ -333,6 +354,7 @@ func main() {
 			Architect: metaArchitect,
 			Catalogue: catService,
 			Inception: inceptionStore,
+			Comms:     commsGateway,
 			DB:        sharedDB,
 		})
 	}
@@ -359,6 +381,12 @@ func main() {
 		swarmReg := swarm.NewRegistry(teamConfigPath)
 
 		soma = swarm.NewSoma(nc, guard, swarmReg, cogRouter, streamHandler, toolExec, internalTools)
+		teamProviders := parseProviderOverrideMap(os.Getenv("MYCELIS_TEAM_PROVIDER_MAP"))
+		agentProviders := parseProviderOverrideMap(os.Getenv("MYCELIS_AGENT_PROVIDER_MAP"))
+		if len(teamProviders) > 0 || len(agentProviders) > 0 {
+			soma.SetProviderOverrides(teamProviders, agentProviders)
+			log.Printf("Provider overrides active: teams=%d agents=%d", len(teamProviders), len(agentProviders))
+		}
 		// V7: wire event spine into Soma so ActivateBlueprint creates runs + emits events
 		if runsManager != nil {
 			soma.SetRunsManager(runsManager)
@@ -486,6 +514,7 @@ func main() {
 
 	// Create Admin Server (V7: pass eventStore + runsManager for Event Spine routes)
 	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, eventStore, runsManager)
+	adminSrv.Comms = commsGateway
 	// V7: wire conversation store into AdminServer for transcript browsing + interjection
 	if convStore != nil {
 		adminSrv.Conversations = convStore
@@ -644,4 +673,26 @@ func buildSystemCapabilities(ctx context.Context, tools *swarm.InternalToolRegis
 	}
 
 	return caps
+}
+
+func parseProviderOverrideMap(raw string) map[string]string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	out := map[string]string{}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		log.Printf("WARN: invalid provider override map JSON: %v", err)
+		return nil
+	}
+	normalized := map[string]string{}
+	for k, v := range out {
+		k = strings.TrimSpace(k)
+		v = strings.TrimSpace(v)
+		if k == "" || v == "" {
+			continue
+		}
+		normalized[k] = v
+	}
+	return normalized
 }
