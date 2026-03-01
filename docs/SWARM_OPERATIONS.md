@@ -57,7 +57,7 @@ This ensures agents are never "context-blind" — they know what teams exist, wh
 
 ## Internal Tool Registry
 
-17 built-in tools available to agents without external MCP servers:
+Built-in tools available to agents without external MCP servers:
 
 | Tool | Description | Primary Users |
 | :--- | :--- | :--- |
@@ -78,8 +78,19 @@ This ensures agents are never "context-blind" — they know what teams exist, wh
 | `read_file` | Read local filesystem (32KB max) | All |
 | `write_file` | Write to local filesystem | All |
 | `generate_image` | Diffusers media engine (SDXL) | Creative, Admin |
+| `local_command` | Execute allowlisted local host commands (no shell interpolation) | Admin |
 
 The `CompositeToolExecutor` wraps both `InternalToolRegistry` and `mcp.ToolExecutorAdapter` behind a single `MCPToolExecutor` interface — internal tools are tried first, MCP falls back.
+
+### MCP Intent Translation Contract
+
+When a request should be handled through MCP, Soma/Council must:
+1. parse intent into operation + target + constraints + expected output
+2. use current installed tool inventory (`list_available_tools`) as source of truth
+3. select the narrowest matching MCP tool and execute with minimal valid arguments
+4. if no tool matches, return explicit missing dependency + credential requirements
+
+Do not stop at schema/tutorial responses when execution is feasible.
 
 ## Agent Blueprints (`/catalogue`)
 

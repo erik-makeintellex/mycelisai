@@ -8,6 +8,8 @@
 
 Open `Workspace` (`/dashboard`) and type naturally.
 Soma receives every message and coordinates the rest.
+Soma operates as a symbiote execution partner: it should execute and deliver outcomes,
+not instruct you step-by-step on how to do the work manually.
 
 ```
 You type -> Soma reasons (ReAct, up to 10 iterations)
@@ -85,6 +87,12 @@ For multi-step execution:
 
 On success, a system message includes a run link (`/runs/{run_id}`).
 
+When crew creation is needed, Soma should build a lean team oriented to:
+1. plan
+2. develop
+3. verify
+4. deliver
+
 ---
 
 ## Operational Helpers
@@ -102,4 +110,3 @@ While chatting, you can use:
 - reference recent context ("continue from step 2")
 - review delegation trace to understand specialist contributions
 - confirm only when proposal intent matches your goal
-

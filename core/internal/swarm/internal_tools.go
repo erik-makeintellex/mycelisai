@@ -18,6 +18,7 @@ import (
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
+	"github.com/mycelis/core/internal/hostcmd"
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/pkg/protocol"
@@ -428,6 +429,21 @@ func (r *InternalToolRegistry) registerAll() {
 		Handler: r.handleWriteFile,
 	}
 
+	r.tools["local_command"] = &InternalTool{
+		Name:        "local_command",
+		Description: "Execute one local command from the MYCELIS_LOCAL_COMMAND_ALLOWLIST without shell interpolation. Uses bounded timeout and argument validation.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"command":    map[string]any{"type": "string", "description": "Allowlisted command name"},
+				"args":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Command arguments"},
+				"timeout_ms": map[string]any{"type": "integer", "description": "Optional timeout in milliseconds (clamped)"},
+			},
+			"required": []string{"command"},
+		},
+		Handler: r.handleLocalCommand,
+	}
+
 	r.tools["generate_image"] = &InternalTool{
 		Name:        "generate_image",
 		Description: "Generate an image from a text prompt using the local Diffusers media engine (Stable Diffusion XL). Returns generation status and metadata. Use for illustrations, concept art, diagrams, or any visual content.",
@@ -535,8 +551,7 @@ func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args ma
 }
 
 func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[string]any) (string, error) {
-	teamID, _ := args["team_id"].(string)
-	task, _ := args["task"].(string)
+	teamID, task := normalizeDelegateTaskArgs(args)
 	if teamID == "" || task == "" {
 		return "", fmt.Errorf("delegate_task requires 'team_id' and 'task'")
 	}
@@ -564,6 +579,78 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	r.nc.Flush()
 
 	return fmt.Sprintf("Task delegated to team %s.", teamID), nil
+}
+
+func normalizeDelegateTaskArgs(args map[string]any) (teamID string, task string) {
+	stringFrom := func(v any) string {
+		switch s := v.(type) {
+		case string:
+			return strings.TrimSpace(s)
+		default:
+			return ""
+		}
+	}
+	serialize := func(v any) string {
+		if v == nil {
+			return ""
+		}
+		b, err := json.Marshal(v)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(b))
+	}
+
+	teamID = stringFrom(args["team_id"])
+	if teamID == "" {
+		teamID = stringFrom(args["teamId"])
+	}
+	if teamID == "" {
+		if teamMap, ok := args["team"].(map[string]any); ok {
+			teamID = stringFrom(teamMap["id"])
+			if teamID == "" {
+				teamID = stringFrom(teamMap["team_id"])
+			}
+			if teamID == "" {
+				teamID = stringFrom(teamMap["name"])
+			}
+		} else {
+			teamID = stringFrom(args["team"])
+		}
+	}
+	if teamID == "" {
+		teamID = stringFrom(args["target_team"])
+	}
+
+	switch t := args["task"].(type) {
+	case string:
+		task = strings.TrimSpace(t)
+	case map[string]any:
+		task = serialize(t)
+	case []any:
+		task = serialize(t)
+	}
+
+	if task == "" {
+		payload := map[string]any{}
+		if op := stringFrom(args["operation"]); op != "" {
+			payload["operation"] = op
+		}
+		if intent := stringFrom(args["intent"]); intent != "" {
+			payload["intent"] = intent
+		}
+		if msg := stringFrom(args["message"]); msg != "" {
+			payload["message"] = msg
+		}
+		if ctxRaw, ok := args["context"]; ok {
+			payload["context"] = ctxRaw
+		}
+		if len(payload) > 0 {
+			task = serialize(payload)
+		}
+	}
+
+	return teamID, task
 }
 
 func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[string]any) (string, error) {
@@ -1223,6 +1310,37 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 	return fmt.Sprintf("File written: %s (%d bytes).", safePath, len(content)), nil
 }
 
+func (r *InternalToolRegistry) handleLocalCommand(ctx context.Context, args map[string]any) (string, error) {
+	command, _ := args["command"].(string)
+	if strings.TrimSpace(command) == "" {
+		return "", fmt.Errorf("local_command requires 'command'")
+	}
+
+	var cmdArgs []string
+	if raw, ok := args["args"].([]any); ok {
+		cmdArgs = make([]string, 0, len(raw))
+		for _, item := range raw {
+			v, ok := item.(string)
+			if !ok {
+				continue
+			}
+			cmdArgs = append(cmdArgs, v)
+		}
+	}
+
+	timeoutMS := 5000
+	if v, ok := args["timeout_ms"].(float64); ok {
+		timeoutMS = int(v)
+	}
+
+	result, err := hostcmd.Execute(ctx, command, cmdArgs, time.Duration(timeoutMS)*time.Millisecond)
+	if err != nil {
+		return "", err
+	}
+	payload, _ := json.Marshal(result)
+	return string(payload), nil
+}
+
 func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map[string]any) (string, error) {
 	prompt, _ := args["prompt"].(string)
 	if prompt == "" {
@@ -1681,8 +1799,11 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 	sb.WriteString("1. Check if past context is relevant → `recall` or `search_memory`\n")
 	sb.WriteString("2. Check if specialist knowledge is needed → `consult_council`\n")
 	sb.WriteString("3. Check if actionable work should be delegated → `delegate_task`\n")
-	sb.WriteString("4. Check if MCP tools can fulfill the request directly\n")
-	sb.WriteString("5. Check if data would benefit from visualization → `store_artifact` with type=chart\n\n")
+	sb.WriteString("4. For software/dev tasks, prefer quick ephemeral code execution and bounded validation (`local_command`) before introducing new MCP dependencies\n")
+	sb.WriteString("5. For web access tasks (search/site retrieval), default to coder-owned ephemeral web code first; use adaptive engine/query strategy\n")
+	sb.WriteString("6. Check if installed MCP tools can fulfill remaining external integration requirements or provide easier execution\n")
+	sb.WriteString("7. MCP Translation Procedure: map user intent -> operation/target/constraints/output, pick the narrowest installed MCP tool, then execute with minimal valid arguments\n")
+	sb.WriteString("8. Check if data would benefit from visualization → `store_artifact` with type=chart\n\n")
 	sb.WriteString("**Post-response** (after completing a task):\n")
 	sb.WriteString("1. Store important learnings or decisions → `remember`\n")
 	sb.WriteString("2. Store significant outputs → `store_artifact`\n")
@@ -1908,6 +2029,11 @@ func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
 	if hasMCPTools {
 		sb.WriteString("\n**MCP tools are callable.** Use the tool name directly in a tool_call:\n")
 		sb.WriteString("```json\n{\"tool_call\": {\"name\": \"<mcp_tool_name>\", \"arguments\": {...}}}\n```\n")
+		sb.WriteString("\n**MCP Translation Procedure (Use Current Inventory):**\n")
+		sb.WriteString("1. Parse user request into operation + target + constraints + expected output.\n")
+		sb.WriteString("2. Match against installed MCP tools listed below (source of truth).\n")
+		sb.WriteString("3. Choose the narrowest matching tool and execute with minimal valid args.\n")
+		sb.WriteString("4. If no match exists, report missing MCP dependency and required credentials.\n")
 
 		// List each MCP tool with its description for the LLM
 		sb.WriteString("\n**MCP Tool Reference:**\n")

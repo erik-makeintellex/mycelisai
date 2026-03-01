@@ -46,6 +46,7 @@ Required outcomes:
 2. No hidden dependency assumptions (credentials/tools/models).
 3. No “manual operator glue” for common flows.
 4. Every path must remain governance-auditable.
+5. No schema-only or tutorial-only responses when direct execution is feasible.
 
 ---
 
@@ -114,6 +115,14 @@ Escalation levels:
 
 `L2` and `L3` require explicit proposal + confirm flow.
 
+MCP translation rule:
+
+1. Parse user request into `operation`, `target`, `constraints`, and `expected_output`.
+2. Use current installed MCP inventory as source of truth (`list_available_tools` / runtime MCP reference).
+3. Select the narrowest matching MCP tool and build minimal valid arguments.
+4. Execute; do not respond with schema-only guidance when execution is feasible.
+5. If tooling is missing, emit explicit install/credential requirements and next action.
+
 ---
 
 ## 5. Direct Code-to-Execution Contract
@@ -131,6 +140,15 @@ Rules:
 - No “code dump only” for execution requests.
 - No completion claim without test evidence or explicit test blocker.
 - If external API dependencies exist, include requirement bundle before execution.
+- Prefer quick, ephemeral code paths that can be validated immediately before introducing
+  new MCP dependencies for software-only tasks.
+
+Web-access execution rule:
+
+1. Requests for search/site retrieval should default to development-specialist-owned ephemeral code execution.
+2. Build adaptive search-engine strategy (Google/Bing/DDG based on availability and constraints).
+3. Construct high-quality, intent-scoped queries (operators, site/domain scope, recency qualifiers).
+4. Use onboarded MCP for web tasks only when it is clearly easier or required by environment/policy.
 
 ---
 
@@ -205,4 +223,3 @@ Operator should always be able to answer:
 4. How to recover when channels degrade?
 
 This is the minimum bar for trustworthy orchestration at V7.
-

@@ -122,6 +122,10 @@
 | `/api/v1/context/snapshots/{id}` | GET | Full snapshot including messages array |
 | **Service Health** | | |
 | `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Comms, Group Bus monitor |
+| **Host Actions (Local Command V0)** | | |
+| `/api/v1/host/status` | GET | Local host actuation status (OS/arch/workspace + effective local command allowlist) |
+| `/api/v1/host/actions` | GET | List host actions available for invocation (currently `local-command`) |
+| `/api/v1/host/actions/{id}/invoke` | POST | Invoke host action by ID. V0 supports allowlisted no-shell local commands only |
 | **Mission Runs & Events (V7)** | | |
 | `/api/v1/runs` | GET | List recent runs across all missions — status, timing, trigger source |
 | `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (MissionEventEnvelope records) |
