@@ -1201,9 +1201,9 @@ func TestHandleServicesStatus_AllOffline(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected data array, got %T", resp["data"])
 	}
-	// Should have 6 services: nats, postgres, cognitive, ollama, reactive, comms
-	if len(data) != 6 {
-		t.Fatalf("expected 6 services, got %d", len(data))
+	// Should have 7 services: nats, postgres, cognitive, ollama, reactive, comms, groups_bus
+	if len(data) != 7 {
+		t.Fatalf("expected 7 services, got %d", len(data))
 	}
 
 	// All should be offline since nothing is wired
@@ -1230,6 +1230,9 @@ func TestHandleServicesStatus_AllOffline(t *testing.T) {
 	}
 	if statusMap["comms"] != "offline" {
 		t.Errorf("expected comms=offline, got %v", statusMap["comms"])
+	}
+	if statusMap["groups_bus"] != "offline" {
+		t.Errorf("expected groups_bus=offline, got %v", statusMap["groups_bus"])
 	}
 }
 

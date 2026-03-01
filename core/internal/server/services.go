@@ -142,6 +142,35 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 	}
 	services = append(services, commsStatus)
 
+	// ── Group Collaboration Bus Monitor ──────────────────────────────────
+	groupBusStatus := ServiceStatus{Name: "groups_bus"}
+	if s.GroupBus == nil {
+		groupBusStatus.Status = "offline"
+		groupBusStatus.Detail = "Group bus monitor not initialized"
+	} else {
+		snap := s.GroupBus.Snapshot(s.NC != nil && s.NC.IsConnected())
+		switch snap.Status {
+		case "online":
+			groupBusStatus.Status = "online"
+		case "degraded":
+			groupBusStatus.Status = "degraded"
+		default:
+			groupBusStatus.Status = "offline"
+		}
+		if snap.PublishedCount == 0 {
+			groupBusStatus.Detail = "No group broadcasts yet"
+		} else if snap.LastGroupID != "" {
+			groupBusStatus.Detail = "Last group: " + snap.LastGroupID + " (" + itoa(int(snap.PublishedCount)) + " total)"
+		} else {
+			groupBusStatus.Detail = itoa(int(snap.PublishedCount)) + " group broadcast(s)"
+		}
+		if snap.LastError != "" && groupBusStatus.Status != "offline" {
+			groupBusStatus.Status = "degraded"
+			groupBusStatus.Detail = "Last error: " + snap.LastError
+		}
+	}
+	services = append(services, groupBusStatus)
+
 	respondJSON(w, map[string]any{"ok": true, "data": services})
 }
 

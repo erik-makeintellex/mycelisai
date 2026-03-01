@@ -5,6 +5,7 @@ import { Users, RefreshCw } from 'lucide-react';
 import { useCortexStore, type TeamsFilter, type TeamDetailEntry } from '@/store/useCortexStore';
 import TeamCard from './TeamCard';
 import TeamDetailDrawer from './TeamDetailDrawer';
+import GroupManagementPanel from './GroupManagementPanel';
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
     { value: 'all', label: 'All Teams' },
@@ -102,7 +103,8 @@ export default function TeamsPage() {
             </div>
 
             {/* Grid */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <GroupManagementPanel />
                 {filteredTeams.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {filteredTeams.map((team) => (

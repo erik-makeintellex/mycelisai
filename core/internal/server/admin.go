@@ -70,6 +70,8 @@ type AdminServer struct {
 	Inception *inception.Store // inception recipe CRUD + search
 	// MCP Tool Sets — agent-scoped MCP tool bundles
 	MCPToolSets *mcp.ToolSetService // tool set CRUD
+	// Root-admin collaboration groups (DB-backed), with live bus monitor for status UI.
+	GroupBus *GroupBusMonitor
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -104,6 +106,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		Events:        evStore,
 		Runs:          runsManager,
 		Reactive:      reactiveEngine,
+		GroupBus:      NewGroupBusMonitor(),
 	}
 }
 
@@ -145,6 +148,11 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
 	mux.HandleFunc("GET /api/v1/teams/detail", s.HandleTeamsDetail)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUpdateSettings)
+	mux.HandleFunc("GET /api/v1/groups", s.HandleListGroups)
+	mux.HandleFunc("GET /api/v1/groups/monitor", s.HandleGroupMonitor)
+	mux.HandleFunc("POST /api/v1/groups", s.HandleCreateGroup)
+	mux.HandleFunc("PUT /api/v1/groups/{id}", s.HandleUpdateGroup)
+	mux.HandleFunc("POST /api/v1/groups/{id}/broadcast", s.HandleGroupBroadcast)
 
 	// Missions API (Dashboard + Phase 9: Neural Wiring Edit/Delete)
 	mux.HandleFunc("GET /api/v1/missions", s.handleListMissions)

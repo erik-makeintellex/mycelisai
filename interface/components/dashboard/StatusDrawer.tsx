@@ -52,6 +52,7 @@ export default function StatusDrawer() {
 
     const natsHealth = statusFromService(serviceMap.get("nats")?.status);
     const dbHealth = statusFromService(serviceMap.get("postgres")?.status);
+    const groupBusHealth = statusFromService(serviceMap.get("groups_bus")?.status);
     const sseHealth: Health = isStreamConnected ? "healthy" : "failure";
     const govHealth: Health = governanceMode === "strict" ? "failure" : governanceMode === "active" ? "degraded" : "healthy";
 
@@ -120,6 +121,12 @@ export default function StatusDrawer() {
                         )}
                     </div>
                     <StatusRow icon={Wifi} label="NATS Connection" value={serviceMap.get("nats")?.status ?? "unknown"} health={natsHealth} />
+                    <StatusRow
+                        icon={Users}
+                        label="Group Bus"
+                        value={serviceMap.get("groups_bus")?.detail ?? serviceMap.get("groups_bus")?.status ?? "unknown"}
+                        health={groupBusHealth}
+                    />
                     <StatusRow icon={Radio} label="SSE Stream" value={isStreamConnected ? "live" : "offline"} health={sseHealth} />
                     <StatusRow icon={Database} label="Database" value={serviceMap.get("postgres")?.status ?? "unknown"} health={dbHealth} />
                     <StatusRow

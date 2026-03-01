@@ -273,6 +273,7 @@ const SERVICE_LABELS: Record<string, string> = {
     postgres: "PostgreSQL + pgvector",
     cognitive: "Cognitive Engine",
     reactive: "Reactive Engine",
+    groups_bus: "Group Collaboration Bus",
 };
 
 const SERVICE_COMMANDS: Record<string, { up: string; down: string; restart: string }> = {
@@ -293,6 +294,11 @@ const SERVICE_COMMANDS: Record<string, { up: string; down: string; restart: stri
     },
     reactive: {
         up: "uvx inv lifecycle.up",
+        down: "uvx inv lifecycle.down",
+        restart: "uvx inv core.restart",
+    },
+    groups_bus: {
+        up: "uvx inv lifecycle.up --frontend",
         down: "uvx inv lifecycle.down",
         restart: "uvx inv core.restart",
     },
