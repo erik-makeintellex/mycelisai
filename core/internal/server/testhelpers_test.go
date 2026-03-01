@@ -36,6 +36,7 @@ func withDB(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 	}
 	t.Cleanup(func() { db.Close() })
 	return func(s *AdminServer) {
+		s.DB = db
 		s.Registry = &registry.Service{DB: db}
 	}, mock
 }
@@ -98,7 +99,28 @@ func doAuthenticatedRequest(t *testing.T, handler http.Handler, method, path, bo
 	} else {
 		req, _ = http.NewRequest(method, path, nil)
 	}
-	identity := &RequestIdentity{UserID: "test-user-001", Username: "admin", Role: "admin"}
+	identity := &RequestIdentity{
+		UserID:   "test-user-001",
+		Username: "admin",
+		Role:     "admin",
+		Scopes:   []string{"*"},
+	}
+	ctx := context.WithValue(req.Context(), ctxKeyIdentity, identity)
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	return rr
+}
+
+// doAuthenticatedRequestAs sends an HTTP request with a caller-specified identity.
+func doAuthenticatedRequestAs(t *testing.T, handler http.Handler, method, path, body string, identity *RequestIdentity) *httptest.ResponseRecorder {
+	t.Helper()
+	var req *http.Request
+	if body != "" {
+		req, _ = http.NewRequest(method, path, strings.NewReader(body))
+	} else {
+		req, _ = http.NewRequest(method, path, nil)
+	}
 	ctx := context.WithValue(req.Context(), ctxKeyIdentity, identity)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()

@@ -53,4 +53,8 @@ const (
 	// V7 Conversation Log: user interjection into in-progress agent runs.
 	// Published by HTTP handler, consumed by agent between ReAct iterations.
 	TopicAgentInterjectionFmt = "swarm.agent.%s.interjection" // agent_id
+
+	// Root-admin collaboration groups (multi-user orchestration).
+	// Group-scoped collaboration channel; may be fanned out to team internal command lanes.
+	TopicGroupCollabFmt = "swarm.group.%s.collab" // group_id
 )

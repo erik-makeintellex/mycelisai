@@ -1,7 +1,7 @@
 # V7 Implementation Plan — Event Spine, Mission Runs, Trigger Engine, Scheduler, Workflow-First IA
 
 > **Status:** In Progress — Team C (Scheduler) is NEXT; Team B (Trigger Engine) is COMPLETE
-> **Date:** 2026-02-20 | **Updated:** 2026-02-28
+> **Date:** 2026-02-20 | **Updated:** 2026-03-01
 > **Scope:** Migrations 023-029, 6 new Go packages, 8 new API route groups, 10+ new frontend components, navigation restructure
 > **Execution Order:** Core track Team A → Team B → Team C → Team E → Team D, then extension tracks in parallel behind security/governance gates
 >
@@ -1816,6 +1816,105 @@ Before expanding autonomy breadth:
 - enforce heartbeat autonomy budgets and kill-switch behavior
 - block unverified external skill imports from medium/high-risk scopes
 - verify credential-probing denial + secret-redaction behavior in security tests
+
+### 9.7 Five-Pattern Assimilation Workboard
+
+This workboard translates the five learned patterns into concrete delivery items.
+
+1. Sub-agent orchestration (manager-worker)
+- Sprint 0: freeze delegation contracts (`manager_plan`, `worker_assignment`, `worker_result`, `resume_hint`)
+- Sprint 1: implement one specialist worker profile with persistent mode support
+- Sprint 1: emit delegation events tied to `run_id` and expose in run timeline UI
+- Tests:
+  - unit: manager route selection and worker assignment policy
+  - integration: worker failure fallback (`worker -> direct|propose`)
+  - e2e: delegation trace visibility in Workspace + run detail
+
+2. Modular skill injection (market/private)
+- Sprint 0: freeze skill/source trust policy contract (signature/scope/sandbox/rollback)
+- Sprint 2: read-only source discovery + verification probe path
+- Sprint 3: controlled install/sync/rollback pilot from trusted source
+- Tests:
+  - unit: signature/scope/sandbox validation matrix
+  - integration: install denied on policy mismatch
+  - e2e: install -> rollback retains audit completeness
+
+3. Proactive autonomy (bounded heartbeat)
+- Sprint 0: finalize heartbeat budget schema + kill-switch semantics
+- Sprint 2: ship one proactive job profile (morning brief/surprise-style) with safe scope
+- Sprint 2: require cycle evidence (`progress`, `next_action`, `continue_reason`)
+- Tests:
+  - unit: budget depletion transitions to paused state
+  - integration: kill-switch halts all active heartbeat jobs
+  - e2e: proactive job executes and surfaces evidence without manual intervention
+
+4. Context compaction resilience (checkpoint + resume)
+- Sprint 0: freeze checkpoint DTO (`checkpoint_id`, `task_state`, `next_intent`, `resume_source`)
+- Sprint 1: checkpoint before compaction/truncation in long-running flows
+- Sprint 2: resume engine consumes checkpoint + distilled memory candidate
+- Tests:
+  - unit: checkpoint serializer/deserializer invariants
+  - integration: forced compaction retains objective continuity
+  - e2e: post-restart resume completes intended objective
+
+5. Self-improving correction loops (reviewed promotion)
+- Sprint 1: capture structured correction logs (`error_class`, `user_fix`, `context_hash`)
+- Sprint 2: add reviewed promotion workflow to recipe candidate set
+- Sprint 2: enforce rollback path for promoted patterns
+- Tests:
+  - unit: correction dedupe + confidence scoring
+  - integration: unreviewed corrections never affect runtime policy
+  - e2e: review -> promote -> rollback cycle remains auditable and reversible
+
+6. Manifest-profile deep improvement alignment
+- Sprint 0: freeze `manifest_improvement` schema and objective-alignment scoring contract
+- Sprint 1: persist improvement signals per manifest profile (`acceptance`, `correction`, `fallback`, `outcome`)
+- Sprint 2: enforce promotion gate requiring objective-class alignment to user-invoked intents
+- Sprint 2: auto-rollback on drift threshold breach
+- Tests:
+  - unit: objective-alignment scorer and drift thresholds
+  - integration: misaligned improvements blocked from promotion
+  - e2e: repeated objective invocation improves profile behavior with auditable deltas
+
+7. Permanent memory growth loop (Postgres + pgvector + local continuity files)
+- Sprint 0: freeze loop contract (`capture`, `distill`, `vectorize`, `retrieve`, `promote`, `rollback`)
+- Sprint 0: freeze no-silence preference rule contract (explicit confirmation/correction only)
+- Sprint 1: implement local hot/context/archive file continuity channel with deterministic sync markers
+- Sprint 2: implement promotion/rollback gates backed by Postgres evidence + pgvector recall quality
+- Tests:
+  - unit: no-silence promotion guard and file-layer merge precedence
+  - integration: local-file continuity survives restart and reconciles to Postgres system-of-record
+  - integration: retrieval quality checks from pgvector drive promotion decisions
+  - e2e: same objective over repeated runs shows improved outcomes with auditable rollback path
+
+8. Central agentry correction governance and runtime maintenance
+- Sprint 1: log every correction with timestamp + run/session context and track repetition counts
+- Sprint 1: trigger scope-promotion prompt at 3 repeated corrections (`global|domain|project`)
+- Sprint 2: add weekly maintenance worker (dedupe, concise confirmed rules, stale-to-archive)
+- Sprint 2: emit weekly "what changed" digest artifact/event
+- Sprint 2: enforce provenance metadata (`file`, `line`) on learned-rule application responses
+- Sprint 2: implement forget semantics (`forget X`, `forget everything`) with full propagation + confirmations
+- Sprint 2: enforce sensitive-data exclusion in memory write path
+- Tests:
+  - unit: correction equivalence + repetition counter logic
+  - unit: sensitive-data detector/redactor decisions
+  - integration: maintenance worker transformations and digest correctness
+  - integration: forget propagation across hot/context/archive + Postgres sync
+  - integration: provenance location mapping to valid source entries
+  - e2e: operator correction cycle from repeat->prompt->promotion decision
+
+9. Root-admin collaboration groups (multi-user goal scopes)
+- Team A (Core/Persistence): DB-backed `collaboration_groups` storage with tenant scoping, policy refs, and create/update audit linkage (`created_audit_event_id`, `updated_audit_event_id`) via migration 034.
+- Team B (Governance/Auth): root-admin scope enforcement on group routes (`groups:read`, `groups:write`, `groups:broadcast`) plus high-impact mutation confirm-token flow (intent proof + confirmation token).
+- Team C (Runtime/UI): group management panel embedded in Teams surface and live group-bus health surfaced through System/Status (`groups_bus` service row + status drawer row).
+- Team Q (QA): integration tests for DB lifecycle, scope denial paths, high-impact approval response, NATS fanout, and monitor snapshot output.
+- Next Sprint: propagate `group_id` into mission_runs/mission_events for run/timeline lineage and enforce group capability bounds during action dispatch.
+- Tests:
+  - unit: group contract validation + work_mode policy matrix
+  - integration: unauthorized user cannot mutate root-admin groups
+  - integration: out-of-scope capability calls denied for group runs
+  - integration: `group_id` propagation integrity across runs/events APIs
+  - e2e: root admin asks Soma to create goal-scoped group, confirms proposal, executes bounded run
 
 Authoritative PRD for this program:
 - `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`

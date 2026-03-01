@@ -1,7 +1,33 @@
-from invoke import Collection
+from invoke import Collection, task
 from ops import core, k8s, proto_relay, misc, interface
 
 ns = Collection()
+
+
+@task
+def install(c):
+    """
+    Install all local development dependencies.
+    Assumes the shell/session is already running with admin rights.
+    """
+    print("Installing workspace Python dependencies...")
+    c.run("uv sync --all-packages --dev")
+
+    print("Installing Go module dependencies...")
+    with c.cd("core"):
+        c.run("go mod download")
+
+    print("Installing Interface dependencies...")
+    c.run("npm install --prefix interface")
+
+    print("Installing Cognitive dependencies...")
+    with c.cd("cognitive"):
+        c.run("uv sync")
+
+    print("Install complete.")
+
+
+ns.add_task(install)
 ns.add_collection(core.ns)
 ns.add_collection(k8s.ns)
 ns.add_collection(proto_relay.ns_proto)

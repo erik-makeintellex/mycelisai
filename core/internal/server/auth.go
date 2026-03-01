@@ -16,9 +16,10 @@ const ctxKeyIdentity contextKey = "identity"
 // RequestIdentity represents the authenticated caller.
 // Phase 0: single root user. Phase 1+ will resolve from JWT/session.
 type RequestIdentity struct {
-	UserID   string `json:"user_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID   string   `json:"user_id"`
+	Username string   `json:"username"`
+	Role     string   `json:"role"`
+	Scopes   []string `json:"scopes,omitempty"`
 }
 
 // IdentityFromContext extracts the RequestIdentity from the request context.
@@ -75,6 +76,7 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 			UserID:   "00000000-0000-0000-0000-000000000000",
 			Username: "admin",
 			Role:     "admin",
+			Scopes:   []string{"*"},
 		}
 
 		ctx := context.WithValue(r.Context(), ctxKeyIdentity, identity)
