@@ -2,7 +2,7 @@
 
 > **Prerequisite:** `inv interface.dev` running on `localhost:3000`
 > **Time estimate:** 10–15 minutes
-> **Reference:** [`docs/product/ia-v7-step-01.md`](../product/ia-v7-step-01.md)
+> **Reference:** [`docs/archive/ia-v7-step-01.md`](./ia-v7-step-01.md)
 
 ---
 

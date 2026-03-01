@@ -17,6 +17,7 @@ import (
 
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/pkg/protocol"
@@ -80,6 +81,7 @@ type InternalToolRegistry struct {
 	architect *cognitive.MetaArchitect
 	catalogue *catalogue.Service
 	inception *inception.Store
+	comms     *comms.Gateway
 	db        *sql.DB
 	// somaRef is set after Soma is constructed — allows list_teams etc.
 	somaRef *Soma
@@ -93,6 +95,7 @@ type InternalToolDeps struct {
 	Architect *cognitive.MetaArchitect
 	Catalogue *catalogue.Service
 	Inception *inception.Store
+	Comms     *comms.Gateway
 	DB        *sql.DB
 }
 
@@ -106,6 +109,7 @@ func NewInternalToolRegistry(deps InternalToolDeps) *InternalToolRegistry {
 		architect: deps.Architect,
 		catalogue: deps.Catalogue,
 		inception: deps.Inception,
+		comms:     deps.Comms,
 		db:        deps.DB,
 	}
 	r.registerAll()
@@ -176,7 +180,7 @@ func (r *InternalToolRegistry) registerAll() {
 					"properties": map[string]any{
 						"confidence": map[string]any{"type": "number", "description": "0.0-1.0 confidence this is the right team"},
 						"urgency":    map[string]any{"type": "string", "enum": []string{"low", "medium", "high", "critical"}},
-						"complexity":  map[string]any{"type": "integer", "description": "1-5 complexity rating"},
+						"complexity": map[string]any{"type": "integer", "description": "1-5 complexity rating"},
 						"risk":       map[string]any{"type": "string", "enum": []string{"low", "medium", "high"}},
 					},
 				},
@@ -278,6 +282,50 @@ func (r *InternalToolRegistry) registerAll() {
 		Handler: r.handleRecall,
 	}
 
+	r.tools["temp_memory_write"] = &InternalTool{
+		Name:        "temp_memory_write",
+		Description: "Persist a temporary working-memory checkpoint (restart-safe) for lead-agent continuity. Use channels like lead.shared, lead.<agent_id>, or interaction.contract.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel":        map[string]any{"type": "string", "description": "Channel key, e.g. lead.shared or lead.council-architect"},
+				"content":        map[string]any{"type": "string", "description": "Checkpoint content"},
+				"owner_agent_id": map[string]any{"type": "string", "description": "Optional owner identity"},
+				"ttl_minutes":    map[string]any{"type": "integer", "description": "Optional expiration in minutes (<=0 means no expiry)"},
+				"metadata":       map[string]any{"type": "object", "description": "Optional structured metadata"},
+			},
+			"required": []string{"channel", "content"},
+		},
+		Handler: r.handleTempMemoryWrite,
+	}
+
+	r.tools["temp_memory_read"] = &InternalTool{
+		Name:        "temp_memory_read",
+		Description: "Read recent temporary working-memory checkpoints for a channel.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel": map[string]any{"type": "string", "description": "Channel key"},
+				"limit":   map[string]any{"type": "integer", "description": "Max entries (default 10)"},
+			},
+			"required": []string{"channel"},
+		},
+		Handler: r.handleTempMemoryRead,
+	}
+
+	r.tools["temp_memory_clear"] = &InternalTool{
+		Name:        "temp_memory_clear",
+		Description: "Clear a temporary working-memory channel.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel": map[string]any{"type": "string", "description": "Channel key"},
+			},
+			"required": []string{"channel"},
+		},
+		Handler: r.handleTempMemoryClear,
+	}
+
 	r.tools["store_artifact"] = &InternalTool{
 		Name:        "store_artifact",
 		Description: `Persist an agent output as a typed artifact. For type="chart", content MUST be a JSON chart spec: {"version":"1", "chart_type":"bar|line|area|dot|geo|table", "title":"...", "data":[{...}], "x":"col", "y":"col"}. Max 2000 data rows.`,
@@ -320,6 +368,22 @@ func (r *InternalToolRegistry) registerAll() {
 			"required": []string{"message"},
 		},
 		Handler: r.handleBroadcast,
+	}
+
+	r.tools["send_external_message"] = &InternalTool{
+		Name:        "send_external_message",
+		Description: "Send a message through an external communication provider (whatsapp, telegram, slack, webhook). Use for operator/user notifications and out-of-band alerts.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"provider":  map[string]any{"type": "string", "description": "Provider name: whatsapp, telegram, slack, webhook"},
+				"recipient": map[string]any{"type": "string", "description": "Recipient handle/ID/number/channel"},
+				"message":   map[string]any{"type": "string", "description": "Message body"},
+				"metadata":  map[string]any{"type": "object", "description": "Optional metadata map"},
+			},
+			"required": []string{"provider", "message"},
+		},
+		Handler: r.handleSendExternalMessage,
 	}
 
 	r.tools["read_signals"] = &InternalTool{
@@ -612,11 +676,11 @@ func (r *InternalToolRegistry) handleGetSystemStatus(_ context.Context, _ map[st
 	}
 
 	snap := map[string]any{
-		"goroutines":    runtime.NumGoroutine(),
-		"heap_alloc_mb": float64(memStats.HeapAlloc) / 1024 / 1024,
-		"sys_mem_mb":    float64(memStats.Sys) / 1024 / 1024,
+		"goroutines":     runtime.NumGoroutine(),
+		"heap_alloc_mb":  float64(memStats.HeapAlloc) / 1024 / 1024,
+		"sys_mem_mb":     float64(memStats.Sys) / 1024 / 1024,
 		"llm_tokens_sec": tokenRate,
-		"timestamp":     time.Now().Format(time.RFC3339),
+		"timestamp":      time.Now().Format(time.RFC3339),
 	}
 
 	data, _ := json.Marshal(snap)
@@ -1010,6 +1074,39 @@ func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[strin
 	return sb.String(), nil
 }
 
+func (r *InternalToolRegistry) handleSendExternalMessage(ctx context.Context, args map[string]any) (string, error) {
+	if r.comms == nil {
+		return "", fmt.Errorf("communications gateway unavailable")
+	}
+
+	provider, _ := args["provider"].(string)
+	recipient, _ := args["recipient"].(string)
+	message, _ := args["message"].(string)
+	if strings.TrimSpace(provider) == "" || strings.TrimSpace(message) == "" {
+		return "", fmt.Errorf("send_external_message requires provider and message")
+	}
+
+	metadata, _ := args["metadata"].(map[string]any)
+	res, err := r.comms.Send(ctx, comms.SendRequest{
+		Provider:  provider,
+		Recipient: recipient,
+		Message:   message,
+		Metadata:  metadata,
+	})
+	if err != nil {
+		return "", fmt.Errorf("external send failed: %w", err)
+	}
+
+	out := map[string]any{
+		"message":  fmt.Sprintf("external message sent via %s", res.Provider),
+		"provider": res.Provider,
+		"status":   res.Status,
+		"result":   res,
+	}
+	b, _ := json.Marshal(out)
+	return string(b), nil
+}
+
 func (r *InternalToolRegistry) handleReadSignals(ctx context.Context, args map[string]any) (string, error) {
 	subject, _ := args["subject"].(string)
 	if subject == "" {
@@ -1224,6 +1321,69 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 }
 
 // ── Conversation Memory ─────────────────────────────────────────
+
+func (r *InternalToolRegistry) handleTempMemoryWrite(ctx context.Context, args map[string]any) (string, error) {
+	if r.mem == nil {
+		return "", fmt.Errorf("memory service offline — temp channels unavailable")
+	}
+
+	channel, _ := args["channel"].(string)
+	content, _ := args["content"].(string)
+	owner, _ := args["owner_agent_id"].(string)
+	metadata, _ := args["metadata"].(map[string]any)
+	ttl := 0
+	if ttlRaw, ok := args["ttl_minutes"].(float64); ok {
+		ttl = int(ttlRaw)
+	}
+
+	id, err := r.mem.PutTempMemory(ctx, "default", channel, owner, content, metadata, ttl)
+	if err != nil {
+		return "", err
+	}
+
+	result := map[string]any{
+		"message": fmt.Sprintf("temp memory stored in channel %q", channel),
+		"id":      id,
+		"channel": channel,
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
+}
+
+func (r *InternalToolRegistry) handleTempMemoryRead(ctx context.Context, args map[string]any) (string, error) {
+	if r.mem == nil {
+		return "", fmt.Errorf("memory service offline — temp channels unavailable")
+	}
+	channel, _ := args["channel"].(string)
+	limit := 10
+	if l, ok := args["limit"].(float64); ok && l > 0 {
+		limit = int(l)
+	}
+	entries, err := r.mem.GetTempMemory(ctx, "default", channel, limit)
+	if err != nil {
+		return "", err
+	}
+	data, _ := json.Marshal(entries)
+	return string(data), nil
+}
+
+func (r *InternalToolRegistry) handleTempMemoryClear(ctx context.Context, args map[string]any) (string, error) {
+	if r.mem == nil {
+		return "", fmt.Errorf("memory service offline — temp channels unavailable")
+	}
+	channel, _ := args["channel"].(string)
+	deleted, err := r.mem.ClearTempMemory(ctx, "default", channel)
+	if err != nil {
+		return "", err
+	}
+	result := map[string]any{
+		"message": fmt.Sprintf("temp memory channel %q cleared", channel),
+		"deleted": deleted,
+		"channel": channel,
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
+}
 
 func (r *InternalToolRegistry) handleSummarizeConversation(ctx context.Context, args map[string]any) (string, error) {
 	messagesText, _ := args["messages"].(string)
@@ -1492,7 +1652,7 @@ func (r *InternalToolRegistry) handleRecallInceptionRecipes(ctx context.Context,
 // BuildContext generates a live system state block for injection into an agent's
 // system prompt. Gives agents awareness of active teams, NATS topology, cognitive
 // config, and installed MCP servers before they process any message.
-func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, teamDeliveries []string, currentInput string) string {
+func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamInputs, teamDeliveries []string, currentInput string) string {
 	var sb strings.Builder
 	sb.WriteString("\n\n## Runtime Context (Live System State)\n")
 	sb.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
@@ -1512,7 +1672,10 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, 
 	// 5. Recalled Conversation Context (pgvector semantic recall)
 	r.writeRecalledMemory(&sb, agentID, currentInput)
 
-	// 6. Interaction Protocol
+	// 6. Lead-agent temp memory channels (restart-safe working context)
+	r.writeLeadTempMemory(&sb, agentID, teamID, role)
+
+	// 7. Interaction Protocol
 	sb.WriteString("### Interaction Protocol\n")
 	sb.WriteString("**Pre-response** (before answering):\n")
 	sb.WriteString("1. Check if past context is relevant → `recall` or `search_memory`\n")
@@ -1525,8 +1688,74 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, 
 	sb.WriteString("2. Store significant outputs → `store_artifact`\n")
 	sb.WriteString("3. Distill successful complex approaches → `store_inception_recipe` (for future reuse)\n")
 	sb.WriteString("4. Report actions taken and outcomes clearly to the user\n")
+	sb.WriteString("5. For lead-agent workflows, checkpoint state via `temp_memory_write` and reload with `temp_memory_read`\n")
 
 	return sb.String()
+}
+
+func (r *InternalToolRegistry) isLeadAgent(agentID, teamID, role string) bool {
+	id := strings.ToLower(agentID)
+	tid := strings.ToLower(teamID)
+	rl := strings.ToLower(role)
+
+	if tid == "admin-core" || tid == "council-core" {
+		return true
+	}
+	if id == "admin" || strings.HasPrefix(id, "council-") {
+		return true
+	}
+	if strings.Contains(rl, "lead") || rl == "architect" || rl == "coder" || rl == "creative" || rl == "sentry" {
+		return true
+	}
+	return false
+}
+
+func (r *InternalToolRegistry) writeLeadTempMemory(sb *strings.Builder, agentID, teamID, role string) {
+	if !r.isLeadAgent(agentID, teamID, role) {
+		return
+	}
+
+	sb.WriteString("### Persistent Temp Memory Channels (Restart-Safe)\n")
+	sb.WriteString("Use these checkpoints to continue work consistently across provider/service restarts.\n")
+
+	if r.mem != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		channels := []string{
+			"interaction.contract",
+			"lead.shared",
+			fmt.Sprintf("lead.%s", agentID),
+		}
+
+		type channelDump struct {
+			Channel string
+			Entries []memory.TempMemoryEntry
+		}
+		dumps := []channelDump{}
+		for _, ch := range channels {
+			entries, err := r.mem.GetTempMemory(ctx, "default", ch, 3)
+			if err != nil || len(entries) == 0 {
+				continue
+			}
+			dumps = append(dumps, channelDump{Channel: ch, Entries: entries})
+		}
+
+		for _, dump := range dumps {
+			sb.WriteString(fmt.Sprintf("- **%s**\n", dump.Channel))
+			for _, e := range dump.Entries {
+				content := strings.TrimSpace(e.Content)
+				if len(content) > 220 {
+					content = content[:220] + "..."
+				}
+				sb.WriteString(fmt.Sprintf("  - [%s] %s\n", e.OwnerAgentID, content))
+			}
+		}
+	} else {
+		sb.WriteString("- Memory backend unavailable; rely on current contract and checkpoint once memory is restored.\n")
+	}
+
+	sb.WriteString("Stability rules: preserve user interaction style, output shape, and action sequencing unless user explicitly changes intent.\n\n")
 }
 
 func (r *InternalToolRegistry) writeTeamRoster(sb *strings.Builder) {

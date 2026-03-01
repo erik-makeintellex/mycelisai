@@ -23,10 +23,11 @@ const (
 
 // TeamManifest defines the configuration for a Swarm Team.
 type TeamManifest struct {
-	ID          string                   `yaml:"id"`
-	Name        string                   `yaml:"name"`
-	Type        TeamType                 `yaml:"type"`
-	Description string                   `yaml:"description"`
+	ID          string   `yaml:"id"`
+	Name        string   `yaml:"name"`
+	Type        TeamType `yaml:"type"`
+	Description string   `yaml:"description"`
+	Provider    string   `yaml:"provider,omitempty"` // Default provider target for all members unless member.provider is set
 	// Members are the Agents (and their roles) that form this team
 	Members []protocol.AgentManifest `yaml:"members"`
 	// Inputs are the NATS subjects this team listens to (Triggers)
@@ -44,13 +45,13 @@ type Team struct {
 	nc            *nats.Conn
 	brain         *cognitive.Router
 	toolExecutor  MCPToolExecutor
-	toolDescs     map[string]string        // tool name → description for agent prompt injection
-	internalTools *InternalToolRegistry    // live system state + context builder
+	toolDescs     map[string]string     // tool name → description for agent prompt injection
+	internalTools *InternalToolRegistry // live system state + context builder
 	ctx           context.Context
 	cancel        context.CancelFunc
 	mu            sync.Mutex
-	sensorConfigs map[string]SensorConfig  // agent.ID → config; nil = all cognitive
-	scheduler     *TeamScheduler           // Optional scheduled auto-trigger
+	sensorConfigs map[string]SensorConfig // agent.ID → config; nil = all cognitive
+	scheduler     *TeamScheduler          // Optional scheduled auto-trigger
 	// V7 Event Spine: optional event emitter + run_id for tool audit trail.
 	// Set by Soma.ActivateBlueprint BEFORE team.Start() so agents receive them.
 	eventEmitter protocol.EventEmitter
@@ -58,9 +59,9 @@ type Team struct {
 	// V7 Conversation Log: optional full-fidelity turn logger.
 	conversationLogger protocol.ConversationLogger
 	// MCP agent-scoped binding: concrete executor + server names + MCP tool descriptions.
-	compositeExec  *CompositeToolExecutor  // concrete type for ScopedToolExecutor wrapping
-	mcpServerNames map[uuid.UUID]string    // serverID → server name
-	mcpToolDescs   map[string]string       // MCP tool name → description
+	compositeExec  *CompositeToolExecutor // concrete type for ScopedToolExecutor wrapping
+	mcpServerNames map[uuid.UUID]string   // serverID → server name
+	mcpToolDescs   map[string]string      // MCP tool name → description
 }
 
 // NewTeam creates a new Team instance.
@@ -92,21 +93,28 @@ func (t *Team) Start() error {
 
 	// 2. Spawn Agents (sensor-aware: SensorAgent for poll-based, Agent for cognitive)
 	for _, manifest := range t.Manifest.Members {
+		member := manifest
+		// Team-level provider targeting fallback:
+		// if a member does not pin a provider, inherit team's provider target.
+		if member.Provider == "" && t.Manifest.Provider != "" {
+			member.Provider = t.Manifest.Provider
+		}
+
 		if cfg, isSensor := t.sensorConfigs[manifest.ID]; isSensor {
-			sensor := NewSensorAgent(t.ctx, manifest, cfg, t.Manifest.ID, t.nc)
+			sensor := NewSensorAgent(t.ctx, member, cfg, t.Manifest.ID, t.nc)
 			go sensor.Start()
 		} else {
 			// Build per-agent scoped tool executor if MCP binding is available
 			var agentToolExec MCPToolExecutor = t.toolExecutor
 			if t.compositeExec != nil {
-				mcpRefs := mcp.ExtractMCPRefs(manifest.Tools)
+				mcpRefs := mcp.ExtractMCPRefs(member.Tools)
 				agentToolExec = NewScopedToolExecutor(t.compositeExec, mcpRefs, t.mcpServerNames)
 			}
-			agent := NewAgent(t.ctx, manifest, t.Manifest.ID, t.nc, t.brain, agentToolExec)
+			agent := NewAgent(t.ctx, member, t.Manifest.ID, t.nc, t.brain, agentToolExec)
 			// Inject tool descriptions for the agent's bound tools
-			if len(manifest.Tools) > 0 && len(t.toolDescs) > 0 {
-				agentDescs := make(map[string]string, len(manifest.Tools))
-				for _, name := range manifest.Tools {
+			if len(member.Tools) > 0 && len(t.toolDescs) > 0 {
+				agentDescs := make(map[string]string, len(member.Tools))
+				for _, name := range member.Tools {
 					if desc, ok := t.toolDescs[name]; ok {
 						agentDescs[name] = desc
 					}

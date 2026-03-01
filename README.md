@@ -16,8 +16,17 @@
 > | [V7 PRD](mycelis-architecture-v7.md) | Event spine, triggers, scheduler, workflow-first IA |
 > | [V7 UI Framework](docs/UI_FRAMEWORK_V7.md) | Canonical UI element/state/testing framework |
 > | [V7 UI Elements Planning](docs/UI_ELEMENTS_PLANNING_V7.md) | Research-backed UI element planning and Soma interaction model |
-> | [V7 UI Parallel Delivery Board](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) | Active lane plan, merge gates, evidence checklist |
+> | [V7 Parallel Implementation Board](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) | Unified lane plan, merge gates, harsh-truth controls, and execution evidence checklist |
 > | [V7 UI Instantiation + Bus Plan](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) | Detailed operator workflow for team instantiation, I/O channels, and user-safe NATS exposure |
+> | [Soma Team + Channel Architecture V7](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) | Canonical inter-team/process/MCP channel architecture and shared memory boundaries |
+> | [MCP Service Config (Local-First)](docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) | Standard process for adding MCP services with local-default serving and remote exception controls |
+> | [Universal Action Interface V7](docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md) | Canonical action plane for MCP/OpenAPI/Python, dynamic service registry APIs, and governed execution |
+> | [Actualization Beyond MCP V7](docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md) | Multi-protocol actualization architecture (MCP/OpenAPI/A2A/ACP/Python manager) with governance-first boundaries |
+> | [Secure Gateway + Remote Actuation](docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md) | Mandatory security controls for self-hosted gateways and remotely managed actuation servers |
+> | [Hardware Interface API + Channels](docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) | Hardware integration standard: interface APIs plus common direct channels for low-level IoT and actuation |
+> | [Soma Symbiote + Host Actuation](docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md) | Backend thought-profile framework, symbiote learning growth model, and localhost actuation path |
+> | [Soma Extension-of-Self PRD](docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) | Detailed action plan for local Ollama-first extension-of-self execution, parallel delivery lanes, and release gates |
+> | [Agent Source Instantiation Template](docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md) | Standardized provider onboarding template with Ollama as default, plus ChatGPT/OpenAI, Claude, Gemini, vLLM, and LM Studio |
 > | [Archive Index](docs/archive/README.md) | Historical docs only (non-authoritative) |
 
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
@@ -987,6 +996,18 @@ If `agent_id` is empty, the interjection is broadcast to all agents on the run's
 
 Inception recipes capture proven "how to ask for X" patterns that agents distill after completing complex tasks.
 
+#### Contract Baseline — `GET /api/v1/inception/contracts`
+
+Returns the frozen Sprint-0 contract bundle used by extension-of-self runtime:
+- decision frame (`direct|manifest_team|propose|scheduled_repeat`)
+- heartbeat autonomy budget
+- universal invoke envelope
+
+```http
+GET /api/v1/inception/contracts
+Authorization: Bearer mycelis-dev-key-change-in-prod
+```
+
 #### 19. List Recipes — `GET /api/v1/inception/recipes`
 
 ```http
@@ -1171,39 +1192,62 @@ POST /api/v1/council/admin/chat
 
 > **Detailed guide:** See [Local Dev Workflow](docs/LOCAL_DEV_WORKFLOW.md) for configuration reference, port map, health checks, and troubleshooting.
 
-### 1. Configure Secrets
+### Prerequisites
+
+| Tool | Minimum | Notes |
+| :--- | :--- | :--- |
+| Docker Desktop | Latest | Required for Kind cluster |
+| Kind | Latest | Local Kubernetes |
+| kubectl | v1.35+ | Older versions have known port-forward issues |
+| Helm | v3+ | Chart deployment |
+| Go | 1.26 | Backend build/runtime |
+| Node.js | 20+ | Frontend build/runtime |
+| uv | Latest | Task runner (`uvx inv ...`) |
+| Ollama | Latest | Default local model runtime |
+
+### 1. Configure Environment
 
 ```bash
 cp .env.example .env
-# Edit .env — set DB credentials, OLLAMA_HOST, NATS_URL, etc.
-# REQUIRED: Set MYCELIS_API_KEY — server refuses to start without it.
-# See docs/LOCAL_DEV_WORKFLOW.md for full variable reference.
+# REQUIRED: set MYCELIS_API_KEY (server will refuse startup without it)
+# Recommended defaults:
+#   OLLAMA_HOST=http://127.0.0.1:11434
+#   NATS_URL=nats://127.0.0.1:4222
+#   DB_HOST=127.0.0.1 DB_PORT=5432
 ```
 
-### 2. Boot the Infrastructure
+Optional but recommended (first-time Ollama model pull):
 
 ```bash
-uvx inv k8s.reset    # Full System Reset (Cluster + Core + DB)
+ollama pull qwen2.5-coder:7b
 ```
 
-### 3. Quick Start (Recommended)
-
-The lifecycle system handles port-forwards, dependencies, and server startup in one command:
+### 2. Bootstrap Infrastructure (First Time / Reset)
 
 ```bash
-uvx inv core.build           # First time only (compile Go binary)
-uvx inv lifecycle.up          # Bring up: bridge → wait deps → core (background)
-uvx inv lifecycle.up --build  # Or combine: build + bring up
+uvx inv k8s.reset
 ```
 
-Check everything:
+### 3. Start Full Local Stack (Recommended)
+
+This starts bridge + backend + frontend in one flow:
 
 ```bash
-uvx inv lifecycle.status      # Dashboard: Docker, Kind, PG, NATS, Core, Frontend, Ollama
-uvx inv lifecycle.health      # Deep probe: hits actual API endpoints with auth
+uvx inv lifecycle.up --build --frontend
 ```
 
-### 3b. Manual Start (Alternative)
+Verify:
+
+```bash
+uvx inv lifecycle.status
+uvx inv lifecycle.health
+```
+
+Open:
+- `http://localhost:3000/dashboard` (frontend)
+- `http://localhost:8081/healthz` (backend health)
+
+### 4. Manual Start (Alternative)
 
 If you prefer manual control over each service:
 
@@ -1215,14 +1259,132 @@ uvx inv interface.install     # First time only
 uvx inv interface.dev         # Next.js dev server (Terminal 3)
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+### 5. Stop / Restart
 
-### 7. Configure the Cognitive Engine
+```bash
+uvx inv lifecycle.down
+uvx inv lifecycle.restart --build --frontend
+```
+
+### 6. Configure Cognitive Providers
 
 - **UI:** `/settings` → **Cognitive Matrix** tab — change provider routing, configure endpoints.
 - **MCP:** `/settings` → **MCP Tools** tab — install servers from curated library or manually.
 - **YAML:** Edit `core/config/cognitive.yaml` directly.
+- **Default:** Ollama is the standard local provider unless you explicitly reroute profiles.
 - **Env:** `OLLAMA_HOST` in `.env` sets the default Ollama endpoint.
+
+#### Multi-Host Agent Routing (Enterprise / Multi-Backend)
+
+Mycelis supports routing different agents/teams to different AI backend hosts while preserving one shared NATS orchestration bus.
+
+- Add providers in `cognitive.yaml` (or provider CRUD API), one provider per host.
+- Route by profile (`profiles` map), team default (`team.provider`), or agent override (`agent.provider`).
+- Default remains local Ollama unless overridden.
+
+Runtime override env vars (JSON maps):
+
+- `MYCELIS_TEAM_PROVIDER_MAP`
+  - Example: `{"council-core":"ollama-local","research-team":"vllm-cluster-a"}`
+- `MYCELIS_AGENT_PROVIDER_MAP`
+  - Example: `{"admin":"ollama-local","council-architect":"claude-remote","council-coder":"lmstudio-local"}`
+
+Precedence:
+1. `agent.provider`
+2. `team.provider`
+3. role/profile routing in `cognitive.profiles`
+4. fallback (`chat`/`sentry`/first available provider)
+
+This enables Soma/Council/teams to execute across mixed backend services while still coordinating over NATS subjects.
+
+### 7. Backend Binary Compile + Modes (No Frontend Required)
+
+The backend binary can run standalone as the API action backend without the frontend.
+
+Build:
+
+```bash
+cd core
+go build -o bin/server ./cmd/server
+```
+
+Run API server mode (default):
+
+```bash
+MYCELIS_API_KEY=replace-me ./bin/server
+# Windows PowerShell:
+# $env:MYCELIS_API_KEY="replace-me"; .\bin\server.exe
+```
+
+Run action mode from the same binary (send API requests to a target Mycelis server):
+
+```bash
+./bin/server action GET /api/v1/services/status
+./bin/server action POST /api/v1/council/sentry/chat '{"messages":[{"role":"user","content":"health check"}]}'
+./bin/server action shell
+```
+
+Action mode defaults to `http://localhost:8081` unless overridden by config or env.
+
+#### Action Shell Mode
+
+`./bin/server action shell` opens an interactive REPL for direct operator communication from a shell environment.
+
+Supported commands:
+
+- `status` → `GET /api/v1/services/status`
+- `/api/v1/...` → shorthand for `GET` on that path
+- `chat <member> <message>` → `POST /api/v1/council/{member}/chat`
+- `broadcast <message>` → `POST /api/v1/swarm/broadcast`
+- `send <provider> <recipient> <message>` → `POST /api/v1/comms/send`
+- `<METHOD> <PATH|URL> [JSON]` → raw request mode
+- `use <base_url>` → switch target server without leaving shell
+- `help`, `exit`
+
+#### Action CLI Configuration (Server Binary)
+
+Config fields:
+
+```yaml
+api_base_url: "http://localhost:8081"
+api_key: "mycelis-dev-key-change-in-prod"
+timeout_seconds: 20
+headers:
+  X-Environment: "dev"
+```
+
+Path precedence (later wins; user-home paths outrank system/project paths):
+1. `/etc/mycelis/config.yaml` or `/etc/mycelis/config.yml`
+2. `./mycelis.yaml`, `./mycelis.yml`, `./config/mycelis.yaml`, `./config/mycelis.yml`
+3. `$XDG_CONFIG_HOME/mycelis/config.yaml` and `.yml`
+4. `$HOME/.config/mycelis/config.yaml` and `.yml`
+5. `$HOME/.mycelis/config.yaml` and `.yml`
+6. `MYCELIS_CONFIG` explicit file path (highest precedence)
+
+Environment overrides for action mode:
+- `MYCELIS_API_URL` (overrides `api_base_url`)
+- `MYCELIS_API_KEY` (overrides `api_key`)
+- `MYCELIS_API_TIMEOUT_SEC` (overrides `timeout_seconds`)
+
+#### Soma Communication Providers (Local-First, Optional)
+
+Soma now supports outbound communication providers through `/api/v1/comms/*` and agent tooling (`send_external_message`).
+
+Configure any subset:
+
+- `MYCELIS_COMMS_SLACK_WEBHOOK_URL` (Slack incoming webhook)
+- `MYCELIS_COMMS_TELEGRAM_BOT_TOKEN` (Telegram Bot API)
+- `MYCELIS_COMMS_TWILIO_ACCOUNT_SID`
+- `MYCELIS_COMMS_TWILIO_AUTH_TOKEN`
+- `MYCELIS_COMMS_WHATSAPP_FROM` (e.g. `+14155238886`)
+- `MYCELIS_COMMS_WEBHOOK_URL` (generic webhook sink)
+- `MYCELIS_COMMS_WEBHOOK_BEARER` (optional Bearer token for generic webhook)
+
+API endpoints:
+
+- `GET /api/v1/comms/providers` — provider readiness/config status
+- `POST /api/v1/comms/send` — direct outbound send
+- `POST /api/v1/comms/inbound/{provider}` — webhook ingress to Soma input bus
 
 ## Developer Orchestration
 
@@ -1236,6 +1398,8 @@ Run from `scratch/` root using `uvx inv`:
 | `uvx inv core.build` | Compile Go binary + Docker image |
 | `uvx inv core.test` | Run unit tests (`go test ./...`) |
 | `uvx inv core.run` | Run Core locally (foreground) |
+| `cd core && go build -o bin/server ./cmd/server` | Compile standalone backend binary (no frontend required) |
+| `cd core && ./bin/server action GET /api/v1/services/status` | Use server binary as action CLI against API backend |
 | `uvx inv core.stop` | Kill running Core process |
 | `uvx inv core.restart` | Stop + Run |
 | `uvx inv core.smoke` | Governance smoke tests |
@@ -1374,18 +1538,27 @@ Three workflows run on push/PR to `main` and `develop`:
 | **V7 Architecture PRD** | [mycelis-architecture-v7.md](mycelis-architecture-v7.md) — V7 product requirements: event spine, mission graph, observability | [/docs?doc=v7-architecture-prd](/docs?doc=v7-architecture-prd) |
 | **V7 UI Framework** | [docs/UI_FRAMEWORK_V7.md](docs/UI_FRAMEWORK_V7.md) — Default UI instantiation contract (state model, failure templates, testing matrix, PR gate) | [/docs?doc=v7-ui-framework](/docs?doc=v7-ui-framework) |
 | **V7 UI Elements Planning** | [docs/UI_ELEMENTS_PLANNING_V7.md](docs/UI_ELEMENTS_PLANNING_V7.md) — Research-backed element standards, Soma interaction patterns, and planning workflow | [/docs?doc=v7-ui-elements-planning](/docs?doc=v7-ui-elements-planning) |
-| **V7 UI Parallel Delivery** | [docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) — Active gate model + lane matrix (A/B/C/D/Q) with evidence tracking | [/docs?doc=v7-ui-parallel-delivery](/docs?doc=v7-ui-parallel-delivery) |
+| **V7 Parallel Implementation Board** | [docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) — Unified gate model + lane matrix (A/B/C/D/Q) with inception-control evidence tracking | [/docs?doc=v7-ui-parallel-delivery](/docs?doc=v7-ui-parallel-delivery) |
 | **V7 UI Instantiation + Bus Plan** | [docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) — Execution-grade plan for team lifecycle, channel I/O contracts, and Basic/Guided/Expert NATS UX | [/docs?doc=v7-ui-instantiation-bus-plan](/docs?doc=v7-ui-instantiation-bus-plan) |
 | **V7 MCP Baseline** | [docs/V7_MCP_BASELINE.md](docs/V7_MCP_BASELINE.md) — MVOS: filesystem, memory, artifact-renderer, fetch | [/docs?doc=v7-mcp-baseline](/docs?doc=v7-mcp-baseline) |
+| **MCP Service Config (Local-First)** | [docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md](docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) — Service onboarding standard, local-default posture, remote exception workflow | [/docs?doc=arch-mcp-service-config-local-first](/docs?doc=arch-mcp-service-config-local-first) |
+| **Universal Action Interface V7** | [docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md](docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md) — Unified action contracts and dynamic service APIs across MCP/OpenAPI/Python | [/docs?doc=arch-universal-action-interface-v7](/docs?doc=arch-universal-action-interface-v7) |
+| **Actualization Beyond MCP V7** | [docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md](docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md) — External research-informed architecture for MCP/OpenAPI/A2A/ACP and Python management interfaces | [/docs?doc=arch-actualization-beyond-mcp-v7](/docs?doc=arch-actualization-beyond-mcp-v7) |
+| **Secure Gateway + Remote Actuation** | [docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md](docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md) — Security hardening profile for self-hosted control planes and remote actuator execution | [/docs?doc=arch-secure-gateway-remote-actuation-v7](/docs?doc=arch-secure-gateway-remote-actuation-v7) |
+| **Hardware Interface API + Channels** | [docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md](docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) — Hardware control-plane API and direct channel architecture for common protocols | [/docs?doc=arch-hardware-interface-api-v7](/docs?doc=arch-hardware-interface-api-v7) |
+| **Soma Symbiote + Host Actuation** | [docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md](docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md) — Thought profile contracts, growth-loop learning, and localhost host-actuation architecture | [/docs?doc=arch-soma-symbiote-growth-host-actuation-v7](/docs?doc=arch-soma-symbiote-growth-host-actuation-v7) |
+| **Agent Source Instantiation Template** | [docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md](docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md) — Canonical provider template with Ollama as default source plus ChatGPT/OpenAI, Claude, Gemini, vLLM, and LM Studio | [/docs?doc=arch-agent-source-instantiation-template-v7](/docs?doc=arch-agent-source-instantiation-template-v7) |
+| **Soma Extension-of-Self PRD** | [docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md](docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) — Detailed extension-of-self program: local Ollama contract, universal action rollout, sprinted lane plan, and quality gates | [/docs?doc=v7-soma-extension-self-prd](/docs?doc=v7-soma-extension-self-prd) |
+| **Soma Team + Channel Architecture** | [docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) — Canonical inter-team/process/MCP channels, I/O envelopes, RAG memory boundaries | [/docs?doc=arch-soma-team-channels](/docs?doc=arch-soma-team-channels) |
 | **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance | [/docs?doc=swarm-operations](/docs?doc=swarm-operations) |
 | **Cognitive Architecture** | [docs/COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md) — Providers, profiles, matrix UI, embedding | [/docs?doc=cognitive-architecture](/docs?doc=cognitive-architecture) |
 | **Signal Log Schema** | [docs/logging.md](docs/logging.md) — LogEntry format, NATS cortex.logs subject, field reference | [/docs?doc=logging-schema](/docs?doc=logging-schema) |
 | **Governance** | [docs/governance.md](docs/governance.md) — Policy enforcement, approvals, security | [/docs?doc=governance](/docs?doc=governance) |
 | **Testing** | [docs/TESTING.md](docs/TESTING.md) — Unit, integration, smoke protocols | [/docs?doc=testing](/docs?doc=testing) |
-| **V7 UI Verification** | [docs/verification/v7-step-01-ui.md](docs/verification/v7-step-01-ui.md) — Manual UI checklist for V7 Step 01 navigation | [/docs?doc=v7-ui-verification](/docs?doc=v7-ui-verification) |
+| **V7 UI Verification (Archive)** | [docs/archive/v7-step-01-ui.md](docs/archive/v7-step-01-ui.md) — Historical manual UI checklist for V7 Step 01 navigation | [/docs?doc=v7-ui-verification](/docs?doc=v7-ui-verification) |
 | **V7 Implementation Plan** | [docs/V7_IMPLEMENTATION_PLAN.md](docs/V7_IMPLEMENTATION_PLAN.md) — Teams A/B/C/D/E technical plan | [/docs?doc=v7-implementation-plan](/docs?doc=v7-implementation-plan) |
 | **V7 Dev State** | [V7_DEV_STATE.md](V7_DEV_STATE.md) — Authoritative map of what's done vs pending | [/docs?doc=v7-dev-state](/docs?doc=v7-dev-state) |
-| **IA Step 01** | [docs/product/ia-v7-step-01.md](docs/product/ia-v7-step-01.md) — Workflow-first navigation PRD and decisions | [/docs?doc=v7-ia-step01](/docs?doc=v7-ia-step01) |
+| **IA Step 01 (Archive)** | [docs/archive/ia-v7-step-01.md](docs/archive/ia-v7-step-01.md) — Historical workflow-first navigation PRD and decisions | [/docs?doc=v7-ia-step01](/docs?doc=v7-ia-step01) |
 | **Registry** | [core/internal/registry/README.md](core/internal/registry/README.md) — Connector marketplace | — |
 | **Core API** | [core/README.md](core/README.md) — Go service architecture | — |
 | **CLI** | [cli/README.md](cli/README.md) — `myc` command-line tool | — |
@@ -1476,7 +1649,7 @@ If preflight fails, mark the run `INVALID_ENV` and stop. Do not file product reg
 | V7 Step 01 | Workflow-First Navigation (Team D) | Nav collapsed from 12+ routes to 5 workflow-first panels. `ZoneA_Rail` (5 items + Advanced Mode toggle). `/automations` (6 tabs + deep-link + advanced gate). `/resources` (4 tabs + deep-link). `/system` (5 tabs + advanced gate). 8 legacy routes → server-side `redirect()`. `PolicyTab` CRUD migrated from `/approvals` into `ApprovalsTab`. 56 unit tests pass. |
 | V7 Team A | Event Spine | `mission_runs` (023) + `mission_events` (024) migrations. `protocol.MissionEventEnvelope` + 17 `EventType` constants. `events.Store` (Emit — DB-first + async CTS publish). `runs.Manager` (CreateRun, CreateChildRun, UpdateRunStatus). `GET /api/v1/runs/{id}/events` + `GET /api/v1/runs/{id}/chain` handlers. Propagation chain: Soma → activation → team → agent. Agent emits `tool.invoked`/`tool.completed`/`tool.failed` per ReAct iteration. `CommitResponse.RunID` returned to UI. TypeScript types in `interface/types/events.ts`. |
 | V7 Soma Workflow | End-to-End Working Flow | **Backend:** `ConsultationEntry` type in `protocol.ChatResponsePayload`; ReAct loop captures `consult_council` calls into `ProcessResult.Consultations`; `agentResult.Consultations` wired into `chatPayload`; `GET /api/v1/runs` global listing endpoint (`runs.Manager.ListRecentRuns`). **Store:** `MissionRun` + `MissionEvent` types; `activeRunId`, `runTimeline`, `recentRuns` state; `confirmProposal` injects `role:'system'` message with `run_id`; `fetchRunTimeline` + `fetchRecentRuns` actions. **Chat UI:** Soma-locked header (no dropdown), `DirectCouncilButton` popover, `DelegationTrace` council cards, `SomaActivityIndicator` (live `streamLogs` activity), system message bubble linking to `/runs/{id}`. **Runs UI:** `RunTimeline.tsx` (auto-poll 5s), `EventCard.tsx`, `/runs/[id]` page, `/runs` list page, `RecentRunsSection` in OpsOverview. **OpsWidget Registry:** `lib/opsWidgetRegistry.ts` — `registerOpsWidget()` / `getOpsWidgets()` / `unregisterOpsWidget()` plugin API; OpsOverview renders from registry. **LaunchCrewModal:** Always targets Soma on open; clears stale proposals. **Tests:** 7 new passing Go tests (4 `ListRecentRuns`, 3 `handleListRuns`). |
-| Provider CRUD + Profiles | Provider Management + Mission Profiles + Reactive | **Backend:** `AddProvider`/`UpdateProvider`/`RemoveProvider` with `RWMutex` hot-reload on `cognitive.Router`. `POST/PUT/DELETE /api/v1/brains` + `POST /api/v1/brains/{id}/probe`. Context snapshot CRUD (`context_snapshots` migration 028). Mission profile CRUD + activate (`mission_profiles` migration 029). Reactive NATS subscription engine (`core/internal/reactive/engine.go`). `GET /api/v1/services/status` health aggregation. `MaxReconnects(-1)` + DB/NATS startup retry loops (45×2s). **Frontend:** `BrainsPage.tsx` (add/edit/delete/probe with type presets), `ContextSwitchModal.tsx` (Cache & Transfer / Start Fresh / Load Snapshot), `MissionProfilesPage.tsx` (role→provider table, NATS subscriptions, context strategy), Profiles tab in Settings, Services tab in System. |
+| Provider CRUD + Profiles | Provider Management + Mission Profiles + Reactive | **Backend:** `AddProvider`/`UpdateProvider`/`RemoveProvider` with `RWMutex` hot-reload on `cognitive.Router`. `POST/PUT/DELETE /api/v1/brains` + `POST /api/v1/brains/{id}/probe`. Context snapshot CRUD (`context_snapshots` migration 028). Mission profile CRUD + activate (`mission_profiles` migration 029). Reactive NATS subscription engine (`core/internal/reactive/engine.go`). `GET /api/v1/services/status` health aggregation (including explicit `ollama` readiness row). `MaxReconnects(-1)` + DB/NATS startup retry loops (45×2s). **Frontend:** `BrainsPage.tsx` (add/edit/delete/probe with type presets), `ContextSwitchModal.tsx` (Cache & Transfer / Start Fresh / Load Snapshot), `MissionProfilesPage.tsx` (role→provider table, NATS subscriptions, context strategy), Profiles tab in Settings, Services tab in System. |
 | V7 Team B | Trigger Engine | **Migrations:** `trigger_rules` (025) + `trigger_executions` (026). **Backend:** `triggers.Store` (rule CRUD, in-memory cache, `LogExecution`, `ActiveCount`). `triggers.Engine` (CTS subscription on `swarm.mission.events.*`, 4-guard `evaluateRule` — cooldown, recursion depth, concurrency, condition — `fireTrigger` creates child run, `proposeTrigger` logs for approval). 6 HTTP handlers (`GET/POST/PUT/DELETE /api/v1/triggers`, `POST /toggle`, `GET /history`). Wired into `AdminServer` + `main.go` with graceful shutdown. **Frontend:** `TriggerRulesTab.tsx` (full CRUD UI — RuleCard, CreateRuleForm, guard badges, mode warnings). Trigger types + 5 async actions in `useCortexStore`. Automations → Triggers tab now live (was DegradedState). **Bug fixes:** `/runs/[id]/page.tsx` (`"use client"` + `use(params)` for Next.js 15+), `/docs/page.tsx` (Suspense boundary for `useSearchParams`). |
 | V7 Conversation Log | Agent Transcript Browsing + Interjection | **Migration 030** (`conversation_turns`). **Backend:** `conversations.Store` (LogTurn, GetRunConversation, GetSessionTurns). `ConversationLogger` interface in `protocol/events.go` propagated Soma → Team → Agent (mirrors EventEmitter). 6 emission points in `processMessageStructured()` (system, user, tool_call, tool_result, interjection, assistant). Interjection via NATS mailbox `swarm.agent.{id}.interjection` — agent checks between ReAct iterations. 3 HTTP handlers (run conversation, session turns, interject). **Frontend:** `ConversationLog.tsx` (agent filter, 5s auto-poll, interjection input), `TurnCard.tsx` (role-based colors/icons/badges), `types/conversations.ts`. `/runs/[id]` tab bar (Conversation + Events). **Tests:** 13 Go store tests, 11 Go handler tests, 9 frontend tests. |
 | V7 Inception Recipes | Structured Prompt Patterns for RAG | **Migration 031** (`inception_recipes`). **Backend:** `inception.Store` (CreateRecipe, GetRecipe, ListRecipes, SearchByTitle, IncrementUsage, UpdateQuality). `store_inception_recipe` + `recall_inception_recipes` internal tools (dual-persist: RDBMS + pgvector). Recipe recall integrated into `research_for_blueprint` pipeline (step 5). Interaction protocol updated: agents prompted to store recipes after complex tasks. 5 HTTP handlers (list, search, get, create, quality feedback). **Tests:** 16 Go store tests, 10 Go handler tests. |
@@ -1544,3 +1717,4 @@ What:
 Validation:
 - ...
 ```
+

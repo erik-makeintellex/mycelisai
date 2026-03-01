@@ -34,9 +34,10 @@ type AgentManifest struct {
 	Role          string        `json:"role" yaml:"role"`
 	SystemPrompt  string        `json:"system_prompt,omitempty" yaml:"system_prompt,omitempty"`
 	Model         string        `json:"model,omitempty" yaml:"model,omitempty"`
+	Provider      string        `json:"provider,omitempty" yaml:"provider,omitempty"` // Explicit provider ID target (maps to cognitive.providers key)
 	Inputs        []string      `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 	Outputs       []string      `json:"outputs,omitempty" yaml:"outputs,omitempty"`
-	Tools         []string      `json:"tools,omitempty" yaml:"tools,omitempty"`              // MCP + internal tool names bound to this agent
+	Tools         []string      `json:"tools,omitempty" yaml:"tools,omitempty"`                   // MCP + internal tool names bound to this agent
 	MaxIterations int           `json:"max_iterations,omitempty" yaml:"max_iterations,omitempty"` // ReAct loop limit (0 = DefaultMaxIterations)
 	Verification  *Verification `json:"verification,omitempty" yaml:"verification,omitempty"`
 }

@@ -1,17 +1,17 @@
 # V7 Implementation Plan — Event Spine, Mission Runs, Trigger Engine, Scheduler, Workflow-First IA
 
-> **Status:** In Progress — Team B (Trigger Engine) is NEXT
-> **Date:** 2026-02-20 | **Updated:** 2026-02-24
+> **Status:** In Progress — Team C (Scheduler) is NEXT; Team B (Trigger Engine) is COMPLETE
+> **Date:** 2026-02-20 | **Updated:** 2026-02-28
 > **Scope:** Migrations 023-029, 6 new Go packages, 8 new API route groups, 10+ new frontend components, navigation restructure
-> **Execution Order:** Team A → Team B → Team C → Team E → Team D (strict sequential, no parallel overlap on shared tables)
+> **Execution Order:** Core track Team A → Team B → Team C → Team E → Team D, then extension tracks in parallel behind security/governance gates
 >
 > | Team | Scope | Status |
 > |------|-------|--------|
 > | Team D | V7 Navigation restructure | ✅ COMPLETE |
 > | Team A | Event Spine — migrations 023-024, events, runs, timeline APIs | ✅ COMPLETE |
 > | Provider/Profile | Migrations 028-029, provider CRUD, mission profiles, reactive engine, services dashboard | ✅ COMPLETE |
-> | Team B | Trigger Engine — migrations 025-026, triggers/store.go, engine.go, handlers | 🔲 NEXT |
-> | Team C | Scheduler — migration 027, scheduler.go, schedules handlers | 🔲 PENDING |
+> | Team B | Trigger Engine — migrations 025-026, triggers/store.go, engine.go, handlers | ✅ COMPLETE |
+> | Team C | Scheduler — migration 027, scheduler.go, schedules handlers | 🔲 NEXT |
 > | Team E | Causal Chain UI — ViewChain.tsx, RunChainNode.tsx, /runs/[id]/chain page | 🔲 PENDING |
 > | MCP Baseline | filesystem, memory, artifact-renderer, fetch MCP servers | 🔲 PARALLEL |
 
@@ -1525,6 +1525,22 @@ No time estimates per project convention. Steps are ordered, verifiable, and dep
 | **E — Run Timeline UI** | RunTimeline, ViewChain, EventCard, RunChainNode components, Zustand slices, route pages, MissionControl integration | 5 major steps | Team A APIs available (GET /runs/*/events, GET /runs/*/chain) | `inv interface.build` succeeds, timeline renders events, chain renders tree |
 | **D — Navigation** | 3 new pages (Automations, Resources, System), nav restructure, degraded mode messaging, content migration from old routes | 7 major steps | Team E complete (Automations page needs run timeline integration) | `inv interface.build` succeeds, all 5 nav items reachable, old routes redirect |
 
+### 7.1 Integrated Timeline Fit (Architecture Expansion)
+
+No absolute day estimates are used; rollout is wave-gated by dependency and risk.
+
+| Wave | Scope | Owner Lanes | Dependency Gate | Exit Criteria |
+|------|-------|-------------|-----------------|---------------|
+| **Wave 0 (Now)** | Core continuity: Scheduler completion + lifecycle profile wiring (`ephemeral/persistent/auto`) | Core Team C + Atlas/Helios | Team B complete (done) | Scheduler stable, lifecycle contracts wired, tests green |
+| **Wave 1 (Next)** | Runs chain UX completion + navigation hardening | Team E + Team D + Lane Q | Wave 0 complete | Causal chain UI production-ready, degraded UX verified |
+| **Wave 2 (Parallel)** | Universal Action Interface runtime scaffolds: action registry, gateway APIs, adapter interfaces (`mcp/openapi/python`) | Forge + Helios + Pyra + Sentinel | Wave 0 complete | `/api/v1/actions/*` contract scaffolds merged with tests |
+| **Wave 3 (Parallel, Security-Gated)** | Secure gateway primitives: handshake scopes, idempotency keys, replay guards, private-remote actuation pilot | Circuit + Forge + Sentinel | Wave 2 core contracts + security profile gates | High-risk security suite passes before remote enablement |
+| **Wave 4 (Expansion)** | Scheduled-repeat promotion + low-level IoT long-lived team pathways | Atlas + Circuit + Pyra | Wave 1 + Wave 3 | Repeat/IoT lifecycle path operational and observable |
+
+Policy note:
+- Remote actuation stays disabled until Wave 3 exit criteria are met.
+- Direct Soma path remains default for low-risk one-off actions during all waves.
+
 ### Step Verification Checklist
 
 **Team A complete when:**
@@ -1578,6 +1594,21 @@ No time estimates per project convention. Steps are ordered, verifiable, and dep
 - [ ] `inv interface.build` succeeds
 
 ---
+
+### Expansion Track Completion Checklist
+
+- [ ] Universal action registry APIs (`/api/v1/actions/services`, `/api/v1/actions`) are available with envelope compliance.
+- [ ] MCP services are mirrored into universal action records without breaking existing MCP endpoints.
+- [ ] Python runtime manager scaffolds can install/sync typed actions safely.
+- [ ] Team lifecycle routing honors `ephemeral|persistent|auto` and scheduled-repeat promotion.
+- [ ] Low-level IoT pathways route to persistent teams with strict governance controls.
+- [ ] Hardware interface control-plane APIs (`/api/v1/hardware/interfaces`, `/api/v1/hardware/actions`) are defined and test-covered.
+- [ ] Common direct channel adapters (`mqtt`, `serial`, `modbus-tcp`, `opc-ua`, `canbus`, `websocket`) have gated onboarding + recovery behavior.
+- [ ] Soma thought profile contracts and decision APIs (`/api/v1/soma/profile`, `/api/v1/soma/decide`) are defined and test-covered.
+- [ ] Localhost host-actuation adapter APIs (`/api/v1/host/actions`, `/api/v1/host/status`) are gated, auditable, and test-covered.
+- [ ] Symbiote learning loop artifacts (signals/recipes/review actions) are observable and rollback-safe.
+- [ ] Secure gateway profile controls are implemented for private remote actuation (mTLS, scoped handshake, replay protection).
+- [ ] Remote actuation remains blocked unless security gate tests pass.
 
 ## 8. Risk Analysis
 
@@ -1699,6 +1730,98 @@ New tables (`mission_runs`, `mission_events`, `trigger_rules`, etc.) need test f
 
 ---
 
+## 9. Soma Extension-of-Self Execution Program
+
+This section converts the new architecture direction into concrete parallel implementation work while Team C (scheduler) remains active.
+
+### 9.1 Program Objective
+
+Deliver a governed extension-of-self runtime where Soma can:
+- choose direct action vs manifested team vs propose path
+- preserve and improve outcomes through bounded learning loops
+- execute local-first actions with explicit Ollama readiness/fallback behavior
+- onboard non-MCP execution channels via the universal action contract
+
+### 9.2 Parallel Work Packages
+
+**Package A — Decision and Memory Contracts (Backend)**
+- Add typed decision-frame contracts and persistence.
+- Emit decision transition events linked to `run_id`.
+- Add learning signal capture + review scaffolds.
+
+**Package B — Universal Action Runtime (Backend)**
+- Introduce `actions/services` registry and invoke pipeline.
+- Keep MCP as adapter zero; add one non-MCP adapter scaffold.
+- Enforce idempotency keys and replay-window checks for side effects.
+
+**Package C — Scheduler + Team Lifetime Runtime (Backend)**
+- Finish scheduled mission execution and pause/resume reliability.
+- Add repeat-promotion logic from one-off to scheduled execution.
+- Enforce team lifetime transitions (`ephemeral|persistent|auto`).
+
+**Package D — Operator Surfaces (Frontend)**
+- Expose decision frame and path reasoning in Workspace.
+- Expose local-provider readiness and fallback states in System/StatusDrawer.
+- Ensure every degraded path includes next-action controls inline.
+
+**Package Q — QA Reliability and Gates (Cross-cutting)**
+- Maintain lane evidence matrix.
+- Run degraded/recovery drills for NATS, SSE, and local provider failures.
+- Gate promotion to `main` via P0/P1/P2/RC evidence.
+
+### 9.3 Dependency and Sequencing Rules
+
+1. Packages A/B/C/D run in parallel.
+2. Package Q validates each package increment and integration merge.
+3. Contract freeze milestone is mandatory before cross-package API usage.
+4. Scheduler completion remains critical-path for repeat/scheduled flows.
+
+### 9.4 Sprint Breakdown
+
+**Sprint 0 (Contract freeze)**
+- Decision frame schemas
+- Universal action invoke envelope
+- Local Ollama readiness status fields
+- Initial contract tests
+
+**Sprint 1 (First vertical slice)**
+- Direct-vs-team decision endpoint wired
+- Workspace decision trace visible
+- Team manifest flow tied to run evidence
+
+**Sprint 2 (Repeat and adaptation)**
+- Scheduler repeat promotion path
+- Learning signal review loop
+- Degraded/recovery reliability drills
+
+**Sprint 3 (Channel expansion)**
+- Non-MCP adapter parity pilot
+- Host/hardware governed action scaffold
+- Security-gated remote controls kept disabled by default
+
+### 9.5 Verification Additions
+
+Add the following checks to release gates:
+- decision frame contract tests (unit + API)
+- universal action adapter contract suite
+- scheduler repeat promotion integration tests
+- local provider degraded/fallback E2E tests
+- host/hardware proposal + approval flow tests
+
+### 9.6 Inception Discipline Gates (Harsh-Truth Controls)
+
+Before expanding autonomy breadth:
+- prove one stable end-to-end use case with measurable operator benefit
+- keep self-update pathways staging-only with verified rollback
+- enforce heartbeat autonomy budgets and kill-switch behavior
+- block unverified external skill imports from medium/high-risk scopes
+- verify credential-probing denial + secret-redaction behavior in security tests
+
+Authoritative PRD for this program:
+- `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
+
+---
+
 ## Appendix A: Dependency Graph
 
 ```
@@ -1759,3 +1882,4 @@ scheduler.Scheduler ──> runs.Manager + events.Store + Soma
 ---
 
 *End of V7 Implementation Plan.*
+

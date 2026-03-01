@@ -342,32 +342,41 @@ func (r *Router) AutoConfigure(ctx context.Context) {
 
 // InferWithContract executes the request against the configured profile/provider
 func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*InferResponse, error) {
+	var providerID string
+	var ok bool
 
-	// 1. Resolve Profile -> ProviderID (3-tier fallback)
-	providerID, ok := r.Config.Profiles[req.Profile]
-	if !ok {
-		log.Printf("WARN: Profile '%s' not found. Attempting fallback chain...", req.Profile)
+	// 1. Resolve explicit Provider override first, then profile routing fallback.
+	if req.Provider != "" {
+		providerID = req.Provider
+	} else {
+		providerID, ok = r.Config.Profiles[req.Profile]
+		if !ok {
+			log.Printf("WARN: Profile '%s' not found. Attempting fallback chain...", req.Profile)
 
-		// Tier 1: Try sentry (safe default)
-		if sentryID, exists := r.Config.Profiles["sentry"]; exists {
-			log.Printf("Fallback: '%s' -> sentry ('%s')", req.Profile, sentryID)
-			providerID = sentryID
-		} else if len(r.Adapters) > 0 {
-			// Tier 2: First available adapter
-			for k := range r.Adapters {
-				log.Printf("Fallback: '%s' -> first available adapter '%s'", req.Profile, k)
-				providerID = k
-				break
+			// Tier 1: Try sentry (safe default)
+			if sentryID, exists := r.Config.Profiles["sentry"]; exists {
+				log.Printf("Fallback: '%s' -> sentry ('%s')", req.Profile, sentryID)
+				providerID = sentryID
+			} else if len(r.Adapters) > 0 {
+				// Tier 2: First available adapter
+				for k := range r.Adapters {
+					log.Printf("Fallback: '%s' -> first available adapter '%s'", req.Profile, k)
+					providerID = k
+					break
+				}
+			} else {
+				// Tier 3: No profiles, no adapters — total cognitive blackout
+				return nil, fmt.Errorf("profile '%s' not found — no providers available (check config/cognitive.yaml and DB connectivity)", req.Profile)
 			}
-		} else {
-			// Tier 3: No profiles, no adapters — total cognitive blackout
-			return nil, fmt.Errorf("profile '%s' not found — no providers available (check config/cognitive.yaml and DB connectivity)", req.Profile)
 		}
 	}
 
 	// 2. Get Adapter
 	adapter, ok := r.Adapters[providerID]
 	if !ok {
+		if req.Provider != "" {
+			return nil, fmt.Errorf("provider '%s' (explicit override) is not initialized", providerID)
+		}
 		return nil, fmt.Errorf("provider '%s' (for profile '%s') is not initialized", providerID, req.Profile)
 	}
 
@@ -407,9 +416,13 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 			r.AutoConfigure(ctx)
 
 			// 3. Retry on NEW provider
-			newProviderID, ok := r.Config.Profiles[req.Profile]
-			if !ok {
-				return nil, fmt.Errorf("profile lost during recovery")
+			newProviderID := providerID
+			if req.Provider == "" {
+				var exists bool
+				newProviderID, exists = r.Config.Profiles[req.Profile]
+				if !exists {
+					return nil, fmt.Errorf("profile lost during recovery")
+				}
 			}
 
 			if newProviderID == providerID {

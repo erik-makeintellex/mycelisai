@@ -150,6 +150,30 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/archive/MVP_AGENTRY_PLAN.md",
                 description: "Historical agentry chain map retained for context",
             },
+            {
+                slug: "v7-ui-verification",
+                label: "V7 UI Verification (Archive)",
+                path: "docs/archive/v7-step-01-ui.md",
+                description: "Historical manual UI verification checklist for V7 Step 01 navigation",
+            },
+            {
+                slug: "v7-ia-step01",
+                label: "IA Step 01 (Archive)",
+                path: "docs/archive/ia-v7-step-01.md",
+                description: "Historical workflow-first navigation PRD for Step 01 implementation",
+            },
+            {
+                slug: "v7-ui-optimal-workflow-prds",
+                label: "UI Optimal Workflow PRDs (Archive)",
+                path: "docs/archive/UI_OPTIMAL_WORKFLOW_PRDS_V7.md",
+                description: "Historical planning PRDs superseded by current execution authority docs",
+            },
+            {
+                slug: "v7-ui-engagement-actuation-review",
+                label: "UI Engagement & Actuation Review (Archive)",
+                path: "docs/archive/UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md",
+                description: "Historical UI engagement/actuation review retained for context",
+            },
         ],
     },
 
@@ -224,6 +248,54 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/V7_MCP_BASELINE.md",
                 description: "MVOS: filesystem, memory, artifact-renderer, fetch servers",
             },
+            {
+                slug: "arch-mcp-service-config-local-first",
+                label: "MCP Service Config (Local-First)",
+                path: "docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md",
+                description: "Canonical process and configuration standard for adding MCP services with local-default posture",
+            },
+            {
+                slug: "arch-universal-action-interface-v7",
+                label: "Universal Action Interface V7",
+                path: "docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md",
+                description: "Canonical universal action contracts, dynamic service API, and Python management interface",
+            },
+            {
+                slug: "arch-actualization-beyond-mcp-v7",
+                label: "Actualization Beyond MCP V7",
+                path: "docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md",
+                description: "Multi-protocol actualization strategy across MCP, OpenAPI, A2A, ACP, and Python action management",
+            },
+            {
+                slug: "arch-secure-gateway-remote-actuation-v7",
+                label: "Secure Gateway + Remote Actuation",
+                path: "docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md",
+                description: "Security baseline for self-hosted gateway patterns and remote actuation services",
+            },
+            {
+                slug: "arch-hardware-interface-api-v7",
+                label: "Hardware Interface API + Channels",
+                path: "docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md",
+                description: "Hardware interface control-plane APIs and direct channel support standards",
+            },
+            {
+                slug: "arch-soma-symbiote-growth-host-actuation-v7",
+                label: "Soma Symbiote + Host Actuation",
+                path: "docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md",
+                description: "Soma thought-profile contracts, learning-growth loop, and localhost host actuation model",
+            },
+            {
+                slug: "arch-soma-team-channels",
+                label: "Soma Team + Channel Architecture",
+                path: "docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md",
+                description: "Canonical inter-team/process/MCP channel contracts and shared memory boundaries",
+            },
+            {
+                slug: "arch-agent-source-instantiation-template-v7",
+                label: "Agent Source Template V7",
+                path: "docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md",
+                description: "Standardized provider instantiation template with Ollama as default and governed overrides for OpenAI, Claude, Gemini, vLLM, and LM Studio",
+            },
         ],
     },
 
@@ -243,12 +315,6 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/TESTING.md",
                 description: "Unit, integration, smoke test protocols",
             },
-            {
-                slug: "v7-ui-verification",
-                label: "V7 UI Verification",
-                path: "docs/verification/v7-step-01-ui.md",
-                description: "Manual UI verification checklist for V7 Step 01 navigation",
-            },
         ],
     },
 
@@ -261,12 +327,6 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "Implementation Plan",
                 path: "docs/V7_IMPLEMENTATION_PLAN.md",
                 description: "V7 technical implementation plan — Teams A/B/C/D/E",
-            },
-            {
-                slug: "v7-ia-step01",
-                label: "IA Step 01 (Nav)",
-                path: "docs/product/ia-v7-step-01.md",
-                description: "Workflow-first navigation PRD and decisions",
             },
             {
                 slug: "v7-ui-framework",
@@ -282,27 +342,21 @@ export const DOC_MANIFEST: DocSection[] = [
             },
             {
                 slug: "v7-ui-parallel-delivery",
-                label: "UI Parallel Delivery Board",
+                label: "Parallel Implementation Board",
                 path: "docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md",
-                description: "Active lanes (A/B/C/D/Q), gate sequencing, dependencies, and evidence tracking",
-            },
-            {
-                slug: "v7-ui-optimal-workflow-prds",
-                label: "UI Optimal Workflow PRDs",
-                path: "docs/product/UI_OPTIMAL_WORKFLOW_PRDS_V7.md",
-                description: "Planning PRDs for optimal user workflows across Workspace, Automations, Resources, System, Teams, and Runs",
-            },
-            {
-                slug: "v7-ui-engagement-actuation-review",
-                label: "UI Engagement & Actuation Review",
-                path: "docs/product/UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md",
-                description: "Planning review of existing UI with directed engagement and actuation improvements",
+                description: "Unified implementation lanes (A/B/C/D/Q), gate sequencing, inception controls, and evidence tracking",
             },
             {
                 slug: "v7-ui-instantiation-bus-plan",
                 label: "UI Instantiation + Bus Plan",
                 path: "docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md",
                 description: "Execution plan for team instantiation, I/O contracts, and user-safe NATS exposure",
+            },
+            {
+                slug: "v7-soma-extension-self-prd",
+                label: "Soma Extension-of-Self PRD",
+                path: "docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md",
+                description: "Detailed extension-of-self delivery plan: local Ollama contract, universal action rollout, lane ownership, and release gates",
             },
         ],
     },
@@ -312,3 +366,4 @@ export const DOC_MANIFEST: DocSection[] = [
 export const DOC_BY_SLUG: Map<string, DocEntry> = new Map(
     DOC_MANIFEST.flatMap((section) => section.docs).map((doc) => [doc.slug, doc])
 );
+

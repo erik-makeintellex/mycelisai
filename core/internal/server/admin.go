@@ -13,10 +13,11 @@ import (
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/internal/events"
-	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/overseer"
@@ -25,10 +26,10 @@ import (
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/runs"
-	"github.com/mycelis/core/internal/triggers"
 	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
 	"github.com/mycelis/core/internal/swarm"
+	"github.com/mycelis/core/internal/triggers"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
@@ -38,36 +39,37 @@ type AdminServer struct {
 	Router        *router.Router
 	Guard         *governance.Guard
 	Mem           *memory.Service
-	DB            *sql.DB             // direct DB for context snapshots + mission profiles
+	DB            *sql.DB // direct DB for context snapshots + mission profiles
 	Cognitive     *cognitive.Router
 	Provisioner   *provisioning.Engine
 	Registry      *registry.Service
 	Soma          *swarm.Soma
-	NC            *nats.Conn          // NATS for chat request-reply routing
+	NC            *nats.Conn // NATS for chat request-reply routing
 	Stream        *signal.StreamHandler
 	MetaArchitect *cognitive.MetaArchitect
-	Overseer      *overseer.Engine    // Phase 5.2: Trust Economy
-	Archivist     *memory.Archivist   // Phase 5.3: RAG Persistence
-	Proposals     *ProposalStore      // Phase 5.3: Team Manifestation
-	MCP           *mcp.Service        // Phase 7.0: MCP Ingress
-	MCPPool       *mcp.ClientPool     // Phase 7.0: MCP Ingress
-	MCPLibrary    *mcp.Library        // Phase 7.7: Curated MCP Library
-	Catalogue     *catalogue.Service  // Phase 7.5: Agent Catalogue
-	Artifacts     *artifacts.Service  // Phase 7.5: Agent Outputs
+	Overseer      *overseer.Engine   // Phase 5.2: Trust Economy
+	Archivist     *memory.Archivist  // Phase 5.3: RAG Persistence
+	Proposals     *ProposalStore     // Phase 5.3: Team Manifestation
+	MCP           *mcp.Service       // Phase 7.0: MCP Ingress
+	MCPPool       *mcp.ClientPool    // Phase 7.0: MCP Ingress
+	MCPLibrary    *mcp.Library       // Phase 7.7: Curated MCP Library
+	Catalogue     *catalogue.Service // Phase 7.5: Agent Catalogue
+	Artifacts     *artifacts.Service // Phase 7.5: Agent Outputs
+	Comms         *comms.Gateway     // External communication providers (whatsapp/telegram/slack/etc.)
 	// V7 Event Spine (Team A)
-	Events        *events.Store       // V7: persistent mission event audit trail
-	Runs          *runs.Manager       // V7: mission run lifecycle management
+	Events *events.Store // V7: persistent mission event audit trail
+	Runs   *runs.Manager // V7: mission run lifecycle management
 	// Mission Profiles & Reactive Subscriptions
-	Reactive      *reactive.Engine    // watches NATS topics for active profiles
+	Reactive *reactive.Engine // watches NATS topics for active profiles
 	// V7 Team B: Trigger Engine
-	Triggers      *triggers.Store     // trigger rule CRUD + in-memory cache
-	TriggerEngine *triggers.Engine    // evaluates rules against CTS events
+	Triggers      *triggers.Store  // trigger rule CRUD + in-memory cache
+	TriggerEngine *triggers.Engine // evaluates rules against CTS events
 	// V7 Conversation Log
 	Conversations *conversations.Store // full-fidelity agent conversation turns
 	// V7 Inception Recipes — structured prompt patterns for RAG recall
-	Inception     *inception.Store     // inception recipe CRUD + search
+	Inception *inception.Store // inception recipe CRUD + search
 	// MCP Tool Sets — agent-scoped MCP tool bundles
-	MCPToolSets   *mcp.ToolSetService  // tool set CRUD
+	MCPToolSets *mcp.ToolSetService // tool set CRUD
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -199,7 +201,11 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Phase 5.3: RAG Memory & Sensory
 	mux.HandleFunc("GET /api/v1/memory/search", s.HandleMemorySearch)
 	mux.HandleFunc("GET /api/v1/memory/sitreps", s.HandleListSitReps)
+	mux.HandleFunc("/api/v1/memory/temp", s.HandleTempMemory)
 	mux.HandleFunc("GET /api/v1/sensors", s.HandleSensors)
+	mux.HandleFunc("GET /api/v1/comms/providers", s.HandleCommsProviders)
+	mux.HandleFunc("POST /api/v1/comms/send", s.HandleCommsSend)
+	mux.HandleFunc("POST /api/v1/comms/inbound/{provider}", s.HandleCommsInbound)
 
 	// Phase 5.3: Team Manifestation Proposals
 	mux.HandleFunc("/api/v1/proposals", s.HandleProposals)
@@ -283,6 +289,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/runs/{id}/interject", s.HandleRunInterject)
 
 	// V7 Inception Recipes: structured prompt patterns for RAG recall
+	mux.HandleFunc("GET /api/v1/inception/contracts", s.HandleInceptionContracts)
 	mux.HandleFunc("GET /api/v1/inception/recipes", s.HandleListInceptionRecipes)
 	mux.HandleFunc("GET /api/v1/inception/recipes/search", s.HandleSearchInceptionRecipes)
 	mux.HandleFunc("GET /api/v1/inception/recipes/{id}", s.HandleGetInceptionRecipe)

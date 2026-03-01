@@ -9,6 +9,14 @@
 > - [Backend Specification](BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines
 > - [Frontend Specification](FRONTEND.md) — Routes, components, Zustand, visual design
 > - [Operations Manual](OPERATIONS.md) — Deployment, config, testing, CI/CD, invoke tasks
+> - [Soma Team + Channel Architecture](SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) — Inter-team/process channels, MCP execution I/O, and shared memory boundaries
+> - [MCP Service Config (Local-First)](MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) — Standard onboarding/configuration for adding MCP services with local-default policy
+> - [Universal Action Interface V7](UNIVERSAL_ACTION_INTERFACE_V7.md) — Unified action contracts across MCP/OpenAPI/Python with dynamic service onboarding APIs
+> - [Actualization Beyond MCP V7](ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md) — Multi-protocol architecture guidance inspired by OpenClaw/A2A/ACP patterns
+> - [Secure Gateway + Remote Actuation](SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md) — Security baseline for self-hosted control planes and remote actuator services
+> - [Hardware Interface API + Channels](HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) — Standard API + direct channel model for hardware interfaces and low-level IoT pathways
+> - [Soma Symbiote + Host Actuation](SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md) — Thought-profile backend contracts, learning growth loop, and localhost actuation model
+> - [Soma Extension-of-Self PRD](../product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) — Detailed action plan for local Ollama-first extension-of-self delivery with parallel lane execution
 > - [README.md](../../README.md) — Operational source of truth (getting started, commands)
 
 ---
@@ -160,6 +168,20 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 
 ## VII. Upcoming Architecture
 
+### V7.x Immediate Program: Soma Extension-of-Self
+
+**Objective:** Operationalize Soma as a governed extension-of-self with explicit decision contracts, local-first cognition visibility, and universal action channels.
+
+- **Decision Runtime:** Add typed decision frames (`direct_action`, `manifest_team`, `propose_only`, `scheduled_repeat`) and run-linked audit emission.
+- **Local Ollama Contract:** Treat local provider readiness (reachability, model availability, latency, throughput, failure ratio) as a first-class operational dependency.
+- **Universal Action Convergence:** Keep MCP as baseline adapter while onboarding one non-MCP adapter through the same invoke contract and governance gates.
+- **Team Lifetime and Repeat:** Enforce `ephemeral|persistent|auto` with scheduler-backed repeat promotion.
+- **Governed Host/Hardware Path:** Add localhost-first host/hardware action scaffolds under allowlist + approval boundaries.
+
+Execution authority:
+- `mycelis-architecture-v7.md` (Part X)
+- `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
+
 ### Phase 12: Persistent Agent Memory & Long-Term Learning
 
 **Objective:** Give agents durable, cross-mission memory so they accumulate expertise over time.
@@ -282,3 +304,4 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 | Vitest tests | ~114 |
 | Playwright specs | 12 |
 | CI workflows | 3 |
+
