@@ -10,6 +10,7 @@ Primary documentation entry points for V7:
 - **V7 Parallel Implementation Board**: `./ui-delivery/PARALLEL_DELIVERY_BOARD.md`
 - **Team A/B/C/Q Execution Board**: `./ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md`
 - **Soma Extension-of-Self PRD**: `./product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
+- **Soma-Council Engagement Protocol V7**: `./architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`
 - **Architecture Specs**: `./architecture/` (`OVERVIEW.md`, `BACKEND.md`, `FRONTEND.md`, `OPERATIONS.md`)
 - **Agent Source Instantiation Template (Ollama-Default)**: `./architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md`
 - **Agentry Template Marketplace + Custom Templating**: `./architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md`

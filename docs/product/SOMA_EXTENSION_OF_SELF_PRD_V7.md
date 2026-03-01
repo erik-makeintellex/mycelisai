@@ -1,7 +1,7 @@
 # Soma Extension-of-Self PRD (V7)
 
 Status: `Authoritative Planning`
-Last Updated: `2026-02-28`
+Last Updated: `2026-03-01`
 Scope: extension-of-self execution model, local Ollama-first cognition, universal action integration, and parallel delivery plan
 
 ---
@@ -79,6 +79,35 @@ Deployment guidance (mandatory at inception):
 2. One stable use case first, then permission expansion by gates.
 3. No financial or mission-critical scopes until reliability/security thresholds are proven.
 
+### 2.2 Five-Pattern Assimilation (Execution Policy)
+
+The following patterns are in-scope and must be implemented as governed capabilities:
+
+1. Sub-agent orchestration (manager-worker):
+- Soma remains manager/orchestrator.
+- workers run with scoped model/context/permission profiles.
+- delegation decisions and worker outcomes must be persisted per run.
+
+2. Modular skill injection:
+- marketplace/private-hub skills are capability packages, not trusted code.
+- install/activation requires signature + scope + sandbox checks.
+- all installs must support rollback and audit trace.
+
+3. Proactive autonomy:
+- heartbeat jobs can proactively execute within explicit budgets.
+- proactive flows must always emit progress and next-step evidence.
+- operator can pause/kill all proactive loops from one control plane.
+
+4. Compaction-safe memory continuity:
+- critical state must be checkpointed before context compaction/truncation.
+- resume logic reads checkpoints + distilled memory, not transcript alone.
+- checkpoint and resume integrity must be test-covered.
+
+5. Self-improving correction loops:
+- user corrections are stored as structured hot-memory corrections.
+- promotion into durable recipes requires review and rollback guardrails.
+- no silent behavior drift from unreviewed corrections.
+
 ---
 
 ## 3. Target Product Outcomes
@@ -97,6 +126,7 @@ Soma builds durable capability through:
 - distilled recipe memory
 - vector retrieval
 - bounded adaptation with operator review
+- manifest-profile deepening tied to user-invoked objective classes
 
 ### O3. Unified Action Plane
 All execution channels (MCP, OpenAPI, Python manager, hardware adapters) use one canonical invoke contract with predictable status semantics.
@@ -137,6 +167,13 @@ Operators manage teams/channels through guided surfaces and templates, not raw t
 2. Soma routes via universal action + hardware/host adapter.
 3. Governance gate evaluates risk and approval requirement.
 4. Action result and diagnostics are recorded with replay-safe identifiers.
+
+### W5. Root-admin Group Orchestration
+1. Root admin asks Soma to define a collaboration group for a specific goal.
+2. Soma proposes group contract (`members`, `goal`, `work_mode`, `capabilities`, `approval policy`).
+3. Root admin confirms; group becomes active with scoped permissions.
+4. Group actions/runs are tracked with `group_id` linkage and governed by policy.
+5. Root admin can pause, revise, or sunset the group through Soma with full audit trail.
 
 ---
 
@@ -184,6 +221,76 @@ Separate layers:
 - distilled (`inception_recipes`, reviewed patterns)
 - retrieval (vector index)
 - procedural (approved automation playbooks)
+
+Permanent memory loop requirements:
+1. capture run evidence and user outcomes to Postgres
+2. distill reusable patterns to recipe/sitrep artifacts
+3. embed retrieval artifacts into pgvector indexes
+4. recall via semantic + objective-class retrieval
+5. promote improvements only through review gates
+6. rollback automatically/manual on drift regressions
+
+No-silence preference rule:
+- do not infer preferences from silence
+- only explicit confirmation/correction can promote preference-level changes
+
+Local continuity channels (simple 3-layer files):
+- hot: `~/.mycelis/memory/hot.jsonl` (always loaded, confirmed rules only)
+- context: `~/.mycelis/memory/context/{tenant_id}/{project_slug}.jsonl`
+- archive: `~/.mycelis/memory/archive/{yyyy-mm}/{project_slug}.jsonl` (inactive by default)
+- Postgres remains system-of-record; local files are continuity channels and must sync deterministically
+
+Central agentry memory policy:
+1. every user correction is logged with timestamp + context
+2. correction repetition is tracked
+3. on the 3rd repeat of equivalent correction, prompt promotion scope (`global|domain|project`)
+4. weekly maintenance run must:
+- remove duplicates
+- keep confirmed rules concise
+- move stale entries to archive
+- emit a short "what changed" digest
+5. when applying learned rules, include provenance (`file` + `line`) in response metadata
+6. never persist sensitive data (passwords, tokens, financial/health data, private data about third parties)
+7. `forget X` deletes matching memory everywhere and confirms completion
+8. `forget everything` wipes memory subsystem and confirms clean reset
+9. ask before high-impact workflow changes inferred from learned memory
+
+### 5.5 Manifest Improvement Contract
+Each active Soma profile must include a `manifest_improvement` policy that binds learning to user-invoked objectives.
+
+Required fields:
+- `enabled`
+- `target_alignment`
+- `signal_sources[]`
+- `promotion_policy` (`review_required`, `min_confidence`, `min_sample_size`)
+- `rollback_policy`
+- `max_change_rate_per_week`
+- `drift_guard`
+
+Rules:
+- improvements must map to objective classes that users actually invoke
+- unaligned improvements are rejected by default
+- profile promotions are auditable and reversible
+
+### 5.6 Multi-User Collaboration Group Contract
+Root-admin-defined groups are first-class execution scopes.
+
+Required fields:
+- `group_id`
+- `tenant_id`
+- `name`
+- `goal_statement`
+- `work_mode` (`read_only|propose_only|execute_with_approval|execute_bounded`)
+- `allowed_capabilities[]`
+- `member_user_ids[]`
+- `coordinator_profile`
+- `approval_policy_ref`
+- `status` (`active|paused|archived`)
+
+Rules:
+- group-scope actions must remain within `goal_statement` + `allowed_capabilities`
+- group mutations by Soma require root-admin governance confirmation when high-impact
+- all group runs emit `group_id`-linked evidence for audit and replay
 
 ---
 
@@ -264,6 +371,9 @@ Deliver:
 - heartbeat budget schema (`time/actions/spend/escalation`)
 - staging-only self-update workflow contract
 - skill import trust policy contract (signature/scope/sandbox profile)
+- manager-worker delegation schema (`manager_plan`, `worker_assignment`, `worker_result`, `resume_hint`)
+- compaction-safe memory checkpoint schema (`checkpoint_id`, `task_state`, `next_intent`, `resume_source`)
+- manifest improvement schema and objective-alignment scoring contract
 
 Exit criteria:
 - schemas published and reviewed
@@ -275,6 +385,12 @@ Deliver:
 - wizard launches manifested team with typed lifetime
 - decision trace visible in Workspace
 - single-use-case production pipeline wired with "worth it" metrics
+- first manager-worker route active with one persistent specialist worker profile
+- worker handoff evidence visible in run timeline
+- capture improvement signals on manifest runs (`acceptance`, `correction`, `fallback`, `outcome`)
+- implement loop contract + local file sync module in core
+- correction repetition tracker with 3-strike promotion scope prompt
+- root-admin group create/update/pause API slice with governance checks
 
 Exit criteria:
 - end-to-end path works on local host with run evidence
@@ -285,6 +401,15 @@ Deliver:
 - adaptation signal capture/review APIs
 - initial policy-bounded recipe feedback loop
 - heartbeat worker with bounded continuation logic and kill-switch integration
+- proactive autonomy pilot ("surprise me" class job) with safe default scope
+- correction log workflow from user correction to reviewed recipe candidate
+- reviewed manifest-profile promotion flow with objective-alignment gating
+- automated rollback on drift-threshold breach
+- permanent memory loop pilot (capture -> distill -> vectorize -> retrieve -> promote -> rollback)
+- no-silence promotion guard and drift rollback tests
+- recall-quality gates (pgvector retrieval metrics) bound to promotion decisions
+- weekly maintenance review worker + digest emission
+- group-scoped run linkage (`group_id`) across events/timelines and policy enforcement
 
 Exit criteria:
 - repeat flow works with safeguards and observability
@@ -295,6 +420,7 @@ Deliver:
 - hardware interface action scaffolds
 - stronger recovery + replay/idempotency controls
 - controlled skill-import pilot from trusted source with sandboxed activation
+- marketplace/private-hub sync + rollback drills for installed skill/template capabilities
 
 Exit criteria:
 - governed host/hardware invocation tested and auditable
@@ -323,6 +449,20 @@ Exit criteria:
 5. Observability Layer
 - run timeline/chain completeness
 - diagnostics and next-step links present
+6. Manifest Profile Layer
+- objective-aligned improvement scoring correctness
+- promotion/rollback guard behavior
+7. Permanent Memory Loop Layer
+- no-silence preference promotion enforcement
+- Postgres/pgvector recall quality and drift rollback integrity
+8. Central Agentry Governance Layer
+- correction repetition threshold behavior and 3-strike prompt
+- provenance metadata correctness (`file`, `line`) on learned rule application
+- forget-X and forget-everything propagation + confirmation
+- sensitive data exclusion in memory persistence path
+9. Multi-User Group Governance Layer
+- root-admin group contract validation and policy scoping
+- group action/run audit integrity (`group_id` linkage)
 
 ### UI/E2E Mandatory Flows
 1. direct action with approval path
@@ -335,6 +475,16 @@ Exit criteria:
 8. unauthorized credential/probe behavior is denied and logged as security event
 9. dynamic skill import fails closed when signature/scope/sandbox checks are not satisfied
 10. single-use-case KPI panel shows operator-benefit metrics before autonomy expansion
+11. manager-worker delegation trace appears for manifested and specialist routes
+12. compaction checkpoint + resume preserves active objective without manual restitching
+13. correction log entry can be reviewed, promoted, and rolled back through governed flow
+14. manifest profile report shows objective-aligned improvements and rollback history
+15. third repeated correction triggers scope-prompt (`global|domain|project`)
+16. weekly maintenance digest reports dedupe/concise/archive changes
+17. learned-rule application displays provenance (`file`, `line`)
+18. forget commands complete and confirm (`forget X`, `forget everything`)
+19. root-admin can define goal-scoped user group through Soma and execute within policy bounds
+20. group actions include `group_id` in run timeline and governance evidence
 
 ### Release Gates
 - Gate P0: contract + health + degraded recovery

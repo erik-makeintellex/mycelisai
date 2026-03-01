@@ -23,12 +23,29 @@ type GroupBusSnapshot = {
     last_error?: string;
 };
 
+type ApprovalToken = {
+    token?: string;
+    intent_proof_id?: string;
+};
+
+type ApprovalResponse = {
+    requires_approval?: boolean;
+    confirm_token?: ApprovalToken | string;
+    intent_proof?: { id?: string };
+};
+
 const WORK_MODES = [
     "read_only",
     "propose_only",
     "execute_with_approval",
     "execute_bounded",
 ] as const;
+
+function parseConfirmToken(confirmToken: ApprovalResponse["confirm_token"]): string {
+    if (!confirmToken) return "";
+    if (typeof confirmToken === "string") return confirmToken;
+    return typeof confirmToken.token === "string" ? confirmToken.token : "";
+}
 
 export default function GroupManagementPanel() {
     const [groups, setGroups] = useState<Group[]>([]);
@@ -39,6 +56,9 @@ export default function GroupManagementPanel() {
     const [selectedGroupID, setSelectedGroupID] = useState("");
     const [broadcastMessage, setBroadcastMessage] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
+    const [pendingConfirmToken, setPendingConfirmToken] = useState("");
+    const [pendingIntentProofID, setPendingIntentProofID] = useState("");
 
     const [name, setName] = useState("");
     const [goal, setGoal] = useState("");
@@ -81,6 +101,7 @@ export default function GroupManagementPanel() {
         if (!name.trim() || !goal.trim()) return;
         setCreating(true);
         setError(null);
+        setNotice(null);
         try {
             const body = {
                 name: name.trim(),
@@ -90,19 +111,34 @@ export default function GroupManagementPanel() {
                 member_user_ids: membersCSV.split(",").map((v) => v.trim()).filter(Boolean),
                 allowed_capabilities: ["runs.read", "runs.propose"],
                 approval_policy_ref: "policy.default",
+                ...(pendingConfirmToken ? { confirm_token: pendingConfirmToken } : {}),
             };
             const res = await fetch("/api/v1/groups", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
+            const payload = await res.json().catch(() => ({}));
             if (!res.ok) {
-                const payload = await res.json().catch(() => ({}));
                 throw new Error((payload as { error?: string }).error ?? "failed to create group");
             }
+
+            const data = extractApiData<ApprovalResponse | unknown>(payload) as ApprovalResponse;
+            if (data?.requires_approval) {
+                const token = parseConfirmToken(data.confirm_token);
+                const proofID = data.intent_proof?.id ?? "";
+                setPendingConfirmToken(token);
+                setPendingIntentProofID(proofID);
+                setNotice("Approval required. Confirm the operation token, then submit create again.");
+                return;
+            }
+
             setName("");
             setGoal("");
             setMembersCSV("");
+            setPendingConfirmToken("");
+            setPendingIntentProofID("");
+            setNotice("Group created successfully.");
             await fetchGroups();
         } catch (err) {
             setError(err instanceof Error ? err.message : "failed to create group");
@@ -115,6 +151,7 @@ export default function GroupManagementPanel() {
         if (!selectedGroupID || !broadcastMessage.trim()) return;
         setBroadcasting(true);
         setError(null);
+        setNotice(null);
         try {
             const res = await fetch(`/api/v1/groups/${selectedGroupID}/broadcast`, {
                 method: "POST",
@@ -126,6 +163,7 @@ export default function GroupManagementPanel() {
                 throw new Error((payload as { error?: string }).error ?? "broadcast failed");
             }
             setBroadcastMessage("");
+            setNotice("Broadcast queued.");
             await fetchGroups();
         } catch (err) {
             setError(err instanceof Error ? err.message : "broadcast failed");
@@ -183,10 +221,31 @@ export default function GroupManagementPanel() {
                     onClick={createGroup}
                     disabled={creating || !name.trim() || !goal.trim()}
                     className="px-3 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-[11px] font-mono hover:bg-cortex-primary/10 disabled:opacity-50"
+                    data-testid="groups-create-button"
                 >
-                    {creating ? "Creating..." : "Create Group"}
+                    {creating ? "Creating..." : pendingConfirmToken ? "Create With Approval Token" : "Create Group"}
                 </button>
             </div>
+
+            {pendingConfirmToken && (
+                <div className="rounded-lg border border-cortex-warning/40 bg-cortex-warning/10 p-3 space-y-2" data-testid="groups-approval-card">
+                    <p className="text-[11px] font-mono text-cortex-warning">Approval required for high-impact mutation.</p>
+                    <label className="flex flex-col gap-1">
+                        <span className="text-[10px] font-mono text-cortex-text-muted uppercase">Confirm Token</span>
+                        <input
+                            value={pendingConfirmToken}
+                            onChange={(e) => setPendingConfirmToken(e.target.value)}
+                            className="px-2 py-1.5 rounded bg-cortex-bg border border-cortex-border text-cortex-text-main text-xs font-mono"
+                            data-testid="groups-confirm-token-input"
+                        />
+                    </label>
+                    {pendingIntentProofID && (
+                        <p className="text-[10px] font-mono text-cortex-text-muted">
+                            Intent proof: {pendingIntentProofID}
+                        </p>
+                    )}
+                </div>
+            )}
 
             <div className="rounded-lg border border-cortex-border overflow-hidden">
                 <div className="grid grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-2 px-3 py-2 text-[10px] font-mono uppercase tracking-wider text-cortex-text-muted bg-cortex-bg/70">
@@ -253,7 +312,8 @@ export default function GroupManagementPanel() {
                 {monitor?.last_error ? ` | Last error: ${monitor.last_error}` : ""}
             </div>
 
-            {error && <div className="text-[11px] text-cortex-danger font-mono">{error}</div>}
+            {notice && <div className="text-[11px] text-cortex-primary font-mono" data-testid="groups-notice">{notice}</div>}
+            {error && <div className="text-[11px] text-cortex-danger font-mono" data-testid="groups-error">{error}</div>}
         </section>
     );
 }

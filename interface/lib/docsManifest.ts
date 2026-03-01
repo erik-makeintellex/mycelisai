@@ -297,6 +297,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical inter-team/process/MCP channel contracts and shared memory boundaries",
             },
             {
+                slug: "arch-soma-council-engagement-protocol-v7",
+                label: "Soma-Council Engagement Protocol V7",
+                path: "docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md",
+                description: "Deterministic path-selection contract for internal tools, MCP, external APIs, and code-to-execution loops",
+            },
+            {
                 slug: "arch-agent-source-instantiation-template-v7",
                 label: "Agent Source Template V7",
                 path: "docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md",

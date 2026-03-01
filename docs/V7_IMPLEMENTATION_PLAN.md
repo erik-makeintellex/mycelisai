@@ -14,6 +14,7 @@
 > | Team C | Scheduler — migration 027, scheduler.go, schedules handlers | 🔲 NEXT |
 > | Team E | Causal Chain UI — ViewChain.tsx, RunChainNode.tsx, /runs/[id]/chain page | 🔲 PENDING |
 > | MCP Baseline | filesystem, memory, artifact-renderer, fetch MCP servers | 🔲 PARALLEL |
+> | Cross-Cut | Soma/Council engagement protocol (internal vs MCP vs API vs code-loop pathing) | ✅ CODIFIED (prompt + architecture contract) |
 
 ---
 

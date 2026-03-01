@@ -120,6 +120,27 @@ The UI must make that loop obvious.
 
 ---
 
+## Execution Path Selection Protocol (V7 Addendum)
+
+Soma and the Council must follow a deterministic pathing order for every actionable request:
+
+1. internal direct tool execution
+2. installed MCP tool execution
+3. code-to-execution loop (Coder implementation + Sentry verification)
+4. mission/team instantiation via blueprint
+
+For external API tasks, the system must:
+
+- check available tooling first
+- prefer existing MCP pathways
+- emit explicit dependency requirements when capability is missing (service, credentials, scope, approval class)
+- avoid hidden credential assumptions and ungoverned direct-network fallbacks
+
+The Architect (meta-agent) is responsible for path choice justification on multi-step requests and must include governance checkpoints plus degraded-mode fallback.
+Detailed authority: `docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`.
+
+---
+
 # PART II — EXECUTION TASK PACK
 
 This is structured sequentially.
@@ -1020,11 +1041,34 @@ Adopt:
 - layered memory (episodic, distilled, retrieval, procedural)
 - scheduled maintenance/automation loops
 - strict treatment of external content as untrusted input
+- manager-worker execution topology (Soma manager + specialized worker agents)
+- operator-approved correction logs that feed reviewed behavior improvements
 
 Do not adopt:
 - unconstrained shell-level autonomy
 - hidden policy drift without operator review
 - remote actuation defaults
+- direct import/activation of unverified third-party skill binaries
+
+Pattern-to-architecture mapping:
+1. Sub-agent orchestration:
+- Soma is the manager planner/orchestrator.
+- Specialized workers are persistent or ephemeral agents with scoped models, context, and permissions.
+- manager delegates only via typed capability contracts and records delegation decisions.
+2. Modular skill injection:
+- external skills/templates can be sourced from marketplace/private hubs.
+- each skill is treated as untrusted until signature/scope/sandbox policy checks pass.
+- activation is reversible and auditable; high-risk scopes require approval.
+3. Proactive autonomy:
+- heartbeat jobs can run bounded proactive loops (for example morning brief, maintenance digest).
+- every loop cycle must emit "what changed / what is next / why continue" evidence.
+- operator kill-switch and budget exhaustion halt loops immediately.
+4. Context compaction resilience:
+- before compaction or context truncation, critical task state is checkpointed to temp memory channel + distilled memory candidate.
+- replay/resume must use checkpoint artifacts, not only conversation transcript.
+5. Self-improving loops:
+- corrections are captured as structured "hot memory" entries.
+- promotion into durable recipes requires review gate, confidence threshold, and rollback path.
 
 ## 2. Extension-of-Self Operating Modes
 
@@ -1077,11 +1121,27 @@ Required memory layers:
 2. Distilled: recipe abstractions and reviewed heuristics
 3. Retrieval: vector-indexed semantic memory
 4. Procedural: approved execution playbooks
+5. Manifest improvement profile: objective-aligned improvement policy and change history per active profile
+6. Local continuity channels: hot/context/archive file layers synced to system-of-record
 
 Growth controls:
 - no silent mutation of policy or approval thresholds
 - promotion of new behavior requires reviewable artifact
 - rollback path required for every profile/recipe promotion
+- improvements that are not aligned to user-invoked objective classes are blocked by default
+- preferences are never promoted from silence; only explicit confirmations/corrections
+- correction repetition threshold: prompt scope selection at 3 repeats (`global|domain|project`)
+- learned-rule application must include provenance source (`file`, `line`)
+- forget semantics required (`forget X`, `forget everything`) with full deletion confirmation
+- weekly maintenance cycle required (dedupe, concise confirmed rules, stale->archive, digest)
+
+Permanent loop policy (required):
+1. capture to Postgres (`mission_events`, `conversation_turns`)
+2. distill to reviewed artifacts (`inception_recipes`, sitreps)
+3. vectorize retrieval artifacts into pgvector indexes
+4. retrieve by semantic + objective alignment
+5. promote via review gates
+6. rollback on regression/drift
 
 ## 5. Multi-User + Multi-Host Routing Contract
 
@@ -1096,6 +1156,29 @@ Required controls:
 - apply tenant guards to temp memory channels, proposals, and mission runs
 - ensure user identity is carried in API and event metadata for auditability
 - prevent cross-tenant toolset/channel reads by default
+
+### 5.1.1 Root-admin collaboration groups (Soma-defined)
+
+Root admin must be able to instruct Soma to create user groups that collaborate for specific goals and modes of work.
+
+Required group contract:
+- `group_id`
+- `tenant_id`
+- `name`
+- `goal_statement`
+- `work_mode` (`read_only|propose_only|execute_with_approval|execute_bounded`)
+- `allowed_capabilities[]`
+- `member_user_ids[]`
+- `coordinator_profile` (Soma/team profile used for orchestration)
+- `approval_policy_ref`
+- `expiry` (optional)
+
+Required behavior:
+1. group creation/update/delete through Soma is a governed mutation (proposal + confirm when required)
+2. group actions are scoped to declared goal and allowed capabilities
+3. cross-group/cross-tenant access is denied by default unless explicitly approved
+4. every group action run must emit audit records with `group_id` + `run_id` + actor identity
+5. high-impact group policy changes require explicit root-admin confirmation
 
 ### 5.2 Provider-target routing hierarchy
 
@@ -1144,6 +1227,28 @@ Channel onboarding is valid only when:
 3. degraded/recovery UX is implemented
 4. test evidence exists for failure and recovery paths
 
+### 6.1 Template Marketplace + Custom Template Strategy
+
+Agentry template distribution must support both:
+1. external marketplaces (for example, ClawHub-style source feeds)
+2. tenant/user-owned custom templates with versioned publishing
+
+Required API concepts:
+- marketplace source registry/probe/sync
+- template discovery with compatibility metadata
+- governed purchase intent and confirm flow
+- entitlement and license enforcement at install/upgrade
+- custom template draft/publish/fork/archive lifecycle
+
+Required policy controls:
+- source allowlist and signature verification
+- purchase/install/upgrade under governance approval where required
+- deterministic audit trails for purchase and install events
+- tenant isolation for private/custom template namespaces
+- effective policy resolution uses precedence: Soma baseline -> deployment defaults -> user overlays
+
+Detailed contract authority: `docs/architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md`
+
 ## 7. Parallel Architecture Delivery Tracks
 
 Track A - Soma Decision + Memory Contracts:
@@ -1153,6 +1258,7 @@ Track A - Soma Decision + Memory Contracts:
 Track B - Universal Action Runtime:
 - action registry APIs
 - adapter lifecycle and invocation contracts
+- template marketplace and custom-template API contracts
 
 Track C - Scheduler + Team Lifetime Runtime:
 - repeat promotion and persistent-team pathways
@@ -1178,21 +1284,32 @@ Immediate (Sprint 0):
 1. freeze decision frame and universal action DTOs
 2. freeze Ollama readiness API contract and system-status mapping
 3. add integration tests for local readiness -> fallback transitions
+4. freeze template marketplace + custom-template DTO/API contracts
+5. freeze manager-worker delegation contract (`manager_plan`, `worker_assignment`, `worker_result`, `resume_hint`)
+6. freeze memory-checkpoint contract for compaction-safe resume (`checkpoint_id`, `task_state`, `next_intent`)
+7. implement loop contract + local file sync module in core
 
 Near-term (Sprint 1):
 1. ship direct-vs-team decision endpoint and UI trace exposure
 2. complete team instantiation + lifecycle path from wizard to run evidence
 3. bind run timeline/chain to decision artifacts
+4. deliver marketplace source registration + discovery APIs (read-only first)
+5. deliver first manager-worker slice with one persistent specialized worker profile
 
 Mid-term (Sprint 2):
 1. complete scheduler + repeat promotion paths
 2. introduce reviewed adaptation signals (recipe feedback loop)
 3. run reliability drills for NATS/SSE/Ollama degradation scenarios
+4. add proactive "surprise me" style bounded autonomy job with approval-safe defaults
+5. add correction-log capture + reviewed promotion workflow
+6. add no-silence promotion guard and drift rollback tests
+7. add recall-quality gates (pgvector retrieval metrics) to promotion decisions
 
 Expansion (Sprint 3):
 1. add one non-MCP adapter in production-shape parity
 2. expose governed host/hardware action scaffolds
 3. complete security-gated remote actuation preconditions (still disabled by default)
+4. add marketplace/private-hub governed skill sync + rollback drills
 
 ## 8. Controlling PRD
 
