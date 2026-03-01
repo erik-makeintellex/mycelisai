@@ -3,6 +3,7 @@
 Source of truth for prioritized, parallel execution aligned to:
 - [Soma Extension-of-Self PRD](../product/SOMA_EXTENSION_OF_SELF_PRD_V7.md)
 - [V7 Implementation Plan](../V7_IMPLEMENTATION_PLAN.md)
+- [Team A/B/C/Q Execution Board](./TEAM_ABCQ_EXECUTION_BOARD.md)
 - [UI Framework V7](../UI_FRAMEWORK_V7.md)
 - [mycelis-architecture-v7.md](../../mycelis-architecture-v7.md)
 - [V7_DEV_STATE.md](../../V7_DEV_STATE.md)
@@ -181,4 +182,3 @@ Delivery is engaged when:
 2. harsh-truth controls are implemented and test-covered
 3. promotion gates have explicit pass/fail criteria and artifacts
 4. single-use-case pipeline has measurable operator-benefit proof before autonomy expansion
-

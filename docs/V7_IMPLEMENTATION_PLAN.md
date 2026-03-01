@@ -1909,6 +1909,12 @@ This workboard translates the five learned patterns into concrete delivery items
 - Team C (Runtime/UI): group management panel embedded in Teams surface and live group-bus health surfaced through System/Status (`groups_bus` service row + status drawer row).
 - Team Q (QA): integration tests for DB lifecycle, scope denial paths, high-impact approval response, NATS fanout, and monitor snapshot output.
 - Next Sprint: propagate `group_id` into mission_runs/mission_events for run/timeline lineage and enforce group capability bounds during action dispatch.
+- Active execution board: `docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md`.
+- Parallel cadence:
+  - Wave 0: contract freeze (`group_id`, denial envelope, approval UX contract)
+  - Wave 1: Team A/B/C implementation in parallel; Team Q harness prep
+  - Wave 2: integrate A+B first, then C rebase, then Q full gate suite
+  - Wave 3: docs/state gate + RC promotion
 - Tests:
   - unit: group contract validation + work_mode policy matrix
   - integration: unauthorized user cannot mutate root-admin groups

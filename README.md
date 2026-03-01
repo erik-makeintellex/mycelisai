@@ -17,6 +17,7 @@
 > | [V7 UI Framework](docs/UI_FRAMEWORK_V7.md) | Canonical UI element/state/testing framework |
 > | [V7 UI Elements Planning](docs/UI_ELEMENTS_PLANNING_V7.md) | Research-backed UI element planning and Soma interaction model |
 > | [V7 Parallel Implementation Board](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) | Unified lane plan, merge gates, harsh-truth controls, and execution evidence checklist |
+> | [Team A/B/C/Q Execution Board](docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md) | Active parallel sprint board for groups hardening (A core, B governance, C UI, Q QA) |
 > | [V7 UI Instantiation + Bus Plan](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) | Detailed operator workflow for team instantiation, I/O channels, and user-safe NATS exposure |
 > | [Soma Team + Channel Architecture V7](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) | Canonical inter-team/process/MCP channel architecture and shared memory boundaries |
 > | [MCP Service Config (Local-First)](docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) | Standard process for adding MCP services with local-default serving and remote exception controls |
@@ -1545,6 +1546,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **V7 UI Framework** | [docs/UI_FRAMEWORK_V7.md](docs/UI_FRAMEWORK_V7.md) — Default UI instantiation contract (state model, failure templates, testing matrix, PR gate) | [/docs?doc=v7-ui-framework](/docs?doc=v7-ui-framework) |
 | **V7 UI Elements Planning** | [docs/UI_ELEMENTS_PLANNING_V7.md](docs/UI_ELEMENTS_PLANNING_V7.md) — Research-backed element standards, Soma interaction patterns, and planning workflow | [/docs?doc=v7-ui-elements-planning](/docs?doc=v7-ui-elements-planning) |
 | **V7 Parallel Implementation Board** | [docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) — Unified gate model + lane matrix (A/B/C/D/Q) with inception-control evidence tracking | [/docs?doc=v7-ui-parallel-delivery](/docs?doc=v7-ui-parallel-delivery) |
+| **Team A/B/C/Q Execution Board** | [docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md](docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md) — Active groups hardening sprint board with explicit parallelization and acceptance gates | [/docs?doc=team-abcq-execution-board](/docs?doc=team-abcq-execution-board) |
 | **V7 UI Instantiation + Bus Plan** | [docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) — Execution-grade plan for team lifecycle, channel I/O contracts, and Basic/Guided/Expert NATS UX | [/docs?doc=v7-ui-instantiation-bus-plan](/docs?doc=v7-ui-instantiation-bus-plan) |
 | **V7 MCP Baseline** | [docs/V7_MCP_BASELINE.md](docs/V7_MCP_BASELINE.md) — MVOS: filesystem, memory, artifact-renderer, fetch | [/docs?doc=v7-mcp-baseline](/docs?doc=v7-mcp-baseline) |
 | **MCP Service Config (Local-First)** | [docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md](docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) — Service onboarding standard, local-default posture, remote exception workflow | [/docs?doc=arch-mcp-service-config-local-first](/docs?doc=arch-mcp-service-config-local-first) |
@@ -1570,6 +1572,16 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Core API** | [core/README.md](core/README.md) — Go service architecture | — |
 | **CLI** | [cli/README.md](cli/README.md) — `myc` command-line tool | — |
 | **Interface** | [interface/README.md](interface/README.md) — Next.js frontend architecture | — |
+
+## Delivery Discipline (Required)
+
+Every merged implementation slice must update:
+1. `README.md` — operator-facing behavior/config/runtime contract changes.
+2. `V7_DEV_STATE.md` — current checkpoint, verification evidence, and next-step plan.
+3. `docs/V7_IMPLEMENTATION_PLAN.md` — roadmap/dependency changes.
+4. `interface/lib/docsManifest.ts` — include any new authoritative doc in `/docs`.
+
+No branch promotion without this documentation gate.
 
 ## Verification
 

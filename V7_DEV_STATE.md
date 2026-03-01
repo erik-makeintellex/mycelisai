@@ -16,11 +16,58 @@ Phase 19 (complete)
     → In-App Docs Browser — /docs page, 31-entry manifest, 8 user guides (complete)
     → Provider CRUD + Mission Profiles + Reactive Subscriptions + Service Management (complete)
     → V7 Team B — Trigger Engine (complete)
+    → Root-admin collaboration groups foundation — DB storage + scoped auth + UI monitor (complete)
+    → Team A/B/C/Q groups hardening sprint (ACTIVE)
     → V7 Team C — Scheduler (NEXT)
     → V7 Causal Chain UI — ViewChain.tsx (after C)
     → MCP Baseline — filesystem, memory, artifact-renderer, fetch (parallel)
     → Resource API standardization + Workspace Explorer activation (in progress)
 ```
+
+---
+
+## Current Checkpoint (2026-03-01)
+
+Latest integration checkpoint:
+- Commit: `f286b5b`
+- Branch: `feature/enterprise-multihost-soma-routing`
+- Delivered:
+  - DB-backed collaboration groups (`migration 034`, `groups.go`)
+  - scoped permissions (`groups:read|write|broadcast`)
+  - high-impact confirm-token gate on group mutation
+  - group bus monitor API and system-status integration
+  - Teams page group-management panel + status drawer signal
+  - targeted integration tests for lifecycle, denial paths, fanout, monitor
+
+Verification evidence (latest targeted slice):
+- `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
+- `cd core && go test ./internal/server -run "TestHandleServicesStatus_AllOffline" -count=1`
+- `cd interface && npm run build`
+
+---
+
+## Next Parallel Sprint (A/B/C/Q)
+
+Execution board:
+- `docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md`
+
+Parallel team tracks:
+1. Team A (Core/Persistence): propagate `group_id` across runs/events/timeline lineage.
+2. Team B (Governance/Auth): enforce capability bounds on dispatch and emit denial audit records.
+3. Team C (Runtime/UI): wire approval continuity and group-aware operator views (timeline/filtering).
+4. Team Q (QA): integration + E2E gate suite for lifecycle, denial, lineage, and monitor integrity.
+
+---
+
+## Documentation Discipline Gate (Mandatory)
+
+Every merged slice must update:
+1. `README.md` (operator/runtime behavior changes)
+2. `V7_DEV_STATE.md` (checkpoint + evidence + next actions)
+3. `docs/V7_IMPLEMENTATION_PLAN.md` (roadmap/dependency changes)
+4. `interface/lib/docsManifest.ts` (for every new authoritative doc)
+
+No promotion without this gate.
 
 ---
 
@@ -49,6 +96,7 @@ Parallelized UI delivery is now explicitly engaged with lane-level playbooks and
 | Hardware interface API + direct channel architecture (common protocol support + IoT pathways) | `docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md` |
 | Soma symbiote growth + host actuation architecture (thought profiles, learning loop, localhost execution path) | `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` |
 | Integrated timeline alignment for architecture expansion (Wave 0-4) | `docs/V7_IMPLEMENTATION_PLAN.md` |
+| Team A/B/C/Q active sprint execution board | `docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md` |
 
 Execution policy:
 - Lanes run in parallel.

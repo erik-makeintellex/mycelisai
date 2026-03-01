@@ -261,6 +261,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical universal action contracts, dynamic service API, and Python management interface",
             },
             {
+                slug: "arch-agentry-template-marketplace-v7",
+                label: "Template Marketplace + Custom",
+                path: "docs/architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md",
+                description: "API and governance model for marketplace template acquisition (ClawHub-style) and tenant custom template publishing",
+            },
+            {
                 slug: "arch-actualization-beyond-mcp-v7",
                 label: "Actualization Beyond MCP V7",
                 path: "docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md",
@@ -345,6 +351,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "Parallel Implementation Board",
                 path: "docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md",
                 description: "Unified implementation lanes (A/B/C/D/Q), gate sequencing, inception controls, and evidence tracking",
+            },
+            {
+                slug: "team-abcq-execution-board",
+                label: "Team A/B/C/Q Execution Board",
+                path: "docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md",
+                description: "Active parallel sprint board for groups hardening: Team A core, Team B governance, Team C UI, Team Q QA",
             },
             {
                 slug: "v7-ui-instantiation-bus-plan",
