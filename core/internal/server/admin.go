@@ -290,6 +290,9 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Service health dashboard
 	mux.HandleFunc("GET /api/v1/services/status", s.HandleServicesStatus)
+	mux.HandleFunc("GET /api/v1/host/status", s.HandleHostStatus)
+	mux.HandleFunc("GET /api/v1/host/actions", s.HandleHostActions)
+	mux.HandleFunc("POST /api/v1/host/actions/{id}/invoke", s.HandleInvokeHostAction)
 
 	// V7 Conversation Log: agent transcript browsing + user interjection
 	mux.HandleFunc("GET /api/v1/runs/{id}/conversation", s.HandleGetRunConversation)

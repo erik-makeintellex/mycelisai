@@ -42,6 +42,12 @@ Latest integration checkpoint:
   - Standing team prompt contracts updated (`core/config/teams/admin.yaml`, `core/config/teams/council.yaml`)
   - New architecture authority doc for deterministic execution pathing (`docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`)
   - In-app docs browser manifest updated to include engagement protocol doc
+  - Local command V0 started: host actions/status APIs + allowlisted no-shell execution module (`core/internal/hostcmd`, `/api/v1/host/actions`)
+  - Soma internal tool added for bounded local command execution (`local_command`)
+  - Soma/Council prompt contracts updated for symbiote partner posture + code-first ephemeral execution preference + plan/develop/verify/deliver team formation
+  - Delegate-task execution hardening: tolerant argument normalization for object/alias payloads to prevent schema-only failure loops
+  - MCP translation behavior hardened: Soma/Council now required to map user intent to currently installed MCP tool inventory and execute concrete tool calls (or emit explicit missing dependency requirements)
+  - Coder-first web access contract codified: search/site retrieval defaults to ephemeral code execution with adaptive query strategy; MCP used when easier/required
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
@@ -60,6 +66,14 @@ Parallel team tracks:
 2. Team B (Governance/Auth): enforce capability bounds on dispatch and emit denial audit records.
 3. Team C (Runtime/UI): wire approval continuity and group-aware operator views (timeline/filtering).
 4. Team Q (QA): integration + E2E gate suite for lifecycle, denial, lineage, and monitor integrity.
+
+### Sprint G2 (Engaged Now)
+
+Parallel team tracks:
+1. Team A (Core/Persistence): persist execution-path metadata (`path_selected`, `execution_owner`, `delivery_mode`) for run/event diagnostics.
+2. Team B (Governance/Auth): enforce delivery-over-tutorial behavior and coder-first web-access routing defaults with structured denial reasons.
+3. Team C (Runtime/UI): surface execution-path outcomes (direct/code-first/MCP/team) and MCP translation outcomes in Workspace/timeline surfaces.
+4. Team Q (QA): add regression/E2E gates for the schema-only failure mode, coder-first web execution, and MCP translation fallback correctness.
 
 ---
 
