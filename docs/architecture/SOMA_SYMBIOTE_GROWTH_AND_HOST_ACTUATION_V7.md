@@ -1,8 +1,8 @@
 # Soma Symbiote Growth and Host Actuation Architecture V7
 
-Version: `1.0`
+Version: `1.1`
 Status: `Authoritative`
-Last Updated: `2026-02-28`
+Last Updated: `2026-03-01`
 Scope: Soma thought configuration, backend compiled contracts, long-term learning growth, and localhost host actuation
 
 This document defines how Soma should think, decide, learn, and actuate over time while staying governed and local-first.
@@ -46,6 +46,16 @@ Soma behavior is configured via explicit profiles:
 - `consultation_policy`: `none|targeted|full_council`
 - `memory_policy`: `minimal|contextual|aggressive_recall`
 - `risk_posture`: `conservative|balanced|aggressive` (policy-bounded)
+- `manifest_improvement`: required profile block for continuous improvement tied to user-invoked objectives
+
+`manifest_improvement` required fields:
+- `enabled` (bool)
+- `target_alignment` (`strict_user_invoke|assisted_user_invoke|exploratory_with_approval`)
+- `signal_sources` (`user_acceptance`, `user_corrections`, `run_outcomes`, `fallback_events`, `recipe_quality`)
+- `promotion_policy` (`review_required`, `min_confidence`, `min_sample_size`)
+- `rollback_policy` (`auto_on_regression`, `manual`, `hybrid`)
+- `max_change_rate_per_week` (int)
+- `drift_guard` (`none|warn|block`)
 
 ### 2.2 Decision Policy
 
@@ -60,6 +70,7 @@ Selection inputs:
 - repeat intent
 - hardware/IoT channel requirements
 - governance mode
+- manifest improvement alignment score (does proposed path align with user-invoked objective patterns?)
 
 ### 2.3 Operator Co-Thought Contract
 
@@ -82,6 +93,8 @@ Soma form must be represented by typed backend contracts.
 - `SomaExecutionPlan`
 - `SomaLearningSignal`
 - `SomaReflectionRecord`
+- `SomaManifestImprovementPolicy`
+- `SomaImprovementDelta`
 
 ### 3.2 Required decision frame fields
 
@@ -92,6 +105,8 @@ Soma form must be represented by typed backend contracts.
 - `risk_level`
 - `confidence`
 - `approval_required`
+- `improvement_profile_id`
+- `objective_alignment_ref`
 
 ### 3.3 Event binding
 
@@ -123,9 +138,90 @@ Growth ladder:
 - continuous suggestion engine for improved routing/tool/team choices
 - operator confirmation required for high-impact behavior shifts
 
+### Stage 5 - Manifest Profile Deepening
+- all approved improvements are attached to the active manifest profile, not only global memory
+- every proposed change must explicitly reference one or more user-invoked objective classes
+- promotion requires evidence that behavior improved outcome quality for those objective classes
+- regression auto-triggers rollback when drift guard threshold is crossed
+
 Learning constraints:
 - no silent policy escalation
 - all adaptation changes produce reviewable artifacts
+- improvement proposals that do not map to user-invoked objective classes are rejected by default
+
+---
+
+## 4.1 Permanent Memory and Learning Growth Loop (Postgres + pgvector)
+
+Permanent memory is implemented as a closed-loop pipeline, not ad hoc storage.
+
+Loop stages:
+1. Capture:
+- persist execution and reasoning evidence to Postgres (`mission_events`, `conversation_turns`)
+- capture user corrections and acceptance outcomes as structured learning signals
+2. Distill:
+- synthesize reusable patterns into `inception_recipes` with quality and usage metrics
+- produce compact periodic summaries (`sitreps`)
+3. Vectorize:
+- embed distilled artifacts and retrieval documents into pgvector-backed indexes
+4. Retrieve:
+- recall by semantic similarity + objective class + recency/quality scoring
+5. Improve:
+- propose manifest/profile deltas from evidence
+- require review/promotion gates before runtime policy effect
+6. Verify:
+- monitor regressions and fallback events
+- rollback promoted deltas when drift guard thresholds are crossed
+
+No-silence rule:
+- preference updates are never inferred from missing feedback or silence
+- only explicit confirmation or explicit correction signals can promote preference-level changes
+
+Three-layer local memory channel (for continuity across restarts/providers):
+1. Hot memory:
+- confirmed rules and operator-approved preferences
+- always loaded
+2. Context memory:
+- project/domain scoped active constraints and conventions
+- loaded by tenant/project/profile
+3. Archive:
+- inactive historical patterns, replay-only by default
+- never auto-promoted back without review
+
+Storage mapping:
+- local memory files are continuity channels; Postgres is system-of-record
+- pgvector indexes retrieval artifacts from distilled and context layers
+- all promotions/rollbacks are audited with `run_id`, `tenant_id`, and timestamp
+
+Suggested local file paths:
+- `~/.mycelis/memory/hot.jsonl`
+- `~/.mycelis/memory/context/{tenant_id}/{project_slug}.jsonl`
+- `~/.mycelis/memory/archive/{yyyy-mm}/{project_slug}.jsonl`
+
+Central agentry behavior requirements:
+1. Correction capture:
+- every user correction must be logged with timestamp, run/session context, and correction class
+- repetition counters must track equivalent correction patterns over time
+- when the same correction pattern appears 3 times, Soma must ask whether to promote it as:
+  - global rule
+  - domain rule
+  - project rule
+2. Weekly maintenance review:
+- deduplicate memory entries
+- compress confirmed rules to concise canonical forms
+- demote stale context rules into archive
+- emit a short "what changed" digest for operator review
+3. Provenance on rule application:
+- when a learned rule is applied, response metadata must include source location (`file`, `line`)
+- provenance references must map to the local memory layer files or promoted Postgres artifacts
+4. Sensitive data exclusion:
+- never store secrets or sensitive personal content (passwords, tokens, financial data, health data, private data about third parties)
+- write pipeline must redact/deny sensitive payloads before persistence
+5. Forget semantics:
+- `forget X` deletes matching entries across hot/context/archive + synced records and confirms completion
+- `forget everything` wipes the memory subsystem (hot/context/archive + synced records), reinitializes clean baseline, and confirms reset
+6. High-impact workflow protection:
+- ask for explicit confirmation before applying high-impact workflow changes inferred from learning signals
 
 ---
 
@@ -195,6 +291,12 @@ All with `run_id` linkage and timeline visibility.
 - `POST /api/v1/soma/decide`
 - `GET /api/v1/soma/learning/signals`
 - `POST /api/v1/soma/learning/review/{id}`
+- `GET /api/v1/soma/profile/improvement`
+- `PUT /api/v1/soma/profile/improvement`
+- `GET /api/v1/soma/profile/improvement/report`
+- `POST /api/v1/soma/memory/forget`
+- `POST /api/v1/soma/memory/forget-all`
+- `GET /api/v1/soma/memory/maintenance/digest`
 
 ### 8.2 Host actuation APIs (localhost-first)
 
@@ -213,21 +315,34 @@ These APIs map into universal action contracts and security profile enforcement.
 - thought decision policy selection tests
 - profile validation tests
 - learning signal classification tests
+- manifest improvement policy schema validation tests
+- objective-alignment scoring tests
+- correction repetition counter equivalence tests
+- sensitive data detection/redaction tests
 
 ### Integration
 - direct vs team path routing tests
 - recipe-driven adaptation tests
 - host adapter allowlist + rejection tests
+- improvement promotion/rollback tests bound to manifest profile
+- regression guard tests (auto rollback on drift)
+- forget-X and forget-everything deletion propagation tests (files + Postgres sync)
+- weekly maintenance dedupe/compression/archive migration tests
 
 ### API
 - profile CRUD + decision endpoints
 - actuation invoke authorization and approval-gate tests
+- memory forget/forget-all endpoints with confirmation payload tests
+- provenance metadata (`file` + `line`) in learned-rule application responses
 
 ### E2E
 - user request -> Soma path decision -> execution trace
 - user request -> team manifestation -> execution trace
 - scheduled repeat promotion and persistent team behavior
 - localhost host actuation with governance confirmation
+- repeated user-invoked objective -> improved manifest behavior over cycles with auditable deltas
+- third repeated correction prompts scope selection (global/domain/project)
+- weekly digest summarizes dedupe/archive/promotions in concise output
 
 ---
 

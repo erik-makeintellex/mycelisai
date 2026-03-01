@@ -1,8 +1,8 @@
 # Universal Action Interface V7
 
-Version: `1.0`
+Version: `1.1`
 Status: `Authoritative`
-Last Updated: `2026-02-28`
+Last Updated: `2026-03-01`
 Scope: Universal action contract, dynamic service onboarding API, and Python management interface
 
 This document defines how Mycelis exposes one universal action plane across MCP, OpenAPI-described services, and Python-bound capabilities.
@@ -21,14 +21,16 @@ Soma growth profile: `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_
 3. Action Plane Architecture
 4. Canonical Action Contract
 5. Dynamic Service Configuration API
-6. Adapter Model (MCP/OpenAPI/Python)
-7. Python Management Interface
-8. Self-Hosted Platform Integration
-9. Governance and Safety Boundaries
-10. Testing and Validation Matrix
-11. Parallel Delivery Plan
-12. Delivery Gates
-13. Timeline Fit and Rollout
+6. Library/Service Intake Policy Resolution
+7. Template Marketplace Integration
+8. Adapter Model (MCP/OpenAPI/Python)
+9. Python Management Interface
+10. Self-Hosted Platform Integration
+11. Governance and Safety Boundaries
+12. Testing and Validation Matrix
+13. Parallel Delivery Plan
+14. Delivery Gates
+15. Timeline Fit and Rollout
 
 ---
 
@@ -169,6 +171,8 @@ Outcome:
   - runtime reachability and schema probe
 - `POST /api/v1/actions/services/{service_id}/sync`
   - re-sync actions from provider
+- `POST /api/v1/actions/services/inspect`
+  - pre-install policy inspection against baseline + defaults + user overlay
 
 ### 5.2 Action Endpoints (New)
 
@@ -187,21 +191,82 @@ Outcome:
 
 ---
 
-## 6. Adapter Model (MCP/OpenAPI/Python)
+## 6. Library/Service Intake Policy Resolution
 
-### 6.1 MCP Adapter
+All new libraries/services must pass an inspection phase before install/enable.
+
+Policy layers (highest precedence first):
+1. Soma baseline rules (non-bypassable denies)
+2. deployment defaults (org/environment policy)
+3. user overlays (tenant/user additions)
+
+Resolution semantics:
+- user overlays may tighten policy but cannot override baseline denies
+- final decision is one of `allow|require_approval|deny`
+- decision + reasons must be returned before operator install confirmation
+- effective policy hash is persisted with install metadata for audit/replay
+
+Inspection payload minimum:
+```json
+{
+  "candidate": {
+    "service_id": "mcp.filesystem",
+    "adapter": "mcp",
+    "locality": "local",
+    "requested_scopes": ["read", "write"]
+  },
+  "policy_context": {
+    "tenant_id": "default",
+    "user_id": "u_123"
+  }
+}
+```
+
+Inspection response minimum:
+```json
+{
+  "decision": "allow|require_approval|deny",
+  "reasons": [],
+  "effective_policy_hash": "sha256:...",
+  "required_approvals": []
+}
+```
+
+---
+
+## 7. Template Marketplace Integration
+
+The universal action plane must interoperate with template distribution:
+- marketplace templates (for example, ClawHub-style feeds)
+- private hub templates
+- tenant custom templates
+
+Integration requirements:
+1. template package requirements must resolve to actions/services in registry
+2. missing dependencies must be surfaced before install/instantiate
+3. paid templates require entitlement validation before action activation
+4. template upgrades must run compatibility checks against action registry state
+
+Detailed source/purchase/custom template API contracts:
+`docs/architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md`
+
+---
+
+## 8. Adapter Model (MCP/OpenAPI/Python)
+
+### 8.1 MCP Adapter
 
 - maps MCP tools into `ActionDefinition`
 - uses existing ToolExecutorAdapter and pool
 - preserves local-first MCP install policy
 
-### 6.2 OpenAPI Adapter
+### 8.2 OpenAPI Adapter
 
 - imports OpenAPI specs and derives callable actions
 - request/response contracts mapped to JSON Schema
 - supports auth metadata without exposing secrets in UI
 
-### 6.3 Python Adapter
+### 8.3 Python Adapter
 
 - executes registered Python actions through managed runtime
 - action signatures exported as JSON Schema
@@ -209,17 +274,17 @@ Outcome:
 
 ---
 
-## 7. Python Management Interface
+## 9. Python Management Interface
 
 A dedicated management interface is recommended for Python-bound action ecosystems.
 
-### 7.1 Why Dedicated Python Interface
+### 9.1 Why Dedicated Python Interface
 
 - Python dependency management differs from JS/Go runtimes
 - isolation and reproducibility require explicit environment control
 - frameworks like PydanticAI/CrewAI need controlled orchestration boundaries
 
-### 7.2 Python Service Manager (Proposed)
+### 9.2 Python Service Manager (Proposed)
 
 - `Python Runtime Manager` service (self-hosted)
 - environment strategy:
@@ -227,7 +292,7 @@ A dedicated management interface is recommended for Python-bound action ecosyste
   - pinned dependency lock
   - explicit runtime metadata in registry
 
-### 7.3 Python Manager Endpoints (New)
+### 9.3 Python Manager Endpoints (New)
 
 - `GET /api/v1/python/services`
 - `POST /api/v1/python/services`
@@ -235,13 +300,13 @@ A dedicated management interface is recommended for Python-bound action ecosyste
 - `POST /api/v1/python/services/{id}/sync-actions`
 - `GET /api/v1/python/services/{id}/health`
 
-### 7.4 Framework Mapping
+### 9.4 Framework Mapping
 
 - PydanticAI: preferred for typed production action definitions
 - CrewAI: supported for multi-agent workflows when exposed as actions
 - Cline/IDE tools: treated as external client layer, not core execution runtime
 
-### 7.5 Scheduled Repeat and Low-Level IoT Support
+### 9.5 Scheduled Repeat and Low-Level IoT Support
 
 The universal action plane must support:
 - converting one-off user actions into scheduled-repeat workflows when requested
@@ -251,21 +316,21 @@ The universal action plane must support:
 
 ---
 
-## 8. Self-Hosted Platform Integration
+## 10. Self-Hosted Platform Integration
 
-### 8.1 Control Surface Positioning
+### 10.1 Control Surface Positioning
 
 - Mycelis remains orchestration authority and governance plane.
 - Open WebUI / LibreChat are optional client interfaces.
 - Ollama remains primary local model runtime.
 
-### 8.2 Integration Strategy
+### 10.2 Integration Strategy
 
 - expose Mycelis chat/action APIs with OpenAI-compatible compatibility where useful
 - keep canonical action execution in Mycelis universal action gateway
 - avoid dual authority for governance decisions
 
-### 8.3 Local-Default Profiles
+### 10.3 Local-Default Profiles
 
 Reference default stack:
 1. Ollama local
@@ -276,36 +341,43 @@ Reference default stack:
 
 ---
 
-## 9. Governance and Safety Boundaries
+## 11. Governance and Safety Boundaries
 
 1. Service add/update/delete are governed mutations.
 2. High-risk actions require explicit confirmation.
 3. Remote service onboarding defaults to high risk.
 4. Action-level policies can deny/require approval/allow.
 5. All action executions must emit mission events.
+6. Library/service onboarding must run policy inspection before install/enable.
+7. Enablement is blocked when inspection decision is `deny`.
 
 ---
 
-## 10. Testing and Validation Matrix
+## 12. Testing and Validation Matrix
 
 ### Unit
 - action schema validation
 - adapter mapping tests (MCP/OpenAPI/Python)
 - policy classification tests
+- policy precedence tests (baseline > defaults > user overlay)
 
 ### Integration
 - dynamic service add/probe/sync lifecycle
 - universal invoke execution path and event linkage
 - Python manager environment lifecycle tests
+- inspect endpoint returns deterministic decision and policy hash
+- install/enable path enforces inspect decision
 
 ### API
 - endpoint contract tests for `/api/v1/actions/*`
 - backward compatibility tests for existing MCP endpoints
+- inspect/install contract tests for policy-gated onboarding
 
 ### UI/E2E
 - add local service from UI and invoke action
 - degraded service recovery from status surfaces
 - action detail schema rendering correctness
+- operator sees inspect report before install confirmation
 
 Recommended existing baseline commands:
 
@@ -317,7 +389,7 @@ cd interface && npm run build
 
 ---
 
-## 11. Parallel Delivery Plan
+## 13. Parallel Delivery Plan
 
 - Team Forge: action registry + gateway contracts
 - Team Helios: OpenAPI/JSON Schema normalization and UI adapters
@@ -327,7 +399,7 @@ cd interface && npm run build
 
 ---
 
-## 12. Delivery Gates
+## 14. Delivery Gates
 
 Gate 1 - Contract:
 - universal action DTOs finalized
@@ -342,11 +414,12 @@ Gate 3 - Execution:
 
 Gate 4 - Governance:
 - risk policy and approval flows validated
+- library/service inspect-gate enforced for all adapters
 
 Gate 5 - Production:
 - full test matrix green and docs in sync
 
-## 13. Timeline Fit and Rollout
+## 15. Timeline Fit and Rollout
 
 This architecture lands in rollout waves tied to current V7 delivery:
 1. Wave 0: Team C scheduler completion + lifecycle contract wiring.

@@ -12,6 +12,7 @@
 > - [Soma Team + Channel Architecture](SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) — Inter-team/process channels, MCP execution I/O, and shared memory boundaries
 > - [MCP Service Config (Local-First)](MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) — Standard onboarding/configuration for adding MCP services with local-default policy
 > - [Universal Action Interface V7](UNIVERSAL_ACTION_INTERFACE_V7.md) — Unified action contracts across MCP/OpenAPI/Python with dynamic service onboarding APIs
+> - [Agentry Template Marketplace + Custom Templating](AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md) — API and governance model for ClawHub-style template acquisition plus tenant-owned custom template publishing
 > - [Actualization Beyond MCP V7](ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md) — Multi-protocol architecture guidance inspired by OpenClaw/A2A/ACP patterns
 > - [Secure Gateway + Remote Actuation](SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md) — Security baseline for self-hosted control planes and remote actuator services
 > - [Hardware Interface API + Channels](HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) — Standard API + direct channel model for hardware interfaces and low-level IoT pathways

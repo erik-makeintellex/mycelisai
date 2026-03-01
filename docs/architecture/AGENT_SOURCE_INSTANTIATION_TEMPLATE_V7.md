@@ -1,6 +1,6 @@
 # Agent Source Instantiation Template V7
 
-Version: `1.0`
+Version: `1.1`
 Status: `Authoritative`
 Last Updated: `2026-03-01`
 Scope: Standardized provider onboarding template for Ollama (default), Claude, Gemini, ChatGPT/OpenAI, vLLM, and LM Studio.
@@ -19,7 +19,8 @@ This document defines a single, repeatable way to instantiate and govern agent m
 6. Validation Checklist
 7. Routing Template by Role
 8. Security and Governance Baseline
-9. Primary Documentation Sources
+9. Manifest Improvement Linkage
+10. Primary Documentation Sources
 
 ---
 
@@ -269,7 +270,19 @@ Override rule:
 
 ---
 
-## 9. Primary Documentation Sources
+## 9. Manifest Improvement Linkage
+
+Provider/profile routing must remain compatible with Soma manifest improvement policy:
+- profile changes must not break objective-alignment signal continuity
+- provider overrides must be recorded in improvement reports when they impact outcomes
+- promotion of profile-level improvements requires review + rollback path
+
+Reference:
+- `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` (`manifest_improvement` contract)
+
+---
+
+## 10. Primary Documentation Sources
 
 - OpenAI API docs (Responses, auth, model API):
   - https://platform.openai.com/docs/api-reference/responses

@@ -20,6 +20,7 @@
 > | [Team A/B/C/Q Execution Board](docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md) | Active parallel sprint board for groups hardening (A core, B governance, C UI, Q QA) |
 > | [V7 UI Instantiation + Bus Plan](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) | Detailed operator workflow for team instantiation, I/O channels, and user-safe NATS exposure |
 > | [Soma Team + Channel Architecture V7](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) | Canonical inter-team/process/MCP channel architecture and shared memory boundaries |
+> | [Soma-Council Engagement Protocol V7](docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md) | Deterministic execution-path contract for internal tools, MCP, external API engagement, and code-to-execution loops |
 > | [MCP Service Config (Local-First)](docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) | Standard process for adding MCP services with local-default serving and remote exception controls |
 > | [Universal Action Interface V7](docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md) | Canonical action plane for MCP/OpenAPI/Python, dynamic service registry APIs, and governed execution |
 > | [Agentry Template Marketplace + Custom Templating](docs/architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md) | API/governance contract for ClawHub-style template acquisition plus tenant-owned custom template publishing |

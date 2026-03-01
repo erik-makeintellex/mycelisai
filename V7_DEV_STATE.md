@@ -38,6 +38,10 @@ Latest integration checkpoint:
   - group bus monitor API and system-status integration
   - Teams page group-management panel + status drawer signal
   - targeted integration tests for lifecycle, denial paths, fanout, monitor
+  - Soma/Council engagement-path protocol codified (internal vs MCP vs external API vs code-loop vs team instantiation)
+  - Standing team prompt contracts updated (`core/config/teams/admin.yaml`, `core/config/teams/council.yaml`)
+  - New architecture authority doc for deterministic execution pathing (`docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`)
+  - In-app docs browser manifest updated to include engagement protocol doc
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`

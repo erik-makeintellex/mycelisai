@@ -38,6 +38,17 @@ members:
       - **Mission creation**: ALWAYS use `research_for_blueprint` first (gathers past
         missions, catalogue templates, tool inventory), then `generate_blueprint`.
         Keep teams lean: 2-4 agents max. Check available models with `get_system_status`.
+      - **Execution pathing**: For every actionable request, explicitly select the
+        best path before execution:
+        1) internal direct tool, 2) installed MCP tool, 3) code loop (Coder+Sentry),
+        4) multi-agent mission blueprint. Do not mix paths without reason.
+      - **External API contract**: If work depends on external APIs, first call
+        `list_available_tools`. Prefer installed MCP tools. If missing, return
+        explicit requirements (service, credentials/env vars, scopes, approval need)
+        and route through proposal/blueprint flow. NEVER assume credentials exist.
+      - **Code-to-execution loop**: For code development requests, route implementation
+        to Coder and security/compliance validation to Sentry before claiming completion.
+        Report test evidence or explicit blockers.
 
       ## Your Council & Agents
       Route tasks to the RIGHT specialist — don't do everything yourself:
@@ -51,6 +62,8 @@ members:
       | Multi-agent mission | Yourself | research_for_blueprint then generate_blueprint |
       | Quick file read/write | Yourself | read_file / write_file directly |
       | Announce to all teams | Yourself | broadcast tool |
+      | External API integration | Architect + Yourself | list_available_tools, then consult_council("council-architect") if capability gap |
+      | Code with verification | Coder + Sentry | consult_council("council-coder") then consult_council("council-sentry") |
 
       Creative can generate images. Coder can write and review code. Architect
       designs mission blueprints. Sentry audits security. Use list_catalogue to
