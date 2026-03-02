@@ -45,17 +45,19 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Standing Teams:** Admin/Soma (orchestrator, 18 tools, 10 ReAct iterations, persistent identity) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
 - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
 - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
-- **Internal Tool Registry:** 22 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O (workspace-sandboxed), NATS bus sensing, image generation, summarize_conversation, research_for_blueprint, store_inception_recipe, recall_inception_recipes, and more.
+- **Internal Tool Registry:** 23 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O (workspace-sandboxed), NATS bus sensing, image generation + cache-save flow, summarize_conversation, research_for_blueprint, store_inception_recipe, recall_inception_recipes, and more.
 - **Composite Tool Executor:** Unified interface routing tool calls to InternalToolRegistry or MCP ToolExecutorAdapter.
 - **MCP Ingress:** Install, manage, and invoke MCP tool servers. Curated library with one-click install. Raw install endpoint disabled (Phase 0 security) — library-only installs enforced.
 - **MCP Test Coverage:** Service/toolset/library/executor suites plus DB-backed MCP handler tests; toolset update not-found now returns HTTP 404.
 - **Archivist:** Context engine — SitReps, auto-embed to pgvector (768-dim, nomic-embed-text), semantic search.
 - **Governance:** Policy engine with YAML rules, approval queue, trust economy (0.0–1.0 threshold).
 - **Cognitive Router:** 6 LLM providers (ollama, vllm, lmstudio, OpenAI, Anthropic, Gemini), profile-based routing, token telemetry. Brain provenance tracks which provider/model executed each response.
+- **Startup Provider Scope:** On boot, connectivity probing is scoped to default `ollama` plus providers explicitly routed by profiles. Mycelis does not attempt to connect to every declared backend unless it is actively configured for use.
 - **CE-1 Templates:** Orchestration template engine with intent proofs, confirm tokens (15min TTL), and audit trail. Chat-to-Answer (read-only) and Chat-to-Proposal (mutation-gated) execution modes.
 - **Brains API:** Full provider CRUD — add, edit, delete, and probe providers at runtime with zero restart (`AddProvider`/`UpdateProvider`/`RemoveProvider` with `RWMutex` hot-reload). Type presets for Ollama, vLLM, LM Studio, OpenAI, Anthropic, Gemini, Custom. Location/data_boundary/usage_policy/roles_allowed enforced. All mutations persist to `cognitive.yaml`.
 - **Mission Profiles:** Named workflow configurations that map agent roles to specific providers. Activate a profile to instantly reroute `architect → vllm`, `coder → ollama`, etc. Context Switch strategies: Cache & Transfer (auto-snapshot before switch), Start Fresh, Load Snapshot. Profiles persist to `mission_profiles` table (migration 029).
 - **Root-admin Collaboration Groups (V7):** DB-backed goal-scoped groups with tenant scoping, policy refs, audit linkage, scoped permissions (`groups:read|write|broadcast`), high-impact confirm-token gating, NATS fanout, and live group-bus monitor surfaces.
+- **Root-admin Full Configuration Authority (V7):** Root-admin can direct Soma to execute configuration across the whole platform (providers/profiles, governance policy, MCP/toolsets, users/groups, runtime settings), not only team instantiation, while preserving proposal/approval gates for governed mutations.
 - **Local Command V0 (V7):** Root-admin host actions API (`/api/v1/host/actions`) with allowlisted no-shell command execution (`MYCELIS_LOCAL_COMMAND_ALLOWLIST`) and bounded timeout/args validation.
 - **Coder-First Web Access Rule (V7):** Web search/site retrieval defaults to development-specialist ephemeral code execution (adaptive search-engine/query strategy), with MCP used when clearly easier/required.
 - **MCP Intent Translation Contract (V7):** Soma/Council must translate user intent into concrete currently-installed MCP tool calls (or emit explicit missing dependency/credential requirements) instead of schema-only responses.
@@ -94,7 +96,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Neural Wiring (Automations → Wiring tab, Advanced Mode):** ArchitectChat + CircuitBoard (ReactFlow) + ToolsPalette + NatsWaterfall. Interactive edit/delete: click agent nodes to modify manifests, delete agents, discard drafts, or terminate active missions.
 - **Agent Visualization:** Observable Plot charts (bar, line, area, dot, waffle, tree), Leaflet geo maps, DataTable — rendered inline via ChartRenderer from `MycelisChartSpec`.
 - **Memory Explorer (`/memory`):** Two-column redesign — Warm (sitreps + artifacts, 40%) + Cold semantic search (60%). Hot signal stream hidden behind Advanced Mode toggle (collapsible). Human-facing labels throughout.
-- **Settings (`/settings`):** Brains (full provider CRUD — Add/Edit/Delete/Probe with type presets, remote-enable confirmation, LOCAL/LEAVES_ORG boundary badge), Profiles (mission profile CRUD + activate + Context Switch Modal), Cognitive Matrix, MCP Tools (curated library), Users (stub auth). Policy/approval rules in Automations → Approvals tab.
+- **Settings (`/settings`):** Profile (assistant display-name rename), Brains (full provider CRUD — Add/Edit/Delete/Probe with type presets, remote-enable confirmation, LOCAL/LEAVES_ORG boundary badge), Profiles (mission profile CRUD + activate + Context Switch Modal), Cognitive Matrix, MCP Tools (curated library), Users & Groups (operator user controls + embedded collaboration-group management panel). Policy/approval rules in Automations → Approvals tab.
 - **Run Timeline (V7):** Vertical event timeline per mission run — policy decisions, tool invocations, trigger firings, artifacts, completion. `RunTimeline.tsx` + `EventCard.tsx` + `/runs/[id]` page. Auto-polls every 5s; stops on terminal events. Tab bar switches between Conversation and Events views.
 - **Conversation Log (V7):** Full agent transcript viewer per run — `ConversationLog.tsx` + `TurnCard.tsx`. Role-based coloring (system gray, user cyan, assistant green, tool_call violet, tool_result amber, interjection red). Agent filter bar for multi-agent runs. System prompts collapsed by default. Provider/model badges on assistant turns. Tool name badges on tool_call turns. Auto-polls 5s while run is active. Operator interjection input bar visible when run status is `running`.
 - **Run List (V7):** `/runs` page listing all recent runs across missions, with status dots and timestamps. Also surfaced in OpsOverview as a `Recent Runs` widget.
@@ -113,11 +115,11 @@ Workspace (`/dashboard`) is the admin's primary interface — a resizable two-pa
 ```
 ┌───────────────────────────────────────────────────────────────┐
 │  Workspace                SIGNAL: LIVE   [Launch Crew] [⚙]   │
-├─── Telemetry Row ─────────────────────────────────────────────┤
+├─── Telemetry Row (Advanced Mode) ─────────────────────────────┤
 │  [Goroutines: 42] [Heap: 18MB] [System: 52MB] [LLM: 3.2t/s] │
 ├───────────────────────────────────────────────────────────────┤
 │                                                               │
-│   ADMIN / COUNCIL CHAT  (55% — resizable)                     │
+│   ADMIN / COUNCIL CHAT  (68% — resizable)                     │
 │   ┌───────────────────────────────────────────────────────┐   │
 │   │  ● Soma  [⚡ Direct ▾]  (Soma is always primary)      │   │
 │   │  Rich messages: markdown, code blocks, tables, links  │   │
@@ -130,7 +132,7 @@ Workspace (`/dashboard`) is the admin's primary interface — a resizable two-pa
 │                                                               │
 ├═══════════════════ drag to resize ════════════════════════════─┤
 │                                                               │
-│   OPS OVERVIEW  (45% — collapsible)                           │
+│   OPS OVERVIEW  (32% — collapsible)                           │
 │   ┌─────────────┐ ┌────────────┐ ┌──────────┐ ┌────────────┐ │
 │   │ SYSTEM      │ │ ALERTS     │ │ TEAMS    │ │ MCP TOOLS  │ │
 │   │ Text: ●     │ │ GOV x2     │ │ admin    │ │ fs  ●      │ │
@@ -154,7 +156,7 @@ Workspace (`/dashboard`) is the admin's primary interface — a resizable two-pa
 | Zone | Component | Description |
 | :--- | :--- | :--- |
 | **Header** | `MissionControl` | Signal status (SSE live/offline), **Launch Crew** button (opens `LaunchCrewModal` — guided 3-step crew intent → proposal → confirm), Settings gear (→ `/settings`) |
-| **Telemetry Row** | `TelemetryRow` | 4 sparkline cards — Goroutines, Heap, System Memory, LLM Tokens/s. Polls `/api/v1/telemetry/compute` every 5s. Shows offline banner after 3 failures. |
+| **Telemetry Row** | `TelemetryRow` | 4 sparkline cards — Goroutines, Heap, System Memory, LLM Tokens/s. Polls `/api/v1/telemetry/compute` every 5s. Shows offline banner after 3 failures. Rendered only in Advanced Mode to keep workspace focused. |
 | **Chat (top)** | `MissionControlChat` | The primary interaction surface — see Chat section below. Shows `SomaOfflineGuide` with startup instructions + retry button when no council members are reachable. |
 | **Resize Handle** | custom drag | Pointer-event drag handler. Split ratio persisted to localStorage (`workspace-split`). Clamped 25%–80%. |
 | **Ops Overview (bottom)** | `OpsOverview` | Responsive auto-fit grid of compact dashboard cards — see Ops section below |
@@ -197,7 +199,8 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | **Live activity** | While Soma processes, a `SomaActivityIndicator` reads `streamLogs` for `tool.invoked` events and shows contextual text: "Consulting Coder...", "Generating blueprint...", "Searching memory..." instead of a static spinner. |
 | **Broadcast mode** | Toggle or `/all` prefix — sends message to ALL active teams via NATS |
 | **File I/O** | Admin + council agents can `read_file` and `write_file` within the workspace sandbox (`MYCELIS_WORKSPACE`, default `./workspace`). Paths must resolve inside the boundary — symlink escapes are detected. Max 1MB per write. Sentry is read-only. |
-| **Tool access** | 20 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, store_artifact, summarize_conversation |
+| **Tool access** | 21 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, save_cached_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, store_artifact, summarize_conversation |
+| **Image cache policy** | Generated images are cache-first and expire after 60 minutes unless explicitly persisted to `workspace/saved-media` via `save_cached_image` or artifact save API |
 | **MCP tools** | Any installed MCP server tools are also available (filesystem, fetch, brave-search, etc.) |
 | **Trust scores** | Each response carries a CTS trust score (0.0–1.0), displayed as a colored badge |
 | **Multi-turn** | Full conversation history is forwarded to the agent — maintains context across turns |
@@ -1233,11 +1236,16 @@ Optional but recommended (first-time Ollama model pull):
 ollama pull qwen2.5-coder:7b
 ```
 
-### 2. Bootstrap Infrastructure (First Time / Reset)
+### 2. Bring Up Cluster (Canonical Order)
 
 ```bash
-uvx inv k8s.reset
+uvx inv k8s.up
 ```
+
+`k8s.up` enforces dependency order in-cluster:
+1. Kind cluster + namespace init
+2. Helm deploy (PostgreSQL, NATS, Core API)
+3. Rollout readiness gates (PostgreSQL -> NATS -> Core API)
 
 ### 3. Start Full Local Stack (Recommended)
 
@@ -1245,6 +1253,12 @@ This starts bridge + backend + frontend in one flow:
 
 ```bash
 uvx inv lifecycle.up --build --frontend
+```
+
+If `uvx inv ...` is unavailable in your shell, use:
+
+```bash
+.\.venv\Scripts\inv.exe lifecycle.up --build --frontend
 ```
 
 Verify:
@@ -1263,6 +1277,7 @@ Open:
 If you prefer manual control over each service:
 
 ```bash
+uvx inv k8s.up                # Cluster services ready in dependency order
 uvx inv k8s.bridge            # Port-forward PG:5432, NATS:4222 (Terminal 1)
 uvx inv db.migrate            # Apply all migrations (idempotent)
 uvx inv core.build && uvx inv core.run   # Build + run (Terminal 2, foreground)
@@ -1277,6 +1292,17 @@ uvx inv lifecycle.down
 uvx inv lifecycle.restart --build --frontend
 ```
 
+### 5A. Fresh Deployment Reset (Clean Slate)
+
+Use this when you want to fully tear down local runtime state and re-bootstrap before the next architecture step.
+
+```bash
+uvx inv lifecycle.down
+uvx inv k8s.reset
+uvx inv lifecycle.up --build --frontend
+uvx inv lifecycle.health
+```
+
 ### 6. Configure Cognitive Providers
 
 - **UI:** `/settings` → **Cognitive Matrix** tab — change provider routing, configure endpoints.
@@ -1284,6 +1310,21 @@ uvx inv lifecycle.restart --build --frontend
 - **YAML:** Edit `core/config/cognitive.yaml` directly.
 - **Default:** Ollama is the standard local provider unless you explicitly reroute profiles.
 - **Env:** `OLLAMA_HOST` in `.env` sets the default Ollama endpoint.
+
+### 7. Rename Soma (Assistant Display Name)
+
+You can rename the assistant from the UI and the new name will propagate across operational surfaces.
+
+1. Open `/settings` → `Profile`.
+2. Set **Assistant Name**.
+3. Click **Save**.
+
+Updated surfaces include:
+- Workspace chat header and placeholders
+- Degraded banner actions
+- Council error card actions
+- Launch Crew copy
+- Runs/Ops copy where the orchestrator name is shown
 
 #### Multi-Host Agent Routing (Enterprise / Multi-Backend)
 
@@ -1428,10 +1469,13 @@ Run from `scratch/` root using `uvx inv`:
 | `uvx inv db.reset` | Drop + recreate + migrate |
 | `uvx inv db.status` | Show tables + row counts |
 | **Infrastructure** | |
-| `uvx inv k8s.reset` | Full cluster reset |
+| `uvx inv k8s.up` | Canonical cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
+| `uvx inv k8s.reset` | Full cluster reset (teardown + canonical bring-up with readiness wait) |
 | `uvx inv k8s.status` | Cluster status |
 | `uvx inv k8s.deploy` | Deploy Helm chart |
+| `uvx inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
 | `uvx inv k8s.bridge` | Port-forward NATS, API, Postgres |
+| `uvx inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
 | **Cognitive** | |
 | `uvx inv cognitive.up` | Start vLLM + Diffusers (full stack) |
 | `uvx inv cognitive.status` | Health check providers |
@@ -1590,11 +1634,14 @@ No branch promotion without this documentation gate.
 ## Verification
 
 ```bash
-uvx inv core.test             # Go unit tests (188 tests across 16 packages — server, events, runs, swarm, governance, ...)
-uvx inv interface.test        # Vitest component tests (~70 V7 tests, 56 pass, 2 pre-existing DashboardPage failures)
-uvx inv interface.e2e         # Playwright E2E specs (requires running servers)
+uvx inv core.test             # Go unit tests (full core package sweep)
+uvx inv interface.test        # Vitest component tests (55 files / 322 tests passing as of 2026-03-02)
+uvx inv interface.e2e         # Playwright E2E specs (51 passing, 4 intentionally skipped as of 2026-03-02)
 uvx inv interface.check       # HTTP smoke test against running dev server (9 pages)
 uvx inv core.smoke            # Governance smoke tests
+cd core && go test ./... -count=1         # Full Go validation
+cd interface && npx vitest run --reporter=dot
+cd interface && npx playwright test --reporter=dot
 cd interface && npx playwright test e2e/specs/v7-operational-ux.spec.ts  # Gate A operational UX E2E (degraded banner, status drawer, council reroute, automations hub, quick checks, focus mode)
 cd core && go test ./internal/mcp/ -count=1
 cd core && go test ./internal/server/ -run TestHandleMCP -count=1
@@ -1629,8 +1676,6 @@ Expected values:
 - `hasWizard: true`
 
 If preflight fails, mark the run `INVALID_ENV` and stop. Do not file product regressions from that run.
-
-> Note: `cd core && go test ./... -count=1` currently fails due to an existing root-package conflict (`probe.go` and `probe_test.go` both declare `main`).
 
 **Go test breakdown (V7 additions):**
 
@@ -1677,7 +1722,7 @@ If preflight fails, mark the run `INVALID_ENV` and stop. Do not file product reg
 | V7 Conversation Log | Agent Transcript Browsing + Interjection | **Migration 030** (`conversation_turns`). **Backend:** `conversations.Store` (LogTurn, GetRunConversation, GetSessionTurns). `ConversationLogger` interface in `protocol/events.go` propagated Soma → Team → Agent (mirrors EventEmitter). 6 emission points in `processMessageStructured()` (system, user, tool_call, tool_result, interjection, assistant). Interjection via NATS mailbox `swarm.agent.{id}.interjection` — agent checks between ReAct iterations. 3 HTTP handlers (run conversation, session turns, interject). **Frontend:** `ConversationLog.tsx` (agent filter, 5s auto-poll, interjection input), `TurnCard.tsx` (role-based colors/icons/badges), `types/conversations.ts`. `/runs/[id]` tab bar (Conversation + Events). **Tests:** 13 Go store tests, 11 Go handler tests, 9 frontend tests. |
 | V7 Inception Recipes | Structured Prompt Patterns for RAG | **Migration 031** (`inception_recipes`). **Backend:** `inception.Store` (CreateRecipe, GetRecipe, ListRecipes, SearchByTitle, IncrementUsage, UpdateQuality). `store_inception_recipe` + `recall_inception_recipes` internal tools (dual-persist: RDBMS + pgvector). Recipe recall integrated into `research_for_blueprint` pipeline (step 5). Interaction protocol updated: agents prompted to store recipes after complex tasks. 5 HTTP handlers (list, search, get, create, quality feedback). **Tests:** 16 Go store tests, 10 Go handler tests. |
 | MCP Test Hardening | Service + Handler Coverage | **Backend Tests:** new suites for MCP library loading/config conversion, registry service CRUD/cache/find flows, toolset CRUD/ref resolution, and executor adapter result formatting. **Handler Tests:** DB-backed happy paths for MCP list/delete/tools/library-install plus toolset update matrix (happy/not-found/bad UUID/missing name/nil service). **Semantics:** `handleUpdateToolSet` returns `404` when the tool set does not exist. |
-| V7 UI Gate A | Parallel UI Framework + Reliability Baseline | **Docs:** `docs/UI_FRAMEWORK_V7.md` + `docs/ui-delivery/*` lane playbooks and board. **UX:** `StatusDrawer`, `DegradedModeBanner`, `CouncilCallErrorCard`, `FocusModeToggle`, `SystemQuickChecks`, and `AutomationHub` baseline integrated. **Tests:** Added/updated Vitest suites for dashboard/pages/shell with targeted Gate A run passing (`38` tests). |
+| V7 UI Gate A | Parallel UI Framework + Reliability Baseline | **Docs:** `docs/UI_FRAMEWORK_V7.md` + `docs/ui-delivery/*` lane playbooks and board. **UX:** `StatusDrawer`, `DegradedModeBanner`, `CouncilCallErrorCard`, `FocusModeToggle`, `SystemQuickChecks`, and `AutomationHub` baseline integrated. **Tests:** Full verification now green in current workspace (`go test ./...`, Vitest `322` passing tests, Playwright `51` passing / `4` skipped on 2026-03-02). |
 | In-App Docs Browser | `/docs` + Doc Registry | **Next.js Route Handlers:** `GET /docs-api` (manifest) + `GET /docs-api/[slug]` (file content, path-validated against manifest). `/docs-api` prefix avoids the `/api/*` → Go backend proxy rewrite; `params` awaited for Next.js 15+ async param requirement. **Manifest:** `lib/docsManifest.ts` — 29 entries across 7 curated sections; `DOC_BY_SLUG` flat map for O(1) slug validation; add a doc by adding one `DocEntry`. **User Guides (new):** 7 plain-language guides in `docs/user/` — Core Concepts, Using Soma Chat, Run Timeline, Automations, Resources, Memory, Governance & Trust — covering every implemented workflow and concept. **UI:** `/docs` page — two-column layout: sidebar (grouped nav, filter search, active state) + content pane (react-markdown + remark-gfm, Midnight Cortex styled). `?doc={slug}` deep-link; URL synced on every sidebar click. **Nav:** `BookOpen` Docs link in main nav directly below Memory (not in footer). |
 
 > Full phase history with details: [Architecture Overview](docs/architecture/OVERVIEW.md#vi-delivered-phases)

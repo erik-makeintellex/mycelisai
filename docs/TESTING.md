@@ -2,6 +2,11 @@
 
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
+Latest baseline (2026-03-02):
+- `cd core && go test ./... -count=1` -> pass
+- `cd interface && npx vitest run --reporter=dot` -> pass (`55` files, `322` tests)
+- `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
+
 ## Quick Reference
 
 ```bash
@@ -56,8 +61,6 @@ go test -v -run TestHandleMCP ./internal/server/... -count=1
 go test -v -run TestHandleUpdateToolSet ./internal/server/... -count=1
 go test -v -run TestScoped ./internal/swarm/... -count=1
 ```
-
-> Note: `go test ./...` currently includes an unrelated root-package conflict (`core/probe.go` and `core/probe_test.go` both declare `main`).
 
 ---
 
@@ -255,7 +258,7 @@ test('renders content', () => {
 ### E2E Spec
 
 1. Create `interface/e2e/specs/<feature>.spec.ts`
-2. Use `page.goto()` + `waitForLoadState('networkidle')`
+2. Use `page.goto()` + `waitForLoadState('domcontentloaded')` for deterministic hydration checks (avoid long-lived stream flake from `networkidle`)
 3. Always include dark mode compliance check (`no bg-white`)
 
 ```typescript
@@ -264,7 +267,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Feature Page', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/feature')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
     })
 
     test('page loads without errors', async ({ page }) => {

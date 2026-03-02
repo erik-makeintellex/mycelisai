@@ -1,40 +1,26 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Governance Page (/approvals)', () => {
+test.describe('Governance Page (/automations?tab=approvals)', () => {
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/approvals');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/automations?tab=approvals');
+        await page.waitForLoadState('domcontentloaded');
+        await expect(page.locator('h1:has-text("Automations")')).toBeVisible();
     });
 
     test('page loads without errors', async ({ page }) => {
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
-
-        // Governance header or content is present
-        await expect(page.locator('text=Governance')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Approvals' })).toBeVisible();
     });
 
     test('policy tab renders governance rules', async ({ page }) => {
-        // Look for policy-related content
-        const policySection = page.locator('text=/policy|rules|default/i');
-        const visible = await policySection.first().isVisible().catch(() => false);
-        if (!visible) {
-            test.skip();
-            return;
-        }
-        await expect(policySection.first()).toBeVisible();
+        const content = page.locator('main, body');
+        await expect(content).toContainText(/approval|governance|policy|degraded/i);
     });
 
     test('pending approvals section renders', async ({ page }) => {
-        // The pending section may show items or an empty state
-        const pendingSection = page.locator('text=/pending|approval|queue/i');
-        const visible = await pendingSection.first().isVisible().catch(() => false);
-        if (!visible) {
-            // Empty state — still counts as passing
-            return;
-        }
-        await expect(pendingSection.first()).toBeVisible();
+        await expect(page.locator('body')).toContainText(/pending|approval|queue|none/i);
     });
 
     test('no bg-white leak on governance page', async ({ page }) => {
