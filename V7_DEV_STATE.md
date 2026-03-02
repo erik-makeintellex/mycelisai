@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-03-01
+> **Updated:** 2026-03-02
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
@@ -26,7 +26,7 @@ Phase 19 (complete)
 
 ---
 
-## Current Checkpoint (2026-03-01)
+## Current Checkpoint (2026-03-02)
 
 Latest integration checkpoint:
 - Commit: `f286b5b`
@@ -48,11 +48,69 @@ Latest integration checkpoint:
   - Delegate-task execution hardening: tolerant argument normalization for object/alias payloads to prevent schema-only failure loops
   - MCP translation behavior hardened: Soma/Council now required to map user intent to currently installed MCP tool inventory and execute concrete tool calls (or emit explicit missing dependency requirements)
   - Coder-first web access contract codified: search/site retrieval defaults to ephemeral code execution with adaptive query strategy; MCP used when easier/required
+  - Root-admin scope expansion codified: Soma/Council must handle full-platform configuration execution requests (providers/profiles, governance, MCP/toolsets, users/groups, runtime settings), not only new-team flows
+  - Cognitive startup probing hardened:
+    - startup calibration now scopes connectivity checks to default `ollama` plus profile-routed providers
+    - avoids startup connection attempts to unrelated declared backends
+    - default `cognitive.yaml` now keeps `vllm` and `lmstudio` disabled until explicitly configured
+  - Architecture authority updated to include startup connectivity policy:
+    - `mycelis-architecture-v7.md` provider-routing section now defines startup probe scope and opt-in model for additional backends
+  - Soma execution guardrail added: non-executing "Step 1 / we need to delegate" responses now trigger a policy-correction re-inference pass to force real tool execution or a concrete blocker
+  - Soma execution guardrail hardened:
+    - detects "Example Input / this will route / I'll consult" instructional narration as non-executing output
+    - parses legacy `{"operation":"...","arguments":...}` payloads as executable tool calls to prevent instruction-only loops
+    - auto-fills `consult_council.question` from the latest user request when omitted by model output
+    - normalizes council member aliases (`Architect` → `council-architect`) and signal aliases (`topic_pattern` → `subject`)
+    - extracts missing NATS subjects from user input for `read_signals` execution fallback
+    - recovers malformed/incomplete `tool_call` JSON via loose parser fallback
+  - ReAct failure handling hardened:
+    - tool execution/lookup failures now feed back into re-inference instead of immediately terminating the turn
+    - prevents premature user-facing failure when a recoverable follow-up tool call is available
+  - Council-first execution policy enforced in runtime for high-impact action paths:
+    - before `create_team` / `delegate_task` / `local_command`, Soma now runs a council preflight consult
+    - preflight feedback is injected back into the same turn so execution parameters can be refined before action
+  - Dynamic team instantiation path added:
+    - new internal `create_team` tool for runtime team creation via Soma
+    - admin team tool inventory now includes `create_team`
+    - adapter path maps malformed `delegate_task` team-creation payloads into `create_team` calls
+    - `create_team` accepts nested `manifest` payload shape for compatibility with local model outputs
+    - added swarm policy tests for operation-payload fallback and stronger non-executing response detection
+  - User-facing docs expanded in the in-app `/docs` browser for runtime recovery and execution behavior:
+    - `docs/user/system-status-recovery.md` (new)
+    - updated `docs/user/core-concepts.md`, `docs/user/automations.md`, `docs/user/soma-chat.md`
+  - In-app docs manifest updated to expose the new user guide (`system-status-recovery`)
+  - Assistant display-name support delivered (`assistant_name`) with persisted backend settings and UI propagation across Workspace/status/error/runs surfaces
+  - Settings Profile now exposes orchestrator rename flow (`Settings -> Profile -> Assistant Name`)
+  - Fresh local deployment reset sequence documented for operators (`lifecycle.down -> k8s.reset -> lifecycle.up --build --frontend -> lifecycle.health`)
+  - Workspace cleanup pass: chat-first default split ratio (68/32) and telemetry row moved behind Advanced Mode to reduce operational clutter in normal mode
+  - Image lifecycle hardening: `generate_image` now cache-first (60m TTL), periodic backend cleanup of expired unsaved images, and explicit save flow (`save_cached_image` tool + `POST /api/v1/artifacts/{id}/save` API) to persist into `workspace/saved-media`
+  - User/operator surfaces expanded: `Settings -> Users & Groups` now includes actionable user-management elements and embedded collaboration-group management UI (no longer user-table stub only)
+  - Cluster bring-up contract hardened in ops/runtime:
+    - new `uvx inv k8s.up` canonical sequence (`init -> deploy -> wait`)
+    - new `uvx inv k8s.wait` readiness gates (`PostgreSQL -> NATS -> Core API`)
+    - `k8s.recover` corrected to restart actual chart resources (`mycelis-core`, `mycelis-core-nats`, `mycelis-core-postgresql`)
+    - Helm core deployment now has startup/readiness/liveness probes on `/healthz` for rollout-health accuracy
+  - Operator docs aligned to canonical cluster sequencing:
+    - `README.md`
+    - `docs/LOCAL_DEV_WORKFLOW.md`
+    - `docs/architecture/OPERATIONS.md`
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
 - `cd core && go test ./internal/server -run "TestHandleServicesStatus_AllOffline" -count=1`
 - `cd interface && npm run build`
+- `cd core && go test ./internal/swarm -count=1`
+- `cd core && go test ./internal/server -count=1`
+- `cd interface && npx vitest run --reporter=dot`
+- `cd core && go test ./internal/server -run "TestHandleMe|TestHandleUpdateSettings" -count=1`
+- `cd interface && npx vitest run __tests__/lib/labels.test.ts __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`
+- `python -m py_compile ops/k8s.py`
+- `cd core && go test ./internal/cognitive -count=1`
+
+Verification evidence (latest full sweep — 2026-03-02):
+- `cd core && go test ./... -count=1` -> pass
+- `cd interface && npx vitest run --reporter=dot` -> pass (`55` files, `322` tests)
+- `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
 
 ---
 
@@ -127,7 +185,7 @@ Gate A baseline progress:
 - Verified targeted gate suite: `50` tests passing across dashboard/pages/shell/teams/automations subsets.
 - Added Playwright Gate A operational UX suite scaffold:
   - `interface/e2e/specs/v7-operational-ux.spec.ts` (6 scenarios: degraded banner lifecycle, status drawer access, council reroute via Soma, automations actionable hub, system quick checks, focus mode toggle).
-  - Run attempt currently blocked locally until Playwright browsers are installed (`npx playwright install`).
+  - Verified green locally in current environment (`cd interface && npx playwright test --reporter=dot` -> `51` passed, `4` skipped).
 - Framework hardening completed:
   - `docs/UI_FRAMEWORK_V7.md` upgraded as canonical UI source with explicit input/output model, global operational state contract, required state transitions, component instantiation templates, telemetry contract, and release gates.
 - UI element planning baseline completed:
@@ -544,16 +602,15 @@ ZoneA_Rail
 
 ```
 next build:         PASSES (all routes)
-vitest:             Gate A + Sprint 0 suite passes (50 tests)
+vitest:             PASSES (`55` files, `322` tests)
+playwright:         PASSES (`51` passed, `4` skipped)
 Go build:           go build ./... PASSES (includes triggers package)
-Go tests:           188+ tests pass across 16 packages
+Go tests:           `go test ./... -count=1` PASSES
                     Migrations 023-029 must be applied for full test coverage
 Go test packages:   internal/server (157), internal/events (16), internal/runs (19), internal/triggers (new), others (~80)
 MCP verification:   `go test ./internal/mcp/ -count=1` PASSES
                     `go test ./internal/server/ -run TestHandleMCP -count=1` PASSES
                     `go test ./internal/swarm/ -run TestScoped -count=1` PASSES
-                    `go test ./... -count=1` has unrelated root-package conflict:
-                    `probe.go` and `probe_test.go` both declare `main`
 TypeScript check:   `cd interface && npx tsc --noEmit` currently fails on pre-existing test typing gaps:
                     `TelemetryRow.test.tsx` missing `afterEach`, and typed-mock issues in
                     `MemoryPage.test.tsx`, `PrimaryRoutes.test.tsx`, `ResourcesPage.test.tsx`
@@ -569,7 +626,6 @@ TypeScript check:   `cd interface && npx tsc --noEmit` currently fails on pre-ex
 | 14 pre-existing test file transform errors | Various `__tests__/{workspace,dashboard,teams,...}` | Low (pre-V7) |
 | Causal Chain UI | ViewChain.tsx + /runs/[id]/chain | After Team C |
 | Automations → Active Automations: DegradedState | `app/(app)/automations/page.tsx` | Blocked by Team C |
-| Full `go test ./...` root-package conflict | `core/probe.go`, `core/probe_test.go` | Medium |
 
 ---
 

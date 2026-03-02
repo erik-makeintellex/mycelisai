@@ -12,7 +12,7 @@ test.describe('Accessibility Baseline', () => {
 
     test('dashboard has no critical a11y violations', async ({ page }) => {
         await page.goto('/');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const results = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa'])
@@ -26,7 +26,7 @@ test.describe('Accessibility Baseline', () => {
 
     test('teams page has no critical a11y violations', async ({ page }) => {
         await page.goto('/teams');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const results = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa'])
@@ -40,7 +40,7 @@ test.describe('Accessibility Baseline', () => {
 
     test('wiring page has no critical a11y violations', async ({ page }) => {
         await page.goto('/wiring');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         const results = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa'])
