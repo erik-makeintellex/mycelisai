@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-03-02
+> **Updated:** 2026-03-03
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
@@ -26,11 +26,12 @@ Phase 19 (complete)
 
 ---
 
-## Current Checkpoint (2026-03-02)
+## Current Checkpoint (2026-03-03)
 
 Latest integration checkpoint:
-- Commit: `f286b5b`
+- Commit: `752f156`
 - Branch: `feature/enterprise-multihost-soma-routing`
+- Runtime note: local verification used `go1.25.6 windows/amd64` while docs still target Go `1.26`
 - Delivered:
   - DB-backed collaboration groups (`migration 034`, `groups.go`)
   - scoped permissions (`groups:read|write|broadcast`)
@@ -107,10 +108,12 @@ Verification evidence (latest targeted slice):
 - `python -m py_compile ops/k8s.py`
 - `cd core && go test ./internal/cognitive -count=1`
 
-Verification evidence (latest full sweep — 2026-03-02):
+Verification evidence (latest full sweep — 2026-03-03):
 - `cd core && go test ./... -count=1` -> pass
+- `cd interface && npm run build` -> pass
 - `cd interface && npx vitest run --reporter=dot` -> pass (`55` files, `322` tests)
 - `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
+- worktree state during sweep: dirty (`59` entries -> `50` modified, `9` untracked)
 
 ---
 
@@ -606,6 +609,7 @@ vitest:             PASSES (`55` files, `322` tests)
 playwright:         PASSES (`51` passed, `4` skipped)
 Go build:           go build ./... PASSES (includes triggers package)
 Go tests:           `go test ./... -count=1` PASSES
+Go runtime:         `go1.25.6 windows/amd64` (local sweep); docs lock target remains `1.26`
                     Migrations 023-029 must be applied for full test coverage
 Go test packages:   internal/server (157), internal/events (16), internal/runs (19), internal/triggers (new), others (~80)
 MCP verification:   `go test ./internal/mcp/ -count=1` PASSES

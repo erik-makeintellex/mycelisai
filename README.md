@@ -1533,7 +1533,7 @@ Three workflows run on push/PR to `main` and `develop`:
 
 | Component | Version | Notes |
 | :--- | :--- | :--- |
-| Go | 1.26 | Module: `github.com/mycelis/core` |
+| Go | 1.26 | Module: `github.com/mycelis/core` (local baseline on 2026-03-03 ran on `go1.25.6`; upgrade pending) |
 | Next.js | 16.1.6 | Turbopack, App Router |
 | React | 19.2.3 | `"use client"` required for hooks/state |
 | Tailwind CSS | v4 | `@import "tailwindcss"`, `@theme` directive |
@@ -1583,6 +1583,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Local Dev Workflow** | [docs/LOCAL_DEV_WORKFLOW.md](docs/LOCAL_DEV_WORKFLOW.md) — Setup, config reference, port map, troubleshooting | [/docs?doc=local-dev](/docs?doc=local-dev) |
 | **Soma Workflow** | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — End-to-end GUI + API workflow reference | [/docs?doc=workflows](/docs?doc=workflows) |
 | **Archive Index** | [docs/archive/README.md](docs/archive/README.md) — Historical docs only; not implementation authority | [/docs?doc=archive-index](/docs?doc=archive-index) |
+| **.build Scratch Docs (Local)** | `.build/*.md` — local planning/scratch artifacts, gitignored, non-authoritative | — |
 | **Council Chat QA** | [docs/QA_COUNCIL_CHAT_API.md](docs/QA_COUNCIL_CHAT_API.md) — QA procedures and test cases for council chat | [/docs?doc=council-chat-qa](/docs?doc=council-chat-qa) |
 | **API Reference** | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Full endpoint table (80+ routes) | [/docs?doc=api-reference](/docs?doc=api-reference) |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
@@ -1614,7 +1615,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Testing** | [docs/TESTING.md](docs/TESTING.md) — Unit, integration, smoke protocols | [/docs?doc=testing](/docs?doc=testing) |
 | **V7 UI Verification (Archive)** | [docs/archive/v7-step-01-ui.md](docs/archive/v7-step-01-ui.md) — Historical manual UI checklist for V7 Step 01 navigation | [/docs?doc=v7-ui-verification](/docs?doc=v7-ui-verification) |
 | **V7 Implementation Plan** | [docs/V7_IMPLEMENTATION_PLAN.md](docs/V7_IMPLEMENTATION_PLAN.md) — Teams A/B/C/D/E technical plan | [/docs?doc=v7-implementation-plan](/docs?doc=v7-implementation-plan) |
-| **V7 Dev State** | [V7_DEV_STATE.md](V7_DEV_STATE.md) — Authoritative map of what's done vs pending | [/docs?doc=v7-dev-state](/docs?doc=v7-dev-state) |
+| **V7 Dev State** | [V7_DEV_STATE.md](V7_DEV_STATE.md) — Detailed checkpoint log (evidence, risks, next actions) | [/docs?doc=v7-dev-state](/docs?doc=v7-dev-state) |
 | **IA Step 01 (Archive)** | [docs/archive/ia-v7-step-01.md](docs/archive/ia-v7-step-01.md) — Historical workflow-first navigation PRD and decisions | [/docs?doc=v7-ia-step01](/docs?doc=v7-ia-step01) |
 | **Registry** | [core/internal/registry/README.md](core/internal/registry/README.md) — Connector marketplace | — |
 | **Core API** | [core/README.md](core/README.md) — Go service architecture | — |
@@ -1648,6 +1649,13 @@ cd core && go test ./internal/server/ -run TestHandleMCP -count=1
 cd core && go test ./internal/swarm/ -run TestScoped -count=1
 cd interface && npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/automations/RouteTemplatePicker.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/SystemPage.test.tsx __tests__/teams/TeamsPage.test.tsx  # Gate A + Sprint 0 baseline (50 pass on 2026-02-27)
 ```
+
+Latest full baseline sweep (2026-03-03, `feature/enterprise-multihost-soma-routing` @ `752f156`):
+- `cd core && go test ./... -count=1` -> pass
+- `cd interface && npm run build` -> pass
+- `cd interface && npx vitest run --reporter=dot` -> pass (`55` files, `322` tests; warning-only noise)
+- `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
+- Worktree during sweep: dirty (`59` entries: `50` modified, `9` untracked), so this is a functional baseline, not a clean-tree release baseline.
 
 If Playwright reports a missing browser executable, run: `cd interface && npx playwright install chromium`.
 
