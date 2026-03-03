@@ -38,6 +38,8 @@ core/bin/
 postgres-data/
 nats-data/
 .build/
+.logs/
+core/workspace/
 CLAUDE.md
 
 # Logs and Debug
