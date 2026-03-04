@@ -5,14 +5,21 @@ import { mockFetch } from '../setup';
 // Mock next/dynamic — resolve the loader and flush microtask queue
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any, _opts?: any) => {
-        const React = require('react');
-        const DynamicComponent = (props: any) => {
-            const [Comp, setComp] = React.useState<any>(null);
+    default: (loader: () => Promise<any>, _opts?: any) => {
+        const React = require('react') as typeof import('react');
+        const DynamicComponent = (props: Record<string, unknown>) => {
+            const [Comp, setComp] = React.useState<import('react').ComponentType<any> | null>(null);
             React.useEffect(() => {
+                let mounted = true;
                 loader().then((mod: any) => {
-                    setComp(() => mod.default || mod);
+                    if (!mounted) {
+                        return;
+                    }
+                    setComp(() => (mod.default || mod) as import('react').ComponentType<any>);
                 });
+                return () => {
+                    mounted = false;
+                };
             }, []);
             return Comp ? React.createElement(Comp, props) : null;
         };

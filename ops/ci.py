@@ -156,14 +156,14 @@ def check(c):
 def baseline(c, e2e=False):
     """
     Strict baseline validation for delivery readiness.
-    Runs: core tests, interface build, vitest, and optional playwright.
+    Runs: core tests, interface build, interface typecheck, vitest, and optional playwright.
     """
     errors = []
 
     print("=== BASELINE ===")
     print()
 
-    print("[1/4] core go test ./... -count=1")
+    print("[1/5] core go test ./... -count=1")
     with c.cd(str(CORE_DIR)):
         result = c.run("go test ./... -count=1", warn=True)
         if result.exited != 0:
@@ -171,14 +171,21 @@ def baseline(c, e2e=False):
         else:
             print("  OK")
 
-    print("[2/4] interface npm run build")
+    print("[2/5] interface npm run build")
     result = c.run("cd interface && npm run build", warn=True)
     if result.exited != 0:
         errors.append("interface build failed")
     else:
         print("  OK")
 
-    print("[3/4] interface vitest run")
+    print("[3/5] interface tsc --noEmit")
+    result = c.run("cd interface && npx tsc --noEmit", warn=True)
+    if result.exited != 0:
+        errors.append("interface typecheck failed")
+    else:
+        print("  OK")
+
+    print("[4/5] interface vitest run")
     result = c.run("cd interface && npx vitest run --reporter=dot", warn=True)
     if result.exited != 0:
         errors.append("interface vitest failed")
@@ -186,14 +193,14 @@ def baseline(c, e2e=False):
         print("  OK")
 
     if e2e:
-        print("[4/4] interface playwright run")
+        print("[5/5] interface playwright run")
         result = c.run("cd interface && npx playwright test --reporter=dot", warn=True)
         if result.exited != 0:
             errors.append("interface playwright failed")
         else:
             print("  OK")
     else:
-        print("[4/4] interface playwright run")
+        print("[5/5] interface playwright run")
         print("  SKIP (--e2e not set)")
 
     print()
