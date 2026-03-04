@@ -40,6 +40,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Soma, Council, Mission, Run, Brain, Event, Trust — plain-language glossary",
             },
             {
+                slug: "system-status-recovery",
+                label: "System Status & Recovery",
+                path: "docs/user/system-status-recovery.md",
+                description: "Global health signals, degraded recovery actions, and Quick Checks workflow",
+            },
+            {
                 slug: "soma-chat",
                 label: "Using Soma Chat",
                 path: "docs/user/soma-chat.md",
@@ -295,6 +301,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "Soma Team + Channel Architecture",
                 path: "docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md",
                 description: "Canonical inter-team/process/MCP channel contracts and shared memory boundaries",
+            },
+            {
+                slug: "arch-workflow-composer-delivery-v7",
+                label: "Workflow Composer Delivery Plan V7",
+                path: "docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md",
+                description: "Airflow-style DAG workflow composer plan with team lanes, release gates, git discipline, and invoke task strategy",
             },
             {
                 slug: "arch-soma-council-engagement-protocol-v7",
