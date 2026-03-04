@@ -1488,6 +1488,9 @@ Run from `scratch/` root using `uvx inv`:
 | `uvx inv lifecycle.restart` | Full restart: down → settle → up. `--build` `--frontend` |
 | **CI Pipeline** | |
 | `uvx inv ci.check` | Full CI: lint → test → build (with timers) |
+| `uvx inv ci.baseline --e2e` | Strict delivery baseline: core tests + interface build + vitest + playwright |
+| `uvx inv ci.toolchain-check --strict` | Enforce locked Go toolchain policy and report node/npm versions |
+| `uvx inv ci.release-preflight --e2e --strict-toolchain` | Release gate: clean tree + toolchain check + strict baseline |
 | `uvx inv ci.deploy` | Full CI: lint → test → build → Docker → K8s |
 
 ### CI Workflows (GitHub Actions)
