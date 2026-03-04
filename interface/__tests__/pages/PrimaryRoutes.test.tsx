@@ -18,11 +18,22 @@ vi.mock('next/navigation', () => ({
 // Mock next/dynamic — eagerly resolve the loader for testing
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any, _opts?: any) => {
-        let Resolved: any = null;
-        loader().then((mod: any) => { Resolved = mod.default || mod; });
-        return (props: any) => {
-            const React = require('react');
+    default: (loader: () => Promise<any>, _opts?: any) => {
+        return (props: Record<string, unknown>) => {
+            const React = require('react') as typeof import('react');
+            const [Resolved, setResolved] = React.useState<import('react').ComponentType<any> | null>(null);
+            React.useEffect(() => {
+                let mounted = true;
+                loader().then((mod: any) => {
+                    if (!mounted) {
+                        return;
+                    }
+                    setResolved(() => (mod.default || mod) as import('react').ComponentType<any>);
+                });
+                return () => {
+                    mounted = false;
+                };
+            }, []);
             return Resolved ? React.createElement(Resolved, props) : null;
         };
     },
@@ -96,7 +107,7 @@ describe('no_console_error_on_primary_routes', () => {
     it('/automations renders without console.error', async () => {
         await act(async () => { render(<AutomationsPage />); });
         const errors = consoleErrorSpy.mock.calls.filter(
-            (call) => !String(call[0]).includes('act()')
+            (call: unknown[]) => !String(call[0]).includes('act()')
         );
         expect(errors).toHaveLength(0);
     });
@@ -104,7 +115,7 @@ describe('no_console_error_on_primary_routes', () => {
     it('/resources renders without console.error', async () => {
         await act(async () => { render(<ResourcesPage />); });
         const errors = consoleErrorSpy.mock.calls.filter(
-            (call) => !String(call[0]).includes('act()')
+            (call: unknown[]) => !String(call[0]).includes('act()')
         );
         expect(errors).toHaveLength(0);
     });
@@ -112,7 +123,7 @@ describe('no_console_error_on_primary_routes', () => {
     it('/system renders without console.error', async () => {
         await act(async () => { render(<SystemPage />); });
         const errors = consoleErrorSpy.mock.calls.filter(
-            (call) => !String(call[0]).includes('act()')
+            (call: unknown[]) => !String(call[0]).includes('act()')
         );
         expect(errors).toHaveLength(0);
     });

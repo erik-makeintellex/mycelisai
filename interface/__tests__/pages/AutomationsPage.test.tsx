@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -19,16 +19,29 @@ vi.mock('next/navigation', () => ({
 // then the resolved component. Since vi.mock is hoisted, child mocks are ready.
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any, opts?: any) => {
-        // Store for lazy resolution
-        let Comp: any = null;
-        const p = loader().then((mod: any) => { Comp = mod.default || mod; }).catch(() => {});
-        const Dynamic = (props: any) => {
-            if (Comp) return <Comp {...props} />;
+    default: (loader: () => Promise<any>, opts?: any) => {
+        const Dynamic = (props: Record<string, unknown>) => {
+            const React = require('react') as typeof import('react');
+            const [Comp, setComp] = React.useState<import('react').ComponentType<any> | null>(null);
+            React.useEffect(() => {
+                let mounted = true;
+                loader()
+                    .then((mod: any) => {
+                        if (!mounted) {
+                            return;
+                        }
+                        setComp(() => (mod.default || mod) as import('react').ComponentType<any>);
+                    })
+                    .catch(() => {});
+                return () => {
+                    mounted = false;
+                };
+            }, []);
+            if (Comp) {
+                return React.createElement(Comp, props);
+            }
             return opts?.loading ? opts.loading() : null;
         };
-        // Attach the resolution promise so tests can await it
-        (Dynamic as any).__resolvePromise = p;
         return Dynamic;
     },
 }));
@@ -109,11 +122,9 @@ describe('Automations Page (V7)', () => {
 
     it('deep-links to approvals tab via search param', async () => {
         mockSearchParams.set('tab', 'approvals');
-        // Allow dynamic import promises to resolve
-        await new Promise((r) => setTimeout(r, 10));
         await act(async () => { render(<AutomationsPage />); });
-        // If dynamic hasn't resolved yet, flush again
-        await act(async () => { await new Promise((r) => setTimeout(r, 10)); });
-        expect(screen.getByTestId('approvals-tab')).toBeDefined();
+        await waitFor(() => {
+            expect(screen.getByTestId('approvals-tab')).toBeDefined();
+        });
     });
 });

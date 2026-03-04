@@ -18,12 +18,21 @@ vi.mock('next/navigation', () => ({
 // Mock next/dynamic — resolve synchronously using React.useState + useEffect
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any, _opts?: any) => {
-        return (props: any) => {
-            const React = require('react');
-            const [Comp, setComp] = React.useState<any>(null);
+    default: (loader: () => Promise<any>, _opts?: any) => {
+        return (props: Record<string, unknown>) => {
+            const React = require('react') as typeof import('react');
+            const [Comp, setComp] = React.useState<import('react').ComponentType<any> | null>(null);
             React.useEffect(() => {
-                loader().then((mod: any) => setComp(() => mod.default || mod));
+                let mounted = true;
+                loader().then((mod: any) => {
+                    if (!mounted) {
+                        return;
+                    }
+                    setComp(() => (mod.default || mod) as import('react').ComponentType<any>);
+                });
+                return () => {
+                    mounted = false;
+                };
             }, []);
             return Comp ? React.createElement(Comp, props) : null;
         };
