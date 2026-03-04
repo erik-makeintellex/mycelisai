@@ -152,6 +152,121 @@ def check(c):
     print("=" * 60)
 
 
+@task(help={"e2e": "Include Playwright E2E run (default: False)."})
+def baseline(c, e2e=False):
+    """
+    Strict baseline validation for delivery readiness.
+    Runs: core tests, interface build, vitest, and optional playwright.
+    """
+    errors = []
+
+    print("=== BASELINE ===")
+    print()
+
+    print("[1/4] core go test ./... -count=1")
+    with c.cd(str(CORE_DIR)):
+        result = c.run("go test ./... -count=1", warn=True)
+        if result.exited != 0:
+            errors.append("core go tests failed")
+        else:
+            print("  OK")
+
+    print("[2/4] interface npm run build")
+    result = c.run("cd interface && npm run build", warn=True)
+    if result.exited != 0:
+        errors.append("interface build failed")
+    else:
+        print("  OK")
+
+    print("[3/4] interface vitest run")
+    result = c.run("cd interface && npx vitest run --reporter=dot", warn=True)
+    if result.exited != 0:
+        errors.append("interface vitest failed")
+    else:
+        print("  OK")
+
+    if e2e:
+        print("[4/4] interface playwright run")
+        result = c.run("cd interface && npx playwright test --reporter=dot", warn=True)
+        if result.exited != 0:
+            errors.append("interface playwright failed")
+        else:
+            print("  OK")
+    else:
+        print("[4/4] interface playwright run")
+        print("  SKIP (--e2e not set)")
+
+    print()
+    if errors:
+        print(f"BASELINE FAILED: {', '.join(errors)}")
+        raise SystemExit(1)
+    print("BASELINE PASSED")
+
+
+@task(help={"strict": "Fail if Go version does not match the locked policy (default: False)."})
+def toolchain_check(c, strict=False):
+    """
+    Report local toolchain versions and optionally enforce Go lock policy.
+    """
+    print("=== TOOLCHAIN CHECK ===")
+    go_result = c.run("go version", hide=True, warn=True)
+    node_result = c.run("node -v", hide=True, warn=True)
+    npm_result = c.run("npm -v", hide=True, warn=True)
+
+    go_text = (go_result.stdout or "").strip()
+    node_text = (node_result.stdout or "").strip()
+    npm_text = (npm_result.stdout or "").strip()
+
+    print(f"go:   {go_text or 'unavailable'}")
+    print(f"node: {node_text or 'unavailable'}")
+    print(f"npm:  {npm_text or 'unavailable'}")
+
+    if go_result.exited != 0:
+        raise SystemExit("TOOLCHAIN CHECK FAILED: go is unavailable.")
+
+    locked_go_prefix = "go1.26"
+    go_matches = locked_go_prefix in go_text
+    if not go_matches:
+        message = (
+            f"Go version drift: expected {locked_go_prefix} (locked docs), found '{go_text}'."
+        )
+        if strict:
+            raise SystemExit(f"TOOLCHAIN CHECK FAILED: {message}")
+        print(f"WARN: {message}")
+    else:
+        print("Go version matches lock policy.")
+
+
+@task(
+    help={
+        "e2e": "Include Playwright in baseline gate (default: False).",
+        "strict_toolchain": "Fail on Go lock mismatch (default: False).",
+    }
+)
+def release_preflight(c, e2e=False, strict_toolchain=False):
+    """
+    Enforce release preflight gate:
+    - clean working tree
+    - toolchain check
+    - strict baseline validation
+    """
+    print("=== RELEASE PREFLIGHT ===")
+    status = c.run("git status --porcelain", hide=True, warn=True)
+    dirty_lines = [ln for ln in (status.stdout or "").splitlines() if ln.strip()]
+    if dirty_lines:
+        print("Working tree is not clean:")
+        preview = dirty_lines[:20]
+        for ln in preview:
+            print(f"  {ln}")
+        if len(dirty_lines) > len(preview):
+            print(f"  ... and {len(dirty_lines) - len(preview)} more")
+        raise SystemExit("RELEASE PREFLIGHT FAILED: clean-tree requirement not met.")
+
+    toolchain_check(c, strict=strict_toolchain)
+    baseline(c, e2e=e2e)
+    print("RELEASE PREFLIGHT PASSED")
+
+
 @task
 def deploy(c):
     """
@@ -180,4 +295,7 @@ ns.add_task(lint)
 ns.add_task(test)
 ns.add_task(build)
 ns.add_task(check)
+ns.add_task(baseline)
+ns.add_task(toolchain_check, name="toolchain-check")
+ns.add_task(release_preflight, name="release-preflight")
 ns.add_task(deploy)
