@@ -109,13 +109,18 @@ def _find_pid_on_port(port: int) -> int | None:
 
 
 def _kill_pid(pid: int):
-    """Kill a process by PID."""
-    if is_windows():
-        subprocess.run(["taskkill", "/F", "/PID", str(pid)],
-                       capture_output=True, timeout=15)
-    else:
-        subprocess.run(["kill", "-9", str(pid)],
-                       capture_output=True, timeout=5)
+    """Kill a process by PID without failing the workflow on slow OS cleanup."""
+    try:
+        if is_windows():
+            subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                           capture_output=True, timeout=15)
+        else:
+            subprocess.run(["kill", "-9", str(pid)],
+                           capture_output=True, timeout=5)
+    except subprocess.TimeoutExpired:
+        # Windows taskkill can hang after the target is already terminating.
+        # Treat this as best-effort and let the caller re-check the port.
+        pass
 
 
 def _kill_port(port: int, label: str) -> bool:
@@ -123,6 +128,9 @@ def _kill_port(port: int, label: str) -> bool:
     pid = _find_pid_on_port(port)
     if pid:
         _kill_pid(pid)
+        if _port_open(port):
+            print(f"  WARN: {label} (PID {pid}) did not release port {port} yet")
+            return False
         print(f"  Killed {label} (PID {pid}) on port {port}")
         return True
     return False
