@@ -28,7 +28,7 @@
 
 **Run from:** `scratch/` (project root where tasks.py lives)
 
-**Invocation:** Always use `uvx inv <namespace>.<task>` — never raw `inv` or `python -m invoke`
+**Invocation:** Always use `uv run inv <namespace>.<task>` (or `.\.venv\Scripts\inv.exe` from the project root). Do not use `uvx --from invoke inv ...`; that ephemeral environment omits project dependencies.
 
 > **Tip:** If you `uv venv && .venv/Scripts/activate` (Windows) or `source .venv/bin/activate` (Linux), you can use `inv` directly.
 
@@ -36,13 +36,13 @@
 
 | Command | Description |
 |---------|-------------|
-| `uvx inv core.build` | Compile Go binary + Docker image (returns TAG) |
-| `uvx inv core.test` | `go test ./...` |
-| `uvx inv core.run` | Run Core locally (foreground, blocking) |
-| `uvx inv core.stop` | Kill running Core process (taskkill on Windows, pkill on Linux) |
-| `uvx inv core.restart` | stop + run |
-| `uvx inv core.smoke` | `go run ./cmd/smoke/main.go` (governance smoke tests) |
-| `uvx inv core.clean` | `go clean`, remove bin/ |
+| `uv run inv core.build` | Compile Go binary + Docker image (returns TAG) |
+| `uv run inv core.test` | `go test ./...` |
+| `uv run inv core.run` | Run Core locally (foreground, blocking) |
+| `uv run inv core.stop` | Kill running Core process (taskkill on Windows, pkill on Linux) |
+| `uv run inv core.restart` | stop + run |
+| `uv run inv core.smoke` | `go run ./cmd/smoke/main.go` (governance smoke tests) |
+| `uv run inv core.clean` | `go clean`, remove bin/ |
 
 ### Interface Tasks (`ops/interface.py`)
 
@@ -74,11 +74,13 @@
 | Command | Description |
 |---------|-------------|
 | `uvx inv k8s.init` | Create Kind cluster (handles Windows absolute paths) |
+| `uvx inv k8s.up` | Canonical cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
 | `uvx inv k8s.deploy` | Build Core, load Docker image, helm upgrade (injects secrets from .env) |
+| `uvx inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
 | `uvx inv k8s.bridge` | Port-forward NATS:4222, HTTP:8081←8080, PG:5432 |
 | `uvx inv k8s.status` | Check Docker, Kind cluster, pod status, PVC status |
-| `uvx inv k8s.recover` | Restart NATS + neural-core deployments |
-| `uvx inv k8s.reset` | Full reset: delete cluster → init → deploy |
+| `uvx inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
+| `uvx inv k8s.reset` | Full reset: delete cluster -> canonical bring-up (includes readiness wait) |
 
 ### Cognitive Tasks (`ops/cognitive.py`)
 
@@ -148,6 +150,9 @@ powershell(command: str) → str  # PowerShell with -NoProfile flag
 ### Local Development (3 terminals)
 
 ```bash
+# Prerequisite (run once per reboot/reset):
+uvx inv k8s.up       # Kind/namespace -> Helm deploy -> PostgreSQL -> NATS -> Core API
+
 # Terminal 1: Infrastructure bridge
 uvx inv k8s.bridge    # Port-forward NATS, API, Postgres
 
@@ -167,8 +172,8 @@ Open [http://localhost:3000](http://localhost:3000)
 cp .env.example .env
 # Edit .env: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 
-# 2. Boot infrastructure
-uvx inv k8s.reset     # Full cluster reset (Kind + Core + DB)
+# 2. Boot infrastructure in dependency order
+uvx inv k8s.up        # Kind + Helm + readiness gates (PostgreSQL -> NATS -> Core API)
 
 # 3. Open bridge (keep running)
 uvx inv k8s.bridge
@@ -405,6 +410,8 @@ securityContext:
   runAsNonRoot: true
   seccompProfile: RuntimeDefault
 persistence: 2Gi (data/artifacts)
+probes:
+  startup/readiness/liveness: GET /healthz
 ```
 
 **Dependencies (Bitnami/NATS Helm charts):**
@@ -412,6 +419,8 @@ persistence: 2Gi (data/artifacts)
 - NATS 1.2.4 (JetStream: 128Mi memory, 2Gi file)
 
 **Helm Templates:** deployment.yaml, service.yaml, secrets.yaml, network-policy.yaml, data-pvc.yaml
+
+**Probe contract:** `mycelis-core` now declares startup/readiness/liveness probes on `/healthz`, so rollout readiness in `k8s.wait`/`k8s.up` reflects actual API health, not just container process start.
 
 ### Docker
 

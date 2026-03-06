@@ -2,7 +2,7 @@
 Lifecycle management for the Mycelis development stack.
 
 Provides unified start/stop/status/health commands that handle the full
-dependency graph: port-forwards → core server → frontend.
+dependency graph: port-forwards -> core server -> frontend.
 
 All probes are Python-native (socket/urllib) — no shell wrappers.
 """
@@ -49,12 +49,12 @@ def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool
         return False
 
 
-def _http_get(url: str, timeout: float = 3.0) -> tuple[int, str]:
+def _http_get(url: str, timeout: float = 3.0, headers: dict[str, str] | None = None) -> tuple[int, str]:
     """HTTP GET returning (status_code, body). Returns (0, error) on failure."""
     import urllib.request
     import urllib.error
     try:
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, headers=headers or {})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as e:
@@ -178,7 +178,16 @@ def _kill_bridges():
 
 def _load_env():
     """Load .env into the process environment."""
-    from dotenv import load_dotenv
+    try:
+        from dotenv import load_dotenv
+    except ModuleNotFoundError as exc:
+        if exc.name != "dotenv":
+            raise
+        raise SystemExit(
+            "Missing python-dotenv in the current invoke environment. "
+            "Run tasks with 'uv run inv ...' or '.\\.venv\\Scripts\\inv.exe ...'; "
+            "do not use 'uvx --from invoke inv ...'."
+        ) from exc
     load_dotenv(str(ROOT_DIR / ".env"), override=True)
 
 
@@ -187,7 +196,7 @@ def _start_core_background():
     _load_env()
     bin_path = CORE_DIR / ("bin/server.exe" if is_windows() else "bin/server")
     if not bin_path.exists():
-        print(f"  ERROR: Binary not found at {bin_path}. Run 'uvx inv core.build' first.")
+        print(f"  ERROR: Binary not found at {bin_path}. Run 'uv run inv core.build' first.")
         return False
 
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
@@ -281,7 +290,7 @@ def status(c):
 def up(c, frontend=False, build=False):
     """
     Bring up the full dev stack (idempotent).
-    Order: port-forwards → core server → (optional) frontend.
+    Order: port-forwards -> core server -> (optional) frontend.
     """
     print("=== Mycelis Stack Up ===\n")
 
@@ -293,7 +302,7 @@ def up(c, frontend=False, build=False):
     else:
         bin_path = CORE_DIR / ("bin/server.exe" if is_windows() else "bin/server")
         if not bin_path.exists():
-            print("ERROR: No binary found. Run with --build or 'uvx inv core.build' first.")
+            print("ERROR: No binary found. Run with --build or 'uv run inv core.build' first.")
             return
 
     # 1. Port-forwards
@@ -309,7 +318,7 @@ def up(c, frontend=False, build=False):
 
     if not pg_ok:
         print("  WARN: PostgreSQL not yet reachable — Core will retry for 90s after start.")
-        print("        If this persists, check: uvx inv k8s.status")
+        print("        If this persists, check: uv run inv k8s.status")
     else:
         print("  PostgreSQL ready")
 
@@ -329,7 +338,7 @@ def up(c, frontend=False, build=False):
             if _wait_for_port(API_PORT, "Core API", timeout=120):
                 print(f"  Core online on :{API_PORT}")
             else:
-                print("  WARN: Core did not come up in time. Check logs with: uvx inv core.run")
+                print("  WARN: Core did not come up in time. Check logs with: uv run inv core.run")
     print()
 
     # 4. Frontend (optional)
@@ -363,14 +372,14 @@ def up(c, frontend=False, build=False):
     else:
         print("[4/4] Frontend: skipped (use --frontend to include)")
 
-    print("\nStack ready. Run 'uvx inv lifecycle.status' to verify.")
+    print("\nStack ready. Run 'uv run inv lifecycle.status' to verify.")
 
 
 @task
 def down(c):
     """
     Stop all dev stack services cleanly.
-    Order: core → frontend → port-forwards.
+    Order: core -> frontend -> port-forwards.
     """
     print("=== Mycelis Stack Down ===\n")
 
@@ -482,12 +491,82 @@ def health(c):
 @task
 def restart(c, build=False, frontend=False):
     """
-    Full stack restart: down → (optional build) → up.
+    Full stack restart: down -> (optional build) -> up.
     """
     down(c)
     print()
     time.sleep(2)  # brief settle
     up(c, frontend=frontend, build=build)
+
+
+@task(
+    help={
+        "build": "Build the Go binary before restart (default: False).",
+        "frontend": "Also start frontend after restart (default: False).",
+    }
+)
+def memory_restart(c, build=False, frontend=False):
+    """
+    Fresh memory restart workflow:
+    down -> db.reset -> up -> health -> memory endpoint probes.
+    """
+    print("=== Mycelis Memory Fresh Restart ===\n")
+
+    print("[1/6] Stopping stack...")
+    down(c)
+    print()
+    time.sleep(2)
+
+    print("[2/6] Restoring database bridge...")
+    _ensure_bridge()
+    if not _wait_for_port(5432, "PostgreSQL", timeout=30):
+        raise SystemExit(
+            "MEMORY RESTART FAILED: PostgreSQL bridge not reachable on 127.0.0.1:5432. "
+            "Run 'uv run inv k8s.up' or 'uv run inv k8s.bridge' and retry."
+        )
+    print()
+
+    print("[3/6] Resetting database...")
+    from . import db as db_tasks
+    db_tasks.reset(c)
+    print()
+
+    print("[4/6] Starting stack...")
+    up(c, frontend=frontend, build=build)
+    print()
+
+    print("[5/6] Running stack health checks...")
+    health(c)
+    print()
+
+    print("[6/6] Verifying memory endpoints...")
+    _load_env()
+    api_key = os.environ.get("MYCELIS_API_KEY", "")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    base = f"http://{API_HOST}:{API_PORT}"
+
+    checks = [
+        ("/api/v1/memory/stream", "Memory Stream"),
+        ("/api/v1/memory/sitreps?limit=1", "Memory SitReps"),
+    ]
+    errors: list[str] = []
+
+    for path, label in checks:
+        code, body = _http_get(f"{base}{path}", timeout=5.0, headers=headers)
+        if code == 200:
+            print(f"  [OK] {label:<20} {path} [200]")
+        else:
+            print(f"  [FAIL] {label:<20} {path} [{code}]")
+            errors.append(f"{label}: HTTP {code} ({body[:120]})")
+
+    if errors:
+        print()
+        for item in errors:
+            print(f"  - {item}")
+        raise SystemExit("MEMORY RESTART FAILED: one or more memory probes failed.")
+
+    print()
+    print("MEMORY RESTART READY.")
 
 
 # ── Collection ───────────────────────────────────────────────────────
@@ -498,3 +577,4 @@ ns.add_task(up)
 ns.add_task(down)
 ns.add_task(health)
 ns.add_task(restart)
+ns.add_task(memory_restart, name="memory-restart")

@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-03-03
+> **Updated:** 2026-03-06
 > **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
@@ -26,7 +26,7 @@ Phase 19 (complete)
 
 ---
 
-## Current Checkpoint (2026-03-03)
+## Current Checkpoint (2026-03-06)
 
 Latest integration checkpoint:
 - Commit: `752f156`
@@ -95,6 +95,38 @@ Latest integration checkpoint:
     - `README.md`
     - `docs/LOCAL_DEV_WORKFLOW.md`
     - `docs/architecture/OPERATIONS.md`
+  - Logging authority refresh completed:
+    - `docs/logging.md` rewritten as implementation-aligned standard (`mission_events` + `log_entries` surfaces, taxonomy, onboarding checklist, anti-patterns)
+  - Agent operating manual now enforces logging first-read checklist:
+    - `CLAUDE.md` updated with mandatory logging contract section
+  - PRD execution manifest updated for immediate delivery sequencing:
+    - `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md` section 13 now locks phase order (P0 logging -> P1 cleanup -> P2 meta-agent manifests -> P3 workflow composer -> P4 release hardening)
+  - Workflow composer architecture plan aligned with logging prerequisite gate:
+    - `docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
+  - Invoke quality/logging gate tasks implemented and wired into baseline:
+    - `uvx inv logging.check-schema`
+    - `uvx inv logging.check-topics`
+    - `uvx inv quality.max-lines --limit 350`
+    - `uvx inv ci.baseline` now runs these gates before core/interface validation
+  - Hot-path topic literals normalized to protocol constants:
+    - added `protocol.TopicGlobalInputFmt`
+    - replaced inline subject literals in `core/internal/swarm/internal_tools.go`, `core/internal/swarm/soma.go`, and `core/internal/server/comms.go`
+  - Memory recovery workflow hardened:
+    - new lifecycle task `uvx inv lifecycle.memory-restart` added (`down -> db.reset -> up -> health -> memory endpoint probes`)
+    - memory endpoint probes now part of deterministic reset readiness (`/api/v1/memory/stream`, `/api/v1/memory/sitreps?limit=1`)
+    - README + testing docs updated with fresh memory restart runbook and expected outcomes
+    - lifecycle task unit tests added for sequence and failure handling (`tests/test_lifecycle_tasks.py`)
+  - Invoke/runtime contract normalized for local operator workflows:
+    - canonical task runner docs now use `uv run inv ...` / `.\.venv\Scripts\inv.exe ...`
+    - `ops/db.py` and `ops/lifecycle.py` now fail with actionable guidance when launched from an invoke environment missing `python-dotenv`
+    - gated execution program recorded at `docs/architecture/NEXT_TARGET_GATED_DELIVERY_PROGRAM.md` with `P0` active and `P1 -> P4` locked behind gate pass
+  - Memory restart database path corrected:
+    - `lifecycle.memory-restart` now restores the PostgreSQL bridge before `db.reset`
+    - database tasks fail fast when `127.0.0.1:5432` is unreachable instead of printing false-success reset/migration messages
+    - targeted DB/lifecycle unit coverage expanded to include bridge-unavailable and connection-guidance cases (`tests/test_db_tasks.py`, `tests/test_lifecycle_tasks.py`)
+  - Test readiness for latest changes refreshed:
+    - task/gate unit suites pass (`test_ci_tasks`, `test_auth_tasks`, `test_logging_tasks`, `test_quality_tasks`, `test_lifecycle_tasks`)
+    - full `uvx inv ci.baseline` pass after logging/quality gates + core/interface validations
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
@@ -107,6 +139,14 @@ Verification evidence (latest targeted slice):
 - `cd interface && npx vitest run __tests__/lib/labels.test.ts __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`
 - `python -m py_compile ops/k8s.py`
 - `cd core && go test ./internal/cognitive -count=1`
+- `python -m py_compile ops/lifecycle.py`
+- `$env:PYTHONPATH='.'; uv run pytest tests/test_ci_tasks.py tests/test_auth_tasks.py tests/test_logging_tasks.py tests/test_quality_tasks.py tests/test_lifecycle_tasks.py -q`
+- `.\.venv\Scripts\inv.exe ci.baseline`
+- `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_logging_tasks.py tests/test_quality_tasks.py -q`
+- `uv run inv -l`
+- `uv run inv db.status`
+- `uv run inv lifecycle.up --frontend`
+- `uv run inv lifecycle.health`
 
 Verification evidence (latest full sweep — 2026-03-03):
 - `cd core && go test ./... -count=1` -> pass
