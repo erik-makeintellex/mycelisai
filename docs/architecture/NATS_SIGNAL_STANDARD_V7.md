@@ -114,6 +114,7 @@ Subject rules:
 - Operator-facing API responses must normalize to the standard API envelope before UI state consumes them.
 - Bus signals derived from web/API work must declare `source_kind=workspace_ui` or `source_kind=web_api`.
 - UI should consume normalized status/result channels, not raw telemetry subjects.
+- Frontend stream consumers should normalize legacy signal objects and standardized signal envelopes through one shared boundary helper before rendering operator surfaces.
 
 ### 5.2 Automation, Scheduler, and Internal Tooling
 

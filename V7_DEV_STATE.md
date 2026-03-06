@@ -141,10 +141,15 @@ Latest integration checkpoint:
     - `delegate_task` now publishes to team `internal.command` subjects instead of legacy direct trigger subjects
     - team `signal.status` and `signal.result` deliveries are wrapped with standardized source metadata before publish
     - runtime-created action teams default to `signal.result`; expression teams default to `signal.status`
+  - UI signal normalization aligned to the standard:
+    - shared frontend normalization now accepts both legacy SSE signals and standardized signal envelopes
+    - signal detail surfaces now expose source kind, payload kind, source channel, and run/team/agent metadata when present
+    - dashboard signal context and main store stream ingestion now normalize at the boundary instead of assuming raw payload shape
   - Test readiness for latest changes refreshed:
     - task/gate unit suites pass (`test_ci_tasks`, `test_auth_tasks`, `test_logging_tasks`, `test_quality_tasks`, `test_lifecycle_tasks`)
     - focused runner/task suite passes with `uv run inv ci.entrypoint-check` plus pytest task coverage
     - focused Go protocol/swarm suite passes for the signal-runtime contract
+    - focused frontend signal-normalization suite and typecheck pass
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
@@ -167,6 +172,8 @@ Verification evidence (latest targeted slice):
 - `uv run inv lifecycle.up --frontend`
 - `uv run inv lifecycle.health`
 - `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
+- `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
+- `cd interface && npx tsc --noEmit`
 
 Verification evidence (latest full sweep — 2026-03-03):
 - `cd core && go test ./... -count=1` -> pass
