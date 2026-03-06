@@ -80,9 +80,11 @@ The current runtime team set includes:
 - `prime-development`
 - `agui-design-architect`
 
-These teams are live on the NATS bus, but they are runtime-instantiated rather
-than manifest-backed. They will not survive a Core restart unless persisted as
-standing manifests.
+These teams are live on the NATS bus and are now manifest-backed in
+`core/config/teams`. They survive Core restart as standing teams.
+
+The remaining gap is response discipline: bus-level coordination works, but not
+every team reliably returns a clean execution brief inside the sync window.
 
 ### 7. Team communication model
 
@@ -141,7 +143,7 @@ Must explicitly state:
 
 Must explicitly state:
 
-- runtime teams versus manifest-backed teams
+- standing teams are manifest-backed while ad hoc teams may still be runtime-created
 - one-way trigger semantics for team command subjects
 - the need for status-topic observability in multi-agent coordination
 
@@ -175,8 +177,8 @@ the base documents as the next documentation pass.
 
 ## Required Follow-On Work
 
-1. Persist the live team set as manifest-backed teams if they are intended to
-   survive restarts.
+1. Harden reply discipline for standing team sync so architect, development,
+   and AGUI teams all return clean execution briefs reliably.
 2. Fold this addendum into the base architecture docs listed above.
 3. Continue P0 until the full memory restart path passes without Core startup
    timing regression.

@@ -15,7 +15,7 @@ restart hardening, gated execution, and multi-agent team instantiation.
 
 ## Findings
 
-### 1. Runtime architecture is ahead of the durable manifests
+### 1. Standing team architecture is now durable, but coordination behavior is uneven
 
 The live team topology currently includes:
 
@@ -23,15 +23,18 @@ The live team topology currently includes:
 - `prime-development`
 - `agui-design-architect`
 
-These teams are live and functional on the NATS bus, but they are still
-runtime-instantiated rather than manifest-backed. That means the operational
-architecture is not yet fully standardized because restart durability depends on
-manual recreation instead of source-controlled manifests.
+These teams are now source-controlled and manifest-backed under
+`core/config/teams`, which is the correct durability model.
+
+The remaining standardization gap is behavioral: architect and AGUI now answer
+central sync requests more reliably than development, so the transport and
+manifest model are correct but reply discipline is still incomplete.
 
 Required standard:
 
 - all standing teams must be manifest-backed if they are part of the delivery
   system rather than ad hoc experiments
+- standing teams must return clean, operator-readable briefs during central sync
 
 ### 2. Gated delivery is defined, but enforcement evidence is still concentrated in one record
 
@@ -247,14 +250,15 @@ What is standardized now:
 - operator entrypoints are normalized to `uv run inv ...` and local virtualenv
   invocation
 - memory restart sequencing is closer to operational truth
+- standing architect, development, and AGUI teams are manifest-backed
 - Python usage is now bounded to tasks and testing by policy
 
 What remains open:
 
-- persist standing teams as manifests
 - fold review addenda back into the base architecture docs
 - stabilize Core startup timing during full memory restart
 - publish one canonical logging and error-handling contract in the base docs
+- harden clean reply behavior for all standing teams during architecture sync
 
 ## Recommended Next Actions
 

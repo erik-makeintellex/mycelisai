@@ -49,3 +49,71 @@ deliveries:
 		t.Errorf("Member parsing failed: %v", m.Members)
 	}
 }
+
+func TestRegistry_LoadStandingPrimeTeamManifests(t *testing.T) {
+	reg := NewRegistry(filepath.Join("..", "..", "config", "teams"))
+
+	manifests, err := reg.LoadManifests()
+	if err != nil {
+		t.Fatalf("LoadManifests() failed: %v", err)
+	}
+
+	expected := map[string]struct {
+		input      string
+		delivery   string
+		memberID   string
+		memberRole string
+	}{
+		"prime-architect": {
+			input:      "swarm.team.prime-architect.internal.command",
+			delivery:   "swarm.team.prime-architect.signal.status",
+			memberID:   "prime-architect-agent",
+			memberRole: "architect",
+		},
+		"prime-development": {
+			input:      "swarm.team.prime-development.internal.command",
+			delivery:   "swarm.team.prime-development.signal.status",
+			memberID:   "prime-development-agent",
+			memberRole: "coder",
+		},
+		"agui-design-architect": {
+			input:      "swarm.team.agui-design-architect.internal.command",
+			delivery:   "swarm.team.agui-design-architect.signal.status",
+			memberID:   "agui-design-architect-agent",
+			memberRole: "design_architect",
+		},
+	}
+
+	found := map[string]*TeamManifest{}
+	for _, manifest := range manifests {
+		if _, ok := expected[manifest.ID]; ok {
+			found[manifest.ID] = manifest
+		}
+	}
+
+	if len(found) != len(expected) {
+		t.Fatalf("expected %d standing prime manifests, found %d", len(expected), len(found))
+	}
+
+	for id, want := range expected {
+		manifest := found[id]
+		if manifest == nil {
+			t.Fatalf("missing manifest %s", id)
+		}
+		if len(manifest.Members) != 1 {
+			t.Fatalf("manifest %s expected 1 member, got %d", id, len(manifest.Members))
+		}
+		if manifest.Members[0].ID != want.memberID {
+			t.Fatalf("manifest %s expected member ID %s, got %s", id, want.memberID, manifest.Members[0].ID)
+		}
+		if manifest.Members[0].Role != want.memberRole {
+			t.Fatalf("manifest %s expected member role %s, got %s", id, want.memberRole, manifest.Members[0].Role)
+		}
+		if len(manifest.Inputs) != 1 || manifest.Inputs[0] != want.input {
+			t.Fatalf("manifest %s expected input %s, got %v", id, want.input, manifest.Inputs)
+		}
+		if len(manifest.Deliveries) != 1 || manifest.Deliveries[0] != want.delivery {
+			t.Fatalf("manifest %s expected delivery %s, got %v", id, want.delivery, manifest.Deliveries)
+		}
+	}
+}
