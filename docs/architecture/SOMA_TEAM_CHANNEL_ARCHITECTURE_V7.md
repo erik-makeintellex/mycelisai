@@ -92,6 +92,7 @@ Required alignment:
 - high-volume machine output stays on telemetry-class subjects
 - sensor and IoT ingress must identify source origin before it is surfaced to operator workflows
 - infrastructure-development or experimentation channels are dev-only and are not part of canonical orchestration unless explicitly promoted
+- current runtime keeps legacy internal worker lanes behind the team boundary, but external orchestration and operator surfaces should treat `internal.command`, `signal.status`, and `signal.result` as canonical
 
 ---
 

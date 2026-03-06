@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -196,7 +197,36 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 func (t *Team) handleResponse(msg *nats.Msg) {
 	log.Printf("Team [%s] Response: %s", t.Manifest.Name, string(msg.Data))
 	for _, subject := range t.Manifest.Deliveries {
-		t.nc.Publish(subject, msg.Data)
+		payload := msg.Data
+		switch {
+		case strings.HasSuffix(subject, ".signal.status"):
+			wrapped, err := protocol.WrapSignalPayload(
+				protocol.SourceKindSystem,
+				fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID),
+				protocol.PayloadKindStatus,
+				t.Manifest.ID,
+				msg.Data,
+			)
+			if err != nil {
+				log.Printf("Team [%s] failed to wrap status signal for [%s]: %v", t.Manifest.Name, subject, err)
+			} else {
+				payload = wrapped
+			}
+		case strings.HasSuffix(subject, ".signal.result"):
+			wrapped, err := protocol.WrapSignalPayload(
+				protocol.SourceKindSystem,
+				fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID),
+				protocol.PayloadKindResult,
+				t.Manifest.ID,
+				msg.Data,
+			)
+			if err != nil {
+				log.Printf("Team [%s] failed to wrap result signal for [%s]: %v", t.Manifest.Name, subject, err)
+			} else {
+				payload = wrapped
+			}
+		}
+		t.nc.Publish(subject, payload)
 	}
 }
 

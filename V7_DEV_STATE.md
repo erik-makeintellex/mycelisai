@@ -136,9 +136,15 @@ Latest integration checkpoint:
     - new authority doc `docs/architecture/NATS_SIGNAL_STANDARD_V7.md` defines source kinds, subject families, payload classes, and product-vs-dev channel boundaries
     - channel architecture doc now points to the signal standard for `internal.command`, `signal.status`, `signal.result`, telemetry, and source normalization
     - repo `AGENTS.md` now enforces Python-first management scripting, the runner contract, and the infrastructure-development channel exclusion rule
+  - NATS signal standardization enforced in runtime:
+    - protocol constants now include `TopicTeamSignalResult` for operator-facing bounded outputs
+    - `delegate_task` now publishes to team `internal.command` subjects instead of legacy direct trigger subjects
+    - team `signal.status` and `signal.result` deliveries are wrapped with standardized source metadata before publish
+    - runtime-created action teams default to `signal.result`; expression teams default to `signal.status`
   - Test readiness for latest changes refreshed:
     - task/gate unit suites pass (`test_ci_tasks`, `test_auth_tasks`, `test_logging_tasks`, `test_quality_tasks`, `test_lifecycle_tasks`)
     - focused runner/task suite passes with `uv run inv ci.entrypoint-check` plus pytest task coverage
+    - focused Go protocol/swarm suite passes for the signal-runtime contract
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
@@ -160,6 +166,7 @@ Verification evidence (latest targeted slice):
 - `uv run inv db.status`
 - `uv run inv lifecycle.up --frontend`
 - `uv run inv lifecycle.health`
+- `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
 
 Verification evidence (latest full sweep — 2026-03-03):
 - `cd core && go test ./... -count=1` -> pass
