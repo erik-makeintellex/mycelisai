@@ -29,7 +29,7 @@ Phase 19 (complete)
 ## Current Checkpoint (2026-03-06)
 
 Latest integration checkpoint:
-- Commit: `752f156`
+- Base commit: `fe335e7`
 - Branch: `feature/enterprise-multihost-soma-routing`
 - Runtime note: local verification used `go1.25.6 windows/amd64` while docs still target Go `1.26`
 - Delivered:
@@ -87,8 +87,8 @@ Latest integration checkpoint:
   - Image lifecycle hardening: `generate_image` now cache-first (60m TTL), periodic backend cleanup of expired unsaved images, and explicit save flow (`save_cached_image` tool + `POST /api/v1/artifacts/{id}/save` API) to persist into `workspace/saved-media`
   - User/operator surfaces expanded: `Settings -> Users & Groups` now includes actionable user-management elements and embedded collaboration-group management UI (no longer user-table stub only)
   - Cluster bring-up contract hardened in ops/runtime:
-    - new `uvx inv k8s.up` canonical sequence (`init -> deploy -> wait`)
-    - new `uvx inv k8s.wait` readiness gates (`PostgreSQL -> NATS -> Core API`)
+    - new `uv run inv k8s.up` canonical sequence (`init -> deploy -> wait`)
+    - new `uv run inv k8s.wait` readiness gates (`PostgreSQL -> NATS -> Core API`)
     - `k8s.recover` corrected to restart actual chart resources (`mycelis-core`, `mycelis-core-nats`, `mycelis-core-postgresql`)
     - Helm core deployment now has startup/readiness/liveness probes on `/healthz` for rollout-health accuracy
   - Operator docs aligned to canonical cluster sequencing:
@@ -104,15 +104,15 @@ Latest integration checkpoint:
   - Workflow composer architecture plan aligned with logging prerequisite gate:
     - `docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
   - Invoke quality/logging gate tasks implemented and wired into baseline:
-    - `uvx inv logging.check-schema`
-    - `uvx inv logging.check-topics`
-    - `uvx inv quality.max-lines --limit 350`
-    - `uvx inv ci.baseline` now runs these gates before core/interface validation
+    - `uv run inv logging.check-schema`
+    - `uv run inv logging.check-topics`
+    - `uv run inv quality.max-lines --limit 350`
+    - `uv run inv ci.baseline` now runs these gates before core/interface validation
   - Hot-path topic literals normalized to protocol constants:
     - added `protocol.TopicGlobalInputFmt`
     - replaced inline subject literals in `core/internal/swarm/internal_tools.go`, `core/internal/swarm/soma.go`, and `core/internal/server/comms.go`
   - Memory recovery workflow hardened:
-    - new lifecycle task `uvx inv lifecycle.memory-restart` added (`down -> db.reset -> up -> health -> memory endpoint probes`)
+    - new lifecycle task `uv run inv lifecycle.memory-restart` added (`down -> db.reset -> up -> health -> memory endpoint probes`)
     - memory endpoint probes now part of deterministic reset readiness (`/api/v1/memory/stream`, `/api/v1/memory/sitreps?limit=1`)
     - README + testing docs updated with fresh memory restart runbook and expected outcomes
     - lifecycle task unit tests added for sequence and failure handling (`tests/test_lifecycle_tasks.py`)
@@ -124,9 +124,21 @@ Latest integration checkpoint:
     - `lifecycle.memory-restart` now restores the PostgreSQL bridge before `db.reset`
     - database tasks fail fast when `127.0.0.1:5432` is unreachable instead of printing false-success reset/migration messages
     - targeted DB/lifecycle unit coverage expanded to include bridge-unavailable and connection-guidance cases (`tests/test_db_tasks.py`, `tests/test_lifecycle_tasks.py`)
+  - Team coordination and manifest delivery hardened:
+    - standing `prime-architect`, `prime-development`, and `agui-design-architect` are now manifest-backed under `core/config/teams/`
+    - `uv run inv team.architecture-sync` provides a Python-native NATS coordination path for central architect sync requests
+    - direct request-reply sync now uses cleaned council subjects instead of legacy trigger shortcuts
+  - Runner contract and task verification standardized:
+    - `uv run inv ...` is the supported task path for real execution
+    - `uvx --from invoke inv -l` is retained only as a compatibility probe
+    - bare `uvx inv ...` is treated as unsupported and checked as a negative control by `uv run inv ci.entrypoint-check`
+  - NATS signal standardization codified:
+    - new authority doc `docs/architecture/NATS_SIGNAL_STANDARD_V7.md` defines source kinds, subject families, payload classes, and product-vs-dev channel boundaries
+    - channel architecture doc now points to the signal standard for `internal.command`, `signal.status`, `signal.result`, telemetry, and source normalization
+    - repo `AGENTS.md` now enforces Python-first management scripting, the runner contract, and the infrastructure-development channel exclusion rule
   - Test readiness for latest changes refreshed:
     - task/gate unit suites pass (`test_ci_tasks`, `test_auth_tasks`, `test_logging_tasks`, `test_quality_tasks`, `test_lifecycle_tasks`)
-    - full `uvx inv ci.baseline` pass after logging/quality gates + core/interface validations
+    - focused runner/task suite passes with `uv run inv ci.entrypoint-check` plus pytest task coverage
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
@@ -143,6 +155,7 @@ Verification evidence (latest targeted slice):
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_ci_tasks.py tests/test_auth_tasks.py tests/test_logging_tasks.py tests/test_quality_tasks.py tests/test_lifecycle_tasks.py -q`
 - `.\.venv\Scripts\inv.exe ci.baseline`
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_logging_tasks.py tests/test_quality_tasks.py -q`
+- `uv run inv ci.entrypoint-check`
 - `uv run inv -l`
 - `uv run inv db.status`
 - `uv run inv lifecycle.up --frontend`

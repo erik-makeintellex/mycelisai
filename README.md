@@ -20,6 +20,7 @@
 > | [Team A/B/C/Q Execution Board](docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md) | Active parallel sprint board for groups hardening (A core, B governance, C UI, Q QA) |
 > | [V7 UI Instantiation + Bus Plan](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) | Detailed operator workflow for team instantiation, I/O channels, and user-safe NATS exposure |
 > | [Soma Team + Channel Architecture V7](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) | Canonical inter-team/process/MCP channel architecture and shared memory boundaries |
+> | [NATS Signal Standard V7](docs/architecture/NATS_SIGNAL_STANDARD_V7.md) | Canonical subject families, source normalization, and product-vs-dev channel rules for NATS traffic |
 > | [Soma-Council Engagement Protocol V7](docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md) | Deterministic execution-path contract for internal tools, MCP, external API engagement, and code-to-execution loops |
 > | [MCP Service Config (Local-First)](docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) | Standard process for adding MCP services with local-default serving and remote exception controls |
 > | [Universal Action Interface V7](docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md) | Canonical action plane for MCP/OpenAPI/Python, dynamic service registry APIs, and governed execution |
@@ -42,7 +43,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 
 - **Soma → Axon → Teams → Agents:** Mission activation pipeline with heartbeat + proof-of-work.
 - **Parallel Team Activation:** `ActivateBlueprint` starts eligible teams concurrently (bounded worker pool), then inserts them race-safely into Soma's team map. Duplicate IDs are skipped idempotently even under concurrent activation calls.
-- **Standing Teams:** Admin/Soma (orchestrator, 18 tools, 10 ReAct iterations, persistent identity) + Council (architect, coder, creative, sentry) — all individually addressable via `POST /api/v1/council/{member}/chat`.
+- **Standing Teams:** Admin/Soma and Council remain the core standing runtime, with manifest-backed specialist teams such as `prime-architect`, `prime-development`, and `agui-design-architect` available for architecture delivery and workflow-composer coordination.
 - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
 - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
 - **Internal Tool Registry:** 23 built-in tools — consult_council, delegate_task, search_memory, remember, recall, broadcast, file I/O (workspace-sandboxed), NATS bus sensing, image generation + cache-save flow, summarize_conversation, research_for_blueprint, store_inception_recipe, recall_inception_recipes, and more.
@@ -1257,7 +1258,15 @@ This starts bridge + backend + frontend in one flow:
 uv run inv lifecycle.up --build --frontend
 ```
 
-Primary task runner contract is `uv run inv ...`. Do not use `uvx --from invoke inv ...`; that ephemeral environment does not include project dependencies such as `python-dotenv`.
+Primary task runner contract is `uv run inv ...`.
+Compatibility probe: `uvx --from invoke inv -l`.
+Do not use bare `uvx inv ...`.
+
+Language ownership is explicit:
+- Go for core runtime/backend work
+- TypeScript for interface/UI work
+- Python for app management tasks, CI task orchestration, and test harnesses
+- PowerShell only as a host wrapper when the local platform requires it
 
 If `uv run inv ...` is unavailable in your shell, use:
 
@@ -1281,19 +1290,19 @@ Open:
 If you prefer manual control over each service:
 
 ```bash
-uvx inv k8s.up                # Cluster services ready in dependency order
-uvx inv k8s.bridge            # Port-forward PG:5432, NATS:4222 (Terminal 1)
-uvx inv db.migrate            # Apply all migrations (idempotent)
-uvx inv core.build && uvx inv core.run   # Build + run (Terminal 2, foreground)
-uvx inv interface.install     # First time only
-uvx inv interface.dev         # Next.js dev server (Terminal 3)
+uv run inv k8s.up                # Cluster services ready in dependency order
+uv run inv k8s.bridge            # Port-forward PG:5432, NATS:4222 (Terminal 1)
+uv run inv db.migrate            # Apply all migrations (idempotent)
+uv run inv core.build && uv run inv core.run   # Build + run (Terminal 2, foreground)
+uv run inv interface.install     # First time only
+uv run inv interface.dev         # Next.js dev server (Terminal 3)
 ```
 
 ### 5. Stop / Restart
 
 ```bash
-uvx inv lifecycle.down
-uvx inv lifecycle.restart --build --frontend
+uv run inv lifecycle.down
+uv run inv lifecycle.restart --build --frontend
 ```
 
 ### 5A. Fresh Deployment Reset (Clean Slate)
@@ -1301,10 +1310,10 @@ uvx inv lifecycle.restart --build --frontend
 Use this when you want to fully tear down local runtime state and re-bootstrap before the next architecture step.
 
 ```bash
-uvx inv lifecycle.down
-uvx inv k8s.reset
-uvx inv lifecycle.up --build --frontend
-uvx inv lifecycle.health
+uv run inv lifecycle.down
+uv run inv k8s.reset
+uv run inv lifecycle.up --build --frontend
+uv run inv lifecycle.health
 ```
 
 ### 5B. Fresh Memory Restart (DB + Memory Probes)
@@ -1312,7 +1321,7 @@ uvx inv lifecycle.health
 Use this when memory stream/search behavior needs a deterministic reset and readiness check.
 
 ```bash
-uvx inv lifecycle.memory-restart --build --frontend
+uv run inv lifecycle.memory-restart --build --frontend
 ```
 
 This workflow runs:
@@ -1514,11 +1523,11 @@ Run from `scratch/` root using `uv run inv`:
 | `uv run inv lifecycle.restart` | Full restart: down → settle → up. `--build` `--frontend` |
 | `uv run inv lifecycle.memory-restart` | Fresh memory reset workflow: down -> db.reset -> up -> health -> memory probes. `--build` `--frontend` |
 | **CI Pipeline** | |
-| `uvx inv ci.check` | Full CI: lint → test → build (with timers) |
-| `uvx inv ci.baseline --e2e` | Strict delivery baseline: core tests + interface build + interface typecheck + vitest + playwright |
-| `uvx inv ci.toolchain-check --strict` | Enforce locked Go toolchain policy and report node/npm versions |
-| `uvx inv ci.release-preflight --e2e --strict-toolchain` | Release gate: clean tree + toolchain check + strict baseline |
-| `uvx inv ci.deploy` | Full CI: lint → test → build → Docker → K8s |
+| `uv run inv ci.check` | Full CI: lint → test → build (with timers) |
+| `uv run inv ci.baseline --e2e` | Strict delivery baseline: core tests + interface build + interface typecheck + vitest + playwright |
+| `uv run inv ci.toolchain-check --strict` | Enforce locked Go toolchain policy and report node/npm versions |
+| `uv run inv ci.release-preflight --e2e --strict-toolchain` | Release gate: clean tree + toolchain check + strict baseline |
+| `uv run inv ci.deploy` | Full CI: lint → test → build → Docker → K8s |
 
 ### CI Workflows (GitHub Actions)
 
@@ -1578,7 +1587,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | Config | Location | Managed Via |
 | :--- | :--- | :--- |
 | Cognitive (Bootstrap) | `core/config/cognitive.yaml` | UI (`/settings` → Matrix) or YAML |
-| Standing Teams | `core/config/teams/*.yaml` | YAML (auto-loaded at startup, council members auto-addressable via API) |
+| Standing Teams | `core/config/teams/*.yaml` | YAML (auto-loaded at startup, including council and manifest-backed specialist teams) |
 | MCP Servers | Database | UI (`/settings` → MCP Tools) or API |
 | Governance Policy | `core/config/policy.yaml` | UI (`/approvals` → Policy tab) or YAML |
 | MCP Library | `core/config/mcp-library.yaml` | YAML (curated registry) |
@@ -1638,6 +1647,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Agent Source Instantiation Template** | [docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md](docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md) — Canonical provider template with Ollama as default source plus ChatGPT/OpenAI, Claude, Gemini, vLLM, and LM Studio | [/docs?doc=arch-agent-source-instantiation-template-v7](/docs?doc=arch-agent-source-instantiation-template-v7) |
 | **Soma Extension-of-Self PRD** | [docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md](docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) — Detailed extension-of-self program plus immediate delivery manifest sequencing (P0 logging, P1 cleanup, P2 meta-agent manifests, P3 workflow composer, P4 release gates) | [/docs?doc=v7-soma-extension-self-prd](/docs?doc=v7-soma-extension-self-prd) |
 | **Soma Team + Channel Architecture** | [docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) — Canonical inter-team/process/MCP channels, I/O envelopes, RAG memory boundaries | [/docs?doc=arch-soma-team-channels](/docs?doc=arch-soma-team-channels) |
+| **NATS Signal Standard V7** | [docs/architecture/NATS_SIGNAL_STANDARD_V7.md](docs/architecture/NATS_SIGNAL_STANDARD_V7.md) — Canonical subject families, source normalization, and product-vs-dev channel boundaries for bus traffic | [/docs?doc=arch-nats-signal-standard-v7](/docs?doc=arch-nats-signal-standard-v7) |
 | **Workflow Composer Delivery Plan V7** | [docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md](docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md) — Airflow-style DAG workflow composer delivery plan, team lanes, git discipline, and invoke tooling gates | [/docs?doc=arch-workflow-composer-delivery-v7](/docs?doc=arch-workflow-composer-delivery-v7) |
 | **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance | [/docs?doc=swarm-operations](/docs?doc=swarm-operations) |
 | **Cognitive Architecture** | [docs/COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md) — Providers, profiles, matrix UI, embedding | [/docs?doc=cognitive-architecture](/docs?doc=cognitive-architecture) |
@@ -1666,11 +1676,12 @@ No branch promotion without this documentation gate.
 ## Verification
 
 ```bash
-uvx inv core.test             # Go unit tests (full core package sweep)
-uvx inv interface.test        # Vitest component tests (55 files / 322 tests passing as of 2026-03-02)
-uvx inv interface.e2e         # Playwright E2E specs (51 passing, 4 intentionally skipped as of 2026-03-02)
-uvx inv interface.check       # HTTP smoke test against running dev server (9 pages)
-uvx inv core.smoke            # Governance smoke tests
+uv run inv core.test             # Go unit tests (full core package sweep)
+uv run inv interface.test        # Vitest component tests (55 files / 322 tests passing as of 2026-03-02)
+uv run inv interface.e2e         # Playwright E2E specs (51 passing, 4 intentionally skipped as of 2026-03-02)
+uv run inv interface.check       # HTTP smoke test against running dev server (9 pages)
+uv run inv core.smoke            # Governance smoke tests
+uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 cd core && go test ./... -count=1         # Full Go validation
 cd interface && npx vitest run --reporter=dot
 cd interface && npx playwright test --reporter=dot
@@ -1689,7 +1700,7 @@ Latest full baseline sweep (2026-03-03, `feature/enterprise-multihost-soma-routi
 - Worktree during sweep: dirty (`59` entries: `50` modified, `9` untracked), so this is a functional baseline, not a clean-tree release baseline.
 
 Latest strict baseline gate (2026-03-06):
-- `uvx inv ci.baseline` -> pass (logging schema + topic constants + max-lines gate + core tests + interface build/typecheck/vitest)
+- `uv run inv ci.baseline` -> pass (logging schema + topic constants + max-lines gate + core tests + interface build/typecheck/vitest)
 
 If Playwright reports a missing browser executable, run: `cd interface && npx playwright install chromium`.
 

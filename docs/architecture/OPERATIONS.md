@@ -17,6 +17,7 @@
 | [kubectl](https://kubernetes.io/docs/tasks/tools/) | >=1.35 | Kubernetes CLI (1.32 has port-forward bug with K8s 1.33) |
 
 **Cross-platform mandate:** All tasks must work on Windows AND Linux. Use `is_windows()` from `ops/config.py` for OS branching. Never use bash/cmd wrapper scripts.
+**Management scripting mandate:** App-tied management logic belongs in Python task modules. PowerShell is only a thin local wrapper when the host platform requires it.
 
 ---
 
@@ -28,7 +29,9 @@
 
 **Run from:** `scratch/` (project root where tasks.py lives)
 
-**Invocation:** Always use `uv run inv <namespace>.<task>` (or `.\.venv\Scripts\inv.exe` from the project root). Do not use `uvx --from invoke inv ...`; that ephemeral environment omits project dependencies.
+**Invocation:** Always use `uv run inv <namespace>.<task>` (or `.\.venv\Scripts\inv.exe` from the project root) for real task execution.
+Use `uvx --from invoke inv -l` only as a lightweight compatibility probe.
+Do not use bare `uvx inv ...`.
 
 > **Tip:** If you `uv venv && .venv/Scripts/activate` (Windows) or `source .venv/bin/activate` (Linux), you can use `inv` directly.
 
@@ -48,68 +51,68 @@
 
 | Command | Description |
 |---------|-------------|
-| `uvx inv interface.dev` | Start Turbopack dev server (stops existing first) |
-| `uvx inv interface.install` | `npm install` |
-| `uvx inv interface.build` | `npm run build` (production) |
-| `uvx inv interface.lint` | `npm run lint` (ESLint) |
-| `uvx inv interface.test` | `npm run test` (Vitest) |
-| `uvx inv interface.test-coverage` | Vitest with V8 coverage |
-| `uvx inv interface.e2e` | `npm run e2e` (Playwright, optional `--headed`) |
-| `uvx inv interface.stop` | Kill process on port 3000 |
-| `uvx inv interface.clean` | rm -rf .next cache |
-| `uvx inv interface.restart` | stop → clean → build → dev → check |
-| `uvx inv interface.check` | Smoke-test: 9 pages for 200 status, no SSR errors, no hydration issues, no `bg-white`/`bg-zinc`/`bg-slate` leaks |
+| `uv run inv interface.dev` | Start Turbopack dev server (stops existing first) |
+| `uv run inv interface.install` | `npm install` |
+| `uv run inv interface.build` | `npm run build` (production) |
+| `uv run inv interface.lint` | `npm run lint` (ESLint) |
+| `uv run inv interface.test` | `npm run test` (Vitest) |
+| `uv run inv interface.test-coverage` | Vitest with V8 coverage |
+| `uv run inv interface.e2e` | `npm run e2e` (Playwright, optional `--headed`) |
+| `uv run inv interface.stop` | Kill process on port 3000 |
+| `uv run inv interface.clean` | rm -rf .next cache |
+| `uv run inv interface.restart` | stop → clean → build → dev → check |
+| `uv run inv interface.check` | Smoke-test: 9 pages for 200 status, no SSR errors, no hydration issues, no `bg-white`/`bg-zinc`/`bg-slate` leaks |
 
 ### Database Tasks (`ops/db.py`)
 
 | Command | Description |
 |---------|-------------|
-| `uvx inv db.migrate` | Apply all SQL migrations (idempotent) |
-| `uvx inv db.reset` | Drop + recreate + migrate |
-| `uvx inv db.status` | List tables + row counts |
-| `uvx inv db.create` | Create cortex database (if not exists) |
+| `uv run inv db.migrate` | Apply all SQL migrations (idempotent) |
+| `uv run inv db.reset` | Drop + recreate + migrate |
+| `uv run inv db.status` | List tables + row counts |
+| `uv run inv db.create` | Create cortex database (if not exists) |
 
 ### Kubernetes Tasks (`ops/k8s.py`)
 
 | Command | Description |
 |---------|-------------|
-| `uvx inv k8s.init` | Create Kind cluster (handles Windows absolute paths) |
-| `uvx inv k8s.up` | Canonical cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
-| `uvx inv k8s.deploy` | Build Core, load Docker image, helm upgrade (injects secrets from .env) |
-| `uvx inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
-| `uvx inv k8s.bridge` | Port-forward NATS:4222, HTTP:8081←8080, PG:5432 |
-| `uvx inv k8s.status` | Check Docker, Kind cluster, pod status, PVC status |
-| `uvx inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
-| `uvx inv k8s.reset` | Full reset: delete cluster -> canonical bring-up (includes readiness wait) |
+| `uv run inv k8s.init` | Create Kind cluster (handles Windows absolute paths) |
+| `uv run inv k8s.up` | Canonical cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
+| `uv run inv k8s.deploy` | Build Core, load Docker image, helm upgrade (injects secrets from .env) |
+| `uv run inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
+| `uv run inv k8s.bridge` | Port-forward NATS:4222, HTTP:8081←8080, PG:5432 |
+| `uv run inv k8s.status` | Check Docker, Kind cluster, pod status, PVC status |
+| `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
+| `uv run inv k8s.reset` | Full reset: delete cluster -> canonical bring-up (includes readiness wait) |
 
 ### Cognitive Tasks (`ops/cognitive.py`)
 
 | Command | Description |
 |---------|-------------|
-| `uvx inv cognitive.install` | `uv sync` dependencies |
-| `uvx inv cognitive.llm` | Start vLLM text server (GPU, configurable) |
-| `uvx inv cognitive.media` | Start Diffusers media server (OpenAI-compatible) |
-| `uvx inv cognitive.up` | Start full stack (vLLM + Media, handles Ctrl+C) |
-| `uvx inv cognitive.stop` | Kill all cognitive processes |
-| `uvx inv cognitive.status` | HTTP probes to check vLLM + Media health |
+| `uv run inv cognitive.install` | `uv sync` dependencies |
+| `uv run inv cognitive.llm` | Start vLLM text server (GPU, configurable) |
+| `uv run inv cognitive.media` | Start Diffusers media server (OpenAI-compatible) |
+| `uv run inv cognitive.up` | Start full stack (vLLM + Media, handles Ctrl+C) |
+| `uv run inv cognitive.stop` | Kill all cognitive processes |
+| `uv run inv cognitive.status` | HTTP probes to check vLLM + Media health |
 
 ### Test Tasks (`ops/test.py`)
 
 | Command | Description |
 |---------|-------------|
-| `uvx inv test.all` | Run ALL unit tests (Core + Interface) |
-| `uvx inv test.coverage` | Go coverage + Vitest V8 coverage |
-| `uvx inv test.e2e` | Alias for interface.e2e |
+| `uv run inv test.all` | Run ALL unit tests (Core + Interface) |
+| `uv run inv test.coverage` | Go coverage + Vitest V8 coverage |
+| `uv run inv test.e2e` | Alias for interface.e2e |
 
 ### CI Tasks (`ops/ci.py`)
 
 | Command | Description |
 |---------|-------------|
-| `uvx inv ci.lint` | Go vet + Next.js lint (both must pass) |
-| `uvx inv ci.test` | Go tests + Interface tests |
-| `uvx inv ci.build` | Go binary + Next.js production build (no Docker) |
-| `uvx inv ci.check` | Full pipeline: lint → test → build (with stage timers) |
-| `uvx inv ci.deploy` | Build + Docker + K8s deploy |
+| `uv run inv ci.lint` | Go vet + Next.js lint (both must pass) |
+| `uv run inv ci.test` | Go tests + Interface tests |
+| `uv run inv ci.build` | Go binary + Next.js production build (no Docker) |
+| `uv run inv ci.check` | Full pipeline: lint → test → build (with stage timers) |
+| `uv run inv ci.deploy` | Build + Docker + K8s deploy |
 
 ### Other Tasks
 
@@ -151,16 +154,16 @@ powershell(command: str) → str  # PowerShell with -NoProfile flag
 
 ```bash
 # Prerequisite (run once per reboot/reset):
-uvx inv k8s.up       # Kind/namespace -> Helm deploy -> PostgreSQL -> NATS -> Core API
+uv run inv k8s.up       # Kind/namespace -> Helm deploy -> PostgreSQL -> NATS -> Core API
 
 # Terminal 1: Infrastructure bridge
-uvx inv k8s.bridge    # Port-forward NATS, API, Postgres
+uv run inv k8s.bridge    # Port-forward NATS, API, Postgres
 
 # Terminal 2: Backend
-uvx inv core.run      # Go backend (foreground, port 8080 → bridged to 8081)
+uv run inv core.run      # Go backend (foreground, port 8080 → bridged to 8081)
 
 # Terminal 3: Frontend
-uvx inv interface.dev # Next.js dev (Turbopack, port 3000)
+uv run inv interface.dev # Next.js dev (Turbopack, port 3000)
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
@@ -173,20 +176,20 @@ cp .env.example .env
 # Edit .env: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 
 # 2. Boot infrastructure in dependency order
-uvx inv k8s.up        # Kind + Helm + readiness gates (PostgreSQL -> NATS -> Core API)
+uv run inv k8s.up        # Kind + Helm + readiness gates (PostgreSQL -> NATS -> Core API)
 
 # 3. Open bridge (keep running)
-uvx inv k8s.bridge
+uv run inv k8s.bridge
 
 # 4. Initialize database
-uvx inv db.migrate    # Apply all 21 migrations (idempotent)
+uv run inv db.migrate    # Apply all 21 migrations (idempotent)
 
 # 5. Start backend
-uvx inv core.run
+uv run inv core.run
 
 # 6. Start frontend
-uvx inv interface.install  # First time only
-uvx inv interface.dev
+uv run inv interface.install  # First time only
+uv run inv interface.dev
 ```
 
 ### Configure Cognitive Engine
@@ -295,11 +298,11 @@ defaults:
 
 | Tier | Tool | Count | Speed | Command |
 |------|------|-------|-------|---------|
-| 1 | Go unit tests | ~112 tests | <5s | `uvx inv core.test` |
-| 2 | Vitest component tests | ~114 tests | <10s | `uvx inv interface.test` |
-| 3 | Playwright E2E | 12 spec files | 30s–2min | `uvx inv interface.e2e` |
+| 1 | Go unit tests | ~112 tests | <5s | `uv run inv core.test` |
+| 2 | Vitest component tests | ~114 tests | <10s | `uv run inv interface.test` |
+| 3 | Playwright E2E | 12 spec files | 30s–2min | `uv run inv interface.e2e` |
 | 4 | Integration tests | DB + NATS + LLM | varies | manual |
-| 5 | Governance smoke | cmd/smoke | varies | `uvx inv core.smoke` |
+| 5 | Governance smoke | cmd/smoke | varies | `uv run inv core.smoke` |
 
 ### Go Test Patterns
 
@@ -323,7 +326,7 @@ defaults:
 
 ### Smoke Test (Quality Gate)
 
-`uvx inv interface.check` validates 9 pages:
+`uv run inv interface.check` validates 9 pages:
 - HTTP 200 status
 - No SSR errors
 - No hydration mismatches
@@ -346,8 +349,8 @@ defaults:
 ### Local CI
 
 ```bash
-uvx inv ci.check    # Full pipeline: lint → test → build (with stage timers)
-uvx inv ci.deploy   # Build + Docker + K8s deploy
+uv run inv ci.check    # Full pipeline: lint → test → build (with stage timers)
+uv run inv ci.deploy   # Build + Docker + K8s deploy
 ```
 
 ### Branching Strategy
@@ -471,7 +474,7 @@ On SIGINT:
 | PowerShell profile has PSReadLine error | All PS calls use `-NoProfile` via `powershell()` helper |
 | PTY not available on Windows | Use `pty=not is_windows()` |
 | kubectl v1.32 ↔ K8s v1.33 port-forward bug | Upgraded kubectl to v1.35 via scoop |
-| Kind cluster cert chain breaks after Docker restart | Fix with `uvx inv k8s.reset` |
+| Kind cluster cert chain breaks after Docker restart | Fix with `uv run inv k8s.reset` |
 | Ollama on LAN (not localhost) | Use `192.168.50.156:11434` |
 | Ollama discovery timeout | 10s (Kind → Host LAN is slow) |
 | `shutil`/`os.path` for file ops in tasks | Never use shell commands for file operations |
@@ -509,3 +512,5 @@ GET /api/v1/cognitive/status:
   - Probes all openai_compatible providers dynamically
   - Reports: provider_id, type, endpoint, model_id, status, last_checked
 ```
+
+
