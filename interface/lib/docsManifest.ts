@@ -201,9 +201,9 @@ export const DOC_MANIFEST: DocSection[] = [
             },
             {
                 slug: "logging-schema",
-                label: "Signal Log Schema",
+                label: "Logging Standard (V7)",
                 path: "docs/logging.md",
-                description: "LogEntry format, NATS cortex.logs subject, field reference",
+                description: "Authoritative mission-events and memory-stream logging contract, taxonomy, and onboarding checklist",
             },
         ],
     },
@@ -301,6 +301,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "Soma Team + Channel Architecture",
                 path: "docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md",
                 description: "Canonical inter-team/process/MCP channel contracts and shared memory boundaries",
+            },
+            {
+                slug: "arch-nats-signal-standard-v7",
+                label: "NATS Signal Standard V7",
+                path: "docs/architecture/NATS_SIGNAL_STANDARD_V7.md",
+                description: "Canonical NATS subject families, source normalization, and product-vs-dev channel boundaries",
             },
             {
                 slug: "arch-workflow-composer-delivery-v7",

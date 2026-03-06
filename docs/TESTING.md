@@ -3,7 +3,7 @@
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
 Latest baseline (2026-03-06):
-- `uvx inv ci.baseline` -> pass (logging/topic/line gates + core tests + interface build + typecheck + vitest)
+- `uv run inv ci.baseline` -> pass (logging/topic/line gates + core tests + interface build + typecheck + vitest)
 - `cd core && go test ./... -count=1` -> pass (via baseline)
 - `cd interface && npx vitest run --reporter=dot` -> pass (via baseline)
 - Last full E2E sweep remains 2026-03-02: `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
@@ -11,7 +11,10 @@ Latest baseline (2026-03-06):
 ## Quick Reference
 
 ```bash
-# Run from scratch/ root — always use uv run inv. Do not use uvx --from invoke inv.
+# Run from scratch/ root.
+# Primary runner: uv run inv ...
+# Compatibility probe: uvx --from invoke inv -l
+# Unsupported bare alias: uvx inv ...
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv interface.test        # Vitest unit tests (jsdom)
 uv run inv interface.e2e         # Playwright E2E tests (requires running servers)
@@ -21,7 +24,17 @@ uv run inv logging.check-schema  # Event schema + docs coverage gate
 uv run inv logging.check-topics  # Hardcoded swarm topic gate
 uv run inv quality.max-lines --limit 350  # Hot-path max-lines gate with legacy caps
 uv run inv lifecycle.memory-restart --build --frontend  # Full memory reset + post-restart memory probes
+uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 ```
+
+Runner matrix:
+- `uv run inv ...` is the supported path for real task execution and testing.
+- `uvx --from invoke inv -l` is a lightweight compatibility probe only.
+- `uvx inv ...` is expected to fail and is checked as a negative control by `uv run inv ci.entrypoint-check`.
+
+Signal/channel standard:
+- When tests touch NATS channel behavior, use the canonical subject families and source metadata defined in `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`.
+- Development-only infrastructure subjects are not part of product orchestration and should stay out of authoritative runtime tests unless the test is explicitly exercising dev-only behavior.
 
 ---
 
@@ -58,7 +71,7 @@ uv run inv lifecycle.memory-restart --build --frontend  # Full memory reset + po
 ### Running
 
 ```bash
-uvx inv core.test                          # All packages
+uv run inv core.test                          # All packages
 go test -v ./internal/server/...           # Server handlers only
 go test -v -run TestHandleGovernance ./internal/server/...  # Single test pattern
 go test -v ./internal/mcp/ -count=1        # MCP service/library/executor/toolset suites
@@ -100,7 +113,7 @@ go test -v -run TestScoped ./internal/swarm/... -count=1
 ### Running
 
 ```bash
-uvx inv interface.test                     # All Vitest tests
+uv run inv interface.test                     # All Vitest tests
 npx vitest run --reporter=verbose          # Verbose output (from interface/)
 npx vitest run __tests__/shell/            # Single directory
 ```
@@ -140,11 +153,11 @@ npx vitest run __tests__/shell/            # Single directory
 
 ```bash
 # Start servers first
-uvx inv core.run          # Terminal 1
-uvx inv interface.dev     # Terminal 2
+uv run inv core.run          # Terminal 1
+uv run inv interface.dev     # Terminal 2
 
 # Run E2E tests
-uvx inv interface.e2e                     # All specs
+uv run inv interface.e2e                     # All specs
 npx playwright test --project=chromium    # From interface/
 npx playwright test e2e/specs/missions.spec.ts  # Single spec
 npx playwright show-report                # View HTML report
@@ -183,7 +196,7 @@ OLLAMA_HOST=http://192.168.50.156:11434 go test -v -tags=integration ./tests/...
 
 ### Protocol
 
-1. Start the Core: `uvx inv core.run`
+1. Start the Core: `uv run inv core.run`
 2. Inject poison: Send a message with intent `k8s.delete.pod`
 3. Verify block: Check logs for "Gatekeeper DENIED"
 4. Inject require approval: Send `payment.create` with amount `100`
@@ -192,7 +205,7 @@ OLLAMA_HOST=http://192.168.50.156:11434 go test -v -tags=integration ./tests/...
 ### Running
 
 ```bash
-uvx inv core.smoke
+uv run inv core.smoke
 ```
 
 ---
@@ -202,7 +215,7 @@ uvx inv core.smoke
 Use this when memory path behavior is suspect (stale stream, sitrep/read model drift, failed local state recovery).
 
 ```bash
-uvx inv lifecycle.memory-restart --build --frontend
+uv run inv lifecycle.memory-restart --build --frontend
 ```
 
 Expected command outcomes:
@@ -302,3 +315,5 @@ test.describe('Feature Page', () => {
     })
 })
 ```
+
+

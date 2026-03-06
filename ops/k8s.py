@@ -1,5 +1,42 @@
 from invoke import task, Collection
 from .config import CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
+from .core import build as core_build
+
+
+def _cluster_exists(c) -> bool:
+    cmd = (
+        f"kind get clusters | findstr {CLUSTER_NAME}"
+        if is_windows()
+        else f"kind get clusters | grep {CLUSTER_NAME}"
+    )
+    result = c.run(cmd, hide=True, warn=True)
+    return bool(result and result.ok and CLUSTER_NAME in result.stdout)
+
+
+def _resource_exists(c, resource: str) -> bool:
+    result = c.run(f"kubectl get {resource} -n {NAMESPACE}", hide=True, warn=True)
+    return bool(result and result.ok)
+
+
+def _wait_rollout(c, resource: str, timeout_seconds: int = 180, required: bool = True) -> bool:
+    if not _resource_exists(c, resource):
+        if required:
+            print(f"  ERROR: Missing required resource: {resource}")
+        else:
+            print(f"  Skipping optional resource (not found): {resource}")
+        return False
+
+    print(f"  Waiting for {resource} rollout...")
+    timeout = f"{int(timeout_seconds)}s"
+    result = c.run(
+        f"kubectl rollout status {resource} -n {NAMESPACE} --timeout={timeout}",
+        warn=True,
+    )
+    if result.ok:
+        print(f"  {resource} ready")
+        return True
+    print(f"  ERROR: {resource} failed readiness check within {timeout}")
+    return False
 
 @task
 def init(c):
@@ -8,13 +45,10 @@ def init(c):
     Creates Kind cluster and applies persistent infra (NATS, DBs).
     """
     print(f"Initializing Cluster: {CLUSTER_NAME}...")
-    try:
-        c.run(f"kind get clusters | findstr {CLUSTER_NAME}" if is_windows() else f"kind get clusters | grep {CLUSTER_NAME}", hide=True)
+    if _cluster_exists(c):
         print("Cluster exists.")
-    except:
+    else:
         # Check if we need to hydrate absolute paths for Windows Kind
-        from pathlib import Path
-        
         with open("kind-config.yaml", "r") as f:
             config = f.read()
         
@@ -39,8 +73,6 @@ def init(c):
     # Legacy raw manifests removed. Helm chart handles infra.
     print("Infrastructure Ready for Helm.")
 
-from .version import get_version
-from .core import build as core_build
 
 @task
 def deploy(c):
@@ -87,6 +119,63 @@ def deploy(c):
     # 4. Restart to ensure fresh config
     c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}")
     print(f"Deployment Complete ({tag}).")
+
+
+@task(help={"timeout": "Seconds to wait per rollout readiness check (default: 180)."})
+def wait(c, timeout=180):
+    """
+    Wait for in-cluster dependency order to be healthy.
+    Order: PostgreSQL -> NATS -> Core API deployment.
+    """
+    timeout = int(timeout)
+    print(f"Waiting for cluster services in namespace '{NAMESPACE}'...")
+
+    ns_result = c.run(f"kubectl get namespace {NAMESPACE}", hide=True, warn=True)
+    if not ns_result.ok:
+        print(f"ERROR: Namespace '{NAMESPACE}' not found. Run 'uv run inv k8s.init' first.")
+        raise SystemExit(1)
+
+    pg_ready = _wait_rollout(c, "statefulset/mycelis-core-postgresql", timeout_seconds=timeout)
+
+    # NATS chart shape can vary by chart version (statefulset or deployment).
+    nats_ready = _wait_rollout(
+        c, "statefulset/mycelis-core-nats", timeout_seconds=timeout, required=False
+    )
+    if not nats_ready:
+        nats_ready = _wait_rollout(
+            c, "deployment/mycelis-core-nats", timeout_seconds=timeout, required=False
+        )
+
+    core_ready = _wait_rollout(c, "deployment/mycelis-core", timeout_seconds=timeout)
+
+    if not (pg_ready and nats_ready and core_ready):
+        print("\nCluster readiness failed. Inspect pods with:")
+        print(f"  kubectl get pods -n {NAMESPACE}")
+        print(f"  kubectl describe pods -n {NAMESPACE}")
+        raise SystemExit(1)
+
+    print("\nCluster ready (PostgreSQL, NATS, Core API).")
+
+
+@task(help={"timeout": "Seconds to wait per rollout readiness check (default: 180)."})
+def up(c, timeout=180):
+    """
+    Canonical cluster bring-up sequence.
+    Order: init -> deploy -> wait.
+    """
+    print("=== Mycelis Cluster Up ===\n")
+    print("[1/3] Ensure Kind cluster + namespace...")
+    init(c)
+    print("\n[2/3] Deploy Helm release...")
+    deploy(c)
+    print("\n[3/3] Wait for service readiness...")
+    wait(c, timeout=timeout)
+    print("\nCluster bring-up complete.")
+    print("Next steps:")
+    print("  1) uv run inv k8s.bridge")
+    print("  2) uv run inv db.migrate")
+    print("  3) uv run inv lifecycle.up --frontend")
+
 
 @task
 def bridge(c):
@@ -140,14 +229,22 @@ def status(c):
 def recover(c):
     """Attempt to heal the cluster."""
     print("Attempting Recovery...")
-    c.run(f"kubectl rollout restart deployment/nats -n {NAMESPACE}")
-    c.run(f"kubectl rollout restart deployment/neural-core -n {NAMESPACE}")
+    # Core API
+    c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}", warn=True)
+    # NATS can be statefulset or deployment depending on chart version
+    if _resource_exists(c, "statefulset/mycelis-core-nats"):
+        c.run(f"kubectl rollout restart statefulset/mycelis-core-nats -n {NAMESPACE}", warn=True)
+    elif _resource_exists(c, "deployment/mycelis-core-nats"):
+        c.run(f"kubectl rollout restart deployment/mycelis-core-nats -n {NAMESPACE}", warn=True)
+    # PostgreSQL (statefulset)
+    if _resource_exists(c, "statefulset/mycelis-core-postgresql"):
+        c.run(f"kubectl rollout restart statefulset/mycelis-core-postgresql -n {NAMESPACE}", warn=True)
     print("Restart signals sent.")
 
 @task
 def reset(c):
     """
-    Reset Infrastructure (Teardown + Init + Deploy).
+    Reset Infrastructure (Teardown + Canonical Bring-Up).
     Standardizes the development environment.
     """
     print("Resetting Infrastructure...")
@@ -156,11 +253,8 @@ def reset(c):
     print("Stopping Cluster...")
     c.run(f"kind delete cluster --name {CLUSTER_NAME}")
     
-    # 2. Init
-    init(c)
-    
-    # 3. Deploy
-    deploy(c)
+    # 2. Canonical bring-up
+    up(c)
     
     print("Infrastructure Reset Complete.")
     print("Run 'inv k8s.status' to verify.")
@@ -168,6 +262,8 @@ def reset(c):
 ns = Collection("k8s")
 ns.add_task(init)
 ns.add_task(deploy)
+ns.add_task(wait)
+ns.add_task(up)
 ns.add_task(bridge)
 ns.add_task(status)
 ns.add_task(recover)

@@ -10,13 +10,16 @@ Primary documentation entry points for V7:
 - **V7 Parallel Implementation Board**: `./ui-delivery/PARALLEL_DELIVERY_BOARD.md`
 - **Team A/B/C/Q Execution Board**: `./ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md`
 - **Soma Extension-of-Self PRD**: `./product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
+- **NATS Signal Standard V7**: `./architecture/NATS_SIGNAL_STANDARD_V7.md`
 - **Soma-Council Engagement Protocol V7**: `./architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`
 - **Workflow Composer Delivery Plan V7**: `./architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
+- **Logging Standard (V7)**: `./logging.md`
 - **Architecture Specs**: `./architecture/` (`OVERVIEW.md`, `BACKEND.md`, `FRONTEND.md`, `OPERATIONS.md`)
 - **Agent Source Instantiation Template (Ollama-Default)**: `./architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md`
 - **Agentry Template Marketplace + Custom Templating**: `./architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md`
 - **Testing Guide**: `./TESTING.md`
 - **Implementation Blueprint**: `./V7_IMPLEMENTATION_PLAN.md`
+- **Repository Standards**: `../AGENTS.md`
 - **Archive Index (Historical / Non-authoritative)**: `./archive/README.md`
 
 User-facing guides live in `./user/`.

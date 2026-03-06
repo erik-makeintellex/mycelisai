@@ -6,13 +6,15 @@ Usage:
     inv ci.lint          # Go vet + Next.js lint
     inv ci.test          # Go tests + Interface tests
     inv ci.build         # Go binary + Next.js production build (no Docker)
-    inv ci.check         # Full pipeline: lint → test → build
+    inv ci.check         # Full pipeline: lint -> test -> build
     inv ci.deploy        # Build + Docker + K8s deploy (requires cluster)
 """
 
 import time
 from invoke import task, Collection
 from .config import CORE_DIR, is_windows, API_HOST, API_PORT, INTERFACE_PORT
+from . import logging as logging_tasks
+from . import quality
 
 
 @task
@@ -117,7 +119,7 @@ def build(c):
 @task
 def check(c):
     """
-    Full local CI pipeline: lint → test → build.
+    Full local CI pipeline: lint -> test -> build.
     Run this before pushing code or creating PRs.
     """
     start = time.time()
@@ -163,44 +165,65 @@ def baseline(c, e2e=False):
     print("=== BASELINE ===")
     print()
 
-    print("[1/5] core go test ./... -count=1")
+    print("[1/7] logging.check-schema")
+    try:
+        logging_tasks.check_schema.body(c)
+        print("  OK")
+    except SystemExit:
+        errors.append("logging schema check failed")
+
+    print("[2/7] logging.check-topics")
+    try:
+        logging_tasks.check_topics.body(c)
+        print("  OK")
+    except SystemExit:
+        errors.append("logging topic check failed")
+
+    print("[3/7] quality.max-lines --limit=350")
+    try:
+        quality.max_lines.body(c, limit=350, paths=quality.DEFAULT_HOT_PATHS, strict=False)
+        print("  OK")
+    except SystemExit:
+        errors.append("quality max-lines check failed")
+
+    print("[4/7] core go test ./... -count=1")
     with c.cd(str(CORE_DIR)):
-        result = c.run("go test ./... -count=1", warn=True)
+        result = c.run("go test ./... -count=1", warn=True, hide=True)
         if result.exited != 0:
             errors.append("core go tests failed")
         else:
             print("  OK")
 
-    print("[2/5] interface npm run build")
-    result = c.run("cd interface && npm run build", warn=True)
+    print("[5/7] interface npm run build")
+    result = c.run("cd interface && npm run build", warn=True, hide=True)
     if result.exited != 0:
         errors.append("interface build failed")
     else:
         print("  OK")
 
-    print("[3/5] interface tsc --noEmit")
-    result = c.run("cd interface && npx tsc --noEmit", warn=True)
+    print("[6/7] interface tsc --noEmit")
+    result = c.run("cd interface && npx tsc --noEmit", warn=True, hide=True)
     if result.exited != 0:
         errors.append("interface typecheck failed")
     else:
         print("  OK")
 
-    print("[4/5] interface vitest run")
-    result = c.run("cd interface && npx vitest run --reporter=dot", warn=True)
+    print("[7/7] interface vitest run")
+    result = c.run("cd interface && npx vitest run --reporter=dot", warn=True, hide=True)
     if result.exited != 0:
         errors.append("interface vitest failed")
     else:
         print("  OK")
 
     if e2e:
-        print("[5/5] interface playwright run")
-        result = c.run("cd interface && npx playwright test --reporter=dot", warn=True)
+        print("[E2E] interface playwright run")
+        result = c.run("cd interface && npx playwright test --reporter=dot", warn=True, hide=True)
         if result.exited != 0:
             errors.append("interface playwright failed")
         else:
             print("  OK")
     else:
-        print("[5/5] interface playwright run")
+        print("[E2E] interface playwright run")
         print("  SKIP (--e2e not set)")
 
     print()
@@ -242,6 +265,38 @@ def toolchain_check(c, strict=False):
         print(f"WARN: {message}")
     else:
         print("Go version matches lock policy.")
+
+
+@task
+def entrypoint_check(c):
+    """
+    Verify the supported invoke runner matrix.
+    - uv run inv ...          => supported primary path
+    - uvx inv ...             => unsupported bare alias
+    - uvx --from invoke inv   => lightweight compatibility path
+    """
+    print("=== ENTRYPOINT CHECK ===")
+
+    primary = c.run("uv run inv -l", hide=True, warn=True)
+    if primary.exited != 0:
+        raise SystemExit("ENTRYPOINT CHECK FAILED: 'uv run inv -l' did not succeed.")
+    print("uv run inv -l: OK")
+
+    bare_uvx = c.run("uvx inv -l", hide=True, warn=True)
+    bare_uvx_text = f"{bare_uvx.stdout or ''}{bare_uvx.stderr or ''}"
+    expected_error = "does not provide any executables"
+    if bare_uvx.exited == 0 or expected_error not in bare_uvx_text:
+        raise SystemExit(
+            "ENTRYPOINT CHECK FAILED: expected bare 'uvx inv -l' to fail with the package-executable message."
+        )
+    print("uvx inv -l: expected failure confirmed")
+
+    compat = c.run("uvx --from invoke inv -l", hide=True, warn=True)
+    if compat.exited != 0:
+        raise SystemExit("ENTRYPOINT CHECK FAILED: 'uvx --from invoke inv -l' did not succeed.")
+    print("uvx --from invoke inv -l: OK")
+
+    print("ENTRYPOINT CHECK PASSED")
 
 
 @task(
@@ -304,5 +359,6 @@ ns.add_task(build)
 ns.add_task(check)
 ns.add_task(baseline)
 ns.add_task(toolchain_check, name="toolchain-check")
+ns.add_task(entrypoint_check, name="entrypoint-check")
 ns.add_task(release_preflight, name="release-preflight")
 ns.add_task(deploy)

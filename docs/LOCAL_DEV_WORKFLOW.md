@@ -1,7 +1,10 @@
 # Local Development Workflow
 
 > **Quick Start:** Already set up? Jump to [Daily Startup](#daily-startup-sequence).
-> **Invoke Contract:** Run project tasks with `uv run inv ...` (or `.\.venv\Scripts\inv.exe ...`). Do not use `uvx --from invoke inv ...`; that environment omits project dependencies.
+> **Invoke Contract:** Run project tasks with `uv run inv ...` (or `.\.venv\Scripts\inv.exe ...`).
+> Use `uvx --from invoke inv -l` only as a lightweight compatibility probe.
+> Do not use bare `uvx inv ...`.
+> **Management Scripting:** App-tied management logic belongs in Python task modules. PowerShell is a host wrapper only when the local platform requires it.
 
 ## Prerequisites
 
@@ -96,10 +99,14 @@ By default, startup probes focus on `ollama`. Additional backends should be expl
 |:--|:--|:--|
 | `admin.yaml` | Admin | admin (17 tools, 5 ReAct iterations) |
 | `council.yaml` | Council | council-architect, council-coder, council-creative, council-sentry |
+| `prime-architect.yaml` | Prime Architect | architecture lead for gated delivery and review flows |
+| `prime-development.yaml` | Prime Development | implementation lead for delivery execution and testing follow-through |
+| `agui-design-architect.yaml` | AGUI Design Architect | workflow-composer and UI/UX architecture lead |
 | `genesis.yaml` | Genesis Core | architect, commander |
 | `telemetry.yaml` | Telemetry Core | observer |
 
 Add a YAML file, restart the server, and the new team is automatically loaded.
+Canonical bus signal conventions for these teams live in `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`.
 
 ### `core/config/policy.yaml` — Governance Rules
 
@@ -115,28 +122,28 @@ cp .env.example .env
 # Edit .env — set OLLAMA_HOST, DB credentials, etc.
 
 # 2. Bring up cluster services in dependency order
-uvx inv k8s.up
+uv run inv k8s.up
 # Order enforced by task:
 #   Kind/namespace -> Helm deploy -> PostgreSQL ready -> NATS ready -> Core API ready
 
 # 3. Open the development bridge (port-forwards)
 # This needs its own terminal — it stays running
-uvx inv k8s.bridge
+uv run inv k8s.bridge
 
 # 4. Initialize the database
-uvx inv db.migrate        # Apply all 21 migrations (idempotent)
+uv run inv db.migrate        # Apply all current migrations (idempotent)
 
 # 5. Build the Go backend
-uvx inv core.build        # Compile binary + Docker image
+uv run inv core.build        # Compile binary + Docker image
 
 # 6. Start the backend (new terminal — stays running)
-uvx inv core.run
+uv run inv core.run
 
 # 7. Install frontend dependencies (first time only)
-uvx inv interface.install
+uv run inv interface.install
 
 # 8. Start the frontend (new terminal — stays running)
-uvx inv interface.dev
+uv run inv interface.dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -148,7 +155,7 @@ Four terminals, in order:
 ### Prerequisite: Cluster Bring-Up (run once per reboot/reset)
 
 ```bash
-uvx inv k8s.up
+uv run inv k8s.up
 ```
 
 ### Terminal 1: Development Bridge
@@ -156,7 +163,7 @@ uvx inv k8s.up
 Port-forwards NATS, PostgreSQL, and the in-cluster API from Kind to localhost.
 
 ```bash
-uvx inv k8s.bridge
+uv run inv k8s.bridge
 ```
 
 > On Windows, this opens 3 new CMD windows (one per port-forward). Keep them open.
@@ -164,13 +171,13 @@ uvx inv k8s.bridge
 ### Terminal 2: Go Backend
 
 ```bash
-uvx inv core.run     # Foreground, blocking. Ctrl+C to stop.
+uv run inv core.run     # Foreground, blocking. Ctrl+C to stop.
 ```
 
 ### Terminal 3: Next.js Frontend
 
 ```bash
-uvx inv interface.dev
+uv run inv interface.dev
 ```
 
 ### Terminal 4: Commands
@@ -178,9 +185,9 @@ uvx inv interface.dev
 Free terminal for running tasks:
 
 ```bash
-uvx inv db.status        # Check database tables
-uvx inv interface.check  # Smoke-test running pages
-uvx inv core.test        # Run Go unit tests
+uv run inv db.status        # Check database tables
+uv run inv interface.check  # Smoke-test running pages
+uv run inv core.test        # Run Go unit tests
 ```
 
 ## Port Map
@@ -212,7 +219,7 @@ Quick commands to verify each service:
 
 ```bash
 # Kind cluster + pods
-uvx inv k8s.status
+uv run inv k8s.status
 
 # Backend health
 curl http://localhost:8081/healthz
@@ -224,7 +231,7 @@ powershell -NoProfile -Command "Test-NetConnection localhost -Port 4222 -Informa
 nc -z localhost 4222
 
 # PostgreSQL
-uvx inv db.status
+uv run inv db.status
 
 # Frontend
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/dashboard
@@ -233,7 +240,7 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/dashboard
 curl http://127.0.0.1:11434/api/tags
 
 # Full smoke test (9 pages, checks for 404s, 500s, hydration errors)
-uvx inv interface.check
+uv run inv interface.check
 ```
 
 ## Troubleshooting
@@ -249,10 +256,10 @@ uvx inv interface.check
 kubectl port-forward -n mycelis svc/mycelis-core-nats 4222:4222
 
 # Or restart full bridge:
-uvx inv k8s.bridge
+uv run inv k8s.bridge
 
 # Then restart backend to reconnect:
-uvx inv core.restart
+uv run inv core.restart
 ```
 
 ### "Agent unavailable — no cognitive engine"
@@ -263,13 +270,13 @@ uvx inv core.restart
 1. Check Ollama is running: `curl http://127.0.0.1:11434/`
 2. Check `.env` has `OLLAMA_HOST=http://127.0.0.1:11434` (not `0.0.0.0`)
 3. Check `core/config/cognitive.yaml` — `ollama.endpoint` should point to the reachable address
-4. Restart backend: `uvx inv core.restart`
+4. Restart backend: `uv run inv core.restart`
 
 ### "ModuleNotFoundError: No module named 'dotenv'"
 
-**Cause:** Using `uvx --from invoke inv` instead of `uv run inv`. The `uvx` ephemeral env doesn't include project deps.
+**Cause:** Running a dependency-heavy task outside the project invoke environment.
 
-**Fix:** Use `uv run inv` (uses project venv with all dependencies) or run `uv sync` first.
+**Fix:** Use `uv run inv` (uses project venv with all dependencies) or `.\.venv\Scripts\inv.exe`.
 
 ### Kind cluster cert chain broken
 
@@ -277,14 +284,14 @@ uvx inv core.restart
 
 **Fix:**
 ```bash
-uvx inv k8s.reset   # Full teardown + reinit + deploy
+uv run inv k8s.reset   # Full teardown + reinit + deploy
 ```
 
 ### Port already in use
 
 ```bash
-uvx inv core.stop       # Kill Go backend (port 8081)
-uvx inv interface.stop  # Kill Next.js (port 3000)
+uv run inv core.stop       # Kill Go backend (port 8081)
+uv run inv interface.stop  # Kill Next.js (port 3000)
 ```
 
 ### UnicodeEncodeError in invoke output (Windows)
@@ -336,8 +343,8 @@ OLLAMA_HOST=http://192.168.x.x:11434
 ### Option C: vLLM (GPU inference)
 
 ```bash
-uvx inv cognitive.install    # Install vLLM + deps
-uvx inv cognitive.llm        # Start on port 8000
+uv run inv cognitive.install    # Install vLLM + deps
+uv run inv cognitive.llm        # Start on port 8000
 ```
 
 Then change profiles in `cognitive.yaml` to `"vllm"`.
@@ -347,37 +354,39 @@ Then change profiles in `cognitive.yaml` to `"vllm"`.
 | Command | Description |
 |:--|:--|
 | **Core** | |
-| `uvx inv core.build` | Compile Go binary + Docker image |
-| `uvx inv core.test` | Go unit tests (`go test ./...`) |
-| `uvx inv core.run` | Start backend (foreground) |
-| `uvx inv core.stop` | Kill backend |
-| `uvx inv core.restart` | Stop + Run |
-| `uvx inv core.smoke` | Governance smoke tests |
+| `uv run inv core.build` | Compile Go binary + Docker image |
+| `uv run inv core.test` | Go unit tests (`go test ./...`) |
+| `uv run inv core.run` | Start backend (foreground) |
+| `uv run inv core.stop` | Kill backend |
+| `uv run inv core.restart` | Stop + Run |
+| `uv run inv core.smoke` | Governance smoke tests |
 | **Interface** | |
-| `uvx inv interface.dev` | Start Next.js dev server |
-| `uvx inv interface.build` | Production build |
-| `uvx inv interface.test` | Vitest unit tests |
-| `uvx inv interface.e2e` | Playwright E2E tests |
-| `uvx inv interface.check` | Smoke-test running pages |
-| `uvx inv interface.stop` | Kill dev server |
-| `uvx inv interface.clean` | Clear `.next` cache |
-| `uvx inv interface.restart` | Full restart cycle |
+| `uv run inv interface.dev` | Start Next.js dev server |
+| `uv run inv interface.build` | Production build |
+| `uv run inv interface.test` | Vitest unit tests |
+| `uv run inv interface.e2e` | Playwright E2E tests |
+| `uv run inv interface.check` | Smoke-test running pages |
+| `uv run inv interface.stop` | Kill dev server |
+| `uv run inv interface.clean` | Clear `.next` cache |
+| `uv run inv interface.restart` | Full restart cycle |
 | **Database** | |
-| `uvx inv db.migrate` | Apply all migrations (idempotent) |
-| `uvx inv db.reset` | Drop + recreate + migrate |
-| `uvx inv db.status` | Show tables |
+| `uv run inv db.migrate` | Apply all migrations (idempotent) |
+| `uv run inv db.reset` | Drop + recreate + migrate |
+| `uv run inv db.status` | Show tables |
 | **Infrastructure** | |
-| `uvx inv k8s.init` | Create Kind cluster |
-| `uvx inv k8s.up` | Canonical cluster bring-up: init → deploy → wait |
-| `uvx inv k8s.deploy` | Helm deploy to cluster |
-| `uvx inv k8s.wait` | Wait for readiness gates (PostgreSQL → NATS → Core API) |
-| `uvx inv k8s.bridge` | Port-forward NATS, PG, API |
-| `uvx inv k8s.status` | Cluster health check |
-| `uvx inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
-| `uvx inv k8s.reset` | Full teardown + canonical bring-up (includes readiness wait) |
+| `uv run inv k8s.init` | Create Kind cluster |
+| `uv run inv k8s.up` | Canonical cluster bring-up: init → deploy → wait |
+| `uv run inv k8s.deploy` | Helm deploy to cluster |
+| `uv run inv k8s.wait` | Wait for readiness gates (PostgreSQL → NATS → Core API) |
+| `uv run inv k8s.bridge` | Port-forward NATS, PG, API |
+| `uv run inv k8s.status` | Cluster health check |
+| `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
+| `uv run inv k8s.reset` | Full teardown + canonical bring-up (includes readiness wait) |
 | **CI** | |
-| `uvx inv ci.check` | Full pipeline: lint → test → build |
+| `uv run inv ci.check` | Full pipeline: lint → test → build |
 | **Cognitive** | |
-| `uvx inv cognitive.up` | Start vLLM + Media servers |
-| `uvx inv cognitive.stop` | Kill cognitive processes |
-| `uvx inv cognitive.status` | Health check providers |
+| `uv run inv cognitive.up` | Start vLLM + Media servers |
+| `uv run inv cognitive.stop` | Kill cognitive processes |
+| `uv run inv cognitive.status` | Health check providers |
+
+

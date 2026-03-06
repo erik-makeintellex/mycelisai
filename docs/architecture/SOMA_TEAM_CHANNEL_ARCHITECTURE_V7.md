@@ -2,13 +2,14 @@
 
 Version: `1.0`
 Status: `Authoritative`
-Last Updated: `2026-02-28`
+Last Updated: `2026-03-06`
 Scope: Inter-team/process channels, MCP execution I/O, and shared memory/RAG contracts
 
 This document defines the canonical channel architecture for workflow execution in V7.
 Companion execution spec: `docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md` (universal action contracts and dynamic service onboarding API).
 Landscape extension: `docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md`.
 Hardware integration profile: `docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md`.
+Detailed signal/source normalization: `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`.
 If any workflow, API, or UI surface conflicts with this contract, this contract wins.
 
 ---
@@ -79,6 +80,18 @@ Required outcomes:
 | MCP tools | ToolExecutorAdapter + MCP pool | Tool call contract + MCP response normalization |
 | Artifact channel | Artifact persistence + event spine | `artifact.created` event + artifact metadata |
 | Memory channel | Memory service + embeddings | `memory.stored` and `memory.recalled` events |
+
+### 2.4 Signal Source Normalization
+
+Detailed subject suffix, source-kind, and payload-kind rules live in `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`.
+
+Required alignment:
+- operator-facing team input uses `swarm.team.{team_id}.internal.command`
+- concise lifecycle updates use `swarm.team.{team_id}.signal.status`
+- bounded execution outcomes use `swarm.team.{team_id}.signal.result`
+- high-volume machine output stays on telemetry-class subjects
+- sensor and IoT ingress must identify source origin before it is surfaced to operator workflows
+- infrastructure-development or experimentation channels are dev-only and are not part of canonical orchestration unless explicitly promoted
 
 ---
 
