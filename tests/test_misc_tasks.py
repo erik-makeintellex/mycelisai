@@ -69,7 +69,10 @@ def test_architecture_sync_requests_all_teams_and_reports_replies(monkeypatch, c
         for item in fake_sock.sent:
             if item.startswith(b"SUB "):
                 inboxes.append(item.decode("utf-8").split()[1])
-        return [(subject, f"ack:{idx}") for idx, subject in enumerate(inboxes, start=1)]
+        return [
+            (subject, f'{{"text":"ack:{idx}","tools_used":[]}}')
+            for idx, subject in enumerate(inboxes, start=1)
+        ]
 
     monkeypatch.setattr("socket.create_connection", lambda *args, **kwargs: fake_sock)
     monkeypatch.setattr(misc, "_read_nats_line", fake_read_nats_line)
@@ -86,8 +89,14 @@ def test_architecture_sync_requests_all_teams_and_reports_replies(monkeypatch, c
     assert "All teams replied inside the sync window." in output
 
     published = b"".join(fake_sock.sent)
-    assert b"swarm.team.prime-architect.internal.trigger" in published
-    assert b"swarm.team.prime-development.internal.trigger" in published
-    assert b"swarm.team.agui-design-architect.internal.trigger" in published
+    assert b"swarm.council.prime-architect-agent.request" in published
+    assert b"swarm.council.prime-development-agent.request" in published
+    assert b"swarm.council.agui-design-architect-agent.request" in published
     assert published.endswith(b"QUIT\r\n")
     assert fake_sock.closed is True
+
+
+def test_format_sync_reply_prefers_process_result_text():
+    message = '{"text":"brief body","tools_used":["publish_signal"]}'
+
+    assert misc._format_sync_reply(message) == "brief body"

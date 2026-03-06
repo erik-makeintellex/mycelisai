@@ -95,6 +95,10 @@ signal subjects rather than request-reply semantics.
 Architecture and operational docs must avoid implying that a command published
 to a team input subject will behave like a synchronous RPC.
 
+Central coordination that requires a guaranteed agent reply should use the
+agent direct request-reply lane rather than bypassing team input contracts
+through internal trigger subjects.
+
 ### 8. Gated delivery policy
 
 The active next-target workflow is gated and phase-ordered:

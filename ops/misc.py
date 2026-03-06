@@ -86,6 +86,25 @@ def _drain_nats_messages(sock, timeout_seconds: float) -> list[tuple[str, str]]:
     return messages
 
 
+def _format_sync_reply(message: str) -> str:
+    import json
+
+    text = message.strip()
+    if not text:
+        return text
+
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return text
+
+    if isinstance(payload, dict):
+        reply_text = payload.get("text")
+        if isinstance(reply_text, str) and reply_text.strip():
+            return reply_text.strip()
+    return text
+
+
 @task(name="architecture-sync")
 def architecture_sync(c, timeout=12):
     """Synchronize architect, development, and AGUI teams over the NATS bus."""
@@ -94,7 +113,7 @@ def architecture_sync(c, timeout=12):
 
     directives = {
         "prime-architect": {
-            "request_subject": "swarm.team.prime-architect.internal.trigger",
+            "agent_id": "prime-architect-agent",
             "message": (
                 "Central architecture directive: keep the next-target workflow aligned to strict gate order. "
                 "P0 remains the active phase. Require concrete test evidence before any phase advancement, "
@@ -102,7 +121,7 @@ def architecture_sync(c, timeout=12):
             ),
         },
         "prime-development": {
-            "request_subject": "swarm.team.prime-development.internal.trigger",
+            "agent_id": "prime-development-agent",
             "message": (
                 "Development directive: focus on P0 closure, memory-restart reliability, logging standardization, "
                 "error-handling normalization, and no-regression verification. Go remains the primary implementation "
@@ -111,7 +130,7 @@ def architecture_sync(c, timeout=12):
             ),
         },
         "agui-design-architect": {
-            "request_subject": "swarm.team.agui-design-architect.internal.trigger",
+            "agent_id": "agui-design-architect-agent",
             "message": (
                 "AGUI directive: align base UI updates to architecture truth. Prioritize workflow-composer onboarding, "
                 "gate-state visibility, system status, team roster visibility, and operator-safe error presentation. "
@@ -148,8 +167,9 @@ def architecture_sync(c, timeout=12):
 
         for team_id, config in directives.items():
             payload = config["message"].encode("utf-8")
+            request_subject = f"swarm.council.{config['agent_id']}.request"
             sock.sendall(
-                f"PUB {config['request_subject']} {inboxes[team_id]} {len(payload)}\r\n".encode("utf-8")
+                f"PUB {request_subject} {inboxes[team_id]} {len(payload)}\r\n".encode("utf-8")
             )
             sock.sendall(payload + b"\r\n")
             print(f"Requested execution brief from {team_id}")
@@ -166,7 +186,7 @@ def architecture_sync(c, timeout=12):
 
         seen_subjects = {subject for subject, _ in acknowledgements}
         for subject, message in acknowledgements:
-            print(f"[reply] {subject}: {message}")
+            print(f"[reply] {subject}: {_format_sync_reply(message)}")
 
         missing = [
             inboxes[team_id]

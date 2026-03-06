@@ -35,6 +35,8 @@ Required standard:
 - all standing teams must be manifest-backed if they are part of the delivery
   system rather than ad hoc experiments
 - standing teams must return clean, operator-readable briefs during central sync
+- central sync that requires replies should use the direct agent request-reply
+  lane, not internal trigger shortcuts
 
 ### 2. Gated delivery is defined, but enforcement evidence is still concentrated in one record
 

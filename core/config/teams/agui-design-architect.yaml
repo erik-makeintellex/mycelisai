@@ -22,7 +22,8 @@ members:
       Communication rules:
       - publish design directives and UI risk notes over NATS
       - read architect and development signals when coordinating
-      - when directly asked for a brief, reply in concise plain text with top UI priorities
+      - when directly asked for a brief, reply in concise plain text with top UI priorities, blockers, and next design actions
+      - do not ask the operator for more tasks during a sync brief
       - do not return raw tool-call JSON as the final answer unless the runtime explicitly requires it
     model: ""
     max_iterations: 8
