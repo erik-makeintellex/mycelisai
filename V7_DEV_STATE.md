@@ -141,6 +141,10 @@ Latest integration checkpoint:
     - `delegate_task` now publishes to team `internal.command` subjects instead of legacy direct trigger subjects
     - team `signal.status` and `signal.result` deliveries are wrapped with standardized source metadata before publish
     - runtime-created action teams default to `signal.result`; expression teams default to `signal.status`
+  - Lifecycle restart reliability hardened further:
+    - `lifecycle.up` now requires Core `/healthz` readiness after the port opens instead of printing a false-success ready state
+    - Core startup now fails fast when the HTTP surface never becomes healthy, which makes restart and memory-restart behavior deterministic for operators
+    - lifecycle unit coverage now includes the unhealthy-Core-after-port-open failure path
   - UI signal normalization aligned to the standard:
     - shared frontend normalization now accepts both legacy SSE signals and standardized signal envelopes
     - signal detail surfaces now expose source kind, payload kind, source channel, and run/team/agent metadata when present
@@ -150,6 +154,7 @@ Latest integration checkpoint:
     - focused runner/task suite passes with `uv run inv ci.entrypoint-check` plus pytest task coverage
     - focused Go protocol/swarm suite passes for the signal-runtime contract
     - focused frontend signal-normalization suite and typecheck pass
+    - focused lifecycle/runner/logging pytest suite passes after readiness hardening
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
@@ -174,6 +179,7 @@ Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
 - `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
 - `cd interface && npx tsc --noEmit`
+- `$env:PYTHONPATH='.'; uv run pytest tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q`
 
 Verification evidence (latest full sweep — 2026-03-03):
 - `cd core && go test ./... -count=1` -> pass

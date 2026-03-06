@@ -7,6 +7,7 @@ Latest baseline (2026-03-06):
 - `cd core && go test ./... -count=1` -> pass (via baseline)
 - `cd interface && npx vitest run --reporter=dot` -> pass (via baseline)
 - Last full E2E sweep remains 2026-03-02: `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
+- Latest focused lifecycle slice: `$env:PYTHONPATH='.'; uv run pytest tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q` -> pass (`18` tests)
 
 ## Quick Reference
 
