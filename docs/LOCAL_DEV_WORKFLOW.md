@@ -5,6 +5,7 @@
 > Use `uvx --from invoke inv -l` only as a lightweight compatibility probe.
 > Do not use bare `uvx inv ...`.
 > **Management Scripting:** App-tied management logic belongs in Python task modules. PowerShell is a host wrapper only when the local platform requires it.
+> **Lifecycle Readiness:** `uv run inv lifecycle.up ...` now waits for Core `/healthz` readiness and fails fast if the API never becomes healthy.
 
 ## Prerequisites
 

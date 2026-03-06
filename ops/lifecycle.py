@@ -74,6 +74,24 @@ def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1
     return False
 
 
+def _wait_for_http_ok(
+    url: str,
+    label: str,
+    timeout: int = 30,
+    interval: float = 1.0,
+    headers: dict[str, str] | None = None,
+) -> bool:
+    """Block until an HTTP endpoint returns 200 or timeout expires."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        code, _body = _http_get(url, timeout=5.0, headers=headers)
+        if code == 200:
+            return True
+        time.sleep(interval)
+    print(f"  TIMEOUT waiting for {label} at {url} ({timeout}s)")
+    return False
+
+
 def _find_pid_on_port(port: int) -> int | None:
     """Find the PID listening on a given port. Returns None if not found."""
     if is_windows():
@@ -344,9 +362,20 @@ def up(c, frontend=False, build=False):
     else:
         if _start_core_background():
             if _wait_for_port(API_PORT, "Core API", timeout=120):
-                print(f"  Core online on :{API_PORT}")
+                print(f"  Core port open on :{API_PORT}")
             else:
-                print("  WARN: Core did not come up in time. Check logs with: uv run inv core.run")
+                raise SystemExit(
+                    "STACK UP FAILED: Core did not open its port in time. "
+                    "Check logs with 'uv run inv core.run'."
+                )
+
+    if _wait_for_http_ok(f"http://{API_HOST}:{API_PORT}/healthz", "Core health", timeout=45):
+        print(f"  Core healthy on :{API_PORT}")
+    else:
+        raise SystemExit(
+            "STACK UP FAILED: Core port opened but /healthz never became ready. "
+            "Check logs with 'uv run inv core.run'."
+        )
     print()
 
     # 4. Frontend (optional)

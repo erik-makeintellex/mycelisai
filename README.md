@@ -1283,6 +1283,8 @@ uv run inv lifecycle.status
 uv run inv lifecycle.health
 ```
 
+`uv run inv lifecycle.up ...` now waits for Core HTTP readiness on `/healthz`, not just an open port. If Core never becomes ready, the task fails fast instead of reporting a false-success stack state.
+
 Open:
 - `http://localhost:3000/dashboard` (frontend)
 - `http://localhost:8081/healthz` (backend health)

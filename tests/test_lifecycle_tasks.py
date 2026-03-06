@@ -3,6 +3,7 @@ from __future__ import annotations
 from invoke import Context
 import pytest
 import subprocess
+from pathlib import Path
 
 from ops import db as db_tasks
 from ops import lifecycle
@@ -80,3 +81,28 @@ def test_kill_pid_ignores_windows_taskkill_timeout(monkeypatch):
     monkeypatch.setattr(lifecycle.subprocess, "run", fake_run)
 
     lifecycle._kill_pid(1234)
+
+
+def test_wait_for_http_ok_returns_true_on_200(monkeypatch):
+    calls: list[str] = []
+
+    def fake_http_get(url: str, timeout: float = 5.0, headers=None):
+        calls.append(url)
+        return 200, "ok"
+
+    monkeypatch.setattr(lifecycle, "_http_get", fake_http_get)
+
+    assert lifecycle._wait_for_http_ok("http://localhost:8081/healthz", "Core health", timeout=1, interval=0.01)
+    assert calls == ["http://localhost:8081/healthz"]
+
+
+def test_up_fails_when_core_health_never_becomes_ready(monkeypatch):
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: None)
+    monkeypatch.setattr(lifecycle, "_wait_for_port", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_start_core_background", lambda: True)
+    monkeypatch.setattr(lifecycle, "_port_open", lambda port, host="127.0.0.1", timeout=1.0: False if port == lifecycle.API_PORT else True)
+    monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: False)
+
+    with pytest.raises(SystemExit, match="Core port opened but /healthz never became ready"):
+        lifecycle.up.body(Context(), frontend=False, build=False)

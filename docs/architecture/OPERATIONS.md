@@ -32,6 +32,7 @@
 **Invocation:** Always use `uv run inv <namespace>.<task>` (or `.\.venv\Scripts\inv.exe` from the project root) for real task execution.
 Use `uvx --from invoke inv -l` only as a lightweight compatibility probe.
 Do not use bare `uvx inv ...`.
+Lifecycle tasks must not report success until Core `/healthz` is actually ready; open-port-only checks are insufficient.
 
 > **Tip:** If you `uv venv && .venv/Scripts/activate` (Windows) or `source .venv/bin/activate` (Linux), you can use `inv` directly.
 
