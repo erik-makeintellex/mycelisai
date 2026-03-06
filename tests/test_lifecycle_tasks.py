@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from invoke import Context
 import pytest
+import subprocess
 
 from ops import db as db_tasks
 from ops import lifecycle
@@ -68,3 +69,14 @@ def test_memory_restart_fails_when_postgres_bridge_does_not_return(monkeypatch):
 
     with pytest.raises(SystemExit, match="PostgreSQL bridge not reachable"):
         lifecycle.memory_restart.body(Context(), build=False, frontend=False)
+
+
+def test_kill_pid_ignores_windows_taskkill_timeout(monkeypatch):
+    monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
+
+    def fake_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd="taskkill", timeout=15)
+
+    monkeypatch.setattr(lifecycle.subprocess, "run", fake_run)
+
+    lifecycle._kill_pid(1234)
