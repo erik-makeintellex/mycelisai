@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import { normalizeIncomingSignal } from "@/lib/signalNormalize";
 
 export interface Signal {
     type: string;
@@ -10,6 +11,12 @@ export interface Signal {
     timestamp?: string;
     payload?: any;
     topic?: string;
+    source_kind?: string;
+    source_channel?: string;
+    payload_kind?: string;
+    team_id?: string;
+    agent_id?: string;
+    run_id?: string;
 }
 
 interface SignalContextType {
@@ -55,7 +62,7 @@ export function SignalProvider({ children }: { children: React.ReactNode }) {
             eventSource.onmessage = (event) => {
                 if (!mountedRef.current) return;
                 try {
-                    const data = JSON.parse(event.data);
+                    const data = normalizeIncomingSignal(JSON.parse(event.data));
                     setSignals(prev => [data, ...prev].slice(0, MAX_SIGNALS));
                 } catch (e) {
                     console.error("Signal Parse Error", e);

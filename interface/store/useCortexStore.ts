@@ -11,6 +11,7 @@ import {
 import type { AgentNodeData } from '@/components/wiring/AgentNode';
 import type { ConversationTurn } from '@/types/conversations';
 import { extractApiData } from '@/lib/apiContracts';
+import { normalizeIncomingSignal } from '@/lib/signalNormalize';
 
 // ── Domain Types ──────────────────────────────────────────────
 
@@ -26,6 +27,9 @@ export interface ChatArtifactRef {
     content_type?: string;    // MIME type
     content?: string;         // inline content (text, JSON, base64 for images)
     url?: string;             // external URL (for links, images)
+    cached?: boolean;         // ephemeral cache marker
+    expires_at?: string;      // ISO expiry for cached assets
+    saved_path?: string;      // workspace-relative path once persisted
 }
 
 // CE-1: Orchestration Template types
@@ -121,6 +125,12 @@ export interface StreamSignal {
     timestamp?: string;
     payload?: any;
     topic?: string;
+    source_kind?: string;
+    source_channel?: string;
+    payload_kind?: string;
+    team_id?: string;
+    agent_id?: string;
+    run_id?: string;
 }
 
 export interface AgentManifest {
@@ -205,6 +215,12 @@ export interface SignalDetail {
     timestamp: string;
     topic?: string;
     payload?: any;
+    source_kind?: string;
+    source_channel?: string;
+    payload_kind?: string;
+    team_id?: string;
+    agent_id?: string;
+    run_id?: string;
     id?: string;
     trace_id?: string;
     intent?: string;
@@ -608,6 +624,7 @@ export interface CortexState {
     missionChat: ChatMessage[];
     isMissionChatting: boolean;
     missionChatError: string | null;
+    assistantName: string;
     councilTarget: string;              // active council member ID ("admin" default)
     councilMembers: CouncilMember[];    // populated from GET /council/members
 
@@ -727,6 +744,8 @@ export interface CortexState {
     // Mission Control Chat (Phase 7.6) + Council API
     sendMissionChat: (message: string) => Promise<void>;
     clearMissionChat: () => void;
+    fetchUserSettings: () => Promise<void>;
+    updateAssistantName: (name: string) => Promise<boolean>;
     setCouncilTarget: (id: string) => void;
     fetchCouncilMembers: () => Promise<void>;
 
@@ -1077,6 +1096,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     missionChat: loadPersistedChat(),
     isMissionChatting: false,
     missionChatError: null,
+    assistantName: 'Soma',
     councilTarget: 'admin',
     councilMembers: [],
 
@@ -1255,7 +1275,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
         es.onmessage = (event) => {
             try {
-                const signal: StreamSignal = JSON.parse(event.data);
+                const signal = normalizeIncomingSignal(JSON.parse(event.data));
                 const { nodes } = get();
 
                 // Push to stream log (capped at 100)
@@ -1748,6 +1768,44 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     },
 
     // ── Mission Control Chat + Council API ───────────────────────
+
+    fetchUserSettings: async () => {
+        try {
+            const res = await fetch('/api/v1/user/me', { cache: 'no-store' });
+            if (!res.ok) return;
+            const body = await res.json();
+            const settings = body?.settings;
+            const assistantName = typeof settings?.assistant_name === 'string'
+                ? settings.assistant_name.trim()
+                : '';
+            if (assistantName) {
+                set({ assistantName });
+            }
+        } catch {
+            // degraded mode — leave default name
+        }
+    },
+
+    updateAssistantName: async (name: string) => {
+        const assistantName = name.trim();
+        if (!assistantName) return false;
+        try {
+            const res = await fetch('/api/v1/user/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assistant_name: assistantName }),
+            });
+            if (!res.ok) return false;
+
+            const body = await res.json().catch(() => ({}));
+            const persisted = body?.settings?.assistant_name;
+            set({ assistantName: typeof persisted === 'string' && persisted.trim() ? persisted.trim() : assistantName });
+            return true;
+        } catch (err) {
+            console.error('[SETTINGS] assistant name update failed:', err);
+            return false;
+        }
+    },
 
     setCouncilTarget: (id: string) => {
         set({ councilTarget: id });
