@@ -1,6 +1,7 @@
 # Local Development Workflow
 
 > **Quick Start:** Already set up? Jump to [Daily Startup](#daily-startup-sequence).
+> **Invoke Contract:** Run project tasks with `uv run inv ...` (or `.\.venv\Scripts\inv.exe ...`). Do not use `uvx --from invoke inv ...`; that environment omits project dependencies.
 
 ## Prerequisites
 
@@ -87,6 +88,7 @@ profiles:
 ```
 
 **Change provider routing:** Edit the `profiles` section or use the UI at `/settings` → **Cognitive Matrix**.
+By default, startup probes focus on `ollama`. Additional backends should be explicitly enabled and profile-routed before Mycelis attempts startup connectivity checks.
 
 ### `core/config/teams/*.yaml` — Standing Teams
 
@@ -112,8 +114,10 @@ Run all commands from `scratch/` (project root where `tasks.py` lives).
 cp .env.example .env
 # Edit .env — set OLLAMA_HOST, DB credentials, etc.
 
-# 2. Create Kind cluster + deploy infrastructure (PostgreSQL, NATS)
-uvx inv k8s.reset
+# 2. Bring up cluster services in dependency order
+uvx inv k8s.up
+# Order enforced by task:
+#   Kind/namespace -> Helm deploy -> PostgreSQL ready -> NATS ready -> Core API ready
 
 # 3. Open the development bridge (port-forwards)
 # This needs its own terminal — it stays running
@@ -140,6 +144,12 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Daily Startup Sequence
 
 Four terminals, in order:
+
+### Prerequisite: Cluster Bring-Up (run once per reboot/reset)
+
+```bash
+uvx inv k8s.up
+```
 
 ### Terminal 1: Development Bridge
 
@@ -358,10 +368,13 @@ Then change profiles in `cognitive.yaml` to `"vllm"`.
 | `uvx inv db.status` | Show tables |
 | **Infrastructure** | |
 | `uvx inv k8s.init` | Create Kind cluster |
+| `uvx inv k8s.up` | Canonical cluster bring-up: init → deploy → wait |
 | `uvx inv k8s.deploy` | Helm deploy to cluster |
+| `uvx inv k8s.wait` | Wait for readiness gates (PostgreSQL → NATS → Core API) |
 | `uvx inv k8s.bridge` | Port-forward NATS, PG, API |
 | `uvx inv k8s.status` | Cluster health check |
-| `uvx inv k8s.reset` | Full teardown + redeploy |
+| `uvx inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
+| `uvx inv k8s.reset` | Full teardown + canonical bring-up (includes readiness wait) |
 | **CI** | |
 | `uvx inv ci.check` | Full pipeline: lint → test → build |
 | **Cognitive** | |

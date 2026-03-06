@@ -28,7 +28,7 @@
 > | [Secure Gateway + Remote Actuation](docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md) | Mandatory security controls for self-hosted gateways and remotely managed actuation servers |
 > | [Hardware Interface API + Channels](docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) | Hardware integration standard: interface APIs plus common direct channels for low-level IoT and actuation |
 > | [Soma Symbiote + Host Actuation](docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md) | Backend thought-profile framework, symbiote learning growth model, and localhost actuation path |
-> | [Soma Extension-of-Self PRD](docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) | Detailed action plan for local Ollama-first extension-of-self execution, parallel delivery lanes, and release gates |
+> | [Soma Extension-of-Self PRD](docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) | Detailed action plan for local Ollama-first extension-of-self execution, including immediate delivery manifest sequencing (logging -> cleanup -> meta-agent manifests -> workflow composer) |
 > | [Agent Source Instantiation Template](docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md) | Standardized provider onboarding template with Ollama as default, plus ChatGPT/OpenAI, Claude, Gemini, vLLM, and LM Studio |
 > | [Archive Index](docs/archive/README.md) | Historical docs only (non-authoritative) |
 
@@ -1216,7 +1216,7 @@ POST /api/v1/council/admin/chat
 | Helm | v3+ | Chart deployment |
 | Go | 1.26 | Backend build/runtime |
 | Node.js | 20+ | Frontend build/runtime |
-| uv | Latest | Task runner (`uvx inv ...`) |
+| uv | Latest | Task runner (`uv run inv ...`) |
 | Ollama | Latest | Default local model runtime |
 
 ### 1. Configure Environment
@@ -1224,6 +1224,8 @@ POST /api/v1/council/admin/chat
 ```bash
 cp .env.example .env
 # REQUIRED: set MYCELIS_API_KEY (server will refuse startup without it)
+# Recommended helper:
+#   uv run inv auth.dev-key
 # Recommended defaults:
 #   OLLAMA_HOST=http://127.0.0.1:11434
 #   NATS_URL=nats://127.0.0.1:4222
@@ -1239,7 +1241,7 @@ ollama pull qwen2.5-coder:7b
 ### 2. Bring Up Cluster (Canonical Order)
 
 ```bash
-uvx inv k8s.up
+uv run inv k8s.up
 ```
 
 `k8s.up` enforces dependency order in-cluster:
@@ -1252,10 +1254,12 @@ uvx inv k8s.up
 This starts bridge + backend + frontend in one flow:
 
 ```bash
-uvx inv lifecycle.up --build --frontend
+uv run inv lifecycle.up --build --frontend
 ```
 
-If `uvx inv ...` is unavailable in your shell, use:
+Primary task runner contract is `uv run inv ...`. Do not use `uvx --from invoke inv ...`; that ephemeral environment does not include project dependencies such as `python-dotenv`.
+
+If `uv run inv ...` is unavailable in your shell, use:
 
 ```bash
 .\.venv\Scripts\inv.exe lifecycle.up --build --frontend
@@ -1264,8 +1268,8 @@ If `uvx inv ...` is unavailable in your shell, use:
 Verify:
 
 ```bash
-uvx inv lifecycle.status
-uvx inv lifecycle.health
+uv run inv lifecycle.status
+uv run inv lifecycle.health
 ```
 
 Open:
@@ -1302,6 +1306,23 @@ uvx inv k8s.reset
 uvx inv lifecycle.up --build --frontend
 uvx inv lifecycle.health
 ```
+
+### 5B. Fresh Memory Restart (DB + Memory Probes)
+
+Use this when memory stream/search behavior needs a deterministic reset and readiness check.
+
+```bash
+uvx inv lifecycle.memory-restart --build --frontend
+```
+
+This workflow runs:
+1. `lifecycle.down`
+2. `db.reset`
+3. `lifecycle.up`
+4. `lifecycle.health`
+5. memory probes:
+   - `GET /api/v1/memory/stream`
+   - `GET /api/v1/memory/sitreps?limit=1`
 
 ### 6. Configure Cognitive Providers
 
@@ -1442,50 +1463,56 @@ API endpoints:
 
 **Prerequisites:** [uv](https://github.com/astral-sh/uv) and [Docker](https://www.docker.com/).
 
-Run from `scratch/` root using `uvx inv`:
+Run from `scratch/` root using `uv run inv`:
 
 | Command | Description |
 | :--- | :--- |
 | **Core** | |
-| `uvx inv core.build` | Compile Go binary + Docker image |
-| `uvx inv core.test` | Run unit tests (`go test ./...`) |
-| `uvx inv core.run` | Run Core locally (foreground) |
+| `uv run inv core.build` | Compile Go binary + Docker image |
+| `uv run inv core.test` | Run unit tests (`go test ./...`) |
+| `uv run inv core.run` | Run Core locally (foreground) |
+| `uv run inv auth.dev-key` | Ensure/rotate `MYCELIS_API_KEY` in `.env` and keep `.env.example` sample synced |
 | `cd core && go build -o bin/server ./cmd/server` | Compile standalone backend binary (no frontend required) |
 | `cd core && ./bin/server action GET /api/v1/services/status` | Use server binary as action CLI against API backend |
-| `uvx inv core.stop` | Kill running Core process |
-| `uvx inv core.restart` | Stop + Run |
-| `uvx inv core.smoke` | Governance smoke tests |
+| `uv run inv core.stop` | Kill running Core process |
+| `uv run inv core.restart` | Stop + Run |
+| `uv run inv core.smoke` | Governance smoke tests |
+| **Quality & Logging Gates** | |
+| `uv run inv logging.check-schema` | Verify runtime event literals map to declared `EventType` constants and docs coverage |
+| `uv run inv logging.check-topics` | Fail on hardcoded `swarm.*` subjects outside allowed constants file |
+| `uv run inv quality.max-lines --limit 350` | Enforce max-lines rule on hot paths with temporary no-regression legacy caps |
 | **Interface** | |
-| `uvx inv interface.dev` | Start Next.js dev server (Turbopack) |
-| `uvx inv interface.build` | Production build |
-| `uvx inv interface.test` | Run Vitest unit tests |
-| `uvx inv interface.e2e` | Run Playwright E2E tests (requires running servers) |
-| `uvx inv interface.check` | Smoke-test running server (9 pages, no light-mode leaks) |
-| `uvx inv interface.stop` | Kill dev server |
-| `uvx inv interface.clean` | Clear `.next` cache |
-| `uvx inv interface.restart` | Full restart: stop → clean → build → dev → check |
+| `uv run inv interface.dev` | Start Next.js dev server (Turbopack) |
+| `uv run inv interface.build` | Production build |
+| `uv run inv interface.test` | Run Vitest unit tests |
+| `uv run inv interface.e2e` | Run Playwright E2E tests (requires running servers) |
+| `uv run inv interface.check` | Smoke-test running server (9 pages, no light-mode leaks) |
+| `uv run inv interface.stop` | Kill dev server |
+| `uv run inv interface.clean` | Clear `.next` cache |
+| `uv run inv interface.restart` | Full restart: stop → clean → build → dev → check |
 | **Database** | |
-| `uvx inv db.migrate` | Apply SQL migrations (idempotent) |
-| `uvx inv db.reset` | Drop + recreate + migrate |
-| `uvx inv db.status` | Show tables + row counts |
+| `uv run inv db.migrate` | Apply SQL migrations (idempotent) |
+| `uv run inv db.reset` | Drop + recreate + migrate |
+| `uv run inv db.status` | Show tables + row counts |
 | **Infrastructure** | |
-| `uvx inv k8s.up` | Canonical cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
-| `uvx inv k8s.reset` | Full cluster reset (teardown + canonical bring-up with readiness wait) |
-| `uvx inv k8s.status` | Cluster status |
-| `uvx inv k8s.deploy` | Deploy Helm chart |
-| `uvx inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
-| `uvx inv k8s.bridge` | Port-forward NATS, API, Postgres |
-| `uvx inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
+| `uv run inv k8s.up` | Canonical cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
+| `uv run inv k8s.reset` | Full cluster reset (teardown + canonical bring-up with readiness wait) |
+| `uv run inv k8s.status` | Cluster status |
+| `uv run inv k8s.deploy` | Deploy Helm chart |
+| `uv run inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
+| `uv run inv k8s.bridge` | Port-forward NATS, API, Postgres |
+| `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
 | **Cognitive** | |
-| `uvx inv cognitive.up` | Start vLLM + Diffusers (full stack) |
-| `uvx inv cognitive.status` | Health check providers |
-| `uvx inv cognitive.stop` | Kill cognitive processes |
+| `uv run inv cognitive.up` | Start vLLM + Diffusers (full stack) |
+| `uv run inv cognitive.status` | Health check providers |
+| `uv run inv cognitive.stop` | Kill cognitive processes |
 | **Lifecycle** | |
-| `uvx inv lifecycle.status` | Dashboard: Docker, Kind, PG, NATS, Core, Frontend, Ollama (with PIDs) |
-| `uvx inv lifecycle.up` | Idempotent bring-up: bridge → deps → core (background). `--frontend` `--build` |
-| `uvx inv lifecycle.down` | Clean teardown: core → frontend → port-forwards |
-| `uvx inv lifecycle.health` | Deep health probe: hits API endpoints with auth |
-| `uvx inv lifecycle.restart` | Full restart: down → settle → up. `--build` `--frontend` |
+| `uv run inv lifecycle.status` | Dashboard: Docker, Kind, PG, NATS, Core, Frontend, Ollama (with PIDs) |
+| `uv run inv lifecycle.up` | Idempotent bring-up: bridge → deps → core (background). `--frontend` `--build` |
+| `uv run inv lifecycle.down` | Clean teardown: core → frontend → port-forwards |
+| `uv run inv lifecycle.health` | Deep health probe: hits API endpoints with auth |
+| `uv run inv lifecycle.restart` | Full restart: down → settle → up. `--build` `--frontend` |
+| `uv run inv lifecycle.memory-restart` | Fresh memory reset workflow: down -> db.reset -> up -> health -> memory probes. `--build` `--frontend` |
 | **CI Pipeline** | |
 | `uvx inv ci.check` | Full CI: lint → test → build (with timers) |
 | `uvx inv ci.baseline --e2e` | Strict delivery baseline: core tests + interface build + interface typecheck + vitest + playwright |
@@ -1609,12 +1636,12 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Hardware Interface API + Channels** | [docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md](docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) — Hardware control-plane API and direct channel architecture for common protocols | [/docs?doc=arch-hardware-interface-api-v7](/docs?doc=arch-hardware-interface-api-v7) |
 | **Soma Symbiote + Host Actuation** | [docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md](docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md) — Thought profile contracts, growth-loop learning, and localhost host-actuation architecture | [/docs?doc=arch-soma-symbiote-growth-host-actuation-v7](/docs?doc=arch-soma-symbiote-growth-host-actuation-v7) |
 | **Agent Source Instantiation Template** | [docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md](docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md) — Canonical provider template with Ollama as default source plus ChatGPT/OpenAI, Claude, Gemini, vLLM, and LM Studio | [/docs?doc=arch-agent-source-instantiation-template-v7](/docs?doc=arch-agent-source-instantiation-template-v7) |
-| **Soma Extension-of-Self PRD** | [docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md](docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) — Detailed extension-of-self program: local Ollama contract, universal action rollout, sprinted lane plan, and quality gates | [/docs?doc=v7-soma-extension-self-prd](/docs?doc=v7-soma-extension-self-prd) |
+| **Soma Extension-of-Self PRD** | [docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md](docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) — Detailed extension-of-self program plus immediate delivery manifest sequencing (P0 logging, P1 cleanup, P2 meta-agent manifests, P3 workflow composer, P4 release gates) | [/docs?doc=v7-soma-extension-self-prd](/docs?doc=v7-soma-extension-self-prd) |
 | **Soma Team + Channel Architecture** | [docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) — Canonical inter-team/process/MCP channels, I/O envelopes, RAG memory boundaries | [/docs?doc=arch-soma-team-channels](/docs?doc=arch-soma-team-channels) |
 | **Workflow Composer Delivery Plan V7** | [docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md](docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md) — Airflow-style DAG workflow composer delivery plan, team lanes, git discipline, and invoke tooling gates | [/docs?doc=arch-workflow-composer-delivery-v7](/docs?doc=arch-workflow-composer-delivery-v7) |
 | **Swarm Operations** | [docs/SWARM_OPERATIONS.md](docs/SWARM_OPERATIONS.md) — Hierarchy, blueprints, activation, teams, tools, governance | [/docs?doc=swarm-operations](/docs?doc=swarm-operations) |
 | **Cognitive Architecture** | [docs/COGNITIVE_ARCHITECTURE.md](docs/COGNITIVE_ARCHITECTURE.md) — Providers, profiles, matrix UI, embedding | [/docs?doc=cognitive-architecture](/docs?doc=cognitive-architecture) |
-| **Signal Log Schema** | [docs/logging.md](docs/logging.md) — LogEntry format, NATS cortex.logs subject, field reference | [/docs?doc=logging-schema](/docs?doc=logging-schema) |
+| **Logging Standard (V7)** | [docs/logging.md](docs/logging.md) — Authoritative mission-events + memory-stream logging contract, taxonomy, onboarding checklist, and quality gates | [/docs?doc=logging-schema](/docs?doc=logging-schema) |
 | **Governance** | [docs/governance.md](docs/governance.md) — Policy enforcement, approvals, security | [/docs?doc=governance](/docs?doc=governance) |
 | **Testing** | [docs/TESTING.md](docs/TESTING.md) — Unit, integration, smoke protocols | [/docs?doc=testing](/docs?doc=testing) |
 | **V7 UI Verification (Archive)** | [docs/archive/v7-step-01-ui.md](docs/archive/v7-step-01-ui.md) — Historical manual UI checklist for V7 Step 01 navigation | [/docs?doc=v7-ui-verification](/docs?doc=v7-ui-verification) |
@@ -1660,6 +1687,9 @@ Latest full baseline sweep (2026-03-03, `feature/enterprise-multihost-soma-routi
 - `cd interface && npx vitest run --reporter=dot` -> pass (`55` files, `322` tests; warning-only noise)
 - `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
 - Worktree during sweep: dirty (`59` entries: `50` modified, `9` untracked), so this is a functional baseline, not a clean-tree release baseline.
+
+Latest strict baseline gate (2026-03-06):
+- `uvx inv ci.baseline` -> pass (logging schema + topic constants + max-lines gate + core tests + interface build/typecheck/vitest)
 
 If Playwright reports a missing browser executable, run: `cd interface && npx playwright install chromium`.
 

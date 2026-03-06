@@ -2,20 +2,25 @@
 
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
-Latest baseline (2026-03-02):
-- `cd core && go test ./... -count=1` -> pass
-- `cd interface && npx vitest run --reporter=dot` -> pass (`55` files, `322` tests)
-- `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
+Latest baseline (2026-03-06):
+- `uvx inv ci.baseline` -> pass (logging/topic/line gates + core tests + interface build + typecheck + vitest)
+- `cd core && go test ./... -count=1` -> pass (via baseline)
+- `cd interface && npx vitest run --reporter=dot` -> pass (via baseline)
+- Last full E2E sweep remains 2026-03-02: `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
 
 ## Quick Reference
 
 ```bash
-# Run from scratch/ root — always use uvx inv, never raw commands
-uvx inv core.test             # Go unit tests (all packages)
-uvx inv interface.test        # Vitest unit tests (jsdom)
-uvx inv interface.e2e         # Playwright E2E tests (requires running servers)
-uvx inv core.smoke            # Governance smoke tests
-uvx inv interface.check       # HTTP smoke test against running dev server
+# Run from scratch/ root — always use uv run inv. Do not use uvx --from invoke inv.
+uv run inv core.test             # Go unit tests (all packages)
+uv run inv interface.test        # Vitest unit tests (jsdom)
+uv run inv interface.e2e         # Playwright E2E tests (requires running servers)
+uv run inv core.smoke            # Governance smoke tests
+uv run inv interface.check       # HTTP smoke test against running dev server
+uv run inv logging.check-schema  # Event schema + docs coverage gate
+uv run inv logging.check-topics  # Hardcoded swarm topic gate
+uv run inv quality.max-lines --limit 350  # Hot-path max-lines gate with legacy caps
+uv run inv lifecycle.memory-restart --build --frontend  # Full memory reset + post-restart memory probes
 ```
 
 ---
@@ -189,6 +194,23 @@ OLLAMA_HOST=http://192.168.50.156:11434 go test -v -tags=integration ./tests/...
 ```bash
 uvx inv core.smoke
 ```
+
+---
+
+## Memory Restart Validation
+
+Use this when memory path behavior is suspect (stale stream, sitrep/read model drift, failed local state recovery).
+
+```bash
+uvx inv lifecycle.memory-restart --build --frontend
+```
+
+Expected command outcomes:
+- stack teardown/restart completes
+- health probe passes
+- memory probes return HTTP 200:
+  - `/api/v1/memory/stream`
+  - `/api/v1/memory/sitreps?limit=1`
 
 ---
 
