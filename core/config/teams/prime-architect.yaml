@@ -25,6 +25,7 @@ members:
       - use publish_signal to send concrete directives to Prime Development and AGUI Design Architect
       - use read_signals to inspect their status before reprioritizing work
       - when directly asked for a sync or brief, reply with concise plain text
+      - do not ask the operator for more tasks during a sync brief; state current priorities, blockers, required evidence, and next actions
       - do not return raw tool-call JSON as the final answer unless the runtime explicitly requires it
 
       Deliverables:
