@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -169,7 +170,7 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["delegate_task"] = &InternalTool{
 		Name:        "delegate_task",
-		Description: "Publish a task to a specific team's trigger topic for processing.",
+		Description: "Publish a task to a specific team's command topic for processing.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -189,6 +190,27 @@ func (r *InternalToolRegistry) registerAll() {
 			"required": []string{"team_id", "task"},
 		},
 		Handler: r.handleDelegateTask,
+	}
+
+	r.tools["create_team"] = &InternalTool{
+		Name:        "create_team",
+		Description: "Create and start a new team at runtime with a minimal manifest.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"team_id":       map[string]any{"type": "string", "description": "Unique team ID"},
+				"name":          map[string]any{"type": "string", "description": "Display name (optional)"},
+				"type":          map[string]any{"type": "string", "enum": []string{"action", "expression"}, "description": "Team type (default action)"},
+				"role":          map[string]any{"type": "string", "description": "Primary agent role (default worker)"},
+				"agent_id":      map[string]any{"type": "string", "description": "Optional first agent ID"},
+				"system_prompt": map[string]any{"type": "string", "description": "Optional first agent system prompt"},
+				"tools":         map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional first agent tools"},
+				"inputs":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional team input subjects"},
+				"deliveries":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional team delivery subjects"},
+			},
+			"required": []string{"team_id"},
+		},
+		Handler: r.handleCreateTeam,
 	}
 
 	r.tools["search_memory"] = &InternalTool{
@@ -446,7 +468,7 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["generate_image"] = &InternalTool{
 		Name:        "generate_image",
-		Description: "Generate an image from a text prompt using the local Diffusers media engine (Stable Diffusion XL). Returns generation status and metadata. Use for illustrations, concept art, diagrams, or any visual content.",
+		Description: "Generate an image from a text prompt using the local Diffusers media engine (Stable Diffusion XL). Generated images are cache-first and expire in 60 minutes unless explicitly saved with save_cached_image.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -456,6 +478,20 @@ func (r *InternalToolRegistry) registerAll() {
 			"required": []string{"prompt"},
 		},
 		Handler: r.handleGenerateImage,
+	}
+
+	r.tools["save_cached_image"] = &InternalTool{
+		Name:        "save_cached_image",
+		Description: "Persist a cached generated image into the workspace saved-media folder (or a specified subfolder). Use when user asks to keep an image beyond cache TTL.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"artifact_id": map[string]any{"type": "string", "description": "Optional image artifact ID. If omitted, saves the latest unsaved cached image."},
+				"folder":      map[string]any{"type": "string", "description": "Optional workspace-relative folder (default: saved-media)."},
+				"filename":    map[string]any{"type": "string", "description": "Optional target filename (extension inferred if omitted)."},
+			},
+		},
+		Handler: r.handleSaveCachedImage,
 	}
 
 	r.tools["research_for_blueprint"] = &InternalTool{
@@ -523,7 +559,25 @@ func (r *InternalToolRegistry) registerAll() {
 
 func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args map[string]any) (string, error) {
 	member, _ := args["member"].(string)
+	if strings.TrimSpace(member) == "" {
+		if v, _ := args["agent"].(string); strings.TrimSpace(v) != "" {
+			member = v
+		} else if v, _ := args["target"].(string); strings.TrimSpace(v) != "" {
+			member = v
+		}
+	}
+	member = normalizeCouncilMember(member)
+
 	question, _ := args["question"].(string)
+	if strings.TrimSpace(question) == "" {
+		if v, _ := args["query"].(string); strings.TrimSpace(v) != "" {
+			question = v
+		} else if v, _ := args["prompt"].(string); strings.TrimSpace(v) != "" {
+			question = v
+		} else if v, _ := args["message"].(string); strings.TrimSpace(v) != "" {
+			question = v
+		}
+	}
 	if member == "" || question == "" {
 		return "", fmt.Errorf("consult_council requires 'member' and 'question'")
 	}
@@ -572,13 +626,176 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 		return "", fmt.Errorf("NATS not available — cannot delegate task")
 	}
 
-	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID)
+	subject := fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)
 	if err := r.nc.Publish(subject, []byte(task)); err != nil {
 		return "", fmt.Errorf("failed to publish task to team %s: %w", teamID, err)
 	}
 	r.nc.Flush()
 
 	return fmt.Sprintf("Task delegated to team %s.", teamID), nil
+}
+
+func (r *InternalToolRegistry) handleCreateTeam(_ context.Context, args map[string]any) (string, error) {
+	if r.somaRef == nil {
+		return "", fmt.Errorf("Soma not available — cannot create team")
+	}
+
+	stringFrom := func(v any) string {
+		if s, ok := v.(string); ok {
+			return strings.TrimSpace(s)
+		}
+		return ""
+	}
+	normalizeTeamID := func(raw string) string {
+		s := strings.ToLower(strings.TrimSpace(raw))
+		s = strings.ReplaceAll(s, " ", "-")
+		s = strings.ReplaceAll(s, "_", "-")
+		return s
+	}
+	toStrings := func(v any) []string {
+		switch t := v.(type) {
+		case []string:
+			return t
+		case []any:
+			out := make([]string, 0, len(t))
+			for _, item := range t {
+				if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+					out = append(out, strings.TrimSpace(s))
+				}
+			}
+			return out
+		default:
+			return nil
+		}
+	}
+
+	manifestMap, _ := args["manifest"].(map[string]any)
+	merged := map[string]any{}
+	for k, v := range args {
+		merged[k] = v
+	}
+	for k, v := range manifestMap {
+		if _, exists := merged[k]; !exists {
+			merged[k] = v
+		}
+	}
+	// Nested agents[0] compatibility
+	if agentsRaw, ok := merged["agents"].([]any); ok && len(agentsRaw) > 0 {
+		if first, ok := agentsRaw[0].(map[string]any); ok {
+			if _, exists := merged["agent_id"]; !exists {
+				if v := stringFrom(first["agent_id"]); v != "" {
+					merged["agent_id"] = v
+				} else if v := stringFrom(first["id"]); v != "" {
+					merged["agent_id"] = v
+				}
+			}
+			if _, exists := merged["role"]; !exists {
+				if v := stringFrom(first["role"]); v != "" {
+					merged["role"] = v
+				}
+			}
+			if _, exists := merged["tools"]; !exists {
+				if v, ok := first["tools"]; ok {
+					merged["tools"] = v
+				}
+			}
+			if _, exists := merged["system_prompt"]; !exists {
+				if v := stringFrom(first["system_prompt"]); v != "" {
+					merged["system_prompt"] = v
+				}
+			}
+		}
+	}
+
+	teamID := normalizeTeamID(stringFrom(merged["team_id"]))
+	if teamID == "" {
+		teamID = normalizeTeamID(stringFrom(merged["id"]))
+	}
+	if teamID == "" {
+		teamID = normalizeTeamID(stringFrom(merged["team_name"]))
+	}
+	if teamID == "" {
+		return "", fmt.Errorf("create_team requires 'team_id'")
+	}
+
+	for _, m := range r.somaRef.ListTeams() {
+		if m != nil && m.ID == teamID {
+			out, _ := json.Marshal(map[string]any{
+				"status":  "already_exists",
+				"team_id": teamID,
+			})
+			return string(out), nil
+		}
+	}
+
+	name := stringFrom(merged["name"])
+	if name == "" {
+		name = teamID
+	}
+
+	teamType := TeamType(stringFrom(merged["type"]))
+	if teamType == "" {
+		teamType = TeamTypeAction
+	}
+	if teamType != TeamTypeAction && teamType != TeamTypeExpression {
+		teamType = TeamTypeAction
+	}
+
+	role := stringFrom(merged["role"])
+	if role == "" {
+		role = "worker"
+	}
+	agentID := normalizeTeamID(stringFrom(merged["agent_id"]))
+	if agentID == "" {
+		agentID = teamID + "-agent"
+	}
+	systemPrompt := stringFrom(merged["system_prompt"])
+	if systemPrompt == "" {
+		systemPrompt = fmt.Sprintf("You are %s in team %s. Execute assigned tasks and report outcomes.", role, teamID)
+	}
+
+	inputs := toStrings(merged["inputs"])
+	if len(inputs) == 0 {
+		inputs = []string{protocol.TopicGlobalBroadcast}
+	}
+	deliveries := toStrings(merged["deliveries"])
+	if len(deliveries) == 0 {
+		if teamType == TeamTypeExpression {
+			deliveries = []string{fmt.Sprintf(protocol.TopicTeamSignalStatus, teamID)}
+		} else {
+			deliveries = []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID)}
+		}
+	}
+	tools := toStrings(merged["tools"])
+
+	manifest := &TeamManifest{
+		ID:          teamID,
+		Name:        name,
+		Type:        teamType,
+		Description: "Runtime-created team",
+		Members: []protocol.AgentManifest{
+			{
+				ID:           agentID,
+				Role:         role,
+				SystemPrompt: systemPrompt,
+				Tools:        tools,
+				MaxIterations: 6,
+			},
+		},
+		Inputs:     inputs,
+		Deliveries: deliveries,
+	}
+
+	if err := r.somaRef.SpawnTeam(manifest); err != nil {
+		return "", fmt.Errorf("create_team failed: %w", err)
+	}
+
+	out, _ := json.Marshal(map[string]any{
+		"status":  "created",
+		"team_id": teamID,
+		"name":    name,
+	})
+	return string(out), nil
 }
 
 func normalizeDelegateTaskArgs(args map[string]any) (teamID string, task string) {
@@ -1196,6 +1413,22 @@ func (r *InternalToolRegistry) handleSendExternalMessage(ctx context.Context, ar
 
 func (r *InternalToolRegistry) handleReadSignals(ctx context.Context, args map[string]any) (string, error) {
 	subject, _ := args["subject"].(string)
+	if strings.TrimSpace(subject) == "" {
+		if v, _ := args["topic_pattern"].(string); strings.TrimSpace(v) != "" {
+			subject = v
+		} else if v, _ := args["topic"].(string); strings.TrimSpace(v) != "" {
+			subject = v
+		} else if v, _ := args["channel"].(string); strings.TrimSpace(v) != "" {
+			subject = v
+		} else {
+			for _, raw := range args {
+				if s, ok := raw.(string); ok && strings.HasPrefix(strings.TrimSpace(s), "swarm.") {
+					subject = strings.TrimSpace(s)
+					break
+				}
+			}
+		}
+	}
 	if subject == "" {
 		return "", fmt.Errorf("read_signals requires 'subject'")
 	}
@@ -1409,6 +1642,20 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		titleTrunc = titleTrunc[:80]
 	}
 	title := fmt.Sprintf("Generated: %s", titleTrunc)
+	expiresAt := time.Now().UTC().Add(60 * time.Minute).Format(time.RFC3339)
+
+	meta := map[string]any{
+		"cache_policy": "ephemeral",
+		"saved":        false,
+		"ttl_minutes":  60,
+		"expires_at":   expiresAt,
+		"prompt":       prompt,
+		"size":         size,
+	}
+	if len(imgResp.Data) > 0 && imgResp.Data[0].RevisedPrompt != "" {
+		meta["revised_prompt"] = imgResp.Data[0].RevisedPrompt
+	}
+	metaJSON, _ := json.Marshal(meta)
 
 	// Store the image as an artifact if DB is available
 	var artifactID string
@@ -1417,7 +1664,7 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 			INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status)
 			VALUES ('internal', 'image', $1, 'image/png', $2, $3, 'completed')
 			RETURNING id
-		`, title, b64Content, string(respBody)).Scan(&artifactID)
+		`, title, b64Content, metaJSON).Scan(&artifactID)
 		if err != nil {
 			log.Printf("generate_image: failed to store artifact: %v", err)
 		}
@@ -1425,17 +1672,167 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 
 	// Return structured result: message for LLM, artifact for HTTP pipeline
 	result := map[string]any{
-		"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). Stored as artifact.", prompt, size),
+		"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). Cached for 60 minutes unless saved.", prompt, size),
 		"artifact": map[string]any{
 			"id":           artifactID,
 			"type":         "image",
 			"title":        title,
 			"content_type": "image/png",
 			"content":      b64Content,
+			"cached":       true,
+			"expires_at":   expiresAt,
 		},
 	}
 	data, _ := json.Marshal(result)
 	return string(data), nil
+}
+
+func (r *InternalToolRegistry) handleSaveCachedImage(ctx context.Context, args map[string]any) (string, error) {
+	if r.db == nil {
+		return "", fmt.Errorf("database not available — cannot save cached image")
+	}
+
+	artifactID, _ := args["artifact_id"].(string)
+	folder, _ := args["folder"].(string)
+	filename, _ := args["filename"].(string)
+
+	var (
+		id          string
+		title       string
+		contentType string
+		contentB64  string
+	)
+
+	if strings.TrimSpace(artifactID) != "" {
+		err := r.db.QueryRowContext(ctx, `
+			SELECT id::text, title, content_type, content
+			FROM artifacts
+			WHERE id = $1::uuid
+			  AND artifact_type = 'image'
+		`, artifactID).Scan(&id, &title, &contentType, &contentB64)
+		if err != nil {
+			return "", fmt.Errorf("cached image %q not found", artifactID)
+		}
+	} else {
+		err := r.db.QueryRowContext(ctx, `
+			SELECT id::text, title, content_type, content
+			FROM artifacts
+			WHERE artifact_type = 'image'
+			  AND COALESCE(metadata->>'cache_policy', '') = 'ephemeral'
+			  AND COALESCE(metadata->>'saved', 'false') <> 'true'
+			ORDER BY created_at DESC
+			LIMIT 1
+		`).Scan(&id, &title, &contentType, &contentB64)
+		if err != nil {
+			return "", fmt.Errorf("no unsaved cached image found")
+		}
+	}
+
+	if strings.TrimSpace(contentB64) == "" {
+		return "", fmt.Errorf("cached image has no content")
+	}
+
+	data, err := base64.StdEncoding.DecodeString(contentB64)
+	if err != nil {
+		return "", fmt.Errorf("decode cached image: %w", err)
+	}
+
+	if strings.TrimSpace(folder) == "" {
+		folder = "saved-media"
+	}
+	if strings.TrimSpace(filename) == "" {
+		filename = sanitizeImageFilename(title)
+		if filename == "" {
+			filename = fmt.Sprintf("image-%s", id[:8])
+		}
+	}
+	if filepath.Ext(filename) == "" {
+		filename += imageFileExt(contentType)
+	}
+
+	targetPath, err := validateToolPath(filepath.ToSlash(filepath.Join(folder, filename)))
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+		return "", fmt.Errorf("create target directory: %w", err)
+	}
+	if err := os.WriteFile(targetPath, data, 0o644); err != nil {
+		return "", fmt.Errorf("write target file: %w", err)
+	}
+
+	workspace := os.Getenv("MYCELIS_WORKSPACE")
+	if workspace == "" {
+		workspace = "./workspace"
+	}
+	absWorkspace, _ := filepath.Abs(workspace)
+	rel, relErr := filepath.Rel(absWorkspace, targetPath)
+	if relErr != nil {
+		rel = targetPath
+	}
+	rel = filepath.ToSlash(rel)
+
+	_, err = r.db.ExecContext(ctx, `
+		UPDATE artifacts
+		SET file_path = $1,
+		    file_size_bytes = $2,
+		    metadata = COALESCE(metadata, '{}'::jsonb) ||
+		               jsonb_build_object('saved', true, 'saved_path', $1, 'saved_at', NOW())
+		WHERE id = $3::uuid
+	`, rel, int64(len(data)), id)
+	if err != nil {
+		return "", fmt.Errorf("update image save metadata: %w", err)
+	}
+
+	result := map[string]any{
+		"message": fmt.Sprintf("Saved cached image to %s", rel),
+		"artifact": map[string]any{
+			"id":         id,
+			"type":       "file",
+			"title":      filename,
+			"saved_path": rel,
+		},
+	}
+	out, _ := json.Marshal(result)
+	return string(out), nil
+}
+
+func sanitizeImageFilename(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	if s == "" {
+		return ""
+	}
+	var b strings.Builder
+	lastDash := false
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if !lastDash {
+			b.WriteRune('-')
+			lastDash = true
+		}
+	}
+	out := strings.Trim(b.String(), "-.")
+	if len(out) > 80 {
+		out = out[:80]
+	}
+	return out
+}
+
+func imageFileExt(contentType string) string {
+	switch strings.ToLower(strings.TrimSpace(contentType)) {
+	case "image/jpeg", "image/jpg":
+		return ".jpg"
+	case "image/webp":
+		return ".webp"
+	case "image/gif":
+		return ".gif"
+	default:
+		return ".png"
+	}
 }
 
 // ── Conversation Memory ─────────────────────────────────────────
@@ -1804,12 +2201,14 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 	sb.WriteString("6. Check if installed MCP tools can fulfill remaining external integration requirements or provide easier execution\n")
 	sb.WriteString("7. MCP Translation Procedure: map user intent -> operation/target/constraints/output, pick the narrowest installed MCP tool, then execute with minimal valid arguments\n")
 	sb.WriteString("8. Check if data would benefit from visualization → `store_artifact` with type=chart\n\n")
+	sb.WriteString("9. For explicit image requests, call `generate_image`; if user asks to keep the image, call `save_cached_image`\n\n")
 	sb.WriteString("**Post-response** (after completing a task):\n")
 	sb.WriteString("1. Store important learnings or decisions → `remember`\n")
 	sb.WriteString("2. Store significant outputs → `store_artifact`\n")
 	sb.WriteString("3. Distill successful complex approaches → `store_inception_recipe` (for future reuse)\n")
 	sb.WriteString("4. Report actions taken and outcomes clearly to the user\n")
 	sb.WriteString("5. For lead-agent workflows, checkpoint state via `temp_memory_write` and reload with `temp_memory_read`\n")
+	sb.WriteString("6. Generated images are ephemeral cache by default (60m). Persist only on user request via `save_cached_image`\n")
 
 	return sb.String()
 }
@@ -1914,8 +2313,10 @@ func (r *InternalToolRegistry) writeAgentTopology(sb *strings.Builder, agentID, 
 	sb.WriteString("### Your Identity & NATS Topology\n")
 	sb.WriteString(fmt.Sprintf("- **Agent ID**: `%s`\n", agentID))
 	sb.WriteString(fmt.Sprintf("- **Team ID**: `%s`\n", teamID))
-	sb.WriteString(fmt.Sprintf("- **Team trigger bus**: `swarm.team.%s.internal.trigger`\n", teamID))
-	sb.WriteString(fmt.Sprintf("- **Team respond bus**: `swarm.team.%s.internal.respond`\n", teamID))
+	sb.WriteString(fmt.Sprintf("- **Team command bus**: `swarm.team.%s.internal.command`\n", teamID))
+	sb.WriteString(fmt.Sprintf("- **Team status bus**: `swarm.team.%s.signal.status`\n", teamID))
+	sb.WriteString(fmt.Sprintf("- **Team result bus**: `swarm.team.%s.signal.result`\n", teamID))
+	sb.WriteString(fmt.Sprintf("- **Legacy internal worker buses**: `swarm.team.%s.internal.trigger`, `swarm.team.%s.internal.response`\n", teamID, teamID))
 	sb.WriteString(fmt.Sprintf("- **Direct address**: `swarm.council.%s.request`\n", agentID))
 
 	if len(inputs) > 0 {

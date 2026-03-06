@@ -40,6 +40,7 @@ Rules:
 - `signal.result` is not a substitute for persistence.
 - `telemetry` is not an operator-facing result channel.
 - Request-reply subjects are not shared event streams.
+- In runtime, operator-facing `signal.status` and `signal.result` subjects are wrapped with standardized metadata before publish.
 
 ---
 
@@ -102,6 +103,7 @@ Subject rules:
 - Team command input should land on `.internal.command`, not generic wildcard subjects.
 - Team status and result subjects must stay distinct even when they share the same producer.
 - New product subject families require architecture review before they become authoritative.
+- Current runtime preserves legacy internal worker subjects (`.internal.trigger`, `.internal.response`) behind the team boundary, but product-facing orchestration should target `.internal.command`, `.signal.status`, and `.signal.result`.
 
 ---
 

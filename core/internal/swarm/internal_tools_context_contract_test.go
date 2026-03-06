@@ -14,4 +14,10 @@ func TestBuildContext_IncludesMCPTranslationProcedure(t *testing.T) {
 	if !strings.Contains(ctx, "web access tasks") {
 		t.Fatalf("expected web-access execution rule in runtime context, got:\n%s", ctx)
 	}
+	if !strings.Contains(ctx, "Team command bus") {
+		t.Fatalf("expected standardized team command bus in runtime context, got:\n%s", ctx)
+	}
+	if !strings.Contains(ctx, "Team result bus") {
+		t.Fatalf("expected standardized team result bus in runtime context, got:\n%s", ctx)
+	}
 }
