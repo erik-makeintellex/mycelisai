@@ -15,12 +15,30 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - Use `uv run inv ...` for real task execution.
 - Use `uvx --from invoke inv -l` only as a compatibility probe.
 - Do not use bare `uvx inv ...`.
+- When invoke task behavior or task names change, update `README.md`, `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md` in the same slice.
 
 ## README Navigation Contract
 
 - Keep a structured `## README TOC` near the top of `README.md`.
 - When adding, removing, or renaming major README sections, update the TOC links in the same change.
 - Treat the README TOC as the stable navigation contract that future development agents should use before scanning the full file.
+
+## Canonical Docs Location
+
+- Put new canonical planning, target-delivery, UI-target, execution-model, and delivery-governance docs under `docs/architecture-library/`.
+- Treat `mycelis-architecture-v7.md` as the stable PRD index and compatibility entrypoint, not the place to grow another giant monolithic spec.
+
+## Feature Status Standard
+
+- Use these canonical status markers in planning and state docs: `REQUIRED`, `NEXT`, `ACTIVE`, `IN_REVIEW`, `COMPLETE`, `BLOCKED`.
+- Preferred meanings:
+  - `REQUIRED`: must exist for target delivery or gate pass, but not started/ready yet
+  - `NEXT`: highest-priority upcoming implementation slice
+  - `ACTIVE`: currently being worked
+  - `IN_REVIEW`: implemented and awaiting validation/review/gate decision
+  - `COMPLETE`: accepted and delivered
+  - `BLOCKED`: cannot advance until a named dependency or defect is resolved
+- Avoid inventing synonymous markers like "in progress", "done-ish", or "pending review" when one of the canonical markers fits.
 
 ## NATS Signal Standard
 

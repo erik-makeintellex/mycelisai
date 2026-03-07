@@ -213,6 +213,42 @@ export const DOC_MANIFEST: DocSection[] = [
         section: "Architecture",
         docs: [
             {
+                slug: "architecture-library-index",
+                label: "Architecture Library Index",
+                path: "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+                description: "Canonical modular index for target delivery, architecture, execution, UI, and testing guidance",
+            },
+            {
+                slug: "target-deliverable-v7",
+                label: "Target Deliverable V7",
+                path: "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
+                description: "Full product end state, recurring-plan modes, phase framing, and success criteria",
+            },
+            {
+                slug: "system-architecture-v7",
+                label: "System Architecture V7",
+                path: "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
+                description: "Canonical runtime layers, persistence model, deployment posture, and bus/storage rules",
+            },
+            {
+                slug: "execution-manifest-library-v7",
+                label: "Execution And Manifest Library V7",
+                path: "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
+                description: "Run lifecycle, manifest lifecycle, recurring-plan semantics, and activation rules",
+            },
+            {
+                slug: "ui-operator-experience-v7",
+                label: "UI And Operator Experience V7",
+                path: "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
+                description: "Operator journeys, anti-information-swarm design rules, and intuitive UI targets",
+            },
+            {
+                slug: "delivery-governance-testing-v7",
+                label: "Delivery Governance And Testing V7",
+                path: "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
+                description: "Delivery proof model, evidence requirements, and product-aligned testing expectations",
+            },
+            {
                 slug: "arch-overview",
                 label: "Overview",
                 path: "docs/architecture/OVERVIEW.md",
@@ -250,9 +286,9 @@ export const DOC_MANIFEST: DocSection[] = [
             },
             {
                 slug: "v7-architecture-prd",
-                label: "V7 Architecture PRD",
+                label: "V7 Architecture PRD Index",
                 path: "mycelis-architecture-v7.md",
-                description: "V7 product requirements — event spine, mission graph, observability mandate",
+                description: "Stable compatibility entrypoint pointing to the modular architecture library",
             },
             {
                 slug: "v7-mcp-baseline",

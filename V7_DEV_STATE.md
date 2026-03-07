@@ -1,27 +1,36 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-03-06
-> **References:** `mycelis-architecture-v7.md` (PRD), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
+> **Updated:** 2026-03-07
+> **References:** `mycelis-architecture-v7.md` (PRD index), `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md` (canonical planning library), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
 
 ---
 
 ## Progress Summary
 
+### Feature Status Legend
+
+- `REQUIRED`: must exist for target delivery or gate pass
+- `NEXT`: highest-priority upcoming slice
+- `ACTIVE`: currently in development
+- `IN_REVIEW`: implemented and awaiting validation/review
+- `COMPLETE`: delivered and accepted
+- `BLOCKED`: cannot advance until a dependency or defect is resolved
+
 ```
-Phase 19 (complete)
-    → V7 Step 01 / Team D — Navigation (complete)
-    → Workspace UX — Rename, LaunchCrew, MemoryExplorer redesign (complete)
-    → V7 Team A — Event Spine (complete)
-    → V7 Soma Workflow E2E — Consultations, run_id, Run Timeline UI, OpsWidget registry (complete)
-    → In-App Docs Browser — /docs page, 31-entry manifest, 8 user guides (complete)
-    → Provider CRUD + Mission Profiles + Reactive Subscriptions + Service Management (complete)
-    → V7 Team B — Trigger Engine (complete)
-    → Root-admin collaboration groups foundation — DB storage + scoped auth + UI monitor (complete)
+Phase 19 [COMPLETE]
+    → V7 Step 01 / Team D — Navigation [COMPLETE]
+    → Workspace UX — Rename, LaunchCrew, MemoryExplorer redesign [COMPLETE]
+    → V7 Team A — Event Spine [COMPLETE]
+    → V7 Soma Workflow E2E — Consultations, run_id, Run Timeline UI, OpsWidget registry [COMPLETE]
+    → In-App Docs Browser — /docs page, curated manifest, and user guides [COMPLETE]
+    → Provider CRUD + Mission Profiles + Reactive Subscriptions + Service Management [COMPLETE]
+    → V7 Team B — Trigger Engine [COMPLETE]
+    → Root-admin collaboration groups foundation — DB storage + scoped auth + UI monitor [COMPLETE]
     → Team A/B/C/Q groups hardening sprint (ACTIVE)
-    → V7 Team C — Scheduler (NEXT)
-    → V7 Causal Chain UI — ViewChain.tsx (after C)
-    → MCP Baseline — filesystem, memory, artifact-renderer, fetch (parallel)
-    → Resource API standardization + Workspace Explorer activation (in progress)
+    → V7 Team C — Scheduler [NEXT]
+    → V7 Causal Chain UI — ViewChain.tsx [REQUIRED]
+    → MCP Baseline — filesystem, memory, artifact-renderer, fetch [REQUIRED]
+    → Resource API standardization + Workspace Explorer activation [ACTIVE]
 ```
 
 ---
@@ -183,6 +192,15 @@ Latest integration checkpoint:
     - `README.md` now exposes a structured `README TOC` near the top for development-agent navigation
     - `AGENTS.md` now requires README TOC maintenance whenever major README sections change
     - docs regression coverage now verifies README TOC anchors resolve to live headings
+  - Canonical planning documentation refactored:
+    - monolithic `mycelis-architecture-v7.md` is now a compatibility PRD index instead of the detailed authority
+    - new modular planning library lives in `docs/architecture-library/`
+    - canonical planning is now split across target-deliverable, system-architecture, execution-manifest, UI-operator-experience, and delivery-governance docs
+    - README and in-app docs navigation now point future work toward the modular library instead of expanding one giant PRD file
+  - Invoke docs/task contract refreshed:
+    - canonical operator docs (`README.md`, `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, `ops/README.md`) now align to the live `uv run inv -l` surface for auth, lifecycle, CI, logging, quality, and team-sync tasks
+    - user recovery docs and workflow-composer delivery planning now use `uv run inv ...` for real task execution instead of stale executable bare `uvx inv ...` examples
+    - docs regression coverage now treats executable bare `uvx inv ...` lines in canonical docs as drift unless they are explicitly documented as unsupported negative controls
   - Test readiness for latest changes refreshed:
     - task/gate unit suites pass (`test_ci_tasks`, `test_auth_tasks`, `test_logging_tasks`, `test_quality_tasks`, `test_lifecycle_tasks`)
     - focused runner/task suite passes with `uv run inv ci.entrypoint-check` plus pytest task coverage
@@ -368,10 +386,10 @@ Detailed architecture and delivery planning is now locked for extension-of-self 
 
 | Deliverable | File |
 |------------|------|
-| V7 architecture update with extension-of-self modes, local Ollama contract, and parallel tracks | `mycelis-architecture-v7.md` (Part X) |
+| V7 architecture update with extension-of-self modes, local Ollama contract, and parallel tracks | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md` |
 | Detailed execution PRD for extension-of-self program (sprints, lanes, gates, tests) | `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md` |
 | Soma symbiote architecture expanded with explicit local Ollama communication contract | `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` |
-| Inception "harsh-truth" guardrails codified (heartbeat budgets, single-use-case ratchet, staged self-update, sandbox-first skill injection) | `mycelis-architecture-v7.md` (Part X), `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`, `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
+| Inception "harsh-truth" guardrails codified (heartbeat budgets, single-use-case ratchet, staged self-update, sandbox-first skill injection) | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`, `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
 | Integrated implementation-plan section for parallel package execution | `docs/V7_IMPLEMENTATION_PLAN.md` (Section 9) |
 
 ### Phase 19 Foundation
