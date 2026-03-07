@@ -16,6 +16,12 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - Use `uvx --from invoke inv -l` only as a compatibility probe.
 - Do not use bare `uvx inv ...`.
 
+## README Navigation Contract
+
+- Keep a structured `## README TOC` near the top of `README.md`.
+- When adding, removing, or renaming major README sections, update the TOC links in the same change.
+- Treat the README TOC as the stable navigation contract that future development agents should use before scanning the full file.
+
 ## NATS Signal Standard
 
 - Use canonical subject constants from Go protocol/topic definitions for product subjects. Do not hardcode `swarm.*` literals in runtime code.

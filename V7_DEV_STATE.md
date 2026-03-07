@@ -179,6 +179,10 @@ Latest integration checkpoint:
     - Workspace / Soma chat now uses `/api/v1/chat`; direct specialist targeting uses `/api/v1/council/{member}/chat`
     - blocked Workspace chat requests now set explicit `blocker` mode and render a Soma-specific recovery card instead of generic council wording
     - focused chat tests now prove route selection and blocker-state behavior for Workspace vs direct council interactions
+  - README navigation contract standardized:
+    - `README.md` now exposes a structured `README TOC` near the top for development-agent navigation
+    - `AGENTS.md` now requires README TOC maintenance whenever major README sections change
+    - docs regression coverage now verifies README TOC anchors resolve to live headings
   - Test readiness for latest changes refreshed:
     - task/gate unit suites pass (`test_ci_tasks`, `test_auth_tasks`, `test_logging_tasks`, `test_quality_tasks`, `test_lifecycle_tasks`)
     - focused runner/task suite passes with `uv run inv ci.entrypoint-check` plus pytest task coverage
