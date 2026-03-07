@@ -33,6 +33,8 @@
 Use `uvx --from invoke inv -l` only as a lightweight compatibility probe.
 Do not use bare `uvx inv ...`.
 Lifecycle tasks must not report success until Core `/healthz` is actually ready; open-port-only checks are insufficient.
+Background Core startup must write to `workspace/logs/core-startup.log` so lifecycle failures have a deterministic diagnostic surface.
+Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to close before reporting success.
 
 > **Tip:** If you `uv venv && .venv/Scripts/activate` (Windows) or `source .venv/bin/activate` (Linux), you can use `inv` directly.
 
@@ -68,7 +70,7 @@ Lifecycle tasks must not report success until Core `/healthz` is actually ready;
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv db.migrate` | Apply all SQL migrations (idempotent) |
+| `uv run inv db.migrate` | Apply canonical forward SQL migrations (`001_init_memory.sql` + `*.up.sql`) |
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | List tables + row counts |
 | `uv run inv db.create` | Create cortex database (if not exists) |
@@ -183,7 +185,7 @@ uv run inv k8s.up        # Kind + Helm + readiness gates (PostgreSQL -> NATS -> 
 uv run inv k8s.bridge
 
 # 4. Initialize database
-uv run inv db.migrate    # Apply all 21 migrations (idempotent)
+uv run inv db.migrate    # Apply canonical forward migrations (fresh reset verified on 2026-03-06)
 
 # 5. Start backend
 uv run inv core.run
@@ -286,6 +288,8 @@ defaults:
 | `DB_NAME` | `cortex` | PostgreSQL database |
 | `NATS_URL` | `nats://mycelis-core-nats:4222` | NATS broker |
 | `PORT` | `8080` | Core HTTP listen port |
+| `MYCELIS_WORKSPACE` | `./workspace` (local) / `/data/workspace` (K8s) | Workspace sandbox root for manifested files and filesystem tools |
+| `DATA_DIR` | `./workspace/artifacts` (local) / `/data/artifacts` (K8s) | Artifact storage root for file-backed outputs |
 | `OLLAMA_HOST` | — | Override Ollama endpoint |
 | `OPENAI_API_KEY` | — | OpenAI API key |
 | `ANTHROPIC_API_KEY` | — | Anthropic API key |
@@ -434,6 +438,13 @@ probes:
 - Exposes port 8080
 - ENTRYPOINT: `/app/server`
 
+### Persistent Storage Contract
+
+- Kubernetes mounts the data PVC at `/data`.
+- `MYCELIS_WORKSPACE` must point at `/data/workspace` for filesystem MCP access and manifested file output.
+- `DATA_DIR` must point at `/data/artifacts` for artifact blob/file storage.
+- Core prepares both paths at startup so mounted storage is immediately writable for manifestation requests.
+
 ### Startup Sequence
 
 ```
@@ -446,8 +457,9 @@ probes:
 7.  Connect NATS (retry 10x, continue degraded if fail)
 8.  Start Router → Soma → Axon → Overseer → Memory Subscription
 9.  Spawn standing teams from YAML (admin, council, genesis)
-10. Start HTTP server (port 8080), register routes
-11. Block on SIGINT
+10. Run bounded MCP bootstrap/reconnect work so one hung server cannot block boot indefinitely
+11. Start HTTP server (port 8080), register routes
+12. Block on SIGINT
 ```
 
 ### Graceful Shutdown

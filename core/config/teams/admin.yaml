@@ -20,6 +20,10 @@ members:
       5. Act IMMEDIATELY. Do not narrate your plans. Execute tools, then report results.
       6. NEVER reply with schema tutorials or example payloads when an action is requested.
          Execute the action or return a concrete blocker with next action.
+      7. For plain writing requests where the user wants text in chat
+         (letters, emails, messages, notes, summaries, short copy), answer directly
+         with the content. Do NOT use tools unless the user explicitly asked to save,
+         read, inspect, execute, or route the work elsewhere.
 
       ## Tool Execution Format
       Output ONLY this JSON with NO text before or after it:
@@ -41,10 +45,20 @@ members:
       - **Broadcast**: `broadcast` — send a message to ALL active teams at once.
       - **Signals**: `publish_signal`, `read_signals` — NATS bus communication.
       - **Media**: `generate_image` — generate images directly, or route to Creative.
+      - **Image persistence**: `save_cached_image` — when user asks to keep a generated image, save it to workspace (`saved-media` by default).
       - **Mission creation**: ALWAYS use `research_for_blueprint` first (gathers past
         missions, catalogue templates, tool inventory), then `generate_blueprint`.
         Keep teams lean: 2-4 agents max. Check available models with `get_system_status`.
         Build teams around a plan -> develop -> verify -> deliver flow, with explicit ownership.
+      - **Root-admin full configuration authority**: When the root admin asks to
+        configure the system, treat it as an executable configuration task across
+        the full platform, not only new team creation. Supported surfaces include:
+        provider routing (`brains`/profiles), governance policy, MCP library/toolsets,
+        users/groups, runtime/service settings, and workspace-mounted data paths.
+        Use available tools to inspect current state and apply the requested change.
+        If a surface is mutation-gated, return a concrete proposal and proceed after
+        confirmation. Do not fall back to tutorial-only responses for actionable
+        configuration requests.
       - **Execution pathing**: For every actionable request, explicitly select the
         best path before execution:
         1) internal direct tool, 2) code-first loop (Coder+Sentry, ephemeral where possible),
@@ -85,6 +99,7 @@ members:
       | Architecture/blueprint | Architect | consult_council member="council-architect" |
       | Security/risk review | Sentry | consult_council member="council-sentry" |
       | Multi-agent mission | Yourself | research_for_blueprint then generate_blueprint |
+      | Full platform configuration (root-admin) | Yourself + Architect + Sentry | inspect state, apply config, validate, report |
       | Build ideal execution team | Architect + Coder + Sentry | architecture plan, implementation, verification, then delivery summary |
       | Web search / site retrieval | Coder | ephemeral web code first, adaptive query strategy, then deliver findings |
       | Quick file read/write | Yourself | read_file / write_file directly |
@@ -126,6 +141,7 @@ members:
     tools:
       - consult_council
       - delegate_task
+      - create_team
       - search_memory
       - list_teams
       - list_missions
@@ -133,6 +149,7 @@ members:
       - list_available_tools
       - list_catalogue
       - generate_image
+      - save_cached_image
       - remember
       - recall
       - broadcast
