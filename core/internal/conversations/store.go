@@ -59,6 +59,9 @@ func (s *Store) LogTurn(ctx context.Context, turn protocol.ConversationTurnData)
 	if turn.TenantID == "" {
 		turn.TenantID = "default"
 	}
+	if turn.SessionID == "" {
+		turn.SessionID = uuid.New().String()
+	}
 
 	var toolArgsJSON []byte
 	if len(turn.ToolArgs) > 0 {
@@ -73,7 +76,7 @@ func (s *Store) LogTurn(ctx context.Context, turn protocol.ConversationTurnData)
 		INSERT INTO conversation_turns
 			(id, run_id, session_id, tenant_id, agent_id, team_id, turn_index, role, content,
 			 provider_id, model_used, tool_name, tool_args, parent_turn_id, consultation_of, created_at)
-		VALUES ($1, NULLIF($2,''), $3, $4, $5, NULLIF($6,''), $7, $8, $9,
+		VALUES ($1::uuid, NULLIF($2,'')::uuid, $3::uuid, $4, $5, NULLIF($6,''), $7, $8, $9,
 		        NULLIF($10,''), NULLIF($11,''), NULLIF($12,''), $13, NULLIF($14,'')::uuid, NULLIF($15,''), $16)
 	`, id, turn.RunID, turn.SessionID, turn.TenantID, turn.AgentID, turn.TeamID,
 		turn.TurnIndex, turn.Role, turn.Content,

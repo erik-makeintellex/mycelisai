@@ -76,11 +76,62 @@ def test_kill_pid_ignores_windows_taskkill_timeout(monkeypatch):
     monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
 
     def fake_run(*args, **kwargs):
-        raise subprocess.TimeoutExpired(cmd="taskkill", timeout=15)
+        raise subprocess.TimeoutExpired(cmd="taskkill", timeout=5)
 
     monkeypatch.setattr(lifecycle.subprocess, "run", fake_run)
 
     lifecycle._kill_pid(1234)
+
+
+def test_run_best_effort_ignores_timeout(monkeypatch):
+    def fake_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd="cleanup", timeout=10)
+
+    monkeypatch.setattr(lifecycle.subprocess, "run", fake_run)
+
+    lifecycle._run_best_effort(["dummy"], timeout=10)
+
+
+def test_wait_for_port_closed_returns_true_when_port_drops(monkeypatch):
+    states = iter([True, False])
+    monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: next(states))
+    monkeypatch.setattr(lifecycle.time, "sleep", lambda _n: None)
+
+    assert lifecycle._wait_for_port_closed(8081, "Core", timeout=1, interval=0.01)
+
+
+def test_down_uses_best_effort_cleanup_without_hanging(monkeypatch):
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
+    monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: commands.append(["bridges"]))
+    monkeypatch.setattr(lifecycle, "_wait_for_port_closed", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
+    monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
+    monkeypatch.setattr(lifecycle, "_run_best_effort", lambda cmd, timeout=10: commands.append(cmd))
+    monkeypatch.setattr(lifecycle.time, "sleep", lambda _n: None)
+
+    lifecycle.down.body(Context())
+
+    assert any(cmd and cmd[:3] == ["powershell", "-NoProfile", "-Command"] for cmd in commands)
+    assert any("Get-Process server" in " ".join(cmd) for cmd in commands)
+    assert ["bridges"] in commands
+
+
+def test_down_fails_when_managed_ports_remain(monkeypatch):
+    monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: True)
+    monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: None)
+    monkeypatch.setattr(lifecycle, "_run_best_effort", lambda cmd, timeout=10: None)
+    monkeypatch.setattr(lifecycle, "is_windows", lambda: False)
+    monkeypatch.setattr(lifecycle.time, "sleep", lambda _n: None)
+    monkeypatch.setattr(
+        lifecycle,
+        "_port_open",
+        lambda port, host="127.0.0.1", timeout=1.0: port == lifecycle.INTERFACE_PORT,
+    )
+
+    with pytest.raises(SystemExit, match="STACK DOWN INCOMPLETE"):
+        lifecycle.down.body(Context())
 
 
 def test_wait_for_http_ok_returns_true_on_200(monkeypatch):
@@ -96,6 +147,14 @@ def test_wait_for_http_ok_returns_true_on_200(monkeypatch):
     assert calls == ["http://localhost:8081/healthz"]
 
 
+def test_core_startup_log_path_points_to_workspace_logs():
+    path = lifecycle._core_startup_log_path()
+
+    assert path.name == "core-startup.log"
+    assert "workspace" in str(path)
+    assert "logs" in str(path)
+
+
 def test_up_fails_when_core_health_never_becomes_ready(monkeypatch):
     monkeypatch.setattr(Path, "exists", lambda self: True)
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: None)
@@ -104,5 +163,5 @@ def test_up_fails_when_core_health_never_becomes_ready(monkeypatch):
     monkeypatch.setattr(lifecycle, "_port_open", lambda port, host="127.0.0.1", timeout=1.0: False if port == lifecycle.API_PORT else True)
     monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: False)
 
-    with pytest.raises(SystemExit, match="Core port opened but /healthz never became ready"):
+    with pytest.raises(SystemExit, match="core-startup.log"):
         lifecycle.up.body(Context(), frontend=False, build=False)

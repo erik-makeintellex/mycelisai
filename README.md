@@ -71,6 +71,8 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Event Spine (V7):** Dual-layer event architecture — CTS for real-time signal transport, MissionEventEnvelope for persistent audit-grade records. Every execution creates a `mission_run` with unique `run_id`. Events persisted to `mission_events` before CTS publish. CTS payloads reference `mission_event_id` for timeline reconstruction.
 - **Trigger Rules Engine (V7):** Declarative IF/THEN trigger rules evaluated on event ingest. Supports cooldown, recursion guard (max depth), and concurrency guard. Default mode: propose-only. Auto-execute requires explicit policy allowance.
 - **Conversation Log (V7):** Full-fidelity agent conversation persistence — every system prompt, user message, tool call, tool result, and assistant response stored in `conversation_turns` table (migration 030). Separate from lightweight `mission_events` — turns are full-text blobs (10KB+). Session-scoped with `session_id`; run-linked when available. `ConversationLogger` interface propagated Soma → Team → Agent, matching `EventEmitter` pattern.
+- **Soma Direct-Draft Guard:** Plain chat drafting requests (letters, emails, short written content) are answered directly in-chat. Soma should not invoke file/system/council tools for these unless the user explicitly asks to save, inspect, execute, or delegate.
+- **Deterministic Local Teardown:** `uv run inv lifecycle.down` uses bounded cleanup timeouts and waits for Core/Frontend ports to close so local test runs do not hang on stale shutdown processes.
 - **Operator Interjection (V7):** Mid-run user redirection via NATS mailbox (`swarm.agent.{id}.interjection`). Agents check a mutex-protected buffer between ReAct iterations. Interjections are injected as `[OPERATOR INTERJECTION]` messages and logged as `role=interjection` turns. Only applies to in-progress runs with active agents.
 - **Inception Recipes (V7):** Structured prompt pattern library for knowledge reuse. When Soma completes a complex task, it can distill an inception recipe capturing: intent pattern, key parameters, example prompt, and outcome shape. Recipes are dual-persisted — RDBMS (`inception_recipes` table, migration 031) for structured queries + pgvector (`context_vectors`) for semantic recall. Quality feedback loop (`quality_score` 0.0–1.0) + usage tracking. Automatically recalled during `research_for_blueprint` pipeline.
 - **Permanent Memory Growth Loop (Planned V7.x):** Postgres + pgvector loop (`capture -> distill -> vectorize -> retrieve -> promote -> rollback`) with a strict no-silence preference rule and 3-layer local continuity memory (`hot/context/archive`) synced back to system-of-record.
@@ -201,7 +203,7 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | **Delegation Trace** | When Soma calls `consult_council` during its ReAct loop, a `DelegationTrace` card appears below the response showing which council members were consulted and a 300-char summary of their contribution. Color-coded per member (Architect=info, Coder=success, Creative=warning, Sentry=danger). |
 | **Live activity** | While Soma processes, a `SomaActivityIndicator` reads `streamLogs` for `tool.invoked` events and shows contextual text: "Consulting Coder...", "Generating blueprint...", "Searching memory..." instead of a static spinner. |
 | **Broadcast mode** | Toggle or `/all` prefix — sends message to ALL active teams via NATS |
-| **File I/O** | Admin + council agents can `read_file` and `write_file` within the workspace sandbox (`MYCELIS_WORKSPACE`, default `./workspace`). Paths must resolve inside the boundary — symlink escapes are detected. Max 1MB per write. Sentry is read-only. |
+| **File I/O** | Admin + council agents can `read_file` and `write_file` within the workspace sandbox (`MYCELIS_WORKSPACE`, default `./workspace`; Kubernetes default `/data/workspace`). Paths must resolve inside the boundary — symlink escapes are detected. Max 1MB per write. Sentry is read-only. |
 | **Tool access** | 21 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, save_cached_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, store_artifact, summarize_conversation |
 | **Image cache policy** | Generated images are cache-first and expire after 60 minutes unless explicitly persisted to `workspace/saved-media` via `save_cached_image` or artifact save API |
 | **MCP tools** | Any installed MCP server tools are also available (filesystem, fetch, brave-search, etc.) |
@@ -253,6 +255,12 @@ Current runtime behavior:
   /reports
   /exports
 ```
+
+Kubernetes storage contract:
+- the Helm chart mounts the persistent data PVC at `/data`
+- manifested filesystem output uses `MYCELIS_WORKSPACE=/data/workspace`
+- artifact blob/file storage uses `DATA_DIR=/data/artifacts`
+- both paths are created on Core startup so requested material lands on mounted storage, not the container filesystem
 
 **Tool risk classification:**
 
@@ -1337,6 +1345,11 @@ This workflow runs:
    - `GET /api/v1/memory/stream`
    - `GET /api/v1/memory/sitreps?limit=1`
 
+Current guarantees:
+- `db.reset` applies only the canonical forward migration path (`001_init_memory.sql` plus `*.up.sql`)
+- PostgreSQL bootstrap enables both `vector` and `pg_trgm`, so trigram indexes build cleanly on fresh reset
+- if background Core startup fails during `lifecycle.up` or `lifecycle.memory-restart`, inspect `workspace/logs/core-startup.log`
+
 ### 6. Configure Cognitive Providers
 
 - **UI:** `/settings` → **Cognitive Matrix** tab — change provider routing, configure endpoints.
@@ -1504,7 +1517,7 @@ Run from `scratch/` root using `uv run inv`:
 | `uv run inv interface.clean` | Clear `.next` cache |
 | `uv run inv interface.restart` | Full restart: stop → clean → build → dev → check |
 | **Database** | |
-| `uv run inv db.migrate` | Apply SQL migrations (idempotent) |
+| `uv run inv db.migrate` | Apply canonical forward SQL migrations (`001_init_memory.sql` + `*.up.sql`) |
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | Show tables + row counts |
 | **Infrastructure** | |
@@ -1521,11 +1534,11 @@ Run from `scratch/` root using `uv run inv`:
 | `uv run inv cognitive.stop` | Kill cognitive processes |
 | **Lifecycle** | |
 | `uv run inv lifecycle.status` | Dashboard: Docker, Kind, PG, NATS, Core, Frontend, Ollama (with PIDs) |
-| `uv run inv lifecycle.up` | Idempotent bring-up: bridge → deps → core (background). `--frontend` `--build` |
+| `uv run inv lifecycle.up` | Idempotent bring-up: bridge → deps → core (background, `/healthz` gated, startup log at `workspace/logs/core-startup.log`). `--frontend` `--build` |
 | `uv run inv lifecycle.down` | Clean teardown: core → frontend → port-forwards |
 | `uv run inv lifecycle.health` | Deep health probe: hits API endpoints with auth |
 | `uv run inv lifecycle.restart` | Full restart: down → settle → up. `--build` `--frontend` |
-| `uv run inv lifecycle.memory-restart` | Fresh memory reset workflow: down -> db.reset -> up -> health -> memory probes. `--build` `--frontend` |
+| `uv run inv lifecycle.memory-restart` | Fresh memory reset workflow: down -> db.reset -> up -> health -> memory probes. Verified passing on 2026-03-06. `--build` `--frontend` |
 | **CI Pipeline** | |
 | `uv run inv ci.check` | Full CI: lint → test → build (with timers) |
 | `uv run inv ci.baseline --e2e` | Strict delivery baseline: core tests + interface build + interface typecheck + vitest + playwright |
@@ -1601,7 +1614,8 @@ Three workflows run on push/PR to `main` and `develop`:
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `MYCELIS_API_KEY` | *(required)* | API authentication key. Server refuses to start without this. |
-| `MYCELIS_WORKSPACE` | `./workspace` | Workspace sandbox root for agent file tools (`read_file`/`write_file`). |
+| `MYCELIS_WORKSPACE` | `./workspace` | Workspace sandbox root for agent file tools (`read_file`/`write_file`). Kubernetes default: `/data/workspace` on the mounted PVC. |
+| `DATA_DIR` | `./workspace/artifacts` (local) | Artifact storage root for file-backed outputs. Kubernetes default: `/data/artifacts` on the mounted PVC. |
 | `MYCELIS_API_HOST` | `localhost` | Core API host |
 | `MYCELIS_API_PORT` | `8081` | Core API port |
 | `MYCELIS_INTERFACE_HOST` | `localhost` | Next.js dev server host |

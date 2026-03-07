@@ -145,6 +145,27 @@ Latest integration checkpoint:
     - `lifecycle.up` now requires Core `/healthz` readiness after the port opens instead of printing a false-success ready state
     - Core startup now fails fast when the HTTP surface never becomes healthy, which makes restart and memory-restart behavior deterministic for operators
     - lifecycle unit coverage now includes the unhealthy-Core-after-port-open failure path
+  - `P0` gate is now passed live:
+    - `uv run inv lifecycle.memory-restart --frontend` completed successfully on 2026-03-06 after a full DB reset, stack bring-up, health sweep, and memory endpoint verification
+    - `docs/architecture/NEXT_TARGET_GATED_DELIVERY_PROGRAM.md` now promotes `P1` to active
+  - Database reset/migration path standardized for deterministic recovery:
+    - `db.migrate` now applies only `001_init_memory.sql` plus `*.up.sql`; `.down.sql` files are excluded from the forward path
+    - `psql` execution now uses `ON_ERROR_STOP=1`, so reset-time SQL failures stop the workflow instead of printing false-success output
+    - `001_init_memory.sql` now enables `pg_trgm` in addition to `vector`, which resolves the prior trigram-index failures in migrations `019` and `031`
+  - Core startup diagnostics and MCP bootstrap reliability hardened:
+    - lifecycle background Core launches now write to `workspace/logs/core-startup.log`
+    - MCP default bootstrap now uses bounded per-server connect timeouts, preventing a hung default MCP server from blocking `HTTP Server listening on :8081`
+  - Persistent manifestation storage standardized for Kubernetes:
+    - filesystem MCP bootstrap now resolves from `MYCELIS_WORKSPACE` instead of incorrectly reusing `DATA_DIR`
+    - Helm now mounts the data PVC at `/data` and sets `MYCELIS_WORKSPACE=/data/workspace` plus `DATA_DIR=/data/artifacts`
+    - Core prepares workspace and artifact directories on startup so manifested material lands on mounted storage
+  - Soma/Council chat failure path hardened:
+    - conversation turn persistence now casts `run_id` and `session_id` to UUID correctly for standing-team chat turns
+    - direct draft requests such as simple letters/messages now prefer in-chat text responses over unnecessary tool execution
+    - admin prompt contract now explicitly forbids tool use for plain drafting unless the user requested file/system/delegation actions
+  - Lifecycle teardown hardened for local testing:
+    - shutdown cleanup helpers now use bounded subprocess timeouts so hung `taskkill` / `kubectl` cleanup cannot stall `uv run inv lifecycle.down`
+    - `lifecycle.down` now waits for Core and Frontend ports to close before reporting completion
   - UI signal normalization aligned to the standard:
     - shared frontend normalization now accepts both legacy SSE signals and standardized signal envelopes
     - signal detail surfaces now expose source kind, payload kind, source channel, and run/team/agent metadata when present
@@ -177,9 +198,12 @@ Verification evidence (latest targeted slice):
 - `uv run inv lifecycle.up --frontend`
 - `uv run inv lifecycle.health`
 - `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
+- `cd core && go test ./internal/mcp ./internal/swarm ./pkg/protocol -count=1`
 - `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
 - `cd interface && npx tsc --noEmit`
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q`
+- `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q`
+- `uv run inv lifecycle.memory-restart --frontend`
 
 Verification evidence (latest full sweep — 2026-03-03):
 - `cd core && go test ./... -count=1` -> pass

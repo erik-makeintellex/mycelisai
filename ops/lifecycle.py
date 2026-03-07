@@ -37,6 +37,8 @@ SERVICES = {
     "ollama":   {"port": 11434,          "label": "Ollama"},
 }
 
+CORE_STARTUP_LOG = ROOT_DIR / "workspace" / "logs" / "core-startup.log"
+
 
 # ── Low-Level Probes ─────────────────────────────────────────────────
 
@@ -74,6 +76,17 @@ def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1
     return False
 
 
+def _wait_for_port_closed(port: int, label: str, timeout: int = 3, interval: float = 0.25) -> bool:
+    """Block until a port is no longer open or timeout expires."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not _port_open(port):
+            return True
+        time.sleep(interval)
+    print(f"  WARN: {label} still holds port {port} after {timeout}s")
+    return False
+
+
 def _wait_for_http_ok(
     url: str,
     label: str,
@@ -90,6 +103,11 @@ def _wait_for_http_ok(
         time.sleep(interval)
     print(f"  TIMEOUT waiting for {label} at {url} ({timeout}s)")
     return False
+
+
+def _core_startup_log_path() -> Path:
+    """Return the log file used for background Core startup diagnostics."""
+    return CORE_STARTUP_LOG
 
 
 def _find_pid_on_port(port: int) -> int | None:
@@ -130,8 +148,11 @@ def _kill_pid(pid: int):
     """Kill a process by PID without failing the workflow on slow OS cleanup."""
     try:
         if is_windows():
-            subprocess.run(["taskkill", "/F", "/PID", str(pid)],
-                           capture_output=True, timeout=15)
+            subprocess.run(
+                ["powershell", "-NoProfile", "-Command", f"Stop-Process -Id {pid} -Force"],
+                capture_output=True,
+                timeout=5,
+            )
         else:
             subprocess.run(["kill", "-9", str(pid)],
                            capture_output=True, timeout=5)
@@ -141,13 +162,37 @@ def _kill_pid(pid: int):
         pass
 
 
+def _run_best_effort(cmd: list[str], timeout: int = 5):
+    """Run a cleanup command without letting a hung subprocess block the workflow."""
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def _remaining_managed_services() -> list[str]:
+    """Return managed service labels that still have listening ports."""
+    return [
+        svc["label"]
+        for key, svc in SERVICES.items()
+        if key in ("postgres", "nats", "core", "frontend") and _port_open(svc["port"])
+    ]
+
+
+def _service_keys_by_label(labels: list[str]) -> list[str]:
+    keys: list[str] = []
+    for key, svc in SERVICES.items():
+        if key in ("postgres", "nats", "core", "frontend") and svc["label"] in labels:
+            keys.append(key)
+    return keys
+
+
 def _kill_port(port: int, label: str) -> bool:
     """Kill whatever is listening on the given port. Returns True if killed."""
     pid = _find_pid_on_port(port)
     if pid:
         _kill_pid(pid)
-        if _port_open(port):
-            print(f"  WARN: {label} (PID {pid}) did not release port {port} yet")
+        if not _wait_for_port_closed(port, label):
             return False
         print(f"  Killed {label} (PID {pid}) on port {port}")
         return True
@@ -226,25 +271,30 @@ def _start_core_background():
         return False
 
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    log_path = _core_startup_log_path()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if is_windows():
-        subprocess.Popen(
-            [str(bin_path)],
-            cwd=str(CORE_DIR),
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-        )
-    else:
-        subprocess.Popen(
-            [str(bin_path)],
-            cwd=str(CORE_DIR),
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
+    with log_path.open("w", encoding="utf-8") as log_file:
+        if is_windows():
+            subprocess.Popen(
+                [str(bin_path)],
+                cwd=str(CORE_DIR),
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+            )
+        else:
+            subprocess.Popen(
+                [str(bin_path)],
+                cwd=str(CORE_DIR),
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
     return True
 
 
@@ -366,7 +416,7 @@ def up(c, frontend=False, build=False):
             else:
                 raise SystemExit(
                     "STACK UP FAILED: Core did not open its port in time. "
-                    "Check logs with 'uv run inv core.run'."
+                    f"Check {_core_startup_log_path()} or run 'uv run inv core.run'."
                 )
 
     if _wait_for_http_ok(f"http://{API_HOST}:{API_PORT}/healthz", "Core health", timeout=45):
@@ -374,7 +424,7 @@ def up(c, frontend=False, build=False):
     else:
         raise SystemExit(
             "STACK UP FAILED: Core port opened but /healthz never became ready. "
-            "Check logs with 'uv run inv core.run'."
+            f"Check {_core_startup_log_path()} or run 'uv run inv core.run'."
         )
     print()
 
@@ -427,16 +477,40 @@ def down(c):
     else:
         # Fallback: kill by process name
         if is_windows():
-            subprocess.run(["taskkill", "/F", "/IM", "server.exe"],
-                           capture_output=True)
+            _run_best_effort(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "Get-Process server -ErrorAction SilentlyContinue | Stop-Process -Force",
+                ]
+            )
         else:
-            subprocess.run(["pkill", "-f", "bin/server"], capture_output=True)
+            _run_best_effort(["pkill", "-f", "bin/server"])
+        _wait_for_port_closed(API_PORT, "Core")
         print("  Core stopped (by name)")
 
     # 2. Frontend
     print("[2/3] Stopping Frontend...")
     if not _kill_port(INTERFACE_PORT, "Frontend"):
-        print("  Frontend not running")
+        if is_windows():
+            _run_best_effort(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | "
+                    "Where-Object { $_.CommandLine -match 'next dev --port 3000' } | "
+                    "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+                ],
+            )
+        else:
+            _run_best_effort(["pkill", "-f", "next dev --port 3000"])
+
+        if _wait_for_port_closed(INTERFACE_PORT, "Frontend"):
+            print("  Frontend stopped (by command line)")
+        else:
+            print("  Frontend not running")
 
     # 3. Port-forwards
     print("[3/3] Stopping port-forwards...")
@@ -444,16 +518,40 @@ def down(c):
 
     # Also kill any remaining kubectl port-forward processes
     if is_windows():
-        subprocess.run(
+        _run_best_effort(
             ["powershell", "-NoProfile", "-Command",
              "Get-Process kubectl -ErrorAction SilentlyContinue | "
              "Where-Object { $_.CommandLine -match 'port-forward' } | "
              "Stop-Process -Force"],
-            capture_output=True,
         )
     else:
-        subprocess.run(["pkill", "-f", "kubectl port-forward"],
-                       capture_output=True)
+        _run_best_effort(["pkill", "-f", "kubectl port-forward"])
+
+    remaining = []
+    deadline = time.time() + 8
+    while time.time() < deadline:
+        remaining = _remaining_managed_services()
+        if not remaining:
+            break
+        time.sleep(0.5)
+    if remaining:
+        # Windows can report the listener a moment after the first kill wave; retry by port.
+        for key in _service_keys_by_label(remaining):
+            svc = SERVICES[key]
+            _kill_port(svc["port"], svc["label"])
+
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            remaining = _remaining_managed_services()
+            if not remaining:
+                break
+            time.sleep(0.5)
+    if remaining:
+        raise SystemExit(
+            "STACK DOWN INCOMPLETE: remaining listeners on "
+            + ", ".join(remaining)
+            + ". Re-run lifecycle.down or inspect the reported ports/PIDs with lifecycle.status."
+        )
 
     print("\nAll services stopped.")
 

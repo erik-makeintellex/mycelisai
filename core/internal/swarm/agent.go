@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -353,7 +354,50 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	var toolsUsed []string
 	var artifacts []protocol.ChatArtifactRef
 	var consultations []protocol.ConsultationEntry
+	directAnswerPreferred := preferDirectDraftResponse(input)
 	if a.toolExecutor != nil && len(a.Manifest.Tools) > 0 {
+		reinferWithToolFeedback := func(toolName string, feedback string) bool {
+			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "assistant", Content: responseText})
+			req.Messages = append(req.Messages, cognitive.ChatMessage{
+				Role:    "user",
+				Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolName, feedback),
+			})
+			updated, inferErr := a.brain.InferWithContract(a.ctx, req)
+			if inferErr != nil {
+				log.Printf("Agent [%s] re-inference after tool feedback failed: %v", a.Manifest.ID, inferErr)
+				responseText = feedback
+				return false
+			}
+			resp = updated
+			responseText = updated.Text
+			return true
+		}
+		preflightDone := map[string]bool{}
+		failedToolCalls := map[string]int{}
+
+		// Guardrail: if the model returns a "plan/step" style response instead of
+		// a tool call for an actionable request, force one correction pass before
+		// entering the normal tool loop.
+		if parseToolCall(responseText) == nil && responseSuggestsUnexecutedAction(responseText) {
+			correction := cognitive.ChatMessage{
+				Role: "system",
+				Content: "Policy correction: do not provide step-by-step plans when tools are available. " +
+					"Emit exactly one tool_call JSON now for the user's actionable request, or return a concrete blocker.",
+			}
+			req.Messages = append(req.Messages, correction)
+			req.Messages = append(req.Messages, cognitive.ChatMessage{
+				Role:    "user",
+				Content: "Re-answer the latest request now under the policy correction.",
+			})
+			repaired, repairErr := a.brain.InferWithContract(a.ctx, req)
+			if repairErr != nil {
+				log.Printf("Agent [%s] policy correction re-inference failed: %v", a.Manifest.ID, repairErr)
+			} else if repaired != nil {
+				resp = repaired
+				responseText = repaired.Text
+			}
+		}
+
 		maxIter := a.Manifest.EffectiveMaxIterations()
 		for i := 0; i < maxIter; i++ {
 			// V7 Interjection: check for user redirect between ReAct iterations
@@ -378,6 +422,48 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			if toolCall == nil {
 				break
 			}
+			autofillToolArguments(toolCall, input)
+			// Simple drafting requests should stay in chat instead of bouncing through tools.
+			if directAnswerPreferred && shouldAvoidToolsForDirectDraft(toolCall.Name) {
+				if !reinferWithToolFeedback(toolCall.Name,
+					"Policy correction: the user asked for text content in this chat. Respond with the requested content directly. Do not call tools unless they explicitly asked to read or write files, save output, inspect runtime state, execute commands, or route work to other teams.") {
+					break
+				}
+				continue
+			}
+			fingerprint := toolCallFingerprint(toolCall)
+			if failedToolCalls[fingerprint] >= 2 {
+				if !reinferWithToolFeedback(toolCall.Name,
+					fmt.Sprintf("Policy correction: the exact tool call %s has already failed %d times in this turn. Do not retry it. Choose a different tool or answer directly without tools.",
+						fingerprint, failedToolCalls[fingerprint])) {
+					break
+				}
+				continue
+			}
+			if shouldCouncilPreflight(toolCall.Name) {
+				member := councilPreflightMember(toolCall.Name)
+				if member != "" && !preflightDone[member] {
+					preflightDone[member] = true
+					summary, err := a.runCouncilPreflight(member, input, toolCall)
+					if err != nil {
+						log.Printf("Agent [%s] council preflight failed for %s: %v", a.Manifest.ID, toolCall.Name, err)
+					} else if strings.TrimSpace(summary) != "" {
+						short := strings.TrimSpace(summary)
+						if len(short) > 300 {
+							short = short[:300] + "..."
+						}
+						consultations = append(consultations, protocol.ConsultationEntry{
+							Member:  member,
+							Summary: short,
+						})
+						// Feed the preflight back so the model can refine the next tool call.
+						if !reinferWithToolFeedback("consult_council", fmt.Sprintf("Preflight (%s): %s", member, summary)) {
+							break
+						}
+						continue
+					}
+				}
+			}
 
 			log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, maxIter, toolCall.Name)
 			toolsUsed = append(toolsUsed, toolCall.Name)
@@ -400,6 +486,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 			serverID, _, err := a.toolExecutor.FindToolByName(a.ctx, toolCall.Name)
 			if err != nil {
+				failedToolCalls[fingerprint]++
 				log.Printf("Agent [%s] tool lookup failed: %v", a.Manifest.ID, err)
 				// V7: emit tool.failed
 				if a.eventEmitter != nil && a.runID != "" {
@@ -408,12 +495,15 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 						a.Manifest.ID, a.TeamID,
 						map[string]interface{}{"tool": toolCall.Name, "error": err.Error(), "phase": "lookup"})
 				}
-				responseText = fmt.Sprintf("Tool '%s' is not available: %v", toolCall.Name, err)
-				break
+				if !reinferWithToolFeedback(toolCall.Name, fmt.Sprintf("Tool '%s' is not available: %v", toolCall.Name, err)) {
+					break
+				}
+				continue
 			}
 
 			toolResult, err := a.toolExecutor.CallTool(a.ctx, serverID, toolCall.Name, toolCall.Arguments)
 			if err != nil {
+				failedToolCalls[fingerprint]++
 				log.Printf("Agent [%s] tool call failed: %v", a.Manifest.ID, err)
 				// V7: emit tool.failed
 				if a.eventEmitter != nil && a.runID != "" {
@@ -422,8 +512,10 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 						a.Manifest.ID, a.TeamID,
 						map[string]interface{}{"tool": toolCall.Name, "error": err.Error(), "phase": "execute"})
 				}
-				responseText = fmt.Sprintf("Tool %s failed: %v", toolCall.Name, err)
-				break
+				if !reinferWithToolFeedback(toolCall.Name, fmt.Sprintf("Tool %s failed: %v", toolCall.Name, err)) {
+					break
+				}
+				continue
 			}
 			// V7: emit tool.completed
 			if a.eventEmitter != nil && a.runID != "" {
@@ -676,6 +768,41 @@ func truncateLog(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
+// responseSuggestsUnexecutedAction detects common "I will/Step 1" patterns where
+// the model narrates an action path instead of invoking tools.
+func responseSuggestsUnexecutedAction(text string) bool {
+	lower := strings.ToLower(strings.TrimSpace(text))
+	if lower == "" {
+		return false
+	}
+	patterns := []string{
+		"we need to delegate",
+		"let's proceed by",
+		"step 1",
+		"you can use",
+		"would you like me to",
+		"to have the",
+		"example input",
+		"this will route your request",
+		"this will delegate",
+		"this will consult",
+		"i'll consult",
+		"i will consult",
+		"i'll delegate",
+		"i will delegate",
+		"route your request",
+		"i've delegated",
+		"i have delegated",
+		"task has been delegated",
+	}
+	for _, p := range patterns {
+		if strings.Contains(lower, p) {
+			return true
+		}
+	}
+	return false
+}
+
 // toolCallPayload represents a tool invocation extracted from LLM output.
 type toolCallPayload struct {
 	Name      string         `json:"name"`
@@ -694,7 +821,7 @@ func parseToolCall(text string) *toolCallPayload {
 	keyword := `"tool_call"`
 	idx := strings.Index(text, keyword)
 	if idx == -1 {
-		return nil
+		return parseOperationCall(text)
 	}
 
 	// Walk backwards from "tool_call" to find the opening brace.
@@ -750,6 +877,9 @@ func parseToolCall(text string) *toolCallPayload {
 		}
 	}
 	if end == -1 {
+		if loose := parseLooseToolCall(text[start:]); loose != nil {
+			return loose
+		}
 		return nil
 	}
 
@@ -758,10 +888,327 @@ func parseToolCall(text string) *toolCallPayload {
 	}
 	if err := json.Unmarshal([]byte(text[start:end]), &wrapper); err != nil {
 		log.Printf("[parseToolCall] JSON unmarshal failed: %v (excerpt: %s)", err, truncateLog(text[start:end], 200))
+		if loose := parseLooseToolCall(text[start:end]); loose != nil {
+			return loose
+		}
 		return nil
 	}
 	if wrapper.ToolCall.Name == "" {
-		return nil
+		return parseOperationCall(text)
 	}
 	return &wrapper.ToolCall
+}
+
+func parseLooseToolCall(text string) *toolCallPayload {
+	nameRe := regexp.MustCompile(`"name"\s*:\s*"([^"]+)"`)
+	m := nameRe.FindStringSubmatch(text)
+	if len(m) < 2 {
+		return nil
+	}
+	name := strings.TrimSpace(m[1])
+	if name == "" {
+		return nil
+	}
+	return &toolCallPayload{Name: name, Arguments: map[string]any{}}
+}
+
+// parseOperationCall extracts fallback operation-style payloads emitted by some models:
+// {"operation":"consult_council","arguments":{...}}
+// This lets the runtime execute the intended tool instead of returning instructions.
+func parseOperationCall(text string) *toolCallPayload {
+	keyword := `"operation"`
+	idx := strings.Index(text, keyword)
+	if idx == -1 {
+		return nil
+	}
+
+	start := -1
+	for i := idx - 1; i >= 0; i-- {
+		ch := text[i]
+		if ch == '{' {
+			start = i
+			break
+		}
+		if ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
+			break
+		}
+	}
+	if start == -1 {
+		return nil
+	}
+
+	depth := 0
+	end := -1
+	inStr := false
+	esc := false
+	for i := start; i < len(text); i++ {
+		ch := text[i]
+		if esc {
+			esc = false
+			continue
+		}
+		if ch == '\\' && inStr {
+			esc = true
+			continue
+		}
+		if ch == '"' {
+			inStr = !inStr
+			continue
+		}
+		if inStr {
+			continue
+		}
+		switch ch {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				end = i + 1
+			}
+		}
+		if end != -1 {
+			break
+		}
+	}
+	if end == -1 {
+		return nil
+	}
+
+	var payload struct {
+		Operation string         `json:"operation"`
+		Arguments map[string]any `json:"arguments"`
+	}
+	if err := json.Unmarshal([]byte(text[start:end]), &payload); err != nil {
+		return nil
+	}
+	if strings.TrimSpace(payload.Operation) == "" {
+		return nil
+	}
+	if payload.Arguments == nil {
+		payload.Arguments = map[string]any{}
+	}
+	return &toolCallPayload{Name: payload.Operation, Arguments: payload.Arguments}
+}
+
+// autofillToolArguments patches common missing fields for tool calls that are
+// clearly actionable but slightly malformed from smaller/local model outputs.
+func autofillToolArguments(call *toolCallPayload, latestUserInput string) {
+	if call == nil {
+		return
+	}
+	if call.Arguments == nil {
+		call.Arguments = map[string]any{}
+	}
+
+	switch call.Name {
+	case "consult_council":
+		member, _ := call.Arguments["member"].(string)
+		if strings.TrimSpace(member) == "" {
+			member = inferCouncilMemberFromInput(latestUserInput)
+		}
+		if normalized := normalizeCouncilMember(member); normalized != "" {
+			call.Arguments["member"] = normalized
+		}
+		question, _ := call.Arguments["question"].(string)
+		if strings.TrimSpace(question) == "" {
+			if q := strings.TrimSpace(latestUserInput); q != "" {
+				call.Arguments["question"] = q
+			}
+		}
+	case "read_signals":
+		subject, _ := call.Arguments["subject"].(string)
+		if strings.TrimSpace(subject) == "" {
+			if v, _ := call.Arguments["topic_pattern"].(string); strings.TrimSpace(v) != "" {
+				call.Arguments["subject"] = strings.TrimSpace(v)
+			} else if v, _ := call.Arguments["topic"].(string); strings.TrimSpace(v) != "" {
+				call.Arguments["subject"] = strings.TrimSpace(v)
+			} else if v, _ := call.Arguments["channel"].(string); strings.TrimSpace(v) != "" {
+				call.Arguments["subject"] = strings.TrimSpace(v)
+			} else if v := extractNATSSubject(latestUserInput); v != "" {
+				call.Arguments["subject"] = v
+			}
+		}
+	case "delegate_task":
+		if _, hasTask := call.Arguments["task"]; !hasTask {
+			if teamName, _ := call.Arguments["team_name"].(string); strings.TrimSpace(teamName) != "" {
+				call.Name = "create_team"
+				call.Arguments["team_id"] = strings.TrimSpace(teamName)
+				if role, _ := call.Arguments["agent_type"].(string); strings.TrimSpace(role) != "" {
+					call.Arguments["role"] = strings.TrimSpace(role)
+				}
+			}
+		}
+	}
+}
+
+func extractNATSSubject(input string) string {
+	for _, tok := range strings.Fields(input) {
+		clean := strings.Trim(tok, " \t\r\n,.;:()[]{}<>\"'")
+		if clean == "" {
+			continue
+		}
+		if strings.HasPrefix(clean, "swarm.") {
+			return clean
+		}
+	}
+	return ""
+}
+
+func normalizeCouncilMember(member string) string {
+	m := strings.ToLower(strings.TrimSpace(member))
+	if m == "" {
+		return ""
+	}
+	switch m {
+	case "architect", "council architect", "council-architect":
+		return "council-architect"
+	case "coder", "council coder", "council-coder":
+		return "council-coder"
+	case "creative", "council creative", "council-creative":
+		return "council-creative"
+	case "sentry", "council sentry", "council-sentry":
+		return "council-sentry"
+	default:
+		if strings.HasPrefix(m, "council-") {
+			return m
+		}
+		return member
+	}
+}
+
+func inferCouncilMemberFromInput(input string) string {
+	lower := strings.ToLower(input)
+	switch {
+	case strings.Contains(lower, "architect"):
+		return "council-architect"
+	case strings.Contains(lower, "coder"), strings.Contains(lower, "code"):
+		return "council-coder"
+	case strings.Contains(lower, "creative"), strings.Contains(lower, "design"), strings.Contains(lower, "image"):
+		return "council-creative"
+	case strings.Contains(lower, "sentry"), strings.Contains(lower, "security"), strings.Contains(lower, "risk"):
+		return "council-sentry"
+	default:
+		return ""
+	}
+}
+
+func shouldCouncilPreflight(toolName string) bool {
+	switch strings.TrimSpace(toolName) {
+	case "create_team", "delegate_task", "local_command":
+		return true
+	default:
+		return false
+	}
+}
+
+func councilPreflightMember(toolName string) string {
+	switch strings.TrimSpace(toolName) {
+	case "create_team", "delegate_task":
+		return "council-architect"
+	case "local_command":
+		return "council-coder"
+	default:
+		return ""
+	}
+}
+
+func formatCouncilPreflightQuestion(userInput string, call *toolCallPayload) string {
+	if call == nil {
+		return userInput
+	}
+	args := "{}"
+	if call.Arguments != nil {
+		if b, err := json.Marshal(call.Arguments); err == nil {
+			args = string(b)
+		}
+	}
+	return fmt.Sprintf("Preflight review before executing tool '%s' with args %s. User request: %s. Provide concise execution guidance and edge cases.", call.Name, args, strings.TrimSpace(userInput))
+}
+
+func (a *Agent) runCouncilPreflight(userMember string, userInput string, call *toolCallPayload) (string, error) {
+	if a == nil || a.toolExecutor == nil {
+		return "", fmt.Errorf("tool executor unavailable")
+	}
+	serverID, toolName, err := a.toolExecutor.FindToolByName(a.ctx, "consult_council")
+	if err != nil {
+		return "", err
+	}
+	preflightCtx, cancel := context.WithTimeout(a.ctx, 10*time.Second)
+	defer cancel()
+	args := map[string]any{
+		"member":   userMember,
+		"question": formatCouncilPreflightQuestion(userInput, call),
+	}
+	return a.toolExecutor.CallTool(preflightCtx, serverID, toolName, args)
+}
+
+func toolCallFingerprint(call *toolCallPayload) string {
+	if call == nil {
+		return ""
+	}
+	args := "{}"
+	if call.Arguments != nil {
+		if b, err := json.Marshal(call.Arguments); err == nil {
+			args = string(b)
+		}
+	}
+	return fmt.Sprintf("%s:%s", strings.TrimSpace(call.Name), args)
+}
+
+func preferDirectDraftResponse(input string) bool {
+	lower := strings.ToLower(strings.TrimSpace(input))
+	if lower == "" {
+		return false
+	}
+
+	explicitAction := []string{
+		"file", "path", "workspace", "folder", "directory", "save", "persist", "store",
+		"read ", "open ", "inspect", "command", "run ", "execute", "shell", "terminal",
+		"team", "agent", "council", "signal", "nats", "api", "http", "url", "image",
+		"diagram", "code", "blueprint", "mission", "workflow",
+	}
+	for _, token := range explicitAction {
+		if strings.Contains(lower, token) {
+			return false
+		}
+	}
+
+	requestMarkers := []string{
+		"write ", "draft ", "compose ", "create ", "make ", "generate ",
+	}
+	hasRequestMarker := false
+	for _, marker := range requestMarkers {
+		if strings.Contains(lower, marker) {
+			hasRequestMarker = true
+			break
+		}
+	}
+	if !hasRequestMarker {
+		return false
+	}
+
+	textOutputs := []string{
+		"letter", "email", "message", "note", "reply", "paragraph",
+		"announcement", "bio", "summary", "caption", "introduction",
+	}
+	for _, target := range textOutputs {
+		if strings.Contains(lower, target) {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldAvoidToolsForDirectDraft(toolName string) bool {
+	switch strings.TrimSpace(toolName) {
+	case "write_file", "read_file", "local_command", "consult_council", "delegate_task",
+		"research_for_blueprint", "generate_blueprint", "remember", "recall",
+		"store_artifact", "list_teams", "list_missions", "get_system_status",
+		"list_available_tools", "list_catalogue", "publish_signal", "read_signals",
+		"broadcast", "create_team":
+		return true
+	default:
+		return false
+	}
 }
