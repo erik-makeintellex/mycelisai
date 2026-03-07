@@ -44,6 +44,22 @@ def test_docs_manifest_paths_resolve():
     assert not missing, f"docsManifest contains broken paths: {missing}"
 
 
+def test_docs_manifest_exposes_required_canonical_docs():
+    text = DOCS_MANIFEST.read_text(encoding="utf-8")
+    required_paths = [
+        "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+        "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
+        "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
+        "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
+        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
+        "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
+        "mycelis-architecture-v7.md",
+    ]
+
+    missing = [path for path in required_paths if path not in text]
+    assert not missing, f"docsManifest is missing required canonical docs: {missing}"
+
+
 def _slugify_heading(heading: str) -> str:
     slug = heading.strip().lower()
     slug = re.sub(r"[^\w\s-]", "", slug)
@@ -83,6 +99,7 @@ def test_readme_has_fresh_agent_review_sequence():
         "docs/architecture/OPERATIONS.md",
         "docs/TESTING.md",
         "V7_DEV_STATE.md",
+        "interface/lib/docsManifest.ts",
     ]
 
     missing = [ref for ref in required_refs if ref not in text]

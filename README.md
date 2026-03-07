@@ -70,6 +70,7 @@ If you are a fresh development agent or starting a new interaction, review the d
 5. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) and [UI Target + Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md) before touching operator-facing UI.
 6. [Operations Manual](docs/architecture/OPERATIONS.md) and [Testing Guide](docs/TESTING.md) before changing runtime tasks, lifecycle flows, or delivery gates.
 7. [V7 Dev State](V7_DEV_STATE.md) for the current checkpoint and active delivery context.
+8. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
 
 Use [mycelis-architecture-v7.md](mycelis-architecture-v7.md) only as the stable PRD index and compatibility entrypoint. Do not expand it back into the primary detailed spec.
 
@@ -90,6 +91,7 @@ Primary places to apply and review these markers:
 - [V7_DEV_STATE.md](V7_DEV_STATE.md) for current development state
 - [docs/architecture-library/TARGET_DELIVERABLE_V7.md](docs/architecture-library/TARGET_DELIVERABLE_V7.md) for target-phase framing
 - [docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) for gate and review expectations
+- [interface/lib/docsManifest.ts](interface/lib/docsManifest.ts) when the status-linked docs should also be surfaced in the in-app documentation page
 
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
 
