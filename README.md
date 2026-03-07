@@ -34,6 +34,40 @@
 > | [Agent Source Instantiation Template](docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md) | Standardized provider onboarding template with Ollama as default, plus ChatGPT/OpenAI, Claude, Gemini, vLLM, and LM Studio |
 > | [Archive Index](docs/archive/README.md) | Historical docs only (non-authoritative) |
 
+## README TOC
+
+- [Architecture](#architecture)
+  - [Workspace Reference](#workspace-reference)
+- [Soma Workflow - End-to-End Reference](#soma-workflow-end-to-end-reference)
+  - [Quick Reference](#quick-reference)
+  - [GUI Execution Path](#gui-execution-path)
+  - [API Execution Path](#api-execution-path)
+  - [Trigger Rules - Automation Workflow](#trigger-rules-automation-workflow)
+  - [Conversation Log And Interjection - Agent Transcript Browsing](#conversation-log-interjection-agent-transcript-browsing)
+  - [Inception Recipes - Structured Prompt Patterns](#inception-recipes-structured-prompt-patterns)
+  - [Workflow State Diagram](#workflow-state-diagram)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Configure Environment](#1-configure-environment)
+  - [Bring Up Cluster](#2-bring-up-cluster-canonical-order)
+  - [Start Full Local Stack](#3-start-full-local-stack-recommended)
+  - [Manual Start](#4-manual-start-alternative)
+  - [Stop / Restart](#5-stop-restart)
+  - [Fresh Deployment Reset](#5a-fresh-deployment-reset-clean-slate)
+  - [Fresh Memory Restart](#5b-fresh-memory-restart-db-memory-probes)
+  - [Configure Cognitive Providers](#6-configure-cognitive-providers)
+  - [Rename Soma](#7-rename-soma-assistant-display-name)
+- [Developer Orchestration](#developer-orchestration)
+- [Frontend Routes](#frontend-routes)
+- [Stack Versions](#stack-versions-locked)
+- [Key Configurations](#key-configurations)
+- [Documentation Hub](#documentation-hub)
+- [Delivery Discipline](#delivery-discipline-required)
+- [Verification](#verification)
+- [Delivered Phases](#delivered-phases)
+- [Upcoming Architecture](#upcoming-architecture)
+- [Branching Strategy](#branching-strategy)
+
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
 
 Built through 19 phases — from genesis through **Admin Orchestrator**, **Council Activation**, **Trust Economy**, **RAG Persistence**, **Agent Visualization**, **Neural Wiring Edit/Delete**, **Meta-Agent Research**, **Team Management**, **Soma Identity & Artifacts**, **Conversation Memory**, **Natural Human Interface**, **Phase 0 Security Containment**, **Agent & Provider Orchestration** — and now executing **V7: Event Spine & Workflow-First Orchestration**. V7 Team A (Event Spine), Team B (Trigger Engine), Agent Conversation Log, and Inception Recipes are complete: persistent mission runs, `MissionEventEnvelope` audit records, tool event emission, run timeline APIs, declarative trigger rules with cooldown/recursion/concurrency guards, full-fidelity agent conversation transcripts with operator interjection, and structured inception recipe patterns for RAG-based knowledge reuse. Team C (Scheduler) and Causal Chain UI follow next.
@@ -285,7 +319,7 @@ This section documents the complete interaction loop from user intent to mission
 
 | Step | GUI Component | HTTP Endpoint | Go Handler | Reference |
 | :--- | :--- | :--- | :--- | :--- |
-| 1. Send message | `MissionControlChat` input | `POST /api/v1/council/admin/chat` | `HandleCouncilChat` | [Chat Panel](#chat-panel--rich-message-rendering) |
+| 1. Send message | `MissionControlChat` input | `POST /api/v1/chat` | `HandleChat` | [Chat Panel](#chat-panel--rich-message-rendering) |
 | 2. Live activity | `SomaActivityIndicator` | SSE `GET /api/v1/stream` | `HandleSSEStream` | [Chat Capabilities](#chat-capabilities) |
 | 3. View delegation | `DelegationTrace` in bubble | ← in chat response body | `processMessageStructured` | [Chat Capabilities](#chat-capabilities) |
 | 4. View proposal | `ProposedActionBlock` | ← in chat response body (`mode: proposal`) | `HandleCouncilChat` mutation detector | [Proposal Blocks](#workspace-reference) |
@@ -325,8 +359,8 @@ Type intent in the textarea and press Enter or click Send.
 You: "Write me a Python CSV parser that handles quoted fields"
 ```
 
-- Store action: `sendMissionChat(text)` → `POST /api/v1/council/admin/chat`
-- NATS routes to Soma (`swarm.council.admin.request`)
+- Store action: `sendMissionChat(text)` → `POST /api/v1/chat`
+- `HandleChat` forwards the conversation to Soma over `swarm.council.admin.request`
 
 #### 3. Live Activity — SomaActivityIndicator
 
@@ -470,16 +504,17 @@ A guided 3-step modal — use when you want to define intent before committing t
 
 The same workflow executed via direct HTTP. All endpoints require `Authorization: Bearer {MYCELIS_API_KEY}`.
 
-#### 1. Send Message — `POST /api/v1/council/admin/chat`
+#### 1. Send Message — `POST /api/v1/chat`
 
 ```http
-POST /api/v1/council/admin/chat
+POST /api/v1/chat
 Authorization: Bearer mycelis-dev-key-change-in-prod
 Content-Type: application/json
 
 {
-  "message": "Write me a Python CSV parser that handles quoted fields",
-  "history": []
+  "messages": [
+    { "role": "user", "content": "Write me a Python CSV parser that handles quoted fields" }
+  ]
 }
 ```
 
@@ -530,7 +565,7 @@ When Soma detects a mutation (`mode: "proposal"`), the response also includes:
 }
 ```
 
-> **Note:** The admin chat endpoint is `POST /api/v1/council/admin/chat`. Other council members are `POST /api/v1/council/{member}/chat` where `{member}` is `architect`, `coder`, `creative`, or `sentry`. Use `GET /api/v1/council/members` to list all available members dynamically.
+> **Note:** Workspace / Soma chat uses `POST /api/v1/chat`. Direct specialist chat uses `POST /api/v1/council/{member}/chat`. Use `GET /api/v1/council/members` to list all available members dynamically.
 
 #### 2. Get Available Council Members — `GET /api/v1/council/members`
 
@@ -1171,7 +1206,7 @@ Navigate to `/automations?tab=triggers`:
 User input
     │
     ▼
-POST /api/v1/council/admin/chat
+POST /api/v1/chat
     │
     ├─── NATS: swarm.council.admin.request ──► Soma ReAct loop
     │                                              │
