@@ -115,6 +115,8 @@ export const WORKSPACE_LABELS = {
 export const MODE_LABELS: Record<string, { label: string; color: string }> = {
   answer: { label: "ANSWER", color: "text-cortex-primary" },
   proposal: { label: "PROPOSAL", color: "text-amber-400" },
+  execution_result: { label: "RESULT", color: "text-cortex-success" },
+  blocker: { label: "BLOCKER", color: "text-cortex-danger" },
   broadcast: { label: "BROADCAST", color: "text-cortex-warning" },
   execute: { label: "EXECUTE", color: "text-cortex-success" },
 };

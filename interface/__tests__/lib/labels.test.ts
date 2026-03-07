@@ -137,10 +137,12 @@ describe('labels', () => {
     // ── CE-1: Orchestration Template labels ────────────────────────
 
     describe('MODE_LABELS', () => {
-        it('has all four modes', () => {
-            expect(Object.keys(MODE_LABELS)).toHaveLength(4);
+        it('has execution and blocker modes for delivery-state rendering', () => {
+            expect(Object.keys(MODE_LABELS)).toHaveLength(6);
             expect(MODE_LABELS.answer.label).toBe('ANSWER');
             expect(MODE_LABELS.proposal.label).toBe('PROPOSAL');
+            expect(MODE_LABELS.execution_result.label).toBe('RESULT');
+            expect(MODE_LABELS.blocker.label).toBe('BLOCKER');
             expect(MODE_LABELS.broadcast.label).toBe('BROADCAST');
             expect(MODE_LABELS.execute.label).toBe('EXECUTE');
         });
@@ -148,6 +150,7 @@ describe('labels', () => {
         it('has colors for each mode', () => {
             expect(MODE_LABELS.answer.color).toContain('cortex-primary');
             expect(MODE_LABELS.proposal.color).toContain('amber');
+            expect(MODE_LABELS.blocker.color).toContain('cortex-danger');
         });
     });
 
