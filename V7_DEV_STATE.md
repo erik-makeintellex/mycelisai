@@ -174,6 +174,10 @@ Latest integration checkpoint:
     - new authority doc `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md` defines required terminal UI states, backend transaction expectations, and failure/recovery rules for execution-facing UI
     - frontend and testing docs now require UI work to prove user-visible outcome plus backend API/NATS/runtime side effect together
     - docs regression coverage now validates both top-level README links and in-app docs manifest paths
+  - First execution-facing UI contract slice enforced in code:
+    - Workspace / Soma chat now uses `/api/v1/chat`; direct specialist targeting uses `/api/v1/council/{member}/chat`
+    - blocked Workspace chat requests now set explicit `blocker` mode and render a Soma-specific recovery card instead of generic council wording
+    - focused chat tests now prove route selection and blocker-state behavior for Workspace vs direct council interactions
   - Test readiness for latest changes refreshed:
     - task/gate unit suites pass (`test_ci_tasks`, `test_auth_tasks`, `test_logging_tasks`, `test_quality_tasks`, `test_lifecycle_tasks`)
     - focused runner/task suite passes with `uv run inv ci.entrypoint-check` plus pytest task coverage
@@ -205,6 +209,7 @@ Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/mcp ./internal/swarm ./pkg/protocol -count=1`
 - `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
 - `cd interface && npx tsc --noEmit`
+- `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q`
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q`
 - `uv run inv lifecycle.memory-restart --frontend`

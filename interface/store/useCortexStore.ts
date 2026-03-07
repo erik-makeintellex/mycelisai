@@ -34,7 +34,7 @@ export interface ChatArtifactRef {
 
 // CE-1: Orchestration Template types
 export type TemplateID = 'chat-to-answer' | 'chat-to-proposal';
-export type ExecutionMode = 'answer' | 'proposal';
+export type ExecutionMode = 'answer' | 'proposal' | 'execution_result' | 'blocker';
 
 export interface AnswerProvenance {
     resolved_intent: string;
@@ -1829,6 +1829,9 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         if (!trimmed) return;
 
         const { councilTarget } = get();
+        const isSomaRoute = councilTarget === 'admin';
+        const chatRoute = isSomaRoute ? '/api/v1/chat' : `/api/v1/council/${councilTarget}/chat`;
+        const routeLabel = isSomaRoute ? 'Soma chat' : 'Council agent';
 
         // Append user message and set loading
         set((s) => ({
@@ -1847,7 +1850,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                     content: m.content,
                 }));
 
-            const res = await fetch(`/api/v1/council/${councilTarget}/chat`, {
+            const res = await fetch(chatRoute, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages }),
@@ -1858,14 +1861,16 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 let errMsg: string;
                 try {
                     const parsed = JSON.parse(text);
-                    errMsg = parsed.error || `Council agent error (${res.status})`;
+                    errMsg = parsed.error || `${routeLabel} blocked (${res.status})`;
                 } catch {
-                    errMsg = `Council agent unreachable (${res.status})`;
+                    errMsg = `${routeLabel} unreachable (${res.status})`;
                 }
                 set((s) => ({
                     isMissionChatting: false,
                     missionChatError: errMsg,
-                    missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget }],
+                    missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget, mode: 'blocker' }],
+                    activeMode: 'blocker',
+                    activeRole: councilTarget,
                 }));
                 return;
             }
@@ -1873,11 +1878,13 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             const body: APIResponse<CTSChatEnvelope> = await res.json();
 
             if (!body.ok || !body.data) {
-                const errText = body.error || `Chat request failed (${res.status})`;
+                const errText = body.error || `${routeLabel} failed (${res.status})`;
                 set((s) => ({
                     isMissionChatting: false,
                     missionChatError: errText,
-                    missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget }],
+                    missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget, mode: 'blocker' }],
+                    activeMode: 'blocker',
+                    activeRole: councilTarget,
                 }));
                 return;
             }
@@ -1929,11 +1936,13 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 } : {}),
             }));
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Chat failed';
+            const msg = err instanceof Error ? err.message : `${routeLabel} failed`;
             set((s) => ({
                 isMissionChatting: false,
                 missionChatError: msg,
-                missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget }],
+                missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget, mode: 'blocker' }],
+                activeMode: 'blocker',
+                activeRole: councilTarget,
             }));
         }
     },

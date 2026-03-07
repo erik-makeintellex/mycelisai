@@ -40,6 +40,7 @@ Signal/channel standard:
 - Development-only infrastructure subjects are not part of product orchestration and should stay out of authoritative runtime tests unless the test is explicitly exercising dev-only behavior.
 - Current focused runtime check: `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
 - Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
+- Current focused Workspace chat contract check: `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
 
 UI delivery contract:
 - Use `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md` as the authoritative map for UI terminal states and backend transaction expectations.

@@ -36,6 +36,8 @@ function resetStore() {
         missionChat: [],
         isMissionChatting: false,
         missionChatError: null,
+        activeMode: 'answer',
+        activeRole: '',
         councilTarget: 'admin',
         councilMembers: [],
         isBroadcasting: false,
@@ -103,7 +105,7 @@ describe('MissionControlChat', () => {
     // ── Chat Flow ─────────────────────────────────────────────
 
     describe('Chat Flow', () => {
-        it('sends message to council endpoint with selected target', async () => {
+        it('sends Workspace chat through the Soma route', async () => {
             useCortexStore.setState({
                 councilMembers: COUNCIL_MEMBERS,
                 councilTarget: 'admin',
@@ -132,7 +134,44 @@ describe('MissionControlChat', () => {
             await waitFor(() => {
                 const calls = mockFetch.mock.calls;
                 const chatCall = calls.find((c: any[]) =>
-                    typeof c[0] === 'string' && c[0].includes('/council/admin/chat')
+                    typeof c[0] === 'string' && c[0].includes('/api/v1/chat')
+                );
+                expect(chatCall).toBeDefined();
+            });
+        });
+
+        it('sends direct specialist chat through the targeted council route', async () => {
+            useCortexStore.setState({
+                councilMembers: COUNCIL_MEMBERS,
+            });
+
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        data: {
+                            ...CTS_CHAT_RESPONSE.data,
+                            meta: { ...CTS_CHAT_RESPONSE.data.meta, source_node: 'council-architect' },
+                        },
+                    }),
+                });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+            act(() => {
+                useCortexStore.getState().setCouncilTarget('council-architect');
+            });
+
+            const input = screen.getByPlaceholderText(/Direct to Architect/i);
+            fireEvent.change(input, { target: { value: 'Review the system architecture' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                const calls = mockFetch.mock.calls;
+                const chatCall = calls.find((c: any[]) =>
+                    typeof c[0] === 'string' && c[0].includes('/api/v1/council/council-architect/chat')
                 );
                 expect(chatCall).toBeDefined();
             });
@@ -253,6 +292,18 @@ describe('MissionControlChat', () => {
     // ── Error States ──────────────────────────────────────────
 
     describe('Error States', () => {
+        it('displays a Soma-specific blocker card when Workspace chat is blocked', async () => {
+            useCortexStore.setState({
+                councilTarget: 'admin',
+                missionChatError: 'Soma chat blocked (500)',
+            });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+            expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
+            expect(screen.queryByText('Switch to Soma')).toBeNull();
+        });
+
         it('displays structured council error card when missionChatError is set', async () => {
             useCortexStore.setState({
                 missionChatError: 'Swarm offline',
@@ -260,8 +311,33 @@ describe('MissionControlChat', () => {
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+            act(() => {
+                useCortexStore.getState().setCouncilTarget('council-architect');
+            });
             expect(screen.getByText('Council Call Failed')).toBeDefined();
             expect(screen.getByText('Copy Diagnostics')).toBeDefined();
+        });
+
+        it('records blocker mode when Soma chat request fails', async () => {
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 500,
+                    text: async () => '{"error":"Soma chat blocked (500)"}',
+                });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const input = screen.getByPlaceholderText(/Ask Soma/i);
+            fireEvent.change(input, { target: { value: 'hello' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(useCortexStore.getState().activeMode).toBe('blocker');
+            });
+            expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
         });
 
         it('shows error as chat bubble with source_node on API failure', async () => {

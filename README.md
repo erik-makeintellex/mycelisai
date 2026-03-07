@@ -201,6 +201,7 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | Feature | Details |
 | :--- | :--- |
 | **Soma-first header** | Soma is always the primary target — locked in the header. A `⚡ Direct` popover allows advanced users to target a specific council member directly (shown in amber when active). Resets to Soma on page load and on `LaunchCrewModal` open. |
+| **Chat route contract** | Workspace chat uses `POST /api/v1/chat`; direct specialist chat uses `POST /api/v1/council/{member}/chat`. Blocked Workspace requests render a Soma-specific blocker card rather than generic council-failure text. |
 | **Delegation Trace** | When Soma calls `consult_council` during its ReAct loop, a `DelegationTrace` card appears below the response showing which council members were consulted and a 300-char summary of their contribution. Color-coded per member (Architect=info, Coder=success, Creative=warning, Sentry=danger). |
 | **Live activity** | While Soma processes, a `SomaActivityIndicator` reads `streamLogs` for `tool.invoked` events and shows contextual text: "Consulting Coder...", "Generating blueprint...", "Searching memory..." instead of a static spinner. |
 | **Broadcast mode** | Toggle or `/all` prefix — sends message to ALL active teams via NATS |
