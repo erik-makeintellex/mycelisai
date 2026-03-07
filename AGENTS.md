@@ -15,7 +15,7 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - Use `uv run inv ...` for real task execution.
 - Use `uvx --from invoke inv -l` only as a compatibility probe.
 - Do not use bare `uvx inv ...`.
-- When invoke task behavior or task names change, update `README.md`, `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md` in the same slice.
+- When invoke task behavior or task names change, update `README.md`, `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, `ops/README.md`, and any affected in-app docs surface in `interface/lib/docsManifest.ts` in the same slice.
 
 ## README Navigation Contract
 
@@ -27,6 +27,7 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 - Put new canonical planning, target-delivery, UI-target, execution-model, and delivery-governance docs under `docs/architecture-library/`.
 - Treat `mycelis-architecture-v7.md` as the stable PRD index and compatibility entrypoint, not the place to grow another giant monolithic spec.
+- If a canonical doc is meant to be readable in the in-app `/docs` page, add or update its entry in `interface/lib/docsManifest.ts` in the same change.
 
 ## Feature Status Standard
 

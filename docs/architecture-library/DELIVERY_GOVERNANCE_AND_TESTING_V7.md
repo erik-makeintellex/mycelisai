@@ -47,6 +47,8 @@ Minimum candidates:
 - `V7_DEV_STATE.md`
 - `docs/TESTING.md`
 - `docs/architecture/OPERATIONS.md`
+- `docs/README.md`
+- `interface/lib/docsManifest.ts` when the documentation should be visible in the in-app docs page
 - this architecture library when the change alters target, architecture, execution, UI, or delivery rules
 
 ## 3.1 Feature Status Markers
