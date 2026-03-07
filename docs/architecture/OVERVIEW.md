@@ -180,7 +180,8 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 - **Governed Host/Hardware Path:** Add localhost-first host/hardware action scaffolds under allowlist + approval boundaries.
 
 Execution authority:
-- `mycelis-architecture-v7.md` (Part X)
+- `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
+- `docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
 - `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
 
 ### Phase 12: Persistent Agent Memory & Long-Term Learning
@@ -247,7 +248,7 @@ Execution authority:
 - **Pages to Migrate:** `/telemetry`, `/marketplace`, `/approvals` — three remaining routes using legacy zinc/slate classes.
 - **Remove Legacy Variables:** Delete `--background`, `--surface`, `--border`, `--border-active` from globals.css.
 - **Automated Audit:** Scan all components for `bg-white`, `bg-zinc-*`, `bg-slate-*`, or Vuexy color references.
-- **Smoke Test Coverage:** Ensure `uvx inv interface.check` validates all 15 routes.
+- **Smoke Test Coverage:** Ensure `uv run inv interface.check` validates all 15 routes.
 
 ### Phase 18: Streaming LLM Responses
 

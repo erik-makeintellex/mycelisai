@@ -7,6 +7,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
+PRD_INDEX = ROOT / "mycelis-architecture-v7.md"
+CANONICAL_DOCS = [
+    README,
+    PRD_INDEX,
+    ROOT / "docs" / "TESTING.md",
+    ROOT / "docs" / "architecture" / "OPERATIONS.md",
+    ROOT / "ops" / "README.md",
+    ROOT / "docs" / "user" / "system-status-recovery.md",
+    ROOT / "docs" / "architecture" / "WORKFLOW_COMPOSER_DELIVERY_V7.md",
+]
 
 
 def test_readme_local_links_resolve():
@@ -57,3 +67,92 @@ def test_readme_has_structured_toc_with_live_heading_targets():
 
     missing = [anchor for anchor in toc_links if anchor not in heading_slugs]
     assert not missing, f"README TOC contains anchors without matching headings: {missing}"
+
+
+def test_readme_has_fresh_agent_review_sequence():
+    text = README.read_text(encoding="utf-8")
+    assert "## Fresh Agent Start Here" in text, "README must expose a fresh-agent review section near the top"
+
+    required_refs = [
+        "AGENTS.md",
+        "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+        "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
+        "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
+        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
+        "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
+        "docs/architecture/OPERATIONS.md",
+        "docs/TESTING.md",
+        "V7_DEV_STATE.md",
+    ]
+
+    missing = [ref for ref in required_refs if ref not in text]
+    assert not missing, f"Fresh-agent review sequence is missing required references: {missing}"
+
+
+def test_readme_has_feature_status_standard():
+    text = README.read_text(encoding="utf-8")
+    assert "## Feature Status Standard" in text, "README must define the canonical feature-status markers"
+
+    required_markers = ["`REQUIRED`", "`NEXT`", "`ACTIVE`", "`IN_REVIEW`", "`COMPLETE`", "`BLOCKED`"]
+    missing = [marker for marker in required_markers if marker not in text]
+    assert not missing, f"Feature status standard is missing markers: {missing}"
+
+
+def test_canonical_docs_do_not_ship_executable_bare_uvx_inv_examples():
+    offenders: list[str] = []
+
+    for path in CANONICAL_DOCS:
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if re.match(r"^\s*uvx inv\b", line):
+                offenders.append(f"{path.relative_to(ROOT)}:{lineno}:{line.strip()}")
+
+    assert not offenders, "Canonical docs contain executable bare uvx inv examples:\n" + "\n".join(offenders)
+
+
+def test_canonical_task_docs_cover_required_invoke_commands():
+    expected = {
+        README: [
+            "uv run inv ci.entrypoint-check",
+            "uv run inv lifecycle.memory-restart",
+            "uv run inv team.architecture-sync",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "uv run inv auth.dev-key",
+            "uv run inv lifecycle.memory-restart",
+            "uv run inv logging.check-schema",
+            "uv run inv quality.max-lines --limit 350",
+            "uv run inv ci.entrypoint-check",
+            "uv run inv team.architecture-sync",
+        ],
+        ROOT / "ops" / "README.md": [
+            "uv run inv core.build",
+            "uv run inv auth.dev-key",
+            "uv run inv lifecycle.health",
+            "uv run inv ci.entrypoint-check",
+            "uv run inv team.architecture-sync",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, commands in expected.items():
+        text = path.read_text(encoding="utf-8")
+        for command in commands:
+            if command not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{command}`")
+
+    assert not missing, "Canonical task docs are missing required invoke commands:\n" + "\n".join(missing)
+
+
+def test_prd_index_points_to_modular_architecture_library():
+    text = PRD_INDEX.read_text(encoding="utf-8")
+    required_links = [
+        "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+        "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
+        "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
+        "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
+        "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
+        "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
+    ]
+
+    missing = [link for link in required_links if link not in text]
+    assert not missing, f"PRD index is missing modular architecture links: {missing}"

@@ -3,7 +3,13 @@
 Primary documentation entry points for V7:
 
 - **Master State Authority**: `../README.md`
-- **V7 Architecture PRD**: `../mycelis-architecture-v7.md`
+- **Architecture Library Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
+- **Target Deliverable V7**: `./architecture-library/TARGET_DELIVERABLE_V7.md`
+- **System Architecture V7**: `./architecture-library/SYSTEM_ARCHITECTURE_V7.md`
+- **Execution And Manifest Library V7**: `./architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md`
+- **UI And Operator Experience V7**: `./architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
+- **Delivery Governance And Testing V7**: `./architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
+- **V7 Architecture PRD Index**: `../mycelis-architecture-v7.md`
 - **V7 Development State**: `../V7_DEV_STATE.md`
 - **V7 UI Framework (Canonical v2.0)**: `./UI_FRAMEWORK_V7.md`
 - **V7 UI Elements Planning**: `./UI_ELEMENTS_PLANNING_V7.md`
@@ -24,3 +30,4 @@ Primary documentation entry points for V7:
 - **Archive Index (Historical / Non-authoritative)**: `./archive/README.md`
 
 User-facing guides live in `./user/`.
+Specialized implementation references remain under `./architecture/`, while the canonical planning library now lives under `./architecture-library/`.

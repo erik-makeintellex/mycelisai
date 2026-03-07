@@ -9,33 +9,24 @@
 > **Architecture PRD:** The detailed architecture specification lives in core documents:
 > | Document | Load When |
 > | :--- | :--- |
-> | [Architecture Overview](docs/architecture/OVERVIEW.md) | Planning phases, architectural decisions |
+> | [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md) | Start here for canonical planning, target delivery, and architecture navigation |
+> | [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md) | Product end state, recurring-plan modes, success criteria, and phase framing |
+> | [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md) | Runtime layers, persistence, NATS posture, deployment, and storage model |
+> | [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md) | Runs, manifests, scheduled/event-driven/persistent-active behavior |
+> | [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) | Canonical UI target, anti-information-swarm rules, and operator journeys |
+> | [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) | Delivery proof, acceptance gates, and product-aligned testing |
+> | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
+> | [V7 PRD Index](mycelis-architecture-v7.md) | Stable compatibility entrypoint that points to the modular architecture library |
+> | [Architecture Overview](docs/architecture/OVERVIEW.md) | Supporting architecture summary and specialized phase context |
 > | [Backend Specification](docs/architecture/BACKEND.md) | Working on Go code, APIs, DB, NATS |
 > | [Frontend Specification](docs/architecture/FRONTEND.md) | Working on React/Next.js, Zustand, design |
-> | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
-> | [V7 PRD](mycelis-architecture-v7.md) | Event spine, triggers, scheduler, workflow-first IA |
-> | [V7 UI Framework](docs/UI_FRAMEWORK_V7.md) | Canonical UI element/state/testing framework |
-> | [V7 UI Elements Planning](docs/UI_ELEMENTS_PLANNING_V7.md) | Research-backed UI element planning and Soma interaction model |
-> | [V7 Parallel Implementation Board](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) | Unified lane plan, merge gates, harsh-truth controls, and execution evidence checklist |
-> | [Team A/B/C/Q Execution Board](docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md) | Active parallel sprint board for groups hardening (A core, B governance, C UI, Q QA) |
-> | [V7 UI Instantiation + Bus Plan](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) | Detailed operator workflow for team instantiation, I/O channels, and user-safe NATS exposure |
-> | [Soma Team + Channel Architecture V7](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) | Canonical inter-team/process/MCP channel architecture and shared memory boundaries |
-> | [NATS Signal Standard V7](docs/architecture/NATS_SIGNAL_STANDARD_V7.md) | Canonical subject families, source normalization, and product-vs-dev channel rules for NATS traffic |
-> | [UI Target + Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md) | Required UI terminal states, frontend-triggered backend effects, and product-flow proof expectations |
-> | [Soma-Council Engagement Protocol V7](docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md) | Deterministic execution-path contract for internal tools, MCP, external API engagement, and code-to-execution loops |
-> | [MCP Service Config (Local-First)](docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) | Standard process for adding MCP services with local-default serving and remote exception controls |
-> | [Universal Action Interface V7](docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md) | Canonical action plane for MCP/OpenAPI/Python, dynamic service registry APIs, and governed execution |
-> | [Agentry Template Marketplace + Custom Templating](docs/architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md) | API/governance contract for ClawHub-style template acquisition plus tenant-owned custom template publishing |
-> | [Actualization Beyond MCP V7](docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md) | Multi-protocol actualization architecture (MCP/OpenAPI/A2A/ACP/Python manager) with governance-first boundaries |
-> | [Secure Gateway + Remote Actuation](docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md) | Mandatory security controls for self-hosted gateways and remotely managed actuation servers |
-> | [Hardware Interface API + Channels](docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) | Hardware integration standard: interface APIs plus common direct channels for low-level IoT and actuation |
-> | [Soma Symbiote + Host Actuation](docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md) | Backend thought-profile framework, symbiote learning growth model, and localhost actuation path |
-> | [Soma Extension-of-Self PRD](docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) | Detailed action plan for local Ollama-first extension-of-self execution, including immediate delivery manifest sequencing (logging -> cleanup -> meta-agent manifests -> workflow composer) |
-> | [Agent Source Instantiation Template](docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md) | Standardized provider onboarding template with Ollama as default, plus ChatGPT/OpenAI, Claude, Gemini, vLLM, and LM Studio |
+> | [NATS Signal Standard V7](docs/architecture/NATS_SIGNAL_STANDARD_V7.md) | Canonical subject families, source normalization, and product-vs-dev channel rules |
 > | [Archive Index](docs/archive/README.md) | Historical docs only (non-authoritative) |
 
 ## README TOC
 
+- [Fresh Agent Start Here](#fresh-agent-start-here)
+- [Feature Status Standard](#feature-status-standard)
 - [Architecture](#architecture)
   - [Workspace Reference](#workspace-reference)
 - [Soma Workflow - End-to-End Reference](#soma-workflow-end-to-end-reference)
@@ -67,6 +58,38 @@
 - [Delivered Phases](#delivered-phases)
 - [Upcoming Architecture](#upcoming-architecture)
 - [Branching Strategy](#branching-strategy)
+
+## Fresh Agent Start Here
+
+If you are a fresh development agent or starting a new interaction, review the docs in this order before making changes:
+
+1. [AGENTS.md](AGENTS.md) for repo standards, language ownership, runner contract, and canonical docs location.
+2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md) for the canonical planning map.
+3. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md) for the intended product end state and phase framing.
+4. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md) for run, manifest, recurring-plan, and activation semantics.
+5. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) and [UI Target + Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md) before touching operator-facing UI.
+6. [Operations Manual](docs/architecture/OPERATIONS.md) and [Testing Guide](docs/TESTING.md) before changing runtime tasks, lifecycle flows, or delivery gates.
+7. [V7 Dev State](V7_DEV_STATE.md) for the current checkpoint and active delivery context.
+
+Use [mycelis-architecture-v7.md](mycelis-architecture-v7.md) only as the stable PRD index and compatibility entrypoint. Do not expand it back into the primary detailed spec.
+
+## Feature Status Standard
+
+Use these canonical delivery markers everywhere feature status is tracked in current docs:
+
+| Marker | Meaning |
+| :--- | :--- |
+| `REQUIRED` | Must exist for target delivery or gate pass, but not yet started or not yet ready |
+| `NEXT` | Highest-priority upcoming slice |
+| `ACTIVE` | Currently in development |
+| `IN_REVIEW` | Implemented and awaiting validation, review, or gate decision |
+| `COMPLETE` | Delivered and accepted |
+| `BLOCKED` | Cannot advance until a dependency or defect is resolved |
+
+Primary places to apply and review these markers:
+- [V7_DEV_STATE.md](V7_DEV_STATE.md) for current development state
+- [docs/architecture-library/TARGET_DELIVERABLE_V7.md](docs/architecture-library/TARGET_DELIVERABLE_V7.md) for target-phase framing
+- [docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) for gate and review expectations
 
 Mycelis is a governed orchestration system ("Neural Organism") where users express intent, Mycelis proposes structured plans, and any state mutation requires explicit confirmation plus a complete Intent Proof bundle. Missions are not isolated — they emit structured events that trigger other missions. Observability is not optional: execution must never be a black box.
 
@@ -1578,10 +1601,16 @@ Run from `scratch/` root using `uv run inv`:
 | `uv run inv lifecycle.memory-restart` | Fresh memory reset workflow: down -> db.reset -> up -> health -> memory probes. Verified passing on 2026-03-06. `--build` `--frontend` |
 | **CI Pipeline** | |
 | `uv run inv ci.check` | Full CI: lint → test → build (with timers) |
+| `uv run inv ci.entrypoint-check` | Verify supported invoke runner matrix (`uv run inv` vs compatibility probe vs unsupported bare alias) |
 | `uv run inv ci.baseline --e2e` | Strict delivery baseline: core tests + interface build + interface typecheck + vitest + playwright |
+| `uv run inv ci.lint` | Lint gate: Go vet + Next.js lint |
+| `uv run inv ci.test` | Test gate: Go unit tests + Interface tests |
+| `uv run inv ci.build` | Build gate: Go binary + Next.js production build |
 | `uv run inv ci.toolchain-check --strict` | Enforce locked Go toolchain policy and report node/npm versions |
 | `uv run inv ci.release-preflight --e2e --strict-toolchain` | Release gate: clean tree + toolchain check + strict baseline |
 | `uv run inv ci.deploy` | Full CI: lint → test → build → Docker → K8s |
+| **Team Coordination** | |
+| `uv run inv team.architecture-sync` | Prime-architect coordination sweep over canonical team NATS lanes |
 
 ### CI Workflows (GitHub Actions)
 
@@ -1674,18 +1703,26 @@ Three workflows run on push/PR to `main` and `develop`:
 | ↳ Memory | [docs/user/memory.md](docs/user/memory.md) — Semantic search, SitReps, artifacts, hot/warm/cold | [/docs?doc=memory-guide](/docs?doc=memory-guide) |
 | ↳ Governance & Trust | [docs/user/governance-trust.md](docs/user/governance-trust.md) — Trust scores, approvals, policy, propose vs execute | [/docs?doc=governance-trust](/docs?doc=governance-trust) |
 | **Overview** | [README.md](README.md) — Architecture, stack, commands, current phase | [/docs?doc=readme](/docs?doc=readme) |
+| **Fresh Agent Review Order** | [README.md#fresh-agent-start-here](README.md#fresh-agent-start-here) — Canonical onboarding sequence for new development agents and new interaction starts | — |
+| **Feature Status Standard** | [README.md#feature-status-standard](README.md#feature-status-standard) — Canonical markers for required, next, active, review, complete, and blocked work | — |
 | **Local Dev Workflow** | [docs/LOCAL_DEV_WORKFLOW.md](docs/LOCAL_DEV_WORKFLOW.md) — Setup, config reference, port map, troubleshooting | [/docs?doc=local-dev](/docs?doc=local-dev) |
 | **Soma Workflow** | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) — End-to-end GUI + API workflow reference | [/docs?doc=workflows](/docs?doc=workflows) |
 | **Archive Index** | [docs/archive/README.md](docs/archive/README.md) — Historical docs only; not implementation authority | [/docs?doc=archive-index](/docs?doc=archive-index) |
 | **.build Scratch Docs (Local)** | `.build/*.md` — local planning/scratch artifacts, gitignored, non-authoritative | — |
 | **Council Chat QA** | [docs/QA_COUNCIL_CHAT_API.md](docs/QA_COUNCIL_CHAT_API.md) — QA procedures and test cases for council chat | [/docs?doc=council-chat-qa](/docs?doc=council-chat-qa) |
 | **API Reference** | [docs/API_REFERENCE.md](docs/API_REFERENCE.md) — Full endpoint table (80+ routes) | [/docs?doc=api-reference](/docs?doc=api-reference) |
+| **Architecture Library Index** | [docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md) — Canonical modular map for target delivery, architecture, execution, UI, and testing | [/docs?doc=architecture-library-index](/docs?doc=architecture-library-index) |
+| **Target Deliverable V7** | [docs/architecture-library/TARGET_DELIVERABLE_V7.md](docs/architecture-library/TARGET_DELIVERABLE_V7.md) — Product end state, recurring-plan modes, success criteria, and phase framing | [/docs?doc=target-deliverable-v7](/docs?doc=target-deliverable-v7) |
+| **System Architecture V7** | [docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md) — Runtime layers, persistence, storage, deployment, and bus posture | [/docs?doc=system-architecture-v7](/docs?doc=system-architecture-v7) |
+| **Execution And Manifest Library V7** | [docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md) — Manifest lifecycle, run lifecycle, recurring plans, and activation rules | [/docs?doc=execution-manifest-library-v7](/docs?doc=execution-manifest-library-v7) |
+| **UI And Operator Experience V7** | [docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) — Anti-information-swarm UI guidance and canonical operator journeys | [/docs?doc=ui-operator-experience-v7](/docs?doc=ui-operator-experience-v7) |
+| **Delivery Governance And Testing V7** | [docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) — Delivery proof model, evidence requirements, and product-aligned testing | [/docs?doc=delivery-governance-testing-v7](/docs?doc=delivery-governance-testing-v7) |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
 | **Backend Specification** | [docs/architecture/BACKEND.md](docs/architecture/BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines | [/docs?doc=arch-backend](/docs?doc=arch-backend) |
 | **Frontend Specification** | [docs/architecture/FRONTEND.md](docs/architecture/FRONTEND.md) — Routes, components, Zustand, design system | [/docs?doc=arch-frontend](/docs?doc=arch-frontend) |
 | **Operations Manual** | [docs/architecture/OPERATIONS.md](docs/architecture/OPERATIONS.md) — Deployment, config, testing, CI/CD | [/docs?doc=arch-operations](/docs?doc=arch-operations) |
 | **Memory Service** | [docs/architecture/DIRECTIVE_MEMORY_SERVICE.md](docs/architecture/DIRECTIVE_MEMORY_SERVICE.md) — State Engine, event projection, pgvector schema | [/docs?doc=arch-memory-service](/docs?doc=arch-memory-service) |
-| **V7 Architecture PRD** | [mycelis-architecture-v7.md](mycelis-architecture-v7.md) — V7 product requirements: event spine, mission graph, observability | [/docs?doc=v7-architecture-prd](/docs?doc=v7-architecture-prd) |
+| **V7 Architecture PRD Index** | [mycelis-architecture-v7.md](mycelis-architecture-v7.md) — Stable root PRD path that points to the modular architecture library | [/docs?doc=v7-architecture-prd](/docs?doc=v7-architecture-prd) |
 | **V7 UI Framework** | [docs/UI_FRAMEWORK_V7.md](docs/UI_FRAMEWORK_V7.md) — Default UI instantiation contract (state model, failure templates, testing matrix, PR gate) | [/docs?doc=v7-ui-framework](/docs?doc=v7-ui-framework) |
 | **V7 UI Elements Planning** | [docs/UI_ELEMENTS_PLANNING_V7.md](docs/UI_ELEMENTS_PLANNING_V7.md) — Research-backed element standards, Soma interaction patterns, and planning workflow | [/docs?doc=v7-ui-elements-planning](/docs?doc=v7-ui-elements-planning) |
 | **V7 Parallel Implementation Board** | [docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md](docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md) — Unified gate model + lane matrix (A/B/C/D/Q) with inception-control evidence tracking | [/docs?doc=v7-ui-parallel-delivery](/docs?doc=v7-ui-parallel-delivery) |
