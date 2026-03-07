@@ -41,6 +41,7 @@ Signal/channel standard:
 - Current focused runtime check: `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
 - Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
 - Current focused Workspace chat contract check: `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
+- Current focused team-sync contract check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
 
 UI delivery contract:
 - Use `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md` as the authoritative map for UI terminal states and backend transaction expectations.
@@ -64,6 +65,7 @@ Minimum proof requirements by path:
 | --- | --- | --- |
 | Workspace / Soma chat | response lands in one valid terminal state, not planning-only output | `/api/v1/chat` call occurs and returned payload is classified correctly |
 | Direct council chat | specialist answer or structured blocker card renders | `/api/v1/council/{member}/chat` path is exercised and timeout/failure behavior is mapped |
+| Prime-team sync | architecture directives publish to canonical team lanes and operator-visible replies are collected | `swarm.team.{team}.internal.command` publishes and `signal.status`/`signal.result` replies are observed |
 | Launch Crew / guided manifestation | proposal or activation result is visible | proposal/confirm endpoints produce identifiers and mutation state |
 | Workflow composer | invalid graph blocks, valid graph proposes or activates | validate/compile/activate endpoints called with expected payloads |
 | Runs / timeline / chain | operator can inspect run state and outcome | run/event/chain/conversation queries return and are rendered consistently |

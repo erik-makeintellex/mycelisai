@@ -65,13 +65,22 @@ def test_architecture_sync_requests_all_teams_and_reports_replies(monkeypatch, c
         if replies_sent:
             return []
         replies_sent = True
-        inboxes: list[str] = []
+        reply_subjects: list[str] = []
         for item in fake_sock.sent:
             if item.startswith(b"SUB "):
-                inboxes.append(item.decode("utf-8").split()[1])
+                subject = item.decode("utf-8").split()[1]
+                if subject.endswith(".signal.status"):
+                    reply_subjects.append(subject)
         return [
-            (subject, f'{{"text":"ack:{idx}","tools_used":[]}}')
-            for idx, subject in enumerate(inboxes, start=1)
+            (
+                subject,
+                (
+                    '{"meta":{"source_kind":"system","source_channel":"swarm.team.test.internal.response",'
+                    '"payload_kind":"status","team_id":"test"},'
+                    f'"text":"ack:{idx}"}}'
+                ),
+            )
+            for idx, subject in enumerate(reply_subjects, start=1)
         ]
 
     monkeypatch.setattr("socket.create_connection", lambda *args, **kwargs: fake_sock)
@@ -83,15 +92,18 @@ def test_architecture_sync_requests_all_teams_and_reports_replies(monkeypatch, c
     misc.architecture_sync.body(Context(), timeout=2)
 
     output = capsys.readouterr().out
-    assert "Requested execution brief from prime-architect" in output
-    assert "Requested execution brief from prime-development" in output
-    assert "Requested execution brief from agui-design-architect" in output
+    assert "Dispatched architecture directive to prime-architect" in output
+    assert "Dispatched architecture directive to prime-development" in output
+    assert "Dispatched architecture directive to agui-design-architect" in output
     assert "All teams replied inside the sync window." in output
 
     published = b"".join(fake_sock.sent)
-    assert b"swarm.council.prime-architect-agent.request" in published
-    assert b"swarm.council.prime-development-agent.request" in published
-    assert b"swarm.council.agui-design-architect-agent.request" in published
+    assert b"swarm.team.prime-architect.internal.command" in published
+    assert b"swarm.team.prime-development.internal.command" in published
+    assert b"swarm.team.agui-design-architect.internal.command" in published
+    assert b"swarm.team.prime-architect.signal.status" in published
+    assert b"swarm.team.prime-development.signal.status" in published
+    assert b"swarm.team.agui-design-architect.signal.status" in published
     assert published.endswith(b"QUIT\r\n")
     assert fake_sock.closed is True
 
@@ -100,3 +112,9 @@ def test_format_sync_reply_prefers_process_result_text():
     message = '{"text":"brief body","tools_used":["publish_signal"]}'
 
     assert misc._format_sync_reply(message) == "brief body"
+
+
+def test_format_sync_reply_prefers_wrapped_signal_text():
+    message = '{"meta":{"payload_kind":"status"},"text":"wrapped brief"}'
+
+    assert misc._format_sync_reply(message) == "wrapped brief"

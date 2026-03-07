@@ -127,7 +127,8 @@ Latest integration checkpoint:
   - Team coordination and manifest delivery hardened:
     - standing `prime-architect`, `prime-development`, and `agui-design-architect` are now manifest-backed under `core/config/teams/`
     - `uv run inv team.architecture-sync` provides a Python-native NATS coordination path for central architect sync requests
-    - direct request-reply sync now uses cleaned council subjects instead of legacy trigger shortcuts
+    - central architect sync now uses canonical team lanes (`swarm.team.{team_id}.internal.command` -> `signal.status` / `signal.result`) instead of ad hoc direct-agent request subjects
+    - live sync currently receives canonical status replies from `prime-architect` and `agui-design-architect`; `prime-development` remains the open reply-discipline gap
   - Runner contract and task verification standardized:
     - `uv run inv ...` is the supported task path for real execution
     - `uvx --from invoke inv -l` is retained only as a compatibility probe
@@ -210,6 +211,8 @@ Verification evidence (latest targeted slice):
 - `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
 - `cd interface && npx tsc --noEmit`
 - `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
+- `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
+- `uv run inv team.architecture-sync`
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q`
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q`
 - `uv run inv lifecycle.memory-restart --frontend`
