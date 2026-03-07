@@ -102,6 +102,13 @@ def _format_sync_reply(message: str) -> str:
         reply_text = payload.get("text")
         if isinstance(reply_text, str) and reply_text.strip():
             return reply_text.strip()
+        nested = payload.get("payload")
+        if isinstance(nested, str) and nested.strip():
+            return nested.strip()
+        if isinstance(nested, dict):
+            nested_text = nested.get("text")
+            if isinstance(nested_text, str) and nested_text.strip():
+                return nested_text.strip()
     return text
 
 
@@ -113,29 +120,44 @@ def architecture_sync(c, timeout=12):
 
     directives = {
         "prime-architect": {
-            "agent_id": "prime-architect-agent",
+            "command_subject": "swarm.team.prime-architect.internal.command",
+            "reply_subjects": [
+                "swarm.team.prime-architect.signal.status",
+                "swarm.team.prime-architect.signal.result",
+            ],
             "message": (
                 "Central architecture directive: keep the next-target workflow aligned to strict gate order. "
                 "P0 remains the active phase. Require concrete test evidence before any phase advancement, "
-                "coordinate development and AGUI work to the target goals, and reply with a concise execution brief."
+                "coordinate development and AGUI work to the target goals, and reply with a concise execution brief. "
+                "Do not use tools for this sync. Respond in plain text with at most 6 short lines."
             ),
         },
         "prime-development": {
-            "agent_id": "prime-development-agent",
+            "command_subject": "swarm.team.prime-development.internal.command",
+            "reply_subjects": [
+                "swarm.team.prime-development.signal.status",
+                "swarm.team.prime-development.signal.result",
+            ],
             "message": (
                 "Development directive: focus on P0 closure, memory-restart reliability, logging standardization, "
                 "error-handling normalization, and no-regression verification. Go remains the primary implementation "
                 "language for backend/runtime work. Python is limited to tasks, management scripting, and tests. "
-                "Reply with the top implementation/testing priorities."
+                "Reply with the top implementation/testing priorities. Do not use tools for this sync. "
+                "Respond in plain text with at most 5 short lines."
             ),
         },
         "agui-design-architect": {
-            "agent_id": "agui-design-architect-agent",
+            "command_subject": "swarm.team.agui-design-architect.internal.command",
+            "reply_subjects": [
+                "swarm.team.agui-design-architect.signal.status",
+                "swarm.team.agui-design-architect.signal.result",
+            ],
             "message": (
                 "AGUI directive: align base UI updates to architecture truth. Prioritize workflow-composer onboarding, "
                 "gate-state visibility, system status, team roster visibility, and operator-safe error presentation. "
                 "Do not invent client-side workflow semantics that diverge from backend gates. "
-                "Reply with the top UI architecture priorities."
+                "Reply with the top UI architecture priorities. Do not use tools for this sync. "
+                "Respond in plain text with at most 5 short lines."
             ),
         },
     }
@@ -153,13 +175,11 @@ def architecture_sync(c, timeout=12):
 
         sock.sendall(b"CONNECT {\"verbose\":false,\"pedantic\":false}\r\n")
 
-        inboxes = {}
         sid = 1
-        for team_id in directives:
-            inbox = f"_INBOX.codex.team-sync.{team_id}.{int(time.time() * 1000)}"
-            inboxes[team_id] = inbox
-            sock.sendall(f"SUB {inbox} {sid}\r\n".encode("utf-8"))
-            sid += 1
+        for config in directives.values():
+            for subject in config["reply_subjects"]:
+                sock.sendall(f"SUB {subject} {sid}\r\n".encode("utf-8"))
+                sid += 1
 
         sock.sendall(b"PING\r\n")
         if _read_nats_line(sock) != "PONG":
@@ -167,36 +187,40 @@ def architecture_sync(c, timeout=12):
 
         for team_id, config in directives.items():
             payload = config["message"].encode("utf-8")
-            request_subject = f"swarm.council.{config['agent_id']}.request"
             sock.sendall(
-                f"PUB {request_subject} {inboxes[team_id]} {len(payload)}\r\n".encode("utf-8")
+                f"PUB {config['command_subject']} {len(payload)}\r\n".encode("utf-8")
             )
             sock.sendall(payload + b"\r\n")
-            print(f"Requested execution brief from {team_id}")
+            print(f"Dispatched architecture directive to {team_id}")
 
         sock.sendall(b"PING\r\n")
         if _read_nats_line(sock) != "PONG":
             raise RuntimeError("NATS did not acknowledge the publish flush")
 
         acknowledgements: list[tuple[str, str]] = []
+        responded_teams: set[str] = set()
         deadline = time.time() + float(timeout)
-        while time.time() < deadline and len(acknowledgements) < len(directives):
-            acknowledgements.extend(_drain_nats_messages(sock, 0.8))
+        while time.time() < deadline and len(responded_teams) < len(directives):
+            new_messages = _drain_nats_messages(sock, 0.8)
+            acknowledgements.extend(new_messages)
+            for subject, _ in new_messages:
+                for team_id, config in directives.items():
+                    if subject in config["reply_subjects"]:
+                        responded_teams.add(team_id)
             time.sleep(0.2)
 
-        seen_subjects = {subject for subject, _ in acknowledgements}
         for subject, message in acknowledgements:
             print(f"[reply] {subject}: {_format_sync_reply(message)}")
 
         missing = [
-            inboxes[team_id]
+            team_id
             for team_id in directives
-            if inboxes[team_id] not in seen_subjects
+            if team_id not in responded_teams
         ]
         if missing:
             print("\nMissing team replies:")
-            for subject in missing:
-                print(f"  - {subject}")
+            for team_id in missing:
+                print(f"  - {team_id}")
         else:
             print("\nAll teams replied inside the sync window.")
     finally:
