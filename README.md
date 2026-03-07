@@ -21,6 +21,7 @@
 > | [V7 UI Instantiation + Bus Plan](docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md) | Detailed operator workflow for team instantiation, I/O channels, and user-safe NATS exposure |
 > | [Soma Team + Channel Architecture V7](docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) | Canonical inter-team/process/MCP channel architecture and shared memory boundaries |
 > | [NATS Signal Standard V7](docs/architecture/NATS_SIGNAL_STANDARD_V7.md) | Canonical subject families, source normalization, and product-vs-dev channel rules for NATS traffic |
+> | [UI Target + Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md) | Required UI terminal states, frontend-triggered backend effects, and product-flow proof expectations |
 > | [Soma-Council Engagement Protocol V7](docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md) | Deterministic execution-path contract for internal tools, MCP, external API engagement, and code-to-execution loops |
 > | [MCP Service Config (Local-First)](docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) | Standard process for adding MCP services with local-default serving and remote exception controls |
 > | [Universal Action Interface V7](docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md) | Canonical action plane for MCP/OpenAPI/Python, dynamic service registry APIs, and governed execution |

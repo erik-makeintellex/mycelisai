@@ -1,7 +1,7 @@
 # V7 Implementation Plan — Event Spine, Mission Runs, Trigger Engine, Scheduler, Workflow-First IA
 
 > **Status:** In Progress — Team C (Scheduler) is NEXT; Team B (Trigger Engine) is COMPLETE
-> **Date:** 2026-02-20 | **Updated:** 2026-03-01
+> **Date:** 2026-02-20 | **Updated:** 2026-03-06
 > **Scope:** Migrations 023-029, 6 new Go packages, 8 new API route groups, 10+ new frontend components, navigation restructure
 > **Execution Order:** Core track Team A → Team B → Team C → Team E → Team D, then extension tracks in parallel behind security/governance gates
 >
@@ -15,6 +15,26 @@
 > | Team E | Causal Chain UI — ViewChain.tsx, RunChainNode.tsx, /runs/[id]/chain page | 🔲 PENDING |
 > | MCP Baseline | filesystem, memory, artifact-renderer, fetch MCP servers | 🔲 PARALLEL |
 > | Cross-Cut | Soma/Council engagement protocol (internal vs MCP vs API vs code-loop pathing) | ✅ CODIFIED (prompt + architecture contract) |
+> | Runtime UX/Ops | Assistant display-name personalization + fresh deployment reset reliability | ✅ COMPLETE |
+> | Runtime UX/Ops | Workspace chat-first cleanup + image cache-save lifecycle (60m TTL + explicit save) | ✅ COMPLETE |
+> | Runtime Ops | Canonical cluster bring-up contract (`k8s.up` + rollout gates + docs alignment) | ✅ COMPLETE |
+> | Cross-Cut | Root-admin full configuration contract (Soma executes beyond team-only flows) | ✅ CODIFIED |
+> | Runtime Ops | Cognitive startup probe scoping (`ollama` default + profile-routed providers only) | ✅ COMPLETE |
+> | Cross-Cut | NATS signal standardization (`signal.status`/`signal.result`/source-kind rules + dev-only infrastructure channel exclusion) | ✅ CODIFIED |
+> | Cross-Cut | UI target + transaction contract (terminal states, backend effects, product-flow proof) | ✅ CODIFIED |
+
+## UI Delivery Rule
+
+For any UI-affecting execution path, delivery planning must use:
+- `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+- `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`
+
+The implementation slice is incomplete until it specifies:
+1. the initiating user interaction
+2. the terminal UI state
+3. the backend API/NATS/runtime side effect
+4. the failure state
+5. the proof in tests
 
 ---
 
@@ -1769,6 +1789,7 @@ Deliver a governed extension-of-self runtime where Soma can:
 - Maintain lane evidence matrix.
 - Run degraded/recovery drills for NATS, SSE, and local provider failures.
 - Gate promotion to `main` via P0/P1/P2/RC evidence.
+- Current gate state: `P0` passed on 2026-03-06 after live `lifecycle.memory-restart --frontend`; active next phase is `P1` cleanup/no-regression enforcement.
 
 ### 9.3 Dependency and Sequencing Rules
 
@@ -1922,6 +1943,16 @@ This workboard translates the five learned patterns into concrete delivery items
   - integration: out-of-scope capability calls denied for group runs
   - integration: `group_id` propagation integrity across runs/events APIs
   - e2e: root admin asks Soma to create goal-scoped group, confirms proposal, executes bounded run
+
+10. Operator identity + clean-reset runtime continuity
+- Deliver assistant display-name setting (`assistant_name`) and propagate across Workspace/status/error/runs surfaces.
+- Persist identity settings in backend user-settings store with safe defaults and validation.
+- Add profile control for rename flow (`Settings -> Profile -> Assistant Name`).
+- Harden local reset path so full fresh deployment remains reproducible (`lifecycle.down -> k8s.reset -> lifecycle.up --build --frontend -> lifecycle.health`).
+- Ensure container build uses package-level server compile path for cmd composition correctness (`go build ./cmd/server`).
+- Tests:
+  - backend: `TestHandleMe`, `TestHandleUpdateSettings`, `TestHandleUpdateSettings_AssistantNamePersists`
+  - frontend: labels + mission chat + degraded banner suites with custom assistant name rendering
 
 Authoritative PRD for this program:
 - `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`

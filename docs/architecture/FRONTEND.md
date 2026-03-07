@@ -4,6 +4,11 @@
 >
 > **Related:** [Overview](OVERVIEW.md) | [Backend](BACKEND.md) | [Operations](OPERATIONS.md)
 
+> **Delivery Rule:** Execution-facing UI work must follow
+> `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`.
+> UI changes are not complete until terminal UI states, backend transaction effects,
+> and product-flow tests are defined together.
+
 ---
 
 ## I. Technology Stack
