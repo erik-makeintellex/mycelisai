@@ -237,6 +237,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Deployment, config, testing, CI/CD",
             },
             {
+                slug: "arch-ui-target-transaction-contract-v7",
+                label: "UI Target + Transaction Contract",
+                path: "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
+                description: "Required UI terminal states, backend effects, and product-flow proof expectations",
+            },
+            {
                 slug: "arch-memory-service",
                 label: "Memory Service",
                 path: "docs/architecture/DIRECTIVE_MEMORY_SERVICE.md",

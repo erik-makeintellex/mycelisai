@@ -7,7 +7,9 @@ Latest baseline (2026-03-06):
 - `cd core && go test ./... -count=1` -> pass (via baseline)
 - `cd interface && npx vitest run --reporter=dot` -> pass (via baseline)
 - Last full E2E sweep remains 2026-03-02: `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
-- Latest focused lifecycle slice: `$env:PYTHONPATH='.'; uv run pytest tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q` -> pass (`18` tests)
+- Latest focused lifecycle/task slice: `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q` -> pass (`26` tests)
+- Latest focused Go runtime slice: `cd core && go test ./internal/mcp ./internal/swarm ./pkg/protocol -count=1` -> pass
+- Latest destructive gate validation: `uv run inv lifecycle.memory-restart --frontend` -> pass
 
 ## Quick Reference
 
@@ -24,7 +26,7 @@ uv run inv interface.check       # HTTP smoke test against running dev server
 uv run inv logging.check-schema  # Event schema + docs coverage gate
 uv run inv logging.check-topics  # Hardcoded swarm topic gate
 uv run inv quality.max-lines --limit 350  # Hot-path max-lines gate with legacy caps
-uv run inv lifecycle.memory-restart --build --frontend  # Full memory reset + post-restart memory probes
+uv run inv lifecycle.memory-restart --frontend          # Full memory reset + post-restart memory probes
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 ```
 
@@ -38,6 +40,46 @@ Signal/channel standard:
 - Development-only infrastructure subjects are not part of product orchestration and should stay out of authoritative runtime tests unless the test is explicitly exercising dev-only behavior.
 - Current focused runtime check: `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
 - Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
+
+UI delivery contract:
+- Use `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md` as the authoritative map for UI terminal states and backend transaction expectations.
+- A UI test is incomplete if it proves rendering but does not prove the backend effect or intentionally blocked state behind that render.
+
+---
+
+## Product Delivery Proof (Required)
+
+For execution-facing UI work, tests must prove product behavior, not only component mechanics.
+
+Every changed UI path must document and test:
+1. the initiating user interaction
+2. the expected terminal UI state: `answer`, `proposal`, `execution_result`, or `blocker`
+3. the backend effect caused by the frontend: HTTP call, DB mutation, run/event creation, or NATS interaction
+4. the failure path and recovery affordance
+
+Minimum proof requirements by path:
+
+| UI Path | UI Proof | Backend/Transaction Proof |
+| --- | --- | --- |
+| Workspace / Soma chat | response lands in one valid terminal state, not planning-only output | `/api/v1/chat` call occurs and returned payload is classified correctly |
+| Direct council chat | specialist answer or structured blocker card renders | `/api/v1/council/{member}/chat` path is exercised and timeout/failure behavior is mapped |
+| Launch Crew / guided manifestation | proposal or activation result is visible | proposal/confirm endpoints produce identifiers and mutation state |
+| Workflow composer | invalid graph blocks, valid graph proposes or activates | validate/compile/activate endpoints called with expected payloads |
+| Runs / timeline / chain | operator can inspect run state and outcome | run/event/chain/conversation queries return and are rendered consistently |
+| System / degraded mode | recovery guidance is visible, not only colored status | health/status responses map to explicit degraded-state actions |
+
+Required test layers for UI-affecting delivery:
+- component tests: terminal state rendering and action affordances
+- integration tests: request/response mapping between UI and backend
+- product-flow tests: user journey reaches a real outcome
+- backend transaction tests: route/DB/NATS side effects match UI claims
+- failure tests: timeout, rejection, degraded dependency, retry/reroute flow
+
+Disallowed testing posture:
+- proving only that a button renders
+- proving only that a fetch function was called without validating resulting user state
+- treating planning-only content as a passing success state
+- validating backend code in isolation when the UI contract is the feature being changed
 
 ---
 
@@ -112,6 +154,8 @@ go test -v -run TestScoped ./internal/swarm/... -count=1
 - **Store state:** Set Zustand state directly via `useCortexStore.setState({...})`.
 - **ReactFlow components:** Import mock via `vi.mock('reactflow', () => import('../mocks/reactflow'))`.
 - **Next.js navigation:** `usePathname` and `useRouter` mocked globally in `setup.ts`.
+- **Terminal state assertions:** For execution-facing surfaces, assert the final delivery state (`answer`, `proposal`, `execution_result`, `blocker`) instead of only intermediate loading behavior.
+- **Transaction assertions:** When a component triggers an API call, assert the expected request target/payload and the resulting user-visible outcome.
 
 ### Running
 
@@ -127,6 +171,12 @@ npx vitest run __tests__/shell/            # Single directory
 
 **Goal:** Verify full user journeys through the running application.
 **Speed:** 30s-2min (requires running Core + Interface servers).
+
+For execution-facing UI work, Playwright coverage should prefer user stories with real closure:
+- direct answer returned
+- proposal created and confirmable
+- run created and inspectable
+- structured blocker with recovery path
 
 ### Location
 
@@ -223,10 +273,12 @@ uv run inv lifecycle.memory-restart --build --frontend
 
 Expected command outcomes:
 - stack teardown/restart completes
+- forward-only migration set applies cleanly (`001_init_memory.sql` + `*.up.sql`)
 - health probe passes
 - memory probes return HTTP 200:
   - `/api/v1/memory/stream`
   - `/api/v1/memory/sitreps?limit=1`
+- if Core fails before binding `:8081`, inspect `workspace/logs/core-startup.log`
 
 ---
 
@@ -252,6 +304,15 @@ Three GitHub Actions workflows enforce quality on every push/PR to `main` and `d
 ---
 
 ## Adding New Tests
+
+### UI Delivery Test Checklist
+
+Before adding or modifying an execution-facing UI feature, answer these in the test file or PR notes:
+1. what user interaction starts the flow?
+2. what terminal UI state is expected?
+3. what backend transaction proves the UI actually caused the intended effect?
+4. what failure state should the user see?
+5. what recovery action should remain available?
 
 ### Backend Handler Test
 

@@ -13,6 +13,7 @@ Primary documentation entry points for V7:
 - **NATS Signal Standard V7**: `./architecture/NATS_SIGNAL_STANDARD_V7.md`
 - **Soma-Council Engagement Protocol V7**: `./architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`
 - **Workflow Composer Delivery Plan V7**: `./architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
+- **UI Target + Transaction Contract V7**: `./architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
 - **Logging Standard (V7)**: `./logging.md`
 - **Architecture Specs**: `./architecture/` (`OVERVIEW.md`, `BACKEND.md`, `FRONTEND.md`, `OPERATIONS.md`)
 - **Agent Source Instantiation Template (Ollama-Default)**: `./architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md`

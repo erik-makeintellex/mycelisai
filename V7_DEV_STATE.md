@@ -170,6 +170,10 @@ Latest integration checkpoint:
     - shared frontend normalization now accepts both legacy SSE signals and standardized signal envelopes
     - signal detail surfaces now expose source kind, payload kind, source channel, and run/team/agent metadata when present
     - dashboard signal context and main store stream ingestion now normalize at the boundary instead of assuming raw payload shape
+  - UI delivery targeting tightened:
+    - new authority doc `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md` defines required terminal UI states, backend transaction expectations, and failure/recovery rules for execution-facing UI
+    - frontend and testing docs now require UI work to prove user-visible outcome plus backend API/NATS/runtime side effect together
+    - docs regression coverage now validates both top-level README links and in-app docs manifest paths
   - Test readiness for latest changes refreshed:
     - task/gate unit suites pass (`test_ci_tasks`, `test_auth_tasks`, `test_logging_tasks`, `test_quality_tasks`, `test_lifecycle_tasks`)
     - focused runner/task suite passes with `uv run inv ci.entrypoint-check` plus pytest task coverage
