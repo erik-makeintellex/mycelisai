@@ -1,5 +1,5 @@
 from invoke import Collection, task
-from ops import core, k8s, proto_relay, misc, interface
+from ops import core, k8s, proto_relay, misc, interface, auth, logging as logging_tasks, quality
 
 ns = Collection()
 
@@ -36,6 +36,9 @@ ns.add_collection(proto_relay.ns_relay)
 ns.add_collection(misc.ns_clean)
 ns.add_collection(misc.ns_team)
 ns.add_collection(interface.ns)
+ns.add_collection(auth.ns)
+ns.add_collection(logging_tasks.ns)
+ns.add_collection(quality.ns)
 
 from ops import device, test, db, ci, cognitive, lifecycle
 ns.add_collection(device.ns)

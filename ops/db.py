@@ -38,7 +38,7 @@ def _run_psql(sql=None, file=None, dbname=None):
     """Run psql and return the completed process."""
     host, port, user, password, db = _dsn(dbname)
     env = {**os.environ, "PGPASSWORD": password}
-    cmd = ["psql", "-h", host, "-p", port, "-U", user, "-d", db]
+    cmd = ["psql", "-v", "ON_ERROR_STOP=1", "-h", host, "-p", port, "-U", user, "-d", db]
     if file:
         cmd += ["-f", str(file)]
     elif sql:
@@ -63,6 +63,19 @@ def _psql(sql=None, file=None, dbname=None):
     result = _run_psql(sql=sql, file=file, dbname=dbname)
     _emit_psql_output(result)
     return result.returncode
+
+
+def _migration_files():
+    """Return the canonical forward migration sequence."""
+    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    selected = []
+    for file in files:
+        name = file.name
+        if name.endswith(".down.sql"):
+            continue
+        if name.endswith(".up.sql") or name == "001_init_memory.sql":
+            selected.append(file)
+    return selected
 
 
 def _require_postgres(dbname="postgres"):
@@ -93,6 +106,10 @@ def status(c):
 @task
 def create(c):
     """Create the cortex database if it doesn't exist."""
+    _ensure_database_exists()
+
+
+def _ensure_database_exists():
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
     _require_postgres()
@@ -111,36 +128,41 @@ def create(c):
     print(f"Database '{db}' ready.")
 
 
-@task
-def migrate(c):
-    """Apply all migrations in order to the cortex database."""
+def _apply_migrations(strict=False):
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
 
-    # Ensure DB exists
-    create(c)
+    _ensure_database_exists()
 
-    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    files = _migration_files()
     if not files:
         print("No migration files found.")
         return
 
     print(f"Applying {len(files)} migrations to '{db}'...")
     failures = []
-    for f in files:
-        print(f"  {f.name}...", end=" ")
-        rc = _psql(file=f)
+    for file in files:
+        print(f"  {file.name}...", end=" ")
+        rc = _psql(file=file)
         if rc == 0:
             print("OK")
-        else:
-            print("ERRORS (non-fatal, continuing)")
-            failures.append(f.name)
+            continue
+        print("ERROR")
+        failures.append(file.name)
+        if strict:
+            raise SystemExit(f"Migration failed: {file.name}")
 
     if failures:
         print(f"\nMigrations with errors: {', '.join(failures)}")
-        print("(Some errors are expected on re-runs due to IF NOT EXISTS guards)")
+        print("Fix the failing migration or reset the database before retrying.")
     else:
         print("\nAll migrations applied cleanly.")
+
+
+@task
+def migrate(c):
+    """Apply all migrations in order to the cortex database."""
+    _apply_migrations(strict=False)
 
 
 @task
@@ -173,7 +195,7 @@ def reset(c):
     print(f"Database '{db}' recreated.")
 
     # Apply migrations
-    migrate(c)
+    _apply_migrations(strict=True)
 
 
 ns = Collection("db")
