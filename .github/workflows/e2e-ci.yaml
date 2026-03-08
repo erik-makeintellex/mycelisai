@@ -57,6 +57,7 @@ jobs:
       - name: Start Core Server
         run: ./bin/server &
         env:
+          MYCELIS_API_KEY: "mycelis-dev-key-change-in-prod"
           OLLAMA_HOST: "http://localhost:11434"
           DATABASE_URL: ""
 
@@ -73,6 +74,8 @@ jobs:
         env:
           INTERFACE_HOST: 127.0.0.1
           INTERFACE_PORT: "3000"
+          MYCELIS_API_KEY: "mycelis-dev-key-change-in-prod"
+          PLAYWRIGHT_LIVE_BACKEND: "1"
           PLAYWRIGHT_UI_SERVER_COMMAND: npm run start -- --hostname 127.0.0.1 --port 3000
 
       - name: Upload Test Results

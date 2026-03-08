@@ -141,6 +141,7 @@ def test_canonical_task_docs_cover_required_invoke_commands():
             "uv run inv quality.max-lines --limit 350",
             "uv run inv ci.entrypoint-check",
             "uv run inv team.architecture-sync",
+            "--live-backend",
         ],
         ROOT / "ops" / "README.md": [
             "uv run inv core.build",
@@ -171,6 +172,8 @@ def test_playwright_docs_reflect_owned_server_and_browser_matrix():
             "Playwright starts/stops the Next.js server",
             "mobile-chromium",
             "@axe-core/playwright",
+            "workspace-live-backend.spec.ts",
+            "--live-backend",
         ],
         ROOT / "docs" / "architecture" / "OPERATIONS.md": [
             "Playwright owns Next.js server lifecycle",

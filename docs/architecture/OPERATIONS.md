@@ -60,7 +60,7 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
 | `uv run inv interface.test` | `npm run test` (Vitest) |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
-| `uv run inv interface.e2e` | `npm run e2e` (Playwright owns Next.js server lifecycle; Invoke clears stale Interface listeners before/after; optional `--headed`, `--project=...`, `--spec=...`) |
+| `uv run inv interface.e2e` | `npm run e2e` (Playwright owns Next.js server lifecycle; Invoke clears stale Interface listeners before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
 | `uv run inv interface.stop` | Kill process on port 3000 |
 | `uv run inv interface.clean` | rm -rf .next cache |
 | `uv run inv interface.restart` | stop → clean → build → dev → check |

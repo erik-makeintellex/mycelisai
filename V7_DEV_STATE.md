@@ -211,6 +211,8 @@ Latest integration checkpoint:
   - UI test harness hardened for reproducible local and CI delivery proof:
     - Playwright now owns the Next.js Interface server lifecycle through `interface/playwright.config.ts`
     - `uv run inv interface.e2e` and `uv run inv test.e2e` now support focused `--project` and `--spec` execution and clear stale listeners on `:3000` before and after each run
+    - `uv run inv interface.e2e --live-backend ...` now loads auth proxy env and enables real Core-backed UI specs instead of route-fulfilled-only browser coverage
+    - new Playwright spec `interface/e2e/specs/workspace-live-backend.spec.ts` proves live `/api/v1/services/status` and `/api/v1/council/members` traffic through the Workspace UI proxy
     - accessibility coverage now depends on a committed `@axe-core/playwright` dev dependency instead of silently skipping when missing
     - Playwright project coverage now includes `chromium`, `firefox`, `webkit`, and `mobile-chromium`
     - `.github/workflows/e2e-ci.yaml` now installs the full browser matrix and lets Playwright manage the UI server while Core remains a separately started backend dependency
@@ -228,6 +230,7 @@ Verification evidence (latest targeted slice):
 - `cd interface && npx tsc --noEmit`
 - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts`
 - `uv run inv test.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts`
+- `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts`
 - `python -m py_compile ops/k8s.py`
 - `cd core && go test ./internal/cognitive -count=1`
 - `python -m py_compile ops/lifecycle.py`

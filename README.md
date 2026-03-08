@@ -1575,7 +1575,7 @@ Run from `scratch/` root using `uv run inv`:
 | `uv run inv interface.dev` | Start Next.js dev server (Turbopack) |
 | `uv run inv interface.build` | Production build |
 | `uv run inv interface.test` | Run Vitest unit tests |
-| `uv run inv interface.e2e` | Run Playwright E2E tests (Playwright owns the Next.js server lifecycle; Invoke clears stale UI listeners) |
+| `uv run inv interface.e2e` | Run Playwright E2E tests (Playwright owns the Next.js server lifecycle; Invoke clears stale UI listeners; add `--live-backend` for real Core-backed UI flows) |
 | `uv run inv interface.check` | Smoke-test running server (9 pages, no light-mode leaks) |
 | `uv run inv interface.stop` | Kill dev server |
 | `uv run inv interface.clean` | Clear `.next` cache |

@@ -62,17 +62,21 @@ def test_coverage(c):
         "headed": "Open a visible browser window.",
         "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
         "spec": "Optional Playwright spec path or glob.",
+        "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
     }
 )
-def e2e(c, headed=False, project="", spec=""):
+def e2e(c, headed=False, project="", spec="", live_backend=False):
     """
     Run Playwright E2E tests.
     Playwright owns the Next.js dev server lifecycle through interface/playwright.config.ts,
     so this task does not require a manually started Interface process.
     The Invoke wrapper clears any stale Interface listener before and after the
     run because Next.js dev servers can linger on Windows after Playwright exits.
+    Use --live-backend when the spec should talk to the real Core API through
+    the Next.js proxy instead of relying entirely on route stubs.
     """
     print("Running Playwright E2E Tests...")
+    _load_env()
     cmd = "cd interface && npx playwright test"
     if project:
         cmd += f" --project={project}"
@@ -80,9 +84,10 @@ def e2e(c, headed=False, project="", spec=""):
         cmd += f" {spec}"
     if headed:
         cmd += " --headed"
+    env = {"PLAYWRIGHT_LIVE_BACKEND": "1"} if live_backend else None
     stop(c)
     try:
-        c.run(cmd, pty=not is_windows())
+        c.run(cmd, pty=not is_windows(), env=env)
     finally:
         stop(c)
 
