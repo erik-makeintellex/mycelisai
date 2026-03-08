@@ -53,6 +53,7 @@ def test_docs_manifest_exposes_required_canonical_docs():
         "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
         "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
         "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
+        "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
         "mycelis-architecture-v7.md",
     ]
 
@@ -160,6 +161,36 @@ def test_canonical_task_docs_cover_required_invoke_commands():
     assert not missing, "Canonical task docs are missing required invoke commands:\n" + "\n".join(missing)
 
 
+def test_playwright_docs_reflect_owned_server_and_browser_matrix():
+    expectations = {
+        README: [
+            "Playwright owns the Next.js server lifecycle",
+            "chromium firefox webkit",
+        ],
+        ROOT / "docs" / "TESTING.md": [
+            "Playwright starts/stops the Next.js server",
+            "mobile-chromium",
+            "@axe-core/playwright",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "Playwright owns Next.js server lifecycle",
+            "Chromium/Firefox/WebKit + mobile smoke",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in expectations.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+        if "requires running servers" in text:
+            missing.append(f"{path.relative_to(ROOT)} still says Playwright requires running servers")
+
+    assert not missing, "Playwright docs are missing required lifecycle/browser guidance:\n" + "\n".join(missing)
+
+
 def test_prd_index_points_to_modular_architecture_library():
     text = PRD_INDEX.read_text(encoding="utf-8")
     required_links = [
@@ -169,6 +200,7 @@ def test_prd_index_points_to_modular_architecture_library():
         "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
         "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
         "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
+        "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
     ]
 
     missing = [link for link in required_links if link not in text]

@@ -35,7 +35,7 @@ Phase 19 [COMPLETE]
 
 ---
 
-## Current Checkpoint (2026-03-06)
+## Current Checkpoint (2026-03-07)
 
 Latest integration checkpoint:
 - Base commit: `fe335e7`
@@ -197,6 +197,7 @@ Latest integration checkpoint:
     - new modular planning library lives in `docs/architecture-library/`
     - canonical planning is now split across target-deliverable, system-architecture, execution-manifest, UI-operator-experience, and delivery-governance docs
     - README and in-app docs navigation now point future work toward the modular library instead of expanding one giant PRD file
+    - `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` now translates the modular library into the current implementation queue with scoped files plus development/testing references
   - Invoke docs/task contract refreshed:
     - canonical operator docs (`README.md`, `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, `ops/README.md`) now align to the live `uv run inv -l` surface for auth, lifecycle, CI, logging, quality, and team-sync tasks
     - user recovery docs and workflow-composer delivery planning now use `uv run inv ...` for real task execution instead of stale executable bare `uvx inv ...` examples
@@ -207,6 +208,12 @@ Latest integration checkpoint:
     - focused Go protocol/swarm suite passes for the signal-runtime contract
     - focused frontend signal-normalization suite and typecheck pass
     - focused lifecycle/runner/logging pytest suite passes after readiness hardening
+  - UI test harness hardened for reproducible local and CI delivery proof:
+    - Playwright now owns the Next.js Interface server lifecycle through `interface/playwright.config.ts`
+    - `uv run inv interface.e2e` and `uv run inv test.e2e` now support focused `--project` and `--spec` execution and clear stale listeners on `:3000` before and after each run
+    - accessibility coverage now depends on a committed `@axe-core/playwright` dev dependency instead of silently skipping when missing
+    - Playwright project coverage now includes `chromium`, `firefox`, `webkit`, and `mobile-chromium`
+    - `.github/workflows/e2e-ci.yaml` now installs the full browser matrix and lets Playwright manage the UI server while Core remains a separately started backend dependency
 
 Verification evidence (latest targeted slice):
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
@@ -217,6 +224,10 @@ Verification evidence (latest targeted slice):
 - `cd interface && npx vitest run --reporter=dot`
 - `cd core && go test ./internal/server -run "TestHandleMe|TestHandleUpdateSettings" -count=1`
 - `cd interface && npx vitest run __tests__/lib/labels.test.ts __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`
+- `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
+- `cd interface && npx tsc --noEmit`
+- `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts`
+- `uv run inv test.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts`
 - `python -m py_compile ops/k8s.py`
 - `cd core && go test ./internal/cognitive -count=1`
 - `python -m py_compile ops/lifecycle.py`

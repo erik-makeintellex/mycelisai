@@ -60,7 +60,7 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
 | `uv run inv interface.test` | `npm run test` (Vitest) |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
-| `uv run inv interface.e2e` | `npm run e2e` (Playwright, optional `--headed`) |
+| `uv run inv interface.e2e` | `npm run e2e` (Playwright owns Next.js server lifecycle; Invoke clears stale Interface listeners before/after; optional `--headed`, `--project=...`, `--spec=...`) |
 | `uv run inv interface.stop` | Kill process on port 3000 |
 | `uv run inv interface.clean` | rm -rf .next cache |
 | `uv run inv interface.restart` | stop → clean → build → dev → check |
@@ -74,6 +74,31 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | List tables + row counts |
 | `uv run inv db.create` | Create cortex database (if not exists) |
+
+### Auth Tasks (`ops/auth.py`)
+
+| Command | Description |
+|---------|-------------|
+| `uv run inv auth.dev-key` | Ensure a local `MYCELIS_API_KEY` exists and keep `.env.example` on a sample value |
+
+### Lifecycle Tasks (`ops/lifecycle.py`)
+
+| Command | Description |
+|---------|-------------|
+| `uv run inv lifecycle.up` | Idempotent bring-up: bridge -> dependencies -> Core (waits for `/healthz`; supports `--build` and `--frontend`) |
+| `uv run inv lifecycle.down` | Clean teardown: Core -> Frontend -> port-forwards with bounded cleanup and port-close waits |
+| `uv run inv lifecycle.status` | Dashboard for PostgreSQL, NATS, Core, Frontend, Ollama, and related PIDs |
+| `uv run inv lifecycle.health` | Deep health probe against actual API endpoints with auth |
+| `uv run inv lifecycle.restart` | Full local restart: down -> settle -> up (supports `--build` and `--frontend`) |
+| `uv run inv lifecycle.memory-restart` | Destructive recovery path: down -> db.reset -> up -> health -> memory probes |
+
+### Logging & Quality Gates (`ops/logging.py`, `ops/quality.py`)
+
+| Command | Description |
+|---------|-------------|
+| `uv run inv logging.check-schema` | Verify runtime event literals map to declared event constants and docs coverage |
+| `uv run inv logging.check-topics` | Fail when production code hardcodes `swarm.*` subjects outside allowed constants files |
+| `uv run inv quality.max-lines --limit 350` | Enforce the hot-path `<=350 LOC` policy with temporary no-regression legacy caps |
 
 ### Kubernetes Tasks (`ops/k8s.py`)
 
@@ -115,6 +140,10 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `uv run inv ci.test` | Go tests + Interface tests |
 | `uv run inv ci.build` | Go binary + Next.js production build (no Docker) |
 | `uv run inv ci.check` | Full pipeline: lint → test → build (with stage timers) |
+| `uv run inv ci.baseline` | Strict delivery baseline covering gates, focused runtime tests, interface build/typecheck, and Vitest |
+| `uv run inv ci.entrypoint-check` | Verify the supported invoke runner matrix and reject unsupported bare aliases |
+| `uv run inv ci.toolchain-check` | Report toolchain versions and optionally enforce Go lock policy |
+| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline |
 | `uv run inv ci.deploy` | Build + Docker + K8s deploy |
 
 ### Other Tasks
@@ -125,7 +154,9 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `ops/proto_relay.py` | `relay.test`, `relay.demo` | Python SDK tests + demo |
 | `ops/device.py` | `device.boot --id=ghost-01` | Device simulation (NATS announce) |
 | `ops/misc.py` | `clean.legacy` | Remove legacy Makefile/docker-compose |
-| `ops/misc.py` | `team.sensors`, `team.output`, `team.test` | Python agent teams |
+| `ops/misc.py` | `team.sensors`, `team.output`, `team.test`, `team.architecture-sync` | Python agent teams + central architect sync over canonical NATS lanes |
+
+Key coordination example: `uv run inv team.architecture-sync`
 
 ### Config Module (`ops/config.py`)
 
@@ -305,7 +336,7 @@ defaults:
 |------|------|-------|-------|---------|
 | 1 | Go unit tests | ~112 tests | <5s | `uv run inv core.test` |
 | 2 | Vitest component tests | ~114 tests | <10s | `uv run inv interface.test` |
-| 3 | Playwright E2E | 12 spec files | 30s–2min | `uv run inv interface.e2e` |
+| 3 | Playwright E2E | 17 spec files + axe accessibility baseline | 30s–2min | `uv run inv interface.e2e` |
 | 4 | Integration tests | DB + NATS + LLM | varies | manual |
 | 5 | Governance smoke | cmd/smoke | varies | `uv run inv core.smoke` |
 
@@ -326,7 +357,7 @@ defaults:
 - **ReactFlow mock:** `__tests__/mocks/reactflow.ts` — ResizeObserver, components, hooks, enums
 - **Store testing:** `useCortexStore.setState()` for pre-seeded state
 - **Key test files:** `__tests__/{shell,dashboard}/*.test.tsx`
-- **E2E specs:** `e2e/specs/*.spec.ts` (12 files)
+- **E2E specs:** `e2e/specs/*.spec.ts` (17 files, including mobile and accessibility slices)
 - **Config:** `playwright.config.ts`
 
 ### Smoke Test (Quality Gate)
@@ -347,7 +378,7 @@ defaults:
 |----------|------|--------------|--------|
 | **Core CI** | `core-ci.yaml` | `core/**`, `ops/core.py` | Go test + coverage, GolangCI-Lint v1.64.5, binary build |
 | **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py` | ESLint, `tsc --noEmit`, Vitest, production build |
-| **E2E CI** | `e2e-ci.yaml` | `interface/**`, `core/**` | Build Core + Next.js, start servers, Playwright (Chromium) |
+| **E2E CI** | `e2e-ci.yaml` | `interface/**`, `core/**` | Build Core + Next.js, start Core, Playwright-managed UI server, Chromium/Firefox/WebKit + mobile smoke |
 
 **Trigger:** Push/PR to `main` and `develop`
 

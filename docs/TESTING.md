@@ -7,6 +7,9 @@ Latest baseline (2026-03-06):
 - `cd core && go test ./... -count=1` -> pass (via baseline)
 - `cd interface && npx vitest run --reporter=dot` -> pass (via baseline)
 - Last full E2E sweep remains 2026-03-02: `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
+- Latest focused Playwright harness slice (2026-03-07):
+  - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts` -> pass (`3` passed)
+  - `uv run inv test.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts` -> pass (`3` passed)
 - Latest focused lifecycle/task slice: `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q` -> pass (`26` tests)
 - Latest focused Go runtime slice: `cd core && go test ./internal/mcp ./internal/swarm ./pkg/protocol -count=1` -> pass
 - Latest destructive gate validation: `uv run inv lifecycle.memory-restart --frontend` -> pass
@@ -20,7 +23,7 @@ Latest baseline (2026-03-06):
 # Unsupported bare alias: uvx inv ...
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv interface.test        # Vitest unit tests (jsdom)
-uv run inv interface.e2e         # Playwright E2E tests (requires running servers)
+uv run inv interface.e2e         # Playwright E2E tests (Playwright starts/stops the Next.js server; Invoke clears stale UI listeners)
 uv run inv core.smoke            # Governance smoke tests
 uv run inv interface.check       # HTTP smoke test against running dev server
 uv run inv logging.check-schema  # Event schema + docs coverage gate
@@ -43,6 +46,7 @@ Signal/channel standard:
 - Current focused Workspace chat contract check: `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
 - Current focused team-sync contract check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
 - Current focused README navigation check: `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
+- Current docs/task drift rule: canonical docs must not contain executable bare `uvx inv ...` examples outside explicit negative-control guidance.
 
 UI delivery contract:
 - Use `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md` as the authoritative map for UI terminal states and backend transaction expectations.
@@ -174,7 +178,7 @@ npx vitest run __tests__/shell/            # Single directory
 ## Tier 3: End-to-End Tests (Playwright)
 
 **Goal:** Verify full user journeys through the running application.
-**Speed:** 30s-2min (requires running Core + Interface servers).
+**Speed:** 30s-2min (Playwright owns the Interface server; start Core separately only for live-backend specs).
 
 For execution-facing UI work, Playwright coverage should prefer user stories with real closure:
 - direct answer returned
@@ -198,25 +202,33 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/proposals.spec.ts` | Proposal CRUD flow |
 | `interface/e2e/specs/teams.spec.ts` | Team management, roster |
 | `interface/e2e/specs/wiring-edit.spec.ts` | Neural wiring, agent edit/delete |
+| `interface/e2e/specs/v7-operational-ux.spec.ts` | Execution-facing degraded-state, recovery, status drawer, and operator UX checks |
+| `interface/e2e/specs/mobile.spec.ts` | Mobile viewport smoke coverage under the dedicated mobile Playwright project |
+| `interface/e2e/specs/accessibility.spec.ts` | Axe-backed accessibility baseline for key operator surfaces |
 
 ### Configuration
 
 - **Config:** `interface/playwright.config.ts`
-- **Base URL:** `http://localhost:3000`
-- **Browser:** Chromium (headless in CI)
+- **Base URL:** `http://127.0.0.1:3000` by default (`INTERFACE_HOST` / `INTERFACE_PORT` override supported)
+- **Browser Projects:** `chromium`, `firefox`, `webkit`, `mobile-chromium`
+- **Server Lifecycle:** Playwright `webServer` starts/stops the Next.js app for local and CI E2E runs
+- **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run
+- **Accessibility Gate:** `@axe-core/playwright` is a required dev dependency; accessibility specs must fail when violated, not skip because the package is missing
 - **Dark mode compliance:** Every spec includes `no bg-white` assertion
 
 ### Running
 
 ```bash
-# Start servers first
-uv run inv core.run          # Terminal 1
-uv run inv interface.dev     # Terminal 2
+# Core is only required for specs that hit the real backend instead of route stubs.
+uv run inv core.run          # Optional: start live backend coverage in a separate terminal
 
 # Run E2E tests
 uv run inv interface.e2e                     # All specs
+uv run inv interface.e2e --project=firefox
+uv run inv interface.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts
 npx playwright test --project=chromium    # From interface/
 npx playwright test e2e/specs/missions.spec.ts  # Single spec
+npx playwright test e2e/specs/accessibility.spec.ts --project=chromium
 npx playwright show-report                # View HTML report
 ```
 
@@ -294,7 +306,7 @@ Three GitHub Actions workflows enforce quality on every push/PR to `main` and `d
 |----------|------|-------------|
 | **Core CI** | `.github/workflows/core-ci.yaml` | Go test with coverage + GolangCI-Lint v1.64.5 + binary build |
 | **Interface CI** | `.github/workflows/interface-ci.yaml` | npm lint + `tsc --noEmit` + Vitest + production build |
-| **E2E CI** | `.github/workflows/e2e-ci.yaml` | Build Core binary + Next.js, start both servers, run Playwright, upload results on failure |
+| **E2E CI** | `.github/workflows/e2e-ci.yaml` | Build Core binary + Next.js, start Core, let Playwright own the UI server, run browser matrix, upload results on failure |
 
 ### CI Checks
 
@@ -303,7 +315,7 @@ Three GitHub Actions workflows enforce quality on every push/PR to `main` and `d
 - **TypeScript:** `npx tsc --noEmit` (strict type checking)
 - **Frontend Lint:** `npm run lint` (ESLint)
 - **Frontend Tests:** `npm run test` (Vitest)
-- **E2E:** Playwright with Chromium, test results uploaded as artifact on failure
+- **E2E:** Playwright browser matrix (`chromium`, `firefox`, `webkit`, `mobile-chromium`) with axe accessibility baseline, test results uploaded as artifact on failure
 
 ---
 

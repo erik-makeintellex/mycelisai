@@ -1,15 +1,7 @@
+import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from '@playwright/test';
 
-let AxeBuilder: any;
-try {
-    AxeBuilder = require('@axe-core/playwright').default;
-} catch {
-    // axe-core not installed — tests will be skipped
-}
-
 test.describe('Accessibility Baseline', () => {
-    test.skip(!AxeBuilder, '@axe-core/playwright not installed');
-
     test('dashboard has no critical a11y violations', async ({ page }) => {
         await page.goto('/');
         await page.waitForLoadState('domcontentloaded');

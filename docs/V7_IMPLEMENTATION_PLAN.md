@@ -1,7 +1,7 @@
 # V7 Implementation Plan — Event Spine, Mission Runs, Trigger Engine, Scheduler, Workflow-First IA
 
 > **Status:** In Progress — Team C (Scheduler) is NEXT; Team B (Trigger Engine) is COMPLETE
-> **Date:** 2026-02-20 | **Updated:** 2026-03-06
+> **Date:** 2026-02-20 | **Updated:** 2026-03-07
 > **Scope:** Migrations 023-029, 6 new Go packages, 8 new API route groups, 10+ new frontend components, navigation restructure
 > **Execution Order:** Core track Team A → Team B → Team C → Team E → Team D, then extension tracks in parallel behind security/governance gates
 >
@@ -22,6 +22,7 @@
 > | Runtime Ops | Cognitive startup probe scoping (`ollama` default + profile-routed providers only) | ✅ COMPLETE |
 > | Cross-Cut | NATS signal standardization (`signal.status`/`signal.result`/source-kind rules + dev-only infrastructure channel exclusion) | ✅ CODIFIED |
 > | Cross-Cut | UI target + transaction contract (terminal states, backend effects, product-flow proof) | ✅ CODIFIED |
+> | Cross-Cut | UI test harness hardening (Playwright-owned UI server, multi-browser matrix, required axe baseline) | ✅ COMPLETE |
 
 ## UI Delivery Rule
 
