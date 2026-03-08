@@ -9,13 +9,9 @@ Primary documentation entry points for V7:
 - **Execution And Manifest Library V7**: `./architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md`
 - **UI And Operator Experience V7**: `./architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
 - **Delivery Governance And Testing V7**: `./architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
+- **Next Execution Slices V7**: `./architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 - **V7 Architecture PRD Index**: `../mycelis-architecture-v7.md`
 - **V7 Development State**: `../V7_DEV_STATE.md`
-- **V7 UI Framework (Canonical v2.0)**: `./UI_FRAMEWORK_V7.md`
-- **V7 UI Elements Planning**: `./UI_ELEMENTS_PLANNING_V7.md`
-- **V7 Parallel Implementation Board**: `./ui-delivery/PARALLEL_DELIVERY_BOARD.md`
-- **Team A/B/C/Q Execution Board**: `./ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md`
-- **Soma Extension-of-Self PRD**: `./product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
 - **NATS Signal Standard V7**: `./architecture/NATS_SIGNAL_STANDARD_V7.md`
 - **Soma-Council Engagement Protocol V7**: `./architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`
 - **Workflow Composer Delivery Plan V7**: `./architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
@@ -31,3 +27,4 @@ Primary documentation entry points for V7:
 
 User-facing guides live in `./user/`.
 Specialized implementation references remain under `./architecture/`, while the canonical planning library now lives under `./architecture-library/`.
+Superseded planning boards and lane playbooks have been purged from the canonical surface; use `./archive/README.md` only for historical context that still needs to be retained.

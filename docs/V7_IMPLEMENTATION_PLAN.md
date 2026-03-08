@@ -1932,7 +1932,7 @@ This workboard translates the five learned patterns into concrete delivery items
 - Team C (Runtime/UI): group management panel embedded in Teams surface and live group-bus health surfaced through System/Status (`groups_bus` service row + status drawer row).
 - Team Q (QA): integration tests for DB lifecycle, scope denial paths, high-impact approval response, NATS fanout, and monitor snapshot output.
 - Next Sprint: propagate `group_id` into mission_runs/mission_events for run/timeline lineage and enforce group capability bounds during action dispatch.
-- Active execution board: `docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md`.
+- Active execution queue: `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`.
 - Parallel cadence:
   - Wave 0: contract freeze (`group_id`, denial envelope, approval UX contract)
   - Wave 1: Team A/B/C implementation in parallel; Team Q harness prep
@@ -1955,8 +1955,9 @@ This workboard translates the five learned patterns into concrete delivery items
   - backend: `TestHandleMe`, `TestHandleUpdateSettings`, `TestHandleUpdateSettings_AssistantNamePersists`
   - frontend: labels + mission chat + degraded banner suites with custom assistant name rendering
 
-Authoritative PRD for this program:
-- `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
+Authoritative target/delivery sources for this program:
+- `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 
 ---
 

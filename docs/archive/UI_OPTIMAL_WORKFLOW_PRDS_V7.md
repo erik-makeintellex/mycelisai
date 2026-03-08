@@ -369,4 +369,4 @@ Release gates:
 
 Planning handoff rule:
 - each workstream must map implementation tasks to one or more PRD sections above before starting build.
-- implementation sequencing and team ownership are controlled by `docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md` and `docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md`.
+- implementation sequencing and team ownership are now controlled by `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` and `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`.

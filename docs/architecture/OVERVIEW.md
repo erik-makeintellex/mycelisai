@@ -17,7 +17,7 @@
 > - [Secure Gateway + Remote Actuation](SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md) — Security baseline for self-hosted control planes and remote actuator services
 > - [Hardware Interface API + Channels](HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) — Standard API + direct channel model for hardware interfaces and low-level IoT pathways
 > - [Soma Symbiote + Host Actuation](SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md) — Thought-profile backend contracts, learning growth loop, and localhost actuation model
-> - [Soma Extension-of-Self PRD](../product/SOMA_EXTENSION_OF_SELF_PRD_V7.md) — Detailed action plan for local Ollama-first extension-of-self delivery with parallel lane execution
+> - [Target Deliverable V7](../architecture-library/TARGET_DELIVERABLE_V7.md) — Canonical product target, phase framing, and recurring-plan delivery rules
 > - [README.md](../../README.md) — Operational source of truth (getting started, commands)
 
 ---
@@ -182,7 +182,7 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 Execution authority:
 - `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
 - `docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
-- `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 
 ### Phase 12: Persistent Agent Memory & Long-Term Learning
 
