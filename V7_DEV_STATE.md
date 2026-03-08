@@ -59,6 +59,11 @@ Latest integration checkpoint:
     - `CouncilCallErrorCard` now distinguishes timeout, unreachable, and server-error failures more accurately for operator guidance
     - `DegradedModeBanner` now surfaces a specific Workspace chat failure reason instead of a generic council-failure label
     - `docs/logging.md` now matches the real task framework (`uv run inv logging.check-schema` / `logging.check-topics`) and no longer advertises a non-existent coverage task as live
+  - Invoke command structure cleaned further:
+    - `ci.test` now treats frontend Vitest failures as blocking instead of legacy warning-only behavior
+    - task registry wiring in `tasks.py` now removes stale commented collection code and keeps imports/collections explicit
+    - operator/testing docs now describe `uv run inv ci.test` as the real Go + Vitest validation path
+    - current validation state: `uv run inv ci.test` is green again after fixing the stray Go workspace stubs and stabilizing the drifting page-route tests
   - Workspace cleanup and commitment cleanup completed:
     - mixed worktree lanes were isolated and landed as narrow scoped commits instead of one broad mixed commit
     - latest cleanup commits:

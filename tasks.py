@@ -1,5 +1,19 @@
 from invoke import Collection, task
-from ops import core, k8s, proto_relay, misc, interface, auth, logging as logging_tasks, quality
+
+from ops import auth
+from ops import ci
+from ops import cognitive
+from ops import core
+from ops import db
+from ops import device
+from ops import interface
+from ops import k8s
+from ops import lifecycle
+from ops import logging as logging_tasks
+from ops import misc
+from ops import proto_relay
+from ops import quality
+from ops import test
 
 ns = Collection()
 
@@ -32,22 +46,16 @@ ns.add_collection(core.ns)
 ns.add_collection(k8s.ns)
 ns.add_collection(proto_relay.ns_proto)
 ns.add_collection(proto_relay.ns_relay)
-# ns.add_collection(misc.ns) # Removed incorrect import
 ns.add_collection(misc.ns_clean)
 ns.add_collection(misc.ns_team)
 ns.add_collection(interface.ns)
 ns.add_collection(auth.ns)
 ns.add_collection(logging_tasks.ns)
 ns.add_collection(quality.ns)
-
-from ops import device, test, db, ci, cognitive, lifecycle
 ns.add_collection(device.ns)
 ns.add_collection(test.ns)
 ns.add_collection(db.ns)
 ns.add_collection(ci.ns)
 ns.add_collection(cognitive.ns)
 ns.add_collection(lifecycle.ns)
-
-
-
 
