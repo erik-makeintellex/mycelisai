@@ -22,7 +22,7 @@
 > | Runtime Ops | Cognitive startup probe scoping (`ollama` default + profile-routed providers only) | ✅ COMPLETE |
 > | Cross-Cut | NATS signal standardization (`signal.status`/`signal.result`/source-kind rules + dev-only infrastructure channel exclusion) | ✅ CODIFIED |
 > | Cross-Cut | UI target + transaction contract (terminal states, backend effects, product-flow proof) | ✅ CODIFIED |
-> | Cross-Cut | UI test harness hardening (Playwright-owned UI server, multi-browser matrix, required axe baseline) | ✅ COMPLETE |
+> | Cross-Cut | UI test harness hardening (Playwright-owned UI server, live-backend Workspace contract coverage, multi-browser matrix, required axe baseline) | ✅ COMPLETE |
 
 ## UI Delivery Rule
 

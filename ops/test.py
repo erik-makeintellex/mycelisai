@@ -38,16 +38,17 @@ def coverage(c):
         "headed": "Open a visible browser window.",
         "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
         "spec": "Optional Playwright spec path or glob.",
+        "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
     }
 )
-def e2e(c, headed=False, project="", spec=""):
+def e2e(c, headed=False, project="", spec="", live_backend=False):
     """
     Run Playwright E2E tests (alias for interface.e2e).
     Playwright owns the Interface dev server lifecycle. Start Core separately
     only when the spec needs a live backend instead of route stubs. The task
     clears stale Interface listeners before and after the browser run.
     """
-    interface.e2e(c, headed=headed, project=project, spec=spec)
+    interface.e2e(c, headed=headed, project=project, spec=spec, live_backend=live_backend)
 
 ns = Collection("test")
 ns.add_task(all)

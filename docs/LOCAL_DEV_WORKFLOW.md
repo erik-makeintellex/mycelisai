@@ -383,7 +383,7 @@ Then change profiles in `cognitive.yaml` to `"vllm"`.
 | `uv run inv interface.dev` | Start Next.js dev server |
 | `uv run inv interface.build` | Production build |
 | `uv run inv interface.test` | Vitest unit tests |
-| `uv run inv interface.e2e` | Playwright E2E tests (self-managed Next.js server lifecycle) |
+| `uv run inv interface.e2e` | Playwright E2E tests (self-managed Next.js server lifecycle; add `--live-backend` for real Core-backed UI flows) |
 | `uv run inv interface.check` | Smoke-test running pages |
 | `uv run inv interface.stop` | Kill dev server |
 | `uv run inv interface.clean` | Clear `.next` cache |

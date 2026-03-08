@@ -10,6 +10,7 @@ Latest baseline (2026-03-06):
 - Latest focused Playwright harness slice (2026-03-07):
   - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts` -> pass (`3` passed)
   - `uv run inv test.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts` -> pass (`3` passed)
+  - `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts` -> pass (`1` passed)
 - Latest focused lifecycle/task slice: `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q` -> pass (`26` tests)
 - Latest focused Go runtime slice: `cd core && go test ./internal/mcp ./internal/swarm ./pkg/protocol -count=1` -> pass
 - Latest destructive gate validation: `uv run inv lifecycle.memory-restart --frontend` -> pass
@@ -24,6 +25,7 @@ Latest baseline (2026-03-06):
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv interface.test        # Vitest unit tests (jsdom)
 uv run inv interface.e2e         # Playwright E2E tests (Playwright starts/stops the Next.js server; Invoke clears stale UI listeners)
+uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real Core-backed Workspace UI contract
 uv run inv core.smoke            # Governance smoke tests
 uv run inv interface.check       # HTTP smoke test against running dev server
 uv run inv logging.check-schema  # Event schema + docs coverage gate
@@ -205,6 +207,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/v7-operational-ux.spec.ts` | Execution-facing degraded-state, recovery, status drawer, and operator UX checks |
 | `interface/e2e/specs/mobile.spec.ts` | Mobile viewport smoke coverage under the dedicated mobile Playwright project |
 | `interface/e2e/specs/accessibility.spec.ts` | Axe-backed accessibility baseline for key operator surfaces |
+| `interface/e2e/specs/workspace-live-backend.spec.ts` | Real Workspace contract coverage against live `/api/v1/services/status` and `/api/v1/council/members` traffic |
 
 ### Configuration
 
@@ -213,6 +216,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 - **Browser Projects:** `chromium`, `firefox`, `webkit`, `mobile-chromium`
 - **Server Lifecycle:** Playwright `webServer` starts/stops the Next.js app for local and CI E2E runs
 - **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run
+- **Live Backend Mode:** `uv run inv interface.e2e --live-backend ...` loads proxy auth env and enables specs that require a real Core backend
 - **Accessibility Gate:** `@axe-core/playwright` is a required dev dependency; accessibility specs must fail when violated, not skip because the package is missing
 - **Dark mode compliance:** Every spec includes `no bg-white` assertion
 
@@ -224,6 +228,7 @@ uv run inv core.run          # Optional: start live backend coverage in a separa
 
 # Run E2E tests
 uv run inv interface.e2e                     # All specs
+uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts
 uv run inv interface.e2e --project=firefox
 uv run inv interface.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts
 npx playwright test --project=chromium    # From interface/
