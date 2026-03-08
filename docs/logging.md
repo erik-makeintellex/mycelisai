@@ -87,7 +87,22 @@ If any logging change is made, agent must update:
 2. relevant tests in `core/internal/events/*` or `core/internal/memory/*`
 3. `README.md` and `V7_DEV_STATE.md` when behavior changes operator-facing outputs
 
-## 6. Anti-Patterns (Disallowed)
+## 6. Operator Failure Contract
+
+Operator-facing execution paths must not classify failures independently in each component.
+
+Current required rule for Workspace and council chat:
+
+- store raw diagnostics separately from the operator-facing failure model
+- classify Workspace/council chat failures once in shared UI/store logic
+- render the same failure type, banner label, summary, and recovery action across:
+  - Workspace blocker cards
+  - degraded-mode banner
+  - system status drawer
+
+This prevents drift where one surface says "unreachable", another says "server error", and the store only holds an opaque string.
+
+## 7. Anti-Patterns (Disallowed)
 
 - Hardcoded topic strings in handlers/services (must use constants).
 - New event names not declared in `protocol/events.go`.
@@ -95,7 +110,7 @@ If any logging change is made, agent must update:
 - Emitting CTS-only event signals without DB persistence.
 - Unbounded free-form payload blobs for common event classes.
 
-## 7. Near-Term Hardening Tasks
+## 8. Near-Term Hardening Tasks
 
 Add/standardize invoke tasks for logging quality gates:
 

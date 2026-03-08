@@ -9,6 +9,7 @@ vi.mock('reactflow', async () => {
 });
 
 import MissionControlChat from '@/components/dashboard/MissionControlChat';
+import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import { useCortexStore } from '@/store/useCortexStore';
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -36,6 +37,7 @@ function resetStore() {
         missionChat: [],
         isMissionChatting: false,
         missionChatError: null,
+        missionChatFailure: null,
         activeMode: 'answer',
         activeRole: '',
         assistantName: 'Soma',
@@ -349,6 +351,12 @@ describe('MissionControlChat', () => {
             useCortexStore.setState({
                 councilTarget: 'admin',
                 missionChatError: 'Soma chat blocked (500)',
+                missionChatFailure: buildMissionChatFailure({
+                    assistantName: 'Soma',
+                    targetId: 'admin',
+                    message: 'Soma chat blocked (500)',
+                    statusCode: 500,
+                }),
             });
 
             render(<MissionControlChat />);
@@ -360,6 +368,11 @@ describe('MissionControlChat', () => {
         it('displays structured council error card when missionChatError is set', async () => {
             useCortexStore.setState({
                 missionChatError: 'Swarm offline',
+                missionChatFailure: buildMissionChatFailure({
+                    assistantName: 'Soma',
+                    targetId: 'council-architect',
+                    message: 'Swarm offline',
+                }),
             });
 
             render(<MissionControlChat />);

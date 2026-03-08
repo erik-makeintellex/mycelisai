@@ -823,7 +823,7 @@ function SomaOfflineGuide({ onRetry, assistantName }: { onRetry: () => void; ass
 export default function MissionControlChat() {
     const missionChat = useCortexStore((s) => s.missionChat);
     const isMissionChatting = useCortexStore((s) => s.isMissionChatting);
-    const missionChatError = useCortexStore((s) => s.missionChatError);
+    const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const sendMissionChat = useCortexStore((s) => s.sendMissionChat);
     const clearMissionChat = useCortexStore((s) => s.clearMissionChat);
     const broadcastToSwarm = useCortexStore((s) => s.broadcastToSwarm);
@@ -961,11 +961,9 @@ export default function MissionControlChat() {
 
             {/* Chat log */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 scrollbar-thin scrollbar-thumb-cortex-border">
-                {missionChatError && (
+                {missionChatFailure && (
                     <CouncilCallErrorCard
-                        member={directTarget || councilTarget}
-                        errorMessage={missionChatError}
-                        assistantName={assistantName}
+                        failure={missionChatFailure}
                         onRetry={retryLastMessage}
                         onSwitchToSoma={() => {
                             setDirectTarget(null);

@@ -11,6 +11,7 @@ import {
 import type { AgentNodeData } from '@/components/wiring/AgentNode';
 import type { ConversationTurn } from '@/types/conversations';
 import { extractApiData } from '@/lib/apiContracts';
+import { buildMissionChatFailure, type MissionChatFailure } from '@/lib/missionChatFailure';
 import { normalizeIncomingSignal } from '@/lib/signalNormalize';
 
 // ── Domain Types ──────────────────────────────────────────────
@@ -630,6 +631,7 @@ export interface CortexState {
     missionChat: ChatMessage[];
     isMissionChatting: boolean;
     missionChatError: string | null;
+    missionChatFailure: MissionChatFailure | null;
     assistantName: string;
     councilTarget: string;              // active council member ID ("admin" default)
     councilMembers: CouncilMember[];    // populated from GET /council/members
@@ -1102,6 +1104,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     missionChat: loadPersistedChat(),
     isMissionChatting: false,
     missionChatError: null,
+    missionChatFailure: null,
     assistantName: 'Soma',
     councilTarget: 'admin',
     councilMembers: [],
@@ -1834,7 +1837,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         const trimmed = message.trim();
         if (!trimmed) return;
 
-        const { councilTarget } = get();
+        const { councilTarget, assistantName } = get();
         const isSomaRoute = councilTarget === 'admin';
         const chatRoute = isSomaRoute ? '/api/v1/chat' : `/api/v1/council/${councilTarget}/chat`;
         const routeLabel = isSomaRoute ? 'Soma chat' : 'Council agent';
@@ -1844,6 +1847,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             missionChat: [...s.missionChat, { role: 'user', content: trimmed }],
             isMissionChatting: true,
             missionChatError: null,
+            missionChatFailure: null,
         }));
 
         try {
@@ -1874,6 +1878,12 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 set((s) => ({
                     isMissionChatting: false,
                     missionChatError: errMsg,
+                    missionChatFailure: buildMissionChatFailure({
+                        assistantName,
+                        targetId: councilTarget,
+                        message: errMsg,
+                        statusCode: res.status,
+                    }),
                     missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget, mode: 'blocker' }],
                     activeMode: 'blocker',
                     activeRole: councilTarget,
@@ -1888,6 +1898,12 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 set((s) => ({
                     isMissionChatting: false,
                     missionChatError: errText,
+                    missionChatFailure: buildMissionChatFailure({
+                        assistantName,
+                        targetId: councilTarget,
+                        message: errText,
+                        statusCode: res.status,
+                    }),
                     missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget, mode: 'blocker' }],
                     activeMode: 'blocker',
                     activeRole: councilTarget,
@@ -1930,6 +1946,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             set((s) => ({
                 isMissionChatting: false,
                 missionChat: [...s.missionChat, chatMsg],
+                missionChatFailure: null,
                 // Phase 19: Update active orchestration state
                 activeBrain: chatMsg.brain ?? null,
                 activeMode: chatMsg.mode || 'answer',
@@ -1946,6 +1963,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             set((s) => ({
                 isMissionChatting: false,
                 missionChatError: msg,
+                missionChatFailure: buildMissionChatFailure({
+                    assistantName,
+                    targetId: councilTarget,
+                    message: msg,
+                }),
                 missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget, mode: 'blocker' }],
                 activeMode: 'blocker',
                 activeRole: councilTarget,
@@ -1954,7 +1976,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     },
 
     clearMissionChat: () => {
-        set({ missionChat: [], missionChatError: null });
+        set({ missionChat: [], missionChatError: null, missionChatFailure: null });
         if (typeof window !== 'undefined') {
             localStorage.removeItem(CHAT_STORAGE_KEY);
         }
@@ -1970,6 +1992,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             missionChat: [...s.missionChat, { role: 'user', content: `[BROADCAST] ${trimmed}` }],
             isBroadcasting: true,
             missionChatError: null,
+            missionChatFailure: null,
         }));
 
         try {
@@ -1984,6 +2007,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 set((s) => ({
                     isBroadcasting: false,
                     missionChatError: errText,
+                    missionChatFailure: null,
                     missionChat: [...s.missionChat, { role: 'architect', content: errText }],
                 }));
                 return;
@@ -2026,6 +2050,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             set((s) => ({
                 isBroadcasting: false,
                 missionChatError: msg,
+                missionChatFailure: null,
                 missionChat: [...s.missionChat, { role: 'architect', content: `Error: ${msg}` }],
             }));
         }
@@ -2435,6 +2460,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                     activeRunId: runId,
                     activeMode: 'execution_result',
                     missionChatError: null,
+                    missionChatFailure: null,
                     missionChat: [...s.missionChat, systemMsg],
                     pendingProposal: null,
                     activeConfirmToken: null,
@@ -2452,6 +2478,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 console.error('[CE-1] Confirm action failed:', errMsg);
                 set((s) => ({
                     missionChatError: errMsg,
+                    missionChatFailure: null,
                     activeMode: 'blocker',
                     missionChat: [
                         ...s.missionChat,
@@ -2467,6 +2494,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             console.error('[CE-1] confirmProposal error:', err);
             set((s) => ({
                 missionChatError: errMsg,
+                missionChatFailure: null,
                 activeMode: 'blocker',
                 missionChat: [
                     ...s.missionChat,

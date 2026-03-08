@@ -54,6 +54,7 @@ Signal/channel standard:
 - Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
 - Current focused Workspace chat contract check: `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
 - Current focused execution feedback check: `cd interface && npx vitest run __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`
+- Current focused Workspace failure-model check: `cd interface && npx vitest run __tests__/lib/missionChatFailure.test.ts __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused Launch Crew contract check: `cd interface && npx vitest run __tests__/workspace/LaunchCrewModal.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused Launch Crew browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/proposals.spec.ts` (proposal outcome + blocker recovery)
 - Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
@@ -95,6 +96,11 @@ Required test layers for UI-affecting delivery:
 - product-flow tests: user journey reaches a real outcome
 - backend transaction tests: route/DB/NATS side effects match UI claims
 - failure tests: timeout, rejection, degraded dependency, retry/reroute flow
+
+For operator-facing blocker work, a passing test set must prove:
+- the store preserves raw diagnostics
+- the shared failure model classifies the error once
+- Workspace blocker card, degraded banner, and status drawer all render from that shared model
 
 Disallowed testing posture:
 - proving only that a button renders
