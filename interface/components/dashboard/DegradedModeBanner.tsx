@@ -4,31 +4,12 @@ import React, { useMemo } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 
-function workspaceFailureLabel(message: string): string {
-    const lower = message.toLowerCase();
-    if (lower.includes("timeout") || lower.includes("deadline exceeded")) return "Workspace chat timeout";
-    if (lower.includes("500") || lower.includes("internal error") || lower.includes("server error")) {
-        return "Workspace chat server error";
-    }
-    if (
-        lower.includes("unreachable") ||
-        lower.includes("failed to fetch") ||
-        lower.includes("bad gateway") ||
-        lower.includes("connection refused") ||
-        lower.includes("503") ||
-        lower.includes("502") ||
-        lower.includes("offline")
-    ) {
-        return "Workspace chat unreachable";
-    }
-    return "Workspace chat blocked";
-}
-
 export default function DegradedModeBanner() {
     const services = useCortexStore((s) => s.servicesStatus);
     const loading = useCortexStore((s) => s.isFetchingServicesStatus);
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
     const missionChatError = useCortexStore((s) => s.missionChatError);
+    const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
     const assistantName = useCortexStore((s) => s.assistantName);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
@@ -54,9 +35,10 @@ export default function DegradedModeBanner() {
         if (m.get("nats") && m.get("nats") !== "online") r.push(`NATS ${m.get("nats")}`);
         if (m.get("postgres") && m.get("postgres") !== "online") r.push(`Database ${m.get("postgres")}`);
         if (!isStreamConnected) r.push("SSE stream offline");
-        if (missionChatError) r.push(workspaceFailureLabel(missionChatError));
+        if (missionChatFailure) r.push(missionChatFailure.bannerLabel);
+        else if (missionChatError) r.push("Workspace chat blocked");
         return r;
-    }, [services, isStreamConnected, missionChatError]);
+    }, [services, isStreamConnected, missionChatError, missionChatFailure]);
 
     const degraded = reasons.length > 0;
     if (!degraded) return null;

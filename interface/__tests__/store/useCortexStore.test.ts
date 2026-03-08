@@ -19,6 +19,11 @@ describe('useCortexStore', () => {
             isFetchingProposals: false,
             catalogueAgents: [],
             isFetchingCatalogue: false,
+            missionChat: [],
+            missionChatError: null,
+            missionChatFailure: null,
+            councilTarget: 'admin',
+            assistantName: 'Soma',
             mcpServers: [],
             isFetchingMCPServers: false,
             mcpTools: [],
@@ -346,6 +351,40 @@ describe('useCortexStore', () => {
     });
 
     // ── Launch Crew / proposal confirmation ─────────────────────
+
+    describe('sendMissionChat', () => {
+        it('stores a structured workspace failure when Soma chat returns 500', async () => {
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 500,
+                text: async () => '{"error":"Soma chat blocked (500)"}',
+            });
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('Soma chat blocked (500)');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'workspace',
+                type: 'server_error',
+                bannerLabel: 'Workspace chat server error',
+            });
+        });
+
+        it('stores a structured council timeout when a direct council request throws', async () => {
+            store.setState({ councilTarget: 'council-architect' });
+            mockFetch.mockRejectedValue(new Error('deadline exceeded'));
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'council',
+                targetId: 'council-architect',
+                type: 'timeout',
+            });
+        });
+    });
 
     describe('confirmProposal', () => {
         it('records an execution result when confirmation succeeds without a run id', async () => {

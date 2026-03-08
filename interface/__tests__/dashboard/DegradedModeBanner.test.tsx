@@ -8,6 +8,7 @@ vi.mock("reactflow", async () => {
 });
 
 import DegradedModeBanner from "@/components/dashboard/DegradedModeBanner";
+import { buildMissionChatFailure } from "@/lib/missionChatFailure";
 import { useCortexStore } from "@/store/useCortexStore";
 
 function resetStore() {
@@ -46,6 +47,11 @@ describe("DegradedModeBanner", () => {
     it("renders in degraded mode and supports actions", async () => {
         useCortexStore.setState({
             missionChatError: "Council timeout",
+            missionChatFailure: buildMissionChatFailure({
+                assistantName: "Soma",
+                targetId: "council-architect",
+                message: "Council timeout",
+            }),
             isStreamConnected: false,
             councilTarget: "council-architect",
             disconnectStream: vi.fn(),
@@ -90,6 +96,12 @@ describe("DegradedModeBanner", () => {
     it("shows a specific workspace chat server-error reason", async () => {
         useCortexStore.setState({
             missionChatError: "Council agent unreachable (500)",
+            missionChatFailure: buildMissionChatFailure({
+                assistantName: "Soma",
+                targetId: "admin",
+                message: "Council agent unreachable (500)",
+                statusCode: 500,
+            }),
             isStreamConnected: true,
         });
 

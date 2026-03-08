@@ -8,6 +8,7 @@ vi.mock("reactflow", async () => {
 });
 
 import StatusDrawer from "@/components/dashboard/StatusDrawer";
+import { buildMissionChatFailure } from "@/lib/missionChatFailure";
 import { useCortexStore } from "@/store/useCortexStore";
 
 function resetStore() {
@@ -40,6 +41,11 @@ describe("StatusDrawer", () => {
         useCortexStore.setState({
             isStatusDrawerOpen: true,
             missionChatError: "Council timeout",
+            missionChatFailure: buildMissionChatFailure({
+                assistantName: "Soma",
+                targetId: "council-sentry",
+                message: "Council timeout",
+            }),
             councilTarget: "council-sentry",
             councilMembers: [{ id: "council-sentry", role: "sentry", team: "council" }],
             isStreamConnected: false,
@@ -69,7 +75,7 @@ describe("StatusDrawer", () => {
         await waitFor(() => {
             expect(screen.getByRole("dialog", { name: "System status drawer" })).toBeDefined();
             expect(screen.getByText("System Status")).toBeDefined();
-            expect(screen.getByText("Last council failure: council-sentry")).toBeDefined();
+            expect(screen.getByText("Last workspace failure: council-sentry (timeout)")).toBeDefined();
             expect(screen.getByText("SSE Stream")).toBeDefined();
             expect(screen.getByText("Active Missions")).toBeDefined();
         });
@@ -83,4 +89,3 @@ describe("StatusDrawer", () => {
         expect(useCortexStore.getState().isStatusDrawerOpen).toBe(false);
     });
 });
-
