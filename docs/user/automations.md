@@ -37,6 +37,16 @@ Default chain guidance:
 4. Review Approval
 5. Execute
 
+### Team Instantiation Wizard
+
+Use **Open Wizard** in Active Automations to launch a guided flow:
+1. Objective
+2. Profile
+3. Readiness
+4. Launch
+
+The wizard is the fastest path when you want a new team scaffolded from intent instead of manual setup.
+
 ---
 
 ## Trigger Rules
@@ -82,6 +92,12 @@ Teams tab surfaces operational readiness:
 
 Use this tab for fast diagnosis when execution paths degrade.
 
+Quick actions on each team card:
+- Open chat
+- View runs
+- View wiring
+- View logs
+
 ---
 
 ## Neural Wiring (Advanced Mode)
@@ -96,3 +112,13 @@ This is the graph-level authoring/editing surface for agent/team wiring and exec
 Scheduler capabilities are represented as planned/coming-soon where applicable.
 This should appear as roadmap context, not a dead error state.
 
+---
+
+## What "Healthy" Looks Like
+
+For the current V7 UX baseline, `/automations` should show:
+- Active Automations tab content with the Automation Hub
+- **Set Up Your First Automation Chain** primary CTA
+- **Open Wizard** control in the Sprint 0 panel
+
+If those are missing, verify you are on the current build and then refresh the app session.

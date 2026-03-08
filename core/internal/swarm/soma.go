@@ -277,7 +277,7 @@ func (s *Soma) HandleCommand(w http.ResponseWriter, r *http.Request) {
 	// Topic: swarm.global.input.user
 	subject := protocol.TopicGlobalInputUser
 	if payload.Source != "" {
-		subject = fmt.Sprintf("swarm.global.input.%s", payload.Source)
+		subject = fmt.Sprintf(protocol.TopicGlobalInputFmt, payload.Source)
 	}
 
 	// 2. Publish

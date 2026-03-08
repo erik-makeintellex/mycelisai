@@ -3,8 +3,13 @@ package artifacts
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -217,6 +222,131 @@ func (s *Service) UpdateStatus(ctx context.Context, id uuid.UUID, status string)
 		return fmt.Errorf("artifact %s not found", id)
 	}
 	return nil
+}
+
+// DeleteExpiredCachedImages removes ephemeral image artifacts older than ttl.
+// Only artifacts explicitly marked metadata.cache_policy="ephemeral" are targeted.
+func (s *Service) DeleteExpiredCachedImages(ctx context.Context, ttl time.Duration) (int64, error) {
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	seconds := int64(ttl.Seconds())
+	result, err := s.DB.ExecContext(ctx, `
+		DELETE FROM artifacts
+		WHERE artifact_type = 'image'
+		  AND COALESCE(metadata->>'cache_policy', '') = 'ephemeral'
+		  AND COALESCE(metadata->>'saved', 'false') <> 'true'
+		  AND created_at < NOW() - ($1 * INTERVAL '1 second')
+	`, seconds)
+	if err != nil {
+		return 0, fmt.Errorf("delete expired cached images: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	return rows, nil
+}
+
+// SaveImageToWorkspace decodes an image artifact and persists it under workspaceRoot/folder.
+// Returns the workspace-relative file path.
+func (s *Service) SaveImageToWorkspace(ctx context.Context, id uuid.UUID, workspaceRoot, folder, filename string) (string, error) {
+	artifact, err := s.Get(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	if artifact.ArtifactType != TypeImage {
+		return "", fmt.Errorf("artifact %s is not an image", id)
+	}
+	if strings.TrimSpace(artifact.Content) == "" {
+		return "", fmt.Errorf("artifact %s has no inline image content", id)
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(artifact.Content)
+	if err != nil {
+		return "", fmt.Errorf("decode image content: %w", err)
+	}
+
+	if workspaceRoot == "" {
+		workspaceRoot = "./workspace"
+	}
+	absWorkspace, err := filepath.Abs(workspaceRoot)
+	if err != nil {
+		return "", fmt.Errorf("invalid workspace path: %w", err)
+	}
+
+	folder = strings.TrimSpace(folder)
+	if folder == "" {
+		folder = "saved-media"
+	}
+	absFolder := filepath.Clean(filepath.Join(absWorkspace, folder))
+	relFolder, err := filepath.Rel(absWorkspace, absFolder)
+	if err != nil || strings.HasPrefix(relFolder, "..") {
+		return "", fmt.Errorf("folder %q escapes workspace boundary", folder)
+	}
+
+	if err := os.MkdirAll(absFolder, 0o755); err != nil {
+		return "", fmt.Errorf("create save folder: %w", err)
+	}
+
+	base := strings.TrimSpace(filename)
+	if base == "" {
+		base = sanitizeFilename(artifact.Title)
+		if base == "" {
+			base = fmt.Sprintf("image-%s", id.String()[:8])
+		}
+	}
+	if filepath.Ext(base) == "" {
+		base += extensionFromContentType(artifact.ContentType)
+	}
+	absTarget := filepath.Clean(filepath.Join(absFolder, base))
+	relTarget, err := filepath.Rel(absWorkspace, absTarget)
+	if err != nil || strings.HasPrefix(relTarget, "..") {
+		return "", fmt.Errorf("target %q escapes workspace boundary", base)
+	}
+
+	if err := os.WriteFile(absTarget, raw, 0o644); err != nil {
+		return "", fmt.Errorf("write image file: %w", err)
+	}
+
+	relPath := filepath.ToSlash(relTarget)
+	_, err = s.DB.ExecContext(ctx, `
+		UPDATE artifacts
+		SET file_path = $1,
+		    file_size_bytes = $2,
+		    metadata = COALESCE(metadata, '{}'::jsonb) ||
+		               jsonb_build_object('saved', true, 'saved_path', $1, 'saved_at', NOW())
+		WHERE id = $3
+	`, relPath, int64(len(raw)), id)
+	if err != nil {
+		return "", fmt.Errorf("update saved artifact metadata: %w", err)
+	}
+
+	return relPath, nil
+}
+
+var nonFilenameChars = regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+
+func sanitizeFilename(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	s = strings.ReplaceAll(s, " ", "-")
+	s = nonFilenameChars.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-.")
+	if len(s) > 80 {
+		s = s[:80]
+	}
+	return s
+}
+
+func extensionFromContentType(contentType string) string {
+	ct := strings.ToLower(strings.TrimSpace(contentType))
+	switch ct {
+	case "image/jpeg", "image/jpg":
+		return ".jpg"
+	case "image/webp":
+		return ".webp"
+	case "image/gif":
+		return ".gif"
+	default:
+		return ".png"
+	}
 }
 
 // scanArtifacts scans multiple rows into Artifact slices.

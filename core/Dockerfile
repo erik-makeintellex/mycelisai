@@ -22,7 +22,7 @@ COPY core/ ./core/
 # CGO_ENABLED=0 for static binary
 # We switch to core directory to build within the module context
 WORKDIR /app/core
-RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
 
 # Run Stage
 FROM gcr.io/distroless/base-debian12

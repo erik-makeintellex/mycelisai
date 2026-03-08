@@ -3,6 +3,7 @@ package swarm
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -10,6 +11,9 @@ func TestInternalToolRegistry_LocalCommand_Registered(t *testing.T) {
 	r := NewInternalToolRegistry(InternalToolDeps{})
 	if r.Get("local_command") == nil {
 		t.Fatal("expected local_command tool to be registered")
+	}
+	if r.Get("save_cached_image") == nil {
+		t.Fatal("expected save_cached_image tool to be registered")
 	}
 }
 
@@ -46,5 +50,16 @@ func TestInternalToolRegistry_LocalCommand_Disallowed(t *testing.T) {
 		"command": "whoami",
 	}); err == nil {
 		t.Fatal("expected error for disallowed command")
+	}
+}
+
+func TestInternalToolRegistry_LocalCommand_RejectsShellSnippet(t *testing.T) {
+	t.Setenv("MYCELIS_LOCAL_COMMAND_ALLOWLIST", "hostname")
+	r := NewInternalToolRegistry(InternalToolDeps{})
+
+	if _, err := r.handleLocalCommand(context.Background(), map[string]any{
+		"command": "echo 'Hello, this is a simple greeting letter.'",
+	}); err == nil || !strings.Contains(err.Error(), "shell snippets are not allowed") {
+		t.Fatalf("expected shell snippet guidance, got %v", err)
 	}
 }
