@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -123,8 +123,6 @@ describe('Automations Page (V7)', () => {
     it('deep-links to approvals tab via search param', async () => {
         mockSearchParams.set('tab', 'approvals');
         await act(async () => { render(<AutomationsPage />); });
-        await waitFor(() => {
-            expect(screen.getByTestId('approvals-tab')).toBeDefined();
-        });
+        expect(await screen.findByTestId('approvals-tab')).toBeDefined();
     });
 });

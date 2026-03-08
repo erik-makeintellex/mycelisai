@@ -1772,6 +1772,7 @@ uv run inv interface.test        # Vitest component tests (jsdom; canonical fron
 uv run inv interface.e2e         # Playwright E2E specs (Playwright starts/stops the Next.js server automatically)
 uv run inv interface.check       # HTTP smoke test against running dev server (9 pages)
 uv run inv core.smoke            # Governance smoke tests
+uv run inv ci.test               # Blocking Go + Vitest validation
 uv run inv ci.baseline           # Strict baseline gate: docs/logging/topics/line caps + core + interface
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 cd core && go test ./... -count=1         # Full Go validation

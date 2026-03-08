@@ -50,6 +50,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 
 ### `ci.py` (Delivery Gates)
 Delivery-focused validation, runner checks, and release preflight.
+- **Test**: `uv run inv ci.test` (Go tests + blocking Vitest run)
 - **Entrypoint Check**: `uv run inv ci.entrypoint-check`
 - **Baseline**: `uv run inv ci.baseline`
 - **Release Preflight**: `uv run inv ci.release-preflight --strict-toolchain`

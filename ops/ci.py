@@ -3,11 +3,11 @@ Local CI Pipeline — runs on dev machine or configured host.
 No GitHub Actions, no auto-triggers. Manual invocation only.
 
 Usage:
-    inv ci.lint          # Go vet + Next.js lint
-    inv ci.test          # Go tests + Interface tests
-    inv ci.build         # Go binary + Next.js production build (no Docker)
-    inv ci.check         # Full pipeline: lint -> test -> build
-    inv ci.deploy        # Build + Docker + K8s deploy (requires cluster)
+    uv run inv ci.lint          # Go vet + Next.js lint
+    uv run inv ci.test          # Go tests + Interface tests
+    uv run inv ci.build         # Go binary + Next.js production build (no Docker)
+    uv run inv ci.check         # Full pipeline: lint -> test -> build
+    uv run inv ci.deploy        # Build + Docker + K8s deploy (requires cluster)
 """
 
 import time
@@ -66,15 +66,13 @@ def test(c):
         else:
             print("  OK")
 
-    # 2. Interface tests (may not have test suite yet — warn only)
-    print("[2/2] interface tests")
-    result = c.run("cd interface && npm run test -- --run 2>/dev/null", warn=True)
+    # 2. Interface tests
+    print("[2/2] interface vitest run")
+    result = c.run("cd interface && npx vitest run --reporter=dot", warn=True)
     if result.exited != 0:
-        # Check if it's "no tests found" vs actual failure
-        if result.stderr and "no test" in result.stderr.lower():
-            print("  SKIP (no test files)")
-        else:
-            print("  WARN: interface tests failed (non-blocking)")
+        errors.append("interface tests failed")
+    else:
+        print("  OK")
 
     print()
     if errors:

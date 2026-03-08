@@ -32,6 +32,7 @@ uv run inv interface.test        # Vitest unit tests (jsdom)
 uv run inv interface.e2e         # Playwright E2E tests (Playwright starts/stops the Next.js server; Invoke clears stale UI listeners)
 uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real Core-backed Workspace UI contract
 uv run inv core.smoke            # Governance smoke tests
+uv run inv ci.test               # Blocking Go + Vitest validation
 uv run inv interface.check       # HTTP smoke test against running dev server
 uv run inv logging.check-schema  # Event schema + docs coverage gate
 uv run inv logging.check-topics  # Hardcoded swarm topic gate
