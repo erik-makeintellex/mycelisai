@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -55,3 +56,72 @@ def test_create_skips_create_when_database_already_exists(monkeypatch):
 
     assert ("require", "postgres") in calls
     assert not any(kind == "psql" and sql == "CREATE DATABASE cortex;" for kind, sql in calls)
+
+
+def test_run_psql_enables_on_error_stop(monkeypatch):
+    captured = {}
+
+    def fake_run(cmd, env=None, capture_output=None, text=None):
+        captured["cmd"] = cmd
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(db_tasks, "_dsn", lambda dbname=None: ("127.0.0.1", "5432", "mycelis", "password", dbname or "cortex"))
+    monkeypatch.setattr(db_tasks.subprocess, "run", fake_run)
+
+    db_tasks._run_psql(sql="SELECT 1;")
+
+    assert captured["cmd"][:3] == ["psql", "-v", "ON_ERROR_STOP=1"]
+
+
+def test_migration_files_only_include_forward_steps(monkeypatch):
+    fake_files = [
+        db_tasks.MIGRATIONS_DIR / "001_init_memory.sql",
+        db_tasks.MIGRATIONS_DIR / "020_cascade_service_manifests.down.sql",
+        db_tasks.MIGRATIONS_DIR / "020_cascade_service_manifests.up.sql",
+        db_tasks.MIGRATIONS_DIR / "031_inception_recipes.down.sql",
+        db_tasks.MIGRATIONS_DIR / "031_inception_recipes.up.sql",
+    ]
+    original_glob = Path.glob
+
+    def fake_glob(self, pattern):
+        if self == db_tasks.MIGRATIONS_DIR:
+            return fake_files
+        return original_glob(self, pattern)
+
+    monkeypatch.setattr(Path, "glob", fake_glob)
+
+    selected = db_tasks._migration_files()
+
+    assert [path.name for path in selected] == [
+        "001_init_memory.sql",
+        "020_cascade_service_manifests.up.sql",
+        "031_inception_recipes.up.sql",
+    ]
+
+
+def test_reset_fails_fast_when_a_migration_errors(monkeypatch):
+    calls: list[str] = []
+
+    monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
+    monkeypatch.setattr(db_tasks, "_require_postgres", lambda dbname="postgres": None)
+    monkeypatch.setenv("DB_NAME", "cortex")
+    monkeypatch.setattr(
+        db_tasks,
+        "_migration_files",
+        lambda: [db_tasks.MIGRATIONS_DIR / "001_init_memory.sql", db_tasks.MIGRATIONS_DIR / "019_agent_memories.up.sql"],
+    )
+
+    def fake_run_psql(sql=None, file=None, dbname=None):
+        if sql is not None:
+            calls.append(sql)
+            return 0
+        calls.append(file.name)
+        return 1 if file.name == "019_agent_memories.up.sql" else 0
+
+    monkeypatch.setattr(db_tasks, "_psql", fake_run_psql)
+    monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
+
+    with pytest.raises(SystemExit, match="Migration failed: 019_agent_memories.up.sql"):
+        db_tasks.reset.body(None)
+
+    assert "019_agent_memories.up.sql" in calls
