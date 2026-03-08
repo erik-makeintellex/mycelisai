@@ -1768,10 +1768,11 @@ No branch promotion without this documentation gate.
 
 ```bash
 uv run inv core.test             # Go unit tests (full core package sweep)
-uv run inv interface.test        # Vitest component tests (55 files / 322 tests passing as of 2026-03-02)
+uv run inv interface.test        # Vitest component tests (jsdom; canonical frontend unit/integration runner)
 uv run inv interface.e2e         # Playwright E2E specs (Playwright starts/stops the Next.js server automatically)
 uv run inv interface.check       # HTTP smoke test against running dev server (9 pages)
 uv run inv core.smoke            # Governance smoke tests
+uv run inv ci.baseline           # Strict baseline gate: docs/logging/topics/line caps + core + interface
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 cd core && go test ./... -count=1         # Full Go validation
 cd interface && npx vitest run --reporter=dot
@@ -1782,6 +1783,16 @@ cd core && go test ./internal/server/ -run TestHandleMCP -count=1
 cd core && go test ./internal/swarm/ -run TestScoped -count=1
 cd interface && npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/automations/RouteTemplatePicker.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/SystemPage.test.tsx __tests__/teams/TeamsPage.test.tsx  # Gate A + Sprint 0 baseline (50 pass on 2026-02-27)
 ```
+
+Latest clean workspace verification (2026-03-07, `feature/enterprise-multihost-soma-routing` @ `2cec145`):
+- `uv run inv ci.baseline` -> pass
+- `uv run pytest tests/test_docs_links.py -q` -> pass (`13` passed)
+- `cd core && go test -p 1 ./internal/artifacts ./internal/cognitive -count=1` -> pass
+- `cd core && go test -p 1 ./internal/server -run "TestHandleSaveArtifactToFolder|TestHandleMe|TestHandleUpdateSettings_AssistantNamePersists" -count=1` -> pass
+- `cd core && go test -p 1 ./internal/swarm -run "TestInternalToolRegistry_LocalCommand_Registered|TestInternalToolRegistry_LocalCommand_RejectsShellSnippet" -count=1` -> pass
+- `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/FocusModeToggle.test.tsx __tests__/settings/UsersPage.test.tsx __tests__/system/SystemQuickChecks.test.tsx __tests__/lib/labels.test.ts __tests__/pages/SettingsPage.test.tsx __tests__/shell/ShellLayout.test.tsx --reporter=dot` -> pass (`78` passed)
+- `cd interface && npx tsc --noEmit` -> pass
+- worktree state after cleanup commits: clean
 
 Latest full baseline sweep (2026-03-03, `feature/enterprise-multihost-soma-routing` @ `752f156`):
 - `cd core && go test ./... -count=1` -> pass

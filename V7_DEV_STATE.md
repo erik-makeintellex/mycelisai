@@ -47,10 +47,23 @@ Slice 5  P2 manifest pipeline preparation                            [REQUIRED]
 ## Current Checkpoint (2026-03-07)
 
 Latest integration checkpoint:
-- Base commit: `0b07fb5`
+- Base commit: `2cec145`
 - Branch: `feature/enterprise-multihost-soma-routing`
 - Runtime note: local verification used `go1.25.6 windows/amd64` while docs still target Go `1.26`
 - Delivered:
+  - Workspace cleanup and commitment cleanup completed:
+    - mixed worktree lanes were isolated and landed as narrow scoped commits instead of one broad mixed commit
+    - latest cleanup commits:
+      - `8b704aa` `test: cover launch crew blocker recovery`
+      - `978f524` `ops: standardize auth logging and quality tasks`
+      - `2f8451c` `runtime: standardize mounted storage paths`
+      - `99d47da` `runtime: harden cognitive and artifact flows`
+      - `2cec145` `ui: clarify operator surfaces and recovery flows`
+    - workspace is currently clean after validation
+  - Testing/documentation baseline refreshed to match the true framework:
+    - `docs/TESTING.md` now leads with the current clean verification baseline and canonical runner commands
+    - `README.md` verification now records the latest clean workspace validation separately from the older full-sweep baseline
+    - current verification guidance now reflects the real split between `uv run inv` task gates, focused Go package tests, focused Vitest suites, Playwright harness slices, and TypeScript typecheck
   - Launch Crew onboarding execution contract is now the active product slice:
     - state/readme alignment keeps Launch Crew/workflow onboarding as the first execution-facing queue item
     - the next implementation change must prove Launch Crew terminates in `answer`, `proposal`, `execution_result`, or `blocker`
@@ -235,6 +248,13 @@ Latest integration checkpoint:
     - `.github/workflows/e2e-ci.yaml` now installs the full browser matrix and lets Playwright manage the UI server while Core remains a separately started backend dependency
 
 Verification evidence (latest targeted slice):
+- `uv run inv ci.baseline`
+- `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
+- `cd core && go test -p 1 ./internal/artifacts ./internal/cognitive -count=1`
+- `cd core && go test -p 1 ./internal/server -run "TestHandleSaveArtifactToFolder|TestHandleMe|TestHandleUpdateSettings_AssistantNamePersists" -count=1`
+- `cd core && go test -p 1 ./internal/swarm -run "TestInternalToolRegistry_LocalCommand_Registered|TestInternalToolRegistry_LocalCommand_RejectsShellSnippet" -count=1`
+- `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/FocusModeToggle.test.tsx __tests__/settings/UsersPage.test.tsx __tests__/system/SystemQuickChecks.test.tsx __tests__/lib/labels.test.ts __tests__/pages/SettingsPage.test.tsx __tests__/shell/ShellLayout.test.tsx --reporter=dot`
+- `cd interface && npx tsc --noEmit`
 - `cd core && go test ./internal/server -run "TestHandle(CreateAndListGroups_HappyPath_DB|CreateGroup_Unauthorized|CreateGroup_ScopeDenied|CreateGroup_HighImpact_RequiresApproval|CreateGroup_InvalidWorkMode|UpdateGroup_NotFound|GroupBroadcast_FanoutParallel_DB|GroupMonitor_ReturnsSnapshot)" -count=1`
 - `cd core && go test ./internal/server -run "TestHandleServicesStatus_AllOffline" -count=1`
 - `cd interface && npm run build`
