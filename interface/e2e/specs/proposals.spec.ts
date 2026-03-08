@@ -55,4 +55,36 @@ test.describe('Mission Proposal Entry Points', () => {
         await expect(modal.getByText(/Create a documentation delivery crew/i)).toBeVisible();
         await expect(modal.getByRole('button', { name: /^Launch Crew$/i })).toBeVisible();
     });
+
+    test('launch crew reaches a blocker outcome with recovery actions when Soma chat fails', async ({ page }) => {
+        await page.route('**/api/v1/council/members', async (route) => {
+            await route.fulfill({
+                json: {
+                    ok: true,
+                    data: [{ id: 'admin', role: 'admin', team: 'admin-core' }],
+                },
+            });
+        });
+
+        await page.route('**/api/v1/chat', async (route) => {
+            await route.fulfill({
+                status: 500,
+                contentType: 'application/json',
+                body: JSON.stringify({ error: 'Soma chat blocked (500)' }),
+            });
+        });
+
+        await page.goto('/dashboard');
+        await page.waitForLoadState('domcontentloaded');
+
+        await page.getByRole('button', { name: /Launch Crew/i }).click();
+        await page.getByPlaceholder('Describe the outcome you need...').fill('Launch a crew for deployment recovery');
+        await page.getByRole('button', { name: /Send to Soma/i }).click();
+
+        const modal = page.locator('.fixed.inset-0.z-50').last();
+        await expect(modal.getByText(/Launch Crew is blocked/i)).toBeVisible();
+        await expect(modal.getByText(/Soma chat blocked \(500\)/i)).toBeVisible();
+        await expect(modal.getByRole('button', { name: /Revise request/i })).toBeVisible();
+        await expect(modal.getByRole('button', { name: /Continue in chat/i })).toBeVisible();
+    });
 });

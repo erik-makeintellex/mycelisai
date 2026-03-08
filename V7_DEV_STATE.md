@@ -54,7 +54,7 @@ Latest integration checkpoint:
   - Launch Crew onboarding execution contract is now the active product slice:
     - state/readme alignment keeps Launch Crew/workflow onboarding as the first execution-facing queue item
     - the next implementation change must prove Launch Crew terminates in `answer`, `proposal`, `execution_result`, or `blocker`
-    - proof must include component tests, store/API transaction tests, and browser coverage for the onboarding entrypoint
+    - proof must include component tests, store/API transaction tests, and browser coverage for both onboarding proposal and blocker outcomes
   - Canonical planning/state cleanup completed:
     - the active queue now follows the architecture-library ordering of operator-facing execution clarity -> operator-facing failure/recovery clarity -> internal coordination -> structural cleanup -> manifest unification
     - the gated delivery program now aligns `P0 -> P4` themes with the target-deliverable library instead of mixing older narrower phase labels
