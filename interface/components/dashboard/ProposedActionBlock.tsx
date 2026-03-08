@@ -12,6 +12,7 @@ interface Props {
 export default function ProposedActionBlock({ message }: Props) {
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
+    const assistantName = useCortexStore((s) => s.assistantName);
 
     const proposal = message.proposal;
     if (!proposal) return null;
@@ -34,7 +35,7 @@ export default function ProposedActionBlock({ message }: Props) {
             <div className="px-4 py-3 space-y-2 text-xs font-mono">
                 <div className="flex items-center gap-4">
                     <span className="text-cortex-text-muted w-16">Role</span>
-                    <span className="text-cortex-text-main">{sourceNodeLabel(message.source_node || "admin")}</span>
+                    <span className="text-cortex-text-main">{sourceNodeLabel(message.source_node || "admin", assistantName)}</span>
                 </div>
                 {message.brain && (
                     <div className="flex items-center gap-4">

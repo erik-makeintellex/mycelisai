@@ -9,6 +9,7 @@ export default function OrchestrationInspector() {
     const msg = useCortexStore((s) => s.inspectedMessage);
     const isOpen = useCortexStore((s) => s.isInspectorOpen);
     const setInspected = useCortexStore((s) => s.setInspectedMessage);
+    const assistantName = useCortexStore((s) => s.assistantName);
 
     if (!isOpen || !msg) return null;
 
@@ -36,7 +37,7 @@ export default function OrchestrationInspector() {
                 <InspectorSection icon={Shield} title="Execution">
                     <Row label="Mode" value={modeInfo.label} valueClass={modeInfo.color} />
                     <Row label="Template" value={msg.template_id || "chat-to-answer"} />
-                    <Row label="Source" value={sourceNodeLabel(msg.source_node || "admin")} />
+                    <Row label="Source" value={sourceNodeLabel(msg.source_node || "admin", assistantName)} />
                     {msg.trust_score != null && (
                         <Row label="Confidence" value={`${(msg.trust_score * 100).toFixed(0)}%`} />
                     )}

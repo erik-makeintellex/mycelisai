@@ -38,6 +38,7 @@ function resetStore() {
         missionChatError: null,
         activeMode: 'answer',
         activeRole: '',
+        assistantName: 'Soma',
         councilTarget: 'admin',
         councilMembers: [],
         isBroadcasting: false,
@@ -67,6 +68,13 @@ describe('MissionControlChat', () => {
 
             // The header shows "Soma" as the default target
             expect(screen.getByText('Soma')).toBeDefined();
+        });
+
+        it('shows custom assistant name from settings', async () => {
+            useCortexStore.setState({ assistantName: 'Atlas' });
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+            expect(screen.getByText('Atlas')).toBeDefined();
         });
 
         it('shows "Broadcast" header in broadcast mode', async () => {
@@ -261,6 +269,51 @@ describe('MissionControlChat', () => {
             // No tool pills should be rendered
             const pills = container.querySelectorAll('[class*="cortex-primary/10"]');
             expect(pills).toHaveLength(0);
+        });
+
+        it('saves cached image artifact to workspace folder from inline card', async () => {
+            useCortexStore.setState({
+                missionChat: [
+                    {
+                        role: 'council',
+                        content: 'Generated image',
+                        source_node: 'admin',
+                        artifacts: [
+                            {
+                                id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                                type: 'image',
+                                title: 'Generated: test',
+                                content_type: 'image/png',
+                                content: 'cG5n',
+                                cached: true,
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = String(input);
+                if (url.includes('/api/v1/artifacts/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/save')) {
+                    return {
+                        ok: true,
+                        json: async () => ({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', file_path: 'saved-media/test.png' }),
+                    } as any;
+                }
+                return {
+                    ok: true,
+                    json: async () => ({ ok: true, data: COUNCIL_MEMBERS }),
+                } as any;
+            });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            fireEvent.click(screen.getByTitle('Save image to workspace/saved-media'));
+
+            await waitFor(() => {
+                expect(screen.getByText(/Saved to:/i)).toBeDefined();
+            });
         });
     });
 

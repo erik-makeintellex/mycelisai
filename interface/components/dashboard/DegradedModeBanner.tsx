@@ -10,6 +10,7 @@ export default function DegradedModeBanner() {
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
     const missionChatError = useCortexStore((s) => s.missionChatError);
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
+    const assistantName = useCortexStore((s) => s.assistantName);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
     const fetchCouncilMembers = useCortexStore((s) => s.fetchCouncilMembers);
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
@@ -63,7 +64,7 @@ export default function DegradedModeBanner() {
                     }}
                     className="px-2 py-1 rounded border border-cortex-primary/30 text-cortex-primary text-[10px] font-mono hover:bg-cortex-primary/15 transition-colors"
                 >
-                    Switch to Soma
+                    Switch to {assistantName}
                 </button>
                 <button
                     onClick={() => setStatusDrawerOpen(true)}
