@@ -252,6 +252,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/artifacts/{id}", s.handleGetArtifact)
 	mux.HandleFunc("POST /api/v1/artifacts", s.handleStoreArtifact)
 	mux.HandleFunc("PUT /api/v1/artifacts/{id}/status", s.handleUpdateArtifactStatus)
+	mux.HandleFunc("POST /api/v1/artifacts/{id}/save", s.handleSaveArtifactToFolder)
 
 	// Phase 19: Brains API (Provider Management)
 	mux.HandleFunc("GET /api/v1/brains", s.HandleListBrains)

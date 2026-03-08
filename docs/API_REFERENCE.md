@@ -71,6 +71,7 @@
 | `/api/v1/artifacts` | GET/POST | List/store artifacts (filterable) |
 | `/api/v1/artifacts/{id}` | GET | Artifact detail |
 | `/api/v1/artifacts/{id}/status` | PUT | Update artifact status |
+| `/api/v1/artifacts/{id}/save` | POST | Persist cached image artifact to workspace folder (`saved-media` default) |
 | **MCP Ingress** | | |
 | `/api/v1/mcp/install` | POST | Raw MCP install endpoint — **disabled by Phase 0 security** (`403`), use library install |
 | `/api/v1/mcp/servers` | GET | List installed MCP servers |

@@ -82,7 +82,7 @@ func (s *AdminServer) HandleCommsInbound(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	subject := fmt.Sprintf("swarm.global.input.%s", provider)
+	subject := fmt.Sprintf(protocol.TopicGlobalInputFmt, provider)
 	payload := msg
 	if req.Sender != "" {
 		payload = fmt.Sprintf("[%s:%s] %s", provider, req.Sender, msg)

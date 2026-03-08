@@ -1566,6 +1566,12 @@ func (r *InternalToolRegistry) handleLocalCommand(ctx context.Context, args map[
 		timeoutMS = int(v)
 	}
 
+	if len(cmdArgs) == 0 && strings.ContainsAny(command, " \t\r\n'\"`|&;<>") {
+		return "", fmt.Errorf(
+			"local_command requires a bare allowlisted command name in 'command' and separate 'args'; shell snippets are not allowed. For creating text output, answer directly or use write_file with 'path' and 'content'",
+		)
+	}
+
 	result, err := hostcmd.Execute(ctx, command, cmdArgs, time.Duration(timeoutMS)*time.Millisecond)
 	if err != nil {
 		return "", err

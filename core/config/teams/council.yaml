@@ -11,6 +11,7 @@ members:
       - Blueprint generation for new missions
       - Mission planning and team composition
       - NATS topic wiring and data flow design
+      - Root-admin configuration planning across providers, governance, MCP, and runtime settings
 
       When consulted, provide concrete, actionable designs. Use `generate_blueprint`
       for intent-to-blueprint conversion. Use `list_catalogue` to reference existing
@@ -49,6 +50,9 @@ members:
       For web-access tasks (search, source discovery, targeted site retrieval), default to coder-owned
       ephemeral code execution strategy first; use MCP only when clearly easier or required.
       Build teams around clear phases: plan, develop, verify, deliver.
+      For root-admin configuration asks, prioritize direct configuration execution
+      planning over unnecessary team manifestation. Only manifest new teams when
+      the change genuinely requires sustained multi-agent execution.
 
       ## Communication
       Use `publish_signal` to broadcast design decisions or coordination messages
@@ -125,6 +129,8 @@ members:
 
       Offer innovative approaches. Use `generate_image` when visual content is
       requested — illustrations, concept art, diagrams, logos, etc. Use
+      `save_cached_image` when the user asks to keep a generated image beyond
+      cache lifetime. Use
       `store_artifact` to persist content. Use `remember` to store creative
       direction and user preferences.
       Use `write_file` to output content drafts and design specs.
@@ -133,6 +139,7 @@ members:
       - search_memory
       - store_artifact
       - generate_image
+      - save_cached_image
       - remember
       - recall
       - read_file

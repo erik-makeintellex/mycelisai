@@ -17,6 +17,10 @@ Mycelis supports **multiple self-hosted and commercial inference engines** — c
 
 All `openai_compatible` providers can point to **any host on the network** — they are not restricted to localhost. Configure endpoints via the Cognitive Matrix UI (`/settings` → Matrix tab) or edit `core/config/cognitive.yaml` directly.
 
+Startup behavior:
+- Mycelis only performs startup connectivity calibration against default `ollama` plus providers explicitly routed by active profiles.
+- Declared-but-unrouted backends are not startup-probed unless you route profiles to them.
+
 ## Profile Routing
 
 Profiles map agent roles to providers. Each profile routes to a provider ID:
@@ -63,18 +67,21 @@ providers:
     endpoint: "http://127.0.0.1:8000/v1"
     model_id: "qwen2.5-coder"
     api_key: "mycelis-local"
+    enabled: false
 
   ollama:
     type: "openai_compatible"
     endpoint: "http://127.0.0.1:11434/v1"
     model_id: "qwen2.5-coder:7b"
     api_key: "ollama"
+    enabled: true
 
   lmstudio:
     type: "openai_compatible"
     endpoint: "http://127.0.0.1:1234/v1"
     model_id: "default"
     api_key: "lm-studio"
+    enabled: false
 
   production_gpt4:
     type: "openai"
