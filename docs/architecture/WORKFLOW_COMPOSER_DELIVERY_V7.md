@@ -1,7 +1,7 @@
 # Workflow Composer Delivery Plan V7
 
-> Status: Proposed execution plan
-> Last Updated: 2026-03-03
+> Status: Active supporting plan
+> Last Updated: 2026-03-07
 > Scope: Drag-and-drop workflow composition, team manifestation orchestration, and release-safe delivery path
 
 ## 1. Purpose
@@ -15,7 +15,23 @@ Define the architecture-native workflow for delivering an Airflow-style visual c
 
 This plan is implementation-facing and designed for Team A/C/Q/T/D parallel execution.
 
-## 2. Current Architecture Status (As Of 2026-03-03)
+Immediate alignment:
+- the active operator-facing slice is Launch Crew and workflow onboarding
+- onboarding must prove execution-facing outcomes before deeper workflow-composer expansion proceeds
+- use [Next Execution Slices V7](../architecture-library/NEXT_EXECUTION_SLICES_V7.md) as the current queue authority
+
+## 1.1 Prerequisite Gate: Logging Standardization
+
+Before any workflow-composer runtime or UI expansion:
+
+- logging contract in `docs/logging.md` must be treated as authoritative.
+- mission event emission must remain DB-first (`core/internal/events/store.go`).
+- topic usage must remain constant-driven (`core/pkg/protocol/topics.go`).
+- new node/runtime features must include mission event coverage in tests.
+
+This prerequisite is mandatory so manifested workflows remain auditable and agent-parseable from day one.
+
+## 2. Current Architecture Status (As Of 2026-03-05)
 
 ### 2.1 Completed Foundation
 
@@ -107,7 +123,7 @@ Verification:
 
 Suggested commands:
 
-- `uvx inv core.test`
+- `uv run inv core.test`
 - `cd core && go test ./internal/server -count=1`
 - `cd core && go test ./internal/runs -count=1`
 
@@ -130,8 +146,8 @@ Verification:
 
 Suggested commands:
 
-- `uvx inv interface.test`
-- `uvx inv interface.build`
+- `uv run inv interface.test`
+- `uv run inv interface.build`
 - `cd interface && npx vitest run --reporter=dot`
 
 ## Phase 3: Runtime Integration And Observability
@@ -151,8 +167,8 @@ Verification:
 
 Suggested commands:
 
-- `uvx inv core.test`
-- `uvx inv interface.e2e`
+- `uv run inv core.test`
+- `uv run inv interface.e2e`
 - `cd interface && npx playwright test --reporter=dot`
 
 ## Phase 4: Release Hardening And Gate Enforcement
@@ -211,20 +227,20 @@ Rules:
 
 ### Existing Tasks To Use As Baseline
 
-- `uvx inv ci.check`
-- `uvx inv core.test`
-- `uvx inv interface.build`
-- `uvx inv interface.test`
-- `uvx inv interface.e2e`
-- `uvx inv lifecycle.health`
+- `uv run inv ci.check`
+- `uv run inv core.test`
+- `uv run inv interface.build`
+- `uv run inv interface.test`
+- `uv run inv interface.e2e`
+- `uv run inv lifecycle.health`
 
 ### Recommended Task Additions
 
 | Task | Purpose |
 | --- | --- |
 | `ci.baseline` | strict full baseline sweep (core tests + interface build + vitest + playwright) |
-| `release.preflight` | enforce clean tree + docs gate + baseline pass |
-| `toolchain.check` | verify go/node/npm versions against declared policy |
+| `ci.release-preflight` | enforce clean tree + docs gate + baseline pass |
+| `ci.toolchain-check` | verify go/node/npm versions against declared policy |
 | `test.scheduler` | targeted scheduler + automations integration test suite |
 | `interface.test-runs` | targeted runs/timeline/chain frontend tests |
 | `quality.warnings` | capture and summarize warning budget from test/build runs |

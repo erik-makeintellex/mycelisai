@@ -54,6 +54,12 @@ export interface ProposalData {
     intent_proof_id: string;
 }
 
+export interface ConfirmProposalResult {
+    ok: boolean;
+    runId: string | null;
+    error?: string;
+}
+
 // Mission Profiles — named provider-routing configs with optional reactive NATS watches
 export interface MissionProfile {
     id: string;
@@ -753,7 +759,7 @@ export interface CortexState {
     broadcastToSwarm: (message: string) => Promise<void>;
 
     // CE-1: Template-aware actions
-    confirmProposal: () => Promise<void>;
+    confirmProposal: () => Promise<ConfirmProposalResult>;
     cancelProposal: () => void;
     fetchRunTimeline: (runId: string) => Promise<void>;
     fetchRecentRuns: () => Promise<void>;
@@ -2402,7 +2408,13 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     // CE-1: Proposal confirmation — calls backend confirm-action endpoint
     confirmProposal: async () => {
         const { activeConfirmToken, pendingProposal } = get();
-        if (!activeConfirmToken || !pendingProposal) return;
+        if (!activeConfirmToken || !pendingProposal) {
+            return {
+                ok: false,
+                runId: null,
+                error: 'No pending proposal to confirm',
+            };
+        }
         try {
             const res = await fetch('/api/v1/intent/confirm-action', {
                 method: 'POST',
@@ -2415,21 +2427,56 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 const systemMsg: ChatMessage = {
                     role: 'system',
                     content: 'Mission activated',
+                    mode: 'execution_result',
                     run_id: runId ?? undefined,
                     timestamp: new Date().toISOString(),
                 };
                 set((s) => ({
                     activeRunId: runId,
+                    activeMode: 'execution_result',
+                    missionChatError: null,
                     missionChat: [...s.missionChat, systemMsg],
+                    pendingProposal: null,
+                    activeConfirmToken: null,
                 }));
+                return { ok: true, runId };
             } else {
                 const text = await res.text();
-                console.error('[CE-1] Confirm action failed:', text);
+                let errMsg = 'Confirm action failed';
+                try {
+                    const parsed = JSON.parse(text);
+                    errMsg = parsed.error || errMsg;
+                } catch {
+                    errMsg = text || errMsg;
+                }
+                console.error('[CE-1] Confirm action failed:', errMsg);
+                set((s) => ({
+                    missionChatError: errMsg,
+                    activeMode: 'blocker',
+                    missionChat: [
+                        ...s.missionChat,
+                        { role: 'council', content: errMsg, source_node: 'admin', mode: 'blocker' },
+                    ],
+                    pendingProposal: null,
+                    activeConfirmToken: null,
+                }));
+                return { ok: false, runId: null, error: errMsg };
             }
         } catch (err) {
+            const errMsg = err instanceof Error ? err.message : 'Confirm action failed';
             console.error('[CE-1] confirmProposal error:', err);
+            set((s) => ({
+                missionChatError: errMsg,
+                activeMode: 'blocker',
+                missionChat: [
+                    ...s.missionChat,
+                    { role: 'council', content: errMsg, source_node: 'admin', mode: 'blocker' },
+                ],
+                pendingProposal: null,
+                activeConfirmToken: null,
+            }));
+            return { ok: false, runId: null, error: errMsg };
         }
-        set({ pendingProposal: null, activeConfirmToken: null });
     },
 
     cancelProposal: () => {

@@ -29,7 +29,7 @@ P4  Release hardening and promotion gates                            [REQUIRED]
 ### Active Queue In Canonical Order
 
 ```
-Slice 1  Launch Crew and workflow onboarding execution contract      [NEXT]
+Slice 1  Launch Crew and workflow onboarding execution contract      [ACTIVE]
 Slice 2  P1 logging, error handling, and execution feedback          [ACTIVE]
 Slice 3  Prime-development reply reliability                         [NEXT]
 Slice 4  P1 hot-path cleanup under max-lines gates                   [REQUIRED]
@@ -47,10 +47,14 @@ Slice 5  P2 manifest pipeline preparation                            [REQUIRED]
 ## Current Checkpoint (2026-03-07)
 
 Latest integration checkpoint:
-- Base commit: `e482f60`
+- Base commit: `0b07fb5`
 - Branch: `feature/enterprise-multihost-soma-routing`
 - Runtime note: local verification used `go1.25.6 windows/amd64` while docs still target Go `1.26`
 - Delivered:
+  - Launch Crew onboarding execution contract is now the active product slice:
+    - state/readme alignment keeps Launch Crew/workflow onboarding as the first execution-facing queue item
+    - the next implementation change must prove Launch Crew terminates in `answer`, `proposal`, `execution_result`, or `blocker`
+    - proof must include component tests, store/API transaction tests, and browser coverage for the onboarding entrypoint
   - Canonical planning/state cleanup completed:
     - the active queue now follows the architecture-library ordering of operator-facing execution clarity -> operator-facing failure/recovery clarity -> internal coordination -> structural cleanup -> manifest unification
     - the gated delivery program now aligns `P0 -> P4` themes with the target-deliverable library instead of mixing older narrower phase labels

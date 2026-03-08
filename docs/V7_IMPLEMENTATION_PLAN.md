@@ -1790,7 +1790,8 @@ Deliver a governed extension-of-self runtime where Soma can:
 - Maintain lane evidence matrix.
 - Run degraded/recovery drills for NATS, SSE, and local provider failures.
 - Gate promotion to `main` via P0/P1/P2/RC evidence.
-- Current gate state: `P0` passed on 2026-03-06 after live `lifecycle.memory-restart --frontend`; active next phase is `P1` cleanup/no-regression enforcement.
+- Current gate state: `P0` passed on 2026-03-06 after live `lifecycle.memory-restart --frontend`; active next phase is `P1` logging, error handling, and no-regression enforcement.
+- Current operator-facing active slice: Launch Crew and workflow onboarding must terminate in `answer`, `proposal`, `execution_result`, or `blocker` before deeper workflow-composer expansion.
 
 ### 9.3 Dependency and Sequencing Rules
 

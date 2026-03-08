@@ -344,4 +344,77 @@ describe('useCortexStore', () => {
             expect(store.getState().selectedArtifact).toBeNull();
         });
     });
+
+    // ── Launch Crew / proposal confirmation ─────────────────────
+
+    describe('confirmProposal', () => {
+        it('records an execution result and run id on successful confirmation', async () => {
+            store.setState({
+                pendingProposal: {
+                    intent: 'Launch a docs crew',
+                    teams: 1,
+                    agents: 2,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-123',
+                    intent_proof_id: 'ip-123',
+                },
+                activeConfirmToken: 'ct-123',
+                missionChat: [],
+                missionChatError: null,
+                activeMode: 'proposal',
+                activeRunId: null,
+            });
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({ data: { run_id: 'run-123' } }),
+            });
+
+            const result = await store.getState().confirmProposal();
+
+            expect(result).toEqual({ ok: true, runId: 'run-123' });
+            expect(store.getState().activeMode).toBe('execution_result');
+            expect(store.getState().activeRunId).toBe('run-123');
+            expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                role: 'system',
+                mode: 'execution_result',
+                run_id: 'run-123',
+            });
+        });
+
+        it('returns a blocker contract when confirmation fails', async () => {
+            store.setState({
+                pendingProposal: {
+                    intent: 'Launch a docs crew',
+                    teams: 1,
+                    agents: 2,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-123',
+                    intent_proof_id: 'ip-123',
+                },
+                activeConfirmToken: 'ct-123',
+                missionChat: [],
+                missionChatError: null,
+                activeMode: 'proposal',
+            });
+            mockFetch.mockResolvedValue({
+                ok: false,
+                text: async () => JSON.stringify({ error: 'confirmation denied' }),
+            });
+
+            const result = await store.getState().confirmProposal();
+
+            expect(result).toEqual({ ok: false, runId: null, error: 'confirmation denied' });
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('confirmation denied');
+            expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                role: 'council',
+                mode: 'blocker',
+                content: 'confirmation denied',
+            });
+        });
+    });
 });
