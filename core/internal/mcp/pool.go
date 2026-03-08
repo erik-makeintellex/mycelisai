@@ -18,6 +18,12 @@ import (
 // Prevents a single hung server from blocking the entire boot sequence.
 const mcpConnectTimeout = 15 * time.Second
 
+func withMCPConnectTimeout(ctx context.Context, fn func(context.Context) error) error {
+	connectCtx, cancel := context.WithTimeout(ctx, mcpConnectTimeout)
+	defer cancel()
+	return fn(connectCtx)
+}
+
 // ManagedClient wraps an active MCP client connection with its metadata.
 type ManagedClient struct {
 	ServerID  uuid.UUID
@@ -270,11 +276,11 @@ func (p *ClientPool) ReconnectAll(ctx context.Context, configs []ServerConfig) {
 		}
 
 		log.Printf("mcp pool: reconnecting to %s (%s)", cfg.Name, cfg.ID)
-		connectCtx, cancel := context.WithTimeout(ctx, mcpConnectTimeout)
-		if err := p.Connect(connectCtx, cfg); err != nil {
+		if err := withMCPConnectTimeout(ctx, func(connectCtx context.Context) error {
+			return p.Connect(connectCtx, cfg)
+		}); err != nil {
 			log.Printf("mcp pool: failed to reconnect %s (%s): %v", cfg.Name, cfg.ID, err)
 		}
-		cancel()
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -398,7 +399,9 @@ func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool 
 			// If previously installed but in error state, try reconnecting
 			if existing.Status == "error" || existing.Status == "pending" {
 				log.Printf("[mcp] bootstrap: retrying connect for %s (was %s)", name, existing.Status)
-				if err := pool.Connect(ctx, *existing); err != nil {
+				if err := withMCPConnectTimeout(ctx, func(connectCtx context.Context) error {
+					return pool.Connect(connectCtx, *existing)
+				}); err != nil {
 					log.Printf("[mcp] bootstrap: reconnect %s failed: %v", name, err)
 				} else {
 					log.Printf("[mcp] bootstrap: %s reconnected successfully", name)
@@ -412,21 +415,18 @@ func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool 
 			continue
 		}
 		cfg := entry.ToServerConfig(nil)
-		// For filesystem, resolve DATA_DIR from environment and ensure dir exists
+		// For filesystem, resolve the workspace root from the same contract used by
+		// the internal file tools so manifested files land on mounted workspace storage.
 		if name == "filesystem" {
-			dataDir := os.Getenv("DATA_DIR")
-			if dataDir == "" {
-				dataDir = "./workspace"
-			}
-			// Ensure the directory exists
-			if err := os.MkdirAll(dataDir, 0o755); err != nil {
-				log.Printf("[mcp] bootstrap: failed to create data dir %s: %v", dataDir, err)
+			workspaceRoot := resolveFilesystemWorkspaceRoot()
+			if err := os.MkdirAll(workspaceRoot, 0o755); err != nil {
+				log.Printf("[mcp] bootstrap: failed to create workspace root %s: %v", workspaceRoot, err)
 			}
 			// Replace the last arg (the mount path) with the resolved directory
 			if len(cfg.Args) >= 3 {
-				cfg.Args[len(cfg.Args)-1] = dataDir
+				cfg.Args[len(cfg.Args)-1] = workspaceRoot
 			}
-			log.Printf("[mcp] bootstrap: filesystem mount path: %s", dataDir)
+			log.Printf("[mcp] bootstrap: filesystem mount path: %s", workspaceRoot)
 		}
 		log.Printf("[mcp] bootstrap: installing %s (command: %s %v)", name, cfg.Command, cfg.Args)
 		installed, err := s.Install(ctx, cfg)
@@ -436,7 +436,9 @@ func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool 
 		}
 		log.Printf("[mcp] bootstrap: installed %s (id=%s)", name, installed.ID)
 		// Best-effort connect (spawns subprocess, discovers tools)
-		if err := pool.Connect(ctx, *installed); err != nil {
+		if err := withMCPConnectTimeout(ctx, func(connectCtx context.Context) error {
+			return pool.Connect(connectCtx, *installed)
+		}); err != nil {
 			log.Printf("[mcp] bootstrap: %s installed but connect failed: %v", name, err)
 		} else {
 			log.Printf("[mcp] bootstrap: %s connected and tools discovered", name)
@@ -461,6 +463,14 @@ func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool 
 			}
 		}
 	}
+}
+
+func resolveFilesystemWorkspaceRoot() string {
+	workspace := strings.TrimSpace(os.Getenv("MYCELIS_WORKSPACE"))
+	if workspace == "" {
+		return "./workspace"
+	}
+	return workspace
 }
 
 // scanServerConfig scans a row from the mcp_servers table into a ServerConfig.
