@@ -1778,6 +1778,7 @@ cd core && go test ./... -count=1         # Full Go validation
 cd interface && npx vitest run --reporter=dot
 cd interface && npx playwright test --reporter=dot
 cd interface && npx playwright test e2e/specs/v7-operational-ux.spec.ts  # Gate A operational UX E2E (degraded banner, status drawer, council reroute, automations hub, quick checks, focus mode)
+uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts  # Launch Crew live confirm-action browser proof
 cd core && go test ./internal/mcp/ -count=1
 cd core && go test ./internal/server/ -run TestHandleMCP -count=1
 cd core && go test ./internal/swarm/ -run TestScoped -count=1
@@ -1890,7 +1891,7 @@ Current delivery order:
 
 | Status | Slice / Phase | Current intent |
 | :--- | :--- | :--- |
-| `ACTIVE` | Launch Crew and workflow onboarding | Make the onboarding path resolve to `answer`, `proposal`, `execution_result`, or `blocker` instead of planning-only narration |
+| `COMPLETE` | Launch Crew and workflow onboarding | Onboarding now resolves to `answer`, `proposal`, `execution_result`, or `blocker`, with browser proof for proposal, blocker, and live confirm-action paths |
 | `ACTIVE` | `P1` logging, error handling, and execution feedback | Make Workspace, council, lifecycle, and bootstrap failures specific and actionable |
 | `NEXT` | Prime-development reply reliability | Complete central-architect team sync on canonical NATS lanes |
 | `REQUIRED` | `P1` hot-path cleanup | Reduce complexity only after behavior contracts are pinned |
