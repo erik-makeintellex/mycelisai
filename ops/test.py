@@ -33,13 +33,21 @@ def coverage(c):
     print()
     print("Coverage reports generated.")
 
-@task
-def e2e(c, headed=False):
+@task(
+    help={
+        "headed": "Open a visible browser window.",
+        "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
+        "spec": "Optional Playwright spec path or glob.",
+    }
+)
+def e2e(c, headed=False, project="", spec=""):
     """
     Run Playwright E2E tests (alias for interface.e2e).
-    Requires: core.run + interface.dev running.
+    Playwright owns the Interface dev server lifecycle. Start Core separately
+    only when the spec needs a live backend instead of route stubs. The task
+    clears stale Interface listeners before and after the browser run.
     """
-    interface.e2e(c, headed=headed)
+    interface.e2e(c, headed=headed, project=project, spec=spec)
 
 ns = Collection("test")
 ns.add_task(all)

@@ -57,18 +57,34 @@ def test_coverage(c):
     print("Running Interface Tests with Coverage...")
     c.run("cd interface && npx vitest run --coverage", pty=not is_windows())
 
-@task
-def e2e(c, headed=False):
+@task(
+    help={
+        "headed": "Open a visible browser window.",
+        "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
+        "spec": "Optional Playwright spec path or glob.",
+    }
+)
+def e2e(c, headed=False, project="", spec=""):
     """
-    Run Playwright E2E tests against a running dev server.
-    Requires: interface.dev running on port 3000.
-    Use --headed to see the browser.
+    Run Playwright E2E tests.
+    Playwright owns the Next.js dev server lifecycle through interface/playwright.config.ts,
+    so this task does not require a manually started Interface process.
+    The Invoke wrapper clears any stale Interface listener before and after the
+    run because Next.js dev servers can linger on Windows after Playwright exits.
     """
     print("Running Playwright E2E Tests...")
     cmd = "cd interface && npx playwright test"
+    if project:
+        cmd += f" --project={project}"
+    if spec:
+        cmd += f" {spec}"
     if headed:
         cmd += " --headed"
-    c.run(cmd, pty=not is_windows())
+    stop(c)
+    try:
+        c.run(cmd, pty=not is_windows())
+    finally:
+        stop(c)
 
 # ── Process Management ───────────────────────────────────────
 

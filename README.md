@@ -15,6 +15,7 @@
 > | [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md) | Runs, manifests, scheduled/event-driven/persistent-active behavior |
 > | [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) | Canonical UI target, anti-information-swarm rules, and operator journeys |
 > | [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) | Delivery proof, acceptance gates, and product-aligned testing |
+> | [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) | Current working queue with scoped next slices and linked development/testing references |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 > | [V7 PRD Index](mycelis-architecture-v7.md) | Stable compatibility entrypoint that points to the modular architecture library |
 > | [Architecture Overview](docs/architecture/OVERVIEW.md) | Supporting architecture summary and specialized phase context |
@@ -71,6 +72,7 @@ If you are a fresh development agent or starting a new interaction, review the d
 6. [Operations Manual](docs/architecture/OPERATIONS.md) and [Testing Guide](docs/TESTING.md) before changing runtime tasks, lifecycle flows, or delivery gates.
 7. [V7 Dev State](V7_DEV_STATE.md) for the current checkpoint and active delivery context.
 8. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
+9. [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) to choose the active slice and load the right development/testing docs before implementation.
 
 Use [mycelis-architecture-v7.md](mycelis-architecture-v7.md) only as the stable PRD index and compatibility entrypoint. Do not expand it back into the primary detailed spec.
 
@@ -1573,7 +1575,7 @@ Run from `scratch/` root using `uv run inv`:
 | `uv run inv interface.dev` | Start Next.js dev server (Turbopack) |
 | `uv run inv interface.build` | Production build |
 | `uv run inv interface.test` | Run Vitest unit tests |
-| `uv run inv interface.e2e` | Run Playwright E2E tests (requires running servers) |
+| `uv run inv interface.e2e` | Run Playwright E2E tests (Playwright owns the Next.js server lifecycle; Invoke clears stale UI listeners) |
 | `uv run inv interface.check` | Smoke-test running server (9 pages, no light-mode leaks) |
 | `uv run inv interface.stop` | Kill dev server |
 | `uv run inv interface.clean` | Clear `.next` cache |
@@ -1622,7 +1624,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | :--- | :--- | :--- |
 | **Core CI** (`core-ci.yaml`) | `core/**`, `ops/core.py` | Go test + coverage, GolangCI-Lint v1.64.5, binary build |
 | **Interface CI** (`interface-ci.yaml`) | `interface/**`, `ops/interface.py` | ESLint, `tsc --noEmit`, Vitest, production build |
-| **E2E CI** (`e2e-ci.yaml`) | `interface/**`, `core/**` | Build Core + Next.js, start servers, Playwright (Chromium) |
+| **E2E CI** (`e2e-ci.yaml`) | `interface/**`, `core/**` | Build Core + Next.js, start Core, Playwright-managed UI server, desktop browser matrix + mobile smoke |
 
 > [!TIP]
 > If you run `uv venv` and activate your virtual environment, you can use `inv` directly without `uvx`.
@@ -1719,6 +1721,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Execution And Manifest Library V7** | [docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md) — Manifest lifecycle, run lifecycle, recurring plans, and activation rules | [/docs?doc=execution-manifest-library-v7](/docs?doc=execution-manifest-library-v7) |
 | **UI And Operator Experience V7** | [docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) — Anti-information-swarm UI guidance and canonical operator journeys | [/docs?doc=ui-operator-experience-v7](/docs?doc=ui-operator-experience-v7) |
 | **Delivery Governance And Testing V7** | [docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) — Delivery proof model, evidence requirements, and product-aligned testing | [/docs?doc=delivery-governance-testing-v7](/docs?doc=delivery-governance-testing-v7) |
+| **Next Execution Slices V7** | [docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) — Current implementation queue with scoped files plus development and testing references | — |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
 | **Backend Specification** | [docs/architecture/BACKEND.md](docs/architecture/BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines | [/docs?doc=arch-backend](/docs?doc=arch-backend) |
 | **Frontend Specification** | [docs/architecture/FRONTEND.md](docs/architecture/FRONTEND.md) — Routes, components, Zustand, design system | [/docs?doc=arch-frontend](/docs?doc=arch-frontend) |
@@ -1772,7 +1775,7 @@ No branch promotion without this documentation gate.
 ```bash
 uv run inv core.test             # Go unit tests (full core package sweep)
 uv run inv interface.test        # Vitest component tests (55 files / 322 tests passing as of 2026-03-02)
-uv run inv interface.e2e         # Playwright E2E specs (51 passing, 4 intentionally skipped as of 2026-03-02)
+uv run inv interface.e2e         # Playwright E2E specs (Playwright starts/stops the Next.js server automatically)
 uv run inv interface.check       # HTTP smoke test against running dev server (9 pages)
 uv run inv core.smoke            # Governance smoke tests
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
@@ -1796,7 +1799,7 @@ Latest full baseline sweep (2026-03-03, `feature/enterprise-multihost-soma-routi
 Latest strict baseline gate (2026-03-06):
 - `uv run inv ci.baseline` -> pass (logging schema + topic constants + max-lines gate + core tests + interface build/typecheck/vitest)
 
-If Playwright reports a missing browser executable, run: `cd interface && npx playwright install chromium`.
+If Playwright reports a missing browser executable, run: `cd interface && npx playwright install chromium firefox webkit`.
 
 ### Remote GUI Agent Preflight (Required)
 
