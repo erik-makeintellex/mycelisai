@@ -7,16 +7,26 @@ type FailureType = "timeout" | "unreachable" | "server_error" | "unknown";
 
 function classifyFailure(message: string): FailureType {
     const lower = message.toLowerCase();
-    if (lower.includes("timeout")) return "timeout";
-    if (lower.includes("unreachable") || lower.includes("failed to fetch")) return "unreachable";
-    if (lower.includes("500") || lower.includes("server")) return "server_error";
+    if (lower.includes("timeout") || lower.includes("deadline exceeded")) return "timeout";
+    if (lower.includes("500") || lower.includes("internal error") || lower.includes("server error")) return "server_error";
+    if (
+        lower.includes("unreachable") ||
+        lower.includes("failed to fetch") ||
+        lower.includes("bad gateway") ||
+        lower.includes("connection refused") ||
+        lower.includes("503") ||
+        lower.includes("502") ||
+        lower.includes("offline")
+    ) {
+        return "unreachable";
+    }
     return "unknown";
 }
 
 function reasonFor(type: FailureType): string {
     if (type === "timeout") return "The council member did not respond before the request deadline.";
-    if (type === "unreachable") return "The council member service is currently unreachable from this client.";
-    if (type === "server_error") return "The council member service returned an internal error.";
+    if (type === "unreachable") return "The council member service or proxy is currently unreachable from this client.";
+    if (type === "server_error") return "The council member service returned an internal error. Retry once, then open system status if the blocker persists.";
     return "The request failed unexpectedly. Check system status for runtime health.";
 }
 

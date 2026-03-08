@@ -86,4 +86,27 @@ describe("DegradedModeBanner", () => {
         expect(useCortexStore.getState().disconnectStream).toHaveBeenCalled();
         expect(useCortexStore.getState().initializeStream).toHaveBeenCalledWith(true);
     });
+
+    it("shows a specific workspace chat server-error reason", async () => {
+        useCortexStore.setState({
+            missionChatError: "Council agent unreachable (500)",
+            isStreamConnected: true,
+        });
+
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                data: [
+                    { name: "nats", status: "online" },
+                    { name: "postgres", status: "online" },
+                ],
+            }),
+        });
+
+        render(<DegradedModeBanner />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Workspace chat server error/i)).toBeDefined();
+        });
+    });
 });

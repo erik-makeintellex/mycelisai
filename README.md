@@ -169,7 +169,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Run List (V7):** `/runs` page listing all recent runs across missions, with status dots and timestamps. Also surfaced in OpsOverview as a `Recent Runs` widget.
 - **Causal Chain View (V7, backend ready):** Parent run → event → trigger → child run traversal. `GET /api/v1/runs/{id}/chain` handler complete; UI pending.
 - **Mode Ribbon:** Always-visible status bar showing current execution mode, active brain (with local/remote badge), and governance state.
-- **Operational Reliability UX (V7 Gate A):** Global `DegradedModeBanner`, global `StatusDrawer` (opened from Mode Ribbon or floating status action), structured `CouncilCallErrorCard` with retry/reroute/copy diagnostics actions, Workspace Focus Mode (`F` key), and `SystemQuickChecks` panel on `/system`.
+- **Operational Reliability UX (V7 Gate A):** Global `DegradedModeBanner`, global `StatusDrawer` (opened from Mode Ribbon or floating status action), structured `CouncilCallErrorCard` with timeout/unreachable/server-error guidance plus retry/reroute/copy diagnostics actions, Workspace Focus Mode (`F` key), and `SystemQuickChecks` panel on `/system`.
 - **Standardized Resource API Contract:** Resource surfaces normalize both raw and enveloped payloads (`{ ok, data, error }`) through shared contract helpers/store actions, so new AI resource channels can be added without per-screen parsing drift.
 - **Proposal Blocks:** Inline chat cards for mutation-gated actions — shows intent, tools, risk level, confirm/cancel buttons wired to CE-1 confirm token flow.
 - **Orchestration Inspector:** Expandable audit panel showing template ID, intent proof, confirm token, and execution mode for each chat response.

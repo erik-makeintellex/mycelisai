@@ -26,6 +26,21 @@ describe("CouncilCallErrorCard", () => {
         expect(screen.getByText("timeout")).toBeDefined();
     });
 
+    it("classifies mixed unreachable 500 errors as server errors", () => {
+        render(
+            <CouncilCallErrorCard
+                member="council-architect"
+                errorMessage="Council agent unreachable (500)"
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("server_error")).toBeDefined();
+        expect(screen.getByText(/returned an internal error/i)).toBeDefined();
+    });
+
     it("fires retry, switch, and continue handlers", () => {
         const onRetry = vi.fn();
         const onSwitchToSoma = vi.fn();
@@ -65,4 +80,3 @@ describe("CouncilCallErrorCard", () => {
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith("failed to fetch");
     });
 });
-

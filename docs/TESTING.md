@@ -52,6 +52,7 @@ Signal/channel standard:
 - Current focused runtime check: `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
 - Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
 - Current focused Workspace chat contract check: `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
+- Current focused execution feedback check: `cd interface && npx vitest run __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`
 - Current focused Launch Crew contract check: `cd interface && npx vitest run __tests__/workspace/LaunchCrewModal.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused Launch Crew browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/proposals.spec.ts` (proposal outcome + blocker recovery)
 - Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
