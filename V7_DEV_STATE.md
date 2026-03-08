@@ -29,7 +29,7 @@ P4  Release hardening and promotion gates                            [REQUIRED]
 ### Active Queue In Canonical Order
 
 ```
-Slice 1  Launch Crew and workflow onboarding execution contract      [ACTIVE]
+Slice 1  Launch Crew and workflow onboarding execution contract      [COMPLETE]
 Slice 2  P1 logging, error handling, and execution feedback          [ACTIVE]
 Slice 3  Prime-development reply reliability                         [NEXT]
 Slice 4  P1 hot-path cleanup under max-lines gates                   [REQUIRED]
@@ -51,6 +51,10 @@ Latest integration checkpoint:
 - Branch: `feature/enterprise-multihost-soma-routing`
 - Runtime note: local verification used `go1.25.6 windows/amd64` while docs still target Go `1.26`
 - Delivered:
+  - Launch Crew / workflow onboarding execution contract is now complete:
+    - browser proof now covers proposal outcome, blocker/recovery outcome, and a live-backend confirm-action round-trip
+    - confirm-path coverage now includes the real backend contract where confirmation succeeds without a `run_id`
+    - Slice 2 (`P1` logging, error handling, and execution feedback) is now the active next implementation lane
   - Workspace cleanup and commitment cleanup completed:
     - mixed worktree lanes were isolated and landed as narrow scoped commits instead of one broad mixed commit
     - latest cleanup commits:
@@ -248,6 +252,9 @@ Latest integration checkpoint:
     - `.github/workflows/e2e-ci.yaml` now installs the full browser matrix and lets Playwright manage the UI server while Core remains a separately started backend dependency
 
 Verification evidence (latest targeted slice):
+- `cd interface && npx vitest run __tests__/workspace/LaunchCrewModal.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`
+- `uv run inv interface.e2e --project=chromium --spec=e2e/specs/proposals.spec.ts`
+- `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts`
 - `uv run inv ci.baseline`
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
 - `cd core && go test -p 1 ./internal/artifacts ./internal/cognitive -count=1`

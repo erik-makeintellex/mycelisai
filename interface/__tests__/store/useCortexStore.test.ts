@@ -348,6 +348,40 @@ describe('useCortexStore', () => {
     // ── Launch Crew / proposal confirmation ─────────────────────
 
     describe('confirmProposal', () => {
+        it('records an execution result when confirmation succeeds without a run id', async () => {
+            store.setState({
+                pendingProposal: {
+                    intent: 'Launch a docs crew',
+                    teams: 1,
+                    agents: 2,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-123',
+                    intent_proof_id: 'ip-123',
+                },
+                activeConfirmToken: 'ct-123',
+                missionChat: [],
+                missionChatError: null,
+                activeMode: 'proposal',
+                activeRunId: null,
+            });
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({ data: { confirmed: true, run_id: null } }),
+            });
+
+            const result = await store.getState().confirmProposal();
+
+            expect(result).toEqual({ ok: true, runId: null });
+            expect(store.getState().activeMode).toBe('execution_result');
+            expect(store.getState().activeRunId).toBeNull();
+            expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                role: 'system',
+                mode: 'execution_result',
+            });
+        });
+
         it('records an execution result and run id on successful confirmation', async () => {
             store.setState({
                 pendingProposal: {

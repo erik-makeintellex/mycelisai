@@ -40,7 +40,7 @@ This queue is ordered by product evocation first:
 ## Slice 1: Launch Crew And Workflow Onboarding
 
 Status:
-- `ACTIVE`
+- `COMPLETE`
 
 Objective:
 - make Launch Crew and onboarding execution-facing instead of planning-facing.
@@ -78,6 +78,11 @@ Acceptance criteria:
 
 Rollback:
 - revert UI/state changes while preserving already-enforced Workspace chat contract
+
+Completion evidence:
+- terminal-state component and store coverage now includes proposal, answer, blocker, execution result with `run_id`, and execution result without `run_id`
+- browser coverage proves proposal outcome, blocker/recovery outcome, and live-backend confirm-action execution through the real UI proxy
+- onboarding no longer relies on planning-only modal states
 
 ## Slice 2: P1 Logging, Error Handling, And Execution Feedback
 
