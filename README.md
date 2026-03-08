@@ -1873,22 +1873,23 @@ If preflight fails, mark the run `INVALID_ENV` and stop. Do not file product reg
 
 ## Upcoming Architecture
 
-Planned phases with detailed specifications are documented in the Architecture Overview:
+The canonical roadmap now lives in the architecture library, not in legacy per-team phase tables.
 
-| Phase | Name | Summary |
+Current delivery order:
+
+| Status | Slice / Phase | Current intent |
 | :--- | :--- | :--- |
-| **V7** | **Event Spine & Workflow-First Orchestration** | **IN PROGRESS** — Team D (nav) ✓, Workspace UX ✓, Team A (Event Spine) ✓, Soma Workflow E2E ✓, Provider CRUD + Mission Profiles ✓, Team B (Trigger Engine) ✓, Conversation Log + Interjection ✓ (migration 030, full transcript persistence, operator redirect), Inception Recipes ✓ (migration 031, dual-persist RAG patterns, quality feedback). **Next:** Team C (Scheduler: migration 027, cron goroutine, NATS suspend/resume) → Causal Chain UI (`ViewChain.tsx`) |
-| 12 | Persistent Agent Memory | Cross-mission memory, semantic recall, memory consolidation daemon |
-| 13 | Multi-Agent Collaboration | Intra-team debate protocol, consensus detection, SquadRoom live chat |
-| 14 | Hot-Reload Runtime | Live agent goroutine replacement, zero-downtime reconfiguration |
-| P1 | Structural Hardening | RBAC (role-based access control), Postgres RLS, memory isolation, JWT/session auth |
-| P2 | Execution Hardening | Tool execution pipeline, SCIP validator, audit logging, prompt injection defense |
-| P3 | Governance Completion | HTTP-layer governance hooks, rate limiting, advanced schedule safety |
-| 16 | Distributed Federation | Multi-node NATS, team affinity, cross-instance delegation |
-| 18 | Streaming LLM | Token-by-token streaming via SSE, mid-stream tool detection |
-| 20 | Observability Dashboard | Historical metrics, Prometheus export, agent performance analytics |
+| `ACTIVE` | Launch Crew and workflow onboarding | Make the onboarding path resolve to `answer`, `proposal`, `execution_result`, or `blocker` instead of planning-only narration |
+| `ACTIVE` | `P1` logging, error handling, and execution feedback | Make Workspace, council, lifecycle, and bootstrap failures specific and actionable |
+| `NEXT` | Prime-development reply reliability | Complete central-architect team sync on canonical NATS lanes |
+| `REQUIRED` | `P1` hot-path cleanup | Reduce complexity only after behavior contracts are pinned |
+| `REQUIRED` | `P2` manifest pipeline preparation | Unify `draft -> validated -> proposed -> approved -> activated` with recurring-plan modes |
 
-> Full roadmap with technical details: [Architecture Overview](docs/architecture/OVERVIEW.md#vii-upcoming-architecture)
+Review order for the active roadmap:
+1. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md)
+2. [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md)
+3. [Workflow Composer Delivery V7](docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md)
+4. [V7 Dev State](V7_DEV_STATE.md)
 
 ## Branching Strategy
 
