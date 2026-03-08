@@ -218,7 +218,7 @@ For each feature PR:
 2. State which friction items from this review are addressed.
 3. Include before/after interaction map.
 4. Include test evidence for degraded and success paths.
-5. Include lane ownership and gate target from `../ui-delivery/PARALLEL_DELIVERY_BOARD.md`.
+5. Include the current queue status and gate target from `../architecture-library/NEXT_EXECUTION_SLICES_V7.md`.
 
 Execution order recommendation:
 

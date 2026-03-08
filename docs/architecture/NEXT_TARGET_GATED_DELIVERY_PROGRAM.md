@@ -1,17 +1,17 @@
 # Next Target Gated Delivery Program
 
-> Status: `P0 ACTIVE`
-> Last Updated: 2026-03-06
+> Status: `P1 ACTIVE`
+> Last Updated: 2026-03-07
 > Execution Rule: advance only after the current phase records a gate pass with evidence.
 
 ## Phase Register
 
 | Phase | Status | Theme |
 | --- | --- | --- |
-| `P0` | ACTIVE | Logging standardization gate + invoke/runtime entrypoint normalization |
-| `P1` | LOCKED | Codebase cleanup to `<=350` LOC with no-regression caps |
+| `P0` | PASSED | Operational foundation and gate discipline |
+| `P1` | ACTIVE | Logging, error handling, and hot-path cleanup under `<=350` LOC policy |
 | `P2` | LOCKED | Meta-agent-owned manifest pipeline |
-| `P3` | LOCKED | Workflow-composer UI onboarding |
+| `P3` | LOCKED | Workflow-composer onboarding and execution-facing UI |
 | `P4` | LOCKED | Release hardening + final regression caps |
 
 ## P0 Action Card
@@ -56,41 +56,62 @@
   - Required output summary:
     - `uv run inv -l` lists the `lifecycle.memory-restart`, `logging.check-schema`, `logging.check-topics`, and `quality.max-lines` tasks
     - pytest suite passes with no failures
-  - Gate result: `PENDING`
+  - Additional evidence:
+    - `uv run inv ci.entrypoint-check`
+    - `uv run inv lifecycle.memory-restart --frontend`
+  - Required output summary:
+    - `uv run inv ci.entrypoint-check` confirms `uv run inv` and `uvx --from invoke inv` behavior while bare `uvx inv` remains unsupported
+    - `uv run inv lifecycle.memory-restart --frontend` completes with clean forward migrations, healthy endpoints, and memory probes at HTTP 200
+  - Gate result: `PASSED`
 
 ## P1 Action Card
 
-- Objective: reduce hot-path files toward the global `350` LOC policy while preserving the temporary no-regression caps already tracked in `ops/quality_legacy_caps.txt`.
+- Objective: standardize operator-facing logging and error handling in the highest-risk execution paths while reducing hot-path files toward the global `350` LOC policy under the temporary no-regression caps tracked in `ops/quality_legacy_caps.txt`.
 - Scoped files:
+  - `docs/logging.md`
   - `core/internal/swarm/agent.go`
   - `core/internal/swarm/internal_tools.go`
   - `core/internal/swarm/soma.go`
+  - `core/internal/server/comms.go`
+  - `core/internal/mcp/service.go`
+  - `interface/components/dashboard/CouncilCallErrorCard.tsx`
+  - `interface/components/dashboard/DegradedModeBanner.tsx`
+  - `interface/components/dashboard/MissionControlChat.tsx`
   - `interface/store/useCortexStore.ts`
   - `ops/quality.py`
   - `ops/quality_legacy_caps.txt`
+  - `ops/lifecycle.py`
 - Branch name: `phase/p1-hotpath-loc-decomposition`
 - Required `uvx inv` commands:
+  - `uvx inv logging.check-schema`
+  - `uvx inv logging.check-topics`
   - `uvx inv quality.max-lines --limit 350`
   - `uvx inv ci.baseline`
 - Tests:
+  - `uv run inv logging.check-schema`
+  - `uv run inv logging.check-topics`
   - `uv run inv quality.max-lines --limit 350`
   - `uv run inv ci.baseline`
-  - targeted package tests for each decomposed area
+  - targeted package and UI tests for each scoped error-handling or decomposition area
 - Acceptance criteria:
+  - scoped operator-facing failures use actionable blocker or recovery language instead of opaque generic failures
+  - logging and signal metadata remain compliant with the documented standard where touched
   - no scoped file grows beyond its current legacy cap
   - at least one legacy cap is reduced or removed
   - extracted modules keep behavior stable under existing tests
 - Rollback plan:
-  - revert decomposition commits per file family
+  - revert the scoped logging/error/decomposition commits per file family
   - restore prior values in `ops/quality_legacy_caps.txt`
   - rerun baseline and targeted tests
 - PR evidence block:
   - Branch: `phase/p1-hotpath-loc-decomposition`
-  - Date: `TBD after P0 pass`
+  - Date: `2026-03-07`
   - Commands:
+    - `uv run inv logging.check-schema`
+    - `uv run inv logging.check-topics`
     - `uv run inv quality.max-lines --limit 350`
     - `uv run inv ci.baseline`
-  - Gate result: `LOCKED`
+  - Gate result: `ACTIVE`
 
 ## P2 Action Card
 
@@ -103,7 +124,7 @@
   - `core/pkg/protocol/manifest.go`
   - `core/pkg/protocol/workflow_composer.go`
   - `core/tests/provisioning_test.go`
-  - `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`
+  - `docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md`
 - Branch name: `phase/p2-meta-agent-manifest-pipeline`
 - Required `uvx inv` commands:
   - `uvx inv core.test`
@@ -131,7 +152,7 @@
 
 ## P3 Action Card
 
-- Objective: onboard operators into the workflow-composer UI with clear single-agent versus manifested-team paths and policy-aware validation.
+- Objective: onboard operators into the workflow-composer UI with clear single-agent versus manifested-team paths, policy-aware validation, and execution-facing terminal states.
 - Scoped files:
   - `interface/lib/types/workflowComposer.ts`
   - `interface/app/(app)/docs/page.tsx`

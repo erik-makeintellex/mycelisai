@@ -16,32 +16,45 @@
 - `COMPLETE`: delivered and accepted
 - `BLOCKED`: cannot advance until a dependency or defect is resolved
 
+### Delivery Program Snapshot
+
 ```
-Phase 19 [COMPLETE]
-    → V7 Step 01 / Team D — Navigation [COMPLETE]
-    → Workspace UX — Rename, LaunchCrew, MemoryExplorer redesign [COMPLETE]
-    → V7 Team A — Event Spine [COMPLETE]
-    → V7 Soma Workflow E2E — Consultations, run_id, Run Timeline UI, OpsWidget registry [COMPLETE]
-    → In-App Docs Browser — /docs page, curated manifest, and user guides [COMPLETE]
-    → Provider CRUD + Mission Profiles + Reactive Subscriptions + Service Management [COMPLETE]
-    → V7 Team B — Trigger Engine [COMPLETE]
-    → Root-admin collaboration groups foundation — DB storage + scoped auth + UI monitor [COMPLETE]
-    → Team A/B/C/Q groups hardening sprint (ACTIVE)
-    → V7 Team C — Scheduler [NEXT]
-    → V7 Causal Chain UI — ViewChain.tsx [REQUIRED]
-    → MCP Baseline — filesystem, memory, artifact-renderer, fetch [REQUIRED]
-    → Resource API standardization + Workspace Explorer activation [ACTIVE]
+P0  Operational foundation and gate discipline                       [COMPLETE]
+P1  Logging, error handling, and hot-path cleanup                    [ACTIVE]
+P2  Meta-agent-owned manifest pipeline                               [REQUIRED]
+P3  Workflow-composer onboarding and execution-facing UI             [REQUIRED]
+P4  Release hardening and promotion gates                            [REQUIRED]
 ```
+
+### Active Queue In Canonical Order
+
+```
+Slice 1  Launch Crew and workflow onboarding execution contract      [NEXT]
+Slice 2  P1 logging, error handling, and execution feedback          [ACTIVE]
+Slice 3  Prime-development reply reliability                         [NEXT]
+Slice 4  P1 hot-path cleanup under max-lines gates                   [REQUIRED]
+Slice 5  P2 manifest pipeline preparation                            [REQUIRED]
+```
+
+### Delivered Foundation Context
+
+- `COMPLETE`: Workspace, run/timeline, docs browser, provider/profile/runtime management, event spine, trigger engine, and the core operational foundation are in place.
+- `COMPLETE`: `P0` gate passed live and the canonical task/docs/runtime contracts are now normalized around `uv run inv ...`.
+- `ACTIVE`: current work should be interpreted through the `P0 -> P4` delivery model first, not legacy Team A/B/C or Phase 19 naming.
 
 ---
 
 ## Current Checkpoint (2026-03-07)
 
 Latest integration checkpoint:
-- Base commit: `fe335e7`
+- Base commit: `e482f60`
 - Branch: `feature/enterprise-multihost-soma-routing`
 - Runtime note: local verification used `go1.25.6 windows/amd64` while docs still target Go `1.26`
 - Delivered:
+  - Canonical planning/state cleanup completed:
+    - the active queue now follows the architecture-library ordering of operator-facing execution clarity -> operator-facing failure/recovery clarity -> internal coordination -> structural cleanup -> manifest unification
+    - the gated delivery program now aligns `P0 -> P4` themes with the target-deliverable library instead of mixing older narrower phase labels
+    - this state document now leads with the delivery-program snapshot instead of legacy phase framing
   - DB-backed collaboration groups (`migration 034`, `groups.go`)
   - scoped permissions (`groups:read|write|broadcast`)
   - high-impact confirm-token gate on group mutation
@@ -109,7 +122,7 @@ Latest integration checkpoint:
   - Agent operating manual now enforces logging first-read checklist:
     - `CLAUDE.md` updated with mandatory logging contract section
   - PRD execution manifest updated for immediate delivery sequencing:
-    - `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md` section 13 now locks phase order (P0 logging -> P1 cleanup -> P2 meta-agent manifests -> P3 workflow composer -> P4 release hardening)
+    - `docs/architecture-library/TARGET_DELIVERABLE_V7.md` and `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` now carry the authoritative `P0 -> P4` sequence and slice ordering
   - Workflow composer architecture plan aligned with logging prerequisite gate:
     - `docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
   - Invoke quality/logging gate tasks implemented and wired into baseline:
@@ -264,8 +277,8 @@ Verification evidence (latest full sweep — 2026-03-03):
 
 ## Next Parallel Sprint (A/B/C/Q)
 
-Execution board:
-- `docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md`
+Execution queue:
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 
 Parallel team tracks:
 1. Team A (Core/Persistence): propagate `group_id` across runs/events/timeline lineage.
@@ -297,30 +310,20 @@ No promotion without this gate.
 
 ## What Is Done
 
-### UI Parallel Delivery Engagement (Activated)
+### UI Delivery Governance (Canonicalized)
 
-Parallelized UI delivery is now explicitly engaged with lane-level playbooks and gate-based merges.
+Parallel UI lane boards and superseded execution playbooks have been purged from the canonical surface.
+
+Current authoritative UI delivery references:
 
 | Deliverable | File |
 |------------|------|
-| Parallel board with active gate model (A/B/C/RC) | `docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md` |
-| Lane A playbook (Global Ops UX) | `docs/ui-delivery/LANE_A_GLOBAL_OPS.md` |
-| Lane B playbook (Workspace Reliability UX) | `docs/ui-delivery/LANE_B_WORKSPACE_RELIABILITY.md` |
-| Lane C playbook (Workflow Surfaces UX) | `docs/ui-delivery/LANE_C_WORKFLOW_SURFACES.md` |
-| Lane D playbook (System + Observability UX) | `docs/ui-delivery/LANE_D_SYSTEM_OBSERVABILITY.md` |
-| Lane Q playbook (QA reliability/regression) | `docs/ui-delivery/LANE_Q_QA_REGRESSION.md` |
-| Canonical UI framework v2.0 (I/O contract, state transitions, component templates, gate checklists) | `docs/UI_FRAMEWORK_V7.md` |
-| UI workflow instantiation + bus plan (execution authority) | `docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md` |
-| Soma team + channel architecture (inter-team/process/MCP/memory contracts) | `docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md` |
-| MCP service configuration standard (local-first onboarding + remote exception controls) | `docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md` |
-| Universal action interface architecture (MCP/OpenAPI/Python + dynamic service APIs) | `docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md` |
-| Actualization architecture beyond MCP (OpenClaw-inspired gateway patterns + A2A/ACP integration posture) | `docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md` |
-| Team lifecycle profile architecture updated (ephemeral/persistent/auto + schedule repeat + low-level IoT path) | `docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md` |
-| Secure gateway + remote actuation security profile (self-hosted default + remote hardening gates) | `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
-| Hardware interface API + direct channel architecture (common protocol support + IoT pathways) | `docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md` |
-| Soma symbiote growth + host actuation architecture (thought profiles, learning loop, localhost execution path) | `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` |
-| Integrated timeline alignment for architecture expansion (Wave 0-4) | `docs/V7_IMPLEMENTATION_PLAN.md` |
-| Team A/B/C/Q active sprint execution board | `docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md` |
+| Canonical operator journeys and anti-information-swarm rules | `docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md` |
+| Required UI terminal states and backend transaction rules | `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md` |
+| Current implementation queue and acceptance logic | `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` |
+| Delivery proof, testing structure, and evidence rules | `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md` |
+| Frontend implementation reference | `docs/architecture/FRONTEND.md` |
+| Implementation roadmap/state sync | `docs/V7_IMPLEMENTATION_PLAN.md` |
 
 Execution policy:
 - Lanes run in parallel.
@@ -335,26 +338,24 @@ Gate A baseline progress:
   - `interface/e2e/specs/v7-operational-ux.spec.ts` (6 scenarios: degraded banner lifecycle, status drawer access, council reroute via Soma, automations actionable hub, system quick checks, focus mode toggle).
   - Verified green locally in current environment (`cd interface && npx playwright test --reporter=dot` -> `51` passed, `4` skipped).
 - Framework hardening completed:
-  - `docs/UI_FRAMEWORK_V7.md` upgraded as canonical UI source with explicit input/output model, global operational state contract, required state transitions, component instantiation templates, telemetry contract, and release gates.
-- UI element planning baseline completed:
-  - `docs/UI_ELEMENTS_PLANNING_V7.md` added as research-backed planning authority for UI element management and Soma interaction patterns.
-  - In-app docs manifest updated to include UI element planning and explicit Archive section labeling for non-authoritative historical docs.
+  - canonical UI guidance now lives in the architecture library and transaction contract docs rather than a separate planning layer.
 - Recovery UX hardening completed:
   - `DegradedModeBanner` Retry now re-checks services, refreshes council/missions, and re-initializes SSE when disconnected.
   - Workspace council direct-target indicator now synchronizes with global `councilTarget` (including one-click fallback to Soma from banner/error card).
   - `StatusDrawer` council failure highlighting now resolves from recent failed council message source instead of only current target selection.
 
-### UI Instantiation + Bus Planning (Kickoff Complete)
+### Workflow Onboarding + Bus Planning (Canonicalized)
 
-Execution-grade planning is now defined for:
-- guided team instantiation workflows
-- shared channel input/output envelopes
-- user-safe NATS exposure (Basic/Guided/Expert)
+Execution-grade planning for workflow onboarding and bus exposure is now tracked through:
+- `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
+- `docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md`
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
+- `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`
 - parallel Sprint 0 and Sprint 1 work packages across Atlas/Helios/Circuit/Argus/Sentinel
 
 Planning source:
-- `docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md`
-- `docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md`
+- `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 
 ### Sprint 0 UI Implementation (Lane C Started)
 
@@ -394,16 +395,15 @@ Verification run:
 - `cd interface && npx vitest run __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/ResourcesPage.test.tsx __tests__/pages/SystemPage.test.tsx` -> pass (18 tests)
 - `cd interface && npx vitest run __tests__/store/useCortexStore.test.ts` -> pass (25 tests)
 
-### Soma Extension-of-Self Architecture + PRD (Planning Authority Added)
+### Soma Extension-of-Self Architecture (Canonicalized)
 
 Detailed architecture and delivery planning is now locked for extension-of-self growth beyond baseline MCP operations.
 
 | Deliverable | File |
 |------------|------|
 | V7 architecture update with extension-of-self modes, local Ollama contract, and parallel tracks | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md` |
-| Detailed execution PRD for extension-of-self program (sprints, lanes, gates, tests) | `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md` |
 | Soma symbiote architecture expanded with explicit local Ollama communication contract | `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` |
-| Inception "harsh-truth" guardrails codified (heartbeat budgets, single-use-case ratchet, staged self-update, sandbox-first skill injection) | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md`, `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
+| Inception "harsh-truth" guardrails codified (heartbeat budgets, single-use-case ratchet, staged self-update, sandbox-first skill injection) | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
 | Integrated implementation-plan section for parallel package execution | `docs/V7_IMPLEMENTATION_PLAN.md` (Section 9) |
 
 ### Phase 19 Foundation

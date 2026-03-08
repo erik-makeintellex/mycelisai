@@ -13,7 +13,7 @@ Related:
 Supporting specialized docs:
 - [UI Target And Transaction Contract V7](../architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
 - [Frontend](../architecture/FRONTEND.md)
-- [UI Framework V7](../UI_FRAMEWORK_V7.md)
+- [Next Execution Slices V7](NEXT_EXECUTION_SLICES_V7.md)
 
 ## 1. Primary Design Problem
 

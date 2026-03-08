@@ -8,6 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
 PRD_INDEX = ROOT / "mycelis-architecture-v7.md"
+NEXT_EXECUTION_SLICES = ROOT / "docs" / "architecture-library" / "NEXT_EXECUTION_SLICES_V7.md"
+DEV_STATE = ROOT / "V7_DEV_STATE.md"
 CANONICAL_DOCS = [
     README,
     PRD_INDEX,
@@ -208,3 +210,61 @@ def test_prd_index_points_to_modular_architecture_library():
 
     missing = [link for link in required_links if link not in text]
     assert not missing, f"PRD index is missing modular architecture links: {missing}"
+
+
+def test_next_execution_slices_follow_canonical_priority_order():
+    text = NEXT_EXECUTION_SLICES.read_text(encoding="utf-8")
+    required_snippets = [
+        "## Commitment Logic For This Queue",
+        "## Slice 1: Launch Crew And Workflow Onboarding",
+        "## Slice 2: P1 Logging, Error Handling, And Execution Feedback",
+        "## Slice 3: Prime-Development Reply Reliability",
+        "## Slice 4: P1 Hot-Path Cleanup",
+        "## Slice 5: Manifest Pipeline Preparation",
+        "1. operator-facing execution clarity",
+        "2. operator-facing error and recovery clarity",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, f"Next execution slices doc is missing required queue structure: {missing}"
+
+
+def test_dev_state_uses_delivery_program_snapshot():
+    text = DEV_STATE.read_text(encoding="utf-8")
+    required_snippets = [
+        "### Delivery Program Snapshot",
+        "P0  Operational foundation and gate discipline",
+        "P1  Logging, error handling, and hot-path cleanup",
+        "### Active Queue In Canonical Order",
+        "Slice 1  Launch Crew and workflow onboarding execution contract",
+        "Slice 2  P1 logging, error handling, and execution feedback",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, f"Dev state is missing delivery-program framing: {missing}"
+
+
+def test_canonical_surfaces_do_not_expose_purged_planning_docs():
+    purged_paths = [
+        "docs/UI_FRAMEWORK_V7.md",
+        "docs/UI_ELEMENTS_PLANNING_V7.md",
+        "docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md",
+        "docs/ui-delivery/TEAM_ABCQ_EXECUTION_BOARD.md",
+        "docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md",
+        "docs/product/SOMA_EXTENSION_OF_SELF_PRD_V7.md",
+    ]
+
+    surfaces = {
+        README: README.read_text(encoding="utf-8"),
+        DOCS_MANIFEST: DOCS_MANIFEST.read_text(encoding="utf-8"),
+        DEV_STATE: DEV_STATE.read_text(encoding="utf-8"),
+        ROOT / "docs" / "README.md": (ROOT / "docs" / "README.md").read_text(encoding="utf-8"),
+    }
+
+    offenders: list[str] = []
+    for path, text in surfaces.items():
+        for purged in purged_paths:
+            if purged in text:
+                offenders.append(f"{path.relative_to(ROOT)} still references `{purged}`")
+
+    assert not offenders, "Canonical surfaces still reference purged planning docs:\n" + "\n".join(offenders)
