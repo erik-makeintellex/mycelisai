@@ -27,6 +27,7 @@ Primary detailed documents:
 - [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
 - [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
 - [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+- [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md)
 
 ## Core Product Position
 

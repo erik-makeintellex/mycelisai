@@ -63,6 +63,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByText('Teams')).toBeDefined();
         expect(screen.getByText('Cognitive Matrix')).toBeDefined();
         expect(screen.getByText('MCP Tools')).toBeDefined();
+        expect(screen.getByText('Users & Groups')).toBeDefined();
     });
 
     it('defaults to profile tab with appearance settings', async () => {

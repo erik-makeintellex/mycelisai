@@ -105,7 +105,33 @@ function CopyButton({ text }: { text: string }) {
 
 function InlineArtifact({ artifact }: { artifact: ChatArtifactRef }) {
     const [expanded, setExpanded] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [savedPath, setSavedPath] = useState(artifact.saved_path || "");
+    const [saveError, setSaveError] = useState("");
     const Icon = artifactIcon(artifact.type);
+    const isCachedImage = artifact.type === "image" && (artifact.cached || !!artifact.expires_at);
+
+    const handleSave = async () => {
+        if (!artifact.id || saving) return;
+        setSaving(true);
+        setSaveError("");
+        try {
+            const res = await fetch(`/api/v1/artifacts/${encodeURIComponent(artifact.id)}/save`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ folder: "saved-media" }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data?.error || `HTTP ${res.status}`);
+            }
+            setSavedPath(data?.file_path || "saved-media");
+        } catch (err: any) {
+            setSaveError(err?.message || "save failed");
+        } finally {
+            setSaving(false);
+        }
+    };
 
     // Chart rendering
     if (artifact.type === "chart" && artifact.content) {
@@ -144,6 +170,26 @@ function InlineArtifact({ artifact }: { artifact: ChatArtifactRef }) {
                     <span className="text-[10px] font-mono font-bold text-cortex-text-main flex-1 truncate">
                         {artifact.title}
                     </span>
+                    {isCachedImage && !savedPath && (
+                        <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border bg-cortex-warning/10 text-cortex-warning border-cortex-warning/30">
+                            cached (1h)
+                        </span>
+                    )}
+                    {savedPath && (
+                        <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border bg-cortex-success/10 text-cortex-success border-cortex-success/30">
+                            saved
+                        </span>
+                    )}
+                    {artifact.id && !savedPath && (
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="text-[8px] font-mono px-1.5 py-0.5 rounded border bg-cortex-primary/10 text-cortex-primary border-cortex-primary/30 hover:bg-cortex-primary/20 disabled:opacity-60"
+                            title="Save image to workspace/saved-media"
+                        >
+                            {saving ? "Saving..." : "Save"}
+                        </button>
+                    )}
                     {artifact.url && (
                         <a href={artifact.url} target="_blank" rel="noopener noreferrer"
                            className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors">
@@ -157,6 +203,15 @@ function InlineArtifact({ artifact }: { artifact: ChatArtifactRef }) {
                 ) : (
                     <div className="flex items-center justify-center h-32 text-cortex-text-muted/40">
                         <ImageIcon className="w-8 h-8" />
+                    </div>
+                )}
+                {(savedPath || saveError) && (
+                    <div className="px-3 py-1.5 border-t border-cortex-border/60 text-[9px] font-mono">
+                        {savedPath ? (
+                            <span className="text-cortex-success">Saved to: {savedPath}</span>
+                        ) : (
+                            <span className="text-cortex-danger">Save failed: {saveError}</span>
+                        )}
                     </div>
                 )}
             </div>
@@ -359,12 +414,12 @@ function MessageContent({ content }: { content: string }) {
 
 // ── Delegation Trace ─────────────────────────────────────────
 
-function DelegationTrace({ consultations }: { consultations: ChatConsultation[] }) {
+function DelegationTrace({ consultations, assistantName }: { consultations: ChatConsultation[]; assistantName: string }) {
     if (!consultations?.length) return null;
     return (
         <div className="mt-2 pt-2 border-t border-cortex-border/40">
             <div className="text-[9px] font-mono text-cortex-text-muted uppercase tracking-wider mb-1.5">
-                Soma consulted
+                {assistantName} consulted
             </div>
             <div className="flex flex-wrap gap-1.5">
                 {consultations.map((c, i) => {
@@ -408,7 +463,7 @@ function toolToActivity(log: { type?: string; payload?: Record<string, string>; 
     }
 }
 
-function SomaActivityIndicator({ isBroadcasting }: { isBroadcasting: boolean }) {
+function SomaActivityIndicator({ isBroadcasting, assistantName }: { isBroadcasting: boolean; assistantName: string }) {
     const streamLogs = useCortexStore((s) => s.streamLogs);
 
     const recentTool = isBroadcasting
@@ -419,7 +474,7 @@ function SomaActivityIndicator({ isBroadcasting }: { isBroadcasting: boolean }) 
         ? 'Broadcasting to all teams...'
         : recentTool
         ? toolToActivity(recentTool)
-        : 'Soma is thinking...';
+        : `${assistantName} is thinking...`;
 
     return (
         <div className="flex items-center gap-2 px-3 py-2.5">
@@ -447,11 +502,13 @@ function DirectCouncilButton({
     directTarget,
     setDirectTarget,
     setCouncilTarget,
+    assistantName,
 }: {
     councilMembers: { id: string; role: string }[];
     directTarget: string | null;
     setDirectTarget: (id: string | null) => void;
     setCouncilTarget: (id: string) => void;
+    assistantName: string;
 }) {
     const [open, setOpen] = useState(false);
     const members = councilMembers.filter((m) => m.id !== 'admin');
@@ -476,7 +533,7 @@ function DirectCouncilButton({
                         className="w-full px-3 py-1.5 text-left text-[10px] font-mono text-cortex-primary hover:bg-cortex-border/50 transition-colors"
                         onClick={() => { setDirectTarget(null); setCouncilTarget('admin'); setOpen(false); }}
                     >
-                        ← Soma
+                        ← {assistantName}
                     </button>
                     <div className="border-t border-cortex-border/40 my-0.5" />
                     {members.map((m) => {
@@ -505,6 +562,8 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
     const isUser = msg.role === "user";
     const isBroadcast = isUser && msg.content.startsWith("[BROADCAST]");
     const setInspected = useCortexStore((s) => s.setInspectedMessage);
+    const assistantName = useCortexStore((s) => s.assistantName);
+    const advancedMode = useCortexStore((s) => s.advancedMode);
 
     // System message: render as centered pill/link
     if (msg.role === 'system') {
@@ -543,11 +602,11 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                         {/* Source node label */}
                         {msg.source_node && (
                             <span className="text-[8px] font-bold uppercase tracking-widest text-cortex-info font-mono">
-                                {sourceNodeLabel(msg.source_node!)}
+                                {sourceNodeLabel(msg.source_node!, assistantName)}
                             </span>
                         )}
-                        {/* Brain provenance */}
-                        {msg.brain && (
+                        {/* Brain provenance (advanced view) */}
+                        {advancedMode && msg.brain && (
                             <>
                                 <span className="text-[7px] text-cortex-text-muted">&bull;</span>
                                 <span
@@ -565,8 +624,8 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                                 </span>
                             </>
                         )}
-                        {/* Mode label */}
-                        {msg.mode && (
+                        {/* Mode label (advanced view) */}
+                        {advancedMode && msg.mode && (
                             <>
                                 <span className="text-[7px] text-cortex-text-muted">&bull;</span>
                                 <span className={`text-[8px] font-mono font-bold uppercase tracking-wide ${
@@ -588,21 +647,23 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                                 </span>
                             </>
                         )}
-                        {/* Remote data boundary warning */}
-                        {msg.brain?.location === 'remote' && (
+                        {/* Remote data boundary warning (advanced view) */}
+                        {advancedMode && msg.brain?.location === 'remote' && (
                             <span className="flex items-center gap-0.5 text-[7px] font-mono text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
                                 <AlertTriangle className="w-2.5 h-2.5" />
                                 External
                             </span>
                         )}
-                        {/* Inspect orchestration button */}
-                        <button
-                            onClick={() => setInspected(msg)}
-                            className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors ml-1"
-                            title="Inspect orchestration"
-                        >
-                            <Eye className="w-3 h-3" />
-                        </button>
+                        {/* Inspect orchestration button (advanced view) */}
+                        {advancedMode && (
+                            <button
+                                onClick={() => setInspected(msg)}
+                                className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors ml-1"
+                                title="Inspect orchestration"
+                            >
+                                <Eye className="w-3 h-3" />
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -625,7 +686,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                 {/* Delegation trace — which council members Soma consulted */}
                 {!isUser && msg.consultations && msg.consultations.length > 0 && (
                     <div className="px-3 pb-2">
-                        <DelegationTrace consultations={msg.consultations} />
+                        <DelegationTrace consultations={msg.consultations} assistantName={assistantName} />
                     </div>
                 )}
 
@@ -703,19 +764,19 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 
 // ── Soma Offline Guide ────────────────────────────────────────
 
-function SomaOfflineGuide({ onRetry }: { onRetry: () => void }) {
+function SomaOfflineGuide({ onRetry, assistantName }: { onRetry: () => void; assistantName: string }) {
     return (
         <div className="flex flex-col items-center justify-center h-full px-6">
             <div className="w-full max-w-sm border border-cortex-border rounded-xl bg-cortex-surface/60 p-5 space-y-4">
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-cortex-danger" />
                     <span className="text-xs font-mono font-bold uppercase tracking-widest text-cortex-text-muted">
-                        Soma Offline
+                        {assistantName} Offline
                     </span>
                 </div>
 
                 <p className="text-sm font-mono text-cortex-text-main leading-relaxed">
-                    Your neural organism isn&apos;t running yet. Start it to talk with Soma, the Council, and your crews.
+                    Your neural organism isn&apos;t running yet. Start it to talk with {assistantName}, the Council, and your crews.
                 </p>
 
                 <div>
@@ -735,7 +796,7 @@ function SomaOfflineGuide({ onRetry }: { onRetry: () => void }) {
                         What comes online
                     </p>
                     {[
-                        "Soma — your orchestrator",
+                        `${assistantName} — your orchestrator`,
                         "Council — Architect, Coder, Creative, Sentry",
                         "Cognitive provider — Ollama (local) or remote",
                     ].map((item) => (
@@ -767,6 +828,7 @@ export default function MissionControlChat() {
     const clearMissionChat = useCortexStore((s) => s.clearMissionChat);
     const broadcastToSwarm = useCortexStore((s) => s.broadcastToSwarm);
     const isBroadcasting = useCortexStore((s) => s.isBroadcasting);
+    const assistantName = useCortexStore((s) => s.assistantName);
     const councilTarget = useCortexStore((s) => s.councilTarget);
     const councilMembers = useCortexStore((s) => s.councilMembers);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
@@ -781,7 +843,7 @@ export default function MissionControlChat() {
     const isLoading = isMissionChatting || isBroadcasting;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
 
-    // Ensure Soma is the default target on mount
+    // Ensure admin orchestrator is the default target on mount.
     useEffect(() => {
         setCouncilTarget('admin');
     }, [setCouncilTarget]);
@@ -841,11 +903,11 @@ export default function MissionControlChat() {
                     <>
                         <Brain className="w-3.5 h-3.5 text-cortex-primary" />
                         <span className="text-[9px] font-bold uppercase tracking-widest text-cortex-primary font-mono">
-                            Soma
+                            {assistantName}
                         </span>
                         {directTarget && (
                             <span className="text-[9px] font-mono text-cortex-warning">
-                                → {councilLabel(directTarget).name}
+                                → {councilLabel(directTarget, assistantName).name}
                             </span>
                         )}
                         <DirectCouncilButton
@@ -853,6 +915,7 @@ export default function MissionControlChat() {
                             directTarget={directTarget}
                             setDirectTarget={setDirectTarget}
                             setCouncilTarget={setCouncilTarget}
+                            assistantName={assistantName}
                         />
                     </>
                 )}
@@ -902,6 +965,7 @@ export default function MissionControlChat() {
                     <CouncilCallErrorCard
                         member={directTarget || councilTarget}
                         errorMessage={missionChatError}
+                        assistantName={assistantName}
                         onRetry={retryLastMessage}
                         onSwitchToSoma={() => {
                             setDirectTarget(null);
@@ -916,7 +980,7 @@ export default function MissionControlChat() {
                 )}
                 {missionChat.length === 0 ? (
                     fetchedMembers && councilMembers.length === 0 ? (
-                        <SomaOfflineGuide onRetry={() => {
+                        <SomaOfflineGuide assistantName={assistantName} onRetry={() => {
                             setFetchedMembers(false);
                             fetchCouncilMembers().then(() => setFetchedMembers(true));
                         }} />
@@ -931,8 +995,8 @@ export default function MissionControlChat() {
                                 {broadcastMode
                                     ? "Broadcast directives to all active teams"
                                     : directTarget
-                                    ? `Direct message to ${councilLabel(directTarget).name}...`
-                                    : "Ask Soma about missions, teams, or your system"}
+                                    ? `Direct message to ${councilLabel(directTarget, assistantName).name}...`
+                                    : `Ask ${assistantName} about missions, teams, or your system`}
                             </p>
                         </div>
                     )
@@ -963,7 +1027,7 @@ export default function MissionControlChat() {
                                     : "bg-cortex-primary/5 border border-cortex-primary/20"
                             }`}
                         >
-                            <SomaActivityIndicator isBroadcasting={isBroadcasting} />
+                            <SomaActivityIndicator isBroadcasting={isBroadcasting} assistantName={assistantName} />
                         </div>
                     </div>
                 )}
@@ -981,8 +1045,8 @@ export default function MissionControlChat() {
                             broadcastMode
                                 ? "Broadcast to all teams..."
                                 : directTarget
-                                ? `Direct to ${councilLabel(directTarget).name}... (or /all to broadcast)`
-                                : "Ask Soma... (or /all to broadcast)"
+                                ? `Direct to ${councilLabel(directTarget, assistantName).name}... (or /all to broadcast)`
+                                : `Ask ${assistantName}... (or /all to broadcast)`
                         }
                         disabled={isLoading}
                         className={`flex-1 bg-cortex-bg border rounded-lg px-2.5 py-1.5 text-sm text-cortex-text-main placeholder-cortex-text-muted/50 font-mono focus:outline-none focus:ring-1 disabled:opacity-50 ${

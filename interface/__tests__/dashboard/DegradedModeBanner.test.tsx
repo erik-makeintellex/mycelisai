@@ -14,6 +14,7 @@ function resetStore() {
     useCortexStore.setState({
         missionChatError: null,
         isStreamConnected: true,
+        assistantName: "Soma",
         councilTarget: "council-sentry",
         isStatusDrawerOpen: false,
     });

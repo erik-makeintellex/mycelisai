@@ -30,6 +30,7 @@ describe('labels', () => {
             expect(toolLabel('list_teams')).toBe('View Teams');
             expect(toolLabel('generate_blueprint')).toBe('Design Mission');
             expect(toolLabel('summarize_conversation')).toBe('Save Context');
+            expect(toolLabel('save_cached_image')).toBe('Save Image');
         });
 
         it('returns raw name for unknown tools', () => {
@@ -37,8 +38,8 @@ describe('labels', () => {
             expect(toolLabel('custom_mcp_tool')).toBe('custom_mcp_tool');
         });
 
-        it('covers all 20 registered internal tools', () => {
-            expect(Object.keys(TOOL_LABELS)).toHaveLength(20);
+        it('covers all 21 registered internal tools', () => {
+            expect(Object.keys(TOOL_LABELS)).toHaveLength(21);
         });
     });
 
@@ -55,6 +56,10 @@ describe('labels', () => {
             expect(councilLabel('unknown')).toEqual({ name: 'unknown', subtitle: '' });
         });
 
+        it('supports custom assistant name for admin label', () => {
+            expect(councilLabel('admin', 'Atlas')).toEqual({ name: 'Atlas', subtitle: 'Executive Cortex' });
+        });
+
         it('covers all 5 council members', () => {
             expect(Object.keys(COUNCIL_LABELS)).toHaveLength(5);
         });
@@ -64,6 +69,10 @@ describe('labels', () => {
         it('formats known members as "Name — Subtitle"', () => {
             expect(councilOptionLabel('admin', 'admin')).toBe('Soma — Executive Cortex');
             expect(councilOptionLabel('council-architect', 'architect')).toBe('Architect — Systems Design');
+        });
+
+        it('uses custom assistant name for admin option label', () => {
+            expect(councilOptionLabel('admin', 'admin', 'Atlas')).toBe('Atlas — Executive Cortex');
         });
 
         it('capitalizes role for unknown members', () => {
@@ -84,6 +93,10 @@ describe('labels', () => {
 
         it('capitalizes raw name when no prefix', () => {
             expect(sourceNodeLabel('observer')).toBe('Observer');
+        });
+
+        it('uses custom assistant name for admin source node', () => {
+            expect(sourceNodeLabel('admin', 'Atlas')).toBe('Atlas');
         });
     });
 
