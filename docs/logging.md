@@ -99,11 +99,12 @@ If any logging change is made, agent must update:
 
 Add/standardize invoke tasks for logging quality gates:
 
-- `uvx inv logging.check-schema`
+- `uv run inv logging.check-schema`
   - validate event types and required keys across targeted tests/fixtures.
-- `uvx inv logging.check-topics`
+- `uv run inv logging.check-topics`
   - detect hardcoded `swarm.` topic strings outside `protocol/topics.go`.
-- `uvx inv logging.check-coverage`
-  - fail when new tool/event paths lack event emission tests.
+
+Current note:
+- `logging.check-coverage` is not a live invoke task yet. Coverage for new logging/event paths is enforced through focused tests plus `uv run inv ci.baseline` until a dedicated task is added.
 
 These tasks are required before enabling broader autonomous agent execution.

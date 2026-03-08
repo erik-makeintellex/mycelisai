@@ -55,6 +55,10 @@ Latest integration checkpoint:
     - browser proof now covers proposal outcome, blocker/recovery outcome, and a live-backend confirm-action round-trip
     - confirm-path coverage now includes the real backend contract where confirmation succeeds without a `run_id`
     - Slice 2 (`P1` logging, error handling, and execution feedback) is now the active next implementation lane
+  - `P1` execution feedback hardening has started:
+    - `CouncilCallErrorCard` now distinguishes timeout, unreachable, and server-error failures more accurately for operator guidance
+    - `DegradedModeBanner` now surfaces a specific Workspace chat failure reason instead of a generic council-failure label
+    - `docs/logging.md` now matches the real task framework (`uv run inv logging.check-schema` / `logging.check-topics`) and no longer advertises a non-existent coverage task as live
   - Workspace cleanup and commitment cleanup completed:
     - mixed worktree lanes were isolated and landed as narrow scoped commits instead of one broad mixed commit
     - latest cleanup commits:
@@ -68,10 +72,6 @@ Latest integration checkpoint:
     - `docs/TESTING.md` now leads with the current clean verification baseline and canonical runner commands
     - `README.md` verification now records the latest clean workspace validation separately from the older full-sweep baseline
     - current verification guidance now reflects the real split between `uv run inv` task gates, focused Go package tests, focused Vitest suites, Playwright harness slices, and TypeScript typecheck
-  - Launch Crew onboarding execution contract is now the active product slice:
-    - state/readme alignment keeps Launch Crew/workflow onboarding as the first execution-facing queue item
-    - the next implementation change must prove Launch Crew terminates in `answer`, `proposal`, `execution_result`, or `blocker`
-    - proof must include component tests, store/API transaction tests, and browser coverage for both onboarding proposal and blocker outcomes
   - Canonical planning/state cleanup completed:
     - the active queue now follows the architecture-library ordering of operator-facing execution clarity -> operator-facing failure/recovery clarity -> internal coordination -> structural cleanup -> manifest unification
     - the gated delivery program now aligns `P0 -> P4` themes with the target-deliverable library instead of mixing older narrower phase labels
@@ -255,6 +255,9 @@ Verification evidence (latest targeted slice):
 - `cd interface && npx vitest run __tests__/workspace/LaunchCrewModal.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`
 - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/proposals.spec.ts`
 - `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts`
+- `cd interface && npx vitest run __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`
+- `uv run inv logging.check-schema`
+- `uv run inv logging.check-topics`
 - `uv run inv ci.baseline`
 - `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
 - `cd core && go test -p 1 ./internal/artifacts ./internal/cognitive -count=1`
