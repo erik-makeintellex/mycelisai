@@ -2,10 +2,15 @@
 
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
-Latest baseline (2026-03-06):
+Latest clean verification baseline (2026-03-07):
 - `uv run inv ci.baseline` -> pass (logging/topic/line gates + core tests + interface build + typecheck + vitest)
-- `cd core && go test ./... -count=1` -> pass (via baseline)
-- `cd interface && npx vitest run --reporter=dot` -> pass (via baseline)
+- `uv run pytest tests/test_docs_links.py -q` -> pass (`13` passed)
+- `cd core && go test -p 1 ./internal/artifacts ./internal/cognitive -count=1` -> pass
+- `cd core && go test -p 1 ./internal/server -run "TestHandleSaveArtifactToFolder|TestHandleMe|TestHandleUpdateSettings_AssistantNamePersists" -count=1` -> pass
+- `cd core && go test -p 1 ./internal/swarm -run "TestInternalToolRegistry_LocalCommand_Registered|TestInternalToolRegistry_LocalCommand_RejectsShellSnippet" -count=1` -> pass
+- `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/FocusModeToggle.test.tsx __tests__/settings/UsersPage.test.tsx __tests__/system/SystemQuickChecks.test.tsx __tests__/lib/labels.test.ts __tests__/pages/SettingsPage.test.tsx __tests__/shell/ShellLayout.test.tsx --reporter=dot` -> pass (`78` passed)
+- `cd interface && npx tsc --noEmit` -> pass
+- Worktree state after cleanup commits: clean
 - Last full E2E sweep remains 2026-03-02: `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
 - Latest focused Playwright harness slice (2026-03-07):
   - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts` -> pass (`3` passed)
@@ -33,6 +38,7 @@ uv run inv logging.check-topics  # Hardcoded swarm topic gate
 uv run inv quality.max-lines --limit 350  # Hot-path max-lines gate with legacy caps
 uv run inv lifecycle.memory-restart --frontend          # Full memory reset + post-restart memory probes
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
+uv run inv ci.baseline           # Canonical strict baseline (docs/logging/topics/line gates + core + interface)
 ```
 
 Runner matrix:
@@ -141,7 +147,7 @@ go test -v -run TestScoped ./internal/swarm/... -count=1
 
 ## Tier 2: Frontend Unit Tests (Vitest)
 
-**Goal:** Verify component rendering, store interactions, and UI logic in jsdom.
+**Goal:** Verify component rendering, store interactions, UI transaction mapping, and terminal delivery states in jsdom.
 **Speed:** < 10s.
 
 ### Location
