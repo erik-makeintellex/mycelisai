@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	os_signal "os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -41,6 +42,31 @@ import (
 	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
 	"github.com/mycelis/core/internal/triggers"
 )
+
+func resolveWorkspaceRoot() string {
+	workspace := strings.TrimSpace(os.Getenv("MYCELIS_WORKSPACE"))
+	if workspace == "" {
+		return "./workspace"
+	}
+	return workspace
+}
+
+func ensureStorageLayout(workspaceRoot, dataDir string) error {
+	dirs := []string{
+		workspaceRoot,
+		filepath.Join(workspaceRoot, "saved-media"),
+		dataDir,
+	}
+	for _, dir := range dirs {
+		if strings.TrimSpace(dir) == "" {
+			continue
+		}
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("create storage path %s: %w", dir, err)
+		}
+	}
+	return nil
+}
 
 func main() {
 	// Action CLI mode: use the same binary to call Mycelis API endpoints.
@@ -291,10 +317,35 @@ func main() {
 	if dataDir == "" {
 		dataDir = "/data/artifacts"
 	}
+	workspaceRoot := resolveWorkspaceRoot()
+	if err := ensureStorageLayout(workspaceRoot, dataDir); err != nil {
+		log.Printf("WARN: Failed to prepare storage layout: %v", err)
+	}
 	var artService *artifacts.Service
 	if sharedDB != nil {
 		artService = artifacts.NewService(sharedDB, dataDir)
 		log.Println("Artifacts Service Active.")
+		// Ephemeral image-cache cleanup loop:
+		// generated images are cache-only unless explicitly saved.
+		go func() {
+			ticker := time.NewTicker(5 * time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					n, err := artService.DeleteExpiredCachedImages(ctx, time.Hour)
+					if err != nil {
+						log.Printf("WARN: image cache cleanup failed: %v", err)
+						continue
+					}
+					if n > 0 {
+						log.Printf("Image cache cleanup: removed %d expired unsaved image artifact(s).", n)
+					}
+				}
+			}
+		}()
 	}
 
 	// 5b. Initialize Provisioning Engine

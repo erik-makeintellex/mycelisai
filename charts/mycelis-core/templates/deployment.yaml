@@ -29,6 +29,14 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if and .Values.probes .Values.probes.enabled }}
+          startupProbe:
+            {{- toYaml .Values.probes.startup | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.probes.readiness | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.probes.liveness | nindent 12 }}
+          {{- end }}
           env:
             - name: NATS_URL
               value: "nats://{{ .Release.Name }}-nats:4222"
@@ -56,7 +64,7 @@ spec:
             - name: tmp-volume
               mountPath: /tmp
             - name: data-volume
-              mountPath: /data/artifacts
+              mountPath: /data
       volumes:
         - name: tmp-volume
           emptyDir: {}
