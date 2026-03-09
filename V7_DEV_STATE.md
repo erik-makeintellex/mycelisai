@@ -1,7 +1,7 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-03-07
-> **References:** `mycelis-architecture-v7.md` (PRD index), `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md` (canonical planning library), `docs/V7_IMPLEMENTATION_PLAN.md` (Blueprint)
+> **Updated:** 2026-03-09
+> **References:** `mycelis-architecture-v7.md` (PRD index), `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md` (canonical planning library), `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` (execution queue), `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` (team protocol)
 
 ---
 
@@ -34,7 +34,39 @@ Slice 2  P1 logging, error handling, and execution feedback          [ACTIVE]
 Slice 3  Prime-development reply reliability                         [NEXT]
 Slice 4  P1 hot-path cleanup under max-lines gates                   [REQUIRED]
 Slice 5  P2 manifest pipeline preparation                            [REQUIRED]
+Slice 6  Soma-first Team Expression and module binding               [ACTIVE]
+Slice 7  Created-team workspace and channel inspector                [BLOCKED]
 ```
+
+### Execution Architecture And State-File Contract (2026-03-09)
+
+- Team lane architecture and execution protocol are now canonical in `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`.
+- `V7_DEV_STATE.md` is the global state source each active lane must update on status transitions, gate outcomes, and blocker changes.
+- Deep testing now follows target-action lockstep in `docs/TESTING.md` and `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`.
+- Current gate note: latest `uv run inv ci.baseline` run failed on `quality.max-lines`; all other baseline stages passed.
+
+### Engagement Kickoff (2026-03-09)
+
+Active execution lane:
+- Slice 6 is now `ACTIVE` under the team-execution protocol.
+
+Lane owners:
+- `Architecture/Governance`: status discipline + acceptance gate decisions
+- `Runtime/Core`: module-binding payload normalization and API/runtime contract integrity
+- `Interface/Operator`: Team Expression and module-binding UX surfaces
+- `QA/Verification`: deep test matrix execution and evidence recording
+
+Required command gate for this slice:
+- `uv run inv core.test`
+- `uv run inv interface.test`
+- `uv run inv interface.build`
+- `uv run inv ci.baseline`
+
+Next 24-48h actions:
+1. finalize Team Expression payload and module-binding schema contract
+2. implement/store and UI rendering path for expression + binding visibility
+3. attach integration and product-flow tests per target-action matrix
+4. update this state file with pass/fail evidence and any blockers
 
 ### Delivered Foundation Context
 
@@ -342,7 +374,7 @@ Parallel team tracks:
 Every merged slice must update:
 1. `README.md` (operator/runtime behavior changes)
 2. `V7_DEV_STATE.md` (checkpoint + evidence + next actions)
-3. `docs/V7_IMPLEMENTATION_PLAN.md` (roadmap/dependency changes)
+3. `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` and `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` (queue/lane changes)
 4. `interface/lib/docsManifest.ts` (for every new authoritative doc)
 
 No promotion without this gate.
@@ -364,7 +396,7 @@ Current authoritative UI delivery references:
 | Current implementation queue and acceptance logic | `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` |
 | Delivery proof, testing structure, and evidence rules | `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md` |
 | Frontend implementation reference | `docs/architecture/FRONTEND.md` |
-| Implementation roadmap/state sync | `docs/V7_IMPLEMENTATION_PLAN.md` |
+| Implementation roadmap/state sync | `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` + `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` |
 
 Execution policy:
 - Lanes run in parallel.
@@ -445,7 +477,7 @@ Detailed architecture and delivery planning is now locked for extension-of-self 
 | V7 architecture update with extension-of-self modes, local Ollama contract, and parallel tracks | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md` |
 | Soma symbiote architecture expanded with explicit local Ollama communication contract | `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` |
 | Inception "harsh-truth" guardrails codified (heartbeat budgets, single-use-case ratchet, staged self-update, sandbox-first skill injection) | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
-| Integrated implementation-plan section for parallel package execution | `docs/V7_IMPLEMENTATION_PLAN.md` (Section 9) |
+| Integrated implementation-plan section for parallel package execution | `docs/archive/V7_IMPLEMENTATION_PLAN_2026-03-07.md` (Section 9, historical) |
 
 ### Phase 19 Foundation
 

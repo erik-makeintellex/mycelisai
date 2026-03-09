@@ -1,7 +1,7 @@
 # UI Target And Transaction Contract V7
 
 > Status: Authoritative
-> Last Updated: 2026-03-06
+> Last Updated: 2026-03-09
 > Scope: Required UI terminal states, frontend-triggered backend effects, and delivery-proof test expectations
 
 ## 1. Why This Exists
@@ -282,6 +282,42 @@ Raw `500`, silent timeout, or generic "failed" states are not acceptable deliver
 - component test: degraded banner and quick checks render action text, not only status colors
 - integration test: backend-offline/auth-required/partial-health responses map to distinct UI states
 
+## 3.7 Created Team Workspace / Channel Inspector
+
+### User interaction
+
+- operator opens a created team and inspects or directs team execution
+
+### Frontend requests
+
+- team communication aggregation endpoints
+- team command/interjection endpoints
+- run/event/conversation queries scoped to team context
+
+### Backend transaction expectations
+
+- team command publishes on canonical team command subjects
+- team operator outputs resolve through `signal.status` and `signal.result` channels
+- communication rows are correlation-safe by `run_id` and `team_id`
+
+### Valid terminal UI states
+
+- `execution_result`
+- `proposal` (for governed team-level mutations)
+- `blocker`
+
+### Required UI effects
+
+- filterable communications by `run_id`, `team_id`, `agent_id`, `source_kind`, `payload_kind`
+- explicit operator controls: interject, reroute, pause/resume/cancel where valid
+- consistent metadata visibility for each communication entry
+
+### Required test proof
+
+- component test: communications inspector renders scoped entries and filter state
+- integration test: created-team command results appear in status/result channels
+- product-flow test: operator interjection changes in-progress team behavior with run-linked evidence
+
 ## 4. Transaction Proof Matrix
 
 Each execution-facing UI test slice must prove both UI state and backend effect.
@@ -294,6 +330,7 @@ Each execution-facing UI test slice must prove both UI state and backend effect.
 | Workflow composer | validation/proposal/activation state visible | validation or activation endpoint invoked with expected payload |
 | Run monitor | run/timeline content visible | run/event/chain queries issued and handled |
 | Degraded mode | recovery guidance visible | health/status endpoint response mapped to distinct state |
+| Created team workspace | communications/control state visible | canonical team command and status/result paths exercised |
 
 Where the backend path involves NATS, integration or backend tests must additionally prove:
 - subject family is canonical
@@ -323,6 +360,7 @@ Prove end-to-end user stories such as:
 - direct council chat failure yields reroute/retry controls
 - launch flow yields proposal then run-linked activation
 - workflow validation stops invalid graphs before execution
+- created team interaction yields scoped communication evidence and recoverable operator controls
 
 ## 5.4 Backend transaction tests
 

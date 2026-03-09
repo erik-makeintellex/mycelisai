@@ -1,7 +1,7 @@
 # Delivery Governance And Testing V7
 
 > Status: Canonical
-> Last Updated: 2026-03-07
+> Last Updated: 2026-03-09
 > Scope: Delivery slices, evidence requirements, documentation discipline, and product-aligned testing.
 
 Related:
@@ -9,6 +9,7 @@ Related:
 - [Target Deliverable V7](TARGET_DELIVERABLE_V7.md)
 - [System Architecture V7](SYSTEM_ARCHITECTURE_V7.md)
 - [Execution And Manifest Library V7](EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+- [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [UI And Operator Experience V7](UI_AND_OPERATOR_EXPERIENCE_V7.md)
 
 Supporting specialized docs:
@@ -155,6 +156,31 @@ The system should bias toward small, high-proof slices:
 - one operator journey or runtime contract at a time
 - docs and tests updated in the same change
 - avoid broad speculative rewrites without acceptance proof
+
+## 11. Target-Action Test Lockstep
+
+Target actions and test actions must move together.
+
+For the current intent-to-manifestation target, acceptance requires the following alignment:
+
+| Target action | Minimum required test actions |
+| --- | --- |
+| Soma-first Team Expression + module binding | component/store tests for expression rendering/editing, integration tests for adapter payload normalization (`internal`/`mcp`/`openapi`/`host`), product-flow test proving `proposal` -> confirmation -> run-linked outcome |
+| Created-team workspace + channel inspector | UI tests for scoped communications filters, integration tests for created-team command -> `signal.status`/`signal.result` round-trip, product-flow test for interjection/pause-resume/reroute control effects |
+| Scheduler recurring execution (`scheduled_missions`) | backend tests for schedule CRUD and tick behavior, persistence tests across restart/rehydration, UI tests proving recurring status and control states |
+| Causal chain operator surface | UI tests for `/runs/[id]/chain` rendering and navigation, integration tests verifying chain query mapping and error states |
+
+A slice that changes one of these target actions is not `COMPLETE` until the matching test actions are attached as evidence.
+
+## 12. Canonical Command Gate
+
+Testing evidence for target actions should be captured with:
+- `uv run inv core.test`
+- `uv run inv interface.test`
+- `uv run inv interface.build`
+- `uv run inv ci.baseline`
+
+When a slice adds E2E-critical operator behavior, also include focused Playwright proof with `uv run inv interface.e2e ...`.
 
 Next:
 - return to [Target Deliverable V7](TARGET_DELIVERABLE_V7.md)

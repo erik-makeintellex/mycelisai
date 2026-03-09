@@ -1,13 +1,14 @@
 # UI And Operator Experience V7
 
 > Status: Canonical
-> Last Updated: 2026-03-07
+> Last Updated: 2026-03-09
 > Scope: Operator journeys, UI targets, information hierarchy, anti-swarm rules, and intuitive interaction design.
 
 Related:
 - [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 - [Target Deliverable V7](TARGET_DELIVERABLE_V7.md)
 - [Execution And Manifest Library V7](EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+- [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 
 Supporting specialized docs:
@@ -108,6 +109,14 @@ Surface:
 Goal:
 - identify failure and take the next correct action
 
+### 4.6 Interact with created teams
+
+Surface:
+- team workspace and communications inspector
+
+Goal:
+- let operators direct, inspect, and refine created-team execution without dropping to raw channel tooling
+
 ## 5. Canonical Screen Model
 
 ### 5.1 Workspace
@@ -166,6 +175,17 @@ Must emphasize:
 - what is safe to continue
 - what command or action should be taken
 
+### 5.6 Team Workspace
+
+Primary job:
+- inspect and steer created teams after manifestation
+
+Must emphasize:
+- team objective and current run linkage
+- communication stream grouped by status/result/conversation/events
+- immediate controls (interject, pause/resume, reroute, cancel where valid)
+- channel and module transparency without exposing operator to low-signal telemetry by default
+
 ## 6. Anti-Swarm Rules
 
 The UI should avoid:
@@ -206,6 +226,14 @@ Use product language that maps to operator intent:
 
 Avoid leading with internal implementation terms unless the user drills deeper.
 
+When execution is delegated, keep language stable:
+- "Team Expression"
+- "Module Binding"
+- "Manifest"
+- "Run"
+- "Result"
+- "Blocker"
+
 ## 9. UI Optimization Principle
 
 The correct design is not the interface that shows the most information.
@@ -218,8 +246,9 @@ The next UI-heavy slices should be judged against this order:
 1. Workspace answer/proposal/result/blocker clarity
 2. Launch Crew and workflow onboarding clarity
 3. Automations clarity for scheduled and persistent plans
-4. Runs and chain inspection clarity
-5. System recovery clarity
+4. created-team workspace and communications clarity
+5. Runs and chain inspection clarity
+6. System recovery clarity
 
 Next:
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)

@@ -1,7 +1,7 @@
 # Workflow Composer Delivery Plan V7
 
 > Status: Active supporting plan
-> Last Updated: 2026-03-07
+> Last Updated: 2026-03-09
 > Scope: Drag-and-drop workflow composition, team manifestation orchestration, and release-safe delivery path
 
 ## 1. Purpose
@@ -46,6 +46,8 @@ This prerequisite is mandatory so manifested workflows remain auditable and agen
 - Team C Scheduler remains critical-path for repeat/scheduled execution behavior.
 - Active Automations tab still blocked behind Team C completion.
 - Causal Chain UI remains pending (`/runs/[id]/chain` UI not yet shipped).
+- created-team workspace and channel inspector are not yet delivered.
+- module-binding UX across internal/MCP/third-party API adapters is not yet unified.
 - Worktree discipline is not yet standardized across in-flight slices.
 
 ### 2.3 Architectural Opportunity
@@ -82,6 +84,18 @@ Single canvas where operators compose a DAG with drag-and-drop blocks, connect d
 - High-impact nodes require explicit Approval node coverage.
 - Every node execution emits `tool.invoked/tool.completed/tool.failed` + mission events linked to `run_id`.
 - Child run propagation must remain queryable in chain view.
+
+### 3.4 Soma-first manifestation thread (default)
+
+- default operator path is intent -> Team Expressions -> module bindings -> proposal/activation.
+- graph canvas is available for advanced composition, but must not replace terminal-state clarity in the default path.
+- manifestation thread and composer graph must compile to one shared runtime contract.
+
+### 3.5 Created-team operations
+
+- every manifested team must expose an operator workspace with communication and control surfaces.
+- created-team operation is part of workflow delivery, not a separate support feature.
+- communications must be filterable and correlated by run/team/agent metadata.
 
 ## 4. Detailed Delivery Workflow (Build -> Deliver)
 
@@ -134,6 +148,7 @@ Owner: Team C
 Deliverables:
 
 - drag-and-drop canvas (ReactFlow-based).
+- Soma-first manifestation thread with Team Expression editing and module binding.
 - node palette + edge linking + form-based node config.
 - draft validation UI (cycle detection, missing approvals, invalid refs).
 - save/load workflow definitions.
@@ -158,6 +173,7 @@ Deliverables:
 
 - run monitor panel for node-level status.
 - chain linkage from composer runs to `/runs` and `/runs/[id]/chain`.
+- created-team workspace with channel inspector and operator controls.
 - failure/retry visualization and restart semantics.
 
 Verification:
@@ -264,6 +280,7 @@ Exit criteria:
 
 - Ship Causal Chain UI end-to-end.
 - Connect composer monitor events to run timeline and chain views.
+- Ship created-team workspace and communications inspector.
 - Add retry/failure overlays for node-level debugging.
 
 Exit criteria:

@@ -55,7 +55,8 @@ Use these specialized references alongside the modular library:
 - [NATS Signal Standard V7](docs/architecture/NATS_SIGNAL_STANDARD_V7.md)
 - [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
 - [Workflow Composer Delivery V7](docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md)
-- [V7 Implementation Plan](docs/V7_IMPLEMENTATION_PLAN.md)
+- [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md)
+- [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
 
 ## Current Delivery Framing
 

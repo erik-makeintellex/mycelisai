@@ -20,4 +20,5 @@ Recently archived (superseded by current V7 execution docs):
 2. `v7-step-01-ui.md`
 3. `UI_OPTIMAL_WORKFLOW_PRDS_V7.md`
 4. `UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md`
-5. purged UI lane boards, execution boards, and extension-of-self planning docs now replaced by the architecture library
+5. `V7_IMPLEMENTATION_PLAN_2026-03-07.md`
+6. purged UI lane boards, execution boards, and extension-of-self planning docs now replaced by the architecture library
