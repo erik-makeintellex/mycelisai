@@ -111,6 +111,27 @@ For execution-facing UI, tests must prove:
 - failure behavior
 - recovery affordance
 
+## 5.1 Backend/API -> UI Target Plan Rule
+
+If a slice changes backend/API behavior, it must include a UI-targeted review/test plan in the same delivery window.
+
+Minimum required plan fields:
+- changed backend/API surface:
+  - routes, payload shape, response/error envelope, or runtime channel behavior
+- expected UI surfaces:
+  - exact pages/components/store paths affected by the backend/API change
+- terminal UI states:
+  - which of `answer` / `proposal` / `execution_result` / `blocker` are expected after the change
+- backend effect evidence:
+  - how the frontend-triggered backend effect will be proven (route call, DB/NATS/run/event outcome)
+- failure-path evidence:
+  - expected degraded/rejection/timeout behavior and how it will be tested
+- command evidence plan:
+  - exact commands that will be run before review (`uv run inv ...` plus focused suites)
+
+Review gate:
+- if backend/API changed and no UI target plan is attached, the slice is not review-ready.
+
 ## 6. Runtime-Specific Rule
 
 Runtime changes are incomplete if they do not prove:

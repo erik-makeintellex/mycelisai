@@ -30,6 +30,32 @@ Cross-reference:
 - `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 - `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
 
+## Backend/API -> UI Target Plan (Required)
+
+When backend/API behavior changes, attach this plan block in the same slice before review:
+
+```md
+Backend/API -> UI Target Plan
+- Backend/API change:
+  - <route/payload/runtime contract delta>
+- UI surfaces impacted:
+  - <page/component/store paths>
+- Expected terminal state(s):
+  - <answer|proposal|execution_result|blocker>
+- Failure/recovery expectation:
+  - <timeout/degraded/rejection behavior shown to operator>
+- Evidence commands:
+  - uv run inv core.test
+  - uv run inv interface.test
+  - uv run inv interface.build
+  - <focused playwright command(s) for impacted UI path>
+  - <live-backend playwright command when proxy/core contract changed>
+```
+
+Minimum policy:
+- no backend/API review without a mapped UI target plan
+- no `COMPLETE` status without executed evidence commands and pass/fail results
+
 ## Quick Reference
 
 ```bash
