@@ -28,7 +28,7 @@ Cross-lane execution rule:
 
 ## 2. Next-Step Execution Plan
 
-### 2.1 Step A: Slice 6 activation (`REQUIRED`)
+### 2.1 Step A: Slice 6 activation (`ACTIVE`)
 
 Goal:
 - deliver Soma-first Team Expression and module-binding execution path as the default operator flow.
@@ -151,3 +151,16 @@ First execution checkpoint:
 2. implement runtime normalization and UI read/write path for bindings
 3. execute deep-test matrix and attach evidence in `V7_DEV_STATE.md`
 4. hold Slice 7 as `BLOCKED` until scheduler + chain prerequisites are accepted
+
+Current checkpoint evidence (2026-03-09):
+- runtime payload contract wired:
+  - mutation proposals now emit `team_expressions[]` with `module_bindings[]` in chat and direct council routes.
+- operator surface wired:
+  - proposal cards and orchestration inspector expose expression/binding counts and adapter-tagged binding chips.
+- deep-test checkpoint:
+  - `uv run inv core.test` -> pass
+  - `uv run inv interface.test` -> pass
+  - `uv run inv interface.build` -> pass
+  - `uv run inv ci.baseline` -> fail (`quality.max-lines` gate: `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts`)
+- immediate next-step:
+  - keep Slice 6 `ACTIVE` while attaching product-flow proof that links Team Expression proposal payload -> confirmation -> run-linked outcome.

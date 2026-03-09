@@ -43,7 +43,7 @@ Slice 7  Created-team workspace and channel inspector                [BLOCKED]
 - Team lane architecture and execution protocol are now canonical in `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`.
 - `V7_DEV_STATE.md` is the global state source each active lane must update on status transitions, gate outcomes, and blocker changes.
 - Deep testing now follows target-action lockstep in `docs/TESTING.md` and `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`.
-- Current gate note: latest `uv run inv ci.baseline` run failed on `quality.max-lines`; all other baseline stages passed.
+- Current gate note: latest `uv run inv ci.baseline` run failed on `quality.max-lines`; command-level reruns confirm `core.test`, `interface.test`, and `interface.build` pass.
 
 ### Engagement Kickoff (2026-03-09)
 
@@ -62,11 +62,31 @@ Required command gate for this slice:
 - `uv run inv interface.build`
 - `uv run inv ci.baseline`
 
+Current Slice 6 checkpoint (2026-03-09):
+1. Runtime/Core delivery:
+- `ChatProposal` now supports structured `team_expressions[]` and `module_bindings[]`.
+- mutation proposal paths in `/api/v1/chat` and `/api/v1/council/{member}/chat` now normalize tools and emit binding metadata (`internal`/`mcp`/`openapi`/`host` inference).
+2. Interface/Operator delivery:
+- Workspace proposal rendering now exposes Team Expression details and module-binding adapter context in both the proposal block and orchestration inspector.
+- store normalization now derives `teams`, `agents`, and `tools` from `team_expressions` payload data when aggregate values are absent.
+3. QA/Verification evidence:
+- `uv run inv core.test` -> pass
+- `uv run inv interface.test` -> pass
+- `uv run inv interface.build` -> pass
+- `uv run inv ci.baseline` -> fail (max-lines gate only)
+- `cd core && go test ./internal/server -run "TestInferAdapterKindFromTool|TestBuildMutationChatProposal" -count=1` -> pass
+- `cd interface && npx vitest run __tests__/store/useCortexStore.test.ts __tests__/dashboard/ProposedActionBlock.test.tsx --reporter=dot` -> pass
+- `cd interface && npx tsc --noEmit` -> pass
+4. Active blockers/dependencies:
+- `quality.max-lines` remains red on legacy hot paths:
+  - `core/internal/swarm/agent.go` (`1214 > legacy cap 1121`)
+  - `core/internal/swarm/internal_tools.go` (`2503 > legacy cap 2491`)
+  - `interface/store/useCortexStore.ts` (`2926 > legacy cap 2714`)
+
 Next 24-48h actions:
-1. finalize Team Expression payload and module-binding schema contract
-2. implement/store and UI rendering path for expression + binding visibility
-3. attach integration and product-flow tests per target-action matrix
-4. update this state file with pass/fail evidence and any blockers
+1. attach explicit product-flow proof of Team Expression proposal -> confirmation -> run-linked outcome
+2. reduce hot-path line-count pressure as part of Slice 4 without regressing Slice 6 behavior
+3. maintain Slice 7 as `BLOCKED` until scheduler + chain prerequisites are accepted
 
 ### Delivered Foundation Context
 

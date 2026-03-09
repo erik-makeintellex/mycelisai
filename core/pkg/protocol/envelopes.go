@@ -94,12 +94,30 @@ type BrainProvenance struct {
 
 // ChatProposal carries proposal metadata for chat-based mutation actions.
 // Phase 19-B: When an agent uses mutation tools, the response is tagged as a proposal.
+// Slice 6: Team expressions + module bindings are optional structured fields
+// that bridge intent-level proposals to executable binding contracts.
+type ChatModuleBinding struct {
+	BindingID   string `json:"binding_id,omitempty"`
+	ModuleID    string `json:"module_id"`
+	AdapterKind string `json:"adapter_kind,omitempty"` // internal | mcp | openapi | host
+	Operation   string `json:"operation,omitempty"`
+}
+
+type ChatTeamExpression struct {
+	ExpressionID   string              `json:"expression_id,omitempty"`
+	TeamID         string              `json:"team_id,omitempty"`
+	Objective      string              `json:"objective"`
+	RolePlan       []string            `json:"role_plan,omitempty"`
+	ModuleBindings []ChatModuleBinding `json:"module_bindings,omitempty"`
+}
+
 type ChatProposal struct {
-	Intent        string   `json:"intent"`
-	Tools         []string `json:"tools"`
-	RiskLevel     string   `json:"risk_level"` // "low" | "medium" | "high"
-	ConfirmToken  string   `json:"confirm_token"`
-	IntentProofID string   `json:"intent_proof_id"`
+	Intent          string               `json:"intent"`
+	Tools           []string             `json:"tools"`
+	RiskLevel       string               `json:"risk_level"` // "low" | "medium" | "high"
+	ConfirmToken    string               `json:"confirm_token"`
+	IntentProofID   string               `json:"intent_proof_id"`
+	TeamExpressions []ChatTeamExpression `json:"team_expressions,omitempty"`
 }
 
 // ConsultationEntry records a single council member consultation made by an agent

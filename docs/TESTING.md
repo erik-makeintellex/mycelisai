@@ -3,24 +3,16 @@
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
 Latest verification baseline (2026-03-09):
+- `uv run inv core.test` -> pass
+- `uv run inv interface.test` -> pass (`59` files, `347` tests)
+- `uv run inv interface.build` -> pass
 - `uv run inv ci.baseline` -> fail (`quality.max-lines` gate)
   - failing files: `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts`
-  - all other baseline stages passed: logging schema/topics, core tests, interface build, typecheck, vitest
-- `uv run pytest tests/test_docs_links.py -q` -> pass (`13` passed)
-- `cd core && go test -p 1 ./internal/artifacts ./internal/cognitive -count=1` -> pass
-- `cd core && go test -p 1 ./internal/server -run "TestHandleSaveArtifactToFolder|TestHandleMe|TestHandleUpdateSettings_AssistantNamePersists" -count=1` -> pass
-- `cd core && go test -p 1 ./internal/swarm -run "TestInternalToolRegistry_LocalCommand_Registered|TestInternalToolRegistry_LocalCommand_RejectsShellSnippet" -count=1` -> pass
-- `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/FocusModeToggle.test.tsx __tests__/settings/UsersPage.test.tsx __tests__/system/SystemQuickChecks.test.tsx __tests__/lib/labels.test.ts __tests__/pages/SettingsPage.test.tsx __tests__/shell/ShellLayout.test.tsx --reporter=dot` -> pass (`78` passed)
-- `cd interface && npx tsc --noEmit` -> pass
-- Worktree state after cleanup commits: clean
-- Last full E2E sweep remains 2026-03-02: `cd interface && npx playwright test --reporter=dot` -> pass (`51` passed, `4` skipped)
-- Latest focused Playwright harness slice (2026-03-07):
-  - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts` -> pass (`3` passed)
-  - `uv run inv test.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts` -> pass (`3` passed)
-  - `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts` -> pass (`1` passed)
-- Latest focused lifecycle/task slice: `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q` -> pass (`26` tests)
-- Latest focused Go runtime slice: `cd core && go test ./internal/mcp ./internal/swarm ./pkg/protocol -count=1` -> pass
-- Latest destructive gate validation: `uv run inv lifecycle.memory-restart --frontend` -> pass
+  - non-gate validation rerun: `cd core && go test ./... -count=1` -> pass
+- Slice 6 focused evidence:
+  - `cd core && go test ./internal/server -run "TestInferAdapterKindFromTool|TestBuildMutationChatProposal" -count=1` -> pass
+  - `cd interface && npx vitest run __tests__/store/useCortexStore.test.ts __tests__/dashboard/ProposedActionBlock.test.tsx --reporter=dot` -> pass (`2` files, `33` tests)
+  - `cd interface && npx tsc --noEmit` -> pass
 
 ## Target-Action Testing Matrix (Intent -> Manifestation)
 
@@ -28,7 +20,7 @@ The same target actions defined in architecture docs must have matching test act
 
 | Target action | Required test actions | Status |
 | --- | --- | --- |
-| Soma-first Team Expression + module binding | Vitest component/store coverage for expression editing + module binding render states; integration coverage for normalized adapter payloads; product-flow proof of `proposal` -> `execution_result` | `REQUIRED` |
+| Soma-first Team Expression + module binding | Vitest component/store coverage for expression editing + module binding render states; integration coverage for normalized adapter payloads; product-flow proof of `proposal` -> `execution_result` | `ACTIVE` |
 | Created-team workspace + channel inspector | UI tests for communication filters; integration tests for created-team command -> `signal.status`/`signal.result`; product-flow proof for interject/reroute/pause-resume controls | `REQUIRED` |
 | Scheduler recurring execution (`scheduled_missions`) | backend schedule CRUD/tick tests, restart/rehydration persistence tests, recurring-state UI tests | `NEXT` |
 | Causal chain operator UI | `/runs/[id]/chain` page/component tests + chain API mapping/error-state integration tests | `REQUIRED` |
