@@ -1,7 +1,7 @@
 # Next Execution Slices V7
 
 > Status: Canonical working queue
-> Last Updated: 2026-03-07
+> Last Updated: 2026-03-09
 > Purpose: Translate the modular architecture library into the next concrete delivery slices with explicit development and testing references.
 
 Related:
@@ -249,6 +249,93 @@ Acceptance criteria:
 Rollback:
 - keep current runtime flows and back out only unfinished manifest-lifecycle changes
 
+## Slice 6: Soma-First Team Expression And Module Binding
+
+Status:
+- `ACTIVE`
+
+Objective:
+- unify intent execution across internal tools, MCP tools, and third-party APIs using one module-binding contract in the operator flow.
+
+Scoped outcome:
+- Soma responses for executable intent include structured Team Expressions with explicit module bindings
+- manifestation flow remains terminal-state compliant (`answer`/`proposal`/`execution_result`/`blocker`)
+
+Scoped files:
+- `docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md`
+- `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+- `interface/components/dashboard/MissionControlChat.tsx`
+- `interface/store/useCortexStore.ts`
+- backend contracts for module-binding payload normalization
+
+Development docs:
+- [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
+- [Execution And Manifest Library V7](EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+- [UI And Operator Experience V7](UI_AND_OPERATOR_EXPERIENCE_V7.md)
+- [Universal Action Interface V7](../architecture/UNIVERSAL_ACTION_INTERFACE_V7.md)
+
+Testing docs:
+- [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+- [Testing](../TESTING.md)
+
+Required proof:
+- component and store tests for Team Expression rendering/editing state
+- integration tests proving module binding payload normalization across adapter kinds
+- product-flow proof showing one intent path through proposal and run-linked result
+
+Acceptance criteria:
+- operator can inspect module bindings before manifest confirmation
+- module adapter details do not leak into primary terminal state messaging
+- execution metadata remains run-linked and auditable
+
+Rollback:
+- revert Team Expression/module-binding UX and payload additions while preserving existing proposal flow
+
+## Slice 7: Created Team Workspace And Channel Inspector
+
+Status:
+- `BLOCKED`
+
+Objective:
+- give operators first-class interaction with created teams across canonical channels without requiring raw infrastructure tooling.
+
+Blocked by:
+- scheduler and recurring-plan visibility completion
+- chain-view/operator lineage clarity completion
+
+Scoped outcome:
+- Team Workspace tabs (`Overview`, `Communications`, `Members`, `Manifest`, `Controls`) available for created teams
+- unified communications timeline filtered by `run_id`, `team_id`, `agent_id`, `source_kind`, `payload_kind`
+
+Scoped files:
+- team workspace route/components
+- backend aggregation endpoints for team communication inspection
+- relevant signal normalization/store slices
+- docs and in-app docs registration
+
+Development docs:
+- [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
+- [Soma Team + Channel Architecture V7](../architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md)
+- [NATS Signal Standard V7](../architecture/NATS_SIGNAL_STANDARD_V7.md)
+- [UI Target And Transaction Contract V7](../architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+
+Testing docs:
+- [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+- [Testing](../TESTING.md)
+
+Required proof:
+- integration tests for created-team command -> status/result round-trip
+- UI tests for communication inspector filters and operator actions
+- product-flow tests for interjection/reroute/pause-resume controls
+
+Acceptance criteria:
+- created-team execution is inspectable and steerable from product UI
+- operator status channels remain distinct from high-volume telemetry
+- all rendered communication entries carry required metadata fields
+
+Rollback:
+- revert team workspace surfaces while preserving existing run timeline and conversation views
+
 ## Immediate Working Order
 
 1. Slice 1
@@ -256,6 +343,8 @@ Rollback:
 3. Slice 3
 4. Slice 4
 5. Slice 5
+6. Slice 6
+7. Slice 7
 
 That order now follows the architecture library more directly:
 - operator-facing execution clarity first
@@ -263,3 +352,5 @@ That order now follows the architecture library more directly:
 - internal coordination third
 - structural cleanup fourth
 - manifest-lifecycle unification fifth
+- module-binding unification sixth
+- created-team interaction seventh

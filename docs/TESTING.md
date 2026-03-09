@@ -2,8 +2,10 @@
 
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
-Latest clean verification baseline (2026-03-07):
-- `uv run inv ci.baseline` -> pass (logging/topic/line gates + core tests + interface build + typecheck + vitest)
+Latest verification baseline (2026-03-09):
+- `uv run inv ci.baseline` -> fail (`quality.max-lines` gate)
+  - failing files: `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts`
+  - all other baseline stages passed: logging schema/topics, core tests, interface build, typecheck, vitest
 - `uv run pytest tests/test_docs_links.py -q` -> pass (`13` passed)
 - `cd core && go test -p 1 ./internal/artifacts ./internal/cognitive -count=1` -> pass
 - `cd core && go test -p 1 ./internal/server -run "TestHandleSaveArtifactToFolder|TestHandleMe|TestHandleUpdateSettings_AssistantNamePersists" -count=1` -> pass
@@ -19,6 +21,22 @@ Latest clean verification baseline (2026-03-07):
 - Latest focused lifecycle/task slice: `$env:PYTHONPATH='.'; uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_ci_tasks.py tests/test_logging_tasks.py -q` -> pass (`26` tests)
 - Latest focused Go runtime slice: `cd core && go test ./internal/mcp ./internal/swarm ./pkg/protocol -count=1` -> pass
 - Latest destructive gate validation: `uv run inv lifecycle.memory-restart --frontend` -> pass
+
+## Target-Action Testing Matrix (Intent -> Manifestation)
+
+The same target actions defined in architecture docs must have matching test actions.
+
+| Target action | Required test actions | Status |
+| --- | --- | --- |
+| Soma-first Team Expression + module binding | Vitest component/store coverage for expression editing + module binding render states; integration coverage for normalized adapter payloads; product-flow proof of `proposal` -> `execution_result` | `REQUIRED` |
+| Created-team workspace + channel inspector | UI tests for communication filters; integration tests for created-team command -> `signal.status`/`signal.result`; product-flow proof for interject/reroute/pause-resume controls | `REQUIRED` |
+| Scheduler recurring execution (`scheduled_missions`) | backend schedule CRUD/tick tests, restart/rehydration persistence tests, recurring-state UI tests | `NEXT` |
+| Causal chain operator UI | `/runs/[id]/chain` page/component tests + chain API mapping/error-state integration tests | `REQUIRED` |
+
+Cross-reference:
+- `docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md`
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
+- `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
 
 ## Quick Reference
 

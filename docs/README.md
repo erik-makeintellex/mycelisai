@@ -7,9 +7,11 @@ Primary documentation entry points for V7:
 - **Target Deliverable V7**: `./architecture-library/TARGET_DELIVERABLE_V7.md`
 - **System Architecture V7**: `./architecture-library/SYSTEM_ARCHITECTURE_V7.md`
 - **Execution And Manifest Library V7**: `./architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md`
+- **Intent To Manifestation And Team Interaction V7**: `./architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md`
 - **UI And Operator Experience V7**: `./architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
 - **Delivery Governance And Testing V7**: `./architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
 - **Next Execution Slices V7**: `./architecture-library/NEXT_EXECUTION_SLICES_V7.md`
+- **Team Execution And Global State Protocol V7**: `./architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
 - **V7 Architecture PRD Index**: `../mycelis-architecture-v7.md`
 - **V7 Development State**: `../V7_DEV_STATE.md`
 - **NATS Signal Standard V7**: `./architecture/NATS_SIGNAL_STANDARD_V7.md`
@@ -21,7 +23,6 @@ Primary documentation entry points for V7:
 - **Agent Source Instantiation Template (Ollama-Default)**: `./architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md`
 - **Agentry Template Marketplace + Custom Templating**: `./architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md`
 - **Testing Guide**: `./TESTING.md`
-- **Implementation Blueprint**: `./V7_IMPLEMENTATION_PLAN.md`
 - **Repository Standards**: `../AGENTS.md`
 - **Archive Index (Historical / Non-authoritative)**: `./archive/README.md`
 

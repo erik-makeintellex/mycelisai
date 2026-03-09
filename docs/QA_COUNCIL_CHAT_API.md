@@ -4,9 +4,9 @@
 >
 > **Prerequisites:** All tests require the full stack running unless noted otherwise.
 > ```
-> Terminal 1: uvx inv k8s.bridge
-> Terminal 2: uvx inv core.run
-> Terminal 3: uvx inv interface.dev
+> Terminal 1: uv run inv k8s.bridge
+> Terminal 2: uv run inv core.run
+> Terminal 3: uv run inv interface.dev
 > ```
 
 ---

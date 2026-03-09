@@ -1,13 +1,14 @@
 # Target Deliverable V7
 
 > Status: Canonical
-> Last Updated: 2026-03-07
+> Last Updated: 2026-03-09
 > Scope: Full product target, delivery phases, recurring-plan semantics, and end-state success criteria.
 
 Related:
 - [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 - [System Architecture V7](SYSTEM_ARCHITECTURE_V7.md)
 - [Execution And Manifest Library V7](EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+- [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [UI And Operator Experience V7](UI_AND_OPERATOR_EXPERIENCE_V7.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 
@@ -59,6 +60,12 @@ Full target delivery is achieved when all of the following are true.
 - docs, tests, runtime, and release gates all describe the same system
 - acceptance is based on delivered behavior, not implementation effort
 - phase transitions are gated and evidenced
+
+### 2.5 Integration coherence
+
+- internal tools, MCP tools, and third-party API capabilities must be exposed through one execution contract
+- Soma-first intent flow must remain consistent when execution is delegated to created teams
+- created teams must remain inspectable and interactable after manifestation
 
 ## 3. Plan Operating Modes
 
@@ -130,6 +137,13 @@ The canonical phase order remains:
 
 - health and degraded state are understandable without requiring the operator to reverse-engineer backend internals
 
+### 6.6 Team interaction and module integration
+
+- operators can interact directly with created teams via governed channels
+- team communications are inspectable by run/team/agent scope
+- module bindings are explicit and auditable across `internal`, `mcp`, `openapi`, and `host` adapter classes
+- intent can be promoted from one-shot execution into durable manifestation without changing the operator mental model
+
 ## 7. Anti-Targets
 
 The product is not considered delivered if it does any of the following:
@@ -152,4 +166,5 @@ The system must be optimized around this sequence:
 Next:
 - [System Architecture V7](SYSTEM_ARCHITECTURE_V7.md)
 - [Execution And Manifest Library V7](EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+- [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [UI And Operator Experience V7](UI_AND_OPERATOR_EXPERIENCE_V7.md)

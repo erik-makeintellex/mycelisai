@@ -1,13 +1,14 @@
 # Execution And Manifest Library V7
 
 > Status: Canonical
-> Last Updated: 2026-03-07
+> Last Updated: 2026-03-09
 > Scope: Execution path selection, manifest lifecycle, run lifecycle, recurring-plan semantics, and canonical operator/runtime behavior.
 
 Related:
 - [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 - [Target Deliverable V7](TARGET_DELIVERABLE_V7.md)
 - [System Architecture V7](SYSTEM_ARCHITECTURE_V7.md)
+- [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [UI And Operator Experience V7](UI_AND_OPERATOR_EXPERIENCE_V7.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 
@@ -43,6 +44,8 @@ Underneath them, runtime execution may involve:
 - council consultation
 - internal tools
 - MCP calls
+- third-party API modules
+- host action modules
 - team manifestation
 - delegated task runs
 - scheduled or subscription-driven reactivation
@@ -106,6 +109,12 @@ Team/workflow manifests should define:
 - runtime policy
 - recovery/rollback behavior
 
+For Soma-first manifestation, manifests should also preserve:
+- source Team Expression identifiers
+- module binding references per executable step
+- policy decisions that were applied during preflight
+- replay-safe execution keys for external side-effecting modules
+
 For recurring or always-on plans, manifests must also define:
 - activation trigger or schedule
 - pause/resume semantics
@@ -157,6 +166,11 @@ Channels may include:
 
 But the operator should experience one coherent flow.
 
+For created-team operation, coherence means:
+- team commands and team outputs are visible in one timeline context
+- run lineage and team communications are correlated by `run_id` and `team_id`
+- adapter-specific module details do not leak into core operator state language
+
 ## 9. Recurring And Always-On Plans
 
 This is a first-class target, not a later enhancement.
@@ -189,6 +203,7 @@ Required failure classes:
 - runtime execution failure
 - communication timeout
 - degraded recurring-plan state
+- module contract mismatch (schema/auth/policy)
 
 Required rollback controls for durable plans:
 - pause
@@ -207,4 +222,5 @@ If a plan is one-shot, the UI must not bury the result inside persistent automat
 
 Next:
 - [UI And Operator Experience V7](UI_AND_OPERATOR_EXPERIENCE_V7.md)
+- [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)

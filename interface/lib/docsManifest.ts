@@ -237,6 +237,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Run lifecycle, manifest lifecycle, recurring-plan semantics, and activation rules",
             },
             {
+                slug: "intent-manifestation-team-interaction-v7",
+                label: "Intent To Manifestation + Team Interaction V7",
+                path: "docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md",
+                description: "Canonical intent-to-manifestation flow, module abstraction, and created-team interaction model",
+            },
+            {
                 slug: "ui-operator-experience-v7",
                 label: "UI And Operator Experience V7",
                 path: "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
@@ -253,6 +259,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "Next Execution Slices V7",
                 path: "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
                 description: "Current working queue with scoped next slices and linked development/testing references",
+            },
+            {
+                slug: "team-execution-global-state-protocol-v7",
+                label: "Team Execution + Global State Protocol V7",
+                path: "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
+                description: "Multi-lane execution architecture, global-state maintenance rules, and deep-testing obligations",
             },
             {
                 slug: "arch-overview",
@@ -396,18 +408,6 @@ export const DOC_MANIFEST: DocSection[] = [
         ],
     },
 
-    // ── V7 Development ────────────────────────────────────────────────────────
-    {
-        section: "V7 Development",
-        docs: [
-            {
-                slug: "v7-implementation-plan",
-                label: "Implementation Plan",
-                path: "docs/V7_IMPLEMENTATION_PLAN.md",
-                description: "V7 technical implementation plan — Teams A/B/C/D/E",
-            },
-        ],
-    },
 ];
 
 /** Flat lookup map: slug → DocEntry. Used by the API route for validation. */

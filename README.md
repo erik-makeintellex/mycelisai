@@ -13,9 +13,11 @@
 > | [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md) | Product end state, recurring-plan modes, success criteria, and phase framing |
 > | [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md) | Runtime layers, persistence, NATS posture, deployment, and storage model |
 > | [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md) | Runs, manifests, scheduled/event-driven/persistent-active behavior |
+> | [Intent To Manifestation And Team Interaction V7](docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md) | Common flow from Soma intent to module execution and created-team interaction contracts |
 > | [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) | Canonical UI target, anti-information-swarm rules, and operator journeys |
 > | [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) | Delivery proof, acceptance gates, and product-aligned testing |
 > | [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) | Current working queue with scoped next slices and linked development/testing references |
+> | [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) | Lane architecture, global-state maintenance rules, and deep-testing obligations |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 > | [V7 PRD Index](mycelis-architecture-v7.md) | Stable compatibility entrypoint that points to the modular architecture library |
 > | [Architecture Overview](docs/architecture/OVERVIEW.md) | Supporting architecture summary and specialized phase context |
@@ -68,11 +70,13 @@ If you are a fresh development agent or starting a new interaction, review the d
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md) for the canonical planning map.
 3. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md) for the intended product end state and phase framing.
 4. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md) for run, manifest, recurring-plan, and activation semantics.
-5. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) and [UI Target + Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md) before touching operator-facing UI.
-6. [Operations Manual](docs/architecture/OPERATIONS.md) and [Testing Guide](docs/TESTING.md) before changing runtime tasks, lifecycle flows, or delivery gates.
-7. [V7 Dev State](V7_DEV_STATE.md) for the current checkpoint and active delivery context.
-8. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
+5. [Intent To Manifestation And Team Interaction V7](docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md) for the canonical intent flow, module abstraction, and created-team interaction model.
+6. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) and [UI Target + Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md) before touching operator-facing UI.
+7. [Operations Manual](docs/architecture/OPERATIONS.md) and [Testing Guide](docs/TESTING.md) before changing runtime tasks, lifecycle flows, or delivery gates.
+8. [V7 Dev State](V7_DEV_STATE.md) for the current checkpoint and active delivery context.
 9. [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) to choose the active slice and load the right development/testing docs before implementation.
+10. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) for lane ownership, state-file update requirements, and deep-testing obligations.
+11. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
 
 Use [mycelis-architecture-v7.md](mycelis-architecture-v7.md) only as the stable PRD index and compatibility entrypoint. Do not expand it back into the primary detailed spec.
 
@@ -139,7 +143,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Inception Recipes (V7):** Structured prompt pattern library for knowledge reuse. When Soma completes a complex task, it can distill an inception recipe capturing: intent pattern, key parameters, example prompt, and outcome shape. Recipes are dual-persisted — RDBMS (`inception_recipes` table, migration 031) for structured queries + pgvector (`context_vectors`) for semantic recall. Quality feedback loop (`quality_score` 0.0–1.0) + usage tracking. Automatically recalled during `research_for_blueprint` pipeline.
 - **Permanent Memory Growth Loop (Planned V7.x):** Postgres + pgvector loop (`capture -> distill -> vectorize -> retrieve -> promote -> rollback`) with a strict no-silence preference rule and 3-layer local continuity memory (`hot/context/archive`) synced back to system-of-record.
 - **Central Agentry Memory Governance (Planned V7.x):** Correction repetition tracking with 3-strike scope prompt (`global|domain|project`), weekly maintenance digest, provenance on learned-rule application (`file` + `line`), sensitive-data exclusion, and supported forget semantics (`forget X`, `forget everything`).
-- **Scheduler (V7):** In-process goroutine scheduler backed by `scheduled_missions` table. Enforces max_active_runs, suspends when NATS offline. Cron expressions for recurring missions.
+- **Scheduler (V7, NEXT):** Target contract is an in-process scheduler backed by `scheduled_missions`, with cron expressions, `max_active_runs` guards, and NATS-aware suspension. Current runtime has team-level interval scheduling only (`core/internal/swarm/team_scheduler.go`); Team C delivery remains pending.
 
 ### Tier 2: Nervous System (NATS JetStream 2.12)
 
@@ -152,7 +156,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **mission_events (024):** MissionEventEnvelope persistence — 17-field audit-grade event records with causal linking (`parent_event_id`, `parent_run_id`, `trigger_rule_id`).
 - **trigger_rules (025):** Declarative event → action rules with cooldown, recursion guard, concurrency guard. Default mode: propose.
 - **trigger_executions (026):** Audit log of rule evaluations — evaluated/fired/skipped with reason.
-- **scheduled_missions (027):** Cron-backed recurring execution with `max_active_runs` guard.
+- **scheduled_missions (027, REQUIRED):** Target migration for cron-backed recurring execution with `max_active_runs` guard. Not present in current migration set yet.
 - **conversation_turns (030):** Full-fidelity agent conversation log — session-scoped, role-typed (system/user/assistant/tool_call/tool_result/interjection), with provider/model provenance and tool call threading via `parent_turn_id`.
 - **inception_recipes (031):** Structured prompt patterns for RAG recall — category-indexed, trigram-searchable titles, dual-persisted (RDBMS + pgvector), quality/usage tracking.
 
@@ -1719,9 +1723,11 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Target Deliverable V7** | [docs/architecture-library/TARGET_DELIVERABLE_V7.md](docs/architecture-library/TARGET_DELIVERABLE_V7.md) — Product end state, recurring-plan modes, success criteria, and phase framing | [/docs?doc=target-deliverable-v7](/docs?doc=target-deliverable-v7) |
 | **System Architecture V7** | [docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md) — Runtime layers, persistence, storage, deployment, and bus posture | [/docs?doc=system-architecture-v7](/docs?doc=system-architecture-v7) |
 | **Execution And Manifest Library V7** | [docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md) — Manifest lifecycle, run lifecycle, recurring plans, and activation rules | [/docs?doc=execution-manifest-library-v7](/docs?doc=execution-manifest-library-v7) |
+| **Intent To Manifestation And Team Interaction V7** | [docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md](docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md) — Canonical intent flow, module integration model, and created-team interaction contract | [/docs?doc=intent-manifestation-team-interaction-v7](/docs?doc=intent-manifestation-team-interaction-v7) |
 | **UI And Operator Experience V7** | [docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md) — Anti-information-swarm UI guidance and canonical operator journeys | [/docs?doc=ui-operator-experience-v7](/docs?doc=ui-operator-experience-v7) |
 | **Delivery Governance And Testing V7** | [docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) — Delivery proof model, evidence requirements, and product-aligned testing | [/docs?doc=delivery-governance-testing-v7](/docs?doc=delivery-governance-testing-v7) |
-| **Next Execution Slices V7** | [docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) — Current implementation queue with scoped files plus development and testing references | — |
+| **Next Execution Slices V7** | [docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) — Current implementation queue with scoped files plus development and testing references | [/docs?doc=next-execution-slices-v7](/docs?doc=next-execution-slices-v7) |
+| **Team Execution And Global State Protocol V7** | [docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) — Team-lane execution architecture, global state update contract, and deep-testing requirements | [/docs?doc=team-execution-global-state-protocol-v7](/docs?doc=team-execution-global-state-protocol-v7) |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
 | **Backend Specification** | [docs/architecture/BACKEND.md](docs/architecture/BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines | [/docs?doc=arch-backend](/docs?doc=arch-backend) |
 | **Frontend Specification** | [docs/architecture/FRONTEND.md](docs/architecture/FRONTEND.md) — Routes, components, Zustand, design system | [/docs?doc=arch-frontend](/docs?doc=arch-frontend) |
@@ -1746,7 +1752,6 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Governance** | [docs/governance.md](docs/governance.md) — Policy enforcement, approvals, security | [/docs?doc=governance](/docs?doc=governance) |
 | **Testing** | [docs/TESTING.md](docs/TESTING.md) — Unit, integration, smoke protocols | [/docs?doc=testing](/docs?doc=testing) |
 | **V7 UI Verification (Archive)** | [docs/archive/v7-step-01-ui.md](docs/archive/v7-step-01-ui.md) — Historical manual UI checklist for V7 Step 01 navigation | [/docs?doc=v7-ui-verification](/docs?doc=v7-ui-verification) |
-| **V7 Implementation Plan** | [docs/V7_IMPLEMENTATION_PLAN.md](docs/V7_IMPLEMENTATION_PLAN.md) — Teams A/B/C/D/E technical plan | [/docs?doc=v7-implementation-plan](/docs?doc=v7-implementation-plan) |
 | **V7 Dev State** | [V7_DEV_STATE.md](V7_DEV_STATE.md) — Detailed checkpoint log (evidence, risks, next actions) | [/docs?doc=v7-dev-state](/docs?doc=v7-dev-state) |
 | **IA Step 01 (Archive)** | [docs/archive/ia-v7-step-01.md](docs/archive/ia-v7-step-01.md) — Historical workflow-first navigation PRD and decisions | [/docs?doc=v7-ia-step01](/docs?doc=v7-ia-step01) |
 | **Registry** | [core/internal/registry/README.md](core/internal/registry/README.md) — Connector marketplace | — |
@@ -1759,7 +1764,7 @@ Three workflows run on push/PR to `main` and `develop`:
 Every merged implementation slice must update:
 1. `README.md` — operator-facing behavior/config/runtime contract changes.
 2. `V7_DEV_STATE.md` — current checkpoint, verification evidence, and next-step plan.
-3. `docs/V7_IMPLEMENTATION_PLAN.md` — roadmap/dependency changes.
+3. `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` and `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` — queue/status or lane/state-discipline changes.
 4. `interface/lib/docsManifest.ts` — include any new authoritative doc in `/docs`.
 
 No branch promotion without this documentation gate.

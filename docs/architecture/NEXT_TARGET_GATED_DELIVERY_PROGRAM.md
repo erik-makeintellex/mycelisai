@@ -8,11 +8,11 @@
 
 | Phase | Status | Theme |
 | --- | --- | --- |
-| `P0` | PASSED | Operational foundation and gate discipline |
+| `P0` | COMPLETE | Operational foundation and gate discipline |
 | `P1` | ACTIVE | Logging, error handling, and hot-path cleanup under `<=350` LOC policy |
-| `P2` | LOCKED | Meta-agent-owned manifest pipeline |
-| `P3` | LOCKED | Workflow-composer onboarding and execution-facing UI |
-| `P4` | LOCKED | Release hardening + final regression caps |
+| `P2` | BLOCKED | Meta-agent-owned manifest pipeline |
+| `P3` | BLOCKED | Workflow-composer onboarding and execution-facing UI |
+| `P4` | BLOCKED | Release hardening + final regression caps |
 
 ## P0 Action Card
 
@@ -28,19 +28,20 @@
   - `tests/test_lifecycle_tasks.py`
   - `tests/test_db_tasks.py`
 - Branch name: `phase/p0-invoke-gate-normalization`
-- Required `uvx inv` commands:
-  - Target contract after gate pass: `uvx inv logging.check-schema`
-  - Target contract after gate pass: `uvx inv logging.check-topics`
-  - Target contract after gate pass: `uvx inv quality.max-lines --limit 350`
-  - Target contract after gate pass: `uvx inv lifecycle.memory-restart --build --frontend`
-  - Current execution note: this workspace verified `uvx inv -l` fails with `Package inv does not provide any executables`; until that alias is introduced or documented, operator evidence must be captured with `uv run inv ...`
+- Required `uv run inv` commands:
+  - Target contract after gate pass: `uv run inv logging.check-schema`
+  - Target contract after gate pass: `uv run inv logging.check-topics`
+  - Target contract after gate pass: `uv run inv quality.max-lines --limit 350`
+  - Target contract after gate pass: `uv run inv lifecycle.memory-restart --build --frontend`
+  - Compatibility probe only: `uvx --from invoke inv -l`
+  - Current execution note: this workspace verified bare `uvx inv -l` fails with `Package inv does not provide any executables`; operator evidence must be captured with `uv run inv ...`
 - Tests:
   - `uv run pytest tests/test_db_tasks.py tests/test_lifecycle_tasks.py tests/test_logging_tasks.py tests/test_quality_tasks.py -q`
   - `uv run inv -l`
   - Optional destructive validation after local stack readiness: `uv run inv lifecycle.memory-restart --build --frontend`
 - Acceptance criteria:
   - lifecycle/db invoke tasks exit with a clear remediation message when `python-dotenv` is missing from the active invoke environment
-  - top-level operator docs no longer imply that `uvx --from invoke inv ...` is valid for project tasks
+  - top-level operator docs no longer imply that bare `uvx inv ...` is valid for project tasks, and keep `uvx --from invoke inv -l` as probe-only
   - logging and max-lines gate commands are documented as P0 prerequisites for all later phases
   - no new P1-P4 implementation work merges before P0 evidence is attached
 - Rollback plan:
@@ -62,7 +63,7 @@
   - Required output summary:
     - `uv run inv ci.entrypoint-check` confirms `uv run inv` and `uvx --from invoke inv` behavior while bare `uvx inv` remains unsupported
     - `uv run inv lifecycle.memory-restart --frontend` completes with clean forward migrations, healthy endpoints, and memory probes at HTTP 200
-  - Gate result: `PASSED`
+  - Gate result: `COMPLETE`
 
 ## P1 Action Card
 
@@ -82,11 +83,11 @@
   - `ops/quality_legacy_caps.txt`
   - `ops/lifecycle.py`
 - Branch name: `phase/p1-hotpath-loc-decomposition`
-- Required `uvx inv` commands:
-  - `uvx inv logging.check-schema`
-  - `uvx inv logging.check-topics`
-  - `uvx inv quality.max-lines --limit 350`
-  - `uvx inv ci.baseline`
+- Required `uv run inv` commands:
+  - `uv run inv logging.check-schema`
+  - `uv run inv logging.check-topics`
+  - `uv run inv quality.max-lines --limit 350`
+  - `uv run inv ci.baseline`
 - Tests:
   - `uv run inv logging.check-schema`
   - `uv run inv logging.check-topics`
@@ -126,10 +127,10 @@
   - `core/tests/provisioning_test.go`
   - `docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md`
 - Branch name: `phase/p2-meta-agent-manifest-pipeline`
-- Required `uvx inv` commands:
-  - `uvx inv core.test`
-  - `uvx inv logging.check-schema`
-  - `uvx inv logging.check-topics`
+- Required `uv run inv` commands:
+  - `uv run inv core.test`
+  - `uv run inv logging.check-schema`
+  - `uv run inv logging.check-topics`
 - Tests:
   - `uv run inv core.test`
   - targeted provisioning/server integration tests
@@ -148,7 +149,7 @@
   - Commands:
     - `uv run inv core.test`
     - targeted manifest contract suite
-  - Gate result: `LOCKED`
+  - Gate result: `BLOCKED`
 
 ## P3 Action Card
 
@@ -160,10 +161,10 @@
   - workflow-composer route/components under `interface/app` and `interface/components`
   - `docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
 - Branch name: `phase/p3-workflow-composer-onboarding`
-- Required `uvx inv` commands:
-  - `uvx inv interface.test`
-  - `uvx inv interface.build`
-  - `uvx inv logging.check-schema`
+- Required `uv run inv` commands:
+  - `uv run inv interface.test`
+  - `uv run inv interface.build`
+  - `uv run inv logging.check-schema`
 - Tests:
   - `uv run inv interface.test`
   - `uv run inv interface.build`
@@ -181,7 +182,7 @@
   - Commands:
     - `uv run inv interface.test`
     - `uv run inv interface.build`
-  - Gate result: `LOCKED`
+  - Gate result: `BLOCKED`
 
 ## P4 Action Card
 
@@ -193,10 +194,10 @@
   - `docs/TESTING.md`
   - `docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
 - Branch name: `phase/p4-release-hardening`
-- Required `uvx inv` commands:
-  - `uvx inv ci.baseline`
-  - `uvx inv ci.release-preflight --e2e --strict-toolchain`
-  - `uvx inv lifecycle.health`
+- Required `uv run inv` commands:
+  - `uv run inv ci.baseline`
+  - `uv run inv ci.release-preflight --e2e --strict-toolchain`
+  - `uv run inv lifecycle.health`
 - Tests:
   - `uv run inv ci.baseline`
   - `uv run inv ci.release-preflight --strict-toolchain`
@@ -215,4 +216,4 @@
   - Commands:
     - `uv run inv ci.baseline`
     - `uv run inv ci.release-preflight --strict-toolchain`
-  - Gate result: `LOCKED`
+  - Gate result: `BLOCKED`
