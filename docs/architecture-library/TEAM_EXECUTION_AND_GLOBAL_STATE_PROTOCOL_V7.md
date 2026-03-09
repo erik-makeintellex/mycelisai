@@ -85,11 +85,13 @@ Required state entry fields:
 - active slice and owner lane
 - status marker change
 - evidence commands and result (`pass`/`fail`)
+- backend/API -> UI target review/test plan reference (required when runtime/API contracts changed)
 - blockers and dependency notes
 - next 24-48h actions
 
 Quality rule:
 - if a PR changes execution behavior and does not update `V7_DEV_STATE.md`, it is not review-ready.
+- if a PR changes runtime/API behavior and does not include a UI target review/test plan reference in `V7_DEV_STATE.md`, it is not review-ready.
 
 ## 4. Deep Testing Architecture
 

@@ -42,6 +42,7 @@ Slice 7  Created-team workspace and channel inspector                [BLOCKED]
 
 - Team lane architecture and execution protocol are now canonical in `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`.
 - `V7_DEV_STATE.md` is the global state source each active lane must update on status transitions, gate outcomes, and blocker changes.
+- Backend/API slices now require an attached UI-targeted review/test plan block before review.
 - Deep testing now follows target-action lockstep in `docs/TESTING.md` and `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`.
 - Current gate note: latest `uv run inv ci.baseline` run failed on `quality.max-lines`; command-level reruns confirm `core.test`, `interface.test`, and `interface.build` pass.
 
