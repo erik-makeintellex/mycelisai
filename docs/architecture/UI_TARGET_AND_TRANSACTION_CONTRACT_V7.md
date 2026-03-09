@@ -76,6 +76,7 @@ Raw `500`, silent timeout, or generic "failed" states are not acceptable deliver
 - backend returns CTS-enveloped chat response
 - if tools or consultations occur, they are reflected in payload metadata
 - if execution creates a proposal, proposal metadata is present
+- when proposal payload includes Team Expressions, `team_expressions[].module_bindings[]` is preserved for operator inspection
 - if execution creates a run or artifact, the returned payload references it
 
 ### Valid terminal UI states
@@ -102,6 +103,7 @@ Raw `500`, silent timeout, or generic "failed" states are not acceptable deliver
 
 - component test: render response-state variants correctly
 - integration test: successful chat request yields one terminal state, not planning-only fallback
+- integration test: proposal payload normalization derives `teams`/`agents`/`tools` from `team_expressions` when present
 - product-flow test: plain drafting request yields direct answer in chat
 - failure test: timeout or backend rejection yields structured blocker card
 
@@ -167,6 +169,7 @@ Raw `500`, silent timeout, or generic "failed" states are not acceptable deliver
 ### Required UI effects
 
 - operator can inspect what will be manifested
+- operator can inspect Team Expressions and module bindings before confirmation
 - operator can see why confirmation is required
 - successful activation yields run link or execution summary
 

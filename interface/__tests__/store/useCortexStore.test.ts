@@ -353,6 +353,71 @@ describe('useCortexStore', () => {
     // ── Launch Crew / proposal confirmation ─────────────────────
 
     describe('sendMissionChat', () => {
+        it('normalizes team expressions and module bindings from proposal payload', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                        signal_type: 'chat_response',
+                        trust_score: 0.5,
+                        template_id: 'chat-to-proposal',
+                        mode: 'proposal',
+                        payload: {
+                            text: 'I prepared a governed execution plan.',
+                            tools_used: ['delegate'],
+                            proposal: {
+                                intent: 'chat-action',
+                                tools: ['delegate'],
+                                risk_level: 'medium',
+                                confirm_token: 'ct-123',
+                                intent_proof_id: 'ip-123',
+                                team_expressions: [
+                                    {
+                                        expression_id: 'expr-1',
+                                        team_id: 'admin-core',
+                                        objective: 'Execute delegate through governed module binding',
+                                        role_plan: ['admin'],
+                                        module_bindings: [
+                                            {
+                                                binding_id: 'binding-1-delegate',
+                                                module_id: 'delegate',
+                                                adapter_kind: 'internal',
+                                                operation: 'delegate',
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                }),
+            });
+
+            await store.getState().sendMissionChat('launch a team');
+
+            expect(store.getState().activeMode).toBe('proposal');
+            expect(store.getState().activeConfirmToken).toBe('ct-123');
+            expect(store.getState().pendingProposal).toMatchObject({
+                intent: 'chat-action',
+                teams: 1,
+                agents: 1,
+                tools: ['delegate'],
+                confirm_token: 'ct-123',
+                intent_proof_id: 'ip-123',
+            });
+            expect(store.getState().pendingProposal?.team_expressions?.[0]).toMatchObject({
+                expression_id: 'expr-1',
+                team_id: 'admin-core',
+                objective: 'Execute delegate through governed module binding',
+            });
+            expect(store.getState().pendingProposal?.team_expressions?.[0].module_bindings?.[0]).toMatchObject({
+                module_id: 'delegate',
+                adapter_kind: 'internal',
+            });
+        });
+
         it('stores a structured workspace failure when Soma chat returns 500', async () => {
             mockFetch.mockResolvedValue({
                 ok: false,

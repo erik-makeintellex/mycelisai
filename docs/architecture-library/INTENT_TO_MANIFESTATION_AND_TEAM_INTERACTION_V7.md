@@ -268,6 +268,11 @@ Current implementation strengths (`COMPLETE`):
 - event spine, run timeline, trigger engine, conversation log, proposal gating, interjection
 - standardized NATS channel posture and source metadata policy
 
+Active checkpoint (`ACTIVE`, 2026-03-09):
+- proposal payload contract now carries structured `team_expressions` + `module_bindings` across Soma and direct council chat mutation paths
+- operator proposal surfaces now expose expression counts and binding-level adapter context before confirmation
+- store normalization now derives teams/agents/tools from Team Expression payloads when explicit aggregate values are absent
+
 Current gaps (`REQUIRED`/`NEXT`):
 - scheduler runtime and `scheduled_missions` persistence path
 - causal chain UI surfaces

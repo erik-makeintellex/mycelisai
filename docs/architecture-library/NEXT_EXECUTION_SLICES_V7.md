@@ -291,6 +291,18 @@ Acceptance criteria:
 Rollback:
 - revert Team Expression/module-binding UX and payload additions while preserving existing proposal flow
 
+Checkpoint (2026-03-09):
+- runtime proposal payload now carries `team_expressions` with `module_bindings` in both `/api/v1/chat` and `/api/v1/council/{member}/chat` mutation paths
+- UI proposal surfaces now show expression/binding counts and binding adapter context before confirmation
+- store normalization now derives `teams`, `agents`, and `tools` from structured `team_expressions` when present
+- focused proof executed:
+  - `cd core; go test ./internal/server -run "TestInferAdapterKindFromTool|TestBuildMutationChatProposal" -count=1` -> pass
+  - `cd interface; npx vitest run __tests__/store/useCortexStore.test.ts __tests__/dashboard/ProposedActionBlock.test.tsx --reporter=dot` -> pass
+  - `cd interface; npx tsc --noEmit` -> pass
+- remaining for `IN_REVIEW` transition:
+  - attach explicit product-flow proof of proposal -> confirmation -> run-linked outcome tied to Team Expression payload
+  - keep Slice 7 blocked until scheduler + chain prerequisites are accepted
+
 ## Slice 7: Created Team Workspace And Channel Inspector
 
 Status:

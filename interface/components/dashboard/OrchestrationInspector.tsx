@@ -104,6 +104,20 @@ export default function OrchestrationInspector() {
                         <Row label="Intent" value={msg.proposal.intent} />
                         <Row label="Teams" value={String(msg.proposal.teams)} />
                         <Row label="Agents" value={String(msg.proposal.agents)} />
+                        {(msg.proposal.team_expressions?.length ?? 0) > 0 && (
+                            <>
+                                <Row label="Expressions" value={String(msg.proposal.team_expressions?.length ?? 0)} />
+                                <Row
+                                    label="Bindings"
+                                    value={String(
+                                        (msg.proposal.team_expressions ?? []).reduce(
+                                            (sum, expr) => sum + (expr.module_bindings?.length ?? 0),
+                                            0,
+                                        ),
+                                    )}
+                                />
+                            </>
+                        )}
                         <Row label="Risk" value={msg.proposal.risk_level?.toUpperCase() || "LOW"} />
                         <Row label="Proof ID" value={msg.proposal.intent_proof_id || "\u2014"} mono />
                     </InspectorSection>
