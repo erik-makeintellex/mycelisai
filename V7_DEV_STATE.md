@@ -32,11 +32,118 @@ P4  Release hardening and promotion gates                            [REQUIRED]
 Slice 1  Launch Crew and workflow onboarding execution contract      [COMPLETE]
 Slice 2  P1 logging, error handling, and execution feedback          [ACTIVE]
 Slice 3  Prime-development reply reliability                         [NEXT]
-Slice 4  P1 hot-path cleanup under max-lines gates                   [REQUIRED]
+Slice 4  P1 hot-path cleanup under max-lines gates                   [ACTIVE]
 Slice 5  P2 manifest pipeline preparation                            [REQUIRED]
 Slice 6  Soma-first Team Expression and module binding               [ACTIVE]
 Slice 7  Created-team workspace and channel inspector                [BLOCKED]
 ```
+
+### MVP Strike Team Activation (2026-03-10)
+
+Canonical execution plan:
+- `docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md`
+
+Most vital delivery architecture (current release focus):
+1. `ACTIVE` close Slice 2 (Workspace clarity + failure/recovery consistency + Soma direct-first routing)
+2. `NEXT` close Slice 3 (prime-development canonical lane reply reliability)
+3. `REQUIRED` reduce Slice 4 gate pressure until `ci.baseline` can pass under max-lines constraints
+
+Lane ownership for the active push:
+1. `Architecture/Governance` -> `prime-architect`
+2. `Runtime/Core` -> `prime-development`
+3. `Interface/Operator` -> `agui-design-architect`
+4. `QA/Verification` -> `council-sentry`
+5. `Release/Ops` -> `admin-core`
+
+Communication + state discipline now enforced for this push:
+1. lane directives on `swarm.team.{team_id}.internal.command`
+2. checkpoint status on `swarm.team.{team_id}.signal.status` (every 2 hours while active)
+3. gate verdicts on `swarm.team.{team_id}.signal.result`
+4. every marker transition/blocker/gate result must be reflected in `V7_DEV_STATE.md` in the same delivery window
+
+Immediate MVP gate sequence:
+1. fix and rerun `v7-operational-ux` failure path drift
+2. resolve prime-development team-sync reliability
+3. reduce hot-path file pressure and re-run `uv run inv ci.baseline`
+
+### Priority 1 Kickoff - Hot-Path Gate Relief (2026-03-10)
+
+Status transition:
+1. Slice 4 moved `REQUIRED -> ACTIVE`
+
+Delivery completed in this kickoff:
+1. extracted large parsing/preflight helper blocks from `core/internal/swarm/agent.go` into:
+   - `core/internal/swarm/agent_parsing.go`
+   - `core/internal/swarm/agent_preflight.go`
+2. extracted memory-context helper from `core/internal/swarm/internal_tools.go` into:
+   - `core/internal/swarm/internal_tools_memory_context.go`
+3. extracted Workspace store graph/proposal/persistence helpers from `interface/store/useCortexStore.ts` into:
+   - `interface/store/cortexStoreUtils.ts`
+
+Post-change line counts (legacy-cap posture):
+1. `core/internal/swarm/agent.go`: `768` (`<= legacy cap 1121`)
+2. `core/internal/swarm/internal_tools.go`: `2458` (`<= legacy cap 2491`)
+3. `interface/store/useCortexStore.ts`: `2586` (`<= legacy cap 2714`)
+
+Evidence commands (2026-03-10):
+1. `uv run inv quality.max-lines --limit 350` -> pass
+2. `cd core && go test ./internal/swarm -count=1` -> pass
+3. `cd interface && npx tsc --noEmit` -> pass
+4. `cd interface && npx vitest run __tests__/store/useCortexStore.test.ts __tests__/dashboard/MissionControlChat.test.tsx --reporter=dot` -> pass
+5. `uv run inv ci.baseline` -> pass
+
+Coverage + documentation completion for extracted helpers (2026-03-10):
+1. `COMPLETE`: added runtime parsing coverage in `core/internal/swarm/agent_parsing_test.go` for conversation payload parsing fallbacks and role normalization.
+2. `COMPLETE`: added frontend helper coverage in `interface/__tests__/store/cortexStoreUtils.test.ts` for graph-building, node solidification, signal dispatch, proposal normalization, and chat persistence helpers.
+3. `COMPLETE`: updated testing and frontend docs to include helper-focused validation commands and ownership:
+   - `docs/TESTING.md`
+   - `docs/architecture/FRONTEND.md`
+
+Next follow-up in this stream:
+1. continue Slice 4 extraction to lower absolute hot-path size further (not only under legacy caps)
+2. proceed to Priority 2 (`v7-operational-ux` reroute assertion drift)
+
+### GUI Surface Audit + Development Strategy (2026-03-10)
+
+Scope:
+- full GUI route/component surface audit from `interface/app/**` + `interface/components/**`
+- API fit audit from `interface/store/useCortexStore.ts` against `core/internal/server/admin.go` + `core/cmd/server/main.go`
+- development-doc parity update for frontend architecture + test coverage
+
+Documentation delivery:
+1. `COMPLETE`: `docs/architecture/FRONTEND.md` rewritten to reflect current shell, full route set, tab model, GUI->API contract map, and frontend strategy streams.
+2. `COMPLETE`: `docs/TESTING.md` now includes a route-level full GUI coverage matrix with explicit `ACTIVE`/`NEXT`/`REQUIRED` status for each major UI surface.
+
+Code/API fit review (evidence-based):
+1. `ACTIVE`: core Workspace routes and API mappings are aligned:
+- `/api/v1/chat` (Soma default) and `/api/v1/council/{member}/chat` (direct specialist) are wired and used by store routing logic.
+- `/api/v1/council/members` is reachable via authenticated contract and currently passes the live-backend Workspace spec.
+2. `REQUIRED`: one stale frontend API path remains:
+- store still contains `installMCPServer -> POST /api/v1/mcp/install` while backend intentionally blocks raw install (`403`) and requires curated `/api/v1/mcp/library/install`.
+3. `COMPLETE`: `POST /api/v1/swarm/broadcast` is live and handled by Soma in `main.go` (not `admin.go`), so frontend broadcast path is runtime-valid.
+
+Current UI/test gate state:
+1. `ACTIVE`: `core.test`, full Vitest (`59` files / `347` tests), and interface build pass.
+2. `ACTIVE`: live-backend Workspace proxy spec now passes:
+- `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts`
+3. `BLOCKED`: operational UX Gate A still has one failing expectation:
+- `v7-operational-ux.spec.ts` expecting `Recovered via Soma`.
+4. `BLOCKED`: `ci.baseline` still red on max-lines gate.
+
+Execution strategy (ordered, architecture-aligned):
+1. `ACTIVE` Stream A (Slice 2): close Workspace reroute/degraded UX drift and keep conversation-first density simplification moving.
+2. `ACTIVE` Stream B (Slice 2 support): remove stale raw-MCP install action path and finish GUI/API contract cleanup with no behavior regressions.
+3. `NEXT` Stream C (Slice 3): restore canonical team-sync reliability so prime-development lane is consistently reachable.
+4. `REQUIRED` Stream D (Slice 4): reduce hot-path complexity to clear max-lines gate on runtime + store files.
+5. `BLOCKED` Stream E (Slice 7 prep): keep created-team workspace/channel-inspector delivery queued behind scheduler + chain prerequisites.
+
+Required proof commands for this strategy:
+- `uv run inv core.test`
+- `cd interface && npx vitest run --reporter=dot`
+- `cd interface && npm run build`
+- `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v7-operational-ux.spec.ts`
+- `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts`
+- `uv run inv ci.baseline`
 
 ### Execution Architecture And State-File Contract (2026-03-09)
 

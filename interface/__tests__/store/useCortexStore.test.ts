@@ -436,6 +436,28 @@ describe('useCortexStore', () => {
             });
         });
 
+        it('routes Soma failures through the workspace contract when no council target is selected', async () => {
+            store.setState({
+                councilTarget: 'admin',
+                councilMembers: [],
+            });
+            mockFetch.mockRejectedValue(new Error('deadline exceeded'));
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/chat', expect.objectContaining({
+                method: 'POST',
+            }));
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('deadline exceeded');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'workspace',
+                targetId: 'admin',
+                type: 'timeout',
+                title: 'Soma Chat Blocked',
+            });
+        });
+
         it('stores a structured council timeout when a direct council request throws', async () => {
             store.setState({ councilTarget: 'council-architect' });
             mockFetch.mockRejectedValue(new Error('deadline exceeded'));
@@ -447,6 +469,29 @@ describe('useCortexStore', () => {
                 routeKind: 'council',
                 targetId: 'council-architect',
                 type: 'timeout',
+            });
+        });
+
+        it('routes direct council 5xx failures through the council blocker contract', async () => {
+            store.setState({ councilTarget: 'council-coder' });
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 503,
+                text: async () => '',
+            });
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/council/council-coder/chat', expect.objectContaining({
+                method: 'POST',
+            }));
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('Council agent unreachable (503)');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'council',
+                targetId: 'council-coder',
+                type: 'server_error',
+                title: 'Council Call Failed',
             });
         });
     });

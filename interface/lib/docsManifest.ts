@@ -267,6 +267,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Multi-lane execution architecture, global-state maintenance rules, and deep-testing obligations",
             },
             {
+                slug: "mvp-release-strike-team-plan-v7",
+                label: "MVP Release Strike Team Plan V7",
+                path: "docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md",
+                description: "Active MVP lane ownership, communication cadence, and state-file update discipline",
+            },
+            {
                 slug: "arch-overview",
                 label: "Overview",
                 path: "docs/architecture/OVERVIEW.md",

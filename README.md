@@ -18,6 +18,7 @@
 > | [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) | Delivery proof, acceptance gates, and product-aligned testing |
 > | [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) | Current working queue with scoped next slices and linked development/testing references |
 > | [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) | Lane architecture, global-state maintenance rules, and deep-testing obligations |
+> | [MVP Release Strike Team Plan V7](docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md) | Active MVP lane ownership, communication cadence, and state-file discipline |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 > | [V7 PRD Index](mycelis-architecture-v7.md) | Stable compatibility entrypoint that points to the modular architecture library |
 > | [Architecture Overview](docs/architecture/OVERVIEW.md) | Supporting architecture summary and specialized phase context |
@@ -76,7 +77,8 @@ If you are a fresh development agent or starting a new interaction, review the d
 8. [V7 Dev State](V7_DEV_STATE.md) for the current checkpoint and active delivery context.
 9. [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) to choose the active slice and load the right development/testing docs before implementation.
 10. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) for lane ownership, state-file update requirements, and deep-testing obligations.
-11. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
+11. [MVP Release Strike Team Plan V7](docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md) for active lane ownership, communication cadence, and release push sequencing.
+12. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
 
 Use [mycelis-architecture-v7.md](mycelis-architecture-v7.md) only as the stable PRD index and compatibility entrypoint. Do not expand it back into the primary detailed spec.
 
@@ -1791,7 +1793,17 @@ cd core && go test ./internal/swarm/ -run TestScoped -count=1
 cd interface && npx vitest run __tests__/automations/TeamInstantiationWizard.test.tsx __tests__/automations/RouteTemplatePicker.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/pages/AutomationsPage.test.tsx __tests__/shell/ShellLayout.test.tsx __tests__/pages/SystemPage.test.tsx __tests__/teams/TeamsPage.test.tsx  # Gate A + Sprint 0 baseline (50 pass on 2026-02-27)
 ```
 
-Latest clean workspace verification (2026-03-07, `feature/enterprise-multihost-soma-routing` @ `2cec145`):
+Latest verification snapshot (2026-03-10):
+- `$env:PYTHONPATH='.'; uv run pytest tests -q` -> pass (`59` passed)
+- `uv run inv core.test` -> pass
+- `uv run inv interface.test` -> runner failure on Windows console encoding (`cp1252`); rerun below passed
+- `cd interface && npx vitest run --reporter=dot` -> pass (`59` files, `347` tests)
+- `cd interface && npm run build` -> pass
+- `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v7-operational-ux.spec.ts` -> fail (`Recovered via Soma` expectation not found)
+- `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts` -> pass (`1` passed)
+- `uv run inv ci.baseline` -> fail (`quality.max-lines` gate on `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts`)
+
+Historical clean workspace verification (2026-03-07, `feature/enterprise-multihost-soma-routing` @ `2cec145`):
 - `uv run inv ci.baseline` -> pass
 - `uv run pytest tests/test_docs_links.py -q` -> pass (`13` passed)
 - `cd core && go test -p 1 ./internal/artifacts ./internal/cognitive -count=1` -> pass

@@ -12,6 +12,7 @@ Primary documentation entry points for V7:
 - **Delivery Governance And Testing V7**: `./architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
 - **Next Execution Slices V7**: `./architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 - **Team Execution And Global State Protocol V7**: `./architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
+- **MVP Release Strike Team Plan V7**: `./architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md`
 - **V7 Architecture PRD Index**: `../mycelis-architecture-v7.md`
 - **V7 Development State**: `../V7_DEV_STATE.md`
 - **NATS Signal Standard V7**: `./architecture/NATS_SIGNAL_STANDARD_V7.md`

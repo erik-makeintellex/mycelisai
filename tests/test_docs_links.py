@@ -10,6 +10,8 @@ DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
 PRD_INDEX = ROOT / "mycelis-architecture-v7.md"
 NEXT_EXECUTION_SLICES = ROOT / "docs" / "architecture-library" / "NEXT_EXECUTION_SLICES_V7.md"
 DEV_STATE = ROOT / "V7_DEV_STATE.md"
+SOMA_COUNCIL_PROTOCOL = ROOT / "docs" / "architecture" / "SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md"
+UI_OPERATOR_EXPERIENCE = ROOT / "docs" / "architecture-library" / "UI_AND_OPERATOR_EXPERIENCE_V7.md"
 CANONICAL_DOCS = [
     README,
     PRD_INDEX,
@@ -242,6 +244,48 @@ def test_dev_state_uses_delivery_program_snapshot():
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
     assert not missing, f"Dev state is missing delivery-program framing: {missing}"
+
+
+def test_ui_operator_experience_covers_direct_first_and_theme_simplification_contract():
+    text = UI_OPERATOR_EXPERIENCE.read_text(encoding="utf-8")
+    required_snippets = [
+        "### 3.5 Soma-First conversation economy rule",
+        "Workspace chat should default to Soma-only execution for normal interaction.",
+        "### 3.6 Theme simplification rule",
+        "diagnostics are progressive-disclosure, not always-on density",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, (
+        "UI/operator experience doc is missing direct-first or theme-simplification contract snippets: "
+        f"{missing}"
+    )
+
+
+def test_soma_council_protocol_defines_consultation_trigger_modes():
+    text = SOMA_COUNCIL_PROTOCOL.read_text(encoding="utf-8")
+    required_snippets = [
+        "### 2.1 Consultation trigger policy (token economy)",
+        "Council consultation is required only when at least one condition is true:",
+        "- `none`: no council call, Soma responds directly",
+        "- `targeted`: one specialist selected by need",
+        "- `full_council`: only for explicitly broad architectural/program decisions",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, f"Soma-council protocol is missing consultation trigger contract snippets: {missing}"
+
+
+def test_dev_state_tracks_active_slice2_theme_and_routing_priorities():
+    text = DEV_STATE.read_text(encoding="utf-8")
+    required_snippets = [
+        "1. `ACTIVE` Slice 2 sub-track: Workspace theme simplification and conversation-first hierarchy",
+        "2. `ACTIVE` Slice 2 sub-track: Soma direct-first routing economy and consultation trigger discipline",
+        "Where theme/routing are now encoded in architecture planning:",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, f"Dev state is missing active Slice 2 theme/routing priorities: {missing}"
 
 
 def test_canonical_surfaces_do_not_expose_purged_planning_docs():

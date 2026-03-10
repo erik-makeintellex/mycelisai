@@ -4,17 +4,19 @@ Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, fronten
 
 Latest verification baseline (2026-03-10):
 - `uv run inv core.test` -> pass
-- `uv run inv interface.test` -> pass (`59` files, `347` tests)
-- `uv run inv interface.build` -> pass
+- `uv run inv interface.test` -> fails on Windows console encoding (`cp1252`) while streaming vitest output
+- `cd interface && npx vitest run --reporter=dot` -> pass (`59` files, `347` tests)
+- `cd interface && npm run build` -> pass
+- `$env:PYTHONPATH='.'; uv run pytest tests -q` -> pass (`59` passed)
 - focused UI browser proof:
   - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/wiring-edit.spec.ts` -> pass (`1` passed, `1` skipped)
   - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts` -> pass (`3` passed)
   - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v7-operational-ux.spec.ts` -> fail (`1` expectation missing: "Recovered via Soma")
-  - `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts` -> fail (`/api/v1/council/members` response not OK through UI proxy)
+  - `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts` -> pass (`1` passed)
 - `uv run inv team.architecture-sync` -> fail (`127.0.0.1:4222` refused; NATS not reachable)
-- `uv run inv ci.baseline` -> fail (`quality.max-lines` gate; summary also reports core go-test failure during baseline run)
+- `uv run inv ci.baseline` -> fail (`quality.max-lines` gate)
   - failing files: `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts`
-  - non-gate validation rerun: `cd core && go test ./... -count=1` -> pass
+  - non-gate validation rerun: `uv run inv core.test` -> pass
 - Slice 6 focused evidence:
   - `cd core && go test ./internal/server -run "TestInferAdapterKindFromTool|TestBuildMutationChatProposal" -count=1` -> pass
   - `cd interface && npx vitest run __tests__/store/useCortexStore.test.ts __tests__/dashboard/ProposedActionBlock.test.tsx --reporter=dot` -> pass (`2` files, `33` tests)
@@ -35,6 +37,27 @@ Cross-reference:
 - `docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md`
 - `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 - `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+
+## Full GUI Coverage Matrix (2026-03-10 Audit)
+
+This matrix is route-driven and code-verified against `interface/app/**`, `interface/__tests__/pages/**`, and `interface/e2e/specs/**`.
+
+| GUI surface | Unit/component coverage | Playwright coverage | Status |
+| --- | --- | --- | --- |
+| `/dashboard` Workspace | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `v7-operational-ux.spec.ts`, `workspace-live-backend.spec.ts`, accessibility baseline | `ACTIVE` |
+| `/automations` | `AutomationsPage.test.tsx`, automations component suites | `v7-operational-ux.spec.ts`, `layout.spec.ts` | `ACTIVE` |
+| `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial) | `ACTIVE` |
+| `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` | `ACTIVE` |
+| `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | `v7-operational-ux.spec.ts` quick-check scenarios | `ACTIVE` |
+| `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites | `settings.spec.ts` | `ACTIVE` |
+| `/runs`, `/runs/[id]` | run component suites (`RunDetailPage`, timeline, cards) | no dedicated run-route e2e yet | `NEXT` |
+| `/docs` in-app browser | no dedicated page test yet | no dedicated docs-route e2e yet | `REQUIRED` |
+| Legacy redirect routes (`/wiring`, `/architect`, `/teams`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
+
+Immediate test additions required for full GUI confidence:
+1. add dedicated `/docs` route tests (unit + e2e smoke)
+2. add dedicated `/runs` and `/runs/[id]` e2e coverage for timeline + conversation tab transitions
+3. close `v7-operational-ux` reroute assertion drift (`Recovered via Soma`) so Slice 2 UX gate can be marked green
 
 ## Backend/API -> UI Target Plan (Required)
 
@@ -93,7 +116,9 @@ Signal/channel standard:
 - When tests touch NATS channel behavior, use the canonical subject families and source metadata defined in `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`.
 - Development-only infrastructure subjects are not part of product orchestration and should stay out of authoritative runtime tests unless the test is explicitly exercising dev-only behavior.
 - Current focused runtime check: `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
+- Current focused agent parsing/preflight check: `cd core && go test ./internal/swarm -run "TestParseConversationPayload_|TestParseToolCall|TestAutofillToolArguments|TestShouldCouncilPreflight|TestCouncilPreflightMember" -count=1`
 - Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
+- Current focused store-utils check: `cd interface && npx vitest run __tests__/store/cortexStoreUtils.test.ts __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused Workspace chat contract check: `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
 - Current focused execution feedback check: `cd interface && npx vitest run __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`
 - Current focused Workspace failure-model check: `cd interface && npx vitest run __tests__/lib/missionChatFailure.test.ts __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`

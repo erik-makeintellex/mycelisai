@@ -406,6 +406,62 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
         });
 
+        it('records Soma blocker mode when council roster is unavailable', async () => {
+            mockFetch
+                .mockResolvedValueOnce({ ok: false })
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 500,
+                    text: async () => '{"error":"Soma chat blocked (500)"}',
+                });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const input = screen.getByPlaceholderText(/Ask Soma/i);
+            fireEvent.change(input, { target: { value: 'hello' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(useCortexStore.getState().activeMode).toBe('blocker');
+            });
+            expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
+            expect(screen.queryByText('Switch to Soma')).toBeNull();
+            expect(
+                mockFetch.mock.calls.some((c: any[]) => typeof c[0] === 'string' && c[0].includes('/api/v1/chat'))
+            ).toBe(true);
+        });
+
+        it('records council blocker mode and shows Soma fallback actions when direct council chat fails', async () => {
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 500,
+                    text: async () => '{"error":"Council member failed"}',
+                });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+            act(() => {
+                useCortexStore.getState().setCouncilTarget('council-sentry');
+            });
+
+            const input = screen.getByPlaceholderText(/Direct to Sentry/i);
+            fireEvent.change(input, { target: { value: 'hello sentry' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(useCortexStore.getState().activeMode).toBe('blocker');
+            });
+            expect(screen.getByText('Council Call Failed')).toBeDefined();
+            expect(screen.getByText('Switch to Soma')).toBeDefined();
+            expect(screen.getByText('Continue with Soma Only')).toBeDefined();
+            expect(
+                mockFetch.mock.calls.some((c: any[]) => typeof c[0] === 'string' && c[0].includes('/api/v1/council/council-sentry/chat'))
+            ).toBe(true);
+        });
+
         it('shows error as chat bubble with source_node on API failure', async () => {
             useCortexStore.setState({
                 councilTarget: 'council-architect',
