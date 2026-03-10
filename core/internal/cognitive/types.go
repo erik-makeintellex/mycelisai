@@ -26,7 +26,7 @@ type ProviderConfig struct {
 	AuthKey    string `yaml:"api_key" json:"-"`                   // NEVER expose in API responses
 	AuthKeyEnv string `yaml:"api_key_env" json:"-"`               // NEVER expose in API responses
 
-	// Phase 19: Provider orchestration metadata
+	// Provider orchestration metadata
 	Location     string   `yaml:"location" json:"location"`           // "local" | "remote"
 	DataBoundary string   `yaml:"data_boundary" json:"data_boundary"` // "local_only" | "leaves_org"
 	UsagePolicy  string   `yaml:"usage_policy" json:"usage_policy"`   // "local_first" | "allow_escalation" | "require_approval" | "disallowed"

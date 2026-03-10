@@ -1,7 +1,7 @@
 # Next Execution Slices V7
 
 > Status: Canonical working queue
-> Last Updated: 2026-03-09
+> Last Updated: 2026-03-10
 > Purpose: Translate the modular architecture library into the next concrete delivery slices with explicit development and testing references.
 
 Related:
@@ -36,6 +36,14 @@ This queue is ordered by product evocation first:
 3. internal coordination that unlocks governed execution
 4. structural cleanup behind behavior contracts
 5. manifest-lifecycle unification for later phases
+
+## Launch Focus (2026-03-10)
+
+Primary issues for launch-readiness, in strict order:
+1. Slice 2 (`ACTIVE`) — unify operator-facing failure/recovery behavior with full runtime/UI evidence.
+2. Slice 3 (`NEXT`) — close `prime-development` reply reliability on canonical team lanes.
+3. Slice 4 (`REQUIRED`) — reduce hot-path complexity and remove max-lines gate pressure.
+4. Scheduler + chain prerequisites (`REQUIRED`) — unblock Slice 7 created-team interaction delivery.
 
 ## Slice 1: Launch Crew And Workflow Onboarding
 
@@ -123,6 +131,8 @@ Required proof:
 - focused UI tests for blocker/recovery behavior
 - focused runtime/task tests for startup, teardown, and degraded messaging
 - logging/schema or topic checks where runtime event shape changes
+- focused Playwright proof for Workspace degraded/recovery UX on at least one desktop browser
+- live-backend Playwright proof when proxy/API runtime contracts in this slice change
 
 Acceptance criteria:
 - operator-facing failure states are actionable and specific
@@ -165,6 +175,7 @@ Testing docs:
 Required proof:
 - task test coverage for canonical publish/collect path
 - live `uv run inv team.architecture-sync` evidence showing all three standing teams reply cleanly
+- subject-path evidence showing request on `internal.command` with responses on `signal.status`/`signal.result`
 
 Acceptance criteria:
 - `prime-development` replies within the sync window
@@ -201,6 +212,7 @@ Required proof:
 - focused unit/integration tests around the extracted behaviors
 - `uv run inv quality.max-lines --limit 350`
 - no regression in lifecycle/chat/runtime behaviors covered by the changed files
+- verification rerun of `uv run inv core.test`, `uv run inv interface.test`, and `uv run inv interface.build` after extraction
 
 Acceptance criteria:
 - one or more hot-path files become smaller or stop growing under legacy caps
@@ -348,21 +360,19 @@ Acceptance criteria:
 Rollback:
 - revert team workspace surfaces while preserving existing run timeline and conversation views
 
-## Immediate Working Order
+## Immediate Working Order (Launch Path)
 
-1. Slice 1
-2. Slice 2
-3. Slice 3
-4. Slice 4
+1. Slice 2
+2. Slice 3
+3. Slice 4
+4. Slice 6
 5. Slice 5
-6. Slice 6
-7. Slice 7
+6. Slice 7
 
 That order now follows the architecture library more directly:
-- operator-facing execution clarity first
-- operator-facing failure/recovery clarity second
-- internal coordination third
-- structural cleanup fourth
+- operator-facing failure/recovery clarity first
+- internal coordination second
+- structural cleanup third
+- module-binding closure fourth
 - manifest-lifecycle unification fifth
-- module-binding unification sixth
-- created-team interaction seventh
+- created-team interaction sixth

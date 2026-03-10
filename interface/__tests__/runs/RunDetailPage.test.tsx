@@ -27,8 +27,8 @@ vi.mock('react', async () => {
 vi.mock('next/dynamic', () => ({
     __esModule: true,
     default: (loader: any) => {
-        const Component = (props: any) => {
-            return <div data-testid="dynamic-component" {...props} />;
+        const Component = () => {
+            return <div data-testid="dynamic-component" />;
         };
         Component.displayName = 'DynamicMock';
         return Component;

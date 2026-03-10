@@ -274,7 +274,7 @@ type ProcessResult struct {
 	Text      string                     `json:"text"`
 	ToolsUsed []string                   `json:"tools_used,omitempty"`
 	Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
-	// Phase 19: Brain provenance — which provider/model executed this request
+	// Brain provenance: which provider/model executed this request.
 	ProviderID string `json:"provider_id,omitempty"`
 	ModelUsed  string `json:"model_used,omitempty"`
 	// V7: Council consultations made during the ReAct loop (for frontend delegation trace)

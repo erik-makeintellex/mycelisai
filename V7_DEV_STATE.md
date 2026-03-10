@@ -1,6 +1,6 @@
 # Mycelis V7 — Development State
 
-> **Updated:** 2026-03-09
+> **Updated:** 2026-03-10
 > **References:** `mycelis-architecture-v7.md` (PRD index), `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md` (canonical planning library), `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` (execution queue), `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` (team protocol)
 
 ---
@@ -45,6 +45,58 @@ Slice 7  Created-team workspace and channel inspector                [BLOCKED]
 - Backend/API slices now require an attached UI-targeted review/test plan block before review.
 - Deep testing now follows target-action lockstep in `docs/TESTING.md` and `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`.
 - Current gate note: latest `uv run inv ci.baseline` run failed on `quality.max-lines`; command-level reruns confirm `core.test`, `interface.test`, and `interface.build` pass.
+
+### Architecture Cleanup + Launch Program Update (2026-03-10)
+
+Status marker context:
+- Slice 2 remains `ACTIVE`
+- Slice 3 remains `NEXT`
+- Slice 4 remains `REQUIRED`
+- Slice 7 remains `BLOCKED`
+
+Codebase cleanup delivered:
+1. removed stale planning-era markers (`Phase 19` / `Phase 19-B`) from active runtime/UI files and replaced with stable contract language
+2. removed debug-only runtime/UI instrumentation from live paths:
+- `interface/store/useCortexStore.ts` (`[DEBUG]` logs + debug DOM overlays removed)
+- `interface/components/workspace/CircuitBoard.tsx` (debug button/state dump removed)
+3. kept existing behavior intact while reducing noise in hot paths and UI state actions
+
+Canonical execution-doc updates:
+- `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` now defines parallel lane execution over canonical NATS channels and launch gate sequencing
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` now includes launch-priority workstream ordering and expanded proof expectations
+- `docs/TESTING.md` baseline updated with latest pass/fail evidence, including UI browser and live-backend checks
+
+Evidence commands (2026-03-10):
+- `uv run inv core.test` -> pass
+- `uv run inv interface.test` -> pass (`59` files, `347` tests)
+- `uv run inv interface.build` -> pass
+- `uv run inv interface.e2e --project=chromium --spec=e2e/specs/wiring-edit.spec.ts` -> pass (`1` passed, `1` skipped)
+- `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts` -> pass (`3` passed)
+- `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v7-operational-ux.spec.ts` -> fail (`Recovered via Soma` expectation not found)
+- `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts` -> fail (`/api/v1/council/members` not OK)
+- `uv run inv team.architecture-sync` -> fail (`127.0.0.1:4222` refused)
+- `uv run inv ci.baseline` -> fail (`quality.max-lines`; baseline summary also reported core go-test failure)
+
+Backend/API -> UI target review/test plan:
+- Backend/API change: none functional in this cleanup slice; runtime-facing edits are comment hygiene only.
+- UI surfaces impacted:
+  - `interface/components/workspace/CircuitBoard.tsx`
+  - `interface/store/useCortexStore.ts`
+- Expected terminal states: unchanged (`answer|proposal|execution_result|blocker` contract preserved)
+- Failure/recovery expectation: unchanged; blocker/recovery paths remain governed by existing Slice 2 contracts and tests.
+
+Active blockers and dependencies:
+1. `quality.max-lines` gate still red:
+- `core/internal/swarm/agent.go`
+- `core/internal/swarm/internal_tools.go`
+- `interface/store/useCortexStore.ts`
+2. live-backend Workspace proxy contract still failing on `/api/v1/council/members`
+3. NATS local coordination path unavailable for `team.architecture-sync` (`127.0.0.1:4222` refused)
+
+Next 24-48h actions:
+1. move Slice 3 to `ACTIVE` once NATS local path is restored and prime-development reply proof is captured
+2. close v7 operational UX reroute assertion drift (`Recovered via Soma`) and rerun focused spec
+3. execute Slice 4 extraction steps targeting the three max-lines blockers and rerun `uv run inv ci.baseline`
 
 ### Engagement Kickoff (2026-03-09)
 

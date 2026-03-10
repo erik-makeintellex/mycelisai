@@ -192,7 +192,7 @@ export const MEMORY_LABELS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Phase 19: Brain / Provider labels
+// Brain / Provider labels
 // ---------------------------------------------------------------------------
 
 export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
