@@ -303,7 +303,7 @@ func (s *Service) ListSitReps(ctx context.Context, teamID string, limit int) ([]
 	return results, nil
 }
 
-// ── Conversation Memory (Phase 19) ───────────────────────────
+// ── Conversation Memory ───────────────────────────────────────
 
 // ConversationSummary represents a stored conversation summary with extracted metadata.
 type ConversationSummary struct {

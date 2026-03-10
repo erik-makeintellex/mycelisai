@@ -78,10 +78,8 @@ export default function CircuitBoard() {
 
     const handleDeleteAgent = useCallback(
         (teamIdx: number, agentIdx: number) => {
-            console.log('[DEBUG] CircuitBoard handleDeleteAgent', { teamIdx, agentIdx, missionStatus });
             if (missionStatus === 'active') {
                 const agentName = blueprint?.teams[teamIdx]?.agents[agentIdx]?.id;
-                console.log('[DEBUG] Deleting active agent', agentName);
                 if (agentName) {
                     deleteAgentFromMission(agentName);
                 }
@@ -110,20 +108,6 @@ export default function CircuitBoard() {
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg relative">
-            {/* DEBUG BUTTON */}
-            <div className="absolute top-0 left-0 z-50 p-2">
-                <button className="bg-red-500 text-white text-xs px-2 py-1" onClick={() => {
-                    const state = useCortexStore.getState();
-                    const activeAgent = state.blueprint?.teams.flatMap(t => t.agents).find(a => a.id === 'agent-0-0' || a.id === 'agent-001'); // helper
-                    console.log('[DEBUG_STATE_DUMP]', {
-                        blueprint: state.blueprint,
-                        missionStatus: state.missionStatus,
-                        activeMissionId: state.activeMissionId,
-                        allAgentIds: state.blueprint?.teams.flatMap(t => t.agents.map(a => a.id))
-                    });
-                }}>DEBUG STATE</button>
-            </div>
-
             {
                 blueprint && (
                     <div className="px-4 py-1.5 border-b border-cortex-border flex items-center gap-4 bg-cortex-surface/50">

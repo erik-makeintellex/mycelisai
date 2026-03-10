@@ -110,7 +110,7 @@ export interface ContextSnapshot {
     created_at: string;
 }
 
-// Phase 19: Brain provenance — which provider/model executed a response
+// Brain provenance metadata for provider/model attribution on responses.
 export interface BrainProvenance {
     provider_id: string;
     provider_name?: string;
@@ -134,7 +134,7 @@ export interface ChatMessage {
     mode?: ExecutionMode;
     provenance?: AnswerProvenance;
     proposal?: ProposalData;
-    // Phase 19: Brain provenance
+    // Brain provenance
     brain?: BrainProvenance;
     // V7: run link for system messages
     run_id?: string;
@@ -720,7 +720,7 @@ export interface CortexState {
     // Signal Detail Drawer
     selectedSignalDetail: SignalDetail | null;
 
-    // Phase 19: Agent & Provider Orchestration
+    // Agent/provider orchestration
     activeBrain: BrainProvenance | null;
     activeMode: ExecutionMode;
     activeRole: string;
@@ -824,7 +824,7 @@ export interface CortexState {
     // Signal Detail Drawer
     selectSignalDetail: (detail: SignalDetail | null) => void;
 
-    // Phase 19: Agent & Provider Orchestration
+    // Agent/provider orchestration
     setInspectedMessage: (msg: ChatMessage | null) => void;
 
     // Mission Profiles & Context Snapshots
@@ -1286,7 +1286,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     // Signal Detail Drawer
     selectedSignalDetail: null,
 
-    // Phase 19: Agent & Provider Orchestration
+    // Agent/provider orchestration
     activeBrain: null,
     activeMode: 'answer' as ExecutionMode,
     activeRole: '',
@@ -1495,7 +1495,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         set({ selectedSignalDetail: detail });
     },
 
-    // Phase 19: Agent & Provider Orchestration
+    // Agent/provider orchestration
     setInspectedMessage: (msg: ChatMessage | null) => {
         set({ inspectedMessage: msg, isInspectorOpen: msg !== null });
     },
@@ -1975,7 +1975,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
         try {
             // Smart windowing: send only the last 20 messages to the LLM.
-            // Older context is auto-recalled from pgvector by the backend (Phase 19).
+            // Older context is auto-recalled from pgvector by the backend.
             const messages = [...get().missionChat]
                 .slice(-20)
                 .map((m) => ({
@@ -2048,13 +2048,13 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 template_id: envelope.template_id || 'chat-to-answer',
                 mode: envelope.mode || 'answer',
                 provenance: envelope.payload?.provenance,
-                // Phase 19: Brain provenance
+                // Brain provenance
                 brain: envelope.payload?.brain,
-                // Phase 19-B: Extract proposal from chat response
+                // Extract proposal from chat response
                 proposal: normalizeProposalData(envelope.payload?.proposal),
             };
 
-            // Phase 19: Derive governance mode from trust threshold
+            // Derive governance mode from trust threshold
             const trust = get().trustThreshold;
             const govMode = trust >= 0.8 ? 'strict' as const : trust >= 0.5 ? 'active' as const : 'passive' as const;
 
@@ -2062,12 +2062,12 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 isMissionChatting: false,
                 missionChat: [...s.missionChat, chatMsg],
                 missionChatFailure: null,
-                // Phase 19: Update active orchestration state
+                // Update active orchestration state
                 activeBrain: chatMsg.brain ?? null,
                 activeMode: chatMsg.mode || 'answer',
                 activeRole: chatMsg.source_node || '',
                 governanceMode: govMode,
-                // Phase 19-B: Set pending proposal if present
+                // Set pending proposal when present
                 ...(chatMsg.proposal ? {
                     pendingProposal: chatMsg.proposal,
                     activeConfirmToken: chatMsg.proposal.confirm_token,
@@ -2391,30 +2391,18 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     },
 
     deleteAgentFromDraft: (teamIdx: number, agentIdx: number) => {
-        console.log('[DEBUG] deleteAgentFromDraft called', { teamIdx, agentIdx });
         const bp = get().blueprint;
-        if (!bp) {
-            console.error('[DEBUG] No blueprint found');
-            return;
-        }
+        if (!bp) return;
         const newBp: MissionBlueprint = structuredClone(bp);
-        console.log('[DEBUG] Blueprint cloned', newBp);
         const team = newBp.teams[teamIdx];
-        if (!team) {
-            console.error('[DEBUG] Team not found', teamIdx);
-            return;
-        }
+        if (!team) return;
         team.agents.splice(agentIdx, 1);
-        console.log('[DEBUG] Agent spliced. Remaining in team:', team.agents.length);
         // Remove team if empty
         if (team.agents.length === 0) {
             newBp.teams.splice(teamIdx, 1);
-            console.log('[DEBUG] Team removed (empty). Remaining teams:', newBp.teams.length);
         }
         const { nodes, edges } = blueprintToGraph(newBp);
-        console.log('[DEBUG] Graph regenerated', { nodes: nodes.length, edges: edges.length });
         set({ blueprint: newBp, nodes, edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
-        console.log('[DEBUG] State updated');
     },
 
     discardDraft: () => {
@@ -2465,32 +2453,17 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     deleteAgentFromMission: async (agentName: string) => {
         const { activeMissionId, blueprint } = get();
-        console.log('[DEBUG] deleteAgentFromMission called', { agentName, activeMissionId });
         if (!activeMissionId) return;
 
         try {
             const res = await fetch(`/api/v1/missions/${activeMissionId}/agents/${agentName}`, {
                 method: 'DELETE',
             });
-            console.log('[DEBUG] DELETE API response:', res.status);
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                const errMsg = data.error ?? res.statusText;
-                console.error('deleteAgentFromMission error:', errMsg);
-
-                const div = document.createElement('div');
-                div.id = 'debug-result-error';
-                div.innerText = 'DELETE ERROR: ' + errMsg;
-                div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:red;color:white;font-size:32px;padding:20px;border:4px solid black;';
-                document.body.appendChild(div);
+                console.error('deleteAgentFromMission error:', data.error ?? res.statusText);
                 return;
             }
-
-            const div = document.createElement('div');
-            div.id = 'debug-result-success';
-            div.innerText = 'DELETE SUCCESS: ' + agentName;
-            div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:green;color:white;font-size:32px;padding:20px;border:4px solid black;';
-            document.body.appendChild(div);
 
             // Update local blueprint
             if (blueprint) {
@@ -2499,7 +2472,6 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 for (let tIdx = 0; tIdx < newBp.teams.length; tIdx++) {
                     const aIdx = newBp.teams[tIdx].agents.findIndex((a) => a.id === agentName);
                     if (aIdx !== -1) {
-                        console.log('[DEBUG] Splicing active agent at', { tIdx, aIdx });
                         newBp.teams[tIdx].agents.splice(aIdx, 1);
                         spliced = true;
                         if (newBp.teams[tIdx].agents.length === 0) {
@@ -2508,11 +2480,12 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                         break;
                     }
                 }
-                if (!spliced) console.warn('[DEBUG] Active agent NOT found in blueprint:', agentName);
+                if (!spliced) {
+                    console.warn('deleteAgentFromMission: active agent not found in local blueprint:', agentName);
+                }
 
                 const { nodes, edges } = blueprintToGraph(newBp);
                 set({ blueprint: newBp, nodes: solidifyNodes(nodes), edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
-                console.log('[DEBUG] Active state updated');
             }
         } catch (err) {
             console.error('deleteAgentFromMission:', err);

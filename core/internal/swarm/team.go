@@ -157,7 +157,7 @@ func (t *Team) Start() error {
 	internalResponse := fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID)
 	t.nc.Subscribe(internalResponse, t.handleResponse)
 
-	// 4. Start scheduler if configured (Phase 19: scheduled team execution)
+	// 4. Start scheduler if configured (scheduled team execution).
 	if t.Manifest.Schedule != nil && t.Manifest.Schedule.Interval != "" {
 		interval, err := time.ParseDuration(t.Manifest.Schedule.Interval)
 		if err != nil {

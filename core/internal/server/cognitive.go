@@ -312,7 +312,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		Consultations: agentResult.Consultations,
 	}
 
-	// Phase 19: Build brain provenance from agent's inference metadata
+	// Build brain provenance from agent inference metadata.
 	if agentResult.ProviderID != "" && s.Cognitive != nil {
 		brain := &protocol.BrainProvenance{
 			ProviderID: agentResult.ProviderID,
@@ -334,7 +334,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		chatPayload.Brain = brain
 	}
 
-	// Phase 19-B: Detect mutation tools → switch to proposal mode
+	// Detect mutation tools and switch to proposal mode when needed.
 	isMutation, mutTools := hasMutationTools(agentResult.ToolsUsed)
 
 	var templateID protocol.TemplateID
@@ -564,7 +564,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		Consultations: agentResult.Consultations,
 	}
 
-	// Phase 19: Build brain provenance from agent's inference metadata
+	// Build brain provenance from agent inference metadata.
 	if agentResult.ProviderID != "" && s.Cognitive != nil {
 		brain := &protocol.BrainProvenance{
 			ProviderID: agentResult.ProviderID,
@@ -587,7 +587,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		chatPayload.Brain = brain
 	}
 
-	// Phase 19-B: Detect mutation tools → switch to proposal mode
+	// Detect mutation tools and switch to proposal mode when needed.
 	isMutation, mutTools := hasMutationTools(agentResult.ToolsUsed)
 
 	var templateID protocol.TemplateID

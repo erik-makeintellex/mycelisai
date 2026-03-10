@@ -82,7 +82,7 @@ func (e *CTSEnvelope) Validate() error {
 }
 
 // BrainProvenance carries metadata about which provider/model executed a request.
-// Phase 19: Every LLM response must be traceable to its source brain.
+// Every LLM response should be traceable to its source brain.
 type BrainProvenance struct {
 	ProviderID   string `json:"provider_id"`             // "ollama", "claude"
 	ProviderName string `json:"provider_name,omitempty"` // display name
@@ -93,7 +93,7 @@ type BrainProvenance struct {
 }
 
 // ChatProposal carries proposal metadata for chat-based mutation actions.
-// Phase 19-B: When an agent uses mutation tools, the response is tagged as a proposal.
+// When an agent uses mutation tools, the response is tagged as a proposal.
 // Slice 6: Team expressions + module bindings are optional structured fields
 // that bridge intent-level proposals to executable binding contracts.
 type ChatModuleBinding struct {
@@ -138,9 +138,9 @@ type ChatResponsePayload struct {
 	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`
 	// CE-1: Answer provenance (audit linkage for Chat-to-Answer template)
 	Provenance *AnswerProvenance `json:"provenance,omitempty"`
-	// Phase 19: Brain provenance (which provider/model executed this response)
+	// Brain provenance (which provider/model executed this response)
 	Brain *BrainProvenance `json:"brain,omitempty"`
-	// Phase 19-B: Chat proposal (when agent uses mutation tools)
+	// Chat proposal (when agent uses mutation tools)
 	Proposal *ChatProposal `json:"proposal,omitempty"`
 }
 

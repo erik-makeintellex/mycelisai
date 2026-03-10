@@ -2,11 +2,17 @@
 
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
-Latest verification baseline (2026-03-09):
+Latest verification baseline (2026-03-10):
 - `uv run inv core.test` -> pass
 - `uv run inv interface.test` -> pass (`59` files, `347` tests)
 - `uv run inv interface.build` -> pass
-- `uv run inv ci.baseline` -> fail (`quality.max-lines` gate)
+- focused UI browser proof:
+  - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/wiring-edit.spec.ts` -> pass (`1` passed, `1` skipped)
+  - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/accessibility.spec.ts` -> pass (`3` passed)
+  - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v7-operational-ux.spec.ts` -> fail (`1` expectation missing: "Recovered via Soma")
+  - `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts` -> fail (`/api/v1/council/members` response not OK through UI proxy)
+- `uv run inv team.architecture-sync` -> fail (`127.0.0.1:4222` refused; NATS not reachable)
+- `uv run inv ci.baseline` -> fail (`quality.max-lines` gate; summary also reports core go-test failure during baseline run)
   - failing files: `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts`
   - non-gate validation rerun: `cd core && go test ./... -count=1` -> pass
 - Slice 6 focused evidence:
