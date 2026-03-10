@@ -172,6 +172,8 @@ Current baseline assignment:
   - ship scheduler/chain prerequisites and hot-path reductions
 - `Interface/Operator`:
   - align blocker/recovery UX across Workspace and team-facing surfaces
+  - reduce Workspace default density and enforce conversation-first theme hierarchy
+  - keep Soma chat direct-first for routine interaction; surface consultation only when explicitly triggered
   - prepare created-team communication inspector integration points
 - `QA/Verification`:
   - run deep-test matrix with explicit UI proof for backend/API-affecting changes
@@ -183,6 +185,8 @@ Current active priorities:
 1. Slice 2 remains `ACTIVE`
 2. Slice 3 remains `NEXT` and is first candidate to move to `ACTIVE`
 3. Slice 4 remains `REQUIRED` with max-lines pressure still open
+4. Workspace complexity/theme simplification is tracked inside Slice 2 (no new slice introduced)
+5. Soma direct-first consultation policy is tracked inside Slice 2 and the Soma-Council protocol
 
 Latest known gate posture:
 - `uv run inv core.test` -> pass

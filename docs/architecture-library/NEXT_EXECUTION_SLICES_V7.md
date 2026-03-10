@@ -102,6 +102,8 @@ Objective:
 
 Scoped outcome:
 - Workspace, council, lifecycle, and bootstrap failures must explain what happened and what to do next instead of collapsing into generic noise.
+- Workspace should reduce dashboard density and maintain a conversation-first visual hierarchy aligned with anti-information-swarm rules.
+- Soma chat should stay direct-first by default; council consultation should be explicit/intent-triggered for planning/architecture/delivery depth.
 
 Scoped files:
 - `docs/logging.md`
@@ -109,6 +111,11 @@ Scoped files:
 - `core/internal/server/comms.go`
 - `core/internal/mcp/service.go`
 - `ops/lifecycle.py`
+- `docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
+- `docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`
+- `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+- `interface/components/dashboard/MissionControl.tsx`
+- `interface/components/dashboard/OpsOverview.tsx`
 - `interface/components/dashboard/CouncilCallErrorCard.tsx`
 - `interface/components/dashboard/DegradedModeBanner.tsx`
 - `interface/components/dashboard/MissionControlChat.tsx`
@@ -131,6 +138,8 @@ Required proof:
 - focused UI tests for blocker/recovery behavior
 - focused runtime/task tests for startup, teardown, and degraded messaging
 - logging/schema or topic checks where runtime event shape changes
+- focused UI tests proving direct-first Soma responses for routine intents and consultation traces only when planning/architecture/delivery intent is explicit
+- focused UI tests proving dashboard simplification keeps conversation outcome dominant and diagnostics progressive-disclosure
 - focused Playwright proof for Workspace degraded/recovery UX on at least one desktop browser
 - live-backend Playwright proof when proxy/API runtime contracts in this slice change
 
@@ -138,6 +147,8 @@ Acceptance criteria:
 - operator-facing failure states are actionable and specific
 - no generic planning-only or opaque 500-style outcomes remain in the scoped paths
 - docs and tests describe the same failure/recovery contract
+- Workspace visual hierarchy is conversation-first and less dense by default
+- Soma does not auto-consult council on every routine interaction
 
 Rollback:
 - revert only the scoped feedback/logging slice while preserving previously proven execution contracts

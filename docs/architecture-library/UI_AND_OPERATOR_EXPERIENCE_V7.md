@@ -1,7 +1,7 @@
 # UI And Operator Experience V7
 
 > Status: Canonical
-> Last Updated: 2026-03-09
+> Last Updated: 2026-03-10
 > Scope: Operator journeys, UI targets, information hierarchy, anti-swarm rules, and intuitive interaction design.
 
 Related:
@@ -66,6 +66,27 @@ When the system degrades, the UI must expose:
 - what failed
 - what still works
 - what the operator can do immediately
+
+### 3.5 Soma-First conversation economy rule
+
+Workspace chat should default to Soma-only execution for normal interaction.
+
+Council engagement should be triggered only when:
+- operator explicitly targets a council member
+- operator explicitly asks to plan, architect, or deliver
+- request crosses complexity/risk thresholds that require specialist review
+
+This preserves token efficiency and keeps routine interaction direct.
+
+### 3.6 Theme simplification rule
+
+Workspace must be legible and intention-first before it is information-dense.
+
+Required layout posture:
+- conversation and terminal outcome are dominant
+- secondary controls are visible but compact
+- diagnostics are progressive-disclosure, not always-on density
+- advanced telemetry remains gated behind explicit advanced actions
 
 ## 4. Primary Operator Journeys
 
@@ -133,6 +154,12 @@ Must emphasize:
 Must demote:
 - deep telemetry
 - low-signal system internals
+- dense multi-widget dashboards that obscure the active conversation outcome
+
+Workspace conversation policy:
+- default route is Soma-first and direct
+- council consultation is intent-triggered, not unconditional
+- user should see when and why consultation happened
 
 ### 5.2 Automations
 
@@ -244,11 +271,12 @@ It is the interface that gets the operator to the correct next decision with the
 
 The next UI-heavy slices should be judged against this order:
 1. Workspace answer/proposal/result/blocker clarity
-2. Launch Crew and workflow onboarding clarity
-3. Automations clarity for scheduled and persistent plans
-4. created-team workspace and communications clarity
-5. Runs and chain inspection clarity
-6. System recovery clarity
+2. Workspace density/theme simplification under progressive-disclosure rules
+3. Launch Crew and workflow onboarding clarity
+4. Automations clarity for scheduled and persistent plans
+5. created-team workspace and communications clarity
+6. Runs and chain inspection clarity
+7. System recovery clarity
 
 Next:
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
