@@ -273,6 +273,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Active MVP lane ownership, communication cadence, and state-file update discipline",
             },
             {
+                slug: "mvp-integration-toolship-execution-plan-v7",
+                label: "MVP Integration + Toolship Plan V7",
+                path: "docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md",
+                description: "Canonical plan for AI interaction, internal toolship, and service-connection hardening to reach non-test-team MVP",
+            },
+            {
                 slug: "arch-overview",
                 label: "Overview",
                 path: "docs/architecture/OVERVIEW.md",

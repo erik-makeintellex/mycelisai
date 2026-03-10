@@ -167,6 +167,24 @@ test.describe('V7 Operational UX Gate A', () => {
             }
             await route.continue();
         });
+        await page.route('**/api/v1/chat', async (route) => {
+            adminCalls += 1;
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    ok: true,
+                    data: {
+                        meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                        signal_type: 'chat_response',
+                        trust_score: 0.8,
+                        template_id: 'chat-to-answer',
+                        mode: 'answer',
+                        payload: { text: 'Recovered via Soma', consultations: [], tools_used: [] },
+                    },
+                }),
+            });
+        });
 
         await page.goto('/dashboard');
         await page.waitForLoadState('domcontentloaded');

@@ -119,3 +119,59 @@ func TestTeam_ResponseDeliveryWrapsStatusAndResultSignals(t *testing.T) {
 	assertSignal(statusCh, protocol.PayloadKindStatus)
 	assertSignal(resultCh, protocol.PayloadKindResult)
 }
+
+func TestTeam_TriggerLogic_UnwrapsCommandEnvelope(t *testing.T) {
+	opts := server.DefaultTestOptions
+	opts.Port = -1
+	s := server.RunServer(&opts)
+	defer s.Shutdown()
+
+	nc, _ := nats.Connect(s.ClientURL())
+	defer nc.Close()
+
+	manifest := &TeamManifest{
+		ID:     "test-core",
+		Name:   "Test Core",
+		Type:   TeamTypeAction,
+		Inputs: []string{"swarm.global.event.command"},
+	}
+
+	team := NewTeam(manifest, nc, nil, nil)
+	if err := team.Start(); err != nil {
+		t.Fatalf("team start: %v", err)
+	}
+	defer team.Stop()
+
+	done := make(chan string, 1)
+	if _, err := nc.Subscribe("swarm.team.test-core.internal.trigger", func(msg *nats.Msg) {
+		done <- string(msg.Data)
+	}); err != nil {
+		t.Fatalf("subscribe internal trigger: %v", err)
+	}
+	nc.Flush()
+
+	payload, err := protocol.WrapSignalPayloadWithMeta(
+		protocol.SourceKindInternalTool,
+		"internal_tool.delegate_task",
+		protocol.PayloadKindCommand,
+		"run-9",
+		"test-core",
+		"soma-admin",
+		[]byte("inspect gate state"),
+	)
+	if err != nil {
+		t.Fatalf("wrap command payload: %v", err)
+	}
+	if err := nc.Publish("swarm.global.event.command", payload); err != nil {
+		t.Fatalf("publish wrapped command: %v", err)
+	}
+
+	select {
+	case got := <-done:
+		if got != "inspect gate state" {
+			t.Fatalf("internal trigger payload = %q", got)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for internal trigger payload")
+	}
+}

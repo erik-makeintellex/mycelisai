@@ -19,6 +19,7 @@
 > | [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) | Current working queue with scoped next slices and linked development/testing references |
 > | [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) | Lane architecture, global-state maintenance rules, and deep-testing obligations |
 > | [MVP Release Strike Team Plan V7](docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md) | Active MVP lane ownership, communication cadence, and state-file discipline |
+> | [MVP Integration And Toolship Execution Plan V7](docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) | AI/toolship/service integration phases and release gates for non-test-team MVP readiness |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 > | [V7 PRD Index](mycelis-architecture-v7.md) | Stable compatibility entrypoint that points to the modular architecture library |
 > | [Architecture Overview](docs/architecture/OVERVIEW.md) | Supporting architecture summary and specialized phase context |
@@ -78,7 +79,8 @@ If you are a fresh development agent or starting a new interaction, review the d
 9. [Next Execution Slices V7](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) to choose the active slice and load the right development/testing docs before implementation.
 10. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) for lane ownership, state-file update requirements, and deep-testing obligations.
 11. [MVP Release Strike Team Plan V7](docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md) for active lane ownership, communication cadence, and release push sequencing.
-12. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
+12. [MVP Integration And Toolship Execution Plan V7](docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) for AI/toolship/service integration sequencing and non-test-team MVP gates.
+13. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
 
 Use [mycelis-architecture-v7.md](mycelis-architecture-v7.md) only as the stable PRD index and compatibility entrypoint. Do not expand it back into the primary detailed spec.
 
@@ -112,7 +114,7 @@ Built through 19 phases — from genesis through **Admin Orchestrator**, **Counc
 - **Soma → Axon → Teams → Agents:** Mission activation pipeline with heartbeat + proof-of-work.
 - **Parallel Team Activation:** `ActivateBlueprint` starts eligible teams concurrently (bounded worker pool), then inserts them race-safely into Soma's team map. Duplicate IDs are skipped idempotently even under concurrent activation calls.
 - **Standing Teams:** Admin/Soma and Council remain the core standing runtime, with manifest-backed specialist teams such as `prime-architect`, `prime-development`, and `agui-design-architect` available for architecture delivery and workflow-composer coordination.
-- **Team Signal Standard (Runtime):** team-facing ingress uses `swarm.team.{team_id}.internal.command`; operator-facing outputs use `swarm.team.{team_id}.signal.status` or `swarm.team.{team_id}.signal.result` with normalized signal metadata.
+- **Team Signal Standard (Runtime):** team-facing ingress uses `swarm.team.{team_id}.internal.command`; operator-facing outputs use `swarm.team.{team_id}.signal.status` or `swarm.team.{team_id}.signal.result` with normalized signal metadata. Channel relaunch continuity is checkpointed on `signal.latest.<subject>` keys via temp-memory channels.
 - **UI Signal Normalization:** frontend stream consumers normalize legacy and standardized signal envelopes through shared helpers before dashboard, drawer, and status surfaces render them.
 - **Council Chat API:** Standardized CTS-enveloped responses with trust scores, provenance metadata, and tools-used tracking. Dynamic member validation via Soma — add a YAML, restart, done.
 - **Runtime Context Injection:** Every agent receives live system state (active teams, NATS topology, MCP servers, cognitive config, interaction protocols) via `InternalToolRegistry.BuildContext()`.
@@ -273,7 +275,7 @@ The chat renders council/agent responses as **full markdown** (via `react-markdo
 | **Live activity** | While Soma processes, a `SomaActivityIndicator` reads `streamLogs` for `tool.invoked` events and shows contextual text: "Consulting Coder...", "Generating blueprint...", "Searching memory..." instead of a static spinner. |
 | **Broadcast mode** | Toggle or `/all` prefix — sends message to ALL active teams via NATS |
 | **File I/O** | Admin + council agents can `read_file` and `write_file` within the workspace sandbox (`MYCELIS_WORKSPACE`, default `./workspace`; Kubernetes default `/data/workspace`). Paths must resolve inside the boundary — symlink escapes are detected. Max 1MB per write. Sentry is read-only. |
-| **Tool access** | 21 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, save_cached_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, store_artifact, summarize_conversation |
+| **Tool access** | 21 internal tools: consult_council, delegate_task, search_memory, remember, recall, broadcast, publish_signal, read_signals, read_file, write_file, generate_image, save_cached_image, research_for_blueprint, generate_blueprint, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, store_artifact, summarize_conversation. `publish_signal` supports `privacy_mode=reference` + `file_path` + `channel_key`; `read_signals` supports `latest_only` + `channel_key` for relaunch-safe latest-output recovery. |
 | **Image cache policy** | Generated images are cache-first and expire after 60 minutes unless explicitly persisted to `workspace/saved-media` via `save_cached_image` or artifact save API |
 | **MCP tools** | Any installed MCP server tools are also available (filesystem, fetch, brave-search, etc.) |
 | **Trust scores** | Each response carries a CTS trust score (0.0–1.0), displayed as a colored badge |
@@ -1730,6 +1732,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Delivery Governance And Testing V7** | [docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) — Delivery proof model, evidence requirements, and product-aligned testing | [/docs?doc=delivery-governance-testing-v7](/docs?doc=delivery-governance-testing-v7) |
 | **Next Execution Slices V7** | [docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) — Current implementation queue with scoped files plus development and testing references | [/docs?doc=next-execution-slices-v7](/docs?doc=next-execution-slices-v7) |
 | **Team Execution And Global State Protocol V7** | [docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) — Team-lane execution architecture, global state update contract, and deep-testing requirements | [/docs?doc=team-execution-global-state-protocol-v7](/docs?doc=team-execution-global-state-protocol-v7) |
+| **MVP Integration + Toolship Plan V7** | [docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md](docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) — AI/toolship/service integration sequencing, gates, and non-test-team MVP exit criteria | [/docs?doc=mvp-integration-toolship-execution-plan-v7](/docs?doc=mvp-integration-toolship-execution-plan-v7) |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
 | **Backend Specification** | [docs/architecture/BACKEND.md](docs/architecture/BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines | [/docs?doc=arch-backend](/docs?doc=arch-backend) |
 | **Frontend Specification** | [docs/architecture/FRONTEND.md](docs/architecture/FRONTEND.md) — Routes, components, Zustand, design system | [/docs?doc=arch-frontend](/docs?doc=arch-frontend) |
