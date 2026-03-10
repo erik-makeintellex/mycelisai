@@ -1,7 +1,7 @@
 # UI Target And Transaction Contract V7
 
 > Status: Authoritative
-> Last Updated: 2026-03-09
+> Last Updated: 2026-03-10
 > Scope: Required UI terminal states, frontend-triggered backend effects, and delivery-proof test expectations
 
 ## 1. Why This Exists
@@ -69,11 +69,14 @@ Raw `500`, silent timeout, or generic "failed" states are not acceptable deliver
 ### Frontend request
 
 - `POST /api/v1/chat`
+- default Workspace route remains Soma-first; direct council routing is opt-in or intent-triggered by explicit planning/architecture/delivery asks
 
 ### Backend transaction expectations
 
 - request is routed to admin agent through NATS request-reply
 - backend returns CTS-enveloped chat response
+- routine low-complexity intents should complete through Soma without mandatory council consultation
+- council consultation metadata is present only when consultation actually occurred
 - if tools or consultations occur, they are reflected in payload metadata
 - if execution creates a proposal, proposal metadata is present
 - when proposal payload includes Team Expressions, `team_expressions[].module_bindings[]` is preserved for operator inspection
@@ -103,6 +106,8 @@ Raw `500`, silent timeout, or generic "failed" states are not acceptable deliver
 
 - component test: render response-state variants correctly
 - integration test: successful chat request yields one terminal state, not planning-only fallback
+- integration test: routine small intents do not require council consultation metadata
+- integration test: explicit planning/architecture/delivery asks can trigger consultation metadata without changing terminal-state contract
 - integration test: proposal payload normalization derives `teams`/`agents`/`tools` from `team_expressions` when present
 - product-flow test: plain drafting request yields direct answer in chat
 - failure test: timeout or backend rejection yields structured blocker card
@@ -112,6 +117,7 @@ Raw `500`, silent timeout, or generic "failed" states are not acceptable deliver
 ### User interaction
 
 - operator targets Architect, Coder, Creative, or Sentry directly and sends a message
+- or operator explicitly asks Soma for planning/architecture/delivery depth that requires specialist consultation
 
 ### Frontend request
 

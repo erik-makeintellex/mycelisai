@@ -2,7 +2,7 @@
 
 Version: `1.0`  
 Status: `Authoritative`  
-Last Updated: `2026-03-01`
+Last Updated: `2026-03-10`
 
 This document defines the canonical execution-path selection contract for Soma, council members, and the meta-agent (Architect). It ensures consistent behavior when choosing between:
 
@@ -66,6 +66,26 @@ Decision outputs:
 - `propose_with_requirements`: waiting on credentials/config approvals
 - `instantiate_team`: mission blueprint path (C)
 - `code_loop`: Coder implementation + Sentry verification (D)
+
+### 2.1 Consultation trigger policy (token economy)
+
+Default posture:
+- keep conversation Soma-first and direct for routine interaction.
+
+Council consultation is required only when at least one condition is true:
+1. user explicitly asks to plan, architect, design architecture, or deliver an implementation plan
+2. user explicitly requests specialist/council involvement
+3. request is high-impact mutation and policy requires specialist review
+4. request complexity exceeds direct execution confidence and needs decomposition
+
+Consultation modes:
+- `none`: no council call, Soma responds directly
+- `targeted`: one specialist selected by need
+- `full_council`: only for explicitly broad architectural/program decisions
+
+Every response should declare consultation mode implicitly through payload metadata:
+- no consultation metadata for `none`
+- populated consultation trace when `targeted` or `full_council`
 
 ---
 
@@ -205,6 +225,8 @@ Required coverage for this contract:
 
 1. Prompt/manifest contract tests for Soma and council directives.
 2. Integration tests for:
+   - direct-first small-intent behavior (no forced council consult)
+   - explicit plan/architect/deliver intents trigger targeted consultation path
    - MCP-first selection
    - missing dependency requirement emission
    - approval-required high-impact path

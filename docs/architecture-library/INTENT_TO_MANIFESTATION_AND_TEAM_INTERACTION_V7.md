@@ -1,7 +1,7 @@
 # Intent To Manifestation And Team Interaction V7
 
 > Status: Canonical
-> Last Updated: 2026-03-09
+> Last Updated: 2026-03-10
 > Scope: Unified contract for Soma-first manifestation, module integration (internal/MCP/third-party APIs), created-team communication, and operator interaction from intent to durable execution.
 
 Related:
@@ -93,6 +93,8 @@ Every execution-capable intent should follow this sequence:
 2. decision frame:
 - Soma returns one of: `answer`, `proposal`, `execution_result`, `blocker`
 - planning-only text is invalid
+- default conversation posture is Soma-direct (`consultation_mode=none`) for routine intents
+- specialist consultation is triggered only by explicit planning/architecture/delivery asks or high-complexity/high-impact conditions
 
 3. manifestation plan:
 - if execution is needed, Soma emits structured Team Expressions

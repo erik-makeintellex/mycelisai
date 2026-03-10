@@ -98,6 +98,86 @@ Next 24-48h actions:
 2. close v7 operational UX reroute assertion drift (`Recovered via Soma`) and rerun focused spec
 3. execute Slice 4 extraction steps targeting the three max-lines blockers and rerun `uv run inv ci.baseline`
 
+### Architecture Review + Priority Refresh (2026-03-10)
+
+Scope of review:
+- recent commits and net architectural impact
+- canonical architecture docs vs current delivery state
+- planning alignment for UI theme simplification and Soma conversation routing economy
+
+Recent change review (latest first):
+1. `3ded135` `ops: restart degraded core during lifecycle up`
+- impact: startup reliability hardening; avoids keeping Core in degraded mode when DB/NATS recover after initial failure
+- validation:
+  - `uv run inv lifecycle.down` -> pass
+  - `uv run inv lifecycle.up --frontend` -> pass
+  - `uv run inv lifecycle.health` -> pass
+  - `uv run inv db.status` -> pass (35 tables present)
+  - authenticated `GET /api/v1/council/members` -> pass
+2. `3a045a0` `chore: clean planning-era code markers and lock launch execution plan`
+- impact: active runtime/UI code surfaces cleaned of stale phase labels and debug instrumentation; canonical team protocol and queue refreshed for launch execution
+3. `b702ccf` `docs: require ui target test plans for backend api slices`
+- impact: delivery governance tightened; backend/API change review now explicitly coupled to UI-target test planning
+4. `445140a` `feat: wire team-expression module bindings into chat proposals`
+- impact: Slice 6 contract path active; proposal payload now carries structured module-binding metadata usable in operator review flows
+
+Architecture delivery state (detailed):
+
+1. Runtime and orchestration:
+- status: `ACTIVE`
+- now cleanly starts with DB/NATS when brought up in canonical order
+- standing Soma/Council teams are reachable through authenticated API contract
+- known gap: quality gate pressure in hot paths remains (`agent.go`, `internal_tools.go`, `useCortexStore.ts`)
+
+2. UI/operator experience:
+- status: `ACTIVE`
+- failure/recovery model present, but default Workspace visual density remains higher than target conversation-first posture
+- theme simplification and progressive-disclosure behavior are now explicitly recorded in planning docs as active Slice 2 constraints
+
+3. Soma conversation routing economy:
+- status: `NEXT` within active planning
+- target policy is now explicit in planning docs: Soma direct-first for routine intents; council consultation only for explicit plan/architect/deliver asks or high-complexity/high-impact conditions
+- implementation still requires focused runtime/store/UI contract execution and tests to lock behavior
+
+4. Testing and gates:
+- status: `ACTIVE`
+- baseline unit/build checks pass
+- startup/health checks now pass after lifecycle reliability fix
+- remaining gate blockers:
+  - `ci.baseline` fails due max-lines
+  - unresolved operational UX expectation drift (`Recovered via Soma`)
+  - `interface.check` flags hydration mismatch warnings (separate frontend quality track)
+
+Priority stack (do not change global program sequencing):
+1. `ACTIVE` Slice 2 sub-track: Workspace theme simplification and conversation-first hierarchy
+2. `ACTIVE` Slice 2 sub-track: Soma direct-first routing economy and consultation trigger discipline
+3. `NEXT` Slice 3: prime-development canonical NATS reply reliability
+4. `REQUIRED` Slice 4: hot-path extraction to relieve quality gate pressure
+5. `BLOCKED` Slice 7: created-team workspace/channel inspector pending scheduler + chain prerequisites
+
+Where theme/routing are now encoded in architecture planning:
+- `docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
+  - added Soma-first conversation economy rule
+  - added theme simplification rule and Workspace conversation policy
+- `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+  - added direct-first Workspace routing and consultation-trigger test expectations
+- `docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`
+  - added consultation trigger policy (`none|targeted|full_council`) for token economy control
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
+  - Slice 2 now explicitly includes Workspace density/theme simplification and direct-first Soma routing acceptance criteria
+- `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
+  - lane priorities now include Workspace simplification + direct-first routing as active responsibilities
+
+Detailed next 24-48h planning actions:
+1. bind Slice 2 implementation card to:
+- Workspace simplification pass (`MissionControl`, `OpsOverview`, `MissionControlChat`)
+- direct-first routing guard in chat path classification (no forced council consult for routine intents)
+2. add focused verification targets:
+- unit/integration tests for consultation trigger policy
+- UI tests for reduced default density and progressive-disclosure behavior
+- Playwright proof for direct-first routine prompt path and explicit planning prompt consultation path
+3. keep Slice 3 and Slice 4 sequencing unchanged while landing the above as Slice 2 sub-tracks
+
 ### Engagement Kickoff (2026-03-09)
 
 Active execution lane:
