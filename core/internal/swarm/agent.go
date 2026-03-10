@@ -483,7 +483,16 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			}
 			a.logTurn("tool_call", responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 
-			serverID, _, err := a.toolExecutor.FindToolByName(a.ctx, toolCall.Name)
+			toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
+				RunID:         a.runID,
+				TeamID:        a.TeamID,
+				AgentID:       a.Manifest.ID,
+				SourceKind:    protocol.SourceKindSystem,
+				SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
+				PayloadKind:   protocol.PayloadKindCommand,
+			})
+
+			serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, toolCall.Name)
 			if err != nil {
 				failedToolCalls[fingerprint]++
 				log.Printf("Agent [%s] tool lookup failed: %v", a.Manifest.ID, err)
@@ -500,7 +509,19 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 				continue
 			}
 
-			toolResult, err := a.toolExecutor.CallTool(a.ctx, serverID, toolCall.Name, toolCall.Arguments)
+			isMCPTool := serverID != InternalServerID
+			if isMCPTool {
+				a.publishToolBusSignal(protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{
+					"state":      "invoked",
+					"tool":       toolCall.Name,
+					"server_id":  serverID.String(),
+					"iteration":  i + 1,
+					"arguments":  toolCall.Arguments,
+					"team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
+				})
+			}
+
+			toolResult, err := a.toolExecutor.CallTool(toolCtx, serverID, toolCall.Name, toolCall.Arguments)
 			if err != nil {
 				failedToolCalls[fingerprint]++
 				log.Printf("Agent [%s] tool call failed: %v", a.Manifest.ID, err)
@@ -513,6 +534,16 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 				}
 				if !reinferWithToolFeedback(toolCall.Name, fmt.Sprintf("Tool %s failed: %v", toolCall.Name, err)) {
 					break
+				}
+				if isMCPTool {
+					a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{
+						"state":      "failed",
+						"tool":       toolCall.Name,
+						"server_id":  serverID.String(),
+						"iteration":  i + 1,
+						"error":      err.Error(),
+						"team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
+					})
 				}
 				continue
 			}
@@ -557,6 +588,16 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 				if toolResult == "" {
 					toolResult = fmt.Sprintf("Tool %s completed successfully.", toolCall.Name)
 				}
+			}
+			if isMCPTool {
+				a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{
+					"state":          "completed",
+					"tool":           toolCall.Name,
+					"server_id":      serverID.String(),
+					"iteration":      i + 1,
+					"result_preview": truncateLog(toolResult, 500),
+					"team_input":     fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
+				})
 			}
 
 			// Append Assistant's tool call and User's tool result to history
@@ -632,6 +673,65 @@ func stripToolCallJSON(text string) string {
 		return cleaned
 	}
 	return text // Don't return empty — keep original if nothing before the JSON
+}
+
+func (a *Agent) publishToolBusSignal(payloadKind protocol.SignalPayloadKind, sourceKind protocol.SignalSourceKind, payload map[string]any) {
+	if a.nc == nil || strings.TrimSpace(a.TeamID) == "" {
+		return
+	}
+
+	var subject string
+	switch payloadKind {
+	case protocol.PayloadKindStatus:
+		subject = fmt.Sprintf(protocol.TopicTeamSignalStatus, a.TeamID)
+	case protocol.PayloadKindResult:
+		subject = fmt.Sprintf(protocol.TopicTeamSignalResult, a.TeamID)
+	default:
+		return
+	}
+
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Agent [%s] signal payload marshal failed: %v", a.Manifest.ID, err)
+		return
+	}
+
+	sourceChannel := fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)
+	wrapped, err := protocol.WrapSignalPayloadWithMeta(
+		sourceKind,
+		sourceChannel,
+		payloadKind,
+		a.runID,
+		a.TeamID,
+		a.Manifest.ID,
+		raw,
+	)
+	if err != nil {
+		log.Printf("Agent [%s] signal envelope wrap failed: %v", a.Manifest.ID, err)
+		return
+	}
+
+	if err := a.nc.Publish(subject, wrapped); err != nil {
+		log.Printf("Agent [%s] publish signal failed on [%s]: %v", a.Manifest.ID, subject, err)
+		return
+	}
+
+	if a.internalTools != nil {
+		channelKey := resolveSignalCheckpointChannelKey(subject, nil)
+		metadata := map[string]any{
+			"subject":      subject,
+			"source_kind":  string(sourceKind),
+			"payload_kind": string(payloadKind),
+			"team_id":      a.TeamID,
+			"agent_id":     a.Manifest.ID,
+		}
+		if strings.TrimSpace(a.runID) != "" {
+			metadata["run_id"] = strings.TrimSpace(a.runID)
+		}
+		if _, err := a.internalTools.upsertSignalCheckpoint(a.ctx, channelKey, a.Manifest.ID, string(wrapped), metadata); err != nil {
+			log.Printf("Agent [%s] checkpoint update failed on [%s]: %v", a.Manifest.ID, channelKey, err)
+		}
+	}
 }
 
 func (a *Agent) handleTrigger(msg *nats.Msg) {

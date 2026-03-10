@@ -66,6 +66,68 @@ Immediate MVP gate sequence:
 2. resolve prime-development team-sync reliability
 3. reduce hot-path file pressure and re-run `uv run inv ci.baseline`
 
+### MVP Integration + Toolship Execution Kickoff (2026-03-10)
+
+Status transition:
+1. Slice 8 moved `REQUIRED -> ACTIVE` in canonical queue (`docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`).
+
+Canonical plan activated:
+1. `docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md`
+
+Runtime delivery completed in kickoff:
+1. internal tool invocation context introduced for run/team/agent provenance:
+   - `core/internal/swarm/tool_invocation_context.go`
+   - agent execution path now sets tool invocation context before tool lookup/call:
+     - `core/internal/swarm/agent.go`
+2. governed signal metadata wrapping enabled for internal tool command/signal publishes:
+   - `delegate_task` now wraps `swarm.team.{team_id}.internal.command` with canonical metadata envelope
+   - `publish_signal` now wraps canonical command/status/result/telemetry/event subjects with canonical metadata envelope
+   - metadata wrapping helpers extracted to:
+     - `core/internal/swarm/internal_tools_signal_metadata.go`
+3. team trigger compatibility preserved:
+   - command envelopes are normalized back to readable command payloads before forwarding to team internal trigger bus:
+     - `core/internal/swarm/team.go`
+4. protocol wrapper expanded for run/team/agent metadata passthrough while preserving existing call sites:
+   - `core/pkg/protocol/envelopes.go`
+5. MCP integration now emits centralized team-bus messaging (not only direct tool-call flow):
+   - MCP tool invocations publish governed status envelopes to `swarm.team.{team_id}.signal.status`
+   - MCP tool completions/failures publish governed result envelopes to `swarm.team.{team_id}.signal.result`
+   - team input lineage is preserved in payload (`team_input`) and envelope metadata (`run_id`, `team_id`, `agent_id`, `source_kind=mcp`)
+   - implementation in:
+     - `core/internal/swarm/agent.go`
+6. private channel/file signaling and relaunch reference recovery added:
+   - `publish_signal` supports `privacy_mode=reference` + `file_path` + `channel_key`
+   - private-reference mode publishes governed reference payloads on bus channels while persisting full private payloads to temp-memory checkpoint channels
+   - `read_signals` supports `latest_only=true` + `channel_key` to return latest persisted channel payload for robust relaunch targeting
+   - agent MCP status/result publishes now also persist latest checkpoint snapshots for canonical team signal subjects
+   - implementation in:
+     - `core/internal/swarm/internal_tools_signals.go`
+     - `core/internal/swarm/signal_channel_checkpoint.go`
+     - `core/internal/swarm/agent.go`
+
+Evidence tests added:
+1. `core/internal/swarm/internal_tools_signal_test.go`
+   - `TestHandleDelegateTask_PublishesToInternalCommand` now asserts envelope metadata (`run_id`, `team_id`, `agent_id`, `source_kind`, `source_channel`, `payload_kind`)
+   - `TestHandlePublishSignal_WrapsCanonicalStatusSubject` validates canonical status wrapping
+2. `core/internal/swarm/team_test.go`
+   - `TestTeam_TriggerLogic_UnwrapsCommandEnvelope` validates compatibility-safe trigger payload normalization
+3. `core/pkg/protocol/envelopes_test.go`
+   - verifies `WrapSignalPayloadWithMeta` run/team/agent linkage and backward-compatible default wrapper behavior
+4. `core/internal/swarm/agent_signal_bridge_test.go`
+   - `TestAgentPublishToolBusSignal_StatusChannelForMCP` validates MCP status publishing to canonical team status lane
+   - `TestAgentPublishToolBusSignal_ResultChannelForMCP` validates MCP result publishing to canonical team result lane
+   - `TestAgentPublishToolBusSignal_PersistsLatestCheckpoint` validates relaunch checkpoint persistence on canonical team signal subjects
+5. `core/internal/swarm/internal_tools_signal_test.go`
+   - `TestHandlePublishSignal_PrivateReferenceAndCheckpoint` validates private reference publishing + checkpoint persistence
+   - `TestHandleReadSignals_LatestOnlyReturnsCheckpoint` validates latest checkpoint recovery path for relaunch flows
+
+Evidence commands (2026-03-10):
+1. `cd core && go test ./internal/swarm ./pkg/protocol -count=1` -> pass
+2. `uv run inv ci.baseline` -> pass
+3. `cd interface && npx tsc --noEmit` -> pass
+4. `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q` -> pass
+5. `cd core && go test ./internal/swarm -run "TestHandlePublishSignal_PrivateReferenceAndCheckpoint|TestHandleReadSignals_LatestOnlyReturnsCheckpoint|TestAgentPublishToolBusSignal_StatusChannelForMCP|TestAgentPublishToolBusSignal_ResultChannelForMCP|TestAgentPublishToolBusSignal_PersistsLatestCheckpoint" -count=1` -> pass
+
 ### Priority 1 Kickoff - Hot-Path Gate Relief (2026-03-10)
 
 Status transition:
@@ -82,7 +144,7 @@ Delivery completed in this kickoff:
 
 Post-change line counts (legacy-cap posture):
 1. `core/internal/swarm/agent.go`: `768` (`<= legacy cap 1121`)
-2. `core/internal/swarm/internal_tools.go`: `2458` (`<= legacy cap 2491`)
+2. `core/internal/swarm/internal_tools.go`: `2377` (`<= legacy cap 2491`)
 3. `interface/store/useCortexStore.ts`: `2586` (`<= legacy cap 2714`)
 
 Evidence commands (2026-03-10):

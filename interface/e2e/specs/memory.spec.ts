@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Phase 5.4 - Hippocampus (Memory) Contract', () => {
+    test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires a live Core backend');
 
     test('GET /api/v1/memory/search returns semantic SitReps', async ({ request }) => {
         const query = 'trust economy architecture';
 
-        const response = await request.get(`http://localhost:3000/api/v1/memory/search`, {
+        const response = await request.get(`/api/v1/memory/search`, {
             params: {
                 q: query,
                 limit: 5

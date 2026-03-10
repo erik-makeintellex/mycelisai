@@ -1,7 +1,9 @@
 package swarm
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -190,7 +192,30 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 
 	// Forward to Internal Bus for Agents to react
 	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
-	t.nc.Publish(internalSubject, msg.Data)
+	t.nc.Publish(internalSubject, normalizeCommandPayload(msg.Data))
+}
+
+func normalizeCommandPayload(data []byte) []byte {
+	var env protocol.SignalEnvelope
+	if err := json.Unmarshal(data, &env); err != nil {
+		return data
+	}
+	if env.Meta.PayloadKind != protocol.PayloadKindCommand {
+		return data
+	}
+	if strings.TrimSpace(env.Text) != "" {
+		return []byte(env.Text)
+	}
+	if len(env.Payload) == 0 {
+		return data
+	}
+
+	trimmed := bytes.TrimSpace(env.Payload)
+	var asString string
+	if err := json.Unmarshal(trimmed, &asString); err == nil {
+		return []byte(asString)
+	}
+	return append([]byte(nil), trimmed...)
 }
 
 // handleResponse receives an internal signal and broadens it to the external team bus (Deliveries).

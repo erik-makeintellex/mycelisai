@@ -372,14 +372,58 @@ Acceptance criteria:
 Rollback:
 - revert team workspace surfaces while preserving existing run timeline and conversation views
 
+## Slice 8: MVP Toolship + Service-Signal Integration Hardening
+
+Status:
+- `ACTIVE`
+
+Objective:
+- harden internal toolship and service-connection signal contracts so MVP behavior is usable by non-test teams.
+
+Scoped outcome:
+- internal tool command/status/result publish paths emit governed metadata envelopes
+- team trigger flow remains agent-readable for command payloads
+- run/team/agent provenance is preserved when available from execution context
+
+Scoped files:
+- `core/internal/swarm/agent.go`
+- `core/internal/swarm/internal_tools.go`
+- `core/internal/swarm/internal_tools_signal_metadata.go`
+- `core/internal/swarm/tool_invocation_context.go`
+- `core/internal/swarm/team.go`
+- `core/pkg/protocol/envelopes.go`
+
+Testing files:
+- `core/internal/swarm/internal_tools_signal_test.go`
+- `core/internal/swarm/team_test.go`
+- `core/pkg/protocol/envelopes_test.go`
+
+Development docs:
+- [MVP Integration And Toolship Execution Plan V7](MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md)
+- [NATS Signal Standard V7](../architecture/NATS_SIGNAL_STANDARD_V7.md)
+- [System Architecture V7](SYSTEM_ARCHITECTURE_V7.md)
+
+Required proof:
+- `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
+- `uv run inv ci.baseline`
+
+Acceptance criteria:
+- no raw hardcoded channel strings in runtime publish paths for this slice
+- metadata wrappers include `source_kind/source_channel/payload_kind/timestamp` with run/team/agent linkage when available
+- baseline quality gates remain green after hardening
+
+Rollback:
+- revert toolship signal-wrapper changes only while preserving existing agent/tool functionality
+
 ## Immediate Working Order (Launch Path)
 
 1. Slice 2
 2. Slice 3
 3. Slice 4
 4. Slice 6
-5. Slice 5
-6. Slice 7
+5. Slice 8
+6. Slice 5
+7. Slice 7
 
 That order now follows the architecture library more directly:
 - operator-facing failure/recovery clarity first

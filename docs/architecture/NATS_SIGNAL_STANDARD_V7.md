@@ -1,8 +1,8 @@
 # NATS Signal Standard V7
 
-Version: `1.0`
+Version: `1.1`
 Status: `Authoritative`
-Last Updated: `2026-03-06`
+Last Updated: `2026-03-10`
 Scope: NATS subject families, source normalization, signal metadata, and product-vs-dev channel boundaries
 
 This document defines the canonical signal standard for Mycelis NATS traffic across workspace UI, web APIs, automation triggers, sensors, IoT paths, internal tools, and system/runtime services.
@@ -121,6 +121,8 @@ Subject rules:
 - Trigger and scheduler emissions must identify `source_kind=automation_trigger` or `source_kind=scheduler`.
 - Internal tool and MCP outputs must declare `source_kind=internal_tool` or `source_kind=mcp`.
 - Mutating actions must emit persistent mission events in addition to transient NATS signals.
+- For private channel/file relays, publish only a governed reference payload on canonical status/result subjects and persist the full private payload in checkpoint memory keyed by `signal.latest.<subject>` (or explicit `channel_key`).
+- Relaunch/recovery flows should read latest checkpoint payloads through governed tool/API surfaces (`read_signals latest_only=true`) rather than exposing full private payloads directly on shared bus subjects.
 
 ### 5.3 Sensor and IoT Paths
 

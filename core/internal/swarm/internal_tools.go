@@ -367,14 +367,18 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["publish_signal"] = &InternalTool{
 		Name:        "publish_signal",
-		Description: "Publish a message to any NATS topic in the swarm. Use for broadcasting signals, triggering teams, or inter-agent communication.",
+		Description: "Publish a message to a NATS topic in the swarm. Supports private reference mode for channel-safe file/message handoff plus latest-checkpoint persistence for relaunch continuity.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"subject": map[string]any{"type": "string", "description": "NATS subject (e.g. swarm.team.council-core.internal.trigger, swarm.global.broadcast)"},
-				"message": map[string]any{"type": "string", "description": "The message payload to publish"},
+				"subject":      map[string]any{"type": "string", "description": "NATS subject (e.g. swarm.team.council-core.internal.command, swarm.global.broadcast)"},
+				"message":      map[string]any{"type": "string", "description": "Message payload to publish. In private reference mode this is stored privately and only a reference is published."},
+				"channel_key":  map[string]any{"type": "string", "description": "Optional private checkpoint channel key. Defaults to signal.latest.<subject>."},
+				"privacy_mode": map[string]any{"type": "string", "description": "full (default) or reference. reference publishes only channel/file references while preserving full payload privately."},
+				"private":      map[string]any{"type": "boolean", "description": "Alias for privacy_mode=reference."},
+				"file_path":    map[string]any{"type": "string", "description": "Optional workspace file path to attach as a private file reference in channel payloads."},
 			},
-			"required": []string{"subject", "message"},
+			"required": []string{},
 		},
 		Handler: r.handlePublishSignal,
 	}
@@ -411,11 +415,13 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["read_signals"] = &InternalTool{
 		Name:        "read_signals",
-		Description: "Subscribe to a NATS topic pattern and collect messages for a brief window. Use to sense what's happening on a bus channel.",
+		Description: "Subscribe to NATS and collect messages for a brief window, or read the latest persisted channel checkpoint (latest_only) for relaunch-safe continuity.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"subject":     map[string]any{"type": "string", "description": "NATS subject or wildcard (e.g. swarm.team.*.signal.status, swarm.global.>)"},
+				"channel_key": map[string]any{"type": "string", "description": "Optional checkpoint channel key. Defaults to signal.latest.<subject>."},
+				"latest_only": map[string]any{"type": "boolean", "description": "When true, returns the latest persisted channel checkpoint instead of live subscription."},
 				"duration_ms": map[string]any{"type": "integer", "description": "How long to listen in milliseconds (default 3000, max 10000)"},
 				"max_msgs":    map[string]any{"type": "integer", "description": "Max messages to collect (default 20)"},
 			},
@@ -627,7 +633,17 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	}
 
 	subject := fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)
-	if err := r.nc.Publish(subject, []byte(task)); err != nil {
+	payload, err := r.wrapGovernedSignalPayload(
+		ctx,
+		"internal_tool.delegate_task",
+		teamID,
+		protocol.PayloadKindCommand,
+		[]byte(task),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to wrap delegated task payload: %w", err)
+	}
+	if err := r.nc.Publish(subject, payload); err != nil {
 		return "", fmt.Errorf("failed to publish task to team %s: %w", teamID, err)
 	}
 	r.nc.Flush()
@@ -1303,25 +1319,6 @@ func (r *InternalToolRegistry) handleRecall(ctx context.Context, args map[string
 	return string(data), nil
 }
 
-func (r *InternalToolRegistry) handlePublishSignal(_ context.Context, args map[string]any) (string, error) {
-	subject, _ := args["subject"].(string)
-	message, _ := args["message"].(string)
-	if subject == "" || message == "" {
-		return "", fmt.Errorf("publish_signal requires 'subject' and 'message'")
-	}
-
-	if r.nc == nil {
-		return "", fmt.Errorf("NATS not available — cannot publish signal")
-	}
-
-	if err := r.nc.Publish(subject, []byte(message)); err != nil {
-		return "", fmt.Errorf("failed to publish to %s: %w", subject, err)
-	}
-	r.nc.Flush()
-
-	return fmt.Sprintf("Signal published to %s (%d bytes).", subject, len(message)), nil
-}
-
 func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[string]any) (string, error) {
 	message, _ := args["message"].(string)
 	if message == "" {
@@ -1409,84 +1406,6 @@ func (r *InternalToolRegistry) handleSendExternalMessage(ctx context.Context, ar
 	}
 	b, _ := json.Marshal(out)
 	return string(b), nil
-}
-
-func (r *InternalToolRegistry) handleReadSignals(ctx context.Context, args map[string]any) (string, error) {
-	subject, _ := args["subject"].(string)
-	if strings.TrimSpace(subject) == "" {
-		if v, _ := args["topic_pattern"].(string); strings.TrimSpace(v) != "" {
-			subject = v
-		} else if v, _ := args["topic"].(string); strings.TrimSpace(v) != "" {
-			subject = v
-		} else if v, _ := args["channel"].(string); strings.TrimSpace(v) != "" {
-			subject = v
-		} else {
-			for _, raw := range args {
-				if s, ok := raw.(string); ok && strings.HasPrefix(strings.TrimSpace(s), "swarm.") {
-					subject = strings.TrimSpace(s)
-					break
-				}
-			}
-		}
-	}
-	if subject == "" {
-		return "", fmt.Errorf("read_signals requires 'subject'")
-	}
-
-	if r.nc == nil {
-		return "", fmt.Errorf("NATS not available — cannot read signals")
-	}
-
-	durationMs := 3000
-	if d, ok := args["duration_ms"].(float64); ok && d > 0 {
-		durationMs = int(d)
-	}
-	if durationMs > 10000 {
-		durationMs = 10000
-	}
-
-	maxMsgs := 20
-	if m, ok := args["max_msgs"].(float64); ok && m > 0 {
-		maxMsgs = int(m)
-	}
-
-	type signalMsg struct {
-		Subject string `json:"subject"`
-		Data    string `json:"data"`
-	}
-
-	var collected []signalMsg
-	sub, err := r.nc.Subscribe(subject, func(msg *nats.Msg) {
-		if len(collected) < maxMsgs {
-			collected = append(collected, signalMsg{
-				Subject: msg.Subject,
-				Data:    string(msg.Data),
-			})
-		}
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to subscribe to %s: %w", subject, err)
-	}
-	defer sub.Unsubscribe()
-
-	select {
-	case <-time.After(time.Duration(durationMs) * time.Millisecond):
-	case <-ctx.Done():
-	}
-
-	if collected == nil {
-		collected = []signalMsg{}
-	}
-
-	result := map[string]any{
-		"subject":   subject,
-		"duration":  fmt.Sprintf("%dms", durationMs),
-		"collected": len(collected),
-		"messages":  collected,
-	}
-
-	data, _ := json.Marshal(result)
-	return string(data), nil
 }
 
 func (r *InternalToolRegistry) handleReadFile(_ context.Context, args map[string]any) (string, error) {

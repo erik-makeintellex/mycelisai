@@ -243,13 +243,29 @@ func WrapSignalPayload(
 	teamID string,
 	raw []byte,
 ) ([]byte, error) {
+	return WrapSignalPayloadWithMeta(sourceKind, sourceChannel, payloadKind, "", teamID, "", raw)
+}
+
+// WrapSignalPayloadWithMeta normalizes status/result/command signals while
+// preserving optional run/agent linkage metadata.
+func WrapSignalPayloadWithMeta(
+	sourceKind SignalSourceKind,
+	sourceChannel string,
+	payloadKind SignalPayloadKind,
+	runID string,
+	teamID string,
+	agentID string,
+	raw []byte,
+) ([]byte, error) {
 	env := SignalEnvelope{
 		Meta: SignalMeta{
 			Timestamp:     time.Now().UTC(),
 			SourceKind:    sourceKind,
 			SourceChannel: sourceChannel,
 			PayloadKind:   payloadKind,
+			RunID:         runID,
 			TeamID:        teamID,
+			AgentID:       agentID,
 		},
 	}
 
