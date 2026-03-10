@@ -8,6 +8,7 @@ Related:
 - [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 - [Target Deliverable V7](TARGET_DELIVERABLE_V7.md)
 - [Next Execution Slices V7](NEXT_EXECUTION_SLICES_V7.md)
+- [MVP Release Strike Team Plan V7](MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 - [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [V7 Development State](../../V7_DEV_STATE.md)
@@ -33,6 +34,12 @@ Use canonical coordination subjects for lane execution and synchronization:
 - `swarm.team.{team_id}.signal.status` for concise progress/status updates
 - `swarm.team.{team_id}.signal.result` for bounded completion payloads
 - `swarm.mission.events.{run_id}` for run-linked delivery events and audit linkage
+
+Cross-team communication requirement:
+- team lanes may and should send direct dependency requests to each other on canonical `internal.command` subjects.
+- responses must come back through `signal.status` for progress and `signal.result` for completion so QA and Architecture/Governance can audit sequence without side-channel reconstruction.
+- team-to-team dependencies are not considered validly coordinated unless they emit these NATS records.
+- self-coordination is also valid and expected: a team can issue staged work to itself using its own `internal.command` subject and emit checkpoint/result records on its own `signal.status` and `signal.result` subjects.
 
 Required coordination metadata on team signals:
 - `run_id` when execution-linked

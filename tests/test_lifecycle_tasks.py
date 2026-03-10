@@ -155,6 +155,81 @@ def test_core_startup_log_path_points_to_workspace_logs():
     assert "logs" in str(path)
 
 
+def test_up_restarts_running_core_when_dependencies_were_down_before_up(monkeypatch):
+    events: list[str] = []
+
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: events.append("bridge"))
+    monkeypatch.setattr(
+        lifecycle,
+        "_wait_for_port",
+        lambda port, label, timeout=30, interval=1.0: events.append(f"wait:{port}:{label}") or True,
+    )
+    monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        lifecycle,
+        "_kill_port",
+        lambda port, label: events.append(f"kill:{port}:{label}") or True,
+    )
+    monkeypatch.setattr(
+        lifecycle,
+        "_start_core_background",
+        lambda: events.append("start_core") or True,
+    )
+
+    def fake_port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
+        if port == 5432:
+            return False
+        if port == 4222:
+            return True
+        if port == lifecycle.API_PORT:
+            return True
+        return False
+
+    monkeypatch.setattr(lifecycle, "_port_open", fake_port_open)
+
+    lifecycle.up.body(Context(), frontend=False, build=False)
+
+    assert f"kill:{lifecycle.API_PORT}:Core" in events
+    assert "start_core" in events
+    assert any(item == f"wait:{lifecycle.API_PORT}:Core API" for item in events)
+
+
+def test_up_keeps_running_core_when_dependencies_were_healthy_before_up(monkeypatch):
+    events: list[str] = []
+
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: events.append("bridge"))
+    monkeypatch.setattr(
+        lifecycle,
+        "_wait_for_port",
+        lambda port, label, timeout=30, interval=1.0: events.append(f"wait:{port}:{label}") or True,
+    )
+    monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        lifecycle,
+        "_kill_port",
+        lambda port, label: events.append(f"kill:{port}:{label}") or True,
+    )
+    monkeypatch.setattr(
+        lifecycle,
+        "_start_core_background",
+        lambda: events.append("start_core") or True,
+    )
+
+    def fake_port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
+        if port in (5432, 4222, lifecycle.API_PORT):
+            return True
+        return False
+
+    monkeypatch.setattr(lifecycle, "_port_open", fake_port_open)
+
+    lifecycle.up.body(Context(), frontend=False, build=False)
+
+    assert f"kill:{lifecycle.API_PORT}:Core" not in events
+    assert "start_core" not in events
+
+
 def test_up_fails_when_core_health_never_becomes_ready(monkeypatch):
     monkeypatch.setattr(Path, "exists", lambda self: True)
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: None)

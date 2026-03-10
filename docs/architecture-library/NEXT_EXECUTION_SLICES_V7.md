@@ -10,6 +10,7 @@ Related:
 - [Execution And Manifest Library V7](EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
 - [UI And Operator Experience V7](UI_AND_OPERATOR_EXPERIENCE_V7.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+- [MVP Release Strike Team Plan V7](MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md)
 
 ## Feature Status Markers
 
