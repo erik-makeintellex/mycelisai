@@ -370,6 +370,11 @@ def up(c, frontend=False, build=False):
     """
     print("=== Mycelis Stack Up ===\n")
 
+    # Capture dependency state before we touch bridges. If Core is already up while one
+    # of these is down, Core is likely running in degraded mode and should be restarted
+    # after dependencies are healthy.
+    deps_were_down_before_up = (not _port_open(5432)) or (not _port_open(4222))
+
     # 0. Optionally build
     if build:
         print("[1/4] Building core binary...")
@@ -409,6 +414,17 @@ def up(c, frontend=False, build=False):
     print("[3/4] Starting Core server...")
     if _port_open(API_PORT):
         print(f"  Core already running on :{API_PORT}")
+        if deps_were_down_before_up:
+            print("  Restarting Core to exit degraded startup mode after dependency recovery...")
+            _kill_port(API_PORT, "Core")
+            if _start_core_background():
+                if _wait_for_port(API_PORT, "Core API", timeout=120):
+                    print(f"  Core restarted on :{API_PORT}")
+                else:
+                    raise SystemExit(
+                        "STACK UP FAILED: Core restart did not open its port in time. "
+                        f"Check {_core_startup_log_path()} or run 'uv run inv core.run'."
+                    )
     else:
         if _start_core_background():
             if _wait_for_port(API_PORT, "Core API", timeout=120):
