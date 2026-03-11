@@ -191,9 +191,10 @@ Rules:
 
 | Area | Current state | Delivery status |
 | --- | --- | --- |
-| Operational UX reroute copy | `v7-operational-ux.spec.ts` expects `Recovered via Soma` and currently fails | `ACTIVE` fix |
+| Operational UX reroute contract | `v7-operational-ux.spec.ts` now validates reroute copy and one-click recovery path; keep this as a standing regression gate | `ACTIVE` guard |
 | Max-lines gate pressure | `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts` over cap | `REQUIRED` Slice 4 |
 | Created-team communications inspector | architecture contract exists but dedicated team workspace/communications tabs are not fully delivered | `BLOCKED` Slice 7 |
+| Docs and runs route browser depth | route-level smoke coverage now exists, but failure/recovery depth (error branches + interjection/terminal transitions) still needs expansion | `NEXT` |
 | Raw MCP install action in store | `installMCPServer` still points to disabled `/api/v1/mcp/install` path | `REQUIRED` cleanup |
 
 ---

@@ -128,6 +128,37 @@ Evidence commands (2026-03-10):
 4. `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q` -> pass
 5. `cd core && go test ./internal/swarm -run "TestHandlePublishSignal_PrivateReferenceAndCheckpoint|TestHandleReadSignals_LatestOnlyReturnsCheckpoint|TestAgentPublishToolBusSignal_StatusChannelForMCP|TestAgentPublishToolBusSignal_ResultChannelForMCP|TestAgentPublishToolBusSignal_PersistsLatestCheckpoint" -count=1` -> pass
 
+### UI Generation + Route Testing Deepening (2026-03-10)
+
+Status transition:
+1. `/docs` and `/runs` route coverage moved from missing-dedicated tests to dedicated baseline route coverage (`ACTIVE`).
+
+Delivery completed in this slice:
+1. added dedicated `/docs` page test coverage:
+   - `interface/__tests__/pages/DocsPage.test.tsx`
+   - validates manifest + doc-content load and manifest-failure fallback
+2. added dedicated `/runs` list page test coverage:
+   - `interface/__tests__/pages/RunsPage.test.tsx`
+   - validates fetch-on-mount, run-row navigation, and empty-state contract
+3. added dedicated route-level browser spec for docs and runs:
+   - `interface/e2e/specs/docs-and-runs.spec.ts`
+   - validates `/docs` manifest/render/filter path
+   - validates `/runs` list -> `/runs/{id}` conversation/events tab flow
+4. codified deterministic UI-generation and deep-testing contract:
+   - `docs/architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md`
+5. updated canonical documentation surfaces for new UI-generation/test authority:
+   - `README.md`
+   - `docs/README.md`
+   - `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
+   - `docs/TESTING.md`
+   - `docs/architecture/FRONTEND.md`
+   - `interface/lib/docsManifest.ts`
+
+Evidence commands (2026-03-10):
+1. `cd interface && npx vitest run __tests__/pages/DocsPage.test.tsx __tests__/pages/RunsPage.test.tsx __tests__/runs/RunDetailPage.test.tsx --reporter=dot` -> pass
+2. `cd interface && npx playwright test e2e/specs/docs-and-runs.spec.ts --project=chromium` -> pass
+3. `uv run inv ci.baseline` -> pass
+
 ### Priority 1 Kickoff - Hot-Path Gate Relief (2026-03-10)
 
 Status transition:

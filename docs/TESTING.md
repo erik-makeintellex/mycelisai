@@ -50,13 +50,13 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
 | `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | `v7-operational-ux.spec.ts` quick-check scenarios | `ACTIVE` |
 | `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites | `settings.spec.ts` | `ACTIVE` |
-| `/runs`, `/runs/[id]` | run component suites (`RunDetailPage`, timeline, cards) | no dedicated run-route e2e yet | `NEXT` |
-| `/docs` in-app browser | no dedicated page test yet | no dedicated docs-route e2e yet | `REQUIRED` |
+| `/runs`, `/runs/[id]` | run component suites (`RunDetailPage`, timeline, cards) + `RunsPage.test.tsx` | `docs-and-runs.spec.ts` route/detail smoke | `ACTIVE` |
+| `/docs` in-app browser | `DocsPage.test.tsx` | `docs-and-runs.spec.ts` docs manifest/render smoke | `ACTIVE` |
 | Legacy redirect routes (`/wiring`, `/architect`, `/teams`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
 
 Immediate test additions required for full GUI confidence:
-1. add dedicated `/docs` route tests (unit + e2e smoke)
-2. add dedicated `/runs` and `/runs/[id]` e2e coverage for timeline + conversation tab transitions
+1. expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches
+2. deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states
 3. stabilize WebKit Playwright execution under full parallel load (current flakes: accessibility Axe runs, nav/team/status interactions)
 
 ## Backend/API -> UI Target Plan (Required)
@@ -120,6 +120,8 @@ Signal/channel standard:
 - Current focused toolship metadata check: `cd core && go test ./internal/swarm -run "TestHandleDelegateTask_PublishesToInternalCommand|TestHandlePublishSignal_WrapsCanonicalStatusSubject|TestHandlePublishSignal_PrivateReferenceAndCheckpoint|TestHandleReadSignals_LatestOnlyReturnsCheckpoint|TestTeam_TriggerLogic_UnwrapsCommandEnvelope|TestAgentPublishToolBusSignal_StatusChannelForMCP|TestAgentPublishToolBusSignal_ResultChannelForMCP|TestAgentPublishToolBusSignal_PersistsLatestCheckpoint" -count=1`
 - Current focused agent parsing/preflight check: `cd core && go test ./internal/swarm -run "TestParseConversationPayload_|TestParseToolCall|TestAutofillToolArguments|TestShouldCouncilPreflight|TestCouncilPreflightMember" -count=1`
 - Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
+- Current focused docs/runs page check: `cd interface && npx vitest run __tests__/pages/DocsPage.test.tsx __tests__/pages/RunsPage.test.tsx __tests__/runs/RunDetailPage.test.tsx --reporter=dot`
+- Current focused docs/runs browser check: `cd interface && npx playwright test e2e/specs/docs-and-runs.spec.ts --project=chromium`
 - Current focused store-utils check: `cd interface && npx vitest run __tests__/store/cortexStoreUtils.test.ts __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused Workspace chat contract check: `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
 - Current focused execution feedback check: `cd interface && npx vitest run __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`

@@ -20,6 +20,7 @@
 > | [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) | Lane architecture, global-state maintenance rules, and deep-testing obligations |
 > | [MVP Release Strike Team Plan V7](docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md) | Active MVP lane ownership, communication cadence, and state-file discipline |
 > | [MVP Integration And Toolship Execution Plan V7](docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) | AI/toolship/service integration phases and release gates for non-test-team MVP readiness |
+> | [UI Generation And Testing Execution Plan V7](docs/architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md) | Deterministic UI-generation contracts and deep route-level test strategy for MVP UX |
 > | [Operations Manual](docs/architecture/OPERATIONS.md) | Deploying, testing, CI/CD, config |
 > | [V7 PRD Index](mycelis-architecture-v7.md) | Stable compatibility entrypoint that points to the modular architecture library |
 > | [Architecture Overview](docs/architecture/OVERVIEW.md) | Supporting architecture summary and specialized phase context |
@@ -80,7 +81,8 @@ If you are a fresh development agent or starting a new interaction, review the d
 10. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) for lane ownership, state-file update requirements, and deep-testing obligations.
 11. [MVP Release Strike Team Plan V7](docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md) for active lane ownership, communication cadence, and release push sequencing.
 12. [MVP Integration And Toolship Execution Plan V7](docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) for AI/toolship/service integration sequencing and non-test-team MVP gates.
-13. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
+13. [UI Generation And Testing Execution Plan V7](docs/architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md) when defining new UI surfaces or raising route-level browser coverage depth.
+14. [In-app Docs Browser Manifest](interface/lib/docsManifest.ts) if the documentation should appear in the `/docs` page and not only in repo files.
 
 Use [mycelis-architecture-v7.md](mycelis-architecture-v7.md) only as the stable PRD index and compatibility entrypoint. Do not expand it back into the primary detailed spec.
 
@@ -1733,6 +1735,7 @@ Three workflows run on push/PR to `main` and `develop`:
 | **Next Execution Slices V7** | [docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md](docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md) — Current implementation queue with scoped files plus development and testing references | [/docs?doc=next-execution-slices-v7](/docs?doc=next-execution-slices-v7) |
 | **Team Execution And Global State Protocol V7** | [docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) — Team-lane execution architecture, global state update contract, and deep-testing requirements | [/docs?doc=team-execution-global-state-protocol-v7](/docs?doc=team-execution-global-state-protocol-v7) |
 | **MVP Integration + Toolship Plan V7** | [docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md](docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) — AI/toolship/service integration sequencing, gates, and non-test-team MVP exit criteria | [/docs?doc=mvp-integration-toolship-execution-plan-v7](/docs?doc=mvp-integration-toolship-execution-plan-v7) |
+| **UI Generation + Testing Plan V7** | [docs/architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md](docs/architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md) — Deterministic UI generation model, route-priority matrix, and deep-test gate criteria | [/docs?doc=ui-generation-testing-execution-plan-v7](/docs?doc=ui-generation-testing-execution-plan-v7) |
 | **Architecture Overview** | [docs/architecture/OVERVIEW.md](docs/architecture/OVERVIEW.md) — Philosophy, 4-layer anatomy, phases, upcoming roadmap | [/docs?doc=arch-overview](/docs?doc=arch-overview) |
 | **Backend Specification** | [docs/architecture/BACKEND.md](docs/architecture/BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines | [/docs?doc=arch-backend](/docs?doc=arch-backend) |
 | **Frontend Specification** | [docs/architecture/FRONTEND.md](docs/architecture/FRONTEND.md) — Routes, components, Zustand, design system | [/docs?doc=arch-frontend](/docs?doc=arch-frontend) |

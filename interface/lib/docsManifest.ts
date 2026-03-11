@@ -279,6 +279,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical plan for AI interaction, internal toolship, and service-connection hardening to reach non-test-team MVP",
             },
             {
+                slug: "ui-generation-testing-execution-plan-v7",
+                label: "UI Generation + Testing Plan V7",
+                path: "docs/architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md",
+                description: "Deterministic UI generation contract, route-priority testing depth, and MVP UX gate criteria",
+            },
+            {
                 slug: "arch-overview",
                 label: "Overview",
                 path: "docs/architecture/OVERVIEW.md",
