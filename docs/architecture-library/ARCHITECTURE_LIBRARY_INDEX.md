@@ -33,6 +33,7 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 | [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) | coordinating multi-lane execution and state discipline | team execution architecture, state-file maintenance, deep-testing obligations |
 | [MVP Release Strike Team Plan V7](MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md) | running coordinated MVP delivery lanes | strike-team ownership, communication cadence, and state-file discipline |
 | [MVP Integration And Toolship Execution Plan V7](MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) | executing AI + internal toolship + service-connection hardening for non-test users | integration phases, acceptance gates, deep-testing matrix, and exit criteria |
+| [UI Generation And Testing Execution Plan V7](UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md) | executing deterministic UI build flow and deep route-level test proof | generation contracts, route coverage priorities, and MVP UI gate criteria |
 
 ## How To Use This Library
 
@@ -46,6 +47,7 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 8. Use [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) when coordinating lane ownership, state-file updates, and deep-testing coverage.
 9. Use [MVP Release Strike Team Plan V7](MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md) when executing the active MVP release push and assigning lane responsibilities.
 10. Use [MVP Integration And Toolship Execution Plan V7](MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) when delivering AI/toolship/service integration slices toward non-test-team usability.
+11. Use [UI Generation And Testing Execution Plan V7](UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md) when defining new UI surfaces or raising route-level browser test depth.
 
 ## Supporting Specialized Docs
 
