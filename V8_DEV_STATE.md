@@ -32,11 +32,12 @@ Use `V7_DEV_STATE.md` only as a migration input and historical checkpoint source
 
 ```text
 V8-0  Migration baseline and architecture alignment                 [ACTIVE]
-V8-1  Canonical contract definition                                [NEXT]
-V8-2  Backend primitive refactor                                   [REQUIRED]
-V8-3  Frontend/operator refactor                                   [REQUIRED]
-V8-4  Documentation and naming migration                           [ACTIVE]
-V8-5  Verification and release hardening                           [REQUIRED]
+V8-1  Canonical contract definition                                [COMPLETE]
+V8-2  Config and bootstrap model planning                          [NEXT]
+V8-3  Backend primitive refactor                                   [REQUIRED]
+V8-4  Frontend/operator refactor                                   [REQUIRED]
+V8-5  Documentation and naming migration                           [ACTIVE]
+V8-6  Verification and release hardening                           [REQUIRED]
 ```
 
 ## Current V8 Grading Baseline
@@ -89,10 +90,11 @@ State-file rules:
 ### 4. Runtime and UI migration posture
 
 Status:
-1. `NEXT` define canonical V8 contracts for `Inception`, `Soma Kernel`, `Central Council`, and provider-policy scope.
-2. `REQUIRED` replace standing-team bootstrap assumptions with configurable organization-resolution contracts.
-3. `REQUIRED` keep Workspace simple and Soma-first while making the operator model kernel-aware instead of fixed-identity-bound.
-4. `REQUIRED` continue the full UI retheme and density-reduction effort under V8 delivery targets, not legacy V7 framing.
+1. `COMPLETE` canonical V8 contracts for `Inception`, `Soma Kernel`, `Central Council`, provider-policy scope, and identity/continuity state now exist.
+2. `NEXT` define the config/bootstrap model that introduces those contracts through configuration, templates, bootstrap resolution, and precedence rules.
+3. `REQUIRED` replace standing-team bootstrap assumptions with configurable organization-resolution contracts.
+4. `REQUIRED` keep Workspace simple and Soma-first while making the operator model kernel-aware instead of fixed-identity-bound.
+5. `REQUIRED` continue the full UI retheme and density-reduction effort under V8 delivery targets, not legacy V7 framing.
 
 ### 5. Testing and gate posture
 
@@ -105,11 +107,12 @@ Status:
 
 ```text
 Task 001  V8 alignment artifact and migration inventory             [IN_REVIEW]
-Task 002  Inception / kernel / council contract definition          [NEXT]
-Task 003  Provider-policy scope contract                            [NEXT]
-Task 004  Standing-team bootstrap de-hardcoding plan                [REQUIRED]
-Task 005  Workspace/UI kernel-aware refactor plan                   [REQUIRED]
-Task 006  V8 docs/state migration and grading discipline            [ACTIVE]
+Task 002  Inception / kernel / council contract definition          [COMPLETE]
+Task 003  Provider-policy scope contract                            [COMPLETE]
+Task 004  Config and bootstrap model planning                       [NEXT]
+Task 005  Standing-team bootstrap de-hardcoding plan                [REQUIRED]
+Task 006  Workspace/UI kernel-aware refactor plan                   [REQUIRED]
+Task 007  V8 docs/state migration and grading discipline            [ACTIVE]
 ```
 
 ## Current Checkpoint (2026-03-12)
@@ -130,32 +133,31 @@ Evidence:
 
 Status:
 1. `COMPLETE` `docs/architecture-library/V8_RUNTIME_CONTRACTS.md` now exists as the new V8 runtime contract shell.
-2. `NEXT` detailed contract definition for Inception, Soma Kernel, Central Council, Provider Policy, and Identity / Continuity State.
+2. `COMPLETE` the initial V8 runtime contract set is now fully defined.
 
 ### 7. Inception contract definition
 
 Status:
 1. `COMPLETE` the Inception contract is now defined in `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`.
-2. `NEXT` Soma Kernel contract definition is the next contract slice.
+2. `COMPLETE` it establishes the top-level organization contract for V8.
 
 ### 8. Soma Kernel contract definition
 
 Status:
 1. `COMPLETE` the Soma Kernel contract is now defined in `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`.
-2. `NEXT` Central Council contract definition is the next contract slice.
+2. `COMPLETE` it establishes the configurable coordination/runtime layer for an Inception.
 
 ### 9. Central Council contract definition
 
 Status:
 1. `COMPLETE` the Central Council contract is now defined in `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`.
-2. `NEXT` Provider Policy contract definition is the next contract slice.
+2. `COMPLETE` it establishes configurable advisory composition rather than a fixed built-in council pattern.
 
 ### 10. Provider Policy contract definition
 
 Status:
 1. `COMPLETE` the Provider Policy contract is now defined in `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`.
 2. `COMPLETE` team-level and agent-level configuration scope are now captured explicitly as first-class contract needs.
-3. `NEXT` Identity and Continuity State contract definition is the next contract slice.
 
 ### 11. Identity and Continuity State contract definition
 
@@ -164,10 +166,15 @@ Status:
 2. `COMPLETE` the initial V8 runtime contract set is now complete.
 3. `NEXT` move to config/bootstrap model planning before backend refactor work begins.
 
+### 12. V8 config/bootstrap planning shell introduction
+
+Status:
+1. `COMPLETE` `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` now exists as the planning shell for V8 config/bootstrap behavior.
+2. `NEXT` define the `Configuration sources` section as the next bootstrap planning slice.
+
 ## Immediate Next Actions
 
-1. `NEXT` begin config/bootstrap model planning so the completed V8 contract set can enter the system through configuration, templates, bootstrap resolution, and precedence rules.
+1. `NEXT` define configuration sources in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so V8 contracts can enter the system through explicit bootstrap inputs.
 2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
 3. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
 4. `REQUIRED` keep all new implementation/testing checkpoints in `V8_DEV_STATE.md` going forward.
-
