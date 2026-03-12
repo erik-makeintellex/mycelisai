@@ -78,7 +78,86 @@ V8 promotes these pieces into an explicit staged bootstrap model.
 
 ## Scope inheritance
 
-TBD in next bootstrap planning step.
+### Definition
+
+Scope inheritance describes how configuration propagates from higher organizational scopes to more specific runtime scopes.
+
+It defines which layers provide defaults, where narrower scopes may refine those defaults, and which forms of state should not flow downward as inherited configuration.
+
+### Inheritance chain
+
+The planned inheritance chain for V8 is:
+
+```text
+Inception
+  -> Soma Kernel
+  -> Central Council roles
+  -> Team defaults
+  -> Agent overrides
+```
+
+This means organization-wide defaults originate at the Inception level, become more specific at the Kernel and Council layers, and can then be narrowed further for teams and individual agents.
+
+Team and agent configuration are first-class scopes in this model, not edge cases.
+
+### What settings inherit
+
+Settings that may inherit downward include:
+- provider policy scope
+- memory access posture
+- reflection participation defaults
+- tool availability and tool-policy defaults
+- behavioral defaults that are intentionally configurable at lower scopes
+
+These inherited settings provide a starting point for more specific runtime layers.
+
+### Allowed overrides and policy blocks
+
+Overrides are allowed only where the higher scope intentionally leaves a field configurable.
+
+Typical allowed override cases include:
+- team-specific provider choices within provider-policy constraints
+- agent-specific tool access within approved tool-policy boundaries
+- narrower memory or reflection posture when governance permits restriction
+- specialization-specific behavioral tuning for teams or agents
+
+Overrides are blocked when they would violate:
+- higher-scope provider-policy constraints
+- governance locks established at the Inception or Kernel level
+- council-role restrictions that are meant to remain fixed for the organization
+- organization-wide safety, compliance, or approval requirements
+
+### Non-inheritable state
+
+The following do not inherit as configuration:
+- identity
+- runtime state
+- execution results
+- single-run execution context
+- ephemeral conversation state
+- transient telemetry and task outputs
+
+These belong to identity, execution, memory, or persistence layers and must be referenced or resolved separately rather than passed down as inherited config.
+
+### Governance constraints
+
+All overrides remain subordinate to governance.
+
+A lower scope may narrow or specialize inherited settings only when the governing higher scope permits that change. Lower scopes cannot use overrides to escape policy, bypass approval boundaries, or silently widen capabilities that were intentionally constrained upstream.
+
+### UI visibility note
+
+Inheritance should be mostly invisible to beginners and surfaced only in advanced panels.
+
+Beginner-facing views should present effective settings without forcing users to reason about every inheritance layer.
+
+Advanced views may reveal where a value came from, which higher scope supplied it, and whether the current layer can override it.
+
+### Boundaries
+
+This section does not yet define exact precedence ordering when multiple candidate values exist at the same layer or across multiple source inputs.
+
+That belongs in the `Precedence rules` section.
 
 ## Precedence rules
 
