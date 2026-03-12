@@ -103,6 +103,19 @@ Status:
 2. `ACTIVE` architecture and state-file changes must be validated by doc-surface checks and in-app docs alignment where applicable.
 3. `REQUIRED` runtime/API changes must include explicit UI review/test targets and focused live-flow evidence when user-visible behavior is touched.
 
+### 6. Implementation-slice cleanup and convergence rule
+
+Status:
+1. `REQUIRED` every implementation slice that edits runtime, config, UI, or supporting logic must include a touched-file cleanup/convergence pass.
+2. `REQUIRED` chunk completion for code-editing slices must include a focused review-team sweep covering contract alignment, dead-code scan, integration continuity, and test alignment.
+3. `REQUIRED` deferred cleanup that cannot be completed safely in the same slice must be reported explicitly in the chunk result.
+
+Implementation rule:
+1. review each changed file for stale fixed-Soma/fixed-Council assumptions, dead branches, outdated comments, duplicated helpers, obsolete config paths, and naming drift
+2. remove safe-to-remove stale code in the touched files as part of the same slice
+3. keep the review scope to touched files and directly adjacent files needed for correctness
+4. commit cleanup changes in the same chunk when they are part of the same logical convergence work
+
 ## Active V8 Queue
 
 ```text
@@ -176,5 +189,6 @@ Status:
 
 1. `NEXT` define configuration sources in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so V8 contracts can enter the system through explicit bootstrap inputs.
 2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
-3. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
-4. `REQUIRED` keep all new implementation/testing checkpoints in `V8_DEV_STATE.md` going forward.
+3. `REQUIRED` apply the touched-file cleanup/convergence rule and review-team sweep to the first backend/runtime refactor chunk and all later code-editing slices.
+4. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
+5. `REQUIRED` keep all new implementation/testing checkpoints in `V8_DEV_STATE.md` going forward.
