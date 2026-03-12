@@ -225,11 +225,124 @@ In V8, council structures must be configurable and organization-specific so each
 
 ## Provider Policy
 
-TBD in next contract step.
+### 1. Definition
+
+Provider Policy is the V8 contract layer that governs how an Inception chooses, constrains, and routes model backends and related execution configuration.
+
+It defines the approved provider scope, routing rules, and configuration inheritance model for an Inception, including how different organizational roles can use local or hosted model APIs.
+
+### 2. Responsibilities
+
+Provider Policy is responsible for:
+- defining allowed providers for an Inception
+- governing local vs hosted provider usage
+- supporting role-based routing
+- supporting council-level, team-level, and agent-level routing
+- enforcing governance boundaries for model selection
+- enabling hybrid deployments
+- defining how scoped defaults and overrides work
+
+This contract turns provider support from an implementation capability into an explicit organizational policy surface.
+
+### 3. Supported provider classes
+
+Provider Policy must support both provider classes below.
+
+#### Local / open-source classes
+
+Examples:
+- Ollama
+- LM Studio
+- vLLM
+- custom OpenAI-compatible local endpoints
+
+#### Hosted / commercial classes
+
+Examples:
+- OpenAI APIs
+- Anthropic / Claude APIs
+- Gemini APIs
+- other OpenAI-compatible hosted APIs
+
+The contract is provider-class oriented and must not be locked to only one vendor family.
+
+### 4. Configuration scope layers
+
+Provider and execution-related configuration must be possible at these scopes:
+
+#### Inception-level
+Applies to the whole organization.
+
+#### Soma Kernel-level
+Applies to kernel defaults.
+
+#### Central Council role-level
+Applies to council roles or role classes.
+
+#### Team-level
+Applies to a specialist team as a whole.
+
+#### Agent-level
+Applies to an individual agent instance inside a team.
+
+Team-level and agent-level configuration are first-class needs, not edge cases.
+
+### 5. Inheritance and override rules
+
+The general inheritance model is:
+
+```text
+Inception defaults
+  -> kernel / council role defaults
+  -> team defaults
+  -> agent overrides
+```
+
+Inheritance is expected.
+
+Lower scopes may override only allowed fields.
+
+Overrides must remain policy-governed, and lower-scope configuration cannot violate higher-scope governance constraints.
+
+### 6. Routing scope
+
+Routing may be applied at these levels:
+- Inception-level routing
+- Soma Kernel defaults
+- Central Council role routing
+- specialist team routing
+- individual agent routing
+- task- or capability-sensitive routing where policy allows
+
+This allows routing posture to reflect organization-wide defaults while still supporting scoped execution needs when governance permits it.
+
+### 7. Boundaries
+
+Provider Policy is not the Inception itself.
+- the Inception defines the organization as a whole, while Provider Policy governs allowed provider and routing configuration inside that organization
+
+Provider Policy is not Soma Kernel responsibilities.
+- the kernel coordinates runtime behavior, while Provider Policy governs which model/routing configurations that coordination may use
+
+Provider Policy is not Central Council responsibilities.
+- the council provides advisory reasoning, while Provider Policy constrains model selection and routing posture
+
+Provider Policy is not specialist team definitions.
+- team definitions describe execution structure, while Provider Policy governs the allowed and intended backend configuration available to those teams
+
+Provider Policy is not runtime execution results.
+- it governs allowed and intended routing/configuration, not the outcome of a particular run or execution path
+
+### 8. Migration note
+
+V7 already had multi-provider routing and profile infrastructure, but it was not yet fully framed as a first-class configurable contract of an Inception.
+
+V8 promotes provider routing from operational capability to explicit organizational policy, including scoped team-level and agent-level configuration.
 
 ## Identity and Continuity State
 
 TBD in next contract step.
+
 
 
 
