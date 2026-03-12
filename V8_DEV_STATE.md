@@ -150,6 +150,13 @@ Status:
 1. `COMPLETE` the Central Council contract is now defined in `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`.
 2. `NEXT` Provider Policy contract definition is the next contract slice.
 
+### 10. Provider Policy contract definition
+
+Status:
+1. `COMPLETE` the Provider Policy contract is now defined in `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`.
+2. `COMPLETE` team-level and agent-level configuration scope are now captured explicitly as first-class contract needs.
+3. `NEXT` Identity and Continuity State contract definition is the next contract slice.
+
 ## Immediate Next Actions
 
 1. `NEXT` define the canonical V8 contract documents for `Inception`, `Soma Kernel`, `Central Council`, and provider-policy scope.
