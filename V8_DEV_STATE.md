@@ -197,11 +197,18 @@ Status:
 Status:
 1. `COMPLETE` the `Bootstrap resolution flow` is now defined in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
 2. `COMPLETE` team-level defaults, agent-level overrides, and beginner-versus-advanced bootstrap entry modes are now explicit in the V8 planning model.
-3. `NEXT` define the `Scope inheritance` section as the next bootstrap planning slice.
+3. `COMPLETE` the staged organization-resolution path is now documented for later implementation work.
+
+### 15. Scope inheritance definition
+
+Status:
+1. `COMPLETE` the `Scope inheritance` section is now defined in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
+2. `COMPLETE` the inheritance chain from `Inception -> Soma Kernel -> Central Council roles -> Team defaults -> Agent overrides` is now documented.
+3. `NEXT` define the `Precedence rules` section as the next bootstrap planning slice.
 
 ## Immediate Next Actions
 
-1. `NEXT` define scope inheritance in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so V8 bootstrap planning can describe how settings propagate across organization layers.
+1. `NEXT` define precedence rules in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so V8 bootstrap planning can describe how competing values are selected across inputs and scopes.
 2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
 3. `REQUIRED` apply the touched-file cleanup/convergence rule and review-team sweep to the first backend/runtime refactor chunk and all later code-editing slices.
 4. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
