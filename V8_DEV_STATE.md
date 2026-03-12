@@ -183,18 +183,25 @@ Status:
 
 Status:
 1. `COMPLETE` `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` now exists as the planning shell for V8 config/bootstrap behavior.
-2. `NEXT` define the `Configuration sources` section as the next bootstrap planning slice.
+2. `COMPLETE` the shell now has initial structure for user-facing and bootstrap-model planning slices.
 
 ### 13. User Concept Layer definition
 
 Status:
 1. `COMPLETE` the `User Concept Layer` is now defined in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
 2. `COMPLETE` architecture-to-user concept mapping is now documented for the V8 UI mental model.
-3. `NEXT` define the `Bootstrap resolution flow` section as the next bootstrap planning slice.
+3. `COMPLETE` the beginner-friendly AI-organization mental model is now part of the bootstrap planning surface.
+
+### 14. Bootstrap resolution flow definition
+
+Status:
+1. `COMPLETE` the `Bootstrap resolution flow` is now defined in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
+2. `COMPLETE` team-level defaults, agent-level overrides, and beginner-versus-advanced bootstrap entry modes are now explicit in the V8 planning model.
+3. `NEXT` define the `Scope inheritance` section as the next bootstrap planning slice.
 
 ## Immediate Next Actions
 
-1. `NEXT` define bootstrap resolution flow in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so V8 contracts can enter the system through an explicit startup/selection path.
+1. `NEXT` define scope inheritance in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so V8 bootstrap planning can describe how settings propagate across organization layers.
 2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
 3. `REQUIRED` apply the touched-file cleanup/convergence rule and review-team sweep to the first backend/runtime refactor chunk and all later code-editing slices.
 4. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).

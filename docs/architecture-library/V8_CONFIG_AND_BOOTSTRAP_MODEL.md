@@ -10,7 +10,71 @@ TBD in next bootstrap planning step.
 
 ## Bootstrap resolution flow
 
-TBD in next bootstrap planning step.
+### Definition
+
+Bootstrap resolution flow describes the staged transformation from configuration, template, and input sources into an active organization/runtime shape.
+
+This section defines:
+- the conceptual resolution order
+- the major stages
+- what becomes available downstream
+
+It does not yet define detailed merge precedence or implementation details.
+
+### High-level flow stages
+
+1. Load source inputs.
+2. Identify the target organization / Inception.
+3. Resolve the Soma Kernel profile.
+4. Resolve the Central Council structure.
+5. Resolve team and agent defaults.
+6. Resolve provider policy scope.
+7. Resolve identity and continuity defaults.
+8. Produce bootstrap-ready organization state.
+
+### Team and agent resolution note
+
+Bootstrap resolution must support:
+- team-level defaults
+- agent-level overrides
+- scoped inheritance across organization layers
+
+Resolution cannot stop at Council or team level only.
+
+### Beginner vs advanced flow note
+
+Beginner users may trigger this flow indirectly through a simple UI workflow.
+
+Advanced users may shape the flow more directly through templates, configuration files, advanced panels, or APIs.
+
+This keeps the platform approachable for new users while preserving deeper control where needed.
+
+### Output of bootstrap resolution
+
+Conceptually, bootstrap resolution should produce:
+- a resolved organization shape
+- resolved Team Lead / Soma Kernel behavior
+- resolved Advisors / Council composition
+- resolved Departments / Teams
+- resolved Specialists / Agents
+- resolved AI Engine Settings / Provider Policy scope
+- resolved Memory & Personality / Identity and Continuity defaults
+
+### Boundaries
+
+This section does not yet define:
+- detailed precedence rules
+- exact merge algorithms
+- storage ownership
+- implementation-specific loader behavior
+
+Those belong in later sections of the bootstrap model.
+
+### Migration note
+
+V7 already had partial bootstrap behavior through YAML, provider profiles, standing team configuration, runtime state, and operator flows, but it did not formalize a single V8 resolution flow for configurable AI organizations.
+
+V8 promotes these pieces into an explicit staged bootstrap model.
 
 ## Scope inheritance
 
