@@ -64,6 +64,16 @@ Initial V8 contract set now covers:
 - Provider Policy
 - Identity and Continuity State
 
+For default user-facing experience, these concepts should translate into a simpler team model:
+
+```text
+AI Organization
+  -> Team Lead
+  -> Advisors
+  -> Departments
+  -> Specialists
+```
+
 The continuity layer is intended to persist structured self-related state across runs while being informed by memory and reflection.
 
 V8 implementation philosophy:
@@ -176,5 +186,3 @@ Mycelis is currently transitioning from V7 operational architecture to V8 incept
 
 The V7 system provides the runtime foundation.
 V8 extends that foundation to support configurable AI organizations, provider-policy scoping, kernel-aware execution architecture, and structured identity/continuity state across runs.
-
-
