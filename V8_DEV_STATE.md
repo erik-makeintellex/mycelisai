@@ -157,9 +157,17 @@ Status:
 2. `COMPLETE` team-level and agent-level configuration scope are now captured explicitly as first-class contract needs.
 3. `NEXT` Identity and Continuity State contract definition is the next contract slice.
 
+### 11. Identity and Continuity State contract definition
+
+Status:
+1. `COMPLETE` the Identity and Continuity State contract is now defined in `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`.
+2. `COMPLETE` the initial V8 runtime contract set is now complete.
+3. `NEXT` move to config/bootstrap model planning before backend refactor work begins.
+
 ## Immediate Next Actions
 
-1. `NEXT` define the canonical V8 contract documents for `Inception`, `Soma Kernel`, `Central Council`, and provider-policy scope.
+1. `NEXT` begin config/bootstrap model planning so the completed V8 contract set can enter the system through configuration, templates, bootstrap resolution, and precedence rules.
 2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
 3. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
 4. `REQUIRED` keep all new implementation/testing checkpoints in `V8_DEV_STATE.md` going forward.
+

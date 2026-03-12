@@ -341,7 +341,81 @@ V8 promotes provider routing from operational capability to explicit organizatio
 
 ## Identity and Continuity State
 
-TBD in next contract step.
+### 1. Definition
+
+Identity and Continuity State is the V8 contract layer that governs how an Inception maintains persistent self-related state across interactions and runs.
+
+It preserves:
+- who the organization is configured to be
+- how it relates to the operator
+- what continuity it maintains across runs
+- what persistent self-related state it may track
+
+This is structured runtime state, not just conversational prose or tone.
+
+### 2. Responsibilities
+
+Identity and Continuity State is responsible for:
+- identity summary ownership
+- continuity summary ownership
+- operator relationship posture
+- persistent self-state boundaries
+- cross-run continuity support
+- memory-linked identity persistence
+- support for reflection inputs where enabled
+
+This layer exists so the organization can preserve governed continuity without collapsing identity into ad hoc prompt text alone.
+
+### 3. Minimal state components
+
+At minimum, Identity and Continuity State may carry:
+- identity summary
+- continuity summary
+- operator relationship posture
+- active organizational self-description
+- persistent boundaries or constraints
+- references to memory/continuity sources
+- reflection-linked updates where policy allows
+
+These are contract-level state components, not final schema definitions.
+
+### 4. Boundaries
+
+Identity and Continuity State is not the Inception definition.
+- Inception defines the organization at the top level, while identity/continuity state preserves self-related state inside that configured organization over time
+
+Identity and Continuity State is not Soma Kernel coordination logic.
+- the kernel coordinates runtime behavior, while identity/continuity state preserves self-related continuity that the kernel may use
+
+Identity and Continuity State is not Central Council reasoning roles.
+- the council contributes advisory reasoning, while identity/continuity state persists who the organization is and how it relates to the operator across runs
+
+Identity and Continuity State is not provider routing policy.
+- provider policy governs allowed backend configuration, while identity/continuity state governs persistent self-related state
+
+Identity and Continuity State is not single-run execution state.
+- a run captures bounded execution context, while identity/continuity state persists across runs
+
+Identity and Continuity State is not freeform conversational style alone.
+- style may reflect identity, but this contract governs structured continuity state rather than prose choices by themselves
+
+### 5. Runtime relationship
+
+Identity and Continuity State relates to the runtime this way:
+- Inception defines the organization-level contract
+- Soma Kernel uses continuity state during coordination and interaction
+- Memory provides supporting continuity evidence and recall sources
+- Runs occur within, but do not replace, cross-run continuity
+- Reflection may update or refine continuity state where policy allows
+
+This layer persists across runs while being informed by memory and reflection.
+
+### 6. Migration note
+
+V7 had memory, conversation history, runs, events, and organizational identity assumptions, but it did not yet formalize a first-class identity and continuity contract.
+
+V8 promotes identity and continuity from implicit behavior to explicit contract.
+
 
 
 
