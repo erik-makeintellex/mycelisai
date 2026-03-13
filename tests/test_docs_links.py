@@ -10,6 +10,8 @@ DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
 PRD_INDEX = ROOT / "mycelis-architecture-v7.md"
 NEXT_EXECUTION_SLICES = ROOT / "docs" / "architecture-library" / "NEXT_EXECUTION_SLICES_V7.md"
 DEV_STATE = ROOT / "V7_DEV_STATE.md"
+V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
+V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
 SOMA_COUNCIL_PROTOCOL = ROOT / "docs" / "architecture" / "SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md"
 UI_OPERATOR_EXPERIENCE = ROOT / "docs" / "architecture-library" / "UI_AND_OPERATOR_EXPERIENCE_V7.md"
 CANONICAL_DOCS = [
@@ -58,6 +60,8 @@ def test_docs_manifest_exposes_required_canonical_docs():
         "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
         "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
         "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
+        "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
+        "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
         "mycelis-architecture-v7.md",
     ]
 
@@ -312,3 +316,101 @@ def test_canonical_surfaces_do_not_expose_purged_planning_docs():
                 offenders.append(f"{path.relative_to(ROOT)} still references `{purged}`")
 
     assert not offenders, "Canonical surfaces still reference purged planning docs:\n" + "\n".join(offenders)
+
+
+def test_v8_bootstrap_model_template_section_defines_blueprint_contract():
+    text = V8_BOOTSTRAP_MODEL.read_text(encoding="utf-8")
+    required_snippets = [
+        "## Template and instantiation entry points",
+        "Template = reusable blueprint",
+        "Inception / AI Organization = actual instantiated organization",
+        "Templates are reusable organization blueprints, not just UI presets.",
+        "- organization type",
+        "- default Team Lead / Soma Kernel posture",
+        "- default Advisors / Council composition",
+        "- default Departments / Teams",
+        "- default Specialists / Agents",
+        "- default AI Engine Settings / provider policy",
+        "- default Memory & Personality settings",
+        "- optional beginner-facing labels and descriptions",
+        "By default, a template does not contain:",
+        "- live runtime state",
+        "- execution history",
+        "- per-run outcomes",
+        "- user-specific secrets",
+        "- starter templates for beginners",
+        "- domain templates such as Research, Engineering, and Marketing",
+        "- executive templates such as CTO, COO, and Product Lead",
+        "- personal / continuity templates",
+        "- empty / minimal template",
+        "### Template validation expectations",
+        "Templates should be treated as governed blueprint inputs, not free-form UI metadata blobs.",
+        "- declare enough structure to identify its organization type and intended operating posture",
+        "- organize defaults along the same conceptual scopes used by bootstrap resolution",
+        "- separate beginner-facing labels from runtime-shaping defaults",
+        "- be resolvable into an instantiated organization without inventing a second hidden template model",
+        "1. create from template",
+        "2. create empty",
+        "3. create from config/API",
+        "4. clone and modify an existing template later",
+        "1. the template supplies defaults",
+        "2. the instantiated organization becomes its own object after creation",
+        "3. later edits to the template do not silently rewrite existing organizations unless that behavior is explicitly designed and governed",
+        "A template can:",
+        "- define team defaults",
+        "- define agent defaults",
+        "- define optional advanced overrides",
+        "Beginner UI should mainly show:",
+        "- template name",
+        "- purpose",
+        "- a simple summary",
+        "Advanced panels may expose:",
+        "- internal structure",
+        "- routing posture",
+        "- scoped defaults",
+        "### Target-delivery implication",
+        "Templates must support target delivery rather than acting as decorative presets.",
+        "- templates are bootstrap inputs for real organizations that should be capable of participating in the governed execution platform",
+        "- instantiated organizations created from templates must still resolve into runtime behavior that can produce target product outcomes such as `answer`, `proposal`, `execution_result`, and `blocker`",
+        "- the template system should not become a second planning-only layer that is disconnected from execution, governance, or operator-visible delivery behavior",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, (
+        "V8 bootstrap model is missing required template/instantiation contract snippets: "
+        f"{missing}"
+    )
+
+
+def test_v8_dev_state_points_next_slice_to_v7_bootstrap_migration():
+    text = V8_DEV_STATE.read_text(encoding="utf-8")
+    required_snippets = [
+        "### 17. Template and instantiation entry points definition",
+        "templates are now documented as reusable organization blueprints",
+        "1. `NEXT` define `Migration from V7 bootstrap assumptions` in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, f"V8 dev state is missing the expected post-template migration next-step framing: {missing}"
+
+
+def test_v8_bootstrap_model_keeps_template_contract_linked_to_target_delivery():
+    bootstrap_text = V8_BOOTSTRAP_MODEL.read_text(encoding="utf-8")
+    target_text = (ROOT / "docs" / "architecture-library" / "TARGET_DELIVERABLE_V7.md").read_text(encoding="utf-8")
+
+    required_target_outcomes = ["`answer`", "`proposal`", "`execution_result`", "`blocker`"]
+    missing_target_outcomes = [marker for marker in required_target_outcomes if marker not in target_text]
+    assert not missing_target_outcomes, (
+        "Target deliverable doc is missing required product-outcome markers: "
+        f"{missing_target_outcomes}"
+    )
+
+    required_bootstrap_linkage = [
+        "Templates must support target delivery rather than acting as decorative presets.",
+        "`answer`, `proposal`, `execution_result`, and `blocker`",
+    ]
+    missing_bootstrap_linkage = [snippet for snippet in required_bootstrap_linkage if snippet not in bootstrap_text]
+    assert not missing_bootstrap_linkage, (
+        "V8 bootstrap model is missing required target-delivery linkage for templates: "
+        f"{missing_bootstrap_linkage}"
+    )

@@ -304,6 +304,19 @@ V8 should support at least these template kinds:
 
 These kinds ensure the template layer can serve both onboarding and serious organizational modeling.
 
+### Template validation expectations
+
+Templates should be treated as governed blueprint inputs, not free-form UI metadata blobs.
+
+At a planning level, a valid template should:
+- declare enough structure to identify its organization type and intended operating posture
+- organize defaults along the same conceptual scopes used by bootstrap resolution
+- separate beginner-facing labels from runtime-shaping defaults
+- remain free of live execution state and user-specific secret material by default
+- be resolvable into an instantiated organization without inventing a second hidden template model
+
+Beginner-safe templates may hide advanced structure from the default UI, but the underlying blueprint should still resolve through the same canonical organization model as advanced variants.
+
 ### Template behavior
 
 Template behavior should follow these rules:
@@ -393,6 +406,15 @@ This distinction matters:
 - instantiated organization = actual runtime-owned organizational object
 
 Bootstrap resolution operates on the instantiated organization, even when a template supplied many of its defaults.
+
+### Target-delivery implication
+
+Templates must support target delivery rather than acting as decorative presets.
+
+This means:
+- templates are bootstrap inputs for real organizations that should be capable of participating in the governed execution platform
+- instantiated organizations created from templates must still resolve into runtime behavior that can produce target product outcomes such as `answer`, `proposal`, `execution_result`, and `blocker`
+- the template system should not become a second planning-only layer that is disconnected from execution, governance, or operator-visible delivery behavior
 
 ### UI note
 
@@ -516,3 +538,4 @@ TBD in next bootstrap planning step.
 V7 runtime/config surfaces remain migration inputs.
 This file is the new V8 planning surface for config/bootstrap behavior.
 Implementation should not begin until the model is defined here.
+
