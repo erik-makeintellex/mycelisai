@@ -35,7 +35,7 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 | [MVP Integration And Toolship Execution Plan V7](MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md) | executing AI + internal toolship + service-connection hardening for non-test users | integration phases, acceptance gates, deep-testing matrix, and exit criteria |
 | [UI Generation And Testing Execution Plan V7](UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md) | executing deterministic UI build flow and deep route-level test proof | generation contracts, route coverage priorities, and MVP UI gate criteria |
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | defining the new V8 runtime contract surface during migration | contract shells for inception, kernel, council, provider policy, and continuity state |
-| [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning how V8 concepts enter the system through config and bootstrap behavior | configuration sources, templates, instantiation entry points, bootstrap resolution, scope inheritance, and precedence rules |
+| [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning how V8 concepts enter the system through config and bootstrap behavior | configuration sources, templates, instantiation entry points, bootstrap resolution, scope inheritance, precedence rules, and the V7-to-V8 bootstrap migration contract |
 
 ## How To Use This Library
 

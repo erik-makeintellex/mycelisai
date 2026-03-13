@@ -33,7 +33,7 @@ Use `V7_DEV_STATE.md` only as a migration input and historical checkpoint source
 ```text
 V8-0  Migration baseline and architecture alignment                 [ACTIVE]
 V8-1  Canonical contract definition                                [COMPLETE]
-V8-2  Config and bootstrap model planning                          [NEXT]
+V8-2  Config and bootstrap model planning                          [COMPLETE]
 V8-3  Backend primitive refactor                                   [REQUIRED]
 V8-4  Frontend/operator refactor                                   [REQUIRED]
 V8-5  Documentation and naming migration                           [ACTIVE]
@@ -92,7 +92,7 @@ State-file rules:
 
 Status:
 1. `COMPLETE` canonical V8 contracts for `Inception`, `Soma Kernel`, `Central Council`, provider-policy scope, and identity/continuity state now exist.
-2. `NEXT` define the config/bootstrap model that introduces those contracts through configuration, templates, bootstrap resolution, and precedence rules.
+2. `COMPLETE` the config/bootstrap model now documents configuration sources, template entry points, scope inheritance, precedence, and V7-to-V8 migration rules.
 3. `REQUIRED` replace standing-team bootstrap assumptions with configurable organization-resolution contracts.
 4. `REQUIRED` keep Workspace simple and Soma-first while making the operator model kernel-aware instead of fixed-identity-bound.
 5. `REQUIRED` continue the full UI retheme and density-reduction effort under V8 delivery targets, not legacy V7 framing.
@@ -123,10 +123,11 @@ Implementation rule:
 Task 001  V8 alignment and migration inventory                      [IN_REVIEW]
 Task 002  Inception / kernel / council contract definition          [COMPLETE]
 Task 003  Provider-policy scope contract                            [COMPLETE]
-Task 004  Config and bootstrap model planning                       [NEXT]
+Task 004  Config and bootstrap model planning                       [COMPLETE]
 Task 005  Standing-team bootstrap de-hardcoding plan                [REQUIRED]
 Task 006  Workspace/UI kernel-aware refactor plan                   [REQUIRED]
 Task 007  V8 docs/state migration and grading discipline            [ACTIVE]
+Task 008  Planning-integration validation pass                      [NEXT]
 ```
 
 ## Current Checkpoint (2026-03-13)
@@ -136,12 +137,14 @@ Delivery updates in this checkpoint:
 2. `COMPLETE` established `V8_DEV_STATE.md` as the canonical state file for new work.
 3. `ACTIVE` migrated active non-archive documentation references from `V7_DEV_STATE.md` to `V8_DEV_STATE.md` where those docs define current execution discipline.
 4. `COMPLETE` preserved V7 architecture-library documents as migration inputs rather than rewriting them into premature V8 specifications.
+5. `COMPLETE` documented how V7 bootstrap sources, implicit behaviors, fixed Soma/Council posture, and runtime-state coupling roll forward into the explicit V8 configuration/bootstrap model.
 
 Evidence:
 1. README directive review completed against `README.md`
 2. runtime-contract alignment confirmed against `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`
 3. bootstrap-planning alignment confirmed against `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 4. active documentation references updated to point at `V8_DEV_STATE.md`
+5. V7-to-V8 bootstrap migration narrative committed in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 
 ### 6. V8 contract shell introduction
 
@@ -220,11 +223,11 @@ Status:
 1. `COMPLETE` the `Template and instantiation entry points` section is now defined in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
 2. `COMPLETE` V8 now distinguishes template-based creation, empty/manual creation, operator/API creation, and config-file/bootstrap creation as canonical organization-entry modes.
 3. `COMPLETE` templates are now documented as reusable organization blueprints that feed bootstrap resolution with default kernel, council, team, and policy shape.
-4. `NEXT` define the `Migration from V7 bootstrap assumptions` section so the plan can explain how fixed V7 startup assumptions collapse into V8 organization instantiation rules.
+4. `COMPLETE` the `Migration from V7 bootstrap assumptions` section now explains how fixed V7 startup assumptions collapse into explicit V8 configuration sources, inheritance, and precedence rules.
 
 ## Immediate Next Actions
 
-1. `NEXT` define `Migration from V7 bootstrap assumptions` in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so the bootstrap plan can explain how standing-team startup, fixed Soma/Council posture, and compatibility bootstrap should transition into V8 organization instantiation.
+1. `NEXT` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.
 2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
 3. `REQUIRED` apply the touched-file cleanup/convergence rule and review-team sweep to the first backend/runtime refactor chunk and all later code-editing slices.
 4. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
