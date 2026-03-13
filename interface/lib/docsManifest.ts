@@ -294,7 +294,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-config-bootstrap-model",
                 label: "V8 Config and Bootstrap Model",
                 path: "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
-                description: "Canonical V8 planning surface for templates, organization entry points, bootstrap resolution, inheritance, and precedence",
+                description: "Canonical V8 bootstrap + V7->V8 migration contract covering templates vs instantiated orgs, entry points, inheritance, and precedence",
             },
             {
                 slug: "arch-overview",

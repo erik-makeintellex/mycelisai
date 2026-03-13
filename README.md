@@ -35,6 +35,11 @@ Review these in order before touching code or planning state:
 10. [V8 Development State](V8_DEV_STATE.md)
 11. [Docs Manifest](interface/lib/docsManifest.ts)
 
+Bootstrap reminder:
+- treat `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the canonical V7->V8 migration and bootstrap contract, not just another planning note
+- always translate V7 YAML, runtime config, DB seeding, and operator wizard flows through that model before they touch a live organization
+- `Template ≠ instantiated organization`, so only instantiated orgs enter bootstrap resolution while templates stay reusable blueprints
+
 Fresh-agent review rule:
 - V7 docs define the current authoritative architecture/planning contract until migrated.
 - `V7_DEV_STATE.md` is legacy migration history.
