@@ -590,3 +590,60 @@ V7 runtime/config surfaces remain migration inputs.
 This file is the new V8 planning surface for config/bootstrap behavior.
 Implementation should not begin until the model is defined here.
 
+## Standing-team bootstrap de-hardcoding plan
+
+### Purpose
+
+Chunk 4.2 converts the legacy standing-team bootstrap into an explicit template → instantiation → inheritance → precedence pipeline so runtime no longer assumes one fixed Soma/Council/topology. This section documents the phased plan required before backend refactors touch the Go code.
+
+### Current hard-coded assumptions
+
+- **Static team manifests** — `core/config/teams/*.yaml` enumerate specific `prime-*`, `council`, `telemetry`, and `genesis` teams whose IDs are re-used verbatim during bootstrap and migrations.
+- **Fixed council roster** — `core/internal/swarm/team.go`, `core/internal/swarm/soma.go`, and `core/internal/swarm/agent.go` bind council roles (architect, coder, creative, sentry) directly in code paths such as `defaultCouncilMembers` and `defaultCouncilTools`.
+- **Kernel defaults baked into runtime** — `core/internal/bootstrap/service.go`, `core/internal/server/inception.go`, and `core/internal/signal/stream.go` seed the same kernel personality, prompts, and signal metadata whenever the DB is empty.
+- **Provider wiring implied by policy.yaml** — `core/config/policy.yaml`, `core/config/cognitive.yaml`, and `core/internal/cognitive/router.go` assume one global provider stack selected via env vars rather than per-scope provider policy inheritance.
+- **Bootstrap == runtime state** — `core/internal/inception/store.go`, `core/internal/provisioning/engine.go`, and `core/migrations/00*.sql` treat persisted standing teams as configuration truth, so rehydration copies prior rows instead of running template-instantiation logic.
+
+These assumptions must move behind the V8 bootstrap contract so that multiple organizations, kernels, councils, and provider policies can coexist.
+
+### Plan: relocate legacy behavior into the V8 model
+
+1. **Template definitions**
+   - Convert each standing-team YAML file into a governed template package (preferred homes: `core/templates/` or a new `bootstrap/templates/` bundle) that describes kernel posture, council roles, team defaults, and agent overrides using the scopes defined earlier in this document.
+   - Encode the former council roster as part of a “Legacy Default Organization” template so it can still be instantiated explicitly but no longer auto-loads at process start.
+   - Capture provider defaults, memory posture, and advanced overrides inside the template metadata instead of `policy.yaml` fallbacks.
+
+2. **Bootstrap resolution**
+   - Replace the “seed standing team rows when DB empty” branch inside `core/internal/bootstrap/service.go` with a call to the template-instantiation service.
+   - Ensure CLI/Helm/bootstrap flows submit explicit organization input packages (template reference + overrides + secrets) to the resolver so runtime never infers configuration from the last database snapshot.
+   - Wire `core/internal/server/templates.go` and `core/internal/inception/store.go` to persist instantiated organizations separately from templates, matching `Template ≠ instantiated organization`.
+
+3. **Scoped inheritance**
+   - Map existing prompt fragments, tool policies, and routing overrides onto the inheritance chain defined earlier (`Inception -> Kernel -> Council -> Team -> Agent`).
+   - Deprecate helpers like `ApplyCouncilDefaults` in `core/internal/swarm/team.go` and replace them with a scope-aware merger that consumes template + config + operator overrides.
+   - Assert inheritance rules in tests so no slice can silently reintroduce fixed IDs (e.g., `TestBootstrapScopeInheritance` exercising `core/internal/bootstrap/service_test.go`).
+
+4. **Provider policy configuration**
+   - Promote provider defaults currently stored in `core/config/policy.yaml` into explicit provider-policy templates referenced by organization templates; runtime reads provider posture from the instantiated organization rather than environment heuristics.
+   - Align `core/internal/cognitive/router.go` and `core/internal/router/router.go` so routing decisions accept scope metadata (organization, kernel, team, agent) and honor provider-policy locks before overrides.
+   - Ensure provider credential sources are declared via Helm secrets/config-maps and resolved at bootstrap time, preventing code from falling back to global env-only knobs.
+
+### Cluster and runtime alignment items
+
+- **Helm env injection (`MYCELIS_API_KEY`)** — The chart currently injects this only into the core deployment. Update the Helm values contract so templates and bootstrap flows declare whether they need API keys, then mount them via secrets referenced in `charts/mycelis-core/templates/secrets.yaml` and surfaced to Pods through env vars consistent with the provider-policy scope.
+- **Port alignment (8080 vs 8081)** — Core API and interface proxies disagree across manifests. Normalize Helm values so core services expose 8080 internally and 8081 externally (or vice versa) in one place, then feed that choice into bootstrap metadata so Playwright/tests/readiness probes stop guessing.
+- **Config file mounts** — Standing-team YAML/config maps should be replaced with template bundles mounted read-only (e.g., `ConfigMap` containing template definitions) plus write-once `Secret` overlays for sensitive overrides. Runtime loads templates through the bootstrap resolver instead of reading ad hoc files from `/config/teams`.
+- **Container storage expectations** — Document required writable paths (`/var/mycelis`, `/data`, etc.) for bootstrap artifacts (e.g., template cache, mission seeds). Helm must provision PVCs for any state the resolver writes, and templates should declare whether persistence is required so local dev clusters (kind/minikube) stay reproducible.
+
+### Acceptance for this planning slice
+
+- Task 005 in `V8_DEV_STATE.md` moves to `ACTIVE` with this written plan.
+- Follow-on implementation slices must:
+  1. land template serialization + loader infrastructure,
+  2. replace standing-team seeding with template-instantiation calls,
+  3. wire provider-policy scopes into routing,
+  4. update Helm charts to honor the env/port/mount/storage requirements above,
+  5. attach scope-aware tests and docs updates per the governance rules.
+
+Until those slices complete, legacy behavior remains in place but is now explicitly targeted for removal.
+

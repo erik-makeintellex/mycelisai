@@ -124,7 +124,7 @@ Task 001  V8 alignment and migration inventory                      [IN_REVIEW]
 Task 002  Inception / kernel / council contract definition          [COMPLETE]
 Task 003  Provider-policy scope contract                            [COMPLETE]
 Task 004  Config and bootstrap model planning                       [COMPLETE]
-Task 005  Standing-team bootstrap de-hardcoding plan                [REQUIRED]
+Task 005  Standing-team bootstrap de-hardcoding plan                [ACTIVE]
 Task 006  Workspace/UI kernel-aware refactor plan                   [REQUIRED]
 Task 007  V8 docs/state migration and grading discipline            [ACTIVE]
 Task 008  Planning-integration validation pass                      [COMPLETE]
@@ -227,6 +227,22 @@ Status:
 2. `COMPLETE` V8 now distinguishes template-based creation, empty/manual creation, operator/API creation, and config-file/bootstrap creation as canonical organization-entry modes.
 3. `COMPLETE` templates are now documented as reusable organization blueprints that feed bootstrap resolution with default kernel, council, team, and policy shape.
 4. `COMPLETE` the `Migration from V7 bootstrap assumptions` section now explains how fixed V7 startup assumptions collapse into explicit V8 configuration sources, inheritance, and precedence rules.
+
+### 18. Standing-team bootstrap de-hardcoding plan
+
+Status:
+1. `ACTIVE` Chunk 4.2 captured the standing-team de-hardcoding plan inside `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
+2. `ACTIVE` runtime/config references to fixed `prime-*` teams, hard-coded council rosters, kernel defaults, and provider wiring have documented migration paths into template definitions, bootstrap resolution, scoped inheritance, and provider-policy configuration.
+3. `ACTIVE` Helm/runtime concerns (env injection for `MYCELIS_API_KEY`, 8080/8081 port normalization, config-file mounts, container storage) are now described alongside the bootstrap plan so infrastructure slices can align with runtime refactors.
+
+Evidence:
+1. Plan section `## Standing-team bootstrap de-hardcoding plan` (2026-03-13) in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` outlines legacy assumptions (`core/config/teams/*.yaml`, `core/internal/swarm/team.go`, `core/internal/bootstrap/service.go`, `core/config/policy.yaml`, `core/internal/inception/store.go`) and prescribes template/instantiation/inheritance/provider policy replacements plus Helm alignment steps.
+2. README review confirmed no additional guidance changes were required after adding the plan (`README.md`, 2026-03-13).
+
+Next steps:
+1. Implement template serialization/loader infrastructure and shift standing-team YAML into governed templates.
+2. Replace bootstrap seeding logic with template-instantiation + scope-aware inheritance.
+3. Promote provider-policy scopes and Helm env/port/mount/storage alignment into actionable runtime slices with tests.
 
 ## Immediate Next Actions
 
