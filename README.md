@@ -102,6 +102,9 @@ Versioning rule:
 - use V7 documents as migration inputs
 - use `V8_DEV_STATE.md` as the live delivery scoreboard
 - migrate naming, runtime assumptions, and documentation incrementally so planning continuity is not broken
+- treat every V7 bootstrap asset (YAML, runtime config, DB seeding flows, operator wizards) as input material that must be translated into the explicit V8 configuration/bootstrap model before it shapes a running organization
+- remember that templates remain reusable blueprints (`Template ≠ instantiated organization`); only instantiated organizations enter runtime bootstrap resolution
+- the compatibility contract for that translation lives in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 
 ## Feature Status Standard
 

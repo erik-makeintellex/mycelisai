@@ -531,7 +531,56 @@ Internal system concepts should remain implementation details unless the user ex
 
 ## Migration from V7 bootstrap assumptions
 
-TBD in next bootstrap planning step.
+### What V7 actually did
+
+V7 never exposed a single declarative bootstrap contract. Instead, the platform stitched organizations together from four implicit source classes:
+
+- **YAML manifests and sidecar config files** that pre-seeded provider settings, specialist manifests, or Soma routing flags.
+- **Runtime configuration** (env vars, `.env`, CLI arguments) that toggled kernel/council posture without documenting precedence.
+- **Database state** produced by ad hoc migrations or interactive setup scripts that silently became the bootstrap truth.
+- **Operator flows** (UI wizards, CLI prompts) that mutated standing-team rows directly and became the de facto configuration after the fact.
+
+This left several implicit behaviors in place:
+
+- standing team definitions were hydrated automatically at process start if the database was empty
+- Soma + Council roles were fixed to a single canonical lineup; “editing the organization” really meant swapping prompt fragments inside that hardcoded team
+- runtime state (runs, manifests, NATS registrations) doubled as bootstrap inputs because cold-start paths reused whatever was last persisted
+- YAML/env overrides won simply because they were loaded last, not because a real precedence rule said so
+
+### Why that breaks for V8
+
+V8 treats Soma, Council, teams, and specialists as configurable organizational scopes. The V7 model coupled all bootstrap behavior to a single standing-team table plus runtime leftovers, which makes it impossible to instantiate multiple organizations, reason about inheritance, or audit what shaped a running team. Fixed Soma/Council posture, hardcoded standing-team IDs, and “database state == configuration” cannot survive in a system that promises configurable AI organizations.
+
+### How V8 replaces the behavior
+
+V8 promotes every bootstrap input into an explicit, precedence-aware source:
+
+1. **Templates** provide reusable blueprints but remain separate from instantiated organizations (`Template ≠ instantiated organization`).
+2. **Declarative configuration artifacts** (files, APIs, automation payloads) describe organization inputs without poking live runtime tables.
+3. **Operator flows** submit explicit organization creation or update intents that feed the same instantiation pipeline as templates/config files.
+4. **Runtime/persistent state** supplies lineage and continuity only after an organization exists; it no longer doubles as a bootstrap authoring surface.
+
+Those inputs pass through the staged resolution flow documented earlier, then inherit across scopes (`Inception -> Kernel -> Council -> Team -> Agent`) before precedence resolves conflicts. Scope inheritance is intentional: inherited defaults stay visible, overrides are allowed only when policy says so, and precedence follows the declared ordering instead of whichever loader ran last.
+
+### Compatibility posture
+
+- V7 YAML and manifest assets remain valid migration inputs, but they must be translated into V8 template/config packages before use.
+- Existing runtime state may seed continuity data, but it cannot override the V8 bootstrap pipeline; cold starts always pass through explicit instantiation now.
+- Operator wizards remain supported, yet they now emit explicit organization definitions instead of mutating standing-team tables directly.
+- Fixed Soma/Council rosters are deprecated; compatibility shims may expose a “legacy default template” that reproduces the old team, but it is treated as a template, not an always-on implicit team.
+
+### What is intentionally not migrated
+
+- Auto-hydrating standing-team rows at process start.
+- Treating last-run database state as the bootstrap plan.
+- Hidden precedence such as “env wins over YAML because it loads later.”
+- Editing live templates from instantiated organizations without governance.
+
+Legacy flows that rely on those behaviors must either run through the V8 template/config translators or stay on V7 until they are reauthored.
+
+### Net result
+
+V8 keeps prior assets useful, but only after they conform to the explicit template + instantiation + inheritance + precedence pipeline. Blueprints stay blueprints, instantiated organizations become first-class runtime objects, and bootstrap state is now auditable, repeatable, and policy-aware instead of being a side effect of whichever V7 component wrote to the database last.
 
 ## Migration note
 

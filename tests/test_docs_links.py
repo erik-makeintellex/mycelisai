@@ -382,16 +382,21 @@ def test_v8_bootstrap_model_template_section_defines_blueprint_contract():
     )
 
 
-def test_v8_dev_state_points_next_slice_to_v7_bootstrap_migration():
+def test_v8_dev_state_tracks_bootstrap_completion_and_validation_pass():
     text = V8_DEV_STATE.read_text(encoding="utf-8")
     required_snippets = [
         "### 17. Template and instantiation entry points definition",
-        "templates are now documented as reusable organization blueprints",
-        "1. `NEXT` define `Migration from V7 bootstrap assumptions` in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`",
+        "the `Migration from V7 bootstrap assumptions` section now explains how fixed V7 startup assumptions collapse into explicit V8 configuration sources",
+        "Task 004  Config and bootstrap model planning                       [COMPLETE]",
+        "Task 008  Planning-integration validation pass                      [NEXT]",
+        "`NEXT` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.",
     ]
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
-    assert not missing, f"V8 dev state is missing the expected post-template migration next-step framing: {missing}"
+    assert not missing, (
+        "V8 dev state is missing the completed bootstrap plan or the new validation-pass next step: "
+        f"{missing}"
+    )
 
 
 def test_v8_bootstrap_model_keeps_template_contract_linked_to_target_delivery():
@@ -413,4 +418,33 @@ def test_v8_bootstrap_model_keeps_template_contract_linked_to_target_delivery():
     assert not missing_bootstrap_linkage, (
         "V8 bootstrap model is missing required target-delivery linkage for templates: "
         f"{missing_bootstrap_linkage}"
+    )
+
+
+def test_v8_bootstrap_model_defines_v7_to_v8_migration_contract():
+    text = V8_BOOTSTRAP_MODEL.read_text(encoding="utf-8")
+    required_snippets = [
+        "## Migration from V7 bootstrap assumptions",
+        "V7 never exposed a single declarative bootstrap contract.",
+        "**YAML manifests and sidecar config files**",
+        "**Runtime configuration** (env vars, `.env`, CLI arguments)",
+        "**Database state** produced by ad hoc migrations or interactive setup scripts",
+        "**Operator flows** (UI wizards, CLI prompts) that mutated standing-team rows directly",
+        "standing team definitions were hydrated automatically at process start if the database was empty",
+        "Soma + Council roles were fixed to a single canonical lineup",
+        "runtime state (runs, manifests, NATS registrations) doubled as bootstrap inputs",
+        "1. **Templates** provide reusable blueprints but remain separate from instantiated organizations (`Template ≠ instantiated organization`).",
+        "2. **Declarative configuration artifacts** (files, APIs, automation payloads) describe organization inputs",
+        "3. **Operator flows** submit explicit organization creation or update intents that feed the same instantiation pipeline",
+        "4. **Runtime/persistent state** supplies lineage and continuity only after an organization exists",
+        "V7 YAML and manifest assets remain valid migration inputs, but they must be translated into V8 template/config packages before use.",
+        "Auto-hydrating standing-team rows at process start.",
+        "Treating last-run database state as the bootstrap plan.",
+        "V8 keeps prior assets useful, but only after they conform to the explicit template + instantiation + inheritance + precedence pipeline.",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, (
+        "V8 bootstrap model migration section is missing required V7-to-V8 contract details: "
+        f"{missing}"
     )
