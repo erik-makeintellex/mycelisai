@@ -3,6 +3,8 @@
 ## Purpose
 
 This document will define how V8 runtime concepts enter the system through configuration sources, templates, bootstrap resolution, scope inheritance, and precedence rules.
+It is the canonical V7->V8 migration contract for bootstrap behavior; README, the architecture-library index, and the docs manifest all rely on this file to describe how legacy YAML/config/DB/operator flows become V8-compliant organizations.
+`Template ≠ instantiated organization` remains the governing rule here—templates stay reusable blueprints until the bootstrap model resolves them into live Inceptions.
 
 ## Configuration sources
 

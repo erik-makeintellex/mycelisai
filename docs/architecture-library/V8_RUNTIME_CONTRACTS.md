@@ -12,6 +12,8 @@ This document will define the canonical V8 runtime contracts for:
 Migration note:
 - V7 architecture-library docs remain migration inputs.
 - This file is the new V8 contract surface being introduced incrementally.
+- `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` is the canonical source for translating V7 assets into instantiated V8 organizations; this doc defines what the runtime must support, while the bootstrap model defines how those contracts enter the system.
+- `Template ≠ instantiated organization`; templates remain blueprints until the bootstrap model resolves them into live Inceptions.
 
 ## Inception
 

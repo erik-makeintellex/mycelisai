@@ -37,6 +37,12 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | defining the new V8 runtime contract surface during migration | contract shells for inception, kernel, council, provider policy, and continuity state |
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning how V8 concepts enter the system through config and bootstrap behavior | configuration sources, templates, instantiation entry points, bootstrap resolution, scope inheritance, precedence rules, and the V7-to-V8 bootstrap migration contract |
 
+### V8 migration reminder
+
+- V7 docs in this table stay authoritative migration inputs until replaced, but they do not override the V8 bootstrap contract.
+- `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` is the canonical V7->V8 migration and bootstrap source; every YAML/runtime/DB/operator asset must be translated through it before shaping a running organization.
+- `Template ≠ instantiated organization`; templates remain reusable blueprints while instantiated Inceptions inherit, override, and resolve configuration through the V8 flow.
+
 ## How To Use This Library
 
 1. Start with [Target Deliverable V7](TARGET_DELIVERABLE_V7.md) to confirm the intended end state.

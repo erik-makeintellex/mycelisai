@@ -48,7 +48,7 @@ Status:
 1. `ACTIVE` V8 alignment is now carried by the README directive, the V8 runtime contracts, and the V8 bootstrap-planning surface instead of a separate tracker artifact.
 2. `COMPLETE` current fixed-organism assumptions vs V8 target model have been mapped at the planning level.
 3. `COMPLETE` backend/frontend/docs hotspots have been identified for the first migration wave.
-4. `NEXT` carry those alignment conclusions into explicit V7-bootstrap migration rules and de-hardcoding work.
+4. `ACTIVE` carry those alignment conclusions into explicit V7-bootstrap migration rules and de-hardcoding work now that the canonical plan exists.
 
 Primary references:
 - `README.md`
@@ -127,7 +127,8 @@ Task 004  Config and bootstrap model planning                       [COMPLETE]
 Task 005  Standing-team bootstrap de-hardcoding plan                [REQUIRED]
 Task 006  Workspace/UI kernel-aware refactor plan                   [REQUIRED]
 Task 007  V8 docs/state migration and grading discipline            [ACTIVE]
-Task 008  Planning-integration validation pass                      [NEXT]
+Task 008  Planning-integration validation pass                      [COMPLETE]
+Task 009  Next-execution/governance guidance migration              [NEXT]
 ```
 
 ## Current Checkpoint (2026-03-13)
@@ -138,6 +139,7 @@ Delivery updates in this checkpoint:
 3. `ACTIVE` migrated active non-archive documentation references from `V7_DEV_STATE.md` to `V8_DEV_STATE.md` where those docs define current execution discipline.
 4. `COMPLETE` preserved V7 architecture-library documents as migration inputs rather than rewriting them into premature V8 specifications.
 5. `COMPLETE` documented how V7 bootstrap sources, implicit behaviors, fixed Soma/Council posture, and runtime-state coupling roll forward into the explicit V8 configuration/bootstrap model.
+6. `COMPLETE` validated cross-doc planning consistency so README, the architecture-library index, runtime contracts, bootstrap model, docs manifest, and tests all reference the canonical V7->V8 migration contract.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -145,6 +147,7 @@ Evidence:
 3. bootstrap-planning alignment confirmed against `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 4. active documentation references updated to point at `V8_DEV_STATE.md`
 5. V7-to-V8 bootstrap migration narrative committed in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
+6. planning-integration validation sweep recorded in this chunk plus `tests/test_docs_links.py`
 
 ### 6. V8 contract shell introduction
 
@@ -181,7 +184,7 @@ Status:
 Status:
 1. `COMPLETE` the Identity and Continuity State contract is now defined in `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`.
 2. `COMPLETE` the initial V8 runtime contract set is now complete.
-3. `NEXT` move to config/bootstrap model planning before backend refactor work begins.
+3. `COMPLETE` the program has already moved into the config/bootstrap planning phase before backend refactor work begins.
 
 ### 12. V8 config/bootstrap planning shell introduction
 
@@ -227,7 +230,7 @@ Status:
 
 ## Immediate Next Actions
 
-1. `NEXT` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.
+1. `COMPLETE` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.
 2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
 3. `REQUIRED` apply the touched-file cleanup/convergence rule and review-team sweep to the first backend/runtime refactor chunk and all later code-editing slices.
 4. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).

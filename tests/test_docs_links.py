@@ -109,6 +109,7 @@ def test_readme_has_fresh_agent_review_sequence():
         "docs/TESTING.md",
         "V7_DEV_STATE.md",
         "interface/lib/docsManifest.ts",
+        "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
     ]
 
     missing = [ref for ref in required_refs if ref not in text]
@@ -388,8 +389,9 @@ def test_v8_dev_state_tracks_bootstrap_completion_and_validation_pass():
         "### 17. Template and instantiation entry points definition",
         "the `Migration from V7 bootstrap assumptions` section now explains how fixed V7 startup assumptions collapse into explicit V8 configuration sources",
         "Task 004  Config and bootstrap model planning                       [COMPLETE]",
-        "Task 008  Planning-integration validation pass                      [NEXT]",
-        "`NEXT` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.",
+        "Task 008  Planning-integration validation pass                      [COMPLETE]",
+        "Task 009  Next-execution/governance guidance migration              [NEXT]",
+        "`COMPLETE` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.",
     ]
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
@@ -425,6 +427,7 @@ def test_v8_bootstrap_model_defines_v7_to_v8_migration_contract():
     text = V8_BOOTSTRAP_MODEL.read_text(encoding="utf-8")
     required_snippets = [
         "## Migration from V7 bootstrap assumptions",
+        "canonical V7->V8 migration contract",
         "V7 never exposed a single declarative bootstrap contract.",
         "**YAML manifests and sidecar config files**",
         "**Runtime configuration** (env vars, `.env`, CLI arguments)",
