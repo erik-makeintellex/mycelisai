@@ -285,6 +285,18 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Deterministic UI generation contract, route-priority testing depth, and MVP UX gate criteria",
             },
             {
+                slug: "v8-runtime-contracts",
+                label: "V8 Runtime Contracts",
+                path: "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
+                description: "Canonical V8 contract shell for inception, kernel, council, provider policy, and continuity state",
+            },
+            {
+                slug: "v8-config-bootstrap-model",
+                label: "V8 Config and Bootstrap Model",
+                path: "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
+                description: "Canonical V8 planning surface for templates, organization entry points, bootstrap resolution, inheritance, and precedence",
+            },
+            {
                 slug: "arch-overview",
                 label: "Overview",
                 path: "docs/architecture/OVERVIEW.md",
@@ -432,4 +444,3 @@ export const DOC_MANIFEST: DocSection[] = [
 export const DOC_BY_SLUG: Map<string, DocEntry> = new Map(
     DOC_MANIFEST.flatMap((section) => section.docs).map((doc) => [doc.slug, doc])
 );
-
