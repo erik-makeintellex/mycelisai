@@ -13,6 +13,14 @@ Related:
 - [MVP Release Strike Team Plan V7](MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md)
 - [UI Generation And Testing Execution Plan V7](UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md)
 
+## V8 Migration Alignment
+
+- This queue now expresses V8 migration slices; the V7 names remain only as compatibility labels.
+- Every slice must reference `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so work follows the template -> instantiation -> inheritance -> precedence bootstrap pipeline.
+- `Template ≠ instantiated organization`; translate templates or legacy YAML/runtime/DB/operator assets before they shape a live slice.
+- All status moves (`NEXT`, `ACTIVE`, `IN_REVIEW`, etc.) must be mirrored into `V8_DEV_STATE.md`, which is the authoritative migration queue.
+- The delivery rules defined here are subordinate to the V8 bootstrap contract even when a slice touches legacy V7 assets.
+
 ## Feature Status Markers
 
 Use only:

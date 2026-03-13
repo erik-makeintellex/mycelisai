@@ -17,6 +17,13 @@ Supporting specialized docs:
 - [Operations](../architecture/OPERATIONS.md)
 - [Next Target Gated Delivery Program](../architecture/NEXT_TARGET_GATED_DELIVERY_PROGRAM.md)
 
+## V8 Migration Alignment
+
+- Delivery governance now references `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the bootstrap and V7->V8 migration contract, even when slices still operate on legacy V7 artifacts.
+- `Template ≠ instantiated organization`; all templates/YAML/runtime/DB/operator inputs must be translated through the V8 template -> instantiation -> inheritance -> precedence pipeline before they change runtime behavior.
+- `V8_DEV_STATE.md` is the authoritative queue for slice/NEXT markers; `V7_DEV_STATE.md` remains a historical reference only.
+- Governance review should confirm that every slice uses V7 docs strictly as migration inputs and reports evidence back into the V8 state file.
+
 ## 1. Delivery Principle
 
 A slice is not accepted because code changed.
@@ -45,7 +52,7 @@ When behavior changes, update the canonical docs in the same slice.
 
 Minimum candidates:
 - `README.md`
-- `V7_DEV_STATE.md`
+- `V8_DEV_STATE.md` (state scoreboard; reference `V7_DEV_STATE.md` only for historical migration evidence)
 - `docs/TESTING.md`
 - `docs/architecture/OPERATIONS.md`
 - `docs/README.md`

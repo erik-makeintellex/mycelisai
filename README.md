@@ -140,6 +140,7 @@ Particular attention belongs on:
 - UI operator experience contracts
 - runtime orchestration assumptions
 - provider routing and hybrid deployment posture
+- When working in the execution/gov docs (`docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`, `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`), treat all V7 content as migration input: translate assets through `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, keep `Template ≠ instantiated organization`, and record slice state in `V8_DEV_STATE.md`.
 
 ## Command Contract
 

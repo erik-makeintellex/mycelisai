@@ -451,3 +451,31 @@ def test_v8_bootstrap_model_defines_v7_to_v8_migration_contract():
         "V8 bootstrap model migration section is missing required V7-to-V8 contract details: "
         f"{missing}"
     )
+
+
+def test_execution_governance_docs_reference_v8_migration_contract():
+    next_text = (ROOT / "docs" / "architecture-library" / "NEXT_EXECUTION_SLICES_V7.md").read_text(encoding="utf-8")
+    governance_text = (ROOT / "docs" / "architecture-library" / "DELIVERY_GOVERNANCE_AND_TESTING_V7.md").read_text(encoding="utf-8")
+    team_text = (ROOT / "docs" / "architecture-library" / "TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md").read_text(encoding="utf-8")
+
+    required = [
+        (next_text, "## V8 Migration Alignment"),
+        (next_text, "template -> instantiation -> inheritance -> precedence"),
+        (next_text, "V8_DEV_STATE.md"),
+        (governance_text, "## V8 Migration Alignment"),
+        (governance_text, "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md"),
+        (governance_text, "Template ≠ instantiated organization"),
+        (team_text, "V8 Migration Workstreams"),
+        (team_text, "template -> instantiation -> inheritance -> precedence"),
+        (team_text, "V8_DEV_STATE.md"),
+    ]
+
+    missing = []
+    for text, snippet in required:
+        if snippet not in text:
+            missing.append(snippet)
+
+    assert not missing, (
+        "Execution/governance docs are missing V8 migration references: "
+        f"{missing}"
+    )
