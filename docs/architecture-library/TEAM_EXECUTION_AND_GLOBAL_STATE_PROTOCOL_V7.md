@@ -11,7 +11,14 @@ Related:
 - [MVP Release Strike Team Plan V7](MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 - [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
-- [V7 Development State](../../V7_DEV_STATE.md)
+- [V8 Development State](../../V8_DEV_STATE.md)
+
+## V8 Migration Alignment
+
+- Lane coordination must respect the V8 template -> instantiation -> inheritance -> precedence bootstrap pipeline described in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
+- `Template ≠ instantiated organization`; any standing-team YAML or runtime asset must be translated through the V8 bootstrap contract before it influences live NATS coordination.
+- All lane status changes belong in `V8_DEV_STATE.md`; treat `V7_DEV_STATE.md` strictly as archival evidence when cross-checking history.
+- V7-named slices remain migration inputs, but team execution, governance, and QA must frame current work as V8 migration slices tied to the canonical bootstrap contract.
 
 ## 1. Team Execution Architecture
 
@@ -54,18 +61,18 @@ Coordination cadence:
 1. architecture issues lane directives on `internal.command`
 2. runtime/interface lanes emit progress on `signal.status` at each discrete contract checkpoint
 3. QA emits gate verdicts on `signal.result` with evidence command list and pass/fail
-4. all accepted transitions are copied into `V7_DEV_STATE.md` in the same delivery window
+4. all accepted transitions are copied into `V8_DEV_STATE.md` in the same delivery window
 
-## 2. Primary Issue Program (Current)
+## 2. V8 Migration Workstreams (Current)
 
 ### 2.1 Launch-Critical Workstreams
 
 | Workstream | Status | Owner lanes | Primary issue |
 | --- | --- | --- | --- |
-| Slice 2: Logging, Error Handling, Execution Feedback | `ACTIVE` | Runtime/Core + Interface/Operator + QA | operator-facing failures still diverge across paths; some live-backend flows surface `503` without complete recovery guidance |
-| Slice 3: Prime-Development Reply Reliability | `NEXT` | Runtime/Core + Architecture/Governance + QA | canonical multi-team coordination is incomplete until `prime-development` reliably replies on standard lanes |
-| Slice 4: P1 Hot-Path Cleanup | `REQUIRED` | Runtime/Core + Interface/Operator + QA | `quality.max-lines` gate red on hot paths; cleanup required to stabilize delivery pace |
-| Scheduler + Chain prerequisites for Slice 7 | `REQUIRED` | Runtime/Core + Interface/Operator + QA | created-team workspace remains blocked until recurring execution + chain UX are reliable |
+| V8 Slice 2: Logging, Error Handling, Execution Feedback | `ACTIVE` | Runtime/Core + Interface/Operator + QA | operator-facing failures still diverge across paths; some live-backend flows surface `503` without complete recovery guidance |
+| V8 Slice 3: Prime-Development Reply Reliability | `NEXT` | Runtime/Core + Architecture/Governance + QA | canonical multi-team coordination is incomplete until `prime-development` reliably replies on standard lanes |
+| V8 Slice 4: P1 Hot-Path Cleanup | `REQUIRED` | Runtime/Core + Interface/Operator + QA | `quality.max-lines` gate red on hot paths; cleanup required to stabilize delivery pace |
+| Scheduler + Chain prerequisites for V8 Slice 7 | `REQUIRED` | Runtime/Core + Interface/Operator + QA | created-team workspace remains blocked until recurring execution + chain UX are reliable |
 
 ### 2.2 Immediate 7-Day Plan
 
@@ -102,7 +109,7 @@ Gate stack for launch candidate:
 ## 4. Global State File Maintenance Contract
 
 Canonical state file:
-- `V7_DEV_STATE.md`
+- `V8_DEV_STATE.md` (`V7_DEV_STATE.md` is retained only for historical migration evidence)
 
 Update triggers (must update state file when any occur):
 1. slice start (`NEXT` -> `ACTIVE`)
@@ -184,7 +191,7 @@ Current baseline assignment:
   - prepare created-team communication inspector integration points
 - `QA/Verification`:
   - run deep-test matrix with explicit UI proof for backend/API-affecting changes
-  - record gate evidence and blockers in `V7_DEV_STATE.md`
+  - record gate evidence and blockers in `V8_DEV_STATE.md`
 
 ### 7.1 Engaged snapshot (2026-03-10)
 
