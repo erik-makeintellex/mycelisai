@@ -64,6 +64,8 @@ Initial V8 contract set now covers:
 - Provider Policy
 - Identity and Continuity State
 
+The active V8 bootstrap-planning surface now also defines how organizations enter the system through templates, manual creation, operator/API creation, and config-file/bootstrap paths.
+
 For default user-facing experience, these concepts should translate into a simpler team model:
 
 ```text

@@ -237,7 +237,204 @@ No later source or narrower scope may use precedence to escape Inception-level p
 
 ## Template and instantiation entry points
 
-TBD in next bootstrap planning step.
+### Definition
+
+This section defines how AI Organizations enter the system and clarifies the most important distinction in the V8 bootstrap model:
+
+- Template = reusable blueprint
+- Inception / AI Organization = actual instantiated organization
+
+A template is not a running organization and is not interchangeable with an instantiated Inception.
+
+Templates are reusable organization blueprints that shape creation and bootstrap resolution.
+
+Instantiated organizations are the real runtime-scoped objects that exist after creation and are then resolved into effective kernel, council, team, specialist, and policy structure.
+
+### Canonical instantiation paths
+
+V8 should support four canonical organization-entry modes:
+
+1. create from template
+2. create empty
+3. create from config/API
+4. clone and modify an existing template later
+
+These are different entry paths into one conceptual bootstrap system.
+
+All of them should normalize into the same organization-instantiation flow before bootstrap resolution continues.
+
+### Templates as reusable organization blueprints
+
+Templates are reusable organization blueprints, not just UI presets.
+
+A template may define:
+- organization type
+- default Team Lead / Soma Kernel posture
+- default Advisors / Council composition
+- default Departments / Teams
+- default Specialists / Agents
+- default AI Engine Settings / provider policy
+- default Memory & Personality settings
+- optional beginner-facing labels and descriptions
+
+Templates may also include optional advanced defaults such as:
+- team-level defaults
+- agent-level defaults
+- scoped provider-policy defaults
+- optional advanced overrides that become visible only in expert panels or file/API views
+
+### What a template does not contain
+
+By default, a template does not contain:
+- live runtime state
+- execution history
+- per-run outcomes
+- user-specific secrets
+
+These belong to instantiated organizations, runtime state, or operator-specific secret-management surfaces, not to reusable blueprint artifacts.
+
+### Required template kinds
+
+V8 should support at least these template kinds:
+- starter templates for beginners
+- domain templates such as Research, Engineering, and Marketing
+- executive templates such as CTO, COO, and Product Lead
+- personal / continuity templates
+- empty / minimal template
+
+These kinds ensure the template layer can serve both onboarding and serious organizational modeling.
+
+### Template behavior
+
+Template behavior should follow these rules:
+
+1. the template supplies defaults
+2. the instantiated organization becomes its own object after creation
+3. later edits to the template do not silently rewrite existing organizations unless that behavior is explicitly designed and governed
+
+This prevents blueprint reuse from being confused with live-organization mutation.
+
+### Instantiation path: create from template
+
+This is the primary beginner-safe path.
+
+In this mode:
+1. the operator or API selects a template
+2. the system creates an organization object from that blueprint
+3. bootstrap resolution uses the template-provided defaults as organization-shaping input
+4. the resulting instantiated organization is resolved into effective runtime structure
+
+This path should usually be the default beginner experience.
+
+### Instantiation path: create empty
+
+This path creates an organization without importing a predefined blueprint beyond the smallest allowed minimal shape.
+
+It is appropriate for:
+- advanced users
+- research or experimental setups
+- highly custom organizations
+- cases where the operator wants to author kernel, council, team, and specialist structure directly
+
+The empty path should still pass through the same bootstrap resolution flow after the organization object is created.
+
+### Instantiation path: create from config or API
+
+V8 must support creation from config-file and API sources, not only interactive UI flows.
+
+This path is required for:
+- operator automation
+- deployment-time bootstrap
+- local/dev workflows
+- reproducible infrastructure-managed startup
+- version-controlled organization definitions
+
+Config/API creation may:
+- instantiate directly from a full organization definition
+- reference a template and then apply overrides
+- define only partial structure and allow later completion through bootstrap defaults
+
+### Instantiation path: clone and modify a template later
+
+V8 should also support using an existing template as a starting point for a new derivative blueprint.
+
+This means operators may:
+- clone a starter template and tailor it
+- create organization-specific template variants
+- evolve domain or executive templates over time
+
+This is still template work, not live-organization mutation.
+
+The cloned template remains a reusable blueprint until an organization is instantiated from it.
+
+### Template scope
+
+Templates should support both beginner-safe and advanced variants.
+
+A template can:
+- define team defaults
+- define agent defaults
+- define optional advanced overrides
+
+This allows simple starter templates for onboarding and deeper blueprint variants for advanced operators and automation systems.
+
+### How templates feed bootstrap resolution
+
+Templates feed bootstrap resolution as reusable blueprint input, not as final runtime truth.
+
+Conceptually:
+1. an instantiation path creates or submits an organization input package
+2. if a template is involved, that template contributes blueprint defaults
+3. the system creates the actual Inception / AI Organization object
+4. bootstrap resolution then resolves that instantiated organization into effective kernel, council, team, specialist, provider-policy, and continuity shape
+
+This distinction matters:
+- template = reusable blueprint source
+- instantiated organization = actual runtime-owned organizational object
+
+Bootstrap resolution operates on the instantiated organization, even when a template supplied many of its defaults.
+
+### UI note
+
+Beginner UI should mainly show:
+- template name
+- purpose
+- a simple summary
+
+Advanced panels may expose:
+- internal structure
+- routing posture
+- scoped defaults
+- team and agent definitions
+- advanced overrides
+
+This keeps template selection approachable for beginners while preserving expert visibility into the blueprint structure.
+
+### Beginner-safe versus advanced path
+
+Beginner-facing flows should usually present:
+- starter or well-scoped domain templates
+- simple labels and summaries
+- a small number of high-confidence setup choices
+
+Advanced flows may expose:
+- empty creation
+- full template internals
+- config/API creation
+- team and agent defaults
+- scoped provider-policy and continuity settings
+- template cloning and variant authoring
+
+### Boundary
+
+This section defines what templates are, what they contain, how organizations may be instantiated, and how blueprint input feeds bootstrap resolution.
+
+It does not yet define:
+- exact template schema
+- persistent storage ownership for templates
+- loader implementation details
+- migration behavior for existing V7 startup assets
+- exact synchronization rules for any future opt-in template-to-instance update model
 
 ## User Concept Layer
 

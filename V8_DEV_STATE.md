@@ -2,7 +2,7 @@
 
 > Updated: 2026-03-13
 > Canonical state file for active V8 grading and delivery tracking
-> References: `README.md`, `mycelis_vnext_implementation_tracker.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/TASK_001_VNEXT_ARCHITECTURE_ALIGNMENT_ARTIFACT.md`, `V7_DEV_STATE.md` (legacy migration input)
+> References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `V7_DEV_STATE.md` (legacy migration input)
 
 ---
 
@@ -45,14 +45,15 @@ V8-6  Verification and release hardening                           [REQUIRED]
 ### 1. Architecture alignment and migration inventory
 
 Status:
-1. `IN_REVIEW` Task 001 alignment artifact now exists and is linked from the VNext tracker.
-2. `COMPLETE` current fixed-organism assumptions vs V8 target model have been mapped.
+1. `ACTIVE` V8 alignment is now carried by the README directive, the V8 runtime contracts, and the V8 bootstrap-planning surface instead of a separate tracker artifact.
+2. `COMPLETE` current fixed-organism assumptions vs V8 target model have been mapped at the planning level.
 3. `COMPLETE` backend/frontend/docs hotspots have been identified for the first migration wave.
+4. `NEXT` carry those alignment conclusions into explicit V7-bootstrap migration rules and de-hardcoding work.
 
 Primary references:
-- `mycelis_vnext_implementation_tracker.md`
-- `docs/architecture-library/TASK_001_VNEXT_ARCHITECTURE_ALIGNMENT_ARTIFACT.md`
-- `docs/architecture-library/TASK_001_STEP_1_ALIGNMENT_AUDIT_NOTE.md`
+- `README.md`
+- `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`
+- `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 
 Key grading conclusion:
 - Mycelis already has the execution substrate needed for V8, but still exposes one hardcoded Soma/Council organizational expression as if it were the platform itself.
@@ -119,7 +120,7 @@ Implementation rule:
 ## Active V8 Queue
 
 ```text
-Task 001  V8 alignment artifact and migration inventory             [IN_REVIEW]
+Task 001  V8 alignment and migration inventory                      [IN_REVIEW]
 Task 002  Inception / kernel / council contract definition          [COMPLETE]
 Task 003  Provider-policy scope contract                            [COMPLETE]
 Task 004  Config and bootstrap model planning                       [NEXT]
@@ -138,8 +139,8 @@ Delivery updates in this checkpoint:
 
 Evidence:
 1. README directive review completed against `README.md`
-2. V8 tracker alignment confirmed against `mycelis_vnext_implementation_tracker.md`
-3. Task 001 artifact confirmed at `docs/architecture-library/TASK_001_VNEXT_ARCHITECTURE_ALIGNMENT_ARTIFACT.md`
+2. runtime-contract alignment confirmed against `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`
+3. bootstrap-planning alignment confirmed against `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 4. active documentation references updated to point at `V8_DEV_STATE.md`
 
 ### 6. V8 contract shell introduction
@@ -211,11 +212,19 @@ Status:
 Status:
 1. `COMPLETE` the `Precedence rules` section is now defined in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
 2. `COMPLETE` source precedence, scope precedence, policy-before-override handling, and conflict resolution are now part of the V8 bootstrap planning model.
-3. `NEXT` define the `Template and instantiation entry points` section as the next bootstrap planning slice.
+3. `COMPLETE` the planning model now has enough structure to define how organizations are created before bootstrap activation.
+
+### 17. Template and instantiation entry points definition
+
+Status:
+1. `COMPLETE` the `Template and instantiation entry points` section is now defined in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
+2. `COMPLETE` V8 now distinguishes template-based creation, empty/manual creation, operator/API creation, and config-file/bootstrap creation as canonical organization-entry modes.
+3. `COMPLETE` templates are now documented as reusable organization blueprints that feed bootstrap resolution with default kernel, council, team, and policy shape.
+4. `NEXT` define the `Migration from V7 bootstrap assumptions` section so the plan can explain how fixed V7 startup assumptions collapse into V8 organization instantiation rules.
 
 ## Immediate Next Actions
 
-1. `NEXT` define template and instantiation entry points in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so V8 bootstrap planning can describe how organizations are created and activated.
+1. `NEXT` define `Migration from V7 bootstrap assumptions` in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` so the bootstrap plan can explain how standing-team startup, fixed Soma/Council posture, and compatibility bootstrap should transition into V8 organization instantiation.
 2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
 3. `REQUIRED` apply the touched-file cleanup/convergence rule and review-team sweep to the first backend/runtime refactor chunk and all later code-editing slices.
 4. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
