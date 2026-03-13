@@ -161,7 +161,79 @@ That belongs in the `Precedence rules` section.
 
 ## Precedence rules
 
-TBD in next bootstrap planning step.
+### Definition
+
+Precedence rules describe how Mycelis chooses among competing candidate values after inheritance has established the available configuration layers.
+
+This section defines conceptual resolution priority across sources and scopes. It does not define loader implementation details, merge algorithms, or storage-specific retrieval behavior.
+
+### Source precedence
+
+When multiple source types contribute candidate values, the intended conceptual source order is:
+
+1. templates
+2. static configuration
+3. database or runtime state
+4. operator input
+5. derived context
+
+This means later source classes may refine or replace earlier candidate values only where the active policy model allows that change.
+
+### Scope precedence
+
+Within the resolved organization shape, the intended conceptual scope order is:
+
+```text
+Inception
+  -> Soma Kernel / Central Council role
+  -> Team
+  -> Agent
+```
+
+Lower scopes are more specific, but they do not automatically win. Their values apply only when the higher scope allows refinement for that field.
+
+### Policy-before-override rule
+
+Policy is evaluated before overrides are accepted.
+
+A lower-scope or later-source value may refine configuration only after higher-scope governance, provider policy, and locked organization constraints have been checked. If a candidate value violates policy, it is not accepted merely because it appears later in the source or scope order.
+
+### Conflict handling
+
+When two candidate values conflict, Mycelis should conceptually resolve them by:
+- identifying the active source class and scope for each value
+- checking whether the field is inheritable and overrideable
+- enforcing higher-scope governance and policy constraints first
+- selecting the most specific allowed value
+- falling back to the higher-governance value when the more specific value is not permitted
+
+Conflicts should produce deterministic effective configuration, not silent ambiguity.
+
+### Precedence vs inheritance
+
+Inheritance determines which defaults flow downward through the organization model.
+
+Precedence determines which candidate value becomes effective when multiple sources or scopes provide values for the same configurable field.
+
+These are related but distinct concerns.
+
+### Precedence vs loader behavior
+
+This section does not define how files are read, how database state is fetched, how caches are consulted, or how runtime loaders are implemented.
+
+Those concerns belong to later implementation-facing planning and backend work.
+
+### Beginner vs advanced UX note
+
+Beginner users should primarily see simple outcomes: the effective organization setup, effective AI engine settings, and working team behavior.
+
+Advanced users may inspect the effective configuration in more detail, including which source or scope supplied a value and why a more specific override was accepted or rejected.
+
+### Governance boundary
+
+Lower scopes can refine allowed configuration, but they cannot bypass higher governance.
+
+No later source or narrower scope may use precedence to escape Inception-level policy, Kernel-level governance, council-role restrictions, or locked safety/compliance requirements.
 
 ## Template and instantiation entry points
 
