@@ -105,6 +105,7 @@ def test_down_uses_best_effort_cleanup_without_hanging(monkeypatch):
 
     monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
     monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: commands.append(["bridges"]))
+    monkeypatch.setattr(lifecycle, "_kill_compiled_go_services", lambda: [])
     monkeypatch.setattr(lifecycle, "_wait_for_port_closed", lambda *args, **kwargs: True)
     monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
     monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
@@ -121,6 +122,7 @@ def test_down_uses_best_effort_cleanup_without_hanging(monkeypatch):
 def test_down_fails_when_managed_ports_remain(monkeypatch):
     monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: True)
     monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: None)
+    monkeypatch.setattr(lifecycle, "_kill_compiled_go_services", lambda: [])
     monkeypatch.setattr(lifecycle, "_run_best_effort", lambda cmd, timeout=10: None)
     monkeypatch.setattr(lifecycle, "is_windows", lambda: False)
     monkeypatch.setattr(lifecycle.time, "sleep", lambda _n: None)
@@ -132,6 +134,37 @@ def test_down_fails_when_managed_ports_remain(monkeypatch):
 
     with pytest.raises(SystemExit, match="STACK DOWN INCOMPLETE"):
         lifecycle.down.body(Context())
+
+
+def test_matches_compiled_go_service_recognizes_known_binaries_and_go_run():
+    assert lifecycle._matches_compiled_go_service("server.exe", "")
+    assert lifecycle._matches_compiled_go_service("go.exe", "go run ./cmd/server")
+    assert lifecycle._matches_compiled_go_service("go", "go run ./cmd/signal_gen")
+    assert not lifecycle._matches_compiled_go_service("python.exe", "python -m pytest")
+
+
+def test_down_kills_detected_compiled_go_services(monkeypatch):
+    killed: list[int] = []
+    scans = iter(
+        [
+            [{"pid": 111, "name": "server.exe", "command": "core\\bin\\server.exe"}],
+            [],
+        ]
+    )
+
+    monkeypatch.setattr(lifecycle, "_kill_port", lambda port, label: False)
+    monkeypatch.setattr(lifecycle, "_kill_bridges", lambda: None)
+    monkeypatch.setattr(lifecycle, "_wait_for_port_closed", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
+    monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
+    monkeypatch.setattr(lifecycle, "_run_best_effort", lambda cmd, timeout=10: None)
+    monkeypatch.setattr(lifecycle, "_kill_pid", lambda pid: killed.append(pid))
+    monkeypatch.setattr(lifecycle, "_list_compiled_go_service_processes", lambda: next(scans))
+    monkeypatch.setattr(lifecycle.time, "sleep", lambda _n: None)
+
+    lifecycle.down.body(Context())
+
+    assert killed == [111]
 
 
 def test_wait_for_http_ok_returns_true_on_200(monkeypatch):

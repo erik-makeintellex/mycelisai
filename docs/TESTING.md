@@ -89,10 +89,28 @@ Minimum policy:
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
+- Detect running compiled binaries with process inspection before the test begins. Look for known service names and any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
 - Agents must never stack runs on top of unknown existing processes.
+
+### Compiled Go Service Cleanup Before Tests
+
+Go services started through `go build`, `go run`, or direct dev binaries can outlive the test that launched them and remain running outside the normal container or bridge lifecycle. Clean-run validation must treat these binaries as first-class cleanup targets before any runtime or integration-style test.
+
+Typical binaries/process shapes to check:
+- core server
+- relays / bridges when implemented as Go services
+- bootstrap helpers
+- any Go-based local services used by the repo, including `go run ./cmd/server`, `go run ./cmd/probe`, `go run ./cmd/signal_gen`, and similar dev/test helpers
+
+Cleanup must distinguish and handle all three classes:
+- local compiled Go services
+- containerized or bridged dependencies
+- test-managed ephemeral services
+
+Stopping containers or port-forwards alone is not enough. The pre-test cleanup pass must also inspect process tables for stray Go binaries and kill them when found.
 
 ## Quick Reference
 

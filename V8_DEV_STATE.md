@@ -102,7 +102,7 @@ Status:
 Status:
 1. `REQUIRED` every V8 migration slice must still carry backend, UI, and docs proof in the same delivery window.
 2. `ACTIVE` architecture and state-file changes must be validated by doc-surface checks and in-app docs alignment where applicable.
-3. `ACTIVE` clean-run discipline is now part of the delivery contract for runtime and integration-style checks: stop prior services, verify ports/processes are clear, start only the minimum required stack, run the check, and tear the stack back down unless explicitly needed.
+3. `ACTIVE` clean-run discipline is now part of the delivery contract for runtime and integration-style checks: stop prior services, verify ports/processes are clear, sweep stray compiled Go binaries from prior runs, start only the minimum required stack, run the check, and tear the stack back down unless explicitly needed.
 4. `REQUIRED` runtime/API changes must include explicit UI review/test targets and focused live-flow evidence when user-visible behavior is touched.
 
 ### 6. Implementation-slice cleanup and convergence rule
@@ -143,6 +143,7 @@ Delivery updates in this checkpoint:
 6. `COMPLETE` validated cross-doc planning consistency so README, the architecture-library index, runtime contracts, bootstrap model, docs manifest, and tests all reference the canonical V7->V8 migration contract.
 7. `ACTIVE` landed the next Task 005 implementation cut: startup now promotes bundle-driven runtime truth by instantiating a runtime organization from `core/config/templates/*.yaml`, with guarded `config/teams` fallback retained only as temporary compatibility behavior when no bundle is configured.
 8. `COMPLETE` promoted clean-run testing discipline into the active testing/operations contract so runtime and integration checks must not stack on unknown local processes.
+9. `COMPLETE` extended the clean-run contract so compiled Go services from prior `go build`, `go run`, or manual binary launches are explicitly detected and terminated before the next runtime or integration check.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -153,6 +154,7 @@ Evidence:
 6. planning-integration validation sweep recorded in this chunk plus `tests/test_docs_links.py`
 7. template-bundle loader, runtime-organization instantiation, startup selection/fallback logic, and the `v8-migration-standing-team-bridge` bundle landed in `core/internal/bootstrap/template_bundle.go`, `core/internal/bootstrap/template_bundle_test.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup.go`, and mirrored chart config packaging
 8. clean-run testing discipline is now documented in `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md`
+9. lifecycle cleanup/status now sweep and report stray compiled Go services in `ops/lifecycle.py` with focused regression coverage in `tests/test_lifecycle_tasks.py`
 
 ### 6. V8 contract shell introduction
 
