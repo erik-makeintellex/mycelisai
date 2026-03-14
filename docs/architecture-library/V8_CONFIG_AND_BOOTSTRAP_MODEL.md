@@ -569,7 +569,7 @@ Those inputs pass through the staged resolution flow documented earlier, then in
 - V7 YAML and manifest assets remain valid migration inputs, but they must be translated into V8 template/config packages before use.
 - Existing runtime state may seed continuity data, but it cannot override the V8 bootstrap pipeline; cold starts always pass through explicit instantiation now.
 - Operator wizards remain supported, yet they now emit explicit organization definitions instead of mutating standing-team tables directly.
-- Fixed Soma/Council rosters are deprecated; compatibility shims may expose a “legacy default template” that reproduces the old team, but it is treated as a template, not an always-on implicit team.
+- Fixed Soma/Council rosters are deprecated; compatibility shims may expose a transitional migration bundle that reproduces the old standing-team shape, but it is treated as a temporary template input, not an always-on implicit team.
 
 ### What is intentionally not migrated
 
@@ -600,11 +600,11 @@ Chunk 4.2 converts the legacy standing-team bootstrap into an explicit template 
 
 | Area | Current artifact | Hard-coded behavior |
 | --- | --- | --- |
-| Team manifests | `core/config/teams/*.yaml` (`prime-architect`, `prime-development`, `council`, `telemetry`, etc.) | IDs, roles, prompts, and tool lists are treated as runtime truth; no template/instance split. |
+| Team manifests | `core/config/teams/*.yaml` (`prime-architect`, `prime-development`, `council`, `telemetry`, etc.) | Transitional migration inputs still carry IDs, roles, prompts, and tool lists. Startup prefers a selected bootstrap bundle and uses direct team scanning only as a guarded no-bundle fallback; true template/instance split is still pending. |
 | Bootstrap listeners | `core/internal/bootstrap/service.go` | Seeds/updates `nodes` table directly from hardware/council events; assumes one standing organization and does not consult templates. |
 | Server startup | `core/cmd/server/main.go` | Fails if `MYCELIS_API_KEY` missing, but Helm values never inject it; DB credentials/host/port are pinned (`mycelis`/`password`, `5432`) and not scoped per organization. |
 | Template API | `core/internal/server/templates.go`, `inception.go`, `provision.go` | Persist templates and instantiated orgs in the same DB without enforcing `Template ≠ instantiated organization`; audit/proof flows still assume a global standing team. |
-| Helm deployment | `charts/mycelis-core/templates/*.yaml`, `values.yaml` | Service listens on 8080 but `ops.k8s.bridge()` forwards service port 8080 → localhost 8081; charts mount `/data` PVC and set `MYCELIS_WORKSPACE`, but they never mount `config/*.yaml` or secrets for dynamic templates/policy. |
+| Helm deployment | `charts/mycelis-core/templates/*.yaml`, `values.yaml` | Service listens on 8080 while `ops.k8s.bridge()` forwards service port 8080 → localhost 8081; charts now mount `config/*.yaml`, transitional template bundles, and the API key secret, but they still package a fixed bridge bundle instead of generated organization templates. |
 | Ops automation | `ops/k8s.py`, `ops/*.py` | `k8s.deploy` loads `.env` and sets Postgres credentials, but there is no hook to package template bundles or per-organization config; bridge task hard-codes 8081↔8080 forwarding. |
 
 ### Current bootstrap + cluster assumptions to retire
@@ -612,9 +612,9 @@ Chunk 4.2 converts the legacy standing-team bootstrap into an explicit template 
 1. **Team/council/kernel defaults** — All runtime coordination still references the standing team YAMLs directly (IDs such as `prime-architect-agent`, `prime-development-agent`), and bootstrap listeners rehydrate them as if they were the product. These definitions must become template metadata instead of living config rows.
 2. **Bootstrap == runtime state** — `service.go` and `provision.go` load the same DB tables for cold-start and live execution. Bootstrap must ingest explicit template/config input, not “last rows in nodes/teams”.
 3. **Env + port wiring** — Charts expose 8080 but ops bridge forwards to 8081; Playwright/tests mention both. The plan needs a single declaration of “internal container port vs. external service port” that flows into docs/tests.
-4. **Secrets/config mounts** — Core expects `config/cognitive.yaml` and `config/policy.yaml` on disk, yet Helm currently bakes them into the image. Templates, policy, and bootstrap payloads must be mounted from ConfigMaps/Secrets per release so operators can swap organizations without rebuilding.
+4. **Secrets/config mounts** — Core now reads `config/cognitive.yaml`, `config/policy.yaml`, and the transitional template bundle from ConfigMap mounts plus `MYCELIS_API_KEY` from a Secret. The remaining gap is replacing the fixed bridge payload with generated per-organization template bundles.
 5. **Storage paths** — `core/cmd/server/main.go` creates `/data`, `/workspace`, and `/data/artifacts` assuming the container filesystem is writable. Charts already mount a PVC at `/data`, but bootstrap artifacts (template cache, mission seeds) need explicit directories plus access mode documentation so persistent + read-only paths are clear.
-6. **API key injection** — Runtime refuses to start without `MYCELIS_API_KEY`, yet charts and ops scripts do not set it; Task 005 must define how Helm secrets feed that env for each organization/template.
+6. **API key injection** — Runtime refuses to start without `MYCELIS_API_KEY`, and the chart now injects it via Secret. The remaining Task 005 work is making that secret/config contract organization-template aware instead of cluster-global.
 
 ### Current hard-coded assumptions
 
@@ -652,7 +652,7 @@ These assumptions must move behind the V8 bootstrap contract so that multiple or
 
 - **Helm env injection (`MYCELIS_API_KEY`)** — Core refuses to start without this key (`core/cmd/server/main.go`) but `charts/mycelis-core/templates/deployment.yaml` never sources it. Update the chart/ops tasks so secrets get mounted and surfaced as env vars per organization, and document how automation supplies per-template credentials.
 - **Port alignment (8080 vs 8081)** — `charts/mycelis-core/values.yaml` exposes port 8080 while `ops.k8s.bridge()` maps 8081→8080. Choose one canonical external port, set it in Helm values + ops bridge, and update doc/tests to stop guessing.
-- **Config file mounts** — Runtime loads `config/cognitive.yaml`, `config/policy.yaml`, team YAMLs, and future template bundles from the container FS. Replace baked-in files with ConfigMaps (templates, policy) and Secrets (provider credentials, API keys) so bootstrap resolution can swap organizations without image rebuilds.
+- **Config file mounts** — Runtime loads `config/cognitive.yaml`, `config/policy.yaml`, team YAMLs, and template bundles from the container FS. Replace baked-in files with ConfigMaps (templates, policy) and Secrets (provider credentials, API keys) so bootstrap resolution can swap organizations without image rebuilds, and keep standing-team YAMLs limited to migration-only bridge inputs until full instantiation lands.
 - **Container storage expectations** — `core/cmd/server.main()` writes under `/data` and `$MYCELIS_WORKSPACE`. Define PVC requirements (size, class, mount path) in the chart plus developer-kind configs, and state which directories must be writable vs read-only.
 
 ### Acceptance for this planning slice

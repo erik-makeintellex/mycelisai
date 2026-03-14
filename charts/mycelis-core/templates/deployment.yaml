@@ -92,6 +92,8 @@ spec:
                 path: cognitive.yaml
               - key: policy.yaml
                 path: policy.yaml
+              - key: v8-migration-standing-team-bridge.yaml
+                path: templates/v8-migration-standing-team-bridge.yaml
               - key: admin.yaml
                 path: teams/admin.yaml
               - key: agui-design-architect.yaml

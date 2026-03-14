@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-13
+> Updated: 2026-03-14
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -102,8 +102,8 @@ Status:
 Status:
 1. `REQUIRED` every V8 migration slice must still carry backend, UI, and docs proof in the same delivery window.
 2. `ACTIVE` architecture and state-file changes must be validated by doc-surface checks and in-app docs alignment where applicable.
-3. `REQUIRED` runtime/API changes must include explicit UI review/test targets and focused live-flow evidence when user-visible behavior is touched.
-4. `ACTIVE` dirty-worktree review now has a temporary local triage-task path so cleanup slices can map changed files to install checks and evidence commands before release decisions without introducing a new runtime-team model.
+3. `ACTIVE` clean-run discipline is now part of the delivery contract for runtime and integration-style checks: stop prior services, verify ports/processes are clear, start only the minimum required stack, run the check, and tear the stack back down unless explicitly needed.
+4. `REQUIRED` runtime/API changes must include explicit UI review/test targets and focused live-flow evidence when user-visible behavior is touched.
 
 ### 6. Implementation-slice cleanup and convergence rule
 
@@ -132,7 +132,7 @@ Task 008  Planning-integration validation pass                      [COMPLETE]
 Task 009  Next-execution/governance guidance migration              [NEXT]
 ```
 
-## Current Checkpoint (2026-03-13)
+## Current Checkpoint (2026-03-14)
 
 Delivery updates in this checkpoint:
 1. `COMPLETE` reviewed the new root `README.md` and adopted V8 as the active development/grading target.
@@ -141,7 +141,8 @@ Delivery updates in this checkpoint:
 4. `COMPLETE` preserved V7 architecture-library documents as migration inputs rather than rewriting them into premature V8 specifications.
 5. `COMPLETE` documented how V7 bootstrap sources, implicit behaviors, fixed Soma/Council posture, and runtime-state coupling roll forward into the explicit V8 configuration/bootstrap model.
 6. `COMPLETE` validated cross-doc planning consistency so README, the architecture-library index, runtime contracts, bootstrap model, docs manifest, and tests all reference the canonical V7->V8 migration contract.
-7. `ACTIVE` added `uv run inv team.worktree-triage` as a temporary local review helper so dirty-worktree cleanup can start from explicit review targets, install checks, and focused evidence commands without changing the standing runtime topology.
+7. `ACTIVE` landed the next Task 005 implementation cut: startup now prefers a selected transitional V8 migration bundle from `core/config/templates/*.yaml`, with explicit regression coverage for guarded fallback to `config/teams` scanning only when no bundle is configured.
+8. `COMPLETE` promoted clean-run testing discipline into the active testing/operations contract so runtime and integration checks must not stack on unknown local processes.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -150,7 +151,8 @@ Evidence:
 4. active documentation references updated to point at `V8_DEV_STATE.md`
 5. V7-to-V8 bootstrap migration narrative committed in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 6. planning-integration validation sweep recorded in this chunk plus `tests/test_docs_links.py`
-7. temporary local worktree-triage helper and focused tests added in `ops/misc.py`, `core/internal/swarm/registry_test.go`, and `tests/test_misc_tasks.py`
+7. template-bundle loader, startup bundle selection, fallback selection logic, and the `v8-migration-standing-team-bridge` bundle landed in `core/internal/bootstrap/template_bundle.go`, `core/internal/bootstrap/template_bundle_test.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup.go`, and mirrored chart config packaging
+8. clean-run testing discipline is now documented in `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md`
 
 ### 6. V8 contract shell introduction
 
@@ -238,13 +240,16 @@ Status:
 2. `ACTIVE` runtime/config references to fixed `prime-*` teams, hard-coded council rosters, kernel defaults, and provider wiring have documented migration paths into template definitions, bootstrap resolution, scoped inheritance, and provider-policy configuration.
 3. `ACTIVE` Helm/runtime concerns (env injection for `MYCELIS_API_KEY`, 8080/8081 port normalization, config-file mounts, container storage) are now described alongside the bootstrap plan so infrastructure slices can align with runtime refactors.
 4. `ACTIVE` current-state scan recorded the exact files that still hard-code assumptions: Helm charts (`charts/mycelis-core/templates/*.yaml`, `values.yaml`), ops automation (`ops/k8s.py` bridge + `.env` injection), bootstrap/service code (`core/internal/bootstrap/service.go`), template/inception endpoints (`core/internal/server/templates.go`, `inception.go`, `provision.go`), startup entrypoint (`core/cmd/server/main.go`), and standing-team YAMLs in `core/config/teams/`.
+5. `ACTIVE` the bridge now owns startup selection: `core/internal/bootstrap/template_bundle.go` loads `core/config/templates/*.yaml` bundles, selects a startup bundle when present, and otherwise falls back to direct team-manifest scanning only when no bundle exists.
 
 Evidence:
 1. Plan section `## Standing-team bootstrap de-hardcoding plan` (2026-03-13) now explicitly calls out the active files and assumptions discovered in Chunk 4.2 (Helm values/env/ports, ops bridge tasks, bootstrap services, template APIs, team manifests, runtime storage expectations).
 2. README review confirmed no additional guidance changes were required after adding the plan (`README.md`, 2026-03-13).
+3. `v8-migration-standing-team-bridge` now validates and supplies the standing manifest set through the bootstrap loader path (`core/config/templates/v8-migration-standing-team-bridge.yaml`, `core/internal/bootstrap/template_bundle_test.go`).
+4. startup selection regression coverage now explicitly proves bundle selection, no-bundle fallback, and invalid-bundle error handling (`core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`).
 
 Next steps:
-1. Implement template serialization/loader infrastructure and shift standing-team YAML into governed templates.
+1. Replace manifest-ref bridge loading and the guarded no-bundle fallback with true bundle-driven template instantiation so runtime startup no longer depends on team-manifest-shaped inputs at all.
 2. Replace bootstrap seeding logic with template-instantiation + scope-aware inheritance.
 3. Promote provider-policy scopes and Helm env/port/mount/storage alignment into actionable runtime slices with tests.
 

@@ -1,0 +1,19 @@
+id: v8-migration-standing-team-bridge
+name: V8 Migration Standing-Team Bridge
+description: "Transitional V8 migration bundle that routes standing-team manifests through the bootstrap template loader."
+template_version: v1alpha1
+source_kind: standing_team_migration_input
+kernel:
+  mode: v8-migration-bridge
+council:
+  mode: v8-migration-bridge
+provider_policy:
+  posture: migration-bridge
+team_manifest_refs:
+  - ../teams/admin.yaml
+  - ../teams/agui-design-architect.yaml
+  - ../teams/council.yaml
+  - ../teams/genesis.yaml
+  - ../teams/prime-architect.yaml
+  - ../teams/prime-development.yaml
+  - ../teams/telemetry.yaml

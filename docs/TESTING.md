@@ -85,6 +85,15 @@ Minimum policy:
 - no backend/API review without a mapped UI target plan
 - no `COMPLETE` status without executed evidence commands and pass/fail results
 
+## Clean Run Discipline for Runtime and Integration Checks
+
+- Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
+- Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
+- Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
+- Run the test or validation command once the required services are confirmed ready.
+- Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
+- Agents must never stack runs on top of unknown existing processes.
+
 ## Quick Reference
 
 ```bash
@@ -105,7 +114,6 @@ uv run inv quality.max-lines --limit 350  # Hot-path max-lines gate with legacy 
 uv run inv lifecycle.memory-restart --frontend          # Full memory reset + post-restart memory probes
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 uv run inv ci.baseline           # Canonical strict baseline (docs/logging/topics/line gates + core + interface)
-uv run inv team.worktree-triage  # Temporary local dirty-worktree review pass: map changed paths to review targets, install checks, and evidence commands
 ```
 
 Runner matrix:
@@ -118,6 +126,8 @@ Signal/channel standard:
 - Development-only infrastructure subjects are not part of product orchestration and should stay out of authoritative runtime tests unless the test is explicitly exercising dev-only behavior.
 - Channel-private relay contract: `publish_signal` may emit `privacy_mode=reference` payloads while persisting full private payloads to checkpoint channels; relaunch recovery must use `read_signals` with `latest_only=true`.
 - Current focused runtime check: `cd core && go test ./internal/swarm ./pkg/protocol -count=1`
+- Current focused bootstrap migration check: `cd core && go test ./cmd/server ./internal/bootstrap ./internal/swarm -count=1`
+- Current focused chart/bootstrap render check: `helm template mycelis-core charts/mycelis-core`
 - Current focused toolship metadata check: `cd core && go test ./internal/swarm -run "TestHandleDelegateTask_PublishesToInternalCommand|TestHandlePublishSignal_WrapsCanonicalStatusSubject|TestHandlePublishSignal_PrivateReferenceAndCheckpoint|TestHandleReadSignals_LatestOnlyReturnsCheckpoint|TestTeam_TriggerLogic_UnwrapsCommandEnvelope|TestAgentPublishToolBusSignal_StatusChannelForMCP|TestAgentPublishToolBusSignal_ResultChannelForMCP|TestAgentPublishToolBusSignal_PersistsLatestCheckpoint" -count=1`
 - Current focused agent parsing/preflight check: `cd core && go test ./internal/swarm -run "TestParseConversationPayload_|TestParseToolCall|TestAutofillToolArguments|TestShouldCouncilPreflight|TestCouncilPreflightMember" -count=1`
 - Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
@@ -131,7 +141,6 @@ Signal/channel standard:
 - Current focused Launch Crew browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/proposals.spec.ts` (proposal outcome + blocker recovery)
 - Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
 - Current focused team-sync contract check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
-- Dirty-worktree triage task check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
 - Current focused README navigation check: `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
 - Current docs/task drift rule: canonical docs must not contain executable bare `uvx inv ...` examples outside explicit negative-control guidance.
 
