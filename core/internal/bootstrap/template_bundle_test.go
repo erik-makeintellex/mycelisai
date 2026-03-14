@@ -105,6 +105,31 @@ func TestTemplateLoader_LoadStandingMigrationBridgeBundle(t *testing.T) {
 	}
 }
 
+func TestTemplateBundle_InstantiateRuntimeOrganization(t *testing.T) {
+	loader := NewTemplateLoader(filepath.Join("..", "..", "config", "templates"))
+	bundles, err := loader.LoadBundles()
+	if err != nil {
+		t.Fatalf("LoadBundles() failed: %v", err)
+	}
+
+	org, err := bundles[0].InstantiateRuntimeOrganization()
+	if err != nil {
+		t.Fatalf("InstantiateRuntimeOrganization() failed: %v", err)
+	}
+	if org.ID != "v8-migration-standing-team-bridge" {
+		t.Fatalf("expected organization id v8-migration-standing-team-bridge, got %s", org.ID)
+	}
+	if org.SourceKind != "standing_team_migration_input" {
+		t.Fatalf("expected standing_team_migration_input, got %s", org.SourceKind)
+	}
+	if org.MigrationFallback {
+		t.Fatal("expected bundle-instantiated organization to be primary path, not migration fallback")
+	}
+	if len(org.Teams) == 0 {
+		t.Fatal("expected instantiated runtime organization to include teams")
+	}
+}
+
 func TestSelectStartupBundle(t *testing.T) {
 	bundles := []*TemplateBundle{
 		{ID: "v8-migration-standing-team-bridge"},

@@ -13,5 +13,5 @@ func loadStartupBundleRegistry(templatesPath, fallbackTeamsPath string) (*bootst
 		return nil, nil, err
 	}
 
-	return selection, swarm.NewRegistryFromManifests(selection.Manifests), nil
+	return selection, swarm.NewRegistryFromRuntimeOrganization(selection.Organization), nil
 }

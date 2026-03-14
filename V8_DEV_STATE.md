@@ -141,7 +141,7 @@ Delivery updates in this checkpoint:
 4. `COMPLETE` preserved V7 architecture-library documents as migration inputs rather than rewriting them into premature V8 specifications.
 5. `COMPLETE` documented how V7 bootstrap sources, implicit behaviors, fixed Soma/Council posture, and runtime-state coupling roll forward into the explicit V8 configuration/bootstrap model.
 6. `COMPLETE` validated cross-doc planning consistency so README, the architecture-library index, runtime contracts, bootstrap model, docs manifest, and tests all reference the canonical V7->V8 migration contract.
-7. `ACTIVE` landed the next Task 005 implementation cut: startup now prefers a selected transitional V8 migration bundle from `core/config/templates/*.yaml`, with explicit regression coverage for guarded fallback to `config/teams` scanning only when no bundle is configured.
+7. `ACTIVE` landed the next Task 005 implementation cut: startup now promotes bundle-driven runtime truth by instantiating a runtime organization from `core/config/templates/*.yaml`, with guarded `config/teams` fallback retained only as temporary compatibility behavior when no bundle is configured.
 8. `COMPLETE` promoted clean-run testing discipline into the active testing/operations contract so runtime and integration checks must not stack on unknown local processes.
 
 Evidence:
@@ -151,7 +151,7 @@ Evidence:
 4. active documentation references updated to point at `V8_DEV_STATE.md`
 5. V7-to-V8 bootstrap migration narrative committed in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 6. planning-integration validation sweep recorded in this chunk plus `tests/test_docs_links.py`
-7. template-bundle loader, startup bundle selection, fallback selection logic, and the `v8-migration-standing-team-bridge` bundle landed in `core/internal/bootstrap/template_bundle.go`, `core/internal/bootstrap/template_bundle_test.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup.go`, and mirrored chart config packaging
+7. template-bundle loader, runtime-organization instantiation, startup selection/fallback logic, and the `v8-migration-standing-team-bridge` bundle landed in `core/internal/bootstrap/template_bundle.go`, `core/internal/bootstrap/template_bundle_test.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup.go`, and mirrored chart config packaging
 8. clean-run testing discipline is now documented in `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md`
 
 ### 6. V8 contract shell introduction
@@ -240,13 +240,13 @@ Status:
 2. `ACTIVE` runtime/config references to fixed `prime-*` teams, hard-coded council rosters, kernel defaults, and provider wiring have documented migration paths into template definitions, bootstrap resolution, scoped inheritance, and provider-policy configuration.
 3. `ACTIVE` Helm/runtime concerns (env injection for `MYCELIS_API_KEY`, 8080/8081 port normalization, config-file mounts, container storage) are now described alongside the bootstrap plan so infrastructure slices can align with runtime refactors.
 4. `ACTIVE` current-state scan recorded the exact files that still hard-code assumptions: Helm charts (`charts/mycelis-core/templates/*.yaml`, `values.yaml`), ops automation (`ops/k8s.py` bridge + `.env` injection), bootstrap/service code (`core/internal/bootstrap/service.go`), template/inception endpoints (`core/internal/server/templates.go`, `inception.go`, `provision.go`), startup entrypoint (`core/cmd/server/main.go`), and standing-team YAMLs in `core/config/teams/`.
-5. `ACTIVE` the bridge now owns startup selection: `core/internal/bootstrap/template_bundle.go` loads `core/config/templates/*.yaml` bundles, selects a startup bundle when present, and otherwise falls back to direct team-manifest scanning only when no bundle exists.
+5. `ACTIVE` the bridge now owns runtime startup truth: `core/internal/bootstrap/template_bundle.go` loads `core/config/templates/*.yaml` bundles, instantiates a runtime organization from the selected bundle, and isolates direct team-manifest scanning as a migration-only no-bundle fallback.
 
 Evidence:
 1. Plan section `## Standing-team bootstrap de-hardcoding plan` (2026-03-13) now explicitly calls out the active files and assumptions discovered in Chunk 4.2 (Helm values/env/ports, ops bridge tasks, bootstrap services, template APIs, team manifests, runtime storage expectations).
 2. README review confirmed no additional guidance changes were required after adding the plan (`README.md`, 2026-03-13).
 3. `v8-migration-standing-team-bridge` now validates and supplies the standing manifest set through the bootstrap loader path (`core/config/templates/v8-migration-standing-team-bridge.yaml`, `core/internal/bootstrap/template_bundle_test.go`).
-4. startup selection regression coverage now explicitly proves bundle selection, no-bundle fallback, and invalid-bundle error handling (`core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`).
+4. startup selection regression coverage now explicitly proves bundle-instantiated runtime organizations, no-bundle fallback, and invalid-bundle error handling (`core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`, `core/internal/swarm/registry_test.go`).
 
 Next steps:
 1. Replace manifest-ref bridge loading and the guarded no-bundle fallback with true bundle-driven template instantiation so runtime startup no longer depends on team-manifest-shaped inputs at all.

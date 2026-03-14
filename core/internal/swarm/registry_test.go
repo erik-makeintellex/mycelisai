@@ -126,3 +126,35 @@ func TestRegistry_LoadStandingPrimeTeamManifests(t *testing.T) {
 		}
 	}
 }
+
+func TestRegistry_RuntimeOrganizationPrimaryPath(t *testing.T) {
+	reg := NewRegistryFromRuntimeOrganization(&RuntimeOrganization{
+		ID:                "bundle-org",
+		Name:              "Bundle Org",
+		SourceKind:        "standing_team_migration_input",
+		KernelMode:        "v8-migration-bridge",
+		CouncilMode:       "v8-migration-bridge",
+		ProviderPolicy:    map[string]string{"posture": "migration-bridge"},
+		Teams:             []*TeamManifest{{ID: "bundle-team", Name: "Bundle Team", Type: TeamTypeAction}},
+		MigrationFallback: false,
+	})
+
+	org := reg.RuntimeOrganization()
+	if org == nil {
+		t.Fatal("expected runtime organization")
+	}
+	if org.ID != "bundle-org" {
+		t.Fatalf("expected bundle-org, got %s", org.ID)
+	}
+	if org.MigrationFallback {
+		t.Fatal("expected primary runtime organization path, not migration fallback")
+	}
+
+	manifests, err := reg.LoadManifests()
+	if err != nil {
+		t.Fatalf("LoadManifests() failed: %v", err)
+	}
+	if len(manifests) != 1 || manifests[0].ID != "bundle-team" {
+		t.Fatalf("unexpected manifests: %+v", manifests)
+	}
+}

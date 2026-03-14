@@ -49,6 +49,15 @@ team_manifest_refs:
 	if selected.Bundle == nil || selected.Bundle.ID != "v8-migration-standing-team-bridge" {
 		t.Fatalf("selected bundle = %+v", selected.Bundle)
 	}
+	if selected.Organization == nil || selected.Organization.MigrationFallback {
+		t.Fatalf("expected primary runtime organization, got %+v", selected.Organization)
+	}
+	if selected.Organization.SourceKind != "standing_team_migration_input" {
+		t.Fatalf("unexpected source kind: %s", selected.Organization.SourceKind)
+	}
+	if registry.RuntimeOrganization() == nil || registry.RuntimeOrganization().ID != selected.Organization.ID {
+		t.Fatalf("expected registry runtime organization to match selection")
+	}
 	manifests, err := registry.LoadManifests()
 	if err != nil {
 		t.Fatalf("registry.LoadManifests() failed: %v", err)
@@ -90,6 +99,9 @@ deliveries:
 	}
 	if selected.Source != "fallback_teams" {
 		t.Fatalf("expected fallback source, got %q", selected.Source)
+	}
+	if selected.Organization == nil || !selected.Organization.MigrationFallback {
+		t.Fatalf("expected migration fallback runtime organization, got %+v", selected.Organization)
 	}
 	manifests, err := registry.LoadManifests()
 	if err != nil {
