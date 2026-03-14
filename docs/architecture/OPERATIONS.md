@@ -154,7 +154,7 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `ops/proto_relay.py` | `relay.test`, `relay.demo` | Python SDK tests + demo |
 | `ops/device.py` | `device.boot --id=ghost-01` | Device simulation (NATS announce) |
 | `ops/misc.py` | `clean.legacy` | Remove legacy Makefile/docker-compose |
-| `ops/misc.py` | `team.sensors`, `team.output`, `team.test`, `team.architecture-sync`, `team.worktree-triage` | Python agent teams, central architect sync, and temporary dirty-worktree review/test triage |
+| `ops/misc.py` | `team.sensors`, `team.output`, `team.test`, `team.architecture-sync`, `team.worktree-triage` | Python agent teams, central architect sync, and temporary local dirty-worktree review/test triage |
 
 Key coordination example: `uv run inv team.architecture-sync`
 

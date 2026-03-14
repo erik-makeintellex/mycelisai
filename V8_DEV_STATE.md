@@ -103,7 +103,7 @@ Status:
 1. `REQUIRED` every V8 migration slice must still carry backend, UI, and docs proof in the same delivery window.
 2. `ACTIVE` architecture and state-file changes must be validated by doc-surface checks and in-app docs alignment where applicable.
 3. `REQUIRED` runtime/API changes must include explicit UI review/test targets and focused live-flow evidence when user-visible behavior is touched.
-4. `ACTIVE` dirty-worktree review now has a temporary triage-task path so cleanup slices can map changed files to install checks and evidence commands before release decisions without adding permanent runtime teams.
+4. `ACTIVE` dirty-worktree review now has a temporary local triage-task path so cleanup slices can map changed files to install checks and evidence commands before release decisions without introducing a new runtime-team model.
 
 ### 6. Implementation-slice cleanup and convergence rule
 
@@ -141,7 +141,7 @@ Delivery updates in this checkpoint:
 4. `COMPLETE` preserved V7 architecture-library documents as migration inputs rather than rewriting them into premature V8 specifications.
 5. `COMPLETE` documented how V7 bootstrap sources, implicit behaviors, fixed Soma/Council posture, and runtime-state coupling roll forward into the explicit V8 configuration/bootstrap model.
 6. `COMPLETE` validated cross-doc planning consistency so README, the architecture-library index, runtime contracts, bootstrap model, docs manifest, and tests all reference the canonical V7->V8 migration contract.
-7. `ACTIVE` added `uv run inv team.worktree-triage` as a temporary local review helper so dirty-worktree cleanup can start from explicit review targets, install checks, and focused evidence commands without changing the standing team topology.
+7. `ACTIVE` added `uv run inv team.worktree-triage` as a temporary local review helper so dirty-worktree cleanup can start from explicit review targets, install checks, and focused evidence commands without changing the standing runtime topology.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -150,7 +150,7 @@ Evidence:
 4. active documentation references updated to point at `V8_DEV_STATE.md`
 5. V7-to-V8 bootstrap migration narrative committed in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 6. planning-integration validation sweep recorded in this chunk plus `tests/test_docs_links.py`
-7. temporary worktree-triage helper and focused tests added in `ops/misc.py`, `core/internal/swarm/registry_test.go`, and `tests/test_misc_tasks.py`
+7. temporary local worktree-triage helper and focused tests added in `ops/misc.py`, `core/internal/swarm/registry_test.go`, and `tests/test_misc_tasks.py`
 
 ### 6. V8 contract shell introduction
 

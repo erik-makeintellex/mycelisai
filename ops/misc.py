@@ -10,9 +10,9 @@ WORKTREE_REVIEW_TARGETS = (
 )
 
 WORKTREE_REVIEW_ROLES = (
-    "temporary review lead: scope the dirty worktree, preserve user edits, and map changes to the active V8 queue",
-    "temporary test auditor: turn changed paths into focused test/build evidence before broader gates",
-    "temporary dependency sentry: confirm install prerequisites, runner contract, and release-preflight safety",
+    "temporary local review lead: scope the dirty worktree, preserve user edits, and map changes to the active V8 queue",
+    "temporary local test auditor: turn changed paths into focused test/build evidence before broader gates",
+    "temporary local dependency sentry: confirm install prerequisites, runner contract, and release-preflight safety",
 )
 
 WORKTREE_BASELINE_INSTALLS = (
@@ -204,7 +204,7 @@ def worktree_triage(c):
     for target in WORKTREE_REVIEW_TARGETS:
         print(f"  - {target}")
 
-    print("\nTemporary review team:")
+    print("\nTemporary local review team:")
     for role in WORKTREE_REVIEW_ROLES:
         print(f"  - {role}")
 
