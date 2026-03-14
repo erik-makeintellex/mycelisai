@@ -92,6 +92,15 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `uv run inv lifecycle.restart` | Full local restart: down -> settle -> up (supports `--build` and `--frontend`) |
 | `uv run inv lifecycle.memory-restart` | Destructive recovery path: down -> db.reset -> up -> health -> memory probes |
 
+### Clean Run Discipline for Runtime and Integration Checks
+
+- Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
+- Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
+- Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
+- Run the test or validation command once the required services are confirmed ready.
+- Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
+- Agents must never stack runs on top of unknown existing processes.
+
 ### Logging & Quality Gates (`ops/logging.py`, `ops/quality.py`)
 
 | Command | Description |
@@ -154,7 +163,7 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `ops/proto_relay.py` | `relay.test`, `relay.demo` | Python SDK tests + demo |
 | `ops/device.py` | `device.boot --id=ghost-01` | Device simulation (NATS announce) |
 | `ops/misc.py` | `clean.legacy` | Remove legacy Makefile/docker-compose |
-| `ops/misc.py` | `team.sensors`, `team.output`, `team.test`, `team.architecture-sync`, `team.worktree-triage` | Python agent teams, central architect sync, and temporary local dirty-worktree review/test triage |
+| `ops/misc.py` | `team.sensors`, `team.output`, `team.test`, `team.architecture-sync` | Python agent teams and central architect sync |
 
 Key coordination example: `uv run inv team.architecture-sync`
 
@@ -241,7 +250,8 @@ uv run inv interface.dev
 | Config | Location | Managed Via |
 |--------|----------|-------------|
 | Cognitive (Bootstrap) | `core/config/cognitive.yaml` | UI (`/settings` → Matrix) or YAML |
-| Standing Teams | `core/config/teams/*.yaml` | YAML (auto-loaded at startup) |
+| Bootstrap Templates | `core/config/templates/*.yaml` | YAML (startup-selected transitional V8 migration bundles; Task 005 bridge layer) |
+| Standing Teams | `core/config/teams/*.yaml` | YAML (transitional migration inputs referenced by startup bundles and the guarded no-bundle fallback path) |
 | MCP Servers | Database | UI (`/settings` → MCP Tools) or API |
 | Governance Policy | `core/config/policy.yaml` | UI (`/approvals` → Policy tab) or YAML |
 | MCP Library | `core/config/mcp-library.yaml` | YAML (curated registry) |
@@ -487,7 +497,7 @@ probes:
 6.  Initialize Memory.Service
 7.  Connect NATS (retry 10x, continue degraded if fail)
 8.  Start Router → Soma → Axon → Overseer → Memory Subscription
-9.  Spawn standing teams from YAML (admin, council, genesis)
+9.  Resolve the selected startup bootstrap bundle and build startup teams from its declared migration inputs, or use the guarded no-bundle fallback to direct team-manifest scanning
 10. Run bounded MCP bootstrap/reconnect work so one hung server cannot block boot indefinitely
 11. Start HTTP server (port 8080), register routes
 12. Block on SIGINT

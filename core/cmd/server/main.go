@@ -351,6 +351,20 @@ func main() {
 	// 5b. Initialize Provisioning Engine
 	provEngine := provisioning.NewEngine(cogRouter)
 
+	templateConfigPath := "config/templates"
+	teamConfigPath := "config/teams"
+	var startupTemplateBundle *bootstrap.TemplateBundle
+	startupSelection, startupRegistry, err := loadStartupBundleRegistry(templateConfigPath, teamConfigPath)
+	if err != nil {
+		log.Fatalf("FATAL: Bootstrap startup selection failed: %v", err)
+	}
+	startupTemplateBundle = startupSelection.Bundle
+	if startupTemplateBundle != nil {
+		log.Printf("Bootstrap Template Bundle Active: %s", startupTemplateBundle.ID)
+	} else {
+		log.Printf("Bootstrap Template Bundles: none configured at %s; falling back to %s", templateConfigPath, teamConfigPath)
+	}
+
 	// 5c. Initialize Bootstrap Service (requires NATS)
 	var bootstrapSrv *bootstrap.Service
 	if nc != nil {
@@ -428,10 +442,12 @@ func main() {
 
 	var soma *swarm.Soma
 	if nc != nil {
-		teamConfigPath := "config/teams"
-		swarmReg := swarm.NewRegistry(teamConfigPath)
-
-		soma = swarm.NewSoma(nc, guard, swarmReg, cogRouter, streamHandler, toolExec, internalTools)
+		if startupTemplateBundle != nil {
+			log.Printf("Soma startup using bootstrap template bundle %s", startupTemplateBundle.ID)
+		} else {
+			log.Printf("Soma startup using fallback standing-team manifests from %s", teamConfigPath)
+		}
+		soma = swarm.NewSoma(nc, guard, startupRegistry, cogRouter, streamHandler, toolExec, internalTools)
 		teamProviders := parseProviderOverrideMap(os.Getenv("MYCELIS_TEAM_PROVIDER_MAP"))
 		agentProviders := parseProviderOverrideMap(os.Getenv("MYCELIS_AGENT_PROVIDER_MAP"))
 		if len(teamProviders) > 0 || len(agentProviders) > 0 {

@@ -10,6 +10,8 @@ data:
 {{ .Files.Get "config/cognitive.yaml" | nindent 4 }}
   policy.yaml: |-
 {{ .Files.Get "config/policy.yaml" | nindent 4 }}
+  v8-migration-standing-team-bridge.yaml: |-
+{{ .Files.Get "config/templates/v8-migration-standing-team-bridge.yaml" | nindent 4 }}
   admin.yaml: |-
 {{ .Files.Get "config/teams/admin.yaml" | nindent 4 }}
   agui-design-architect.yaml: |-

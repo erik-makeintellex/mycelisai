@@ -51,7 +51,6 @@ deliveries:
 }
 
 func TestRegistry_LoadStandingPrimeTeamManifests(t *testing.T) {
-	// Temporary/local cleanup helpers must not change the standing runtime team set.
 	reg := NewRegistry(filepath.Join("..", "..", "config", "teams"))
 
 	manifests, err := reg.LoadManifests()

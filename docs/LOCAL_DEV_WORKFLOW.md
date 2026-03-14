@@ -97,6 +97,16 @@ profiles:
 **Change provider routing:** Edit the `profiles` section or use the UI at `/settings` → **Cognitive Matrix**.
 By default, startup probes focus on `ollama`. Additional backends should be explicitly enabled and profile-routed before Mycelis attempts startup connectivity checks.
 
+### `core/config/templates/*.yaml` — Bootstrap Template Bundles
+
+| File | Purpose |
+|:--|:--|
+| `v8-migration-standing-team-bridge.yaml` | Transitional V8 migration bundle that routes standing-team manifests through the Task 005 bootstrap loader |
+
+These bundles are the first implementation bridge from the V8 bootstrap model into runtime-readable config.
+Startup resolves teams through a selected bundle when one is configured.
+If no bundle is configured, runtime still falls back to direct `core/config/teams/*.yaml` scanning as a guarded compatibility path.
+
 ### `core/config/teams/*.yaml` — Standing Teams
 
 | File | Team | Agents |
@@ -109,7 +119,7 @@ By default, startup probes focus on `ollama`. Additional backends should be expl
 | `genesis.yaml` | Genesis Core | architect, commander |
 | `telemetry.yaml` | Telemetry Core | observer |
 
-Add a YAML file, restart the server, and the new team is automatically loaded.
+These YAML files are transitional migration inputs referenced by bootstrap bundles, and they remain the guarded fallback source when no startup bundle is configured.
 Canonical bus signal conventions for these teams live in `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`.
 
 ### `core/config/policy.yaml` — Governance Rules

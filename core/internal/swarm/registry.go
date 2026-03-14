@@ -15,6 +15,7 @@ import (
 // Registry manages the loading and lifecycle of Team Manifests.
 type Registry struct {
 	teamsPath string
+	manifests []*TeamManifest
 	mu        sync.RWMutex
 }
 
@@ -25,10 +26,22 @@ func NewRegistry(path string) *Registry {
 	}
 }
 
+func NewRegistryFromManifests(manifests []*TeamManifest) *Registry {
+	return &Registry{
+		manifests: manifests,
+	}
+}
+
 // LoadManifests scans the config directory and returns all found manifests.
 func (r *Registry) LoadManifests() ([]*TeamManifest, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
+
+	if len(r.manifests) > 0 {
+		loaded := make([]*TeamManifest, 0, len(r.manifests))
+		loaded = append(loaded, r.manifests...)
+		return loaded, nil
+	}
 
 	var manifests []*TeamManifest
 
@@ -43,7 +56,7 @@ func (r *Registry) LoadManifests() ([]*TeamManifest, error) {
 	for _, f := range files {
 		if filepath.Ext(f.Name()) == ".yaml" || filepath.Ext(f.Name()) == ".yml" {
 			path := filepath.Join(r.teamsPath, f.Name())
-			m, err := r.loadManifest(path)
+			m, err := LoadManifestFile(path)
 			if err != nil {
 				log.Printf("WARN: Failed to load manifest %s: %v", f.Name(), err)
 				continue
@@ -55,7 +68,7 @@ func (r *Registry) LoadManifests() ([]*TeamManifest, error) {
 	return manifests, nil
 }
 
-func (r *Registry) loadManifest(path string) (*TeamManifest, error) {
+func LoadManifestFile(path string) (*TeamManifest, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
