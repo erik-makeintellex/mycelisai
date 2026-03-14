@@ -11,6 +11,7 @@ import os
 import socket
 import subprocess
 import time
+import json
 from pathlib import Path
 
 from invoke import task, Collection
@@ -38,6 +39,25 @@ SERVICES = {
 }
 
 CORE_STARTUP_LOG = ROOT_DIR / "workspace" / "logs" / "core-startup.log"
+COMPILED_GO_PROCESS_NAMES = ("server", "core", "probe", "signal_gen", "smoke")
+COMPILED_GO_COMMAND_HINTS = (
+    "cmd/server",
+    "cmd\\server",
+    "cmd/probe",
+    "cmd\\probe",
+    "cmd/signal_gen",
+    "cmd\\signal_gen",
+    "cmd/smoke",
+    "cmd\\smoke",
+    "bin/server",
+    "bin\\server",
+    "bin/probe",
+    "bin\\probe",
+    "bin/signal_gen",
+    "bin\\signal_gen",
+    "bin/smoke",
+    "bin\\smoke",
+)
 
 
 # ── Low-Level Probes ─────────────────────────────────────────────────
@@ -177,6 +197,96 @@ def _remaining_managed_services() -> list[str]:
         for key, svc in SERVICES.items()
         if key in ("postgres", "nats", "core", "frontend") and _port_open(svc["port"])
     ]
+
+
+def _matches_compiled_go_service(name: str, command_line: str) -> bool:
+    """Return True when a process looks like a repo-local Go service run."""
+    normalized_name = (name or "").lower()
+    normalized_cmd = (command_line or "").lower()
+
+    if normalized_name.endswith(".exe"):
+        normalized_name = normalized_name[:-4]
+
+    if normalized_name in COMPILED_GO_PROCESS_NAMES:
+        return True
+
+    if normalized_name == "go":
+        return any(token in normalized_cmd for token in COMPILED_GO_COMMAND_HINTS)
+
+    return any(token in normalized_cmd for token in COMPILED_GO_COMMAND_HINTS)
+
+
+def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:
+    """Find repo-local Go service processes that may outlive prior test runs."""
+    processes: list[dict[str, str | int]] = []
+    try:
+        if is_windows():
+            result = subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "Get-CimInstance Win32_Process | "
+                    "Select-Object ProcessId,Name,CommandLine | "
+                    "ConvertTo-Json -Compress",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+            raw = result.stdout.strip()
+            if not raw:
+                return []
+            payload = json.loads(raw)
+            rows = payload if isinstance(payload, list) else [payload]
+            for row in rows:
+                pid = row.get("ProcessId")
+                name = row.get("Name") or ""
+                command_line = row.get("CommandLine") or ""
+                if isinstance(pid, int) and _matches_compiled_go_service(name, command_line):
+                    processes.append({"pid": pid, "name": name, "command": command_line})
+            return processes
+
+        result = subprocess.run(
+            ["ps", "-eo", "pid=,comm=,args="],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        for line in result.stdout.splitlines():
+            parts = line.strip().split(None, 2)
+            if len(parts) < 2 or not parts[0].isdigit():
+                continue
+            pid = int(parts[0])
+            name = parts[1]
+            command_line = parts[2] if len(parts) > 2 else ""
+            if _matches_compiled_go_service(name, command_line):
+                processes.append({"pid": pid, "name": name, "command": command_line})
+    except (subprocess.SubprocessError, json.JSONDecodeError, OSError, ValueError):
+        return []
+    return processes
+
+
+def _kill_compiled_go_services() -> list[dict[str, str | int]]:
+    """Terminate stray compiled or go-run Mycelis services from prior runs."""
+    processes = _list_compiled_go_service_processes()
+    if not processes:
+        print("  No stray compiled Go services detected")
+        return []
+
+    print("  Cleaning stray compiled Go services from prior runs...")
+    for proc in processes:
+        print(f"    - {proc['name']} (PID {proc['pid']})")
+        _kill_pid(int(proc["pid"]))
+
+    time.sleep(0.5)
+    remaining = _list_compiled_go_service_processes()
+    if remaining:
+        for proc in remaining:
+            _kill_pid(int(proc["pid"]))
+        time.sleep(0.5)
+        remaining = _list_compiled_go_service_processes()
+    return remaining
 
 
 def _service_keys_by_label(labels: list[str]) -> list[str]:
@@ -354,6 +464,15 @@ def status(c):
     else:
         print("  Core API probe  : OFFLINE")
 
+    compiled_go = _list_compiled_go_service_processes()
+    if compiled_go:
+        summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in compiled_go[:4])
+        if len(compiled_go) > 4:
+            summary += ", ..."
+        print(f"  Compiled Go svc : DETECTED ({summary})")
+    else:
+        print("  Compiled Go svc : CLEAR")
+
     print()
 
 
@@ -482,12 +601,12 @@ def up(c, frontend=False, build=False):
 def down(c):
     """
     Stop all dev stack services cleanly.
-    Order: core -> frontend -> port-forwards.
+    Order: core -> frontend -> compiled Go cleanup -> port-forwards.
     """
     print("=== Mycelis Stack Down ===\n")
 
     # 1. Core
-    print("[1/3] Stopping Core...")
+    print("[1/4] Stopping Core...")
     if _kill_port(API_PORT, "Core"):
         pass
     else:
@@ -507,7 +626,7 @@ def down(c):
         print("  Core stopped (by name)")
 
     # 2. Frontend
-    print("[2/3] Stopping Frontend...")
+    print("[2/4] Stopping Frontend...")
     if not _kill_port(INTERFACE_PORT, "Frontend"):
         if is_windows():
             _run_best_effort(
@@ -528,8 +647,12 @@ def down(c):
         else:
             print("  Frontend not running")
 
-    # 3. Port-forwards
-    print("[3/3] Stopping port-forwards...")
+    # 3. Compiled Go helpers
+    print("[3/4] Cleaning compiled Go services...")
+    remaining_compiled = _kill_compiled_go_services()
+
+    # 4. Port-forwards
+    print("[4/4] Stopping port-forwards...")
     _kill_bridges()
 
     # Also kill any remaining kubectl port-forward processes
@@ -567,6 +690,13 @@ def down(c):
             "STACK DOWN INCOMPLETE: remaining listeners on "
             + ", ".join(remaining)
             + ". Re-run lifecycle.down or inspect the reported ports/PIDs with lifecycle.status."
+        )
+    if remaining_compiled:
+        compiled_summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in remaining_compiled)
+        raise SystemExit(
+            "STACK DOWN INCOMPLETE: stray compiled Go services still running ("
+            + compiled_summary
+            + "). Re-run lifecycle.down or inspect the reported ports/PIDs with lifecycle.status."
         )
 
     print("\nAll services stopped.")

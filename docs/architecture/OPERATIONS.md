@@ -86,8 +86,8 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | Command | Description |
 |---------|-------------|
 | `uv run inv lifecycle.up` | Idempotent bring-up: bridge -> dependencies -> Core (waits for `/healthz`; supports `--build` and `--frontend`) |
-| `uv run inv lifecycle.down` | Clean teardown: Core -> Frontend -> port-forwards with bounded cleanup and port-close waits |
-| `uv run inv lifecycle.status` | Dashboard for PostgreSQL, NATS, Core, Frontend, Ollama, and related PIDs |
+| `uv run inv lifecycle.down` | Clean teardown: Core -> Frontend -> compiled Go service sweep -> port-forwards with bounded cleanup and port-close waits |
+| `uv run inv lifecycle.status` | Dashboard for PostgreSQL, NATS, Core, Frontend, Ollama, compiled Go leftovers, and related PIDs |
 | `uv run inv lifecycle.health` | Deep health probe against actual API endpoints with auth |
 | `uv run inv lifecycle.restart` | Full local restart: down -> settle -> up (supports `--build` and `--frontend`) |
 | `uv run inv lifecycle.memory-restart` | Destructive recovery path: down -> db.reset -> up -> health -> memory probes |
@@ -96,10 +96,28 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
+- Detect compiled Go binaries before starting the check. Inspect for known service names or listeners on declared dev/test ports, terminate them through lifecycle/task helpers when found, and never assume they belong to the current slice.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
 - Agents must never stack runs on top of unknown existing processes.
+
+### Compiled Go Service Cleanup Before Tests
+
+Local Go binaries can survive outside normal lifecycle orchestration after `go build`, `go run`, or manual binary execution. That means the clean-run contract must cover more than containers and bridges.
+
+Typical binaries/process shapes to clear:
+- core server
+- relays / bridges when a local Go service provides them
+- bootstrap helpers
+- any repo-local Go service launched through `go run ./cmd/...` or `core/bin/*`
+
+Pre-test cleanup must distinguish:
+- local compiled Go services
+- containerized dependencies
+- test-managed ephemeral services
+
+Stopping containers is necessary but not sufficient. The operator or agent must also inspect local processes for stray compiled Go services and terminate them before the next runtime or integration check begins.
 
 ### Logging & Quality Gates (`ops/logging.py`, `ops/quality.py`)
 
