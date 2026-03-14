@@ -7,8 +7,8 @@ def _load_env():
     """Load root .env into the process environment so Next.js proxy
     can read MYCELIS_API_KEY (used to inject Authorization headers into
     proxied /api/* requests). Uses override=True so .env wins over system env.
-    Removes PORT afterwards — the root .env sets PORT=8081 for Go Core,
-    but Next.js would read it and try to listen on 8081 instead of 3000."""
+    Removes PORT afterwards — the root .env sets PORT=8080 for Go Core,
+    but Next.js would read it and try to listen on 8080 instead of 3000."""
     import os
     try:
         from dotenv import load_dotenv

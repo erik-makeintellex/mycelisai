@@ -245,6 +245,24 @@ Next steps:
 2. Replace bootstrap seeding logic with template-instantiation + scope-aware inheritance.
 3. Promote provider-policy scopes and Helm env/port/mount/storage alignment into actionable runtime slices with tests.
 
+### 19. Cluster/runtime bootstrap contract alignment
+
+Status:
+1. `COMPLETE` Helm deployment now provisions the configuration bundle (`cognitive.yaml`, `policy.yaml`, standing-team YAMLs) via a ConfigMap volume so Pods read deterministic bootstrap inputs instead of whatever was baked in the image.
+2. `COMPLETE` `MYCELIS_API_KEY` is required and injected through a Kubernetes Secret created by the chart (or supplied via `coreAuth.existingSecret`); `ops.k8s.deploy` now refuses to proceed when the key is missing.
+3. `COMPLETE` Core HTTP port contract is unified on `8080` (`core/cmd/server` default, Helm `PORT` env, Service/bridge forwarding, ops defaults).
+4. `COMPLETE` Charts and ops scripts document/mount the writable storage contract (`/data` PVC for artifacts + `$MYCELIS_WORKSPACE` under `/data/workspace`), and the ConfigMap keeps read-only bootstrap files under `/app/config`.
+
+Evidence:
+1. Helm templates: `charts/mycelis-core/templates/deployment.yaml`, `configmap-config.yaml`, `_helpers.tpl`, `core-auth-secret.yaml`, updated `values.yaml`, plus new `config/` assets.
+2. Ops automation: `ops/k8s.py` enforces API key injection and 8080 port-forward; `ops/config.py` defaults shift to 8080; `ops/interface.py` startup guidance updated.
+3. Runtime entrypoint: `core/cmd/server/main.go` now defaults to `PORT=8080`.
+4. Validation: `uv run pytest tests/test_docs_links.py -q`.
+
+Next steps:
+1. Wire provider-policy scopes and template-instantiation flow into the runtime without depending on standing-team tables.
+2. Extend Helm/ops surface so template bundles are generated from the new template serialization path instead of the baked defaults once Task 005 code work lands.
+
 ## Immediate Next Actions
 
 1. `COMPLETE` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.

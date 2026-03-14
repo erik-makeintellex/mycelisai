@@ -9,6 +9,12 @@ service:
   type: ClusterIP
   port: 8080
 
+coreAuth:
+  # Either provide apiKey (for dev) or reference an existing secret
+  apiKey: ""
+  existingSecret: ""
+  secretName: ""
+
 resources:
   requests:
     cpu: 50m
