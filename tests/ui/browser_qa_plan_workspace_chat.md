@@ -1,12 +1,12 @@
 # Browser QA Test Plan: Soma Workspace Chat
 
 ## Application
-Mycelis Cortex V7 - Workspace UI (`/dashboard`)
+Mycelis Cortex V8 Workspace (`/dashboard`)
 
 ## Context and Strategy
-Existing Playwright tests (`workspace-live-backend`, `proposals`, `error-scenarios`, `v7-operational-ux`) heavily cover the "Launch Crew" modal proposal generation, system health fallback UI (Degraded Mode), and API hard-crashes. 
+Existing Playwright suites (`workspace-live-backend`, `proposals`, `error-scenarios`, `v7-operational-ux`) already cover Launch Crew proposal flows, degraded-state UI, and proxy regressions. V8 delivery now expects governed inline chat behavior backed by the same template → instantiation → inheritance → precedence contract, so this manual pass concentrates on the **inline Soma chat** happy paths and edge cases that the automated suites only sample.
 
-This manual Browser QA pass will focus strictly on the **inline Soma Chat experience**, filling the gaps in exploratory testing, UI edge cases, and V7 terminal state progression within the primary message feed.
+The focus is validating the four canonical terminal states (`answer`, `proposal`, `execution_result`, `blocker`) and confirming Soma remains direct-first unless the operator explicitly triggers a council consultation. V7-specific references have been removed; every test now references the V8 contract.
 
 ---
 
@@ -16,7 +16,7 @@ This manual Browser QA pass will focus strictly on the **inline Soma Chat experi
 - **Purpose:** Ensure Soma can answer a question without unnecessarily pulling in the council or triggering a mutation proposal.
 - **Steps:**
   1. Open `/dashboard`.
-  2. Type: "Summarize the current UI V7 design objectives."
+  2. Type: "Summarize the current Workspace V8 design objectives."
   3. Click Send.
   4. Wait for the response.
 - **Expected Result:**
@@ -72,7 +72,7 @@ This manual Browser QA pass will focus strictly on the **inline Soma Chat experi
   - HTML tags are escaped and rendered as raw text in the message bubble, not executed as DOM elements.
 
 ### Test 2.3: Visual Breakage on Large Layouts
-- **Purpose:** Verify that oversized markdown elements (like wide tables or extremely long code blocks) do not break the 68% bounded width of the chat pane.
+- **Purpose:** Verify that oversized markdown elements (like wide tables or extremely long code blocks) do not break the bounded width of the chat pane.
 - **Steps:**
   1. Ask Soma: "Generate a markdown table with 10 columns and 5 rows containing dummy data."
 - **Expected Result:**
