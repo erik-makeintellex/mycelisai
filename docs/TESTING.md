@@ -89,7 +89,7 @@ Minimum policy:
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
-- Detect running compiled binaries with process inspection before the test begins. Look for known service names and any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
+- Detect running compiled binaries with process inspection before the test begins. Look for repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -110,7 +110,7 @@ Cleanup must distinguish and handle all three classes:
 - containerized or bridged dependencies
 - test-managed ephemeral services
 
-Stopping containers or port-forwards alone is not enough. The pre-test cleanup pass must also inspect process tables for stray Go binaries and kill them when found.
+Stopping containers or port-forwards alone is not enough. The pre-test cleanup pass must also inspect process tables for stray Go binaries and kill them when found. If process inspection fails, treat the environment as unverified and do not continue with runtime or integration-style tests until the inspection path is healthy again.
 
 ## Quick Reference
 

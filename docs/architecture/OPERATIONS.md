@@ -96,7 +96,7 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
-- Detect compiled Go binaries before starting the check. Inspect for known service names or listeners on declared dev/test ports, terminate them through lifecycle/task helpers when found, and never assume they belong to the current slice.
+- Detect compiled Go binaries before starting the check. Inspect for repo-local command lines or binary paths plus listeners on declared dev/test ports, terminate them through lifecycle/task helpers when found, and never assume they belong to the current slice.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -117,7 +117,7 @@ Pre-test cleanup must distinguish:
 - containerized dependencies
 - test-managed ephemeral services
 
-Stopping containers is necessary but not sufficient. The operator or agent must also inspect local processes for stray compiled Go services and terminate them before the next runtime or integration check begins.
+Stopping containers is necessary but not sufficient. The operator or agent must also inspect local processes for stray compiled Go services and terminate them before the next runtime or integration check begins. If process inspection fails, treat the local environment as unverified and stop before running the check.
 
 ### Logging & Quality Gates (`ops/logging.py`, `ops/quality.py`)
 
