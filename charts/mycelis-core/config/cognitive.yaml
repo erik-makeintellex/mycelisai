@@ -1,0 +1,108 @@
+providers:
+    lmstudio:
+        type: openai_compatible
+        endpoint: http://127.0.0.1:11434/v1
+        model_id: default
+        api_key: lm-studio
+        api_key_env: ""
+        location: local
+        data_boundary: local_only
+        usage_policy: local_first
+        roles_allowed:
+            - all
+        enabled: false
+    local-ollama-dev:
+        type: ollama
+        endpoint: http://127.0.0.1:11434/v1
+        model_id: qwen2.5-coder:7b
+        api_key: ""
+        api_key_env: ""
+        location: ""
+        data_boundary: ""
+        usage_policy: ""
+        roles_allowed: []
+        enabled: false
+    local-sovereign:
+        type: ollama
+        endpoint: http://127.0.0.1:11434/v1
+        model_id: qwen2.5-coder:7b
+        api_key: ""
+        api_key_env: ""
+        location: ""
+        data_boundary: ""
+        usage_policy: ""
+        roles_allowed: []
+        enabled: false
+    ollama:
+        type: openai_compatible
+        endpoint: http://127.0.0.1:11434/v1
+        model_id: qwen2.5-coder:1.5b-base
+        api_key: ollama
+        api_key_env: ""
+        location: local
+        data_boundary: local_only
+        usage_policy: local_first
+        roles_allowed:
+            - all
+        enabled: true
+    production_claude:
+        type: anthropic
+        endpoint: ""
+        model_id: claude-3-opus-20240229
+        api_key: ""
+        api_key_env: ANTHROPIC_API_KEY
+        location: remote
+        data_boundary: leaves_org
+        usage_policy: require_approval
+        roles_allowed:
+            - architect
+            - coder
+        enabled: false
+    production_gemini:
+        type: google
+        endpoint: ""
+        model_id: gemini-1.5-pro
+        api_key: ""
+        api_key_env: GEMINI_API_KEY
+        location: remote
+        data_boundary: leaves_org
+        usage_policy: require_approval
+        roles_allowed:
+            - architect
+        enabled: false
+    production_gpt4:
+        type: openai
+        endpoint: https://api.openai.com/v1
+        model_id: gpt-4-turbo
+        api_key: ""
+        api_key_env: OPENAI_API_KEY
+        location: remote
+        data_boundary: leaves_org
+        usage_policy: require_approval
+        roles_allowed:
+            - architect
+            - coder
+        enabled: false
+    vllm:
+        type: openai_compatible
+        endpoint: http://127.0.0.1:11434/v1
+        model_id: qwen2.5-coder
+        api_key: mycelis-local
+        api_key_env: ""
+        location: local
+        data_boundary: local_only
+        usage_policy: local_first
+        roles_allowed:
+            - all
+        enabled: false
+profiles:
+    admin: ollama
+    architect: local-ollama-dev
+    chat: local-ollama-dev
+    coder: local-ollama-dev
+    creative: local-ollama-dev
+    overseer: local-ollama-dev
+    sentry: local-ollama-dev
+media:
+    endpoint: http://127.0.0.1:8001/v1
+    model_id: stable-diffusion-xl

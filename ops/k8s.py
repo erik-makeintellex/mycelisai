@@ -97,11 +97,15 @@ def deploy(c):
     # Load .env secrets
     import os
     from dotenv import load_dotenv
+    import shlex
     load_dotenv(os.path.join(ROOT_DIR, ".env")) # Explicit path
     
     pg_user = os.getenv("POSTGRES_USER", "mycelis")
     pg_pass = os.getenv("POSTGRES_PASSWORD", "password")
     pg_db = os.getenv("POSTGRES_DB", "cortex")
+    api_key = os.getenv("MYCELIS_API_KEY", "")
+    if not api_key:
+        raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
 
     print(f"   Injecting Secrets for DB User: {pg_user}")
 
@@ -112,6 +116,7 @@ def deploy(c):
         f"--set postgresql.auth.username={pg_user} "
         f"--set postgresql.auth.password={pg_pass} "
         f"--set postgresql.auth.database={pg_db} "
+        f"--set coreAuth.apiKey={shlex.quote(api_key)} "
         "--wait"
     )
     c.run(cmd)
@@ -181,16 +186,16 @@ def up(c, timeout=180):
 def bridge(c):
     """
     Open Development Bridge.
-    Forwards cluster ports (NATS:4222, HTTP:8081←8080, PG:5432) to localhost.
+    Forwards cluster ports (NATS:4222, HTTP:8080, PG:5432) to localhost.
     """
-    print("Starting Port-Forward Proxy (NATS:4222, HTTP:8081, PG:5432)...")
+    print("Starting Port-Forward Proxy (NATS:4222, HTTP:8080, PG:5432)...")
     if is_windows():
         c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core-nats 4222:4222")
-        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8081:8080")
+        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080")
         c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core-postgresql 5432:5432")
     else:
         p1 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core-nats 4222:4222", asynchronous=True)
-        p2 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8081:8080", asynchronous=True)
+        p2 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080", asynchronous=True)
         p3 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core-postgresql 5432:5432", asynchronous=True)
         print("Bridge active. Press Ctrl+C to stop.")
         p1.join() 

@@ -19,7 +19,7 @@ SDK_DIR = ROOT_DIR / "sdk/python"
 # -- Host Defaults (env-var overridable) --
 # Core API server
 API_HOST = os.environ.get("MYCELIS_API_HOST", "localhost")
-API_PORT = int(os.environ.get("MYCELIS_API_PORT", "8081"))
+API_PORT = int(os.environ.get("MYCELIS_API_PORT", "8080"))
 
 # Interface (Next.js) dev server
 INTERFACE_HOST = os.environ.get("MYCELIS_INTERFACE_HOST", "localhost")
