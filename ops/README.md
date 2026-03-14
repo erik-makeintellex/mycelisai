@@ -58,7 +58,7 @@ Delivery-focused validation, runner checks, and release preflight.
 ### `misc.py` (Team Coordination)
 Central architect sync path and utility task surfaces.
 - **Architecture Sync**: `uv run inv team.architecture-sync`
-- **Worktree Triage**: `uv run inv team.worktree-triage` (temporary local review helper)
+- **Worktree Triage**: `uv run inv team.worktree-triage` (temporary local review helper only; not a standing runtime team)
 
 ## ⚡ Directives
 - **Never tag `latest`** for production.

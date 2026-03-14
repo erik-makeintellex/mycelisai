@@ -148,7 +148,7 @@ Required command references for active V8 work:
 - `uv run inv ci.entrypoint-check`
 - `uv run inv lifecycle.memory-restart`
 - `uv run inv team.architecture-sync`
-- `uv run inv team.worktree-triage` (temporary dirty-worktree review helper; not a standing runtime team)
+- `uv run inv team.worktree-triage` (temporary local dirty-worktree review helper; not a runtime-team model change)
 
 Use `uv run inv ...` for execution.
 Use `uvx --from invoke inv -l` only as a compatibility probe.
@@ -177,7 +177,7 @@ Agents implementing V8 should follow this process:
 1. clean runtime environment and running services when the slice requires a deterministic baseline
 2. review the implementation tracker
 3. review V7 architecture-library documentation as migration input
-4. when the worktree is dirty or unclear, run `uv run inv team.worktree-triage` to assemble a temporary review pass before cleanup or release decisions
+4. when the worktree is dirty or unclear, run `uv run inv team.worktree-triage` to assemble a temporary local review pass before cleanup or release decisions
 5. identify migration targets and required contract updates
 6. implement incremental runtime or documentation updates
 7. verify with tests and execution gates
