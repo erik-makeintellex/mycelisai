@@ -40,9 +40,10 @@ type TemplateLoader struct {
 }
 
 type StartupSelection struct {
-	Bundle    *TemplateBundle
-	Manifests []*swarm.TeamManifest
-	Source    string
+	Bundle       *TemplateBundle
+	Organization *swarm.RuntimeOrganization
+	Manifests    []*swarm.TeamManifest
+	Source       string
 }
 
 func NewTemplateLoader(path string) *TemplateLoader {
@@ -165,6 +166,29 @@ func (b *TemplateBundle) LoadTeamManifests() ([]*swarm.TeamManifest, error) {
 	return manifests, nil
 }
 
+func (b *TemplateBundle) InstantiateRuntimeOrganization() (*swarm.RuntimeOrganization, error) {
+	manifests, err := b.LoadTeamManifests()
+	if err != nil {
+		return nil, err
+	}
+	providerPolicy := map[string]string{}
+	for k, v := range b.ProviderPolicy {
+		providerPolicy[k] = v
+	}
+	return &swarm.RuntimeOrganization{
+		ID:                b.ID,
+		Name:              b.Name,
+		Description:       b.Description,
+		TemplateVersion:   b.TemplateVersion,
+		SourceKind:        b.SourceKind,
+		KernelMode:        b.Kernel.Mode,
+		CouncilMode:       b.Council.Mode,
+		ProviderPolicy:    providerPolicy,
+		Teams:             manifests,
+		MigrationFallback: false,
+	}, nil
+}
+
 func SelectStartupBundle(bundles []*TemplateBundle, requestedID string) (*TemplateBundle, error) {
 	if len(bundles) == 0 {
 		return nil, nil
@@ -199,9 +223,11 @@ func ResolveStartupSelection(templatesPath, fallbackTeamsPath, requestedID strin
 		if err != nil {
 			return nil, fmt.Errorf("load fallback team manifests: %w", err)
 		}
+		org := instantiateFallbackRuntimeOrganization(fallbackTeamsPath, manifests)
 		return &StartupSelection{
-			Manifests: manifests,
-			Source:    "fallback_teams",
+			Organization: org,
+			Manifests:    manifests,
+			Source:       "fallback_teams",
 		}, nil
 	}
 
@@ -210,14 +236,29 @@ func ResolveStartupSelection(templatesPath, fallbackTeamsPath, requestedID strin
 		return nil, fmt.Errorf("select startup bootstrap template bundle: %w", err)
 	}
 
-	manifests, err := selected.LoadTeamManifests()
+	org, err := selected.InstantiateRuntimeOrganization()
 	if err != nil {
-		return nil, fmt.Errorf("load startup bootstrap template bundle %s: %w", selected.ID, err)
+		return nil, fmt.Errorf("instantiate startup bootstrap template bundle %s: %w", selected.ID, err)
 	}
 
 	return &StartupSelection{
-		Bundle:    selected,
-		Manifests: manifests,
-		Source:    "bundle",
+		Bundle:       selected,
+		Organization: org,
+		Manifests:    append([]*swarm.TeamManifest(nil), org.Teams...),
+		Source:       "bundle",
 	}, nil
+}
+
+func instantiateFallbackRuntimeOrganization(fallbackTeamsPath string, manifests []*swarm.TeamManifest) *swarm.RuntimeOrganization {
+	return &swarm.RuntimeOrganization{
+		ID:                "migration-fallback-standing-teams",
+		Name:              "Migration Fallback Standing Teams",
+		Description:       fmt.Sprintf("Temporary migration fallback instantiated from %s because no bootstrap template bundle was configured.", fallbackTeamsPath),
+		TemplateVersion:   "migration-fallback",
+		SourceKind:        "standing_team_migration_fallback",
+		KernelMode:        "migration-fallback",
+		CouncilMode:       "migration-fallback",
+		Teams:             append([]*swarm.TeamManifest(nil), manifests...),
+		MigrationFallback: true,
+	}
 }

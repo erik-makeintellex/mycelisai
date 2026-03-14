@@ -57,6 +57,15 @@ team_manifest_refs:
 	if selection.Bundle == nil || selection.Bundle.ID != "v8-migration-standing-team-bridge" {
 		t.Fatalf("unexpected selected bundle: %+v", selection.Bundle)
 	}
+	if selection.Organization == nil {
+		t.Fatal("expected instantiated runtime organization")
+	}
+	if selection.Organization.MigrationFallback {
+		t.Fatal("expected bundle path to be primary runtime organization, not fallback")
+	}
+	if selection.Organization.SourceKind != "standing_team_migration_input" {
+		t.Fatalf("unexpected organization source kind: %s", selection.Organization.SourceKind)
+	}
 	if len(selection.Manifests) != 1 || selection.Manifests[0].ID != "bridge-team" {
 		t.Fatalf("unexpected startup manifests: %+v", selection.Manifests)
 	}
@@ -84,6 +93,15 @@ func TestResolveStartupSelectionFallsBackWhenBundleMissing(t *testing.T) {
 	}
 	if selection.Bundle != nil {
 		t.Fatalf("expected no selected bundle, got %+v", selection.Bundle)
+	}
+	if selection.Organization == nil {
+		t.Fatal("expected fallback runtime organization")
+	}
+	if !selection.Organization.MigrationFallback {
+		t.Fatal("expected fallback runtime organization to be marked migration-only")
+	}
+	if selection.Organization.SourceKind != "standing_team_migration_fallback" {
+		t.Fatalf("unexpected fallback source kind: %s", selection.Organization.SourceKind)
 	}
 	if len(selection.Manifests) != 1 || selection.Manifests[0].ID != "bridge-team" {
 		t.Fatalf("unexpected fallback manifests: %+v", selection.Manifests)

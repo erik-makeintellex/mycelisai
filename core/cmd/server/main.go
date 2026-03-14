@@ -364,6 +364,13 @@ func main() {
 	} else {
 		log.Printf("Bootstrap Template Bundles: none configured at %s; falling back to %s", templateConfigPath, teamConfigPath)
 	}
+	if startupSelection.Organization != nil {
+		if startupSelection.Organization.MigrationFallback {
+			log.Printf("Bootstrap Runtime Organization Active: %s (migration fallback)", startupSelection.Organization.ID)
+		} else {
+			log.Printf("Bootstrap Runtime Organization Active: %s", startupSelection.Organization.ID)
+		}
+	}
 
 	// 5c. Initialize Bootstrap Service (requires NATS)
 	var bootstrapSrv *bootstrap.Service
@@ -443,9 +450,9 @@ func main() {
 	var soma *swarm.Soma
 	if nc != nil {
 		if startupTemplateBundle != nil {
-			log.Printf("Soma startup using bootstrap template bundle %s", startupTemplateBundle.ID)
+			log.Printf("Soma startup instantiating runtime organization from bootstrap template bundle %s", startupTemplateBundle.ID)
 		} else {
-			log.Printf("Soma startup using fallback standing-team manifests from %s", teamConfigPath)
+			log.Printf("Soma startup using temporary migration fallback standing-team manifests from %s", teamConfigPath)
 		}
 		soma = swarm.NewSoma(nc, guard, startupRegistry, cogRouter, streamHandler, toolExec, internalTools)
 		teamProviders := parseProviderOverrideMap(os.Getenv("MYCELIS_TEAM_PROVIDER_MAP"))

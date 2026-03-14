@@ -250,8 +250,8 @@ uv run inv interface.dev
 | Config | Location | Managed Via |
 |--------|----------|-------------|
 | Cognitive (Bootstrap) | `core/config/cognitive.yaml` | UI (`/settings` → Matrix) or YAML |
-| Bootstrap Templates | `core/config/templates/*.yaml` | YAML (startup-selected transitional V8 migration bundles; Task 005 bridge layer) |
-| Standing Teams | `core/config/teams/*.yaml` | YAML (transitional migration inputs referenced by startup bundles and the guarded no-bundle fallback path) |
+| Bootstrap Templates | `core/config/templates/*.yaml` | YAML (startup-selected transitional V8 migration bundles that instantiate the runtime organization; Task 005 bridge layer) |
+| Standing Teams | `core/config/teams/*.yaml` | YAML (transitional migration inputs referenced by startup bundles and the temporary no-bundle compatibility fallback path) |
 | MCP Servers | Database | UI (`/settings` → MCP Tools) or API |
 | Governance Policy | `core/config/policy.yaml` | UI (`/approvals` → Policy tab) or YAML |
 | MCP Library | `core/config/mcp-library.yaml` | YAML (curated registry) |
@@ -497,7 +497,7 @@ probes:
 6.  Initialize Memory.Service
 7.  Connect NATS (retry 10x, continue degraded if fail)
 8.  Start Router → Soma → Axon → Overseer → Memory Subscription
-9.  Resolve the selected startup bootstrap bundle and build startup teams from its declared migration inputs, or use the guarded no-bundle fallback to direct team-manifest scanning
+9.  Resolve the selected startup bootstrap bundle, instantiate the runtime organization from it, and build startup teams from that instantiated object, or use the temporary no-bundle compatibility fallback to direct team-manifest scanning
 10. Run bounded MCP bootstrap/reconnect work so one hung server cannot block boot indefinitely
 11. Start HTTP server (port 8080), register routes
 12. Block on SIGINT

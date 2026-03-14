@@ -16,7 +16,22 @@ import (
 type Registry struct {
 	teamsPath string
 	manifests []*TeamManifest
+	org       *RuntimeOrganization
 	mu        sync.RWMutex
+}
+
+// RuntimeOrganization is the instantiated bootstrap object that feeds runtime team activation.
+type RuntimeOrganization struct {
+	ID                string
+	Name              string
+	Description       string
+	TemplateVersion   string
+	SourceKind        string
+	KernelMode        string
+	CouncilMode       string
+	ProviderPolicy    map[string]string
+	Teams             []*TeamManifest
+	MigrationFallback bool
 }
 
 // NewRegistry creates a new Registry loaded from the given path.
@@ -27,8 +42,22 @@ func NewRegistry(path string) *Registry {
 }
 
 func NewRegistryFromManifests(manifests []*TeamManifest) *Registry {
+	return NewRegistryFromRuntimeOrganization(&RuntimeOrganization{
+		ID:                "manifest-registry",
+		Name:              "Manifest Registry",
+		SourceKind:        "manifest_registry",
+		Teams:             manifests,
+		MigrationFallback: false,
+	})
+}
+
+func NewRegistryFromRuntimeOrganization(org *RuntimeOrganization) *Registry {
+	if org == nil {
+		return &Registry{}
+	}
 	return &Registry{
-		manifests: manifests,
+		org:       org,
+		manifests: append([]*TeamManifest(nil), org.Teams...),
 	}
 }
 
@@ -66,6 +95,25 @@ func (r *Registry) LoadManifests() ([]*TeamManifest, error) {
 	}
 
 	return manifests, nil
+}
+
+func (r *Registry) RuntimeOrganization() *RuntimeOrganization {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if r.org == nil {
+		return nil
+	}
+
+	orgCopy := *r.org
+	orgCopy.Teams = append([]*TeamManifest(nil), r.org.Teams...)
+	if len(r.org.ProviderPolicy) > 0 {
+		orgCopy.ProviderPolicy = make(map[string]string, len(r.org.ProviderPolicy))
+		for k, v := range r.org.ProviderPolicy {
+			orgCopy.ProviderPolicy[k] = v
+		}
+	}
+	return &orgCopy
 }
 
 func LoadManifestFile(path string) (*TeamManifest, error) {

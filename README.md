@@ -39,7 +39,7 @@ Bootstrap reminder:
 - treat `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the canonical V7->V8 migration and bootstrap contract, not just another planning note
 - always translate V7 YAML, runtime config, DB seeding, and operator wizard flows through that model before they touch a live organization
 - `Template ≠ instantiated organization`, so only instantiated orgs enter bootstrap resolution while templates stay reusable blueprints
-- Task 005 bridge layer: `core/config/templates/*.yaml` now defines transitional V8 migration bundles, and startup prefers a selected bundle while falling back to `config/teams` scanning only when no bundle is configured
+- Task 005 bridge layer: `core/config/templates/*.yaml` now instantiates the startup runtime organization through the bundle path, while direct `config/teams` scanning remains a temporary compatibility fallback only when no bundle is configured
 
 Fresh-agent review rule:
 - V7 docs define the current authoritative architecture/planning contract until migrated.
