@@ -234,9 +234,10 @@ Status:
 1. `ACTIVE` Chunk 4.2 captured the standing-team de-hardcoding plan inside `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
 2. `ACTIVE` runtime/config references to fixed `prime-*` teams, hard-coded council rosters, kernel defaults, and provider wiring have documented migration paths into template definitions, bootstrap resolution, scoped inheritance, and provider-policy configuration.
 3. `ACTIVE` Helm/runtime concerns (env injection for `MYCELIS_API_KEY`, 8080/8081 port normalization, config-file mounts, container storage) are now described alongside the bootstrap plan so infrastructure slices can align with runtime refactors.
+4. `ACTIVE` current-state scan recorded the exact files that still hard-code assumptions: Helm charts (`charts/mycelis-core/templates/*.yaml`, `values.yaml`), ops automation (`ops/k8s.py` bridge + `.env` injection), bootstrap/service code (`core/internal/bootstrap/service.go`), template/inception endpoints (`core/internal/server/templates.go`, `inception.go`, `provision.go`), startup entrypoint (`core/cmd/server/main.go`), and standing-team YAMLs in `core/config/teams/`.
 
 Evidence:
-1. Plan section `## Standing-team bootstrap de-hardcoding plan` (2026-03-13) in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` outlines legacy assumptions (`core/config/teams/*.yaml`, `core/internal/swarm/team.go`, `core/internal/bootstrap/service.go`, `core/config/policy.yaml`, `core/internal/inception/store.go`) and prescribes template/instantiation/inheritance/provider policy replacements plus Helm alignment steps.
+1. Plan section `## Standing-team bootstrap de-hardcoding plan` (2026-03-13) now explicitly calls out the active files and assumptions discovered in Chunk 4.2 (Helm values/env/ports, ops bridge tasks, bootstrap services, template APIs, team manifests, runtime storage expectations).
 2. README review confirmed no additional guidance changes were required after adding the plan (`README.md`, 2026-03-13).
 
 Next steps:
