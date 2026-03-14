@@ -263,6 +263,18 @@ Next steps:
 1. Wire provider-policy scopes and template-instantiation flow into the runtime without depending on standing-team tables.
 2. Extend Helm/ops surface so template bundles are generated from the new template serialization path instead of the baked defaults once Task 005 code work lands.
 
+### 20. Testing/QA alignment review
+
+Status:
+1. `COMPLETE` browser QA test plan for Workspace chat now references the V8 contract (inline Soma chat, terminal states, direct-first routing) instead of the outdated V7 framing.
+2. `COMPLETE` manual testing expectations now list the canonical outcomes (`answer`, `proposal`, `execution_result`, `blocker`) and reinforce the V8 inline-governance posture.
+
+Evidence:
+1. `tests/ui/browser_qa_plan_workspace_chat.md` updated on 2026-03-13 to remove V7 references and describe the V8 workspace, happy paths, and edge cases.
+
+Next steps:
+1. Keep automated Playwright suites aligned with the same inline-chat expectations once Workspace refactors land.
+
 ## Immediate Next Actions
 
 1. `COMPLETE` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.
