@@ -59,28 +59,28 @@ func TestRegistry_LoadStandingPrimeTeamManifests(t *testing.T) {
 	}
 
 	expected := map[string]struct {
-		input      string
-		delivery   string
-		memberID   string
-		memberRole string
+		input       string
+		deliveries  []string
+		memberIDs   []string
+		memberRoles []string
 	}{
 		"prime-architect": {
-			input:      "swarm.team.prime-architect.internal.command",
-			delivery:   "swarm.team.prime-architect.signal.status",
-			memberID:   "prime-architect-agent",
-			memberRole: "architect",
+			input:       "swarm.team.prime-architect.internal.command",
+			deliveries:  []string{"swarm.team.prime-architect.signal.status"},
+			memberIDs:   []string{"prime-architect-agent"},
+			memberRoles: []string{"architect"},
 		},
 		"prime-development": {
-			input:      "swarm.team.prime-development.internal.command",
-			delivery:   "swarm.team.prime-development.signal.status",
-			memberID:   "prime-development-agent",
-			memberRole: "coder",
+			input:       "swarm.team.prime-development.internal.command",
+			deliveries:  []string{"swarm.team.prime-development.signal.status"},
+			memberIDs:   []string{"prime-development-agent"},
+			memberRoles: []string{"coder"},
 		},
 		"agui-design-architect": {
-			input:      "swarm.team.agui-design-architect.internal.command",
-			delivery:   "swarm.team.agui-design-architect.signal.status",
-			memberID:   "agui-design-architect-agent",
-			memberRole: "design_architect",
+			input:       "swarm.team.agui-design-architect.internal.command",
+			deliveries:  []string{"swarm.team.agui-design-architect.signal.status"},
+			memberIDs:   []string{"agui-design-architect-agent"},
+			memberRoles: []string{"design_architect"},
 		},
 	}
 
@@ -100,20 +100,29 @@ func TestRegistry_LoadStandingPrimeTeamManifests(t *testing.T) {
 		if manifest == nil {
 			t.Fatalf("missing manifest %s", id)
 		}
-		if len(manifest.Members) != 1 {
-			t.Fatalf("manifest %s expected 1 member, got %d", id, len(manifest.Members))
+		if len(manifest.Members) != len(want.memberIDs) {
+			t.Fatalf("manifest %s expected %d members, got %d", id, len(want.memberIDs), len(manifest.Members))
 		}
-		if manifest.Members[0].ID != want.memberID {
-			t.Fatalf("manifest %s expected member ID %s, got %s", id, want.memberID, manifest.Members[0].ID)
+		for idx, memberID := range want.memberIDs {
+			if manifest.Members[idx].ID != memberID {
+				t.Fatalf("manifest %s expected member ID %s at index %d, got %s", id, memberID, idx, manifest.Members[idx].ID)
+			}
 		}
-		if manifest.Members[0].Role != want.memberRole {
-			t.Fatalf("manifest %s expected member role %s, got %s", id, want.memberRole, manifest.Members[0].Role)
+		for idx, memberRole := range want.memberRoles {
+			if manifest.Members[idx].Role != memberRole {
+				t.Fatalf("manifest %s expected member role %s at index %d, got %s", id, memberRole, idx, manifest.Members[idx].Role)
+			}
 		}
 		if len(manifest.Inputs) != 1 || manifest.Inputs[0] != want.input {
 			t.Fatalf("manifest %s expected input %s, got %v", id, want.input, manifest.Inputs)
 		}
-		if len(manifest.Deliveries) != 1 || manifest.Deliveries[0] != want.delivery {
-			t.Fatalf("manifest %s expected delivery %s, got %v", id, want.delivery, manifest.Deliveries)
+		if len(manifest.Deliveries) != len(want.deliveries) {
+			t.Fatalf("manifest %s expected %d deliveries, got %d", id, len(want.deliveries), len(manifest.Deliveries))
+		}
+		for idx, delivery := range want.deliveries {
+			if manifest.Deliveries[idx] != delivery {
+				t.Fatalf("manifest %s expected delivery %s at index %d, got %s", id, delivery, idx, manifest.Deliveries[idx])
+			}
 		}
 	}
 }

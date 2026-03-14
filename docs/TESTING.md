@@ -105,6 +105,7 @@ uv run inv quality.max-lines --limit 350  # Hot-path max-lines gate with legacy 
 uv run inv lifecycle.memory-restart --frontend          # Full memory reset + post-restart memory probes
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 uv run inv ci.baseline           # Canonical strict baseline (docs/logging/topics/line gates + core + interface)
+uv run inv team.worktree-triage  # Temporary dirty-worktree review pass: map changed paths to review targets, install checks, and evidence commands
 ```
 
 Runner matrix:
@@ -130,6 +131,7 @@ Signal/channel standard:
 - Current focused Launch Crew browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/proposals.spec.ts` (proposal outcome + blocker recovery)
 - Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
 - Current focused team-sync contract check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
+- Dirty-worktree triage task check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
 - Current focused README navigation check: `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
 - Current docs/task drift rule: canonical docs must not contain executable bare `uvx inv ...` examples outside explicit negative-control guidance.
 

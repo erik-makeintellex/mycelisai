@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+from dataclasses import dataclass
+
 from invoke import Context
 
 from ops import misc
@@ -31,6 +34,28 @@ class _FakeSocket:
 
     def close(self):
         self.closed = True
+
+
+@dataclass
+class FakeResult:
+    exited: int = 0
+    stdout: str = ""
+    stderr: str = ""
+
+
+class FakeContext(Context):
+    def __init__(self, command_results: dict[str, FakeResult]):
+        super().__init__()
+        self.command_results = command_results
+        self.commands: list[str] = []
+
+    def run(self, command: str, **_kwargs) -> FakeResult:
+        self.commands.append(command)
+        return self.command_results.get(command, FakeResult())
+
+    @contextmanager
+    def cd(self, _path: str):
+        yield
 
 
 def test_read_nats_line_reads_until_crlf():
@@ -118,3 +143,49 @@ def test_format_sync_reply_prefers_wrapped_signal_text():
     message = '{"meta":{"payload_kind":"status"},"text":"wrapped brief"}'
 
     assert misc._format_sync_reply(message) == "wrapped brief"
+
+
+def test_build_worktree_triage_maps_changed_paths_to_installs_and_commands():
+    triage = misc._build_worktree_triage(
+        "\n".join(
+            [
+                " M core/internal/swarm/team.go",
+                " M interface/components/dashboard/OperationsBoard.tsx",
+                " M ops/misc.py",
+                "R  docs/old.md -> docs/new.md",
+            ]
+        )
+    )
+
+    assert [area["name"] for area in triage["areas"]] == [
+        "Core runtime",
+        "Docs and state",
+        "Interface",
+        "Python automation",
+    ]
+    assert "cd core && go mod download" in triage["priority_installs"]
+    assert "uv run inv interface.install" in triage["priority_installs"]
+    assert "uv sync --all-packages --dev" in triage["priority_installs"]
+    assert "uv run inv core.test" in triage["recommended_commands"]
+    assert "uv run inv interface.test" in triage["recommended_commands"]
+    assert "uv run inv interface.build" in triage["recommended_commands"]
+    assert "$env:PYTHONPATH='.'; uv run pytest tests/test_ci_tasks.py tests/test_misc_tasks.py -q" in triage["recommended_commands"]
+    assert "$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q" in triage["recommended_commands"]
+
+
+def test_worktree_triage_reports_clean_tree(capsys):
+    ctx = FakeContext(
+        {
+            "git status --porcelain": FakeResult(stdout=""),
+        }
+    )
+
+    misc.worktree_triage.body(ctx)
+
+    output = capsys.readouterr().out
+    assert "Working tree: clean" in output
+    assert "Temporary review team:" in output
+    assert "uv run inv install" in output
+    assert "uv run inv ci.entrypoint-check" in output
+    assert "uv run inv ci.baseline" in output
+    assert "none triggered by current paths" in output
