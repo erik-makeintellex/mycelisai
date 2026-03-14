@@ -39,24 +39,44 @@ SERVICES = {
 }
 
 CORE_STARTUP_LOG = ROOT_DIR / "workspace" / "logs" / "core-startup.log"
-COMPILED_GO_PROCESS_NAMES = ("server", "core", "probe", "signal_gen", "smoke")
-COMPILED_GO_COMMAND_HINTS = (
-    "cmd/server",
-    "cmd\\server",
-    "cmd/probe",
-    "cmd\\probe",
-    "cmd/signal_gen",
-    "cmd\\signal_gen",
-    "cmd/smoke",
-    "cmd\\smoke",
-    "bin/server",
-    "bin\\server",
-    "bin/probe",
-    "bin\\probe",
-    "bin/signal_gen",
-    "bin\\signal_gen",
-    "bin/smoke",
-    "bin\\smoke",
+COMPILED_GO_PROCESS_HINTS = tuple(
+    hint.lower()
+    for hint in {
+        "go run ./cmd/server",
+        "go run .\\cmd\\server",
+        "go run ./cmd/probe",
+        "go run .\\cmd\\probe",
+        "go run ./cmd/signal_gen",
+        "go run .\\cmd\\signal_gen",
+        "go run ./cmd/smoke/main.go",
+        "go run .\\cmd\\smoke\\main.go",
+        "cmd/server",
+        "cmd\\server",
+        "cmd/probe",
+        "cmd\\probe",
+        "cmd/signal_gen",
+        "cmd\\signal_gen",
+        "cmd/smoke",
+        "cmd\\smoke",
+        "bin/server",
+        "bin\\server",
+        "bin/probe",
+        "bin\\probe",
+        "bin/signal_gen",
+        "bin\\signal_gen",
+        "bin/smoke",
+        "bin\\smoke",
+        str((CORE_DIR / "bin" / "server").resolve()),
+        str((CORE_DIR / "bin" / "server.exe").resolve()),
+        str((CORE_DIR / "bin" / "probe").resolve()),
+        str((CORE_DIR / "bin" / "probe.exe").resolve()),
+        str((CORE_DIR / "bin" / "signal_gen").resolve()),
+        str((CORE_DIR / "bin" / "signal_gen.exe").resolve()),
+        str((CORE_DIR / "cmd" / "server").resolve()),
+        str((CORE_DIR / "cmd" / "probe").resolve()),
+        str((CORE_DIR / "cmd" / "signal_gen").resolve()),
+        str((CORE_DIR / "cmd" / "smoke").resolve()),
+    }
 )
 
 
@@ -201,19 +221,11 @@ def _remaining_managed_services() -> list[str]:
 
 def _matches_compiled_go_service(name: str, command_line: str) -> bool:
     """Return True when a process looks like a repo-local Go service run."""
-    normalized_name = (name or "").lower()
-    normalized_cmd = (command_line or "").lower()
-
-    if normalized_name.endswith(".exe"):
-        normalized_name = normalized_name[:-4]
-
-    if normalized_name in COMPILED_GO_PROCESS_NAMES:
-        return True
-
-    if normalized_name == "go":
-        return any(token in normalized_cmd for token in COMPILED_GO_COMMAND_HINTS)
-
-    return any(token in normalized_cmd for token in COMPILED_GO_COMMAND_HINTS)
+    _normalized_name = (name or "").lower()
+    normalized_cmd = (command_line or "").lower().replace("\\", "/")
+    if not normalized_cmd:
+        return False
+    return any(hint.replace("\\", "/") in normalized_cmd for hint in COMPILED_GO_PROCESS_HINTS)
 
 
 def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:
@@ -234,6 +246,8 @@ def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:
                 text=True,
                 timeout=8,
             )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.strip() or "process query failed")
             raw = result.stdout.strip()
             if not raw:
                 return []
@@ -253,6 +267,8 @@ def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:
             text=True,
             timeout=8,
         )
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or "process query failed")
         for line in result.stdout.splitlines():
             parts = line.strip().split(None, 2)
             if len(parts) < 2 or not parts[0].isdigit():
@@ -262,14 +278,21 @@ def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:
             command_line = parts[2] if len(parts) > 2 else ""
             if _matches_compiled_go_service(name, command_line):
                 processes.append({"pid": pid, "name": name, "command": command_line})
-    except (subprocess.SubprocessError, json.JSONDecodeError, OSError, ValueError):
-        return []
+    except (subprocess.SubprocessError, json.JSONDecodeError, OSError, ValueError, RuntimeError) as exc:
+        raise RuntimeError(f"compiled Go service inspection failed: {exc}") from exc
     return processes
 
 
 def _kill_compiled_go_services() -> list[dict[str, str | int]]:
     """Terminate stray compiled or go-run Mycelis services from prior runs."""
-    processes = _list_compiled_go_service_processes()
+    try:
+        processes = _list_compiled_go_service_processes()
+    except RuntimeError as exc:
+        raise SystemExit(
+            "STACK DOWN INCOMPLETE: unable to inspect compiled Go services. "
+            + str(exc)
+            + ". Resolve the local process-inspection failure before running tests."
+        ) from exc
     if not processes:
         print("  No stray compiled Go services detected")
         return []
@@ -464,14 +487,18 @@ def status(c):
     else:
         print("  Core API probe  : OFFLINE")
 
-    compiled_go = _list_compiled_go_service_processes()
-    if compiled_go:
-        summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in compiled_go[:4])
-        if len(compiled_go) > 4:
-            summary += ", ..."
-        print(f"  Compiled Go svc : DETECTED ({summary})")
+    try:
+        compiled_go = _list_compiled_go_service_processes()
+    except RuntimeError as exc:
+        print(f"  Compiled Go svc : UNKNOWN ({exc})")
     else:
-        print("  Compiled Go svc : CLEAR")
+        if compiled_go:
+            summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in compiled_go[:4])
+            if len(compiled_go) > 4:
+                summary += ", ..."
+            print(f"  Compiled Go svc : DETECTED ({summary})")
+        else:
+            print("  Compiled Go svc : CLEAR")
 
     print()
 

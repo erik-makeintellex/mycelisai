@@ -52,7 +52,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
-- Detect running compiled Go services before the test begins. Check known service names and any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
+- Detect running compiled Go services before the test begins. Check repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -73,7 +73,7 @@ Cleanup must cover:
 - containerized dependencies
 - test-managed ephemeral services
 
-Stopping containers alone is not enough. The cleanup pass must also inspect and terminate stray compiled Go binaries before the next runtime or integration test.
+Stopping containers alone is not enough. The cleanup pass must also inspect and terminate stray compiled Go binaries before the next runtime or integration test. If process inspection fails, treat the environment as unverified and stop before running the check.
 
 ### `ci.py` (Delivery Gates)
 Delivery-focused validation, runner checks, and release preflight.
