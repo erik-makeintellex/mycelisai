@@ -128,6 +128,70 @@ func TestTemplateBundle_InstantiateRuntimeOrganization(t *testing.T) {
 	if len(org.Teams) == 0 {
 		t.Fatal("expected instantiated runtime organization to include teams")
 	}
+	if org.ProviderPolicy.Provider != "local-ollama-dev" {
+		t.Fatalf("expected migration bridge provider default local-ollama-dev, got %q", org.ProviderPolicy.Provider)
+	}
+}
+
+func TestTemplateBundleInstantiateRuntimeOrganizationCarriesStructuredProviderPolicy(t *testing.T) {
+	root := t.TempDir()
+	templatesDir := filepath.Join(root, "templates")
+	teamsDir := filepath.Join(root, "teams")
+	if err := os.MkdirAll(templatesDir, 0o755); err != nil {
+		t.Fatalf("mkdir templates: %v", err)
+	}
+	if err := os.MkdirAll(teamsDir, 0o755); err != nil {
+		t.Fatalf("mkdir teams: %v", err)
+	}
+
+	teamYAML := `id: council-core
+name: Council
+type: action
+members:
+  - id: council-architect
+    role: architect
+inputs:
+  - swarm.global.broadcast
+deliveries:
+  - swarm.team.council-core.signal.status
+`
+	if err := os.WriteFile(filepath.Join(teamsDir, "council.yaml"), []byte(teamYAML), 0o644); err != nil {
+		t.Fatalf("write team manifest: %v", err)
+	}
+
+	bundleYAML := `id: structured-policy-bundle
+name: Structured Policy Bundle
+provider_policy:
+  provider: org-provider
+  allowed_providers:
+    - org-provider
+    - council-provider
+  council:
+    role_providers:
+      architect: council-provider
+team_manifest_refs:
+  - ../teams/council.yaml
+`
+	if err := os.WriteFile(filepath.Join(templatesDir, "structured-policy-bundle.yaml"), []byte(bundleYAML), 0o644); err != nil {
+		t.Fatalf("write template bundle: %v", err)
+	}
+
+	loader := NewTemplateLoader(templatesDir)
+	bundles, err := loader.LoadBundles()
+	if err != nil {
+		t.Fatalf("LoadBundles() failed: %v", err)
+	}
+
+	org, err := bundles[0].InstantiateRuntimeOrganization()
+	if err != nil {
+		t.Fatalf("InstantiateRuntimeOrganization() failed: %v", err)
+	}
+	if org.ProviderPolicy.Provider != "org-provider" {
+		t.Fatalf("organization provider = %q", org.ProviderPolicy.Provider)
+	}
+	if org.ProviderPolicy.Council.RoleProviders["architect"] != "council-provider" {
+		t.Fatalf("architect role provider = %q", org.ProviderPolicy.Council.RoleProviders["architect"])
+	}
 }
 
 func TestSelectStartupBundle(t *testing.T) {

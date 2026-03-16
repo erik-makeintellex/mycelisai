@@ -14,15 +14,15 @@ import (
 // TemplateBundle is the transitional Task 005 bridge from V8 bootstrap planning
 // to runtime-readable organization template bundles.
 type TemplateBundle struct {
-	ID               string            `yaml:"id"`
-	Name             string            `yaml:"name"`
-	Description      string            `yaml:"description,omitempty"`
-	TemplateVersion  string            `yaml:"template_version,omitempty"`
-	SourceKind       string            `yaml:"source_kind,omitempty"`
-	Kernel           TemplateKernel    `yaml:"kernel,omitempty"`
-	Council          TemplateCouncil   `yaml:"council,omitempty"`
-	ProviderPolicy   map[string]string `yaml:"provider_policy,omitempty"`
-	TeamManifestRefs []string          `yaml:"team_manifest_refs,omitempty"`
+	ID               string               `yaml:"id"`
+	Name             string               `yaml:"name"`
+	Description      string               `yaml:"description,omitempty"`
+	TemplateVersion  string               `yaml:"template_version,omitempty"`
+	SourceKind       string               `yaml:"source_kind,omitempty"`
+	Kernel           TemplateKernel       `yaml:"kernel,omitempty"`
+	Council          TemplateCouncil      `yaml:"council,omitempty"`
+	ProviderPolicy   swarm.ProviderPolicy `yaml:"provider_policy,omitempty"`
+	TeamManifestRefs []string             `yaml:"team_manifest_refs,omitempty"`
 	baseDir          string
 	configRoot       string
 }
@@ -171,10 +171,6 @@ func (b *TemplateBundle) InstantiateRuntimeOrganization() (*swarm.RuntimeOrganiz
 	if err != nil {
 		return nil, err
 	}
-	providerPolicy := map[string]string{}
-	for k, v := range b.ProviderPolicy {
-		providerPolicy[k] = v
-	}
 	return &swarm.RuntimeOrganization{
 		ID:                b.ID,
 		Name:              b.Name,
@@ -183,7 +179,7 @@ func (b *TemplateBundle) InstantiateRuntimeOrganization() (*swarm.RuntimeOrganiz
 		SourceKind:        b.SourceKind,
 		KernelMode:        b.Kernel.Mode,
 		CouncilMode:       b.Council.Mode,
-		ProviderPolicy:    providerPolicy,
+		ProviderPolicy:    b.ProviderPolicy.Clone(),
 		Teams:             manifests,
 		MigrationFallback: false,
 	}, nil

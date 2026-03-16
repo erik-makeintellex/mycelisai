@@ -44,11 +44,8 @@ type Soma struct {
 	eventEmitter protocol.EventEmitter // persists + publishes events
 	// V7 Conversation Log: optional full-fidelity turn logger.
 	conversationLogger protocol.ConversationLogger
-	// Provider overrides for multi-host routing.
-	// teamProviderOverrides applies to all members in a team unless member override exists.
-	// agentProviderOverrides applies directly to one agent ID and takes precedence.
-	teamProviderOverrides  map[string]string
-	agentProviderOverrides map[string]string
+	// Provider policy drives runtime routing for instantiated organizations.
+	providerPolicy ProviderPolicy
 }
 
 // NewSoma creates a new Executive instance.
@@ -102,7 +99,7 @@ func (s *Soma) Start() error {
 		log.Printf("WARN: Failed to load team manifests: %v", err)
 	}
 	for _, m := range manifests {
-		team := NewTeam(s.applyProviderOverrides(m), s.nc, s.brain, s.toolExecutor)
+		team := NewTeam(s.applyProviderPolicy(m), s.nc, s.brain, s.toolExecutor)
 		if len(toolDescs) > 0 {
 			team.SetToolDescriptions(toolDescs)
 		}
@@ -166,7 +163,7 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 	// Persist? For now, just runtime spawn.
 	// TODO: Save to Registry (YAML)
 
-	team := NewTeam(s.applyProviderOverrides(manifest), s.nc, s.brain, s.toolExecutor)
+	team := NewTeam(s.applyProviderPolicy(manifest), s.nc, s.brain, s.toolExecutor)
 	if s.internalTools != nil {
 		team.SetToolDescriptions(s.internalTools.ListDescriptions())
 	}
@@ -425,38 +422,30 @@ func (s *Soma) SetMCPToolDescs(descs map[string]string) {
 	s.mcpToolDescs = descs
 }
 
-// SetProviderOverrides wires team/agent provider targets for multi-host routing.
-// agentProviders take precedence over teamProviders.
-func (s *Soma) SetProviderOverrides(teamProviders, agentProviders map[string]string) {
-	s.teamProviderOverrides = teamProviders
-	s.agentProviderOverrides = agentProviders
+// SetProviderPolicy wires scoped provider routing into runtime team activation.
+func (s *Soma) SetProviderPolicy(policy ProviderPolicy) {
+	s.providerPolicy = policy.Clone()
 }
 
-func (s *Soma) applyProviderOverrides(manifest *TeamManifest) *TeamManifest {
+// SetProviderOverrides retains the legacy env-driven fallback path for no-bundle compatibility only.
+func (s *Soma) SetProviderOverrides(teamProviders, agentProviders map[string]string) {
+	s.SetProviderPolicy(FallbackProviderPolicy(teamProviders, agentProviders))
+}
+
+func (s *Soma) applyProviderPolicy(manifest *TeamManifest) *TeamManifest {
 	if manifest == nil {
 		return nil
 	}
-	if len(s.teamProviderOverrides) == 0 && len(s.agentProviderOverrides) == 0 {
+	if s.providerPolicy.IsEmpty() {
 		return manifest
 	}
 
-	out := *manifest
-	out.Members = make([]protocol.AgentManifest, len(manifest.Members))
-	copy(out.Members, manifest.Members)
-
-	if provider, ok := s.teamProviderOverrides[manifest.ID]; ok && provider != "" {
-		out.Provider = provider
+	resolved, blocked := s.providerPolicy.ResolveManifest(manifest)
+	for _, blockedOverride := range blocked {
+		log.Printf("WARN: provider override blocked for team %s: %s", manifest.ID, blockedOverride.String())
 	}
-
-	for i := range out.Members {
-		member := out.Members[i]
-		if member.Provider == "" && out.Provider != "" {
-			member.Provider = out.Provider
-		}
-		if p, ok := s.agentProviderOverrides[member.ID]; ok && p != "" {
-			member.Provider = p
-		}
-		out.Members[i] = member
+	if resolved == nil {
+		return manifest
 	}
-	return &out
+	return resolved
 }

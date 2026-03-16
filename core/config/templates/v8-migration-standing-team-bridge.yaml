@@ -9,6 +9,16 @@ council:
   mode: v8-migration-bridge
 provider_policy:
   posture: migration-bridge
+  provider: local-ollama-dev
+  kernel:
+    role_providers:
+      admin: local-ollama-dev
+  council:
+    role_providers:
+      architect: local-ollama-dev
+      coder: local-ollama-dev
+      creative: local-ollama-dev
+      sentry: local-ollama-dev
 team_manifest_refs:
   - ../teams/admin.yaml
   - ../teams/agui-design-architect.yaml
