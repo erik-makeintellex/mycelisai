@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-14
+> Updated: 2026-03-16
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -63,7 +63,8 @@ Key grading conclusion:
 Status:
 1. `ACTIVE` V8 explicitly requires support for local, hosted, and hybrid model-provider infrastructure.
 2. `COMPLETE` provider abstraction is confirmed as an existing core subsystem, not a plugin afterthought.
-3. `NEXT` move provider-policy grading from global/default posture to inception-, council-, and role-aware posture.
+3. `ACTIVE` instantiated-organization provider policy now drives runtime routing with inherited organization, kernel/council-role, team, and agent scope resolution.
+4. `NEXT` extend provider-policy grading beyond the standing-team bridge so future instantiated organizations can declare richer approval/data-boundary posture without fallback-era assumptions.
 
 Required V8 provider support:
 - local/open-source: Ollama, LM Studio, vLLM, custom OpenAI-compatible endpoints
@@ -81,7 +82,9 @@ Required routing posture:
 Status:
 1. `ACTIVE` canonical grading is moving from `V7_DEV_STATE.md` to `V8_DEV_STATE.md`.
 2. `ACTIVE` active non-archive docs are being updated to reference the V8 state file.
-3. `REQUIRED` V7 architecture-library documents remain authoritative migration inputs until V8 replacements exist.
+3. `ACTIVE` top documentation entrypoints now link the detailed framework-memory surfaces needed for restart/onboarding (`README.md`, `docs/README.md`, `docs/archive/README.md`).
+4. `COMPLETE` clearly stale dated architecture-review addenda were removed from `docs/architecture/`.
+5. `REQUIRED` V7 architecture-library documents remain authoritative migration inputs until V8 replacements exist.
 
 State-file rules:
 1. all new status transitions, blocker updates, and gate evidence belong in `V8_DEV_STATE.md`
@@ -132,7 +135,7 @@ Task 008  Planning-integration validation pass                      [COMPLETE]
 Task 009  Next-execution/governance guidance migration              [NEXT]
 ```
 
-## Current Checkpoint (2026-03-14)
+## Current Checkpoint (2026-03-16)
 
 Delivery updates in this checkpoint:
 1. `COMPLETE` reviewed the new root `README.md` and adopted V8 as the active development/grading target.
@@ -144,6 +147,12 @@ Delivery updates in this checkpoint:
 7. `ACTIVE` landed the next Task 005 implementation cut: startup now promotes bundle-driven runtime truth by instantiating a runtime organization from `core/config/templates/*.yaml`, with guarded `config/teams` fallback retained only as temporary compatibility behavior when no bundle is configured.
 8. `COMPLETE` promoted clean-run testing discipline into the active testing/operations contract so runtime and integration checks must not stack on unknown local processes.
 9. `COMPLETE` extended the clean-run contract so compiled Go services from prior `go build`, `go run`, or manual binary launches are explicitly detected and terminated before the next runtime or integration check.
+10. `BLOCKED` the latest lifecycle/doc hardening commits are local-only until GitHub SSH-agent/key access is restored; branch publication is currently blocked by `Permission denied (publickey)` during `git push`.
+11. `COMPLETE` refreshed top documentation entrypoints so restart/onboarding flow now points directly at the detailed framework-memory surfaces (`README.md`, `docs/README.md`, `docs/archive/README.md`).
+12. `COMPLETE` removed clearly stale dated review docs from `docs/architecture/` to reduce documentation clutter without disturbing active migration inputs.
+13. `COMPLETE` doc-surface validation is green again after the documentation cleanup pass.
+14. `COMPLETE` wired provider-policy inheritance from the instantiated runtime organization into live Soma routing so organization defaults, kernel/council role defaults, team defaults, and agent overrides now resolve through one policy-bounded path.
+15. `ACTIVE` isolated `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` to the no-bundle migration fallback path; removing that temporary compatibility hook remains follow-up cleanup once bundle instantiation is universal.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -156,6 +165,11 @@ Evidence:
 8. clean-run testing discipline is now documented in `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md`
 9. lifecycle cleanup/status now sweep and report stray compiled Go services in `ops/lifecycle.py` with focused regression coverage in `tests/test_lifecycle_tasks.py`
 10. compiled-service inspection now fails closed: `lifecycle.status` reports unknown inspection state and `lifecycle.down` blocks runtime/integration testing when local process inspection cannot verify cleanup
+11. local branch currently carries `e64e249` and `01a4aca` for Chunk 4.7a, but remote publication is blocked until SSH-agent/key state is repaired
+12. documentation cleanup refreshed `README.md`, `docs/README.md`, and `docs/archive/README.md`, and removed `docs/architecture/AGI_ARCHITECTURE_REVIEW_2026-03-06.md` plus `docs/architecture/STANDARDIZATION_REVIEW_2026-03-06.md`
+13. validation: `uv run pytest tests/test_docs_links.py -q` -> `21 passed`
+14. instantiated-organization provider policy now resolves through `core/internal/swarm/provider_policy.go`, is carried by `core/internal/bootstrap/template_bundle.go`, is applied during startup in `core/cmd/server/main.go`, and is exercised by focused bootstrap/swarm coverage
+15. the standing-team bridge bundle now declares a conservative provider-policy default in both `core/config/templates/v8-migration-standing-team-bridge.yaml` and `charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml` so local and charted startup follow the same instantiated-organization routing path as tests
 
 ### 6. V8 contract shell introduction
 
@@ -293,3 +307,6 @@ Next steps:
 3. `REQUIRED` apply the touched-file cleanup/convergence rule and review-team sweep to the first backend/runtime refactor chunk and all later code-editing slices.
 4. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
 5. `REQUIRED` keep all new implementation/testing checkpoints in `V8_DEV_STATE.md` going forward.
+6. `BLOCKED` restore SSH-agent/key access and push the latest local lifecycle/doc/state commits to the remote branch.
+7. `NEXT` continue the documentation authority cleanup so active entrypoints stay lean while compatibility docs and archive material remain intentionally separated.
+8. `NEXT` remove the remaining no-bundle env-map provider-routing compatibility once all startup paths resolve through instantiated-organization provider policy.

@@ -22,7 +22,7 @@ func TestApplyProviderOverrides(t *testing.T) {
 		},
 	}
 
-	out := s.applyProviderOverrides(manifest)
+	out := s.applyProviderPolicy(manifest)
 	if out.Provider != "team-provider" {
 		t.Fatalf("team provider = %q", out.Provider)
 	}

@@ -29,7 +29,7 @@ type RuntimeOrganization struct {
 	SourceKind        string
 	KernelMode        string
 	CouncilMode       string
-	ProviderPolicy    map[string]string
+	ProviderPolicy    ProviderPolicy
 	Teams             []*TeamManifest
 	MigrationFallback bool
 }
@@ -107,12 +107,7 @@ func (r *Registry) RuntimeOrganization() *RuntimeOrganization {
 
 	orgCopy := *r.org
 	orgCopy.Teams = append([]*TeamManifest(nil), r.org.Teams...)
-	if len(r.org.ProviderPolicy) > 0 {
-		orgCopy.ProviderPolicy = make(map[string]string, len(r.org.ProviderPolicy))
-		for k, v := range r.org.ProviderPolicy {
-			orgCopy.ProviderPolicy[k] = v
-		}
-	}
+	orgCopy.ProviderPolicy = r.org.ProviderPolicy.Clone()
 	return &orgCopy
 }
 

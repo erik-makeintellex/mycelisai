@@ -134,7 +134,7 @@ func TestRegistry_RuntimeOrganizationPrimaryPath(t *testing.T) {
 		SourceKind:        "standing_team_migration_input",
 		KernelMode:        "v8-migration-bridge",
 		CouncilMode:       "v8-migration-bridge",
-		ProviderPolicy:    map[string]string{"posture": "migration-bridge"},
+		ProviderPolicy:    ProviderPolicy{Metadata: map[string]string{"posture": "migration-bridge"}},
 		Teams:             []*TeamManifest{{ID: "bundle-team", Name: "Bundle Team", Type: TeamTypeAction}},
 		MigrationFallback: false,
 	})
