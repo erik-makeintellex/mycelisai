@@ -46,6 +46,11 @@ type StartupSelection struct {
 	Source       string
 }
 
+const (
+	StartupSourceBundle                 = "bundle"
+	StartupSourceMigrationFallbackTeams = "migration_fallback_teams"
+)
+
 func NewTemplateLoader(path string) *TemplateLoader {
 	return &TemplateLoader{templatesPath: path}
 }
@@ -215,6 +220,14 @@ func ResolveStartupSelection(templatesPath, fallbackTeamsPath, requestedID strin
 	}
 
 	if len(bundles) == 0 {
+		requestedID = strings.TrimSpace(requestedID)
+		if requestedID != "" {
+			return nil, fmt.Errorf("requested bootstrap template bundle %q was not found; no-bundle startup remains migration-only compatibility", requestedID)
+		}
+
+		// Temporary migration-only compatibility: once template bundles are universal,
+		// direct team-manifest scanning should be removed instead of treated as co-equal
+		// runtime truth.
 		manifests, err := swarm.NewRegistry(fallbackTeamsPath).LoadManifests()
 		if err != nil {
 			return nil, fmt.Errorf("load fallback team manifests: %w", err)
@@ -223,7 +236,7 @@ func ResolveStartupSelection(templatesPath, fallbackTeamsPath, requestedID strin
 		return &StartupSelection{
 			Organization: org,
 			Manifests:    manifests,
-			Source:       "fallback_teams",
+			Source:       StartupSourceMigrationFallbackTeams,
 		}, nil
 	}
 
@@ -241,7 +254,7 @@ func ResolveStartupSelection(templatesPath, fallbackTeamsPath, requestedID strin
 		Bundle:       selected,
 		Organization: org,
 		Manifests:    append([]*swarm.TeamManifest(nil), org.Teams...),
-		Source:       "bundle",
+		Source:       StartupSourceBundle,
 	}, nil
 }
 
@@ -249,7 +262,7 @@ func instantiateFallbackRuntimeOrganization(fallbackTeamsPath string, manifests 
 	return &swarm.RuntimeOrganization{
 		ID:                "migration-fallback-standing-teams",
 		Name:              "Migration Fallback Standing Teams",
-		Description:       fmt.Sprintf("Temporary migration fallback instantiated from %s because no bootstrap template bundle was configured.", fallbackTeamsPath),
+		Description:       fmt.Sprintf("Temporary migration-only fallback instantiated from %s because no bootstrap template bundle was configured.", fallbackTeamsPath),
 		TemplateVersion:   "migration-fallback",
 		SourceKind:        "standing_team_migration_fallback",
 		KernelMode:        "migration-fallback",

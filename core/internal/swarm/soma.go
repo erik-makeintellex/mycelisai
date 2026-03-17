@@ -427,11 +427,6 @@ func (s *Soma) SetProviderPolicy(policy ProviderPolicy) {
 	s.providerPolicy = policy.Clone()
 }
 
-// SetProviderOverrides retains the legacy env-driven fallback path for no-bundle compatibility only.
-func (s *Soma) SetProviderOverrides(teamProviders, agentProviders map[string]string) {
-	s.SetProviderPolicy(FallbackProviderPolicy(teamProviders, agentProviders))
-}
-
 func (s *Soma) applyProviderPolicy(manifest *TeamManifest) *TeamManifest {
 	if manifest == nil {
 		return nil
