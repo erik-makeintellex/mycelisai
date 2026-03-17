@@ -146,7 +146,6 @@ func TestRegistry_RuntimeOrganizationPrimaryPath(t *testing.T) {
 			Inputs:      []string{"swarm.team.bundle-team.internal.command"},
 			Deliveries:  []string{"swarm.team.bundle-team.signal.status"},
 		}},
-		MigrationFallback: false,
 	})
 
 	org := reg.RuntimeOrganization()
@@ -155,9 +154,6 @@ func TestRegistry_RuntimeOrganizationPrimaryPath(t *testing.T) {
 	}
 	if org.ID != "bundle-org" {
 		t.Fatalf("expected bundle-org, got %s", org.ID)
-	}
-	if org.MigrationFallback {
-		t.Fatal("expected primary runtime organization path, not migration fallback")
 	}
 
 	manifests, err := reg.LoadManifests()

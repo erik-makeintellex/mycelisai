@@ -1,6 +1,6 @@
 id: v8-migration-standing-team-bridge
 name: V8 Migration Standing-Team Bridge
-description: "Transitional V8 migration bundle that instantiates the runtime organization from self-contained standing-team data. Direct config/teams scanning remains migration-only compatibility."
+description: "Transitional V8 migration bundle that instantiates the runtime organization from self-contained standing-team data through one mandatory bundle-driven startup path."
 template_version: v1alpha1
 source_kind: standing_team_migration_input
 kernel:

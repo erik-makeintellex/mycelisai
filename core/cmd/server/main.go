@@ -352,25 +352,17 @@ func main() {
 	provEngine := provisioning.NewEngine(cogRouter)
 
 	templateConfigPath := "config/templates"
-	teamConfigPath := "config/teams"
 	var startupTemplateBundle *bootstrap.TemplateBundle
-	startupSelection, startupRegistry, err := loadStartupBundleRegistry(templateConfigPath, teamConfigPath)
+	startupSelection, startupRegistry, err := loadStartupBundleRegistry(templateConfigPath)
 	if err != nil {
 		log.Fatalf("FATAL: Bootstrap startup selection failed: %v", err)
 	}
 	startupTemplateBundle = startupSelection.Bundle
-	if startupTemplateBundle != nil {
-		log.Printf("Bootstrap Template Bundle Active: %s", startupTemplateBundle.ID)
-	} else {
-		log.Printf("Bootstrap Template Bundles: none configured at %s; falling back to %s", templateConfigPath, teamConfigPath)
+	if startupTemplateBundle == nil || startupSelection.Organization == nil {
+		log.Fatal("FATAL: Bootstrap startup selection did not return a bundle-backed runtime organization")
 	}
-	if startupSelection.Organization != nil {
-		if startupSelection.Organization.MigrationFallback {
-			log.Printf("Bootstrap Runtime Organization Active: %s (migration fallback)", startupSelection.Organization.ID)
-		} else {
-			log.Printf("Bootstrap Runtime Organization Active: %s", startupSelection.Organization.ID)
-		}
-	}
+	log.Printf("Bootstrap Template Bundle Active: %s", startupTemplateBundle.ID)
+	log.Printf("Bootstrap Runtime Organization Active: %s", startupSelection.Organization.ID)
 
 	// 5c. Initialize Bootstrap Service (requires NATS)
 	var bootstrapSrv *bootstrap.Service
@@ -449,11 +441,7 @@ func main() {
 
 	var soma *swarm.Soma
 	if nc != nil {
-		if startupTemplateBundle != nil {
-			log.Printf("Soma startup instantiating runtime organization from bootstrap template bundle %s", startupTemplateBundle.ID)
-		} else {
-			log.Printf("Soma startup using temporary migration-only no-bundle fallback standing-team manifests from %s", teamConfigPath)
-		}
+		log.Printf("Soma startup instantiating runtime organization from bootstrap template bundle %s", startupTemplateBundle.ID)
 		soma = swarm.NewSoma(nc, guard, startupRegistry, cogRouter, streamHandler, toolExec, internalTools)
 		startupRouting := resolveStartupProviderRouting(
 			startupSelection,

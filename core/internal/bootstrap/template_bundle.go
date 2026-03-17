@@ -46,8 +46,7 @@ type StartupSelection struct {
 }
 
 const (
-	StartupSourceBundle                 = "bundle"
-	StartupSourceMigrationFallbackTeams = "migration_fallback_teams"
+	StartupSourceBundle = "bundle"
 )
 
 func NewTemplateLoader(path string) *TemplateLoader {
@@ -162,16 +161,15 @@ func (b *TemplateBundle) InstantiateRuntimeOrganization() (*swarm.RuntimeOrganiz
 		return nil, err
 	}
 	return &swarm.RuntimeOrganization{
-		ID:                b.ID,
-		Name:              b.Name,
-		Description:       b.Description,
-		TemplateVersion:   b.TemplateVersion,
-		SourceKind:        b.SourceKind,
-		KernelMode:        b.Kernel.Mode,
-		CouncilMode:       b.Council.Mode,
-		ProviderPolicy:    b.ProviderPolicy.Clone(),
-		Teams:             manifests,
-		MigrationFallback: false,
+		ID:              b.ID,
+		Name:            b.Name,
+		Description:     b.Description,
+		TemplateVersion: b.TemplateVersion,
+		SourceKind:      b.SourceKind,
+		KernelMode:      b.Kernel.Mode,
+		CouncilMode:     b.Council.Mode,
+		ProviderPolicy:  b.ProviderPolicy.Clone(),
+		Teams:           manifests,
 	}, nil
 }
 
@@ -197,7 +195,7 @@ func SelectStartupBundle(bundles []*TemplateBundle, requestedID string) (*Templa
 	return nil, fmt.Errorf("bootstrap template bundle %q not found", requestedID)
 }
 
-func ResolveStartupSelection(templatesPath, fallbackTeamsPath, requestedID string) (*StartupSelection, error) {
+func ResolveStartupSelection(templatesPath, requestedID string) (*StartupSelection, error) {
 	templateLoader := NewTemplateLoader(templatesPath)
 	bundles, err := templateLoader.LoadBundles()
 	if err != nil {
@@ -207,22 +205,9 @@ func ResolveStartupSelection(templatesPath, fallbackTeamsPath, requestedID strin
 	if len(bundles) == 0 {
 		requestedID = strings.TrimSpace(requestedID)
 		if requestedID != "" {
-			return nil, fmt.Errorf("requested bootstrap template bundle %q was not found; no-bundle startup remains migration-only compatibility", requestedID)
+			return nil, fmt.Errorf("requested bootstrap template bundle %q was not found in %s; startup requires a valid bootstrap template bundle", requestedID, templatesPath)
 		}
-
-		// Temporary migration-only compatibility: once template bundles are universal,
-		// direct team-manifest scanning should be removed instead of treated as co-equal
-		// runtime truth.
-		manifests, err := swarm.NewRegistry(fallbackTeamsPath).LoadManifests()
-		if err != nil {
-			return nil, fmt.Errorf("load fallback team manifests: %w", err)
-		}
-		org := instantiateFallbackRuntimeOrganization(fallbackTeamsPath, manifests)
-		return &StartupSelection{
-			Organization: org,
-			Manifests:    manifests,
-			Source:       StartupSourceMigrationFallbackTeams,
-		}, nil
+		return nil, fmt.Errorf("no bootstrap template bundles found in %s; startup requires a valid bootstrap template bundle", templatesPath)
 	}
 
 	selected, err := SelectStartupBundle(bundles, requestedID)
@@ -241,20 +226,6 @@ func ResolveStartupSelection(templatesPath, fallbackTeamsPath, requestedID strin
 		Manifests:    append([]*swarm.TeamManifest(nil), org.Teams...),
 		Source:       StartupSourceBundle,
 	}, nil
-}
-
-func instantiateFallbackRuntimeOrganization(fallbackTeamsPath string, manifests []*swarm.TeamManifest) *swarm.RuntimeOrganization {
-	return &swarm.RuntimeOrganization{
-		ID:                "migration-fallback-standing-teams",
-		Name:              "Migration Fallback Standing Teams",
-		Description:       fmt.Sprintf("Temporary migration-only fallback instantiated from %s because no bootstrap template bundle was configured.", fallbackTeamsPath),
-		TemplateVersion:   "migration-fallback",
-		SourceKind:        "standing_team_migration_fallback",
-		KernelMode:        "migration-fallback",
-		CouncilMode:       "migration-fallback",
-		Teams:             append([]*swarm.TeamManifest(nil), manifests...),
-		MigrationFallback: true,
-	}
 }
 
 func validateEmbeddedTeamManifest(idx int, manifest *swarm.TeamManifest) error {

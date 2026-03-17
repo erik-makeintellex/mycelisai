@@ -600,7 +600,7 @@ Chunk 4.2 converts the legacy standing-team bootstrap into an explicit template 
 
 | Area | Current artifact | Hard-coded behavior |
 | --- | --- | --- |
-| Team manifests | `core/config/teams/*.yaml` (`prime-architect`, `prime-development`, `council`, `telemetry`, etc.) | Transitional migration inputs still carry IDs, roles, prompts, and tool lists. Startup now instantiates a runtime organization through the selected bootstrap bundle path and uses direct team scanning only as a temporary no-bundle compatibility fallback; true template/instance split is still pending. |
+| Team manifests | `core/config/teams/*.yaml` (`prime-architect`, `prime-development`, `council`, `telemetry`, etc.) | Transitional migration inputs still carry IDs, roles, prompts, and tool lists, but startup truth now comes only from self-contained bootstrap bundles that instantiate runtime organizations directly; true template/instance split is still pending. |
 | Bootstrap listeners | `core/internal/bootstrap/service.go` | Seeds/updates `nodes` table directly from hardware/council events; assumes one standing organization and does not consult templates. |
 | Server startup | `core/cmd/server/main.go` | Fails if `MYCELIS_API_KEY` missing, but Helm values never inject it; DB credentials/host/port are pinned (`mycelis`/`password`, `5432`) and not scoped per organization. |
 | Template API | `core/internal/server/templates.go`, `inception.go`, `provision.go` | Persist templates and instantiated orgs in the same DB without enforcing `Template ≠ instantiated organization`; audit/proof flows still assume a global standing team. |

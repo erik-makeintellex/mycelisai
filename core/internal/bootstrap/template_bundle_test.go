@@ -114,9 +114,6 @@ func TestTemplateBundle_InstantiateRuntimeOrganization(t *testing.T) {
 	if org.SourceKind != "standing_team_migration_input" {
 		t.Fatalf("expected standing_team_migration_input, got %s", org.SourceKind)
 	}
-	if org.MigrationFallback {
-		t.Fatal("expected bundle-instantiated organization to be primary path, not migration fallback")
-	}
 	if len(org.Teams) == 0 {
 		t.Fatal("expected instantiated runtime organization to include teams")
 	}
