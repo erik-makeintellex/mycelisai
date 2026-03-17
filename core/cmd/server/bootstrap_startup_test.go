@@ -13,7 +13,6 @@ import (
 func TestLoadStartupBundleRegistry(t *testing.T) {
 	root := t.TempDir()
 	templatesDir := filepath.Join(root, "templates")
-	teamsDir := filepath.Join(root, "migration-only-fallback-teams")
 	if err := os.MkdirAll(templatesDir, 0o755); err != nil {
 		t.Fatalf("mkdir templates: %v", err)
 	}
@@ -36,7 +35,7 @@ teams:
 		t.Fatalf("write template bundle: %v", err)
 	}
 
-	selected, registry, err := loadStartupBundleRegistry(templatesDir, teamsDir)
+	selected, registry, err := loadStartupBundleRegistry(templatesDir)
 	if err != nil {
 		t.Fatalf("loadStartupBundleRegistry() failed: %v", err)
 	}
@@ -46,8 +45,8 @@ teams:
 	if selected.Bundle == nil || selected.Bundle.ID != "v8-migration-standing-team-bridge" {
 		t.Fatalf("selected bundle = %+v", selected.Bundle)
 	}
-	if selected.Organization == nil || selected.Organization.MigrationFallback {
-		t.Fatalf("expected primary runtime organization, got %+v", selected.Organization)
+	if selected.Organization == nil {
+		t.Fatalf("expected bundle-backed runtime organization, got %+v", selected.Organization)
 	}
 	if selected.Organization.SourceKind != "standing_team_migration_input" {
 		t.Fatalf("unexpected source kind: %s", selected.Organization.SourceKind)
@@ -67,75 +66,54 @@ teams:
 	}
 }
 
-func TestLoadStartupBundleRegistryFallsBackWithoutBundle(t *testing.T) {
+func TestLoadStartupBundleRegistryFailsWithoutBundle(t *testing.T) {
 	root := t.TempDir()
 	templatesDir := filepath.Join(root, "templates")
-	teamsDir := filepath.Join(root, "teams")
 	if err := os.MkdirAll(templatesDir, 0o755); err != nil {
 		t.Fatalf("mkdir templates: %v", err)
 	}
-	if err := os.MkdirAll(teamsDir, 0o755); err != nil {
-		t.Fatalf("mkdir teams: %v", err)
+
+	if _, _, err := loadStartupBundleRegistry(templatesDir); err == nil {
+		t.Fatal("expected missing bundle error")
+	} else if !strings.Contains(err.Error(), "requires a valid bootstrap template bundle") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadStartupBundleRegistryFailsWhenBundleInvalid(t *testing.T) {
+	root := t.TempDir()
+	templatesDir := filepath.Join(root, "templates")
+	if err := os.MkdirAll(templatesDir, 0o755); err != nil {
+		t.Fatalf("mkdir templates: %v", err)
 	}
 
-	teamYAML := `id: bridge-team
-name: Bridge Team
-type: action
-members:
-  - id: bridge-agent
-    role: coder
-inputs:
-  - swarm.team.bridge-team.internal.command
-deliveries:
-  - swarm.team.bridge-team.signal.status
+	invalidBundle := `id: broken-bridge
+name: Broken Bridge
+teams:
+  - id: broken-team
+    name: Broken Team
+    members: []
+    inputs:
+      - swarm.team.broken.internal.command
+    deliveries:
+      - swarm.team.broken.signal.status
 `
-	if err := os.WriteFile(filepath.Join(teamsDir, "bridge-team.yaml"), []byte(teamYAML), 0o644); err != nil {
-		t.Fatalf("write team manifest: %v", err)
+	if err := os.WriteFile(filepath.Join(templatesDir, "broken-bridge.yaml"), []byte(invalidBundle), 0o644); err != nil {
+		t.Fatalf("write invalid template bundle: %v", err)
 	}
 
-	selected, registry, err := loadStartupBundleRegistry(templatesDir, teamsDir)
-	if err != nil {
-		t.Fatalf("loadStartupBundleRegistry() failed: %v", err)
-	}
-	if selected.Source != bootstrap.StartupSourceMigrationFallbackTeams {
-		t.Fatalf("expected fallback source, got %q", selected.Source)
-	}
-	if selected.Organization == nil || !selected.Organization.MigrationFallback {
-		t.Fatalf("expected migration fallback runtime organization, got %+v", selected.Organization)
-	}
-	manifests, err := registry.LoadManifests()
-	if err != nil {
-		t.Fatalf("registry.LoadManifests() failed: %v", err)
-	}
-	if len(manifests) != 1 || manifests[0].ID != "bridge-team" {
-		t.Fatalf("unexpected fallback manifests: %+v", manifests)
+	if _, _, err := loadStartupBundleRegistry(templatesDir); err == nil {
+		t.Fatal("expected invalid bundle error")
+	} else if !strings.Contains(err.Error(), "load bootstrap template bundles") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestLoadStartupBundleRegistryRequiresExplicitSelectionForMultipleBundles(t *testing.T) {
 	root := t.TempDir()
 	templatesDir := filepath.Join(root, "templates")
-	teamsDir := filepath.Join(root, "teams")
 	if err := os.MkdirAll(templatesDir, 0o755); err != nil {
 		t.Fatalf("mkdir templates: %v", err)
-	}
-	if err := os.MkdirAll(teamsDir, 0o755); err != nil {
-		t.Fatalf("mkdir teams: %v", err)
-	}
-
-	teamYAML := `id: bridge-team
-name: Bridge Team
-type: action
-members:
-  - id: bridge-agent
-    role: coder
-inputs:
-  - swarm.team.bridge-team.internal.command
-deliveries:
-  - swarm.team.bridge-team.signal.status
-`
-	if err := os.WriteFile(filepath.Join(teamsDir, "bridge-team.yaml"), []byte(teamYAML), 0o644); err != nil {
-		t.Fatalf("write team manifest: %v", err)
 	}
 
 	firstBundle := `id: bridge-a
@@ -174,43 +152,24 @@ teams:
 	}
 
 	t.Setenv("MYCELIS_BOOTSTRAP_TEMPLATE_ID", "")
-	if _, _, err := loadStartupBundleRegistry(templatesDir, teamsDir); err == nil {
+	if _, _, err := loadStartupBundleRegistry(templatesDir); err == nil {
 		t.Fatal("expected bundle selection error")
 	} else if !strings.Contains(err.Error(), "set MYCELIS_BOOTSTRAP_TEMPLATE_ID") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestLoadStartupBundleRegistryDoesNotFallbackWhenTemplateRequested(t *testing.T) {
+func TestLoadStartupBundleRegistryDoesNotStartWhenRequestedTemplateMissing(t *testing.T) {
 	root := t.TempDir()
 	templatesDir := filepath.Join(root, "templates")
-	teamsDir := filepath.Join(root, "teams")
 	if err := os.MkdirAll(templatesDir, 0o755); err != nil {
 		t.Fatalf("mkdir templates: %v", err)
 	}
-	if err := os.MkdirAll(teamsDir, 0o755); err != nil {
-		t.Fatalf("mkdir teams: %v", err)
-	}
-
-	teamYAML := `id: bridge-team
-name: Bridge Team
-type: action
-members:
-  - id: bridge-agent
-    role: coder
-inputs:
-  - swarm.team.bridge-team.internal.command
-deliveries:
-  - swarm.team.bridge-team.signal.status
-`
-	if err := os.WriteFile(filepath.Join(teamsDir, "bridge-team.yaml"), []byte(teamYAML), 0o644); err != nil {
-		t.Fatalf("write team manifest: %v", err)
-	}
 
 	t.Setenv("MYCELIS_BOOTSTRAP_TEMPLATE_ID", "missing-bundle")
-	if _, _, err := loadStartupBundleRegistry(templatesDir, teamsDir); err == nil {
+	if _, _, err := loadStartupBundleRegistry(templatesDir); err == nil {
 		t.Fatal("expected requested bundle error")
-	} else if !strings.Contains(err.Error(), "migration-only compatibility") {
+	} else if !strings.Contains(err.Error(), "requires a valid bootstrap template bundle") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -251,30 +210,5 @@ func TestResolveStartupProviderRoutingUsesRuntimeOrganizationPolicy(t *testing.T
 	}
 	if !routing.IgnoredLegacyEnvMaps {
 		t.Fatal("expected legacy env maps to be ignored on bundle path")
-	}
-}
-
-func TestResolveStartupProviderRoutingKeepsMigrationFallbackIsolated(t *testing.T) {
-	selection := &bootstrap.StartupSelection{
-		Organization: &swarm.RuntimeOrganization{
-			ID:                "migration-fallback-standing-teams",
-			MigrationFallback: true,
-		},
-		Source: bootstrap.StartupSourceMigrationFallbackTeams,
-	}
-
-	routing := resolveStartupProviderRouting(
-		selection,
-		`{"council-core":"legacy-team-provider"}`,
-		`{"council-architect":"legacy-agent-provider"}`,
-	)
-	if !routing.Policy.IsEmpty() {
-		t.Fatalf("expected no provider policy on isolated fallback path, got %+v", routing.Policy)
-	}
-	if routing.Source != "" {
-		t.Fatalf("expected no provider routing source, got %q", routing.Source)
-	}
-	if !routing.IgnoredLegacyEnvMaps {
-		t.Fatal("expected retired env-map compatibility inputs to be ignored")
 	}
 }

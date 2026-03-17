@@ -144,7 +144,7 @@ Delivery updates in this checkpoint:
 4. `COMPLETE` preserved V7 architecture-library documents as migration inputs rather than rewriting them into premature V8 specifications.
 5. `COMPLETE` documented how V7 bootstrap sources, implicit behaviors, fixed Soma/Council posture, and runtime-state coupling roll forward into the explicit V8 configuration/bootstrap model.
 6. `COMPLETE` validated cross-doc planning consistency so README, the architecture-library index, runtime contracts, bootstrap model, docs manifest, and tests all reference the canonical V7->V8 migration contract.
-7. `ACTIVE` landed the next Task 005 implementation cut: startup now instantiates runtime organization truth directly from self-contained bundle data in `core/config/templates/*.yaml`; direct `config/teams` scanning remains only as a temporary migration-only no-bundle fallback when no bundle is available and no explicit bundle was requested.
+7. `ACTIVE` landed the next Task 005 implementation cut: startup now instantiates runtime organization truth directly from self-contained bundle data in `core/config/templates/*.yaml` and fails closed unless a valid bootstrap bundle is available.
 8. `COMPLETE` promoted clean-run testing discipline into the active testing/operations contract so runtime and integration checks must not stack on unknown local processes.
 9. `COMPLETE` extended the clean-run contract so compiled Go services from prior `go build`, `go run`, or manual binary launches are explicitly detected and terminated before the next runtime or integration check.
 10. `BLOCKED` the latest lifecycle/doc hardening commits are local-only until GitHub SSH-agent/key access is restored; branch publication is currently blocked by `Permission denied (publickey)` during `git push`.
@@ -153,7 +153,7 @@ Delivery updates in this checkpoint:
 13. `COMPLETE` doc-surface validation is green again after the documentation cleanup pass.
 14. `COMPLETE` wired provider-policy inheritance from the instantiated runtime organization into live Soma routing so organization defaults, kernel/council role defaults, team defaults, and agent overrides now resolve through one policy-bounded path.
 15. `COMPLETE` retired the `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` runtime compatibility path so provider routing now resolves only from the instantiated organization policy and never from startup env maps.
-16. `ACTIVE` audited the remaining fallback debt exactly: normal startup no longer depends on standing-team manifest refs; the only remaining legacy dependency is the explicit migration-only no-bundle fallback in `core/internal/bootstrap/template_bundle.go` plus its paired startup/selection tests and mirrored fallback packaging of `config/teams/*.yaml`.
+16. `COMPLETE` retired the remaining no-bundle bootstrap fallback: normal startup now has one truth path only, `template -> instantiation -> runtime organization`, while mirrored `config/teams/*.yaml` packaging remains compatibility input rather than startup truth.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -162,7 +162,7 @@ Evidence:
 4. active documentation references updated to point at `V8_DEV_STATE.md`
 5. V7-to-V8 bootstrap migration narrative committed in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 6. planning-integration validation sweep recorded in this chunk plus `tests/test_docs_links.py`
-7. template-bundle loader, runtime-organization instantiation, startup selection/fallback logic, and the `v8-migration-standing-team-bridge` bundle landed in `core/internal/bootstrap/template_bundle.go`, `core/internal/bootstrap/template_bundle_test.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup.go`, and mirrored chart config packaging
+7. template-bundle loader, runtime-organization instantiation, fail-closed startup selection logic, and the `v8-migration-standing-team-bridge` bundle landed in `core/internal/bootstrap/template_bundle.go`, `core/internal/bootstrap/template_bundle_test.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup.go`, and mirrored chart config packaging
 8. clean-run testing discipline is now documented in `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md`
 9. lifecycle cleanup/status now sweep and report stray compiled Go services in `ops/lifecycle.py` with focused regression coverage in `tests/test_lifecycle_tasks.py`
 10. compiled-service inspection now fails closed: `lifecycle.status` reports unknown inspection state and `lifecycle.down` blocks runtime/integration testing when local process inspection cannot verify cleanup
@@ -171,7 +171,7 @@ Evidence:
 13. validation: `uv run pytest tests/test_docs_links.py -q` -> `21 passed`
 14. instantiated-organization provider policy now resolves through `core/internal/swarm/provider_policy.go`, is carried by `core/internal/bootstrap/template_bundle.go`, is applied during startup in `core/cmd/server/main.go`, and is exercised by focused bootstrap/swarm coverage
 15. the standing-team bridge bundle now declares a conservative provider-policy default in both `core/config/templates/v8-migration-standing-team-bridge.yaml` and `charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml` so local and charted startup follow the same instantiated-organization routing path as tests
-16. startup now fails closed when `MYCELIS_BOOTSTRAP_TEMPLATE_ID` requests a bundle that is absent, runtime provider routing ignores legacy env-map inputs on both bundle and fallback paths, and the remaining no-bundle path is labeled migration-only in code/tests/state (`core/internal/bootstrap/template_bundle.go`, `core/cmd/server/bootstrap_startup.go`, `core/cmd/server/main.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`)
+16. startup now fails closed when the bootstrap bundle set is missing or invalid, when `MYCELIS_BOOTSTRAP_TEMPLATE_ID` requests a bundle that is absent, and when multiple bundles exist without an explicit selection; runtime provider routing ignores legacy env-map inputs and startup truth now remains bundle-only in code/tests/state (`core/internal/bootstrap/template_bundle.go`, `core/cmd/server/bootstrap_startup.go`, `core/cmd/server/main.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`)
 17. Windows `lifecycle.down` CIM timeout/inspection failure remains separate tooling debt; it is not part of the bootstrap fallback surface and still tracks under the lifecycle hardening work until resolved
 
 ### 6. V8 contract shell introduction
@@ -259,17 +259,17 @@ Status:
 1. `ACTIVE` Chunk 4.2 captured the standing-team de-hardcoding plan inside `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
 2. `ACTIVE` runtime/config references to fixed `prime-*` teams, hard-coded council rosters, kernel defaults, and provider wiring have documented migration paths into template definitions, bootstrap resolution, scoped inheritance, and provider-policy configuration.
 3. `ACTIVE` Helm/runtime concerns (env injection for `MYCELIS_API_KEY`, 8080/8081 port normalization, config-file mounts, container storage) are now described alongside the bootstrap plan so infrastructure slices can align with runtime refactors.
-4. `ACTIVE` current-state scan now records the exact remaining bootstrap debt: the only no-bundle startup dependency is `core/internal/bootstrap/template_bundle.go` plus startup logging/tests, env-map provider overrides are retired, and the remaining direct legacy team/config assumption is the mirrored Helm/config fallback packaging kept for migration-only startup safety.
-5. `ACTIVE` the bridge now owns runtime startup truth through native bundle content: `core/internal/bootstrap/template_bundle.go` loads `core/config/templates/*.yaml` bundles, instantiates a runtime organization directly from bundle-defined org/team/agent data, fails closed when an explicit bundle selection is missing, and isolates direct team-manifest scanning as a migration-only no-bundle fallback.
+4. `COMPLETE` current-state scan now records that the no-bundle startup dependency is gone: `core/internal/bootstrap/template_bundle.go` now fails closed when bundles are missing, env-map provider overrides are retired, and mirrored Helm/config packaging of `config/teams/*.yaml` no longer participates in startup truth.
+5. `ACTIVE` the bridge now owns runtime startup truth through native bundle content: `core/internal/bootstrap/template_bundle.go` loads `core/config/templates/*.yaml` bundles, instantiates a runtime organization directly from bundle-defined org/team/agent data, and fails closed when no valid bootstrap bundle is available.
 
 Evidence:
 1. Plan section `## Standing-team bootstrap de-hardcoding plan` (2026-03-13) now explicitly calls out the active files and assumptions discovered in Chunk 4.2 (Helm values/env/ports, ops bridge tasks, bootstrap services, template APIs, team manifests, runtime storage expectations).
 2. README review confirmed no additional guidance changes were required after adding the plan (`README.md`, 2026-03-13).
 3. `v8-migration-standing-team-bridge` now validates as a self-contained V8 bundle through the bootstrap loader path without requiring standing-team manifest refs (`core/config/templates/v8-migration-standing-team-bridge.yaml`, `core/internal/bootstrap/template_bundle_test.go`).
-4. startup selection regression coverage now explicitly proves bundle-instantiated runtime organizations, isolated migration fallback, missing-requested-bundle failure, and registry continuity with bundle presence (`core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`, `core/internal/swarm/registry_test.go`).
+4. startup selection regression coverage now explicitly proves bundle-instantiated runtime organizations, missing-bundle failure, invalid-bundle failure, missing-requested-bundle failure, and registry continuity with bundle presence (`core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`, `core/internal/swarm/registry_test.go`).
 
 Next steps:
-1. Remove the guarded no-bundle fallback once bundle-backed instantiation is universal.
+1. Promote generated per-organization bootstrap bundles so startup stays bundle-only without depending on the fixed standing-team bridge asset forever.
 2. Replace bootstrap seeding logic with template-instantiation + scope-aware inheritance.
 3. Promote provider-policy scopes and Helm env/port/mount/storage alignment into actionable runtime slices with tests.
 
@@ -312,4 +312,4 @@ Next steps:
 5. `REQUIRED` keep all new implementation/testing checkpoints in `V8_DEV_STATE.md` going forward.
 6. `BLOCKED` restore SSH-agent/key access and push the latest local lifecycle/doc/state commits to the remote branch.
 7. `NEXT` continue the documentation authority cleanup so active entrypoints stay lean while compatibility docs and archive material remain intentionally separated.
-8. `NEXT` remove the remaining migration-only no-bundle startup fallback once bundle-backed instantiation is universal.
+8. `NEXT` promote generated per-organization bootstrap bundles so startup remains bundle-only without relying on the fixed standing-team bridge asset long term.

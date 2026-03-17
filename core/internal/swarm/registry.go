@@ -22,16 +22,15 @@ type Registry struct {
 
 // RuntimeOrganization is the instantiated bootstrap object that feeds runtime team activation.
 type RuntimeOrganization struct {
-	ID                string
-	Name              string
-	Description       string
-	TemplateVersion   string
-	SourceKind        string
-	KernelMode        string
-	CouncilMode       string
-	ProviderPolicy    ProviderPolicy
-	Teams             []*TeamManifest
-	MigrationFallback bool // Temporary migration-only no-bundle compatibility path.
+	ID              string
+	Name            string
+	Description     string
+	TemplateVersion string
+	SourceKind      string
+	KernelMode      string
+	CouncilMode     string
+	ProviderPolicy  ProviderPolicy
+	Teams           []*TeamManifest
 }
 
 // NewRegistry creates a new Registry loaded from the given path.
@@ -43,11 +42,10 @@ func NewRegistry(path string) *Registry {
 
 func NewRegistryFromManifests(manifests []*TeamManifest) *Registry {
 	return NewRegistryFromRuntimeOrganization(&RuntimeOrganization{
-		ID:                "manifest-registry",
-		Name:              "Manifest Registry",
-		SourceKind:        "manifest_registry",
-		Teams:             manifests,
-		MigrationFallback: false,
+		ID:         "manifest-registry",
+		Name:       "Manifest Registry",
+		SourceKind: "manifest_registry",
+		Teams:      manifests,
 	})
 }
 
