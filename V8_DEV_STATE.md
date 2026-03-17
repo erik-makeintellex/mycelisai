@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-16
+> Updated: 2026-03-17
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -154,6 +154,7 @@ Delivery updates in this checkpoint:
 14. `COMPLETE` wired provider-policy inheritance from the instantiated runtime organization into live Soma routing so organization defaults, kernel/council role defaults, team defaults, and agent overrides now resolve through one policy-bounded path.
 15. `COMPLETE` retired the `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` runtime compatibility path so provider routing now resolves only from the instantiated organization policy and never from startup env maps.
 16. `COMPLETE` retired the remaining no-bundle bootstrap fallback: normal startup now has one truth path only, `template -> instantiation -> runtime organization`, while mirrored `config/teams/*.yaml` packaging remains compatibility input rather than startup truth.
+17. `COMPLETE` operator startup requirements are now explicit: Core requires at least one valid bootstrap bundle under `config/templates/`, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must be set whenever more than one bundle is present.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -172,7 +173,7 @@ Evidence:
 14. instantiated-organization provider policy now resolves through `core/internal/swarm/provider_policy.go`, is carried by `core/internal/bootstrap/template_bundle.go`, is applied during startup in `core/cmd/server/main.go`, and is exercised by focused bootstrap/swarm coverage
 15. the standing-team bridge bundle now declares a conservative provider-policy default in both `core/config/templates/v8-migration-standing-team-bridge.yaml` and `charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml` so local and charted startup follow the same instantiated-organization routing path as tests
 16. startup now fails closed when the bootstrap bundle set is missing or invalid, when `MYCELIS_BOOTSTRAP_TEMPLATE_ID` requests a bundle that is absent, and when multiple bundles exist without an explicit selection; runtime provider routing ignores legacy env-map inputs and startup truth now remains bundle-only in code/tests/state (`core/internal/bootstrap/template_bundle.go`, `core/cmd/server/bootstrap_startup.go`, `core/cmd/server/main.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`)
-17. Windows `lifecycle.down` CIM timeout/inspection failure remains separate tooling debt; it is not part of the bootstrap fallback surface and still tracks under the lifecycle hardening work until resolved
+18. Windows `lifecycle.down` CIM timeout/inspection failure remains separate tooling debt; it is not part of the retired bootstrap fallback surface and still tracks under the lifecycle hardening work until resolved
 
 ### 6. V8 contract shell introduction
 

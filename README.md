@@ -39,7 +39,7 @@ Bootstrap reminder:
 - treat `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the canonical V7->V8 migration and bootstrap contract, not just another planning note
 - always translate V7 YAML, runtime config, DB seeding, and operator wizard flows through that model before they touch a live organization
 - `Template ≠ instantiated organization`, so only instantiated orgs enter bootstrap resolution while templates stay reusable blueprints
-- Task 005 bridge layer: `core/config/templates/*.yaml` now instantiates the startup runtime organization through the bundle path, and normal startup fails closed unless a valid bootstrap bundle is present
+- Task 005 bridge layer: `core/config/templates/*.yaml` now instantiates the startup runtime organization through the bundle path, and normal startup fails closed unless a valid bootstrap bundle is present; if more than one bundle is mounted, `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must select one explicitly
 
 Fresh-agent review rule:
 - V7 docs define the current authoritative architecture/planning contract until migrated.
