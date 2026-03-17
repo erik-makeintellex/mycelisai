@@ -31,7 +31,7 @@ type RuntimeOrganization struct {
 	CouncilMode       string
 	ProviderPolicy    ProviderPolicy
 	Teams             []*TeamManifest
-	MigrationFallback bool
+	MigrationFallback bool // Temporary migration-only no-bundle compatibility path.
 }
 
 // NewRegistry creates a new Registry loaded from the given path.

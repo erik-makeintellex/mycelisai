@@ -166,18 +166,3 @@ func TestExecuteActionRequest(t *testing.T) {
 		t.Fatalf("body = %s", body)
 	}
 }
-
-func TestParseProviderOverrideMap(t *testing.T) {
-	got := parseProviderOverrideMap(`{"council-core":"ollama-local","council-architect":"vllm-west"}`)
-	if got["council-core"] != "ollama-local" {
-		t.Fatalf("unexpected map value: %#v", got)
-	}
-	if got["council-architect"] != "vllm-west" {
-		t.Fatalf("unexpected map value: %#v", got)
-	}
-
-	none := parseProviderOverrideMap("not-json")
-	if none != nil {
-		t.Fatalf("expected nil on invalid json, got %#v", none)
-	}
-}

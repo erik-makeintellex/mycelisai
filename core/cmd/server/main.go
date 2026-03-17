@@ -452,21 +452,20 @@ func main() {
 		if startupTemplateBundle != nil {
 			log.Printf("Soma startup instantiating runtime organization from bootstrap template bundle %s", startupTemplateBundle.ID)
 		} else {
-			log.Printf("Soma startup using temporary migration fallback standing-team manifests from %s", teamConfigPath)
+			log.Printf("Soma startup using temporary migration-only no-bundle fallback standing-team manifests from %s", teamConfigPath)
 		}
 		soma = swarm.NewSoma(nc, guard, startupRegistry, cogRouter, streamHandler, toolExec, internalTools)
-		if startupSelection.Organization != nil && !startupSelection.Organization.ProviderPolicy.IsEmpty() {
-			soma.SetProviderPolicy(startupSelection.Organization.ProviderPolicy)
-			log.Printf("Provider routing active from runtime organization policy: teams=%d agents=%d", len(startupSelection.Organization.ProviderPolicy.Teams), len(startupSelection.Organization.ProviderPolicy.Agents))
-		} else if startupSelection.Organization != nil && startupSelection.Organization.MigrationFallback {
-			teamProviders := parseProviderOverrideMap(os.Getenv("MYCELIS_TEAM_PROVIDER_MAP"))
-			agentProviders := parseProviderOverrideMap(os.Getenv("MYCELIS_AGENT_PROVIDER_MAP"))
-			if len(teamProviders) > 0 || len(agentProviders) > 0 {
-				soma.SetProviderOverrides(teamProviders, agentProviders)
-				log.Printf("Provider routing compatibility fallback active: teams=%d agents=%d", len(teamProviders), len(agentProviders))
-			}
-		} else if strings.TrimSpace(os.Getenv("MYCELIS_TEAM_PROVIDER_MAP")) != "" || strings.TrimSpace(os.Getenv("MYCELIS_AGENT_PROVIDER_MAP")) != "" {
-			log.Printf("WARN: ignoring MYCELIS_TEAM_PROVIDER_MAP / MYCELIS_AGENT_PROVIDER_MAP because runtime provider routing now comes from the instantiated organization")
+		startupRouting := resolveStartupProviderRouting(
+			startupSelection,
+			os.Getenv("MYCELIS_TEAM_PROVIDER_MAP"),
+			os.Getenv("MYCELIS_AGENT_PROVIDER_MAP"),
+		)
+		if !startupRouting.Policy.IsEmpty() {
+			soma.SetProviderPolicy(startupRouting.Policy)
+			log.Printf("Provider routing active from runtime organization policy: teams=%d agents=%d", len(startupRouting.Policy.Teams), len(startupRouting.Policy.Agents))
+		}
+		if startupRouting.IgnoredLegacyEnvMaps {
+			log.Printf("WARN: ignoring MYCELIS_TEAM_PROVIDER_MAP / MYCELIS_AGENT_PROVIDER_MAP; provider routing now comes only from the instantiated organization and the env-map compatibility path is retired")
 		}
 		// V7: wire event spine into Soma so ActivateBlueprint creates runs + emits events
 		if runsManager != nil {
@@ -754,26 +753,4 @@ func buildSystemCapabilities(ctx context.Context, tools *swarm.InternalToolRegis
 	}
 
 	return caps
-}
-
-func parseProviderOverrideMap(raw string) map[string]string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return nil
-	}
-	out := map[string]string{}
-	if err := json.Unmarshal([]byte(raw), &out); err != nil {
-		log.Printf("WARN: invalid provider override map JSON: %v", err)
-		return nil
-	}
-	normalized := map[string]string{}
-	for k, v := range out {
-		k = strings.TrimSpace(k)
-		v = strings.TrimSpace(v)
-		if k == "" || v == "" {
-			continue
-		}
-		normalized[k] = v
-	}
-	return normalized
 }

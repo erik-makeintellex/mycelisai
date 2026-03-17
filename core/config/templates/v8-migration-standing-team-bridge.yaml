@@ -1,6 +1,6 @@
 id: v8-migration-standing-team-bridge
 name: V8 Migration Standing-Team Bridge
-description: "Transitional V8 migration bundle that routes standing-team manifests through the bootstrap template loader."
+description: "Transitional V8 migration bundle that instantiates the runtime organization from standing-team manifests. Direct config/teams scanning remains migration-only compatibility."
 template_version: v1alpha1
 source_kind: standing_team_migration_input
 kernel:
@@ -27,3 +27,4 @@ team_manifest_refs:
   - ../teams/prime-architect.yaml
   - ../teams/prime-development.yaml
   - ../teams/telemetry.yaml
+

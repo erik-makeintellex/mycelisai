@@ -51,7 +51,7 @@ team_manifest_refs:
 	if err != nil {
 		t.Fatalf("ResolveStartupSelection() failed: %v", err)
 	}
-	if selection.Source != "bundle" {
+	if selection.Source != StartupSourceBundle {
 		t.Fatalf("expected bundle source, got %q", selection.Source)
 	}
 	if selection.Bundle == nil || selection.Bundle.ID != "v8-migration-standing-team-bridge" {
@@ -88,8 +88,8 @@ func TestResolveStartupSelectionFallsBackWhenBundleMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveStartupSelection() failed: %v", err)
 	}
-	if selection.Source != "fallback_teams" {
-		t.Fatalf("expected fallback_teams source, got %q", selection.Source)
+	if selection.Source != StartupSourceMigrationFallbackTeams {
+		t.Fatalf("expected %s source, got %q", StartupSourceMigrationFallbackTeams, selection.Source)
 	}
 	if selection.Bundle != nil {
 		t.Fatalf("expected no selected bundle, got %+v", selection.Bundle)
@@ -133,6 +133,26 @@ team_manifest_refs:
 	if _, err := ResolveStartupSelection(templatesDir, teamsDir, ""); err == nil {
 		t.Fatal("expected invalid bundle error")
 	} else if !strings.Contains(err.Error(), "load bootstrap template bundles") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestResolveStartupSelectionDoesNotSilentlyFallbackWhenTemplateRequested(t *testing.T) {
+	root := t.TempDir()
+	templatesDir := filepath.Join(root, "templates")
+	teamsDir := filepath.Join(root, "teams")
+	if err := os.MkdirAll(templatesDir, 0o755); err != nil {
+		t.Fatalf("mkdir templates: %v", err)
+	}
+	if err := os.MkdirAll(teamsDir, 0o755); err != nil {
+		t.Fatalf("mkdir teams: %v", err)
+	}
+
+	writeStartupSelectionTeam(t, teamsDir)
+
+	if _, err := ResolveStartupSelection(templatesDir, teamsDir, "expected-bundle"); err == nil {
+		t.Fatal("expected requested bundle error")
+	} else if !strings.Contains(err.Error(), "migration-only compatibility") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

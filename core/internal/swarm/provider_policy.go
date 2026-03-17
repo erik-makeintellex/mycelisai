@@ -317,27 +317,6 @@ func (p ProviderPolicy) resolveMemberProvider(manifest *TeamManifest, member pro
 	return provider, blocked
 }
 
-func FallbackProviderPolicy(teamProviders, agentProviders map[string]string) ProviderPolicy {
-	policy := ProviderPolicy{
-		Metadata: map[string]string{
-			"compatibility_source": "fallback_env_provider_maps",
-		},
-	}
-	if len(teamProviders) > 0 {
-		policy.Teams = make(map[string]ProviderScope, len(teamProviders))
-		for teamID, provider := range normalizeProviderMap(teamProviders) {
-			policy.Teams[teamID] = ProviderScope{Provider: provider}
-		}
-	}
-	if len(agentProviders) > 0 {
-		policy.Agents = make(map[string]ProviderScope, len(agentProviders))
-		for agentID, provider := range normalizeProviderMap(agentProviders) {
-			policy.Agents[agentID] = ProviderScope{Provider: provider}
-		}
-	}
-	return policy
-}
-
 type scopeCandidate struct {
 	name         string
 	target       string
