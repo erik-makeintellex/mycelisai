@@ -128,13 +128,29 @@ func LoadManifestFile(path string) (*TeamManifest, error) {
 		return nil, err
 	}
 
-	// Basic Validation
-	if m.ID == "" {
-		m.ID = strings.ToLower(strings.ReplaceAll(m.Name, " ", "-"))
-	}
-	if m.Type == "" {
-		m.Type = TeamTypeAction // Default
+	if err := NormalizeManifest(&m); err != nil {
+		return nil, err
 	}
 
 	return &m, nil
+}
+
+func NormalizeManifest(m *TeamManifest) error {
+	if m == nil {
+		return fmt.Errorf("manifest is nil")
+	}
+
+	m.ID = strings.TrimSpace(m.ID)
+	m.Name = strings.TrimSpace(m.Name)
+	if m.ID == "" {
+		if m.Name == "" {
+			return fmt.Errorf("manifest is missing id and name")
+		}
+		m.ID = strings.ToLower(strings.ReplaceAll(m.Name, " ", "-"))
+	}
+	if m.Type == "" {
+		m.Type = TeamTypeAction
+	}
+
+	return nil
 }
