@@ -129,13 +129,13 @@ Task 002  Inception / kernel / council contract definition          [COMPLETE]
 Task 003  Provider-policy scope contract                            [COMPLETE]
 Task 004  Config and bootstrap model planning                       [COMPLETE]
 Task 005  Standing-team bootstrap de-hardcoding plan                [ACTIVE]
-Task 006  Workspace/UI kernel-aware refactor plan                   [REQUIRED]
+Task 006  Workspace/UI kernel-aware refactor plan                   [ACTIVE]
 Task 007  V8 docs/state migration and grading discipline            [ACTIVE]
 Task 008  Planning-integration validation pass                      [COMPLETE]
 Task 009  Next-execution/governance guidance migration              [NEXT]
 ```
 
-## Current Checkpoint (2026-03-16)
+## Current Checkpoint (2026-03-17)
 
 Delivery updates in this checkpoint:
 1. `COMPLETE` reviewed the new root `README.md` and adopted V8 as the active development/grading target.
@@ -155,6 +155,8 @@ Delivery updates in this checkpoint:
 15. `COMPLETE` retired the `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` runtime compatibility path so provider routing now resolves only from the instantiated organization policy and never from startup env maps.
 16. `COMPLETE` retired the remaining no-bundle bootstrap fallback: normal startup now has one truth path only, `template -> instantiation -> runtime organization`, while mirrored `config/teams/*.yaml` packaging remains compatibility input rather than startup truth.
 17. `COMPLETE` operator startup requirements are now explicit: Core requires at least one valid bootstrap bundle under `config/templates/`, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must be set whenever more than one bundle is present.
+18. `COMPLETE` defined a dedicated V8 UI/API/operator PRD so first-run, AI Organization creation, template-vs-empty start, organization home, Team Lead-first workspace behavior, role visibility, advanced-mode boundaries, and screen-to-API mapping now have one canonical contract.
+19. `COMPLETE` exposed the new V8 UI/API/operator contract through the architecture-library index, the in-app docs manifest, and doc-test enforcement so future UI slices do not drift back toward generic-chat UX.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -169,11 +171,13 @@ Evidence:
 10. compiled-service inspection now fails closed: `lifecycle.status` reports unknown inspection state and `lifecycle.down` blocks runtime/integration testing when local process inspection cannot verify cleanup
 11. local branch currently carries `e64e249` and `01a4aca` for Chunk 4.7a, but remote publication is blocked until SSH-agent/key state is repaired
 12. documentation cleanup refreshed `README.md`, `docs/README.md`, and `docs/archive/README.md`, and removed `docs/architecture/AGI_ARCHITECTURE_REVIEW_2026-03-06.md` plus `docs/architecture/STANDARDIZATION_REVIEW_2026-03-06.md`
-13. validation: `uv run pytest tests/test_docs_links.py -q` -> `21 passed`
+13. validation: `uv run pytest tests/test_docs_links.py -q` -> `23 passed`
 14. instantiated-organization provider policy now resolves through `core/internal/swarm/provider_policy.go`, is carried by `core/internal/bootstrap/template_bundle.go`, is applied during startup in `core/cmd/server/main.go`, and is exercised by focused bootstrap/swarm coverage
 15. the standing-team bridge bundle now declares a conservative provider-policy default in both `core/config/templates/v8-migration-standing-team-bridge.yaml` and `charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml` so local and charted startup follow the same instantiated-organization routing path as tests
 16. startup now fails closed when the bootstrap bundle set is missing or invalid, when `MYCELIS_BOOTSTRAP_TEMPLATE_ID` requests a bundle that is absent, and when multiple bundles exist without an explicit selection; runtime provider routing ignores legacy env-map inputs and startup truth now remains bundle-only in code/tests/state (`core/internal/bootstrap/template_bundle.go`, `core/cmd/server/bootstrap_startup.go`, `core/cmd/server/main.go`, `core/internal/bootstrap/startup_selection_test.go`, `core/cmd/server/bootstrap_startup_test.go`)
-18. Windows `lifecycle.down` CIM timeout/inspection failure remains separate tooling debt; it is not part of the retired bootstrap fallback surface and still tracks under the lifecycle hardening work until resolved
+17. dedicated V8 UI/API/operator contract PRD now lives in `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and defines first-run flow, AI Organization creation, Team Lead-first workspace behavior, role visibility, advanced-mode boundaries, and screen-to-API mapping
+18. architecture-library discovery and in-app docs exposure now include the V8 UI/API/operator contract through `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `interface/lib/docsManifest.ts`, and `tests/test_docs_links.py`
+19. Windows `lifecycle.down` CIM timeout/inspection failure remains separate tooling debt; it is not part of the retired bootstrap fallback surface and still tracks under the lifecycle hardening work until resolved
 
 ### 6. V8 contract shell introduction
 
@@ -314,3 +318,4 @@ Next steps:
 6. `BLOCKED` restore SSH-agent/key access and push the latest local lifecycle/doc/state commits to the remote branch.
 7. `NEXT` continue the documentation authority cleanup so active entrypoints stay lean while compatibility docs and archive material remain intentionally separated.
 8. `NEXT` promote generated per-organization bootstrap bundles so startup remains bundle-only without relying on the fixed standing-team bridge asset long term.
+9. `NEXT` translate `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` into concrete first-run, AI Organization home, and Team Lead workspace implementation slices.

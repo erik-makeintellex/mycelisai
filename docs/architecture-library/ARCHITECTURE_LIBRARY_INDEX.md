@@ -1,7 +1,7 @@
 # Architecture Library Index
 
 > Status: Canonical
-> Last Updated: 2026-03-13
+> Last Updated: 2026-03-17
 > Purpose: Replace monolithic planning with a modular, cross-linked architecture and target-delivery library.
 
 ## Why This Library Exists
@@ -36,6 +36,7 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 | [UI Generation And Testing Execution Plan V7](UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md) | executing deterministic UI build flow and deep route-level test proof | generation contracts, route coverage priorities, and MVP UI gate criteria |
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | defining the new V8 runtime contract surface during migration | contract shells for inception, kernel, council, provider policy, and continuity state |
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning how V8 concepts enter the system through config and bootstrap behavior | configuration sources, templates, instantiation entry points, bootstrap resolution, scope inheritance, precedence rules, and the V7-to-V8 bootstrap migration contract |
+| [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | working on first-run flow, AI Organization creation, Team Lead-first workspace, or screen-to-API mapping | canonical V8 operator PRD, anti-generic-chat UX guardrails, visibility rules, advanced-mode boundaries, and API/UI contracts |
 
 ### V8 migration reminder
 
@@ -58,6 +59,7 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 11. Use [UI Generation And Testing Execution Plan V7](UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md) when defining new UI surfaces or raising route-level browser test depth.
 12. Use [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) when defining the new canonical V8 runtime contracts during migration.
 13. Use [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) when planning how V8 contracts enter the system through configuration, templates, organization entry points, bootstrap resolution, and precedence rules.
+14. Use [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) when defining first-run flow, AI Organization creation, Team Lead-first workspace behavior, role visibility, advanced-mode boundaries, and screen-to-API mapping.
 
 Execution governance reminder:
 - `NEXT_EXECUTION_SLICES_V7.md`, `DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, and `TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` now describe V8 migration slices; apply the V8 bootstrap pipeline (`docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`) and update `V8_DEV_STATE.md` whenever those docs change.

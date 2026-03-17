@@ -297,6 +297,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical V8 bootstrap + V7->V8 migration contract covering templates vs instantiated orgs, entry points, inheritance, and precedence",
             },
             {
+                slug: "v8-ui-api-operator-experience-contract",
+                label: "V8 UI/API/Operator Contract",
+                path: "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+                description: "Canonical V8 PRD for first-run, AI Organization creation, Team Lead-first workspace behavior, visibility rules, and screen-to-API mapping",
+            },
+            {
                 slug: "arch-overview",
                 label: "Overview",
                 path: "docs/architecture/OVERVIEW.md",

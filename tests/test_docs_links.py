@@ -12,6 +12,7 @@ NEXT_EXECUTION_SLICES = ROOT / "docs" / "architecture-library" / "NEXT_EXECUTION
 DEV_STATE = ROOT / "V7_DEV_STATE.md"
 V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
 V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
+V8_UI_API_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"
 SOMA_COUNCIL_PROTOCOL = ROOT / "docs" / "architecture" / "SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md"
 UI_OPERATOR_EXPERIENCE = ROOT / "docs" / "architecture-library" / "UI_AND_OPERATOR_EXPERIENCE_V7.md"
 CANONICAL_DOCS = [
@@ -62,6 +63,7 @@ def test_docs_manifest_exposes_required_canonical_docs():
         "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
         "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
+        "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
         "mycelis-architecture-v7.md",
     ]
 
@@ -517,4 +519,57 @@ def test_v8_bundle_startup_docs_reflect_fail_closed_contract():
     local_workflow_text = (ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md").read_text(encoding="utf-8")
     assert "when no startup bundle is configured" not in local_workflow_text, (
         "docs/LOCAL_DEV_WORKFLOW.md still describes a no-bundle startup fallback"
+    )
+
+
+def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
+    index_text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
+    manifest_text = DOCS_MANIFEST.read_text(encoding="utf-8")
+    contract_text = V8_UI_API_CONTRACT.read_text(encoding="utf-8")
+
+    required_index_refs = [
+        "V8 UI/API and Operator Experience Contract",
+        "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+    ]
+    missing_index_refs = [snippet for snippet in required_index_refs if snippet not in index_text]
+    assert not missing_index_refs, (
+        "Architecture library index is missing the V8 UI/API contract references: "
+        f"{missing_index_refs}"
+    )
+
+    required_manifest_refs = [
+        'slug: "v8-ui-api-operator-experience-contract"',
+        'path: "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"',
+    ]
+    missing_manifest_refs = [snippet for snippet in required_manifest_refs if snippet not in manifest_text]
+    assert not missing_manifest_refs, (
+        "docsManifest is missing the V8 UI/API contract entry: "
+        f"{missing_manifest_refs}"
+    )
+
+    required_contract_snippets = [
+        "The default product experience must feel like creating and operating an AI Organization.",
+        "## 2. Canonical terminology",
+        "AI Organization",
+        "Team Lead",
+        "Advisors",
+        "Departments",
+        "Specialists",
+        "AI Engine Settings",
+        "Memory & Personality",
+        "### 4.1 First-run flow",
+        "### 4.2 Create AI Organization flow",
+        "### 4.3 Choose template vs empty start",
+        "### 4.4 AI Organization home and header contract",
+        "### 4.5 Team Lead-first workspace behavior",
+        "### 4.6 Advisor, Department, and Specialist visibility rules",
+        "### 4.7 Advanced-mode boundaries",
+        "## 5. API/UI contract mapping by screen and action",
+        "The product must not open into a raw assistant conversation as its primary identity.",
+        "Open Team Lead Workspace",
+    ]
+    missing_contract_snippets = [snippet for snippet in required_contract_snippets if snippet not in contract_text]
+    assert not missing_contract_snippets, (
+        "V8 UI/API contract is missing required operator-flow or terminology coverage: "
+        f"{missing_contract_snippets}"
     )
