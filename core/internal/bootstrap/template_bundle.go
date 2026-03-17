@@ -8,23 +8,22 @@ import (
 	"strings"
 
 	"github.com/mycelis/core/internal/swarm"
+	"github.com/mycelis/core/pkg/protocol"
 	"gopkg.in/yaml.v3"
 )
 
 // TemplateBundle is the transitional Task 005 bridge from V8 bootstrap planning
 // to runtime-readable organization template bundles.
 type TemplateBundle struct {
-	ID               string               `yaml:"id"`
-	Name             string               `yaml:"name"`
-	Description      string               `yaml:"description,omitempty"`
-	TemplateVersion  string               `yaml:"template_version,omitempty"`
-	SourceKind       string               `yaml:"source_kind,omitempty"`
-	Kernel           TemplateKernel       `yaml:"kernel,omitempty"`
-	Council          TemplateCouncil      `yaml:"council,omitempty"`
-	ProviderPolicy   swarm.ProviderPolicy `yaml:"provider_policy,omitempty"`
-	TeamManifestRefs []string             `yaml:"team_manifest_refs,omitempty"`
-	baseDir          string
-	configRoot       string
+	ID              string                `yaml:"id"`
+	Name            string                `yaml:"name"`
+	Description     string                `yaml:"description,omitempty"`
+	TemplateVersion string                `yaml:"template_version,omitempty"`
+	SourceKind      string                `yaml:"source_kind,omitempty"`
+	Kernel          TemplateKernel        `yaml:"kernel,omitempty"`
+	Council         TemplateCouncil       `yaml:"council,omitempty"`
+	ProviderPolicy  swarm.ProviderPolicy  `yaml:"provider_policy,omitempty"`
+	Teams           []*swarm.TeamManifest `yaml:"teams,omitempty"`
 }
 
 type TemplateKernel struct {
@@ -81,7 +80,7 @@ func (l *TemplateLoader) LoadBundles() ([]*TemplateBundle, error) {
 		}
 		seen[bundle.ID] = struct{}{}
 
-		if err := bundle.Validate(filepath.Dir(path), filepath.Clean(filepath.Join(l.templatesPath, ".."))); err != nil {
+		if err := bundle.Validate(); err != nil {
 			return nil, fmt.Errorf("validate template bundle %s: %w", f.Name(), err)
 		}
 		bundles = append(bundles, bundle)
@@ -117,58 +116,44 @@ func loadTemplateBundle(path string) (*TemplateBundle, error) {
 	return &bundle, nil
 }
 
-func (b *TemplateBundle) Validate(baseDir, configRoot string) error {
+func (b *TemplateBundle) Validate() error {
 	if strings.TrimSpace(b.ID) == "" {
 		return fmt.Errorf("missing id")
 	}
 	if strings.TrimSpace(b.Name) == "" {
 		return fmt.Errorf("missing name")
 	}
-	if len(b.TeamManifestRefs) == 0 {
-		return fmt.Errorf("team_manifest_refs must not be empty")
+	if len(b.Teams) == 0 {
+		return fmt.Errorf("teams must not be empty")
 	}
 
-	for _, ref := range b.TeamManifestRefs {
-		ref = strings.TrimSpace(ref)
-		if ref == "" {
-			return fmt.Errorf("team_manifest_refs contains an empty path")
-		}
-		if filepath.IsAbs(ref) {
-			return fmt.Errorf("team manifest ref %q must be relative", ref)
-		}
-		resolved := filepath.Clean(filepath.Join(baseDir, ref))
-		rel, err := filepath.Rel(configRoot, resolved)
+	normalized := make([]*swarm.TeamManifest, 0, len(b.Teams))
+	seen := make(map[string]struct{}, len(b.Teams))
+	for idx, team := range b.Teams {
+		clone, err := cloneTeamManifest(team)
 		if err != nil {
-			return fmt.Errorf("resolve team manifest ref %q: %w", ref, err)
+			return fmt.Errorf("clone team %d: %w", idx, err)
 		}
-		if strings.HasPrefix(rel, "..") {
-			return fmt.Errorf("team manifest ref %q escapes config root", ref)
+		if err := validateEmbeddedTeamManifest(idx, clone); err != nil {
+			return err
 		}
-		if _, err := swarm.LoadManifestFile(resolved); err != nil {
-			return fmt.Errorf("load team manifest ref %q: %w", ref, err)
+		if _, exists := seen[clone.ID]; exists {
+			return fmt.Errorf("duplicate team id %q", clone.ID)
 		}
+		seen[clone.ID] = struct{}{}
+		normalized = append(normalized, clone)
 	}
 
-	b.baseDir = baseDir
-	b.configRoot = configRoot
+	b.Teams = normalized
 	return nil
 }
 
 func (b *TemplateBundle) LoadTeamManifests() ([]*swarm.TeamManifest, error) {
-	if b.baseDir == "" || b.configRoot == "" {
-		return nil, fmt.Errorf("template bundle %q has not been validated", b.ID)
+	if len(b.Teams) == 0 {
+		return nil, fmt.Errorf("template bundle %q has no embedded teams", b.ID)
 	}
 
-	manifests := make([]*swarm.TeamManifest, 0, len(b.TeamManifestRefs))
-	for _, ref := range b.TeamManifestRefs {
-		path := filepath.Clean(filepath.Join(b.baseDir, ref))
-		manifest, err := swarm.LoadManifestFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("load team manifest %q: %w", ref, err)
-		}
-		manifests = append(manifests, manifest)
-	}
-	return manifests, nil
+	return cloneTeamManifests(b.Teams)
 }
 
 func (b *TemplateBundle) InstantiateRuntimeOrganization() (*swarm.RuntimeOrganization, error) {
@@ -270,4 +255,79 @@ func instantiateFallbackRuntimeOrganization(fallbackTeamsPath string, manifests 
 		Teams:             append([]*swarm.TeamManifest(nil), manifests...),
 		MigrationFallback: true,
 	}
+}
+
+func validateEmbeddedTeamManifest(idx int, manifest *swarm.TeamManifest) error {
+	if manifest == nil {
+		return fmt.Errorf("teams[%d] must not be null", idx)
+	}
+	if err := swarm.NormalizeManifest(manifest); err != nil {
+		return fmt.Errorf("teams[%d]: %w", idx, err)
+	}
+	if strings.TrimSpace(manifest.Name) == "" {
+		return fmt.Errorf("team %q missing name", manifest.ID)
+	}
+	if len(manifest.Members) == 0 {
+		return fmt.Errorf("team %q must declare at least one member", manifest.ID)
+	}
+	if len(manifest.Inputs) == 0 {
+		return fmt.Errorf("team %q must declare at least one input", manifest.ID)
+	}
+	if len(manifest.Deliveries) == 0 {
+		return fmt.Errorf("team %q must declare at least one delivery", manifest.ID)
+	}
+
+	for memberIdx, member := range manifest.Members {
+		if strings.TrimSpace(member.ID) == "" {
+			return fmt.Errorf("team %q member %d missing id", manifest.ID, memberIdx)
+		}
+		if strings.TrimSpace(member.Role) == "" {
+			return fmt.Errorf("team %q member %q missing role", manifest.ID, member.ID)
+		}
+	}
+	return nil
+}
+
+func cloneTeamManifests(manifests []*swarm.TeamManifest) ([]*swarm.TeamManifest, error) {
+	cloned := make([]*swarm.TeamManifest, 0, len(manifests))
+	for idx, manifest := range manifests {
+		clone, err := cloneTeamManifest(manifest)
+		if err != nil {
+			return nil, fmt.Errorf("clone team %d: %w", idx, err)
+		}
+		cloned = append(cloned, clone)
+	}
+	return cloned, nil
+}
+
+func cloneTeamManifest(manifest *swarm.TeamManifest) (*swarm.TeamManifest, error) {
+	if manifest == nil {
+		return nil, nil
+	}
+
+	clone := *manifest
+	clone.Members = make([]protocol.AgentManifest, len(manifest.Members))
+	for idx, member := range manifest.Members {
+		clone.Members[idx] = cloneAgentManifest(member)
+	}
+	clone.Inputs = append([]string(nil), manifest.Inputs...)
+	clone.Deliveries = append([]string(nil), manifest.Deliveries...)
+	if manifest.Schedule != nil {
+		schedule := *manifest.Schedule
+		clone.Schedule = &schedule
+	}
+	return &clone, nil
+}
+
+func cloneAgentManifest(manifest protocol.AgentManifest) protocol.AgentManifest {
+	clone := manifest
+	clone.Inputs = append([]string(nil), manifest.Inputs...)
+	clone.Outputs = append([]string(nil), manifest.Outputs...)
+	clone.Tools = append([]string(nil), manifest.Tools...)
+	if manifest.Verification != nil {
+		verification := *manifest.Verification
+		verification.Rubric = append([]string(nil), manifest.Verification.Rubric...)
+		clone.Verification = &verification
+	}
+	return clone
 }

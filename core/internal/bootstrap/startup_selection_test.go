@@ -28,20 +28,24 @@ deliveries:
 func TestResolveStartupSelectionUsesBundleWhenPresent(t *testing.T) {
 	root := t.TempDir()
 	templatesDir := filepath.Join(root, "templates")
-	teamsDir := filepath.Join(root, "teams")
+	teamsDir := filepath.Join(root, "migration-only-fallback-teams")
 	if err := os.MkdirAll(templatesDir, 0o755); err != nil {
 		t.Fatalf("mkdir templates: %v", err)
 	}
-	if err := os.MkdirAll(teamsDir, 0o755); err != nil {
-		t.Fatalf("mkdir teams: %v", err)
-	}
-
-	writeStartupSelectionTeam(t, teamsDir)
 
 	bundleYAML := `id: v8-migration-standing-team-bridge
 name: V8 Migration Standing-Team Bridge
-team_manifest_refs:
-  - ../teams/bridge-team.yaml
+teams:
+  - id: bridge-team
+    name: Bridge Team
+    type: action
+    members:
+      - id: bridge-agent
+        role: coder
+    inputs:
+      - swarm.team.bridge-team.internal.command
+    deliveries:
+      - swarm.team.bridge-team.signal.status
 `
 	if err := os.WriteFile(filepath.Join(templatesDir, "v8-migration-standing-team-bridge.yaml"), []byte(bundleYAML), 0o644); err != nil {
 		t.Fatalf("write template bundle: %v", err)
@@ -65,6 +69,9 @@ team_manifest_refs:
 	}
 	if selection.Organization.SourceKind != "standing_team_migration_input" {
 		t.Fatalf("unexpected organization source kind: %s", selection.Organization.SourceKind)
+	}
+	if len(selection.Organization.Teams) != 1 || selection.Organization.Teams[0].ID != "bridge-team" {
+		t.Fatalf("unexpected organization teams: %+v", selection.Organization.Teams)
 	}
 	if len(selection.Manifests) != 1 || selection.Manifests[0].ID != "bridge-team" {
 		t.Fatalf("unexpected startup manifests: %+v", selection.Manifests)
@@ -123,8 +130,14 @@ func TestResolveStartupSelectionErrorsWhenBundleInvalid(t *testing.T) {
 
 	invalidBundle := `id: broken-bridge
 name: Broken Bridge
-team_manifest_refs:
-  - ../teams/missing.yaml
+teams:
+  - id: broken-team
+    name: Broken Team
+    members: []
+    inputs:
+      - swarm.team.broken.internal.command
+    deliveries:
+      - swarm.team.broken.signal.status
 `
 	if err := os.WriteFile(filepath.Join(templatesDir, "broken-bridge.yaml"), []byte(invalidBundle), 0o644); err != nil {
 		t.Fatalf("write invalid template bundle: %v", err)

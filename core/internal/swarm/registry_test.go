@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func TestRegistry_LoadManifests(t *testing.T) {
@@ -129,13 +131,21 @@ func TestRegistry_LoadStandingPrimeTeamManifests(t *testing.T) {
 
 func TestRegistry_RuntimeOrganizationPrimaryPath(t *testing.T) {
 	reg := NewRegistryFromRuntimeOrganization(&RuntimeOrganization{
-		ID:                "bundle-org",
-		Name:              "Bundle Org",
-		SourceKind:        "standing_team_migration_input",
-		KernelMode:        "v8-migration-bridge",
-		CouncilMode:       "v8-migration-bridge",
-		ProviderPolicy:    ProviderPolicy{Metadata: map[string]string{"posture": "migration-bridge"}},
-		Teams:             []*TeamManifest{{ID: "bundle-team", Name: "Bundle Team", Type: TeamTypeAction}},
+		ID:             "bundle-org",
+		Name:           "Bundle Org",
+		SourceKind:     "template_bundle",
+		KernelMode:     "bundle-native",
+		CouncilMode:    "bundle-native",
+		ProviderPolicy: ProviderPolicy{Metadata: map[string]string{"posture": "bundle-native"}},
+		Teams: []*TeamManifest{{
+			ID:          "bundle-team",
+			Name:        "Bundle Team",
+			Type:        TeamTypeAction,
+			Description: "Team loaded from embedded bundle content.",
+			Members:     []protocol.AgentManifest{{ID: "bundle-agent", Role: "coder"}},
+			Inputs:      []string{"swarm.team.bundle-team.internal.command"},
+			Deliveries:  []string{"swarm.team.bundle-team.signal.status"},
+		}},
 		MigrationFallback: false,
 	})
 
@@ -156,5 +166,8 @@ func TestRegistry_RuntimeOrganizationPrimaryPath(t *testing.T) {
 	}
 	if len(manifests) != 1 || manifests[0].ID != "bundle-team" {
 		t.Fatalf("unexpected manifests: %+v", manifests)
+	}
+	if len(manifests[0].Members) != 1 || manifests[0].Members[0].ID != "bundle-agent" {
+		t.Fatalf("expected embedded bundle member, got %+v", manifests[0].Members)
 	}
 }
