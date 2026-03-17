@@ -479,3 +479,42 @@ def test_execution_governance_docs_reference_v8_migration_contract():
         "Execution/governance docs are missing V8 migration references: "
         f"{missing}"
     )
+
+
+def test_v8_bundle_startup_docs_reflect_fail_closed_contract():
+    surfaces = {
+        README: [
+            "normal startup fails closed unless a valid bootstrap bundle is present",
+            "`MYCELIS_BOOTSTRAP_TEMPLATE_ID`",
+        ],
+        ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md": [
+            "Startup now instantiates the runtime organization only through a selected bundle.",
+            "Core fails closed when no valid bundle exists in `core/config/templates/`",
+            "`MYCELIS_BOOTSTRAP_TEMPLATE_ID`",
+            "not a normal startup path",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "instantiate the runtime organization from it",
+            "fail closed if no valid bundle is available",
+            "require `MYCELIS_BOOTSTRAP_TEMPLATE_ID` when multiple bundles are mounted",
+        ],
+        V8_DEV_STATE: [
+            "startup now instantiates runtime organization truth directly from self-contained bundle data",
+            "retired the remaining no-bundle bootstrap fallback",
+            "`MYCELIS_BOOTSTRAP_TEMPLATE_ID` must be set whenever more than one bundle is present",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in surfaces.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "V8 bundle startup docs are missing required fail-closed contract snippets:\n" + "\n".join(missing)
+
+    local_workflow_text = (ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md").read_text(encoding="utf-8")
+    assert "when no startup bundle is configured" not in local_workflow_text, (
+        "docs/LOCAL_DEV_WORKFLOW.md still describes a no-bundle startup fallback"
+    )

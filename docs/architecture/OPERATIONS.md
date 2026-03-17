@@ -515,7 +515,7 @@ probes:
 6.  Initialize Memory.Service
 7.  Connect NATS (retry 10x, continue degraded if fail)
 8.  Start Router → Soma → Axon → Overseer → Memory Subscription
-9.  Resolve the selected startup bootstrap bundle, instantiate the runtime organization from it, and build startup teams from that instantiated object; fail closed if no valid bundle is available
+9.  Resolve the selected startup bootstrap bundle, instantiate the runtime organization from it, and build startup teams from that instantiated object; fail closed if no valid bundle is available, and require `MYCELIS_BOOTSTRAP_TEMPLATE_ID` when multiple bundles are mounted
 10. Run bounded MCP bootstrap/reconnect work so one hung server cannot block boot indefinitely
 11. Start HTTP server (port 8080), register routes
 12. Block on SIGINT
