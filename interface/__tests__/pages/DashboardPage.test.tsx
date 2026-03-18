@@ -1,42 +1,100 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { mockFetch } from "../setup";
 
-// Mock reactflow (store imports it)
-vi.mock('reactflow', async () => {
-    const mock = await import('../mocks/reactflow');
-    return mock;
-});
+const push = vi.fn();
 
-// The dashboard page uses next/dynamic to lazy-load MissionControl with ssr:false.
-// In jsdom there's no real SSR boundary, so mock MissionControl directly and
-// mock next/dynamic to return the component synchronously.
-vi.mock('@/components/dashboard/MissionControl', () => ({
-    __esModule: true,
-    default: () => <div data-testid="mission-control">MissionControl</div>,
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({ push, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
 }));
 
-vi.mock('next/dynamic', () => ({
-    __esModule: true,
-    default: (loader: any) => {
-        // Vitest hoists vi.mock, so the MissionControl mock is already in place.
-        // We can't resolve the promise synchronously, so just return a wrapper
-        // that renders the known mock directly.
-        const MockComponent = (props: any) => <div data-testid="mission-control">MissionControl</div>;
-        MockComponent.displayName = 'DynamicMock';
-        return MockComponent;
-    },
-}));
+import DashboardPage from "@/app/(app)/dashboard/page";
 
-import DashboardPage from '@/app/(app)/dashboard/page';
-
-describe('Dashboard Page (/dashboard)', () => {
-    it('mounts without crashing', () => {
-        render(<DashboardPage />);
-        expect(screen.getByTestId('mission-control')).toBeDefined();
+describe("Dashboard Page (V8 AI Organization entry flow)", () => {
+    beforeEach(() => {
+        push.mockReset();
     });
 
-    it('renders the MissionControl layout component', () => {
+    it("renders the Create AI Organization entry flow", async () => {
+        mockFetch
+            .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [{
+                id: "engineering-starter",
+                name: "Engineering Starter",
+                description: "Guided AI Organization for engineering work",
+                organization_type: "AI Organization starter",
+                team_lead_label: "Team Lead",
+                advisor_count: 1,
+                department_count: 1,
+                specialist_count: 2,
+                ai_engine_settings_summary: "Starter defaults included",
+                memory_personality_summary: "Prepared for Adaptive Delivery work",
+            }] })))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })));
+
         render(<DashboardPage />);
-        expect(screen.getByText('MissionControl')).toBeDefined();
+
+        expect(await screen.findByRole("heading", { name: "Create AI Organization" })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Start from template/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Start empty/i })).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: /Start from template/i }));
+        expect(await screen.findByText("Engineering Starter")).toBeDefined();
+        expect(screen.getByText("AI Organization starter")).toBeDefined();
+    });
+
+    it("submits an empty-start organization and routes into the context shell", async () => {
+        mockFetch
+            .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: {
+                id: "org-123",
+                name: "Northstar Labs",
+                purpose: "Ship a focused AI engineering organization for product delivery.",
+                start_mode: "empty",
+                team_lead_label: "Team Lead",
+                advisor_count: 0,
+                department_count: 0,
+                specialist_count: 0,
+                ai_engine_settings_summary: "Set up later in Advanced mode",
+                memory_personality_summary: "Set up later in Advanced mode",
+                status: "ready",
+            } }), { status: 201 }));
+
+        render(<DashboardPage />);
+
+        expect(await screen.findByRole("heading", { name: "Create AI Organization" })).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Start empty/i }));
+        fireEvent.change(screen.getByLabelText("AI Organization name"), { target: { value: "Northstar Labs" } });
+        fireEvent.change(screen.getByLabelText("Purpose"), { target: { value: "Ship a focused AI engineering organization for product delivery." } });
+        fireEvent.click(screen.getByRole("button", { name: "Create AI Organization" }));
+
+        await waitFor(() => {
+            expect(push).toHaveBeenCalledWith("/organizations/org-123");
+        });
+    });
+
+    it("shows recent AI Organizations when summaries exist", async () => {
+        mockFetch
+            .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [] })))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: [{
+                id: "org-42",
+                name: "Atlas",
+                purpose: "Resume me later",
+                start_mode: "empty",
+                team_lead_label: "Team Lead",
+                advisor_count: 0,
+                department_count: 0,
+                specialist_count: 0,
+                ai_engine_settings_summary: "Set up later in Advanced mode",
+                memory_personality_summary: "Set up later in Advanced mode",
+                status: "ready",
+            }] })));
+
+        render(<DashboardPage />);
+
+        expect(await screen.findByText("Recent AI Organizations")).toBeDefined();
+        expect(screen.getByText("Atlas")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Open AI Organization" }));
+        expect(push).toHaveBeenCalledWith("/organizations/org-42");
     });
 });

@@ -29,7 +29,7 @@ vi.mock('@/store/useCortexStore', () => ({
 import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
 const V7_NAV_ENTRIES = [
-    { href: '/dashboard', label: 'Workspace' },
+    { href: '/dashboard', label: 'AI Organization' },
     { href: '/automations', label: 'Automations' },
     { href: '/resources', label: 'Resources' },
     { href: '/memory', label: 'Memory' },
