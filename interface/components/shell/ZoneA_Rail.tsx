@@ -31,7 +31,7 @@ export function ZoneA() {
 
             {/* 2. Workflow-First Navigation (V7) */}
             <div className="flex-1 flex flex-col py-4 gap-1 px-2">
-                <NavItem href="/dashboard" icon={Home} label="Workspace" />
+                <NavItem href="/dashboard" icon={Home} label="AI Organization" />
                 <NavItem href="/automations" icon={Workflow} label="Automations" />
                 <NavItem href="/resources" icon={FolderCog} label="Resources" />
                 <NavItem href="/memory" icon={Brain} label="Memory" />

@@ -72,6 +72,9 @@ type AdminServer struct {
 	MCPToolSets *mcp.ToolSetService // tool set CRUD
 	// Root-admin collaboration groups (DB-backed), with live bus monitor for status UI.
 	GroupBus *GroupBusMonitor
+	// V8 AI Organization entry flow support.
+	Organizations       *OrganizationStore
+	TemplateBundlesPath string
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -84,29 +87,31 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 	})
 
 	return &AdminServer{
-		Router:        r,
-		Guard:         guard,
-		Mem:           mem,
-		DB:            db,
-		Cognitive:     cog,
-		Provisioner:   prov,
-		Registry:      reg,
-		Soma:          soma,
-		NC:            nc,
-		Stream:        stream,
-		MetaArchitect: architect,
-		Overseer:      ov,
-		Archivist:     arch,
-		Proposals:     NewProposalStore(),
-		MCP:           mcpSvc,
-		MCPPool:       mcpPool,
-		MCPLibrary:    mcpLib,
-		Catalogue:     cat,
-		Artifacts:     art,
-		Events:        evStore,
-		Runs:          runsManager,
-		Reactive:      reactiveEngine,
-		GroupBus:      NewGroupBusMonitor(),
+		Router:              r,
+		Guard:               guard,
+		Mem:                 mem,
+		DB:                  db,
+		Cognitive:           cog,
+		Provisioner:         prov,
+		Registry:            reg,
+		Soma:                soma,
+		NC:                  nc,
+		Stream:              stream,
+		MetaArchitect:       architect,
+		Overseer:            ov,
+		Archivist:           arch,
+		Proposals:           NewProposalStore(),
+		MCP:                 mcpSvc,
+		MCPPool:             mcpPool,
+		MCPLibrary:          mcpLib,
+		Catalogue:           cat,
+		Artifacts:           art,
+		Events:              evStore,
+		Runs:                runsManager,
+		Reactive:            reactiveEngine,
+		GroupBus:            NewGroupBusMonitor(),
+		Organizations:       NewOrganizationStore(),
+		TemplateBundlesPath: "config/templates",
 	}
 }
 
@@ -197,6 +202,9 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// CE-1: Orchestration Templates & Intent Proofs
 	mux.HandleFunc("GET /api/v1/templates", s.handleListTemplatesAPI)
+	mux.HandleFunc("GET /api/v1/organizations", s.handleListOrganizations)
+	mux.HandleFunc("POST /api/v1/organizations", s.handleCreateOrganization)
+	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
 	mux.HandleFunc("GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
 
 	// Phase 6.0: Symbiotic Seed (built-in sensor team, no LLM required)

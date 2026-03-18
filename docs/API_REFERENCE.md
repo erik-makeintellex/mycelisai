@@ -134,4 +134,8 @@
 | **Intent (CE-1)** | | |
 | `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return run_id |
 | `/api/v1/intent/proof/{id}` | GET | Retrieve intent proof bundle by ID |
-| `/api/v1/templates` | GET | List CE-1 orchestration templates |
+| `/api/v1/templates` | GET | List CE-1 orchestration templates or V8 AI Organization starters when `view=organization-starters` |
+| **AI Organizations (V8)** | | |
+| `/api/v1/organizations` | GET | List created AI Organization summaries for the entry flow |
+| `/api/v1/organizations` | POST | Create an AI Organization from template or empty start |
+| `/api/v1/organizations/{id}/home` | GET | Load the minimal AI Organization context shell |
