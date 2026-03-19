@@ -328,6 +328,23 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Working tone")).toBeVisible();
         await expect(page.getByText("Context continuity")).toBeVisible();
         await expect(page.getByRole("button", { name: /Plan next steps for this organization/i })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Review Advisors" }).first()).toBeVisible();
+        await expect(page.getByRole("button", { name: "Open Departments" }).first()).toBeVisible();
+
+        await page.getByRole("button", { name: "Review Advisors" }).first().click();
+        await expect(page.getByRole("heading", { name: "Advisor details" })).toBeVisible();
+        await expect(page.getByText("Planning Advisor")).toBeVisible();
+        await expect(page.getByText("AI Organization Home")).toBeVisible();
+        await expect(page.getByText("Work with the Team Lead")).toBeVisible();
+        await page.getByRole("button", { name: "Back to Team Lead" }).click();
+
+        await page.getByRole("button", { name: "Open Departments" }).last().click();
+        await expect(page.getByRole("heading", { name: "Department details" })).toBeVisible();
+        await expect(page.getByText("Planning Department")).toBeVisible();
+        await expect(page.getByText("2 Specialists visible here.").first()).toBeVisible();
+        await expect(page.getByText("AI Organization Home")).toBeVisible();
+        await expect(page.getByText("Work with the Team Lead")).toBeVisible();
+        await page.getByRole("button", { name: "Back to Team Lead" }).click();
 
         await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();
         expect(capturedActionBody).toEqual({ action: "plan_next_steps" });
