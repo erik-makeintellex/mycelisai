@@ -6,6 +6,7 @@ import { ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, S
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type {
     AgentTypeAIEngineUpdateRequest,
+    AgentTypeResponseContractUpdateRequest,
     DepartmentAIEngineUpdateRequest,
     OrganizationAgentTypeProfileSummary,
     OrganizationAIEngineProfileId,
@@ -123,6 +124,10 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [selectedAgentTypeAIEngineProfile, setSelectedAgentTypeAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
     const [agentTypeAIEngineUpdatePendingKey, setAgentTypeAIEngineUpdatePendingKey] = useState<string | null>(null);
     const [agentTypeAIEngineUpdateError, setAgentTypeAIEngineUpdateError] = useState<{ departmentId: string; agentTypeId: string; message: string } | null>(null);
+    const [activeAgentTypeResponseContractKey, setActiveAgentTypeResponseContractKey] = useState<string | null>(null);
+    const [selectedAgentTypeResponseContractProfile, setSelectedAgentTypeResponseContractProfile] = useState<ResponseContractProfileId | null>(null);
+    const [agentTypeResponseContractUpdatePendingKey, setAgentTypeResponseContractUpdatePendingKey] = useState<string | null>(null);
+    const [agentTypeResponseContractUpdateError, setAgentTypeResponseContractUpdateError] = useState<{ departmentId: string; agentTypeId: string; message: string } | null>(null);
     const [isResponseContractSelectorOpen, setIsResponseContractSelectorOpen] = useState(false);
     const [selectedResponseContractProfile, setSelectedResponseContractProfile] = useState<ResponseContractProfileId | null>(null);
     const [responseContractUpdatePending, setResponseContractUpdatePending] = useState(false);
@@ -177,6 +182,10 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             setSelectedAgentTypeAIEngineProfile(null);
             setAgentTypeAIEngineUpdatePendingKey(null);
             setAgentTypeAIEngineUpdateError(null);
+            setActiveAgentTypeResponseContractKey(null);
+            setSelectedAgentTypeResponseContractProfile(null);
+            setAgentTypeResponseContractUpdatePendingKey(null);
+            setAgentTypeResponseContractUpdateError(null);
         }
         if (activeDetailView !== "responseContract") {
             setIsResponseContractSelectorOpen(false);
@@ -344,6 +353,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         setActiveAgentTypeAIEngineKey(agentTypeSelectionKey(departmentId, profile.id));
         setSelectedAgentTypeAIEngineProfile((profile.ai_engine_effective_profile_id as OrganizationAIEngineProfileId | undefined) ?? null);
         setAgentTypeAIEngineUpdateError(null);
+        setActiveAgentTypeResponseContractKey(null);
+        setSelectedAgentTypeResponseContractProfile(null);
+        setAgentTypeResponseContractUpdateError(null);
     };
 
     const submitAgentTypeAIEngineSelection = async (departmentId: string, agentTypeId: string) => {
@@ -413,6 +425,86 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             });
         } finally {
             setAgentTypeAIEngineUpdatePendingKey(null);
+        }
+    };
+
+    const openAgentTypeResponseContractSelector = (departmentId: string, profile: OrganizationAgentTypeProfileSummary) => {
+        setActiveDetailView("departments");
+        setActiveAgentTypeResponseContractKey(agentTypeSelectionKey(departmentId, profile.id));
+        setSelectedAgentTypeResponseContractProfile((profile.response_contract_effective_profile_id as ResponseContractProfileId | undefined) ?? "clear_balanced");
+        setAgentTypeResponseContractUpdateError(null);
+        setActiveAgentTypeAIEngineKey(null);
+        setSelectedAgentTypeAIEngineProfile(null);
+        setAgentTypeAIEngineUpdateError(null);
+    };
+
+    const submitAgentTypeResponseContractSelection = async (departmentId: string, agentTypeId: string) => {
+        if (!organization || !selectedAgentTypeResponseContractProfile || agentTypeResponseContractUpdatePendingKey) {
+            return;
+        }
+
+        const selectionKey = agentTypeSelectionKey(departmentId, agentTypeId);
+        setAgentTypeResponseContractUpdatePendingKey(selectionKey);
+        setAgentTypeResponseContractUpdateError(null);
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/departments/${departmentId}/agent-types/${agentTypeId}/response-contract`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ profile_id: selectedAgentTypeResponseContractProfile } satisfies AgentTypeResponseContractUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to update this Agent Type Response Style.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setActiveAgentTypeResponseContractKey(null);
+            setSelectedAgentTypeResponseContractProfile(null);
+        } catch (err) {
+            setAgentTypeResponseContractUpdateError({
+                departmentId,
+                agentTypeId,
+                message: err instanceof Error ? err.message : "Unable to update this Agent Type Response Style.",
+            });
+        } finally {
+            setAgentTypeResponseContractUpdatePendingKey(null);
+        }
+    };
+
+    const revertAgentTypeResponseContractSelection = async (departmentId: string, agentTypeId: string) => {
+        if (!organization || agentTypeResponseContractUpdatePendingKey) {
+            return;
+        }
+
+        const selectionKey = agentTypeSelectionKey(departmentId, agentTypeId);
+        setAgentTypeResponseContractUpdatePendingKey(selectionKey);
+        setAgentTypeResponseContractUpdateError(null);
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/departments/${departmentId}/agent-types/${agentTypeId}/response-contract`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ use_organization_or_team_default: true } satisfies AgentTypeResponseContractUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to return this Agent Type to the Organization / Team default.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setActiveAgentTypeResponseContractKey(null);
+            setSelectedAgentTypeResponseContractProfile(null);
+        } catch (err) {
+            setAgentTypeResponseContractUpdateError({
+                departmentId,
+                agentTypeId,
+                message: err instanceof Error ? err.message : "Unable to return this Agent Type to the Organization / Team default.",
+            });
+        } finally {
+            setAgentTypeResponseContractUpdatePendingKey(null);
         }
     };
 
@@ -587,6 +679,19 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 }}
                                 onSubmitAgentTypeAIEngineSelection={submitAgentTypeAIEngineSelection}
                                 onRevertAgentTypeAIEngineSelection={revertAgentTypeAIEngineSelection}
+                                activeAgentTypeResponseContractKey={activeAgentTypeResponseContractKey}
+                                selectedAgentTypeResponseContractProfile={selectedAgentTypeResponseContractProfile}
+                                agentTypeResponseContractUpdatePendingKey={agentTypeResponseContractUpdatePendingKey}
+                                agentTypeResponseContractUpdateError={agentTypeResponseContractUpdateError}
+                                onAgentTypeResponseContractProfileSelect={setSelectedAgentTypeResponseContractProfile}
+                                onOpenAgentTypeResponseContractSelector={openAgentTypeResponseContractSelector}
+                                onCloseAgentTypeResponseContractSelector={() => {
+                                    setActiveAgentTypeResponseContractKey(null);
+                                    setSelectedAgentTypeResponseContractProfile(null);
+                                    setAgentTypeResponseContractUpdateError(null);
+                                }}
+                                onSubmitAgentTypeResponseContractSelection={submitAgentTypeResponseContractSelection}
+                                onRevertAgentTypeResponseContractSelection={revertAgentTypeResponseContractSelection}
                                 onBack={() => setActiveDetailView(null)}
                             />
                         )}
@@ -780,8 +885,8 @@ function agentTypeAIEngineSourceLabel(profile: OrganizationAgentTypeProfileSumma
 
 function agentTypeResponseStyleSourceLabel(profile: OrganizationAgentTypeProfileSummary) {
     return profile.inherits_default_response_contract
-        ? `Using Organization/Team default: ${profile.response_contract_effective_summary}`
-        : `Type-specific response binding: ${profile.response_contract_effective_summary}`;
+        ? `Using Organization or Team Default: ${profile.response_contract_effective_summary}`
+        : `Type-specific Response Style: ${profile.response_contract_effective_summary}`;
 }
 
 function agentTypeSelectionKey(departmentId: string, agentTypeId: string) {
@@ -1077,6 +1182,15 @@ function WorkspaceDetailView({
     onCloseAgentTypeAIEngineSelector,
     onSubmitAgentTypeAIEngineSelection,
     onRevertAgentTypeAIEngineSelection,
+    activeAgentTypeResponseContractKey,
+    selectedAgentTypeResponseContractProfile,
+    agentTypeResponseContractUpdatePendingKey,
+    agentTypeResponseContractUpdateError,
+    onAgentTypeResponseContractProfileSelect,
+    onOpenAgentTypeResponseContractSelector,
+    onCloseAgentTypeResponseContractSelector,
+    onSubmitAgentTypeResponseContractSelection,
+    onRevertAgentTypeResponseContractSelection,
     onBack,
 }: {
     view: "advisors" | "departments" | "aiEngine" | "responseContract";
@@ -1116,6 +1230,15 @@ function WorkspaceDetailView({
     onCloseAgentTypeAIEngineSelector: () => void;
     onSubmitAgentTypeAIEngineSelection: (departmentId: string, agentTypeId: string) => void;
     onRevertAgentTypeAIEngineSelection: (departmentId: string, agentTypeId: string) => void;
+    activeAgentTypeResponseContractKey: string | null;
+    selectedAgentTypeResponseContractProfile: ResponseContractProfileId | null;
+    agentTypeResponseContractUpdatePendingKey: string | null;
+    agentTypeResponseContractUpdateError: { departmentId: string; agentTypeId: string; message: string } | null;
+    onAgentTypeResponseContractProfileSelect: (profile: ResponseContractProfileId) => void;
+    onOpenAgentTypeResponseContractSelector: (departmentId: string, profile: OrganizationAgentTypeProfileSummary) => void;
+    onCloseAgentTypeResponseContractSelector: () => void;
+    onSubmitAgentTypeResponseContractSelection: (departmentId: string, agentTypeId: string) => void;
+    onRevertAgentTypeResponseContractSelection: (departmentId: string, agentTypeId: string) => void;
     onBack: () => void;
 }) {
     const title =
@@ -1267,12 +1390,12 @@ function WorkspaceDetailView({
                                             <div>
                                                 <p className="text-sm font-semibold text-cortex-text-main">Agent Type Profiles</p>
                                                 <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                                                    These inspect-only profiles show how this Team's role types inherit the Team default or follow a type-specific AI Engine or Response Style.
+                                                    These guided profiles show how this Team's role types inherit the Team default or follow a type-specific AI Engine or Response Style.
                                                 </p>
                                             </div>
                                             <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
-                                                <p className="font-medium text-cortex-text-main">Inspect only</p>
-                                                <p className="mt-1 leading-6">Use these profiles to understand how specialist role types are set up before any instance-level changes are introduced.</p>
+                                                <p className="font-medium text-cortex-text-main">Guided role tuning</p>
+                                                <p className="mt-1 leading-6">Use these profiles to review or safely tune role-type defaults while individual Specialist instances stay out of scope.</p>
                                             </div>
                                         </div>
 
@@ -1282,9 +1405,16 @@ function WorkspaceDetailView({
                                                     const agentTypeKey = agentTypeSelectionKey(item.id, profile.id);
                                                     const isAgentTypeEditing = activeAgentTypeAIEngineKey === agentTypeKey;
                                                     const isAgentTypePending = agentTypeAIEngineUpdatePendingKey === agentTypeKey;
+                                                    const isAgentTypeResponseEditing = activeAgentTypeResponseContractKey === agentTypeKey;
+                                                    const isAgentTypeResponsePending = agentTypeResponseContractUpdatePendingKey === agentTypeKey;
                                                     const agentTypeError =
                                                         agentTypeAIEngineUpdateError?.departmentId === item.id && agentTypeAIEngineUpdateError.agentTypeId === profile.id
                                                             ? agentTypeAIEngineUpdateError.message
+                                                            : null;
+                                                    const agentTypeResponseError =
+                                                        agentTypeResponseContractUpdateError?.departmentId === item.id &&
+                                                        agentTypeResponseContractUpdateError.agentTypeId === profile.id
+                                                            ? agentTypeResponseContractUpdateError.message
                                                             : null;
 
                                                     return (
@@ -1317,7 +1447,10 @@ function WorkspaceDetailView({
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => onOpenAgentTypeAIEngineSelector(item.id, profile)}
-                                                                    disabled={Boolean(agentTypeAIEngineUpdatePendingKey && agentTypeAIEngineUpdatePendingKey !== agentTypeKey)}
+                                                                    disabled={
+                                                                        Boolean(agentTypeAIEngineUpdatePendingKey && agentTypeAIEngineUpdatePendingKey !== agentTypeKey) ||
+                                                                        Boolean(agentTypeResponseContractUpdatePendingKey && agentTypeResponseContractUpdatePendingKey !== agentTypeKey)
+                                                                    }
                                                                     className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
                                                                 >
                                                                     <Sparkles className="h-4 w-4 text-cortex-primary" />
@@ -1334,6 +1467,29 @@ function WorkspaceDetailView({
                                                                         Use Team Default
                                                                     </button>
                                                                 )}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => onOpenAgentTypeResponseContractSelector(item.id, profile)}
+                                                                    disabled={
+                                                                        Boolean(agentTypeAIEngineUpdatePendingKey && agentTypeAIEngineUpdatePendingKey !== agentTypeKey) ||
+                                                                        Boolean(agentTypeResponseContractUpdatePendingKey && agentTypeResponseContractUpdatePendingKey !== agentTypeKey)
+                                                                    }
+                                                                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                >
+                                                                    <Sparkles className="h-4 w-4 text-cortex-primary" />
+                                                                    Change Response Style for this Agent Type
+                                                                </button>
+                                                                {!profile.inherits_default_response_contract && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => onRevertAgentTypeResponseContractSelection(item.id, profile.id)}
+                                                                        disabled={isAgentTypeResponsePending}
+                                                                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                    >
+                                                                        {isAgentTypeResponsePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                                                                        Use Organization / Team Default
+                                                                    </button>
+                                                                )}
                                                             </div>
 
                                                             {isAgentTypeEditing && (
@@ -1344,6 +1500,17 @@ function WorkspaceDetailView({
                                                                     onAgentTypeAIEngineProfileSelect={onAgentTypeAIEngineProfileSelect}
                                                                     onClose={onCloseAgentTypeAIEngineSelector}
                                                                     onSubmit={() => onSubmitAgentTypeAIEngineSelection(item.id, profile.id)}
+                                                                />
+                                                            )}
+
+                                                            {isAgentTypeResponseEditing && (
+                                                                <AgentTypeResponseContractSelectionPanel
+                                                                    selectedAgentTypeResponseContractProfile={selectedAgentTypeResponseContractProfile}
+                                                                    agentTypeResponseContractUpdatePending={isAgentTypeResponsePending}
+                                                                    agentTypeResponseContractUpdateError={agentTypeResponseError}
+                                                                    onAgentTypeResponseContractProfileSelect={onAgentTypeResponseContractProfileSelect}
+                                                                    onClose={onCloseAgentTypeResponseContractSelector}
+                                                                    onSubmit={() => onSubmitAgentTypeResponseContractSelection(item.id, profile.id)}
                                                                 />
                                                             )}
                                                         </div>
@@ -1432,7 +1599,7 @@ function AIEngineSelectionPanel({
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Organization level only</p>
-                    <p className="mt-1">Team and role settings stay read-only in this workspace.</p>
+                    <p className="mt-1">Department and role tuning stay in Department details so this organization-wide choice stays clear.</p>
                 </div>
             </div>
 
@@ -1538,7 +1705,7 @@ function ResponseContractSelectionPanel({
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Organization level only</p>
-                    <p className="mt-1">Team and role response overrides stay out of this workspace for now.</p>
+                    <p className="mt-1">Department and role Response Style tuning stays in Department details so this organization-wide default stays easy to understand.</p>
                 </div>
             </div>
 
@@ -1807,6 +1974,120 @@ function AgentTypeAIEngineSelectionPanel({
                     type="button"
                     onClick={onClose}
                     disabled={agentTypeAIEngineUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function AgentTypeResponseContractSelectionPanel({
+    selectedAgentTypeResponseContractProfile,
+    agentTypeResponseContractUpdatePending,
+    agentTypeResponseContractUpdateError,
+    onAgentTypeResponseContractProfileSelect,
+    onClose,
+    onSubmit,
+}: {
+    selectedAgentTypeResponseContractProfile: ResponseContractProfileId | null;
+    agentTypeResponseContractUpdatePending: boolean;
+    agentTypeResponseContractUpdateError: string | null;
+    onAgentTypeResponseContractProfileSelect: (profile: ResponseContractProfileId) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+}) {
+    return (
+        <div className="mt-4 rounded-3xl border border-cortex-primary/20 bg-cortex-surface p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h4 className="text-lg font-semibold text-cortex-text-main">Choose a Response Style for this Agent Type</h4>
+                    <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
+                        Pick one safe Response Style only for this Agent Type when this role needs a consistent specialist voice that should stay steady even if the wider default changes.
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Agent Type level only</p>
+                    <p className="mt-1">The Team Lead workspace stays visible, and Organization / Team default behavior remains in place for every other role type.</p>
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+                {RESPONSE_CONTRACT_OPTIONS.map((option) => {
+                    const isSelected = selectedAgentTypeResponseContractProfile === option.id;
+                    return (
+                        <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => onAgentTypeResponseContractProfileSelect(option.id)}
+                            disabled={agentTypeResponseContractUpdatePending}
+                            className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                                isSelected
+                                    ? "border-cortex-primary/40 bg-cortex-primary/10"
+                                    : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/20"
+                            } ${agentTypeResponseContractUpdatePending ? "opacity-75" : ""}`}
+                        >
+                            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-cortex-text-main">{option.label}</p>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                        <span className="font-medium text-cortex-text-main">Tone:</span> {option.toneStyle}
+                                    </p>
+                                </div>
+                                {isSelected && (
+                                    <span className="inline-flex w-fit rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-cortex-primary">
+                                        Selected
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Structure:</span> {option.structure}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Detail:</span> {option.verbosity}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Best for:</span> {option.bestFor}
+                            </p>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {agentTypeResponseContractUpdateError && (
+                <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Unable to update this Agent Type Response Style</p>
+                    <p className="mt-2 leading-6">{agentTypeResponseContractUpdateError}</p>
+                    <p className="mt-2 leading-6">Try again to keep this specialist role aligned with the Team Lead workspace while the wider organization stays visible.</p>
+                </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                    type="button"
+                    onClick={onSubmit}
+                    disabled={!selectedAgentTypeResponseContractProfile || agentTypeResponseContractUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {agentTypeResponseContractUpdatePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {agentTypeResponseContractUpdatePending ? "Updating Agent Type Response Style..." : "Use selected Response Style"}
+                </button>
+                {agentTypeResponseContractUpdateError && (
+                    <button
+                        type="button"
+                        onClick={onSubmit}
+                        disabled={!selectedAgentTypeResponseContractProfile || agentTypeResponseContractUpdatePending}
+                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <RefreshCcw className="h-4 w-4" />
+                        Retry Response Style change
+                    </button>
+                )}
+                <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={agentTypeResponseContractUpdatePending}
                     className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Cancel

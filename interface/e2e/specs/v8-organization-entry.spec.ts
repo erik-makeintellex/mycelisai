@@ -164,6 +164,36 @@ function applyAgentTypeAIEngine(
     };
 }
 
+function applyAgentTypeResponseContract(
+    home: typeof createdTemplateOrganization,
+    departmentId: string,
+    agentTypeId: string,
+    profileId: string | undefined,
+    summary: string,
+) {
+    return {
+        ...home,
+        departments: home.departments.map((department) =>
+            department.id === departmentId
+                ? {
+                      ...department,
+                      agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                          profile.id === agentTypeId
+                              ? {
+                                    ...profile,
+                                    response_contract_binding_profile_id: profileId,
+                                    response_contract_effective_profile_id: profileId ?? home.response_contract_profile_id,
+                                    response_contract_effective_summary: profileId ? summary : home.response_contract_summary,
+                                    inherits_default_response_contract: !profileId,
+                                }
+                              : profile,
+                      ),
+                  }
+                : department,
+        ),
+    };
+}
+
 async function saveScreenshot(page: Page, testInfo: TestInfo, name: string) {
     await page.screenshot({
         path: testInfo.outputPath(name),
@@ -194,6 +224,7 @@ async function mockOrganizationEntryApis(
         aiEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         departmentAIEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         agentTypeAIEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
+        agentTypeResponseContractUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         responseContractUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         homeResponsesById?: Record<string, unknown>;
     },
@@ -210,6 +241,7 @@ async function mockOrganizationEntryApis(
         aiEngineUpdateHandler,
         departmentAIEngineUpdateHandler,
         agentTypeAIEngineUpdateHandler,
+        agentTypeResponseContractUpdateHandler,
         responseContractUpdateHandler,
         homeResponsesById = {
             [createdTemplateOrganization.id]: createdTemplateOrganization,
@@ -550,6 +582,61 @@ async function mockOrganizationEntryApis(
         });
     });
 
+    await page.route("**/api/v1/organizations/*/departments/*/agent-types/*/response-contract", async (route) => {
+        const requestBody = route.request().postDataJSON() as Record<string, unknown>;
+        const url = new URL(route.request().url());
+        const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/departments\/([^/]+)\/agent-types\/([^/]+)\/response-contract$/);
+        const organizationId = match?.[1];
+        const departmentId = match?.[2];
+        const agentTypeId = match?.[3];
+
+        if (agentTypeResponseContractUpdateHandler) {
+            const response = agentTypeResponseContractUpdateHandler(requestBody);
+            await route.fulfill({
+                status: response.status,
+                contentType: "application/json",
+                body: JSON.stringify(response.body),
+            });
+            return;
+        }
+
+        const summaries: Record<string, string> = {
+            clear_balanced: "Clear & Balanced",
+            structured_analytical: "Structured & Analytical",
+            concise_direct: "Concise & Direct",
+            warm_supportive: "Warm & Supportive",
+        };
+
+        if (organizationId && departmentId && agentTypeId && mutableHomeResponsesById[organizationId]) {
+            if (requestBody.use_organization_or_team_default) {
+                mutableHomeResponsesById[organizationId] = applyAgentTypeResponseContract(
+                    mutableHomeResponsesById[organizationId] as typeof createdTemplateOrganization,
+                    departmentId,
+                    agentTypeId,
+                    undefined,
+                    "",
+                );
+            } else {
+                mutableHomeResponsesById[organizationId] = applyAgentTypeResponseContract(
+                    mutableHomeResponsesById[organizationId] as typeof createdTemplateOrganization,
+                    departmentId,
+                    agentTypeId,
+                    String(requestBody.profile_id ?? ""),
+                    summaries[String(requestBody.profile_id ?? "")] ?? "Clear & Balanced",
+                );
+            }
+        }
+
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                ok: true,
+                data: organizationId ? mutableHomeResponsesById[organizationId] : null,
+            }),
+        });
+    });
+
     await page.route("**/api/v1/organizations/*/home", async (route) => {
         const url = new URL(route.request().url());
         const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/home$/);
@@ -714,8 +801,8 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Delivery Specialist")).toBeVisible();
         await expect(page.getByText("Type-specific Engine: High Reasoning")).toBeVisible();
         await expect(page.getByText("Using Team Default: Starter defaults included")).toBeVisible();
-        await expect(page.getByText("Type-specific response binding: Structured & Analytical")).toBeVisible();
-        await expect(page.getByText("Using Organization/Team default: Clear & Balanced")).toBeVisible();
+        await expect(page.getByText("Type-specific Response Style: Structured & Analytical")).toBeVisible();
+        await expect(page.getByText("Using Organization or Team Default: Clear & Balanced")).toBeVisible();
         await page.getByRole("button", { name: "Change for this Team" }).click();
         await expect(page.getByRole("heading", { name: "Choose an AI Engine for this Team" })).toBeVisible();
         await page.getByRole("button", { name: /Balanced/i }).click();
@@ -730,6 +817,14 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("button", { name: "Use Team Default" }).last()).toBeVisible();
         await page.getByRole("button", { name: "Use Team Default" }).last().click();
         await expect(page.getByText("Using Team Default: Balanced")).toBeVisible();
+        await page.getByRole("button", { name: "Change Response Style for this Agent Type" }).last().click();
+        await expect(page.getByRole("heading", { name: "Choose a Response Style for this Agent Type" })).toBeVisible();
+        await page.getByRole("button", { name: /Warm & Supportive/i }).click();
+        await page.getByRole("button", { name: "Use selected Response Style" }).click();
+        await expect(page.getByText("Type-specific Response Style: Warm & Supportive")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Use Organization / Team Default" }).last()).toBeVisible();
+        await page.getByRole("button", { name: "Use Organization / Team Default" }).last().click();
+        await expect(page.getByText("Using Organization or Team Default: Clear & Balanced")).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
@@ -770,7 +865,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await page.getByRole("button", { name: "Revert to Organization Default" }).click();
         await expect(page.getByText("Using Organization Default: High Reasoning")).toBeVisible();
         await expect(page.getByText("Using Team Default: High Reasoning")).toBeVisible();
-        await expect(page.getByText("Using Organization/Team default: Warm & Supportive")).toBeVisible();
+        await expect(page.getByText("Using Organization or Team Default: Warm & Supportive")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
 
         await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();
