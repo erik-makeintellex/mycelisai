@@ -205,6 +205,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/organizations", s.handleListOrganizations)
 	mux.HandleFunc("POST /api/v1/organizations", s.handleCreateOrganization)
 	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
 	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
 	mux.HandleFunc("GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
 

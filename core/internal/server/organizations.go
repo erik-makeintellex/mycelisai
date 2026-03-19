@@ -23,6 +23,23 @@ const (
 	OrganizationStartModeEmpty    OrganizationStartMode = "empty"
 )
 
+type OrganizationAIEngineProfileID string
+
+const (
+	OrganizationAIEngineProfileStarterDefaults OrganizationAIEngineProfileID = "starter_defaults"
+	OrganizationAIEngineProfileBalanced        OrganizationAIEngineProfileID = "balanced"
+	OrganizationAIEngineProfileHighReasoning   OrganizationAIEngineProfileID = "high_reasoning"
+	OrganizationAIEngineProfileFastLightweight OrganizationAIEngineProfileID = "fast_lightweight"
+	OrganizationAIEngineProfileDeepPlanning    OrganizationAIEngineProfileID = "deep_planning"
+)
+
+type organizationAIEngineProfile struct {
+	ID          OrganizationAIEngineProfileID
+	Summary     string
+	Description string
+	BestFor     string
+}
+
 type OrganizationTemplateSummary struct {
 	ID                       string `json:"id"`
 	Name                     string `json:"name"`
@@ -47,6 +64,7 @@ type OrganizationSummary struct {
 	AdvisorCount             int                   `json:"advisor_count"`
 	DepartmentCount          int                   `json:"department_count"`
 	SpecialistCount          int                   `json:"specialist_count"`
+	AIEngineProfileID        string                `json:"ai_engine_profile_id,omitempty"`
 	AIEngineSettingsSummary  string                `json:"ai_engine_settings_summary"`
 	MemoryPersonalitySummary string                `json:"memory_personality_summary"`
 	Status                   string                `json:"status"`
@@ -76,6 +94,10 @@ type TeamLeadGuidanceRequest struct {
 	Action TeamLeadGuidedAction `json:"action"`
 }
 
+type OrganizationAIEngineUpdateRequest struct {
+	ProfileID string `json:"profile_id"`
+}
+
 type TeamLeadGuidanceResponse struct {
 	Action             TeamLeadGuidedAction `json:"action"`
 	RequestLabel       string               `json:"request_label"`
@@ -83,6 +105,39 @@ type TeamLeadGuidanceResponse struct {
 	Summary            string               `json:"summary"`
 	PrioritySteps      []string             `json:"priority_steps"`
 	SuggestedFollowUps []string             `json:"suggested_follow_ups"`
+}
+
+var organizationAIEngineProfiles = []organizationAIEngineProfile{
+	{
+		ID:          OrganizationAIEngineProfileStarterDefaults,
+		Summary:     "Starter Defaults",
+		Description: "Keeps the guided starter profile that came with this AI Organization.",
+		BestFor:     "Helpful when the organization is still settling into its first operating rhythm.",
+	},
+	{
+		ID:          OrganizationAIEngineProfileBalanced,
+		Summary:     "Balanced",
+		Description: "Steady planning depth and response quality for everyday work.",
+		BestFor:     "Best for day-to-day Team Lead guidance and general organization coordination.",
+	},
+	{
+		ID:          OrganizationAIEngineProfileHighReasoning,
+		Summary:     "High Reasoning",
+		Description: "Adds more careful thinking when planning and tradeoffs need extra attention.",
+		BestFor:     "Best for complex planning, review, and higher-stakes decisions.",
+	},
+	{
+		ID:          OrganizationAIEngineProfileFastLightweight,
+		Summary:     "Fast & Lightweight",
+		Description: "Keeps responses quick and keeps planning lighter for rapid iteration.",
+		BestFor:     "Best for fast-moving loops, check-ins, and quick coordination.",
+	},
+	{
+		ID:          OrganizationAIEngineProfileDeepPlanning,
+		Summary:     "Deep Planning",
+		Description: "Leans into longer multi-step planning and more deliberate organization shaping.",
+		BestFor:     "Best for designing larger workstreams and sequencing bigger efforts.",
+	},
 }
 
 type OrganizationStore struct {
@@ -120,6 +175,20 @@ func (s *OrganizationStore) Get(id string) (OrganizationHomePayload, bool) {
 	defer s.mu.RUnlock()
 	item, ok := s.items[id]
 	return item, ok
+}
+
+func (s *OrganizationStore) Update(id string, update func(OrganizationHomePayload) OrganizationHomePayload) (OrganizationHomePayload, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	item, ok := s.items[id]
+	if !ok {
+		return OrganizationHomePayload{}, false
+	}
+
+	item = update(item)
+	s.items[id] = item
+	return item, true
 }
 
 func (s *AdminServer) templateBundlesPath() string {
@@ -186,6 +255,25 @@ func summarizeAIEngineSettings(policy swarm.ProviderPolicy) string {
 		return "Starter defaults included"
 	}
 	return "Starter defaults included"
+}
+
+func defaultAIEngineProfileID(startMode OrganizationStartMode, template *OrganizationTemplateSummary) string {
+	if template != nil {
+		return string(OrganizationAIEngineProfileStarterDefaults)
+	}
+	if startMode == OrganizationStartModeTemplate {
+		return string(OrganizationAIEngineProfileStarterDefaults)
+	}
+	return ""
+}
+
+func lookupOrganizationAIEngineProfile(id string) (organizationAIEngineProfile, bool) {
+	for _, profile := range organizationAIEngineProfiles {
+		if string(profile.ID) == strings.TrimSpace(id) {
+			return profile, true
+		}
+	}
+	return organizationAIEngineProfile{}, false
 }
 
 func summarizeMemoryPersonality(bundle *bootstrap.TemplateBundle) string {
@@ -258,6 +346,7 @@ func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, templ
 			TeamLeadLabel:            "Team Lead",
 			AIEngineSettingsSummary:  "Set up later in Advanced mode",
 			MemoryPersonalitySummary: "Set up later in Advanced mode",
+			AIEngineProfileID:        defaultAIEngineProfileID(req.StartMode, template),
 		},
 	}
 
@@ -338,6 +427,38 @@ func (s *AdminServer) handleGetOrganizationHome(w http.ResponseWriter, r *http.R
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(home))
+}
+
+func (s *AdminServer) handleUpdateOrganizationAIEngine(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		respondAPIError(w, "organization id is required", http.StatusBadRequest)
+		return
+	}
+
+	var req OrganizationAIEngineUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "invalid AI Engine update request", http.StatusBadRequest)
+		return
+	}
+
+	profile, ok := lookupOrganizationAIEngineProfile(req.ProfileID)
+	if !ok {
+		respondAPIError(w, "profile_id must be one of the guided AI Engine options", http.StatusBadRequest)
+		return
+	}
+
+	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+		home.AIEngineProfileID = string(profile.ID)
+		home.AIEngineSettingsSummary = profile.Summary
+		return home
+	})
+	if !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
 }
 
 func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.Request) {

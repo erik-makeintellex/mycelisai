@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
-import type { OrganizationHomePayload } from "@/lib/organizations";
+import type { OrganizationAIEngineProfileId, OrganizationAIEngineUpdateRequest, OrganizationHomePayload } from "@/lib/organizations";
 import TeamLeadInteractionPanel from "@/components/organizations/TeamLeadInteractionPanel";
 
 async function readJson(response: Response) {
@@ -15,12 +15,54 @@ async function readJson(response: Response) {
     }
 }
 
+const AI_ENGINE_OPTIONS: Array<{
+    id: OrganizationAIEngineProfileId;
+    label: string;
+    description: string;
+    goodFor: string;
+}> = [
+    {
+        id: "starter_defaults",
+        label: "Starter Defaults",
+        description: "Keeps the guided starter profile that already came with this AI Organization.",
+        goodFor: "Best for keeping the original setup intact while the Team Lead settles the first workflow.",
+    },
+    {
+        id: "balanced",
+        label: "Balanced",
+        description: "Steady planning depth and response quality for everyday Team Lead work.",
+        goodFor: "Best for most organizations that want dependable guidance across planning and execution.",
+    },
+    {
+        id: "high_reasoning",
+        label: "High Reasoning",
+        description: "Adds more careful thinking when planning and tradeoffs need extra attention.",
+        goodFor: "Best for complex decisions, deeper review, and more deliberate next-step planning.",
+    },
+    {
+        id: "fast_lightweight",
+        label: "Fast & Lightweight",
+        description: "Keeps responses quick and planning lighter for rapid iteration.",
+        goodFor: "Best for quick loops, check-ins, and lighter day-to-day coordination.",
+    },
+    {
+        id: "deep_planning",
+        label: "Deep Planning",
+        description: "Leans into longer multi-step planning and more deliberate organization shaping.",
+        goodFor: "Best for designing larger workstreams and sequencing bigger efforts.",
+    },
+];
+
 export default function OrganizationContextShell({ organizationId }: { organizationId: string }) {
     const [organization, setOrganization] = useState<OrganizationHomePayload | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [retryToken, setRetryToken] = useState(0);
     const [activeDetailView, setActiveDetailView] = useState<"advisors" | "departments" | "aiEngine" | null>(null);
+    const [isAIEngineSelectorOpen, setIsAIEngineSelectorOpen] = useState(false);
+    const [selectedAIEngineProfile, setSelectedAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
+    const [aiEngineUpdatePending, setAIEngineUpdatePending] = useState(false);
+    const [aiEngineUpdateError, setAIEngineUpdateError] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -55,6 +97,54 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             cancelled = true;
         };
     }, [organizationId, retryToken]);
+
+    useEffect(() => {
+        if (activeDetailView !== "aiEngine") {
+            setIsAIEngineSelectorOpen(false);
+            setAIEngineUpdateError(null);
+            setAIEngineUpdatePending(false);
+        }
+    }, [activeDetailView]);
+
+    const openAIEngineSelector = () => {
+        if (!organization) {
+            return;
+        }
+        setActiveDetailView("aiEngine");
+        setSelectedAIEngineProfile((organization.ai_engine_profile_id as OrganizationAIEngineProfileId | undefined) ?? null);
+        setAIEngineUpdateError(null);
+        setIsAIEngineSelectorOpen(true);
+    };
+
+    const submitAIEngineSelection = async () => {
+        if (!organization || !selectedAIEngineProfile || aiEngineUpdatePending) {
+            return;
+        }
+
+        setAIEngineUpdatePending(true);
+        setAIEngineUpdateError(null);
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/ai-engine`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ profile_id: selectedAIEngineProfile } satisfies OrganizationAIEngineUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to update AI Engine Settings.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setSelectedAIEngineProfile((updated.ai_engine_profile_id as OrganizationAIEngineProfileId | undefined) ?? selectedAIEngineProfile);
+            setIsAIEngineSelectorOpen(false);
+        } catch (err) {
+            setAIEngineUpdateError(err instanceof Error ? err.message : "Unable to update AI Engine Settings.");
+        } finally {
+            setAIEngineUpdatePending(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -179,6 +269,17 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 view={activeDetailView}
                                 organization={organization}
                                 teamLeadName={teamLeadName}
+                                isAIEngineSelectorOpen={isAIEngineSelectorOpen}
+                                selectedAIEngineProfile={selectedAIEngineProfile}
+                                aiEngineUpdatePending={aiEngineUpdatePending}
+                                aiEngineUpdateError={aiEngineUpdateError}
+                                onAIEngineProfileSelect={setSelectedAIEngineProfile}
+                                onOpenAIEngineSelector={openAIEngineSelector}
+                                onCloseAIEngineSelector={() => {
+                                    setIsAIEngineSelectorOpen(false);
+                                    setAIEngineUpdateError(null);
+                                }}
+                                onSubmitAIEngineSelection={submitAIEngineSelection}
                                 onBack={() => setActiveDetailView(null)}
                             />
                         )}
@@ -230,7 +331,8 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 <InspectOnlySummary
                                     icon={<Bot className="h-4 w-4" />}
                                     title="AI Engine Settings"
-                                    countLabel="Inspect only"
+                                    countLabel="Guided tuning"
+                                    statusLabel="Organization level"
                                     summary={aiEngineSummary(organization.ai_engine_settings_summary)}
                                     supportLabel="What this affects"
                                     items={aiEngineSupportItems(organization.ai_engine_settings_summary)}
@@ -381,21 +483,23 @@ function aiEngineSupportItems(summary: string) {
 }
 
 function aiEngineDetailItems(organization: OrganizationHomePayload) {
+    const hasOrganizationLevelSelection = Boolean(organization.ai_engine_profile_id && organization.ai_engine_settings_summary.trim());
+
     return [
         {
             name: "Organization-wide AI engine",
             purpose:
-                organization.ai_engine_settings_summary.trim() === "Set up later in Advanced mode"
-                    ? "The organization is still on a simple starter profile until a more specific AI engine assignment is surfaced here."
+                !hasOrganizationLevelSelection || organization.ai_engine_settings_summary.trim() === "Set up later in Advanced mode"
+                    ? "No organization-wide AI engine has been chosen yet. Pick one here when you want to tune how the Team Lead plans and responds."
                     : `Current profile: ${organization.ai_engine_settings_summary}.`,
             supportCue: "Affects the overall response style, planning depth, and how work is carried across the organization.",
         },
         {
             name: "Team defaults",
             purpose:
-                organization.start_mode === "template"
-                    ? `The current starter applies the shared AI engine profile across Departments unless a team-specific setting appears here.`
-                    : "No separate team AI engine defaults are visible in this workspace yet.",
+                hasOrganizationLevelSelection
+                    ? "Departments start from the organization-wide AI engine unless a team-specific setting appears here."
+                    : "Departments will follow the organization-wide AI engine after one is chosen here.",
             supportCue: "Affects how each Department begins its work before any more specific assignment takes over.",
         },
         {
@@ -484,6 +588,7 @@ function InspectOnlySummary({
     items,
     inspectActionLabel,
     onInspect,
+    statusLabel = "Inspect only",
 }: {
     icon: React.ReactNode;
     title: string;
@@ -493,6 +598,7 @@ function InspectOnlySummary({
     items: string[];
     inspectActionLabel?: string;
     onInspect?: () => void;
+    statusLabel?: string;
 }) {
     return (
         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -506,7 +612,7 @@ function InspectOnlySummary({
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">{countLabel}</p>
-                    <p className="mt-1">Inspect only</p>
+                    <p className="mt-1">{statusLabel}</p>
                 </div>
             </div>
             <div className="mt-5">
@@ -539,11 +645,27 @@ function WorkspaceDetailView({
     view,
     organization,
     teamLeadName,
+    isAIEngineSelectorOpen,
+    selectedAIEngineProfile,
+    aiEngineUpdatePending,
+    aiEngineUpdateError,
+    onAIEngineProfileSelect,
+    onOpenAIEngineSelector,
+    onCloseAIEngineSelector,
+    onSubmitAIEngineSelection,
     onBack,
 }: {
     view: "advisors" | "departments" | "aiEngine";
     organization: OrganizationHomePayload;
     teamLeadName: string;
+    isAIEngineSelectorOpen: boolean;
+    selectedAIEngineProfile: OrganizationAIEngineProfileId | null;
+    aiEngineUpdatePending: boolean;
+    aiEngineUpdateError: string | null;
+    onAIEngineProfileSelect: (profile: OrganizationAIEngineProfileId) => void;
+    onOpenAIEngineSelector: () => void;
+    onCloseAIEngineSelector: () => void;
+    onSubmitAIEngineSelection: () => void;
     onBack: () => void;
 }) {
     const title =
@@ -586,14 +708,26 @@ function WorkspaceDetailView({
                     <h3 className="text-xl font-semibold text-cortex-text-main">{title}</h3>
                     <p className="mt-2 text-sm leading-7 text-cortex-text-muted">{summary}</p>
                 </div>
-                <button
-                    type="button"
-                    onClick={onBack}
-                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Team Lead
-                </button>
+                <div className="flex flex-wrap gap-3">
+                    {view === "aiEngine" && (
+                        <button
+                            type="button"
+                            onClick={isAIEngineSelectorOpen ? onCloseAIEngineSelector : onOpenAIEngineSelector}
+                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/40"
+                        >
+                            <Sparkles className="h-4 w-4 text-cortex-primary" />
+                            {isAIEngineSelectorOpen ? "Close AI Engine choices" : "Change AI Engine"}
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Team Lead
+                    </button>
+                </div>
             </div>
 
             {items.length > 0 ? (
@@ -615,6 +749,123 @@ function WorkspaceDetailView({
                           : `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`}
                 </div>
             )}
+
+            {view === "aiEngine" && isAIEngineSelectorOpen && (
+                <AIEngineSelectionPanel
+                    selectedAIEngineProfile={selectedAIEngineProfile}
+                    aiEngineUpdatePending={aiEngineUpdatePending}
+                    aiEngineUpdateError={aiEngineUpdateError}
+                    onAIEngineProfileSelect={onAIEngineProfileSelect}
+                    onClose={onCloseAIEngineSelector}
+                    onSubmit={onSubmitAIEngineSelection}
+                />
+            )}
+        </div>
+    );
+}
+
+function AIEngineSelectionPanel({
+    selectedAIEngineProfile,
+    aiEngineUpdatePending,
+    aiEngineUpdateError,
+    onAIEngineProfileSelect,
+    onClose,
+    onSubmit,
+}: {
+    selectedAIEngineProfile: OrganizationAIEngineProfileId | null;
+    aiEngineUpdatePending: boolean;
+    aiEngineUpdateError: string | null;
+    onAIEngineProfileSelect: (profile: OrganizationAIEngineProfileId) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+}) {
+    return (
+        <div className="mt-5 rounded-3xl border border-cortex-primary/20 bg-cortex-bg p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h4 className="text-lg font-semibold text-cortex-text-main">Choose an AI Engine profile</h4>
+                    <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
+                        Pick one guided AI Engine profile for the whole AI Organization. This tunes how the Team Lead plans, responds, and carries work forward.
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Organization level only</p>
+                    <p className="mt-1">Team and role settings stay read-only in this workspace.</p>
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+                {AI_ENGINE_OPTIONS.map((option) => {
+                    const isSelected = selectedAIEngineProfile === option.id;
+                    return (
+                        <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => onAIEngineProfileSelect(option.id)}
+                            disabled={aiEngineUpdatePending}
+                            className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                                isSelected
+                                    ? "border-cortex-primary/40 bg-cortex-primary/10"
+                                    : "border-cortex-border bg-cortex-surface hover:border-cortex-primary/20"
+                            } ${aiEngineUpdatePending ? "opacity-75" : ""}`}
+                        >
+                            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-cortex-text-main">{option.label}</p>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{option.description}</p>
+                                </div>
+                                {isSelected && (
+                                    <span className="inline-flex w-fit rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-cortex-primary">
+                                        Current choice
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Good for:</span> {option.goodFor}
+                            </p>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {aiEngineUpdateError && (
+                <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-surface px-4 py-4 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Unable to update AI Engine Settings</p>
+                    <p className="mt-2 leading-6">{aiEngineUpdateError}</p>
+                    <p className="mt-2 leading-6">Try again to apply the selected AI Engine profile while keeping this Team Lead workspace in place.</p>
+                </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                    type="button"
+                    onClick={onSubmit}
+                    disabled={!selectedAIEngineProfile || aiEngineUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {aiEngineUpdatePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {aiEngineUpdatePending ? "Updating AI Engine..." : "Use selected AI Engine"}
+                </button>
+                {aiEngineUpdateError && (
+                    <button
+                        type="button"
+                        onClick={onSubmit}
+                        disabled={!selectedAIEngineProfile || aiEngineUpdatePending}
+                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <RefreshCcw className="h-4 w-4" />
+                        Retry AI Engine change
+                    </button>
+                )}
+                <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={aiEngineUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Cancel
+                </button>
+            </div>
         </div>
     );
 }
