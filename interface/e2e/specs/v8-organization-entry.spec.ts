@@ -252,10 +252,12 @@ test.describe("V8 AI Organization entry flow", () => {
         });
 
         await expect(page.getByText("AI Organization Home")).toBeVisible();
-        await expect(page.getByRole("heading", { name: createdTemplateOrganization.name })).toBeVisible();
-        await expect(page.getByText("Team Lead status")).toBeVisible();
+        await expect(page.getByRole("heading", { name: createdTemplateOrganization.name, exact: true })).toBeVisible();
+        await expect(page.getByText("Team Lead ready")).toBeVisible();
+        await expect(page.getByText("Team Lead workspace")).toBeVisible();
         await expect(page.getByText("Organization overview")).toBeVisible();
-        await expect(page.getByText("Team Lead workspace coming soon")).toBeVisible();
+        await expect(page.getByRole("button", { name: /Ask Team Lead to plan next steps/i })).toBeVisible();
+        await expect(page.getByText("Recommended next steps")).toBeVisible();
         await expect(page.getByText("Mission Control")).toHaveCount(0);
         await expect(page.getByText("New Chat")).toHaveCount(0);
         await expectNoForbiddenCopy(page);
@@ -291,8 +293,9 @@ test.describe("V8 AI Organization entry flow", () => {
         });
 
         await expect(page.getByText("AI Organization Home")).toBeVisible();
-        await expect(page.getByRole("heading", { name: createdEmptyOrganization.name })).toBeVisible();
-        await expect(page.getByText("Team Lead status")).toBeVisible();
+        await expect(page.getByRole("heading", { name: createdEmptyOrganization.name, exact: true })).toBeVisible();
+        await expect(page.getByText("Team Lead ready")).toBeVisible();
+        await expect(page.getByText("Team Lead workspace")).toBeVisible();
         await expect(page.getByText("Started from")).toBeVisible();
         await expect(page.getByText("Empty")).toBeVisible();
         await expectNoForbiddenCopy(page);
