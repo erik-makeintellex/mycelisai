@@ -13,6 +13,7 @@ Migration note:
 - V7 architecture-library docs remain migration inputs.
 - This file is the new V8 contract surface being introduced incrementally.
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` is the canonical source for translating V7 assets into instantiated V8 organizations; this doc defines what the runtime must support, while the bootstrap model defines how those contracts enter the system.
+- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` extends the runtime contract library with Loop Profiles, Runtime Capabilities, promoted Response Contract inheritance, promoted Agent Type Profiles, and the first bounded Automations posture.
 - `Template ≠ instantiated organization`; templates remain blueprints until the bootstrap model resolves them into live Inceptions.
 
 ## Inception

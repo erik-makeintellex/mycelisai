@@ -2,7 +2,7 @@
 
 > Updated: 2026-03-19
 > Canonical state file for active V8 grading and delivery tracking
-> References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `V7_DEV_STATE.md` (legacy migration input)
+> References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
 ---
 
@@ -343,6 +343,18 @@ Evidence:
 Next steps:
 1. Keep automated Playwright suites aligned with the same inline-chat expectations once Workspace refactors land.
 
+### 21. V8.1 living organization architecture definition
+
+Status:
+1. `COMPLETE` `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` now defines the canonical V8.1 architecture contract for Loop Profiles, Runtime Capabilities, promoted Response Contract inheritance, promoted Agent Type Profiles, and bounded Automations visibility.
+2. `COMPLETE` the architecture-library index, in-app docs manifest, and doc-test contract now expose V8.1 as canonical architecture truth rather than leaving `v8-1.md` as a loose planning draft.
+3. `NEXT` turn the first shippable V8.1 state into concrete slices: bundle/config loop definitions, capability contract surfaces, and read-only Automations visibility in the Team Lead workspace.
+
+Evidence:
+1. `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` now carries the canonical V8.1 PRD for Loop Profiles, Runtime Capabilities, promoted Response Contract and Agent Type Profile runtime truth, safety rules, testing requirements, and initial release definition.
+2. `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `interface/lib/docsManifest.ts`, and `tests/test_docs_links.py` now index, expose, and enforce the V8.1 architecture doc as a canonical surface.
+3. `docs/architecture-library/V8_RUNTIME_CONTRACTS.md` and `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` now cross-link the V8.1 architecture extension so runtime and operator docs do not drift into a parallel truth.
+
 ## Immediate Next Actions
 
 1. `COMPLETE` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.
@@ -355,5 +367,7 @@ Next steps:
 8. `NEXT` promote generated per-organization bootstrap bundles so startup remains bundle-only without relying on the fixed standing-team bridge asset long term.
 9. `NEXT` extend the Team Lead workspace from guided starting actions into real request/history API flows and deeper structure surfaces while keeping advisor orchestration, raw agent selection, and advanced configuration behind intentional later slices.
 10. `NEXT` add bounded Team Lead response history and operator-visible continuity inside the AI Organization workspace without widening into generic chat or exposing raw agent-selection controls.
+11. `NEXT` define the first bundle/config contract slice for Loop Profiles and Runtime Capabilities so V8.1 execution surfaces exist as safe, inspectable configuration before live execution is introduced.
+12. `NEXT` add read-only `Automations` visibility to the Team Lead workspace using the V8.1 user-facing terms `Automations`, `Watchers`, and `Reviews` without exposing advanced controls or enabling execution.
 
 

@@ -1,9 +1,9 @@
 # V8 UI API and Operator Experience Contract
 
 > Status: Canonical V8 PRD
-> Last Updated: 2026-03-17
+> Last Updated: 2026-03-19
 > Purpose: Define the exact V8 operator and user-facing flows so UI implementation reflects AI Organization behavior instead of collapsing into generic chat UX.
-> Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+> Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
 
 ## 1. Why this document exists
 
@@ -510,3 +510,6 @@ Implementation work that touches:
 - API contracts for those screens
 
 must align with this document, the V8 runtime contracts, and the V8 config/bootstrap model in the same slice.
+
+V8.1 extension note:
+- Loop Profiles, Runtime Capabilities, Agent Type runtime truth, and the first bounded `Automations` surface are defined in `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`.
