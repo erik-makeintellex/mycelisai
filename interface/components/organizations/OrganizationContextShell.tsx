@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Blocks, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Blocks, Loader2, RefreshCcw } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type { OrganizationHomePayload } from "@/lib/organizations";
 
@@ -18,6 +18,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [organization, setOrganization] = useState<OrganizationHomePayload | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [retryToken, setRetryToken] = useState(0);
 
     useEffect(() => {
         let cancelled = false;
@@ -47,11 +48,11 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             }
         };
 
-        load();
+        void load();
         return () => {
             cancelled = true;
         };
-    }, [organizationId]);
+    }, [organizationId, retryToken]);
 
     if (loading) {
         return (
@@ -70,8 +71,18 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                 <div className="max-w-lg rounded-3xl border border-cortex-danger/30 bg-cortex-surface p-6">
                     <p className="text-lg font-semibold text-cortex-text-main">AI Organization unavailable</p>
                     <p className="mt-2 text-sm leading-7 text-cortex-text-muted">{error || "This AI Organization could not be loaded."}</p>
-                    <div className="mt-5">
-                        <Link href="/dashboard" className="inline-flex items-center gap-2 text-cortex-primary hover:underline">
+                    <p className="mt-3 text-sm leading-7 text-cortex-text-muted">
+                        Try loading the organization again, or return to the setup screen to create a new AI Organization.
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                        <button
+                            onClick={() => setRetryToken((value) => value + 1)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                        >
+                            <RefreshCcw className="h-4 w-4" />
+                            Retry
+                        </button>
+                        <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-cortex-primary hover:bg-cortex-primary/10">
                             <ArrowLeft className="h-4 w-4" />
                             Return to Create AI Organization
                         </Link>
@@ -97,9 +108,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             </div>
                         </div>
                         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                            <p className="font-medium text-cortex-text-main">Current context shell</p>
+                            <p className="font-medium text-cortex-text-main">Team Lead status</p>
                             <p className="mt-1 leading-6">
-                                This first UI slice lands in AI Organization context before the Team Lead workspace itself ships.
+                                {organization.team_lead_label} is ready to guide {organization.name}. Review the organization details below and continue here as the Team Lead workspace becomes available.
                             </p>
                         </div>
                     </div>
@@ -108,11 +119,17 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                 <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                     <div className="space-y-4 rounded-3xl border border-cortex-border bg-cortex-surface p-6">
                         <div>
-                            <h2 className="text-xl font-semibold text-cortex-text-main">Organization header</h2>
-                            <p className="mt-1 text-sm text-cortex-text-muted">User-facing context only. Advanced configuration remains hidden for this slice.</p>
+                            <h2 className="text-xl font-semibold text-cortex-text-main">Organization overview</h2>
+                            <p className="mt-1 text-sm text-cortex-text-muted">See the Team Lead, structure, and starting point for this AI Organization at a glance.</p>
+                        </div>
+                        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Team Lead</p>
+                            <p className="mt-2 text-lg font-semibold text-cortex-text-main">{organization.team_lead_label}</p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                The Team Lead coordinates Advisors, Departments, and Specialists for this AI Organization.
+                            </p>
                         </div>
                         <div className="grid gap-3 md:grid-cols-2">
-                            <Metric label="Team Lead" value={organization.team_lead_label} />
                             <Metric label="Started from" value={organization.start_mode === "template" ? (organization.template_name || "Template") : "Empty"} />
                             <Metric label="Advisors" value={String(organization.advisor_count)} />
                             <Metric label="Departments" value={String(organization.department_count)} />
@@ -123,8 +140,8 @@ export default function OrganizationContextShell({ organizationId }: { organizat
 
                     <div className="space-y-4 rounded-3xl border border-cortex-border bg-cortex-surface p-6">
                         <div>
-                            <h2 className="text-xl font-semibold text-cortex-text-main">What comes next</h2>
-                            <p className="mt-1 text-sm text-cortex-text-muted">The next bounded slice turns this context shell into the Team Lead-first workspace.</p>
+                            <h2 className="text-xl font-semibold text-cortex-text-main">Next steps</h2>
+                            <p className="mt-1 text-sm text-cortex-text-muted">Confirm the organization setup now, then continue into the Team Lead workspace when it opens.</p>
                         </div>
                         <div className="space-y-3">
                             <Metric label="AI Engine Settings" value={organization.ai_engine_settings_summary} />
@@ -133,7 +150,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 disabled
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-cortex-border px-4 py-3 text-sm font-medium text-cortex-text-muted opacity-80"
                             >
-                                Team Lead workspace is next
+                                Team Lead workspace coming soon
                                 <ArrowRight className="h-4 w-4" />
                             </button>
                             <Link href="/dashboard" className="inline-flex items-center gap-2 text-cortex-primary hover:underline">
