@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-17
+> Updated: 2026-03-19
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -157,8 +157,9 @@ Delivery updates in this checkpoint:
 17. `COMPLETE` operator startup requirements are now explicit: Core requires at least one valid bootstrap bundle under `config/templates/`, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must be set whenever more than one bundle is present.
 18. `COMPLETE` defined a dedicated V8 UI/API/operator PRD so first-run, AI Organization creation, template-vs-empty start, organization home, Team Lead-first workspace behavior, role visibility, advanced-mode boundaries, and screen-to-API mapping now have one canonical contract.
 19. `COMPLETE` exposed the new V8 UI/API/operator contract through the architecture-library index, the in-app docs manifest, and doc-test enforcement so future UI slices do not drift back toward generic-chat UX.
-20. `COMPLETE` implemented the first bounded V8 UI slice: `/dashboard` now opens with `Create AI Organization`, offers `Start from template` vs `Start empty`, uses user-facing AI Organization terms, and routes successful creation into a new organization context shell instead of generic workspace chat.
+20. `COMPLETE` implemented the first bounded V8 UI slice: `/dashboard` now opens with `Create AI Organization`, offers `Start from template` vs `Start empty`, uses user-facing AI Organization terms, and routes successful creation into a dedicated AI Organization home instead of generic workspace chat.
 21. `COMPLETE` added the minimal backend contract for the new flow: starter template listing from bundle-backed organization templates, AI Organization creation requests, recent-organization summaries, and organization-home loading for the success path.
+22. `COMPLETE` hardened the AI Organization entry UX before live GUI sign-off: starter-template and recent-organization failures are now decoupled, retry/recovery paths preserve any still-valid actions, architecture/dev wording is removed from operator-facing copy, and the organization home makes the Team Lead more concrete.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -183,6 +184,7 @@ Evidence:
 20. the first V8 creation-flow slice now lives in `interface/app/(app)/dashboard/page.tsx`, `interface/components/organizations/CreateOrganizationEntry.tsx`, `interface/app/(app)/organizations/[id]/page.tsx`, and `interface/components/organizations/OrganizationContextShell.tsx`
 21. minimal AI Organization starter/create/home APIs now live in `core/internal/server/templates.go`, `core/internal/server/organizations.go`, and `core/internal/server/admin.go`, with focused backend coverage in `core/internal/server/organizations_test.go`
 22. route/API exposure docs now include the V8 AI Organization entry flow through `docs/API_REFERENCE.md`, and frontend regression coverage lives in `interface/__tests__/pages/DashboardPage.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/__tests__/shell/ZoneA_Rail.test.tsx`
+23. the entry flow now keeps recent-organization resume and starter-template setup resilient under partial API failure, exposes retry/recovery actions in-place, removes operator-visible dev/architecture copy leaks, and strengthens Team Lead status in the AI Organization home (`interface/components/organizations/CreateOrganizationEntry.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/DashboardPage.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`)
 
 ### 6. V8 contract shell introduction
 
