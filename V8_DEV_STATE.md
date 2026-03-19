@@ -167,6 +167,7 @@ Delivery updates in this checkpoint:
 27. `COMPLETE` added inspect-only Advisor and Department visibility to the Team Lead workspace so the AI Organization structure now feels visible and understandable without displacing the Team Lead as the primary operating counterpart.
 28. `COMPLETE` added inspect-only AI Engine Settings and Memory & Personality surfaces to the Team Lead workspace so operators can understand the current organization posture without opening advanced controls or seeing architecture jargon.
 29. `COMPLETE` added inspect-only Advisor and Department detail views to the Team Lead workspace and wired both Team Lead and support-column actions into those focused views without displacing the Team Lead as the primary counterpart.
+30. `COMPLETE` added an inspect-only AI Engine Settings detail view with scoped model-assignment visibility so operators can inspect organization-wide defaults, team defaults, and specific-role override status without opening advanced editing.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -199,6 +200,7 @@ Evidence:
 28. inspect-only Advisor and Department visibility now lives in `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; the Team Lead remains the primary workspace counterpart while Advisors and Departments are visible as supporting structure, and full advisor orchestration, raw agent selection, and department management remain intentionally out of scope
 29. inspect-only AI Engine Settings and Memory & Personality workspace surfaces now live in `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; they explain current engine/profile and memory/personality posture in operator language while keeping advanced provider, capability, memory, and personality controls intentionally out of scope
 30. inspect-only Advisor and Department detail views now live in `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; Team Lead action buttons and support-column buttons both open the same focused workspace views while advisor orchestration, department editing, and raw agent selection remain intentionally out of scope
+31. inspect-only AI Engine Settings detail now lives in `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; it exposes organization-wide AI engine posture, team-default visibility, and specific-role override visibility in operator language while keeping advanced editing, provider-policy terms, and runtime capability controls intentionally out of scope
 
 ### 6. V8 contract shell introduction
 

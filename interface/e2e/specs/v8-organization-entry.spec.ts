@@ -330,6 +330,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("button", { name: /Plan next steps for this organization/i })).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Advisors" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Open Departments" }).first()).toBeVisible();
+        await expect(page.getByRole("button", { name: "Review AI Engine Settings" }).first()).toBeVisible();
 
         await page.getByRole("button", { name: "Review Advisors" }).first().click();
         await expect(page.getByRole("heading", { name: "Advisor details" })).toBeVisible();
@@ -342,6 +343,16 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Department details" })).toBeVisible();
         await expect(page.getByText("Planning Department")).toBeVisible();
         await expect(page.getByText("2 Specialists visible here.").first()).toBeVisible();
+        await expect(page.getByText("AI Organization Home")).toBeVisible();
+        await expect(page.getByText("Work with the Team Lead")).toBeVisible();
+        await page.getByRole("button", { name: "Back to Team Lead" }).click();
+
+        await page.getByRole("button", { name: "Review AI Engine Settings" }).last().click();
+        await expect(page.getByRole("heading", { name: "AI Engine Settings details" })).toBeVisible();
+        await expect(page.getByText("Organization-wide AI engine")).toBeVisible();
+        await expect(page.getByText("Team defaults")).toBeVisible();
+        await expect(page.getByText("Specific role overrides", { exact: true })).toBeVisible();
+        await expect(page.getByText("Current profile: Starter defaults included.")).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
