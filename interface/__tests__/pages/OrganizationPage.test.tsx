@@ -154,12 +154,43 @@ function applyAgentTypeAIEngine(
     };
 }
 
+function applyAgentTypeResponseContract(
+    home: OrganizationHomePayload,
+    departmentId: string,
+    agentTypeId: string,
+    profileId: ResponseContractProfileId | undefined,
+    summary: string,
+): OrganizationHomePayload {
+    return {
+        ...home,
+        departments: (home.departments ?? []).map((department) =>
+            department.id === departmentId
+                ? {
+                      ...department,
+                      agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                          profile.id === agentTypeId
+                              ? {
+                                    ...profile,
+                                    response_contract_binding_profile_id: profileId,
+                                    response_contract_effective_profile_id: profileId ?? home.response_contract_profile_id,
+                                    response_contract_effective_summary: profileId ? summary : home.response_contract_summary,
+                                    inherits_default_response_contract: !profileId,
+                                }
+                              : profile,
+                      ),
+                  }
+                : department,
+        ),
+    };
+}
+
 function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
     actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
     aiEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     departmentAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     agentTypeAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
+    agentTypeResponseContractUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     responseContractUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
 }) {
     let currentOrganizationHome: OrganizationHomePayload = structuredClone(organizationHome);
@@ -314,6 +345,37 @@ function setupOrganizationFetch(options?: {
                 agentTypeId,
                 profileId as OrganizationAIEngineProfileId,
                 summaries[profileId] ?? "Balanced",
+            );
+
+            return jsonResponse({ ok: true, data: currentOrganizationHome });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/departments/platform/agent-types/") && url.includes("/response-contract") && method === "PATCH") {
+            const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
+            if (options?.agentTypeResponseContractUpdateHandler) {
+                return options.agentTypeResponseContractUpdateHandler(body);
+            }
+
+            const summaries: Record<string, string> = {
+                clear_balanced: "Clear & Balanced",
+                structured_analytical: "Structured & Analytical",
+                concise_direct: "Concise & Direct",
+                warm_supportive: "Warm & Supportive",
+            };
+
+            const agentTypeId = url.includes("/delivery-specialist/") ? "delivery-specialist" : "planner";
+            if (body.use_organization_or_team_default) {
+                currentOrganizationHome = applyAgentTypeResponseContract(currentOrganizationHome, "platform", agentTypeId, undefined, "");
+                return jsonResponse({ ok: true, data: currentOrganizationHome });
+            }
+
+            const profileId = String(body.profile_id ?? "");
+            currentOrganizationHome = applyAgentTypeResponseContract(
+                currentOrganizationHome,
+                "platform",
+                agentTypeId,
+                profileId as ResponseContractProfileId,
+                summaries[profileId] ?? "Clear & Balanced",
             );
 
             return jsonResponse({ ok: true, data: currentOrganizationHome });
@@ -515,8 +577,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Delivery Specialist")).toBeDefined();
         expect(screen.getByText("Type-specific Engine: High Reasoning")).toBeDefined();
         expect(screen.getByText("Using Team Default: Starter defaults included")).toBeDefined();
-        expect(screen.getByText("Type-specific response binding: Structured & Analytical")).toBeDefined();
-        expect(screen.getByText("Using Organization/Team default: Clear & Balanced")).toBeDefined();
+        expect(screen.getByText("Type-specific Response Style: Structured & Analytical")).toBeDefined();
+        expect(screen.getByText("Using Organization or Team Default: Clear & Balanced")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
 
@@ -681,6 +743,29 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByText("Using Team Default: Starter defaults included")).toBeDefined();
     });
 
+    it("lets the operator bind an Agent Type Response Style and then return it to the Organization / Team default", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Departments" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+
+        expect(await screen.findByText("Using Organization or Team Default: Clear & Balanced")).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Change Response Style for this Agent Type" }).at(-1)!);
+        expect(await screen.findByRole("heading", { name: "Choose a Response Style for this Agent Type" })).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Warm & Supportive/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected Response Style" }));
+
+        expect(await screen.findByText("Type-specific Response Style: Warm & Supportive")).toBeDefined();
+        expect(screen.getAllByRole("button", { name: "Use Organization / Team Default" }).at(-1)).toBeDefined();
+
+        fireEvent.click(screen.getAllByRole("button", { name: "Use Organization / Team Default" }).at(-1)!);
+        expect(await screen.findByText("Using Organization or Team Default: Clear & Balanced")).toBeDefined();
+    });
+
     it("keeps a Department override when the organization AI Engine changes and reapplies inheritance after revert", async () => {
         setupOrganizationFetch();
 
@@ -743,6 +828,77 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getAllByRole("button", { name: "Use selected AI Engine" }).at(-1)!);
         expect(await screen.findByText("Type-specific Engine: Balanced")).toBeDefined();
+    });
+
+    it("keeps a type-bound Response Style stable when the organization default changes and reapplies inheritance after revert", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Departments" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+        fireEvent.click(screen.getAllByRole("button", { name: "Change Response Style for this Agent Type" }).at(-1)!);
+        fireEvent.click(screen.getByRole("button", { name: /Warm & Supportive/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected Response Style" }));
+        expect(await screen.findByText("Type-specific Response Style: Warm & Supportive")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Back to Team Lead" }));
+        fireEvent.click(screen.getByRole("button", { name: "Review Response Style" }));
+        fireEvent.click(screen.getByRole("button", { name: "Change Response Style" }));
+        fireEvent.click(screen.getByRole("button", { name: /Concise & Direct/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected Response Style" }));
+        expect(await screen.findByText("Current profile: Concise & Direct.")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Back to Team Lead" }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+        expect(await screen.findByText("Type-specific Response Style: Warm & Supportive")).toBeDefined();
+
+        fireEvent.click(screen.getAllByRole("button", { name: "Use Organization / Team Default" }).at(-1)!);
+        expect(await screen.findByText("Using Organization or Team Default: Concise & Direct")).toBeDefined();
+    });
+
+    it("shows retry guidance when changing an Agent Type Response Style fails and recovers on retry", async () => {
+        let attempts = 0;
+        setupOrganizationFetch({
+            agentTypeResponseContractUpdateHandler: (body) => {
+                attempts += 1;
+                if (attempts === 1) {
+                    return jsonResponse({ ok: false, error: "Agent Type Response Style update is unavailable right now." }, 500);
+                }
+
+                return jsonResponse({
+                    ok: true,
+                    data: applyAgentTypeResponseContract(
+                        organizationHome,
+                        "platform",
+                        "delivery-specialist",
+                        String(body.profile_id ?? "") as ResponseContractProfileId,
+                        "Warm & Supportive",
+                    ),
+                });
+            },
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Departments" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+        fireEvent.click(screen.getAllByRole("button", { name: "Change Response Style for this Agent Type" }).at(-1)!);
+        fireEvent.click(screen.getByRole("button", { name: /Warm & Supportive/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected Response Style" }));
+
+        expect(await screen.findByText("Unable to update this Agent Type Response Style")).toBeDefined();
+        expect(screen.getByText("Agent Type Response Style update is unavailable right now.")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Retry Response Style change" })).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+
+        fireEvent.click(screen.getByRole("button", { name: "Retry Response Style change" }));
+        expect(await screen.findByText("Type-specific Response Style: Warm & Supportive")).toBeDefined();
     });
 
     it("shows retry guidance when changing the AI Engine fails and recovers on retry", async () => {

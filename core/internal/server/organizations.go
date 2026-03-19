@@ -156,6 +156,11 @@ type AgentTypeAIEngineUpdateRequest struct {
 	UseTeamDefault bool   `json:"use_team_default,omitempty"`
 }
 
+type AgentTypeResponseContractUpdateRequest struct {
+	ProfileID                    string `json:"profile_id,omitempty"`
+	UseOrganizationOrTeamDefault bool   `json:"use_organization_or_team_default,omitempty"`
+}
+
 type ResponseContractUpdateRequest struct {
 	ProfileID string `json:"profile_id"`
 }
@@ -1004,6 +1009,82 @@ func (s *AdminServer) handleUpdateAgentTypeAIEngine(w http.ResponseWriter, r *ht
 					profile.AIEngineBindingProfileID = ""
 				} else {
 					profile.AIEngineBindingProfileID = profileID
+				}
+				department.AgentTypeProfiles[profileIndex] = profile
+				break
+			}
+			home.Departments[departmentIndex] = department
+			break
+		}
+		return normalizeOrganizationHome(home)
+	})
+	if !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+	if !departmentFound {
+		respondAPIError(w, "department not found", http.StatusNotFound)
+		return
+	}
+	if !agentTypeFound {
+		respondAPIError(w, "agent type profile not found", http.StatusNotFound)
+		return
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
+}
+
+func (s *AdminServer) handleUpdateAgentTypeResponseContract(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	departmentID := strings.TrimSpace(r.PathValue("departmentId"))
+	agentTypeID := strings.TrimSpace(r.PathValue("agentTypeId"))
+	if id == "" || departmentID == "" || agentTypeID == "" {
+		respondAPIError(w, "organization id, department id, and agent type id are required", http.StatusBadRequest)
+		return
+	}
+
+	var req AgentTypeResponseContractUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "invalid Agent Type Response Style update request", http.StatusBadRequest)
+		return
+	}
+
+	profileID := strings.TrimSpace(req.ProfileID)
+	if req.UseOrganizationOrTeamDefault {
+		profileID = ""
+	} else {
+		if profileID == "" {
+			respondAPIError(w, "profile_id is required unless returning to the Organization / Team default", http.StatusBadRequest)
+			return
+		}
+		if _, ok := lookupResponseContractProfile(profileID); !ok {
+			respondAPIError(w, "profile_id must be one of the guided Response Style options", http.StatusBadRequest)
+			return
+		}
+	}
+
+	departmentFound := false
+	agentTypeFound := false
+	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+		home = normalizeOrganizationHome(home)
+		defaultProfileID := strings.TrimSpace(home.ResponseContractProfileID)
+		if defaultProfileID == "" {
+			defaultProfileID = string(defaultResponseContractProfile().ID)
+		}
+		for departmentIndex, department := range home.Departments {
+			if department.ID != departmentID {
+				continue
+			}
+			departmentFound = true
+			for profileIndex, profile := range department.AgentTypeProfiles {
+				if profile.ID != agentTypeID {
+					continue
+				}
+				agentTypeFound = true
+				if profileID == "" || profileID == defaultProfileID {
+					profile.ResponseContractBindingProfileID = ""
+				} else {
+					profile.ResponseContractBindingProfileID = profileID
 				}
 				department.AgentTypeProfiles[profileIndex] = profile
 				break
