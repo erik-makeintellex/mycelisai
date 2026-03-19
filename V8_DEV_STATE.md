@@ -135,7 +135,7 @@ Task 008  Planning-integration validation pass                      [COMPLETE]
 Task 009  Next-execution/governance guidance migration              [NEXT]
 ```
 
-## Current Checkpoint (2026-03-17)
+## Current Checkpoint (2026-03-19)
 
 Delivery updates in this checkpoint:
 1. `COMPLETE` reviewed the new root `README.md` and adopted V8 as the active development/grading target.
@@ -164,6 +164,7 @@ Delivery updates in this checkpoint:
 24. `COMPLETE` turned the post-create organization page into the first Team Lead-first workspace shell: organization context stays visible, the Team Lead now has a concrete identity/presence block, primary next actions drive the active workspace focus, and advanced controls remain summarized instead of becoming the default surface.
 25. `COMPLETE` introduced the first guided Team Lead interaction workflow: the organization workspace now offers structured Team Lead starting actions, sends a minimal workspace action request to the backend, and renders a shaped guidance response without expanding into generic chat or advisor orchestration.
 26. `COMPLETE` hardened the guided Team Lead workflow for bounded production use: action failures now surface clear retry guidance without dropping the AI Organization frame, partial guidance payloads normalize into readable Team Lead sections, duplicate submits stay disabled while loading, and browser coverage now exercises guided-action failure recovery.
+27. `COMPLETE` added inspect-only Advisor and Department visibility to the Team Lead workspace so the AI Organization structure now feels visible and understandable without displacing the Team Lead as the primary operating counterpart.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -176,7 +177,7 @@ Evidence:
 8. clean-run testing discipline is now documented in `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md`
 9. lifecycle cleanup/status now sweep and report stray compiled Go services in `ops/lifecycle.py` with focused regression coverage in `tests/test_lifecycle_tasks.py`
 10. compiled-service inspection now fails closed: `lifecycle.status` reports unknown inspection state and `lifecycle.down` blocks runtime/integration testing when local process inspection cannot verify cleanup
-11. local branch currently carries `e64e249` and `01a4aca` for Chunk 4.7a, but remote publication is blocked until SSH-agent/key state is repaired
+11. latest local checkpoint for the bounded Team Lead resilience slice is `e4131df` (`V8 migration: harden guided Team Lead interaction resilience`)
 12. documentation cleanup refreshed `README.md`, `docs/README.md`, and `docs/archive/README.md`, and removed `docs/architecture/AGI_ARCHITECTURE_REVIEW_2026-03-06.md` plus `docs/architecture/STANDARDIZATION_REVIEW_2026-03-06.md`
 13. validation: `uv run pytest tests/test_docs_links.py -q` -> `23 passed`
 14. instantiated-organization provider policy now resolves through `core/internal/swarm/provider_policy.go`, is carried by `core/internal/bootstrap/template_bundle.go`, is applied during startup in `core/cmd/server/main.go`, and is exercised by focused bootstrap/swarm coverage
@@ -193,6 +194,7 @@ Evidence:
 25. the organization page now functions as a Team Lead-first workspace shell rather than a static landing state: `interface/components/organizations/OrganizationContextShell.tsx` keeps the AI Organization header visible, adds a concrete Team Lead identity block plus next-action controls, and switches the active workspace focus between planning, advisor review, department review, AI Engine Settings summary, and Memory & Personality summary with focused page and browser coverage
 26. the first Team Lead interaction workflow now lives in `core/internal/server/organizations.go`, `interface/components/organizations/TeamLeadInteractionPanel.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/organizations/TeamLeadInteractionPanel.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; it intentionally stops at guided Team Lead responses and does not yet implement advisor orchestration, raw agent selection, advanced configuration panels, or a full chat system
 27. guided Team Lead resilience now adds readable fallback shaping in `core/internal/server/organizations.go`, failure/retry and malformed-response rendering in `interface/components/organizations/TeamLeadInteractionPanel.tsx`, focused backend/frontend tests in `core/internal/server/organizations_test.go`, `interface/__tests__/organizations/TeamLeadInteractionPanel.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and bounded browser retry coverage in `interface/e2e/specs/v8-organization-entry.spec.ts`; advisor orchestration, raw agent selection, advanced configuration panels, and a full chat system remain intentionally out of scope
+28. inspect-only Advisor and Department visibility now lives in `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; the Team Lead remains the primary workspace counterpart while Advisors and Departments are visible as supporting structure, and full advisor orchestration, raw agent selection, and department management remain intentionally out of scope
 
 ### 6. V8 contract shell introduction
 

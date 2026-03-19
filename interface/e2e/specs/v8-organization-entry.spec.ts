@@ -314,6 +314,12 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Team Lead ready")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
         await expect(page.getByText("Organization overview")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByText("Advisor support")).toBeVisible();
+        await expect(page.getByText("Department view")).toBeVisible();
+        await expect(page.getByText("Planning review")).toBeVisible();
+        await expect(page.getByText("Started from Engineering Starter")).toBeVisible();
         await expect(page.getByRole("button", { name: /Plan next steps for this organization/i })).toBeVisible();
 
         await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();
@@ -359,8 +365,12 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: createdEmptyOrganization.name, exact: true })).toBeVisible();
         await expect(page.getByText("Team Lead ready")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
-        await expect(page.getByText("Started from")).toBeVisible();
-        await expect(page.getByText("Empty")).toBeVisible();
+        await expect(page.getByText("Started from", { exact: true })).toBeVisible();
+        await expect(page.getByText("Empty", { exact: true })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByText("Advisor roles appear here once they are added")).toBeVisible();
+        await expect(page.getByText("Add the first Department when ready")).toBeVisible();
         await expectNoForbiddenCopy(page);
 
         await saveScreenshot(page, testInfo, "empty-success-home.png");
@@ -420,6 +430,8 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByText("Team Lead ready")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Team Lead for Northstar Labs" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry Team Lead action" })).toBeVisible();
         await expectNoForbiddenCopy(page);
 

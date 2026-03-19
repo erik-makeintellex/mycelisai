@@ -84,6 +84,12 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
         expect(screen.getByText("What I can help with")).toBeDefined();
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.getByText("Advisor support")).toBeDefined();
+        expect(screen.getByText("Department view")).toBeDefined();
+        expect(screen.getByText("Planning review")).toBeDefined();
+        expect(screen.getByText("Started from Engineering Starter")).toBeDefined();
         expect(screen.getByRole("button", { name: /Plan next steps for this organization/i })).toBeDefined();
         expect(screen.getByRole("button", { name: /What should I focus on first\?/i })).toBeDefined();
         expect(screen.getByRole("button", { name: /Review my organization setup/i })).toBeDefined();
@@ -127,6 +133,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Northstar Labs")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
     });
 
     it("preserves the organization context when a Team Lead action fails and then succeeds on retry", async () => {
@@ -173,6 +181,36 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByText("Team Lead plan for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
+    });
+
+    it("shows inspect-only Advisor and Department summaries when the organization starts empty", async () => {
+        setupOrganizationFetch({
+            homeHandler: () =>
+                jsonResponse({
+                    ok: true,
+                    data: {
+                        ...organizationHome,
+                        name: "Skylight Works",
+                        start_mode: "empty",
+                        template_id: undefined,
+                        template_name: undefined,
+                        advisor_count: 0,
+                        department_count: 0,
+                        specialist_count: 0,
+                    },
+                }),
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Advisors" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.getAllByText("Inspect only").length).toBeGreaterThan(0);
+        expect(screen.getByText("Advisor roles appear here once they are added")).toBeDefined();
+        expect(screen.getByText("Add the first Department when ready")).toBeDefined();
+        expect(screen.getByText("Started from Empty")).toBeDefined();
     });
 
     it("offers retry guidance when the organization home cannot be loaded", async () => {

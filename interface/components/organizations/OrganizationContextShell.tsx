@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Blocks, Bot, BrainCircuit, Loader2, RefreshCcw, Sparkles } from "lucide-react";
+import { ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type { OrganizationHomePayload } from "@/lib/organizations";
 import TeamLeadInteractionPanel from "@/components/organizations/TeamLeadInteractionPanel";
@@ -180,6 +180,24 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             </div>
                         </div>
 
+                        <InspectOnlySummary
+                            icon={<Users className="h-4 w-4" />}
+                            title="Advisors"
+                            countLabel={formatConfiguredCount(organization.advisor_count, "Advisor")}
+                            summary={advisorSummary(organization.advisor_count, teamLeadName)}
+                            supportLabel="Advisor support"
+                            items={advisorSupportItems(organization.advisor_count)}
+                        />
+
+                        <InspectOnlySummary
+                            icon={<Building2 className="h-4 w-4" />}
+                            title="Departments"
+                            countLabel={formatConfiguredCount(organization.department_count, "Department")}
+                            summary={departmentSummary(organization.department_count, organization.specialist_count, teamLeadName)}
+                            supportLabel="Department view"
+                            items={departmentSupportItems(organization)}
+                        />
+
                         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
                             <div className="grid gap-3">
                                 <SummaryRow
@@ -212,6 +230,41 @@ function formatConfiguredCount(count: number, label: string) {
         return "Not configured yet";
     }
     return `${count} ${label}${count === 1 ? "" : "s"}`;
+}
+
+function advisorSummary(count: number, teamLeadName: string) {
+    if (count === 0) {
+        return `${teamLeadName} is handling planning and review directly until Advisors are added.`;
+    }
+    if (count === 1) {
+        return `1 Advisor is ready to help ${teamLeadName} with review, priorities, and decision support.`;
+    }
+    return `${count} Advisors are ready to help ${teamLeadName} review decisions and keep the organization aligned.`;
+}
+
+function advisorSupportItems(count: number) {
+    if (count === 0) {
+        return ["Inspect only for now", "Advisor roles appear here once they are added"];
+    }
+    return ["Planning review", "Decision support", "Priority checks"].slice(0, Math.max(2, Math.min(count + 1, 3)));
+}
+
+function departmentSummary(count: number, specialistCount: number, teamLeadName: string) {
+    if (count === 0) {
+        return `${teamLeadName} can still shape the first operating lane before Departments are configured.`;
+    }
+    return `${count} Departments and ${formatConfiguredCount(specialistCount, "Specialist").toLowerCase()} are visible here so ${teamLeadName} can work with a clear delivery structure.`;
+}
+
+function departmentSupportItems(organization: OrganizationHomePayload) {
+    const items = [
+        organization.start_mode === "template" && organization.template_name
+            ? `Started from ${organization.template_name}`
+            : "Started from Empty",
+        formatConfiguredCount(organization.specialist_count, "Specialist"),
+        organization.department_count > 0 ? "Inspect only for now" : "Add the first Department when ready",
+    ];
+    return items;
 }
 
 function toTitleCase(value: string) {
@@ -256,6 +309,50 @@ function SummaryRow({
                 <p className="text-sm font-medium text-cortex-text-main">{label}</p>
             </div>
             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{value}</p>
+        </div>
+    );
+}
+
+function InspectOnlySummary({
+    icon,
+    title,
+    countLabel,
+    summary,
+    supportLabel,
+    items,
+}: {
+    icon: React.ReactNode;
+    title: string;
+    countLabel: string;
+    summary: string;
+    supportLabel: string;
+    items: string[];
+}) {
+    return (
+        <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2 text-cortex-primary">
+                        {icon}
+                        <h2 className="text-xl font-semibold text-cortex-text-main">{title}</h2>
+                    </div>
+                    <p className="mt-1 text-sm text-cortex-text-muted">{summary}</p>
+                </div>
+                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">{countLabel}</p>
+                    <p className="mt-1">Inspect only</p>
+                </div>
+            </div>
+            <div className="mt-5">
+                <p className="text-sm font-medium text-cortex-text-main">{supportLabel}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                    {items.map((item) => (
+                        <div key={item} className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main">
+                            {item}
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }
