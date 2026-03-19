@@ -30,13 +30,50 @@ function jsonResponse(body: unknown, status = 200) {
     return Promise.resolve(new Response(JSON.stringify(body), { status }));
 }
 
+function setupOrganizationFetch(options?: {
+    homeHandler?: () => Promise<Response>;
+    actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
+}) {
+    mockFetch.mockImplementation((input, init) => {
+        const url = typeof input === "string" ? input : input instanceof Request ? input.url : String(input);
+        const method = init?.method ?? (input instanceof Request ? input.method : "GET");
+
+        if (url.includes("/api/v1/organizations/org-123/home")) {
+            return options?.homeHandler?.() ?? jsonResponse({ ok: true, data: organizationHome });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/workspace/actions") && method === "POST") {
+            const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
+            return options?.actionHandler?.(body) ?? jsonResponse({
+                ok: true,
+                data: {
+                    action: "plan_next_steps",
+                    request_label: "Plan next steps for this organization",
+                    headline: "Team Lead plan for Northstar Labs",
+                    summary: "Team Lead recommends a focused first delivery loop.",
+                    priority_steps: [
+                        "Align the first outcome with the AI Organization purpose.",
+                        "Use the first Department as the routing layer for work.",
+                    ],
+                    suggested_follow_ups: [
+                        "Review my organization setup",
+                        "What should I focus on first?",
+                    ],
+                },
+            });
+        }
+
+        throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+}
+
 describe("OrganizationPage (/organizations/[id])", () => {
     beforeEach(() => {
         mockFetch.mockReset();
     });
 
-    it("renders a Team Lead-first organization workspace with action cards and no generic or dev wording", async () => {
-        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: organizationHome })));
+    it("renders a Team Lead-first organization workspace with guided actions and no generic or dev wording", async () => {
+        setupOrganizationFetch();
 
         await act(async () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
@@ -44,15 +81,12 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByText("AI Organization Home")).toBeDefined();
         expect(screen.getByText("Team Lead ready")).toBeDefined();
-        expect(screen.getByText("Team Lead for Northstar Labs")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
         expect(screen.getByText("What I can help with")).toBeDefined();
-        expect(screen.getByRole("button", { name: /Review Advisors/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Open Departments/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Ask Team Lead to plan next steps/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Review AI Engine Settings/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Review Memory & Personality/i })).toBeDefined();
-        expect(screen.getByText("Team Lead workspace")).toBeDefined();
-        expect(screen.getByText("Recommended next steps")).toBeDefined();
+        expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+        expect(screen.getByRole("button", { name: /Plan next steps for this organization/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /What should I focus on first\?/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Review my organization setup/i })).toBeDefined();
         expect(screen.queryByText(/context shell/i)).toBeNull();
         expect(screen.queryByText(/bounded slice/i)).toBeNull();
         expect(screen.queryByText(/implementation slice/i)).toBeNull();
@@ -61,32 +95,49 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.queryByText(/generic chat/i)).toBeNull();
     });
 
-    it("keeps the organization frame visible while moving from home into the Team Lead workspace focus", async () => {
-        mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, data: organizationHome })));
+    it("keeps the organization frame visible while moving from home into the Team Lead interaction flow", async () => {
+        setupOrganizationFetch({
+            actionHandler: (body) => jsonResponse({
+                ok: true,
+                data: {
+                    action: body.action,
+                    request_label: "Review my organization setup",
+                    headline: "Organization setup review for Northstar Labs",
+                    summary: "Team Lead is reviewing the current AI Organization shape.",
+                    priority_steps: [
+                        "Advisors: 1 advisor ready.",
+                        "Departments: 1 department ready.",
+                    ],
+                    suggested_follow_ups: [
+                        "Plan next steps for this organization",
+                        "What should I focus on first?",
+                    ],
+                },
+            }),
+        });
 
         await act(async () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
         });
 
-        expect(await screen.findByText("Team Lead workspace")).toBeDefined();
-        fireEvent.click(screen.getByRole("button", { name: /Review Advisors/i }));
-        expect(screen.getByText("Review the advisor picture")).toBeDefined();
-        expect(screen.getByText("1 Advisor ready to guide")).toBeDefined();
+        expect(await screen.findByText("Work with the Team Lead")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Review my organization setup/i }));
+        expect(await screen.findByText("Organization setup review for Northstar Labs")).toBeDefined();
+        expect(screen.getByText("Priority steps")).toBeDefined();
         expect(screen.getByText("Northstar Labs")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-
-        fireEvent.click(screen.getByRole("button", { name: /Ask Team Lead to plan next steps/i }));
-        expect(screen.getByText("Plan the next steps for Northstar Labs")).toBeDefined();
-        expect(screen.getByText("Recommended next steps")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
     });
 
     it("offers retry guidance when the organization home cannot be loaded", async () => {
         let attempt = 0;
-        mockFetch.mockImplementation(() => {
-            attempt += 1;
-            return attempt === 1
-                ? jsonResponse({ ok: false, error: "This AI Organization could not be loaded right now." }, 500)
-                : jsonResponse({ ok: true, data: organizationHome });
+        setupOrganizationFetch({
+            homeHandler: () => {
+                attempt += 1;
+                return attempt === 1
+                    ? jsonResponse({ ok: false, error: "This AI Organization could not be loaded right now." }, 500)
+                    : jsonResponse({ ok: true, data: organizationHome });
+            },
         });
 
         await act(async () => {
@@ -98,3 +149,4 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByText("Team Lead ready")).toBeDefined();
     });
 });
+
