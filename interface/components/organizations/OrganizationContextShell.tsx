@@ -10,6 +10,8 @@ import type {
     OrganizationAIEngineUpdateRequest,
     OrganizationDepartmentSummary,
     OrganizationHomePayload,
+    ResponseContractProfileId,
+    ResponseContractUpdateRequest,
 } from "@/lib/organizations";
 import TeamLeadInteractionPanel from "@/components/organizations/TeamLeadInteractionPanel";
 
@@ -59,12 +61,54 @@ const AI_ENGINE_OPTIONS: Array<{
     },
 ];
 
+const RESPONSE_CONTRACT_OPTIONS: Array<{
+    id: ResponseContractProfileId;
+    label: string;
+    toneStyle: string;
+    structure: string;
+    verbosity: string;
+    bestFor: string;
+}> = [
+    {
+        id: "clear_balanced",
+        label: "Clear & Balanced",
+        toneStyle: "Straightforward and steady without sounding cold.",
+        structure: "Uses clear sections and practical takeaways when helpful.",
+        verbosity: "Balanced detail with enough context to act confidently.",
+        bestFor: "Best for everyday Team Lead guidance, reviews, and general coordination.",
+    },
+    {
+        id: "structured_analytical",
+        label: "Structured & Analytical",
+        toneStyle: "Measured, methodical, and reasoning-forward.",
+        structure: "Organizes answers into clear steps, comparisons, or frameworks.",
+        verbosity: "Moderate-to-detailed when structure improves decision-making.",
+        bestFor: "Best for planning, tradeoffs, diagnosis, and deeper review work.",
+    },
+    {
+        id: "concise_direct",
+        label: "Concise & Direct",
+        toneStyle: "Focused, efficient, and low-friction.",
+        structure: "Keeps responses short and action-led unless more detail is needed.",
+        verbosity: "Intentionally brief with only the highest-signal details.",
+        bestFor: "Best for quick decisions, status checks, and fast-moving execution loops.",
+    },
+    {
+        id: "warm_supportive",
+        label: "Warm & Supportive",
+        toneStyle: "Encouraging, collaborative, and reassuring.",
+        structure: "Still organized, but written to feel more human and supportive.",
+        verbosity: "Balanced detail with a little more guidance and framing.",
+        bestFor: "Best for onboarding, operator guidance, and people-facing support work.",
+    },
+];
+
 export default function OrganizationContextShell({ organizationId }: { organizationId: string }) {
     const [organization, setOrganization] = useState<OrganizationHomePayload | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [retryToken, setRetryToken] = useState(0);
-    const [activeDetailView, setActiveDetailView] = useState<"advisors" | "departments" | "aiEngine" | null>(null);
+    const [activeDetailView, setActiveDetailView] = useState<"advisors" | "departments" | "aiEngine" | "responseContract" | null>(null);
     const [isAIEngineSelectorOpen, setIsAIEngineSelectorOpen] = useState(false);
     const [selectedAIEngineProfile, setSelectedAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
     const [aiEngineUpdatePending, setAIEngineUpdatePending] = useState(false);
@@ -73,6 +117,10 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [selectedDepartmentAIEngineProfile, setSelectedDepartmentAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
     const [departmentAIEngineUpdatePendingId, setDepartmentAIEngineUpdatePendingId] = useState<string | null>(null);
     const [departmentAIEngineUpdateError, setDepartmentAIEngineUpdateError] = useState<{ departmentId: string; message: string } | null>(null);
+    const [isResponseContractSelectorOpen, setIsResponseContractSelectorOpen] = useState(false);
+    const [selectedResponseContractProfile, setSelectedResponseContractProfile] = useState<ResponseContractProfileId | null>(null);
+    const [responseContractUpdatePending, setResponseContractUpdatePending] = useState(false);
+    const [responseContractUpdateError, setResponseContractUpdateError] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -120,6 +168,12 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             setDepartmentAIEngineUpdatePendingId(null);
             setDepartmentAIEngineUpdateError(null);
         }
+        if (activeDetailView !== "responseContract") {
+            setIsResponseContractSelectorOpen(false);
+            setSelectedResponseContractProfile(null);
+            setResponseContractUpdatePending(false);
+            setResponseContractUpdateError(null);
+        }
     }, [activeDetailView]);
 
     const openAIEngineSelector = () => {
@@ -159,6 +213,46 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             setAIEngineUpdateError(err instanceof Error ? err.message : "Unable to update AI Engine Settings.");
         } finally {
             setAIEngineUpdatePending(false);
+        }
+    };
+
+    const openResponseContractSelector = () => {
+        if (!organization) {
+            return;
+        }
+        setActiveDetailView("responseContract");
+        setSelectedResponseContractProfile((organization.response_contract_profile_id as ResponseContractProfileId | undefined) ?? "clear_balanced");
+        setResponseContractUpdateError(null);
+        setIsResponseContractSelectorOpen(true);
+    };
+
+    const submitResponseContractSelection = async () => {
+        if (!organization || !selectedResponseContractProfile || responseContractUpdatePending) {
+            return;
+        }
+
+        setResponseContractUpdatePending(true);
+        setResponseContractUpdateError(null);
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/response-contract`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ profile_id: selectedResponseContractProfile } satisfies ResponseContractUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to update Response Style.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setSelectedResponseContractProfile((updated.response_contract_profile_id as ResponseContractProfileId | undefined) ?? selectedResponseContractProfile);
+            setIsResponseContractSelectorOpen(false);
+        } catch (err) {
+            setResponseContractUpdateError(err instanceof Error ? err.message : "Unable to update Response Style.");
+        } finally {
+            setResponseContractUpdatePending(false);
         }
     };
 
@@ -369,6 +463,17 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                     setAIEngineUpdateError(null);
                                 }}
                                 onSubmitAIEngineSelection={submitAIEngineSelection}
+                                isResponseContractSelectorOpen={isResponseContractSelectorOpen}
+                                selectedResponseContractProfile={selectedResponseContractProfile}
+                                responseContractUpdatePending={responseContractUpdatePending}
+                                responseContractUpdateError={responseContractUpdateError}
+                                onResponseContractProfileSelect={setSelectedResponseContractProfile}
+                                onOpenResponseContractSelector={openResponseContractSelector}
+                                onCloseResponseContractSelector={() => {
+                                    setIsResponseContractSelectorOpen(false);
+                                    setResponseContractUpdateError(null);
+                                }}
+                                onSubmitResponseContractSelection={submitResponseContractSelection}
                                 activeDepartmentAIEngineId={activeDepartmentAIEngineId}
                                 selectedDepartmentAIEngineProfile={selectedDepartmentAIEngineProfile}
                                 departmentAIEngineUpdatePendingId={departmentAIEngineUpdatePendingId}
@@ -440,6 +545,17 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                     items={aiEngineSupportItems(organization.ai_engine_settings_summary)}
                                     inspectActionLabel="Review AI Engine Settings"
                                     onInspect={() => setActiveDetailView("aiEngine")}
+                                />
+                                <InspectOnlySummary
+                                    icon={<BrainCircuit className="h-4 w-4" />}
+                                    title="Response Style"
+                                    countLabel="Guided tuning"
+                                    statusLabel="Organization level"
+                                    summary={responseContractSummary(organization.response_contract_summary)}
+                                    supportLabel="What this shapes"
+                                    items={responseContractSupportItems(organization.response_contract_summary)}
+                                    inspectActionLabel="Review Response Style"
+                                    onInspect={() => setActiveDetailView("responseContract")}
                                 />
                                 <InspectOnlySummary
                                     icon={<BrainCircuit className="h-4 w-4" />}
@@ -644,6 +760,42 @@ function aiEngineDetailItems(organization: OrganizationHomePayload) {
     ];
 }
 
+function responseContractSummary(summary: string) {
+    const normalized = summary.trim();
+    if (!normalized) {
+        return "The current Response Style keeps the organization on a clear, steady default for safe day-to-day guidance.";
+    }
+    return `The current Response Style is ${normalized.toLowerCase()}, which shapes how the Team Lead presents tone, structure, and detail.`;
+}
+
+function responseContractSupportItems(summary: string) {
+    if (!summary.trim()) {
+        return ["Tone", "Structure", "Verbosity"];
+    }
+    return [summary, "Tone", "Structure", "Verbosity"];
+}
+
+function responseContractDetailItems(summary: string) {
+    const option = RESPONSE_CONTRACT_OPTIONS.find((item) => item.label === summary.trim()) ?? RESPONSE_CONTRACT_OPTIONS[0];
+    return [
+        {
+            name: "Current response style",
+            purpose: `Current profile: ${option.label}.`,
+            supportCue: option.bestFor,
+        },
+        {
+            name: "Tone and style",
+            purpose: option.toneStyle,
+            supportCue: "Guides how supportive, direct, or analytical the Team Lead should sound by default.",
+        },
+        {
+            name: "Structure and detail",
+            purpose: `${option.structure} ${option.verbosity}`,
+            supportCue: "Guides how organized and how detailed responses should feel across the AI Organization.",
+        },
+    ];
+}
+
 function memoryPersonalitySummary(summary: string) {
     const normalized = summary.trim();
     if (!normalized || normalized === "Set up later in Advanced mode") {
@@ -784,6 +936,14 @@ function WorkspaceDetailView({
     onOpenAIEngineSelector,
     onCloseAIEngineSelector,
     onSubmitAIEngineSelection,
+    isResponseContractSelectorOpen,
+    selectedResponseContractProfile,
+    responseContractUpdatePending,
+    responseContractUpdateError,
+    onResponseContractProfileSelect,
+    onOpenResponseContractSelector,
+    onCloseResponseContractSelector,
+    onSubmitResponseContractSelection,
     activeDepartmentAIEngineId,
     selectedDepartmentAIEngineProfile,
     departmentAIEngineUpdatePendingId,
@@ -795,7 +955,7 @@ function WorkspaceDetailView({
     onRevertDepartmentAIEngineSelection,
     onBack,
 }: {
-    view: "advisors" | "departments" | "aiEngine";
+    view: "advisors" | "departments" | "aiEngine" | "responseContract";
     organization: OrganizationHomePayload;
     teamLeadName: string;
     isAIEngineSelectorOpen: boolean;
@@ -806,6 +966,14 @@ function WorkspaceDetailView({
     onOpenAIEngineSelector: () => void;
     onCloseAIEngineSelector: () => void;
     onSubmitAIEngineSelection: () => void;
+    isResponseContractSelectorOpen: boolean;
+    selectedResponseContractProfile: ResponseContractProfileId | null;
+    responseContractUpdatePending: boolean;
+    responseContractUpdateError: string | null;
+    onResponseContractProfileSelect: (profile: ResponseContractProfileId) => void;
+    onOpenResponseContractSelector: () => void;
+    onCloseResponseContractSelector: () => void;
+    onSubmitResponseContractSelection: () => void;
     activeDepartmentAIEngineId: string | null;
     selectedDepartmentAIEngineProfile: OrganizationAIEngineProfileId | null;
     departmentAIEngineUpdatePendingId: string | null;
@@ -818,13 +986,21 @@ function WorkspaceDetailView({
     onBack: () => void;
 }) {
     const title =
-        view === "advisors" ? "Advisor details" : view === "departments" ? "Department details" : "AI Engine Settings details";
+        view === "advisors"
+            ? "Advisor details"
+            : view === "departments"
+              ? "Department details"
+              : view === "aiEngine"
+                ? "AI Engine Settings details"
+                : "Response Style details";
     const summary =
         view === "advisors"
             ? `${teamLeadName} can review the current Advisor support in ${organization.name} here without leaving the workspace.`
             : view === "departments"
               ? `${teamLeadName} can inspect the current Department structure in ${organization.name} here without leaving the workspace.`
-              : `${teamLeadName} can inspect the current AI Engine Settings in ${organization.name} here without leaving the workspace.`;
+              : view === "aiEngine"
+                ? `${teamLeadName} can inspect the current AI Engine Settings in ${organization.name} here without leaving the workspace.`
+                : `${teamLeadName} can inspect the current Response Style in ${organization.name} here without leaving the workspace.`;
     const items =
         view === "advisors"
             ? advisorDetailItems(organization.advisor_count).map((item) => ({
@@ -833,7 +1009,7 @@ function WorkspaceDetailView({
                   detail: item.purpose,
                   support: item.supportCue,
               }))
-            : aiEngineDetailItems(organization).map((item) => ({
+            : (view === "aiEngine" ? aiEngineDetailItems(organization) : responseContractDetailItems(organization.response_contract_summary)).map((item) => ({
                   key: item.name,
                   title: item.name,
                   detail: item.purpose,
@@ -845,7 +1021,9 @@ function WorkspaceDetailView({
             ? `${teamLeadName} is handling review directly until Advisors are added.`
             : view === "departments"
               ? `${teamLeadName} can still shape the first operating lane before Departments are added.`
-              : `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`;
+              : view === "aiEngine"
+                ? `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`
+                : `${teamLeadName} is still using the organization-wide Response Style until a different guided profile is selected here.`;
 
     return (
         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -863,6 +1041,16 @@ function WorkspaceDetailView({
                         >
                             <Sparkles className="h-4 w-4 text-cortex-primary" />
                             {isAIEngineSelectorOpen ? "Close AI Engine choices" : "Change AI Engine"}
+                        </button>
+                    )}
+                    {view === "responseContract" && (
+                        <button
+                            type="button"
+                            onClick={isResponseContractSelectorOpen ? onCloseResponseContractSelector : onOpenResponseContractSelector}
+                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/40"
+                        >
+                            <Sparkles className="h-4 w-4 text-cortex-primary" />
+                            {isResponseContractSelectorOpen ? "Close Response Style choices" : "Change Response Style"}
                         </button>
                     )}
                     <button
@@ -975,6 +1163,17 @@ function WorkspaceDetailView({
                     onSubmit={onSubmitAIEngineSelection}
                 />
             )}
+
+            {view === "responseContract" && isResponseContractSelectorOpen && (
+                <ResponseContractSelectionPanel
+                    selectedResponseContractProfile={selectedResponseContractProfile}
+                    responseContractUpdatePending={responseContractUpdatePending}
+                    responseContractUpdateError={responseContractUpdateError}
+                    onResponseContractProfileSelect={onResponseContractProfileSelect}
+                    onClose={onCloseResponseContractSelector}
+                    onSubmit={onSubmitResponseContractSelection}
+                />
+            )}
         </div>
     );
 }
@@ -1076,6 +1275,120 @@ function AIEngineSelectionPanel({
                     type="button"
                     onClick={onClose}
                     disabled={aiEngineUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function ResponseContractSelectionPanel({
+    selectedResponseContractProfile,
+    responseContractUpdatePending,
+    responseContractUpdateError,
+    onResponseContractProfileSelect,
+    onClose,
+    onSubmit,
+}: {
+    selectedResponseContractProfile: ResponseContractProfileId | null;
+    responseContractUpdatePending: boolean;
+    responseContractUpdateError: string | null;
+    onResponseContractProfileSelect: (profile: ResponseContractProfileId) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+}) {
+    return (
+        <div className="mt-5 rounded-3xl border border-cortex-primary/20 bg-cortex-bg p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h4 className="text-lg font-semibold text-cortex-text-main">Choose a Response Style</h4>
+                    <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
+                        Pick one safe Response Style for the whole AI Organization. This shapes tone, structure, and detail without exposing raw prompt or policy text.
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Organization level only</p>
+                    <p className="mt-1">Team and role response overrides stay out of this workspace for now.</p>
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+                {RESPONSE_CONTRACT_OPTIONS.map((option) => {
+                    const isSelected = selectedResponseContractProfile === option.id;
+                    return (
+                        <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => onResponseContractProfileSelect(option.id)}
+                            disabled={responseContractUpdatePending}
+                            className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                                isSelected
+                                    ? "border-cortex-primary/40 bg-cortex-primary/10"
+                                    : "border-cortex-border bg-cortex-surface hover:border-cortex-primary/20"
+                            } ${responseContractUpdatePending ? "opacity-75" : ""}`}
+                        >
+                            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-cortex-text-main">{option.label}</p>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                        <span className="font-medium text-cortex-text-main">Tone:</span> {option.toneStyle}
+                                    </p>
+                                </div>
+                                {isSelected && (
+                                    <span className="inline-flex w-fit rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-cortex-primary">
+                                        Current choice
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Structure:</span> {option.structure}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Detail:</span> {option.verbosity}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Best for:</span> {option.bestFor}
+                            </p>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {responseContractUpdateError && (
+                <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-surface px-4 py-4 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Unable to update Response Style</p>
+                    <p className="mt-2 leading-6">{responseContractUpdateError}</p>
+                    <p className="mt-2 leading-6">Try again to keep the Team Lead workspace visible while the organization-wide response style is updated.</p>
+                </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                    type="button"
+                    onClick={onSubmit}
+                    disabled={!selectedResponseContractProfile || responseContractUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {responseContractUpdatePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {responseContractUpdatePending ? "Updating Response Style..." : "Use selected Response Style"}
+                </button>
+                {responseContractUpdateError && (
+                    <button
+                        type="button"
+                        onClick={onSubmit}
+                        disabled={!selectedResponseContractProfile || responseContractUpdatePending}
+                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <RefreshCcw className="h-4 w-4" />
+                        Retry Response Style change
+                    </button>
+                )}
+                <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={responseContractUpdatePending}
                     className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Cancel

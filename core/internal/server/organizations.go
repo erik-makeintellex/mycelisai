@@ -24,6 +24,7 @@ const (
 )
 
 type OrganizationAIEngineProfileID string
+type ResponseContractProfileID string
 
 const (
 	OrganizationAIEngineProfileStarterDefaults OrganizationAIEngineProfileID = "starter_defaults"
@@ -33,11 +34,27 @@ const (
 	OrganizationAIEngineProfileDeepPlanning    OrganizationAIEngineProfileID = "deep_planning"
 )
 
+const (
+	ResponseContractProfileClearBalanced        ResponseContractProfileID = "clear_balanced"
+	ResponseContractProfileStructuredAnalytical ResponseContractProfileID = "structured_analytical"
+	ResponseContractProfileConciseDirect        ResponseContractProfileID = "concise_direct"
+	ResponseContractProfileWarmSupportive       ResponseContractProfileID = "warm_supportive"
+)
+
 type organizationAIEngineProfile struct {
 	ID          OrganizationAIEngineProfileID
 	Summary     string
 	Description string
 	BestFor     string
+}
+
+type responseContractProfile struct {
+	ID        ResponseContractProfileID
+	Summary   string
+	ToneStyle string
+	Structure string
+	Verbosity string
+	BestFor   string
 }
 
 type OrganizationDepartmentSummary struct {
@@ -62,24 +79,27 @@ type OrganizationTemplateSummary struct {
 	SpecialistCount          int                             `json:"specialist_count"`
 	Departments              []OrganizationDepartmentSummary `json:"departments,omitempty"`
 	AIEngineSettingsSummary  string                          `json:"ai_engine_settings_summary"`
+	ResponseContractSummary  string                          `json:"response_contract_summary"`
 	MemoryPersonalitySummary string                          `json:"memory_personality_summary"`
 }
 
 type OrganizationSummary struct {
-	ID                       string                `json:"id"`
-	Name                     string                `json:"name"`
-	Purpose                  string                `json:"purpose"`
-	StartMode                OrganizationStartMode `json:"start_mode"`
-	TemplateID               string                `json:"template_id,omitempty"`
-	TemplateName             string                `json:"template_name,omitempty"`
-	TeamLeadLabel            string                `json:"team_lead_label"`
-	AdvisorCount             int                   `json:"advisor_count"`
-	DepartmentCount          int                   `json:"department_count"`
-	SpecialistCount          int                   `json:"specialist_count"`
-	AIEngineProfileID        string                `json:"ai_engine_profile_id,omitempty"`
-	AIEngineSettingsSummary  string                `json:"ai_engine_settings_summary"`
-	MemoryPersonalitySummary string                `json:"memory_personality_summary"`
-	Status                   string                `json:"status"`
+	ID                        string                `json:"id"`
+	Name                      string                `json:"name"`
+	Purpose                   string                `json:"purpose"`
+	StartMode                 OrganizationStartMode `json:"start_mode"`
+	TemplateID                string                `json:"template_id,omitempty"`
+	TemplateName              string                `json:"template_name,omitempty"`
+	TeamLeadLabel             string                `json:"team_lead_label"`
+	AdvisorCount              int                   `json:"advisor_count"`
+	DepartmentCount           int                   `json:"department_count"`
+	SpecialistCount           int                   `json:"specialist_count"`
+	AIEngineProfileID         string                `json:"ai_engine_profile_id,omitempty"`
+	AIEngineSettingsSummary   string                `json:"ai_engine_settings_summary"`
+	ResponseContractProfileID string                `json:"response_contract_profile_id,omitempty"`
+	ResponseContractSummary   string                `json:"response_contract_summary"`
+	MemoryPersonalitySummary  string                `json:"memory_personality_summary"`
+	Status                    string                `json:"status"`
 }
 
 type OrganizationHomePayload struct {
@@ -114,6 +134,10 @@ type OrganizationAIEngineUpdateRequest struct {
 type DepartmentAIEngineUpdateRequest struct {
 	ProfileID                   string `json:"profile_id,omitempty"`
 	RevertToOrganizationDefault bool   `json:"revert_to_organization_default,omitempty"`
+}
+
+type ResponseContractUpdateRequest struct {
+	ProfileID string `json:"profile_id"`
 }
 
 type TeamLeadGuidanceResponse struct {
@@ -155,6 +179,41 @@ var organizationAIEngineProfiles = []organizationAIEngineProfile{
 		Summary:     "Deep Planning",
 		Description: "Leans into longer multi-step planning and more deliberate organization shaping.",
 		BestFor:     "Best for designing larger workstreams and sequencing bigger efforts.",
+	},
+}
+
+var responseContractProfiles = []responseContractProfile{
+	{
+		ID:        ResponseContractProfileClearBalanced,
+		Summary:   "Clear & Balanced",
+		ToneStyle: "Straightforward and steady without sounding cold.",
+		Structure: "Uses clear sections and practical takeaways when helpful.",
+		Verbosity: "Balanced detail with enough context to act confidently.",
+		BestFor:   "Best for everyday Team Lead guidance, reviews, and general coordination.",
+	},
+	{
+		ID:        ResponseContractProfileStructuredAnalytical,
+		Summary:   "Structured & Analytical",
+		ToneStyle: "Measured, methodical, and reasoning-forward.",
+		Structure: "Organizes answers into clear steps, comparisons, or frameworks.",
+		Verbosity: "Moderate-to-detailed when structure improves decision-making.",
+		BestFor:   "Best for planning, tradeoffs, diagnosis, and deeper review work.",
+	},
+	{
+		ID:        ResponseContractProfileConciseDirect,
+		Summary:   "Concise & Direct",
+		ToneStyle: "Focused, efficient, and low-friction.",
+		Structure: "Keeps responses short and action-led unless more detail is needed.",
+		Verbosity: "Intentionally brief with only the highest-signal details.",
+		BestFor:   "Best for quick decisions, status checks, and fast-moving execution loops.",
+	},
+	{
+		ID:        ResponseContractProfileWarmSupportive,
+		Summary:   "Warm & Supportive",
+		ToneStyle: "Encouraging, collaborative, and reassuring.",
+		Structure: "Still organized, but written to feel more human and supportive.",
+		Verbosity: "Balanced detail with a little more guidance and framing.",
+		BestFor:   "Best for onboarding, operator guidance, and people-facing support work.",
 	},
 }
 
@@ -244,6 +303,7 @@ func summarizeStarterBundle(bundle *bootstrap.TemplateBundle) OrganizationTempla
 	departmentCount := len(bundle.Teams)
 	specialistCount := 0
 	departments := make([]OrganizationDepartmentSummary, 0, len(bundle.Teams))
+	responseContract := defaultResponseContractProfile()
 	for _, team := range bundle.Teams {
 		memberCount := len(team.Members)
 		specialistCount += memberCount
@@ -265,6 +325,7 @@ func summarizeStarterBundle(bundle *bootstrap.TemplateBundle) OrganizationTempla
 		SpecialistCount:          specialistCount,
 		Departments:              departments,
 		AIEngineSettingsSummary:  summarizeAIEngineSettings(bundle.ProviderPolicy),
+		ResponseContractSummary:  responseContract.Summary,
 		MemoryPersonalitySummary: summarizeMemoryPersonality(bundle),
 	}
 }
@@ -308,6 +369,19 @@ func organizationAIEngineSummaryForProfile(id string) string {
 		return "Set up later in Advanced mode"
 	}
 	return profile.Summary
+}
+
+func lookupResponseContractProfile(id string) (responseContractProfile, bool) {
+	for _, profile := range responseContractProfiles {
+		if string(profile.ID) == strings.TrimSpace(id) {
+			return profile, true
+		}
+	}
+	return responseContractProfile{}, false
+}
+
+func defaultResponseContractProfile() responseContractProfile {
+	return responseContractProfiles[0]
 }
 
 func normalizeDepartmentName(name string, fallbackIndex int) string {
@@ -480,17 +554,20 @@ func (s *AdminServer) resolveStarterTemplate(id string) (*OrganizationTemplateSu
 }
 
 func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, template *OrganizationTemplateSummary) OrganizationHomePayload {
+	responseContract := defaultResponseContractProfile()
 	home := OrganizationHomePayload{
 		OrganizationSummary: OrganizationSummary{
-			ID:                       uuid.NewString(),
-			Name:                     strings.TrimSpace(req.Name),
-			Purpose:                  strings.TrimSpace(req.Purpose),
-			StartMode:                req.StartMode,
-			Status:                   "ready",
-			TeamLeadLabel:            "Team Lead",
-			AIEngineSettingsSummary:  "Set up later in Advanced mode",
-			MemoryPersonalitySummary: "Set up later in Advanced mode",
-			AIEngineProfileID:        defaultAIEngineProfileID(req.StartMode, template),
+			ID:                        uuid.NewString(),
+			Name:                      strings.TrimSpace(req.Name),
+			Purpose:                   strings.TrimSpace(req.Purpose),
+			StartMode:                 req.StartMode,
+			Status:                    "ready",
+			TeamLeadLabel:             "Team Lead",
+			AIEngineSettingsSummary:   "Set up later in Advanced mode",
+			ResponseContractProfileID: string(responseContract.ID),
+			ResponseContractSummary:   responseContract.Summary,
+			MemoryPersonalitySummary:  "Set up later in Advanced mode",
+			AIEngineProfileID:         defaultAIEngineProfileID(req.StartMode, template),
 		},
 	}
 
@@ -502,6 +579,7 @@ func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, templ
 		home.DepartmentCount = template.DepartmentCount
 		home.SpecialistCount = template.SpecialistCount
 		home.AIEngineSettingsSummary = template.AIEngineSettingsSummary
+		home.ResponseContractSummary = template.ResponseContractSummary
 		home.MemoryPersonalitySummary = template.MemoryPersonalitySummary
 		home.Description = template.Description
 		home.Departments = append([]OrganizationDepartmentSummary(nil), template.Departments...)
@@ -596,6 +674,38 @@ func (s *AdminServer) handleUpdateOrganizationAIEngine(w http.ResponseWriter, r 
 	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home.AIEngineProfileID = string(profile.ID)
 		home.AIEngineSettingsSummary = profile.Summary
+		return normalizeOrganizationHome(home)
+	})
+	if !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
+}
+
+func (s *AdminServer) handleUpdateResponseContract(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		respondAPIError(w, "organization id is required", http.StatusBadRequest)
+		return
+	}
+
+	var req ResponseContractUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "invalid Response Contract update request", http.StatusBadRequest)
+		return
+	}
+
+	profile, ok := lookupResponseContractProfile(req.ProfileID)
+	if !ok {
+		respondAPIError(w, "profile_id must be one of the guided Response Style options", http.StatusBadRequest)
+		return
+	}
+
+	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+		home.ResponseContractProfileID = string(profile.ID)
+		home.ResponseContractSummary = profile.Summary
 		return normalizeOrganizationHome(home)
 	})
 	if !ok {

@@ -11,6 +11,8 @@ const starterTemplate = {
     specialist_count: 2,
     ai_engine_profile_id: "starter_defaults",
     ai_engine_settings_summary: "Starter defaults included",
+    response_contract_profile_id: "clear_balanced",
+    response_contract_summary: "Clear & Balanced",
     memory_personality_summary: "Prepared for Adaptive Delivery work",
 };
 
@@ -27,6 +29,8 @@ const createdTemplateOrganization = {
     specialist_count: 2,
     ai_engine_profile_id: "starter_defaults",
     ai_engine_settings_summary: "Starter defaults included",
+    response_contract_profile_id: "clear_balanced",
+    response_contract_summary: "Clear & Balanced",
     memory_personality_summary: "Prepared for Adaptive Delivery work",
     status: "ready",
     departments: [
@@ -51,6 +55,8 @@ const createdEmptyOrganization = {
     department_count: 0,
     specialist_count: 0,
     ai_engine_settings_summary: "Set up later in Advanced mode",
+    response_contract_profile_id: "clear_balanced",
+    response_contract_summary: "Clear & Balanced",
     memory_personality_summary: "Set up later in Advanced mode",
     status: "ready",
     departments: [],
@@ -70,6 +76,14 @@ function applyOrganizationAIEngineToDepartments(home: typeof createdTemplateOrga
                   }
                 : department,
         ),
+    };
+}
+
+function applyResponseContract(home: typeof createdTemplateOrganization, profileId: string | undefined, summary: string) {
+    return {
+        ...home,
+        response_contract_profile_id: profileId,
+        response_contract_summary: summary,
     };
 }
 
@@ -102,6 +116,7 @@ async function mockOrganizationEntryApis(
         actionHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         aiEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         departmentAIEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
+        responseContractUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         homeResponsesById?: Record<string, unknown>;
     },
 ) {
@@ -116,6 +131,7 @@ async function mockOrganizationEntryApis(
         actionHandler,
         aiEngineUpdateHandler,
         departmentAIEngineUpdateHandler,
+        responseContractUpdateHandler,
         homeResponsesById = {
             [createdTemplateOrganization.id]: createdTemplateOrganization,
             [createdEmptyOrganization.id]: createdEmptyOrganization,
@@ -256,6 +272,47 @@ async function mockOrganizationEntryApis(
                 mutableHomeResponsesById[organizationId] as typeof createdTemplateOrganization,
                 String(requestBody.profile_id ?? ""),
                 summaries[String(requestBody.profile_id ?? "")] ?? "Balanced",
+            );
+        }
+
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                ok: true,
+                data: organizationId ? mutableHomeResponsesById[organizationId] : null,
+            }),
+        });
+    });
+
+    await page.route("**/api/v1/organizations/*/response-contract", async (route) => {
+        const requestBody = route.request().postDataJSON() as Record<string, unknown>;
+        const url = new URL(route.request().url());
+        const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/response-contract$/);
+        const organizationId = match?.[1];
+
+        if (responseContractUpdateHandler) {
+            const response = responseContractUpdateHandler(requestBody);
+            await route.fulfill({
+                status: response.status,
+                contentType: "application/json",
+                body: JSON.stringify(response.body),
+            });
+            return;
+        }
+
+        const summaries: Record<string, string> = {
+            clear_balanced: "Clear & Balanced",
+            structured_analytical: "Structured & Analytical",
+            concise_direct: "Concise & Direct",
+            warm_supportive: "Warm & Supportive",
+        };
+
+        if (organizationId && mutableHomeResponsesById[organizationId]) {
+            mutableHomeResponsesById[organizationId] = applyResponseContract(
+                mutableHomeResponsesById[organizationId] as typeof createdTemplateOrganization,
+                String(requestBody.profile_id ?? ""),
+                summaries[String(requestBody.profile_id ?? "")] ?? "Clear & Balanced",
             );
         }
 
@@ -461,20 +518,26 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByText("Advisor support")).toBeVisible();
         await expect(page.getByText("Department view")).toBeVisible();
         await expect(page.getByText("Planning review")).toBeVisible();
         await expect(page.getByText("Started from Engineering Starter")).toBeVisible();
         await expect(page.getByText("What this affects")).toHaveCount(2);
-        await expect(page.getByText("Response style")).toBeVisible();
-        await expect(page.getByText("Planning depth")).toBeVisible();
+        await expect(page.getByText("What this shapes")).toBeVisible();
+        await expect(page.getByText("Response style", { exact: true })).toBeVisible();
+        await expect(page.getByText("Planning depth", { exact: true })).toBeVisible();
+        await expect(page.getByText("Tone", { exact: true })).toBeVisible();
+        await expect(page.getByText("Structure", { exact: true })).toBeVisible();
+        await expect(page.getByText("Verbosity", { exact: true })).toBeVisible();
         await expect(page.getByText("Working tone")).toBeVisible();
         await expect(page.getByText("Context continuity")).toBeVisible();
         await expect(page.getByRole("button", { name: /Plan next steps for this organization/i })).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Advisors" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Open Departments" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Review AI Engine Settings" }).first()).toBeVisible();
+        await expect(page.getByRole("button", { name: "Review Response Style" }).first()).toBeVisible();
 
         await page.getByRole("button", { name: "Review Advisors" }).first().click();
         await expect(page.getByRole("heading", { name: "Advisor details" })).toBeVisible();
@@ -506,14 +569,26 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Current profile: Starter defaults included.")).toBeVisible();
         await page.getByRole("button", { name: "Change AI Engine" }).click();
         await expect(page.getByRole("heading", { name: "Choose an AI Engine profile" })).toBeVisible();
-        await expect(page.getByText("Balanced")).toBeVisible();
-        await expect(page.getByText("High Reasoning")).toBeVisible();
+        await expect(page.getByRole("button", { name: /^Balanced/ })).toBeVisible();
+        await expect(page.getByRole("button", { name: /^High Reasoning/ })).toBeVisible();
         await page.getByRole("button", { name: /High Reasoning/i }).click();
         await page.getByRole("button", { name: "Use selected AI Engine" }).click();
         await expect(page.getByText("Current profile: High Reasoning.")).toBeVisible();
         await expect(page.getByText("The current AI Engine Settings profile is high reasoning and shapes how the organization responds, plans, and carries work forward.")).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
+        await page.getByRole("button", { name: "Back to Team Lead" }).click();
+
+        await page.getByRole("button", { name: "Review Response Style" }).click();
+        await expect(page.getByRole("heading", { name: "Response Style details" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Change Response Style" })).toBeVisible();
+        await expect(page.getByText("Current response style", { exact: true })).toBeVisible();
+        await page.getByRole("button", { name: "Change Response Style" }).click();
+        await expect(page.getByRole("heading", { name: "Choose a Response Style" })).toBeVisible();
+        await page.getByRole("button", { name: /Warm & Supportive/i }).click();
+        await page.getByRole("button", { name: "Use selected Response Style" }).click();
+        await expect(page.getByText("Current profile: Warm & Supportive.")).toBeVisible();
+        await expect(page.getByText("The current Response Style is warm & supportive, which shapes how the Team Lead presents tone, structure, and detail.")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
 
         await page.getByRole("button", { name: "Open Departments" }).last().click();
@@ -570,10 +645,12 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByText("Advisor roles appear here once they are added")).toBeVisible();
         await expect(page.getByText("Add the first Department when ready")).toBeVisible();
         await expect(page.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeVisible();
+        await expect(page.getByText("The current Response Style is clear & balanced, which shapes how the Team Lead presents tone, structure, and detail.")).toBeVisible();
         await expect(page.getByText("Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.")).toBeVisible();
         await expectNoForbiddenCopy(page);
 
@@ -637,6 +714,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry Team Lead action" })).toBeVisible();
         await expectNoForbiddenCopy(page);
