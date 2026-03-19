@@ -160,6 +160,7 @@ Delivery updates in this checkpoint:
 20. `COMPLETE` implemented the first bounded V8 UI slice: `/dashboard` now opens with `Create AI Organization`, offers `Start from template` vs `Start empty`, uses user-facing AI Organization terms, and routes successful creation into a dedicated AI Organization home instead of generic workspace chat.
 21. `COMPLETE` added the minimal backend contract for the new flow: starter template listing from bundle-backed organization templates, AI Organization creation requests, recent-organization summaries, and organization-home loading for the success path.
 22. `COMPLETE` hardened the AI Organization entry UX before live GUI sign-off: starter-template and recent-organization failures are now decoupled, retry/recovery paths preserve any still-valid actions, architecture/dev wording is removed from operator-facing copy, and the organization home makes the Team Lead more concrete.
+23. `COMPLETE` added bounded browser coverage for the AI Organization entry flow so the dominant create path, template path, empty-start path, partial-failure recovery, and forbidden-copy checks now run in Playwright before wider UI slices proceed.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -185,6 +186,7 @@ Evidence:
 21. minimal AI Organization starter/create/home APIs now live in `core/internal/server/templates.go`, `core/internal/server/organizations.go`, and `core/internal/server/admin.go`, with focused backend coverage in `core/internal/server/organizations_test.go`
 22. route/API exposure docs now include the V8 AI Organization entry flow through `docs/API_REFERENCE.md`, and frontend regression coverage lives in `interface/__tests__/pages/DashboardPage.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/__tests__/shell/ZoneA_Rail.test.tsx`
 23. the entry flow now keeps recent-organization resume and starter-template setup resilient under partial API failure, exposes retry/recovery actions in-place, removes operator-visible dev/architecture copy leaks, and strengthens Team Lead status in the AI Organization home (`interface/components/organizations/CreateOrganizationEntry.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/DashboardPage.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`)
+24. bounded browser automation for the entry flow now lives in `interface/e2e/specs/v8-organization-entry.spec.ts` and covers dominant AI Organization entry framing, template selection, empty start, organization-home landing, retry/recovery under partial failure, and visible forbidden-copy enforcement
 
 ### 6. V8 contract shell introduction
 
