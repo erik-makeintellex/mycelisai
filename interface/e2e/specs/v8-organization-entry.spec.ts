@@ -366,6 +366,73 @@ test.describe("V8 AI Organization entry flow", () => {
         await saveScreenshot(page, testInfo, "empty-success-home.png");
     });
 
+    test("preserves organization context when a guided Team Lead action fails and then succeeds on retry", async ({ page }, testInfo) => {
+        let actionAttempts = 0;
+
+        await mockOrganizationEntryApis(page, {
+            createHandler: () => ({
+                status: 201,
+                body: { ok: true, data: createdTemplateOrganization },
+            }),
+            actionHandler: (requestBody) => {
+                actionAttempts += 1;
+                if (actionAttempts === 1) {
+                    return {
+                        status: 500,
+                        body: { ok: false, error: "Team Lead guidance is unavailable right now." },
+                    };
+                }
+
+                return {
+                    status: 200,
+                    body: {
+                        ok: true,
+                        data: {
+                            action: requestBody.action ?? "plan_next_steps",
+                            request_label: "Plan next steps for this organization",
+                            headline: "Team Lead plan for Northstar Labs",
+                            summary: "Team Lead recommends a focused first delivery loop for this AI Organization.",
+                            priority_steps: [
+                                "Align the first outcome with the AI Organization purpose.",
+                                "Use the first Department as the routing layer for work.",
+                            ],
+                            suggested_follow_ups: [
+                                "Review my organization setup",
+                                "What should I focus on first?",
+                            ],
+                        },
+                    },
+                };
+            },
+        });
+
+        await page.goto("/dashboard");
+        await page.waitForLoadState("domcontentloaded");
+        await page.getByRole("button", { name: /Start from template/i }).click();
+        await page.getByLabel("AI Organization name").fill(createdTemplateOrganization.name);
+        await page.getByLabel("Purpose").fill(createdTemplateOrganization.purpose);
+        await page.getByRole("button", { name: "Create AI Organization" }).click();
+
+        await expect(page).toHaveURL(/\/organizations\/org-123$/);
+        await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();
+
+        await expect(page.getByText("Team Lead guidance is unavailable", { exact: true })).toBeVisible();
+        await expect(page.getByText("AI Organization Home")).toBeVisible();
+        await expect(page.getByText("Team Lead ready")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Team Lead for Northstar Labs" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Retry Team Lead action" })).toBeVisible();
+        await expectNoForbiddenCopy(page);
+
+        await page.getByRole("button", { name: "Retry Team Lead action" }).click();
+
+        await expect(page.getByText("Team Lead plan for Northstar Labs")).toBeVisible();
+        await expect(page.getByText("Priority steps")).toBeVisible();
+        await expect(page.getByText("Keep moving with")).toBeVisible();
+        await expectNoForbiddenCopy(page);
+
+        await saveScreenshot(page, testInfo, "guided-retry-recovery.png");
+    });
+
     test("keeps creation available when recent organizations fail and shows retry guidance", async ({ page }, testInfo) => {
         let organizationsAttempt = 0;
 

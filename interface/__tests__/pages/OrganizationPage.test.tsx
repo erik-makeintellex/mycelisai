@@ -129,6 +129,52 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
     });
 
+    it("preserves the organization context when a Team Lead action fails and then succeeds on retry", async () => {
+        let attempt = 0;
+        setupOrganizationFetch({
+            actionHandler: (body) => {
+                attempt += 1;
+                if (attempt === 1) {
+                    return jsonResponse({ ok: false, error: "Team Lead guidance is unavailable right now." }, 500);
+                }
+                return jsonResponse({
+                    ok: true,
+                    data: {
+                        action: body.action,
+                        request_label: "Plan next steps for this organization",
+                        headline: "Team Lead plan for Northstar Labs",
+                        summary: "Team Lead recommends a focused first delivery loop.",
+                        priority_steps: [
+                            "Align the first outcome with the AI Organization purpose.",
+                            "Use the first Department as the routing layer for work.",
+                        ],
+                        suggested_follow_ups: [
+                            "Review my organization setup",
+                            "What should I focus on first?",
+                        ],
+                    },
+                });
+            },
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByText("Work with the Team Lead")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Plan next steps for this organization/i }));
+
+        expect(await screen.findByText("Team Lead guidance is unavailable")).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getByText("Team Lead ready")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+
+        fireEvent.click(screen.getByRole("button", { name: "Retry Team Lead action" }));
+
+        expect(await screen.findByText("Team Lead plan for Northstar Labs")).toBeDefined();
+        expect(screen.getByText("Priority steps")).toBeDefined();
+    });
+
     it("offers retry guidance when the organization home cannot be loaded", async () => {
         let attempt = 0;
         setupOrganizationFetch({

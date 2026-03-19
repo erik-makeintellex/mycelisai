@@ -219,3 +219,61 @@ func TestHandleTeamLeadGuidedAction_RejectsUnknownAction(t *testing.T) {
 	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"launch_agents"}`)
 	assertStatus(t, rr, http.StatusBadRequest)
 }
+
+func TestHandleTeamLeadGuidedAction_RejectsMalformedRequest(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			ID:            "org-123",
+			Name:          "Northstar Labs",
+			Purpose:       "Ship a focused AI engineering organization",
+			StartMode:     OrganizationStartModeEmpty,
+			TeamLeadLabel: "Team Lead",
+			Status:        "ready",
+		},
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":`)
+	assertStatus(t, rr, http.StatusBadRequest)
+}
+
+func TestHandleTeamLeadGuidedAction_ReturnsNotFoundForMissingOrganization(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/org-missing/workspace/actions", `{"action":"plan_next_steps"}`)
+	assertStatus(t, rr, http.StatusNotFound)
+}
+
+func TestBuildTeamLeadGuidance_UsesReadableFallbacksForPartialHome(t *testing.T) {
+	response, err := buildTeamLeadGuidance(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			StartMode: OrganizationStartModeEmpty,
+			Status:    "ready",
+		},
+	}, TeamLeadGuidedActionPlanNextSteps)
+	if err != nil {
+		t.Fatalf("buildTeamLeadGuidance returned error: %v", err)
+	}
+
+	if response.Headline != "Team Lead plan for this AI Organization" {
+		t.Fatalf("unexpected fallback headline: %+v", response)
+	}
+	if response.Summary != "Team Lead recommends moving this AI Organization from setup into a focused first delivery loop." {
+		t.Fatalf("unexpected fallback summary: %+v", response)
+	}
+	if len(response.PrioritySteps) != 3 {
+		t.Fatalf("expected fallback priority steps, got %+v", response)
+	}
+	if response.PrioritySteps[0] != "Align the first outcome with this purpose: the current AI Organization priorities." {
+		t.Fatalf("unexpected fallback priority steps: %+v", response.PrioritySteps)
+	}
+	if len(response.SuggestedFollowUps) != 3 {
+		t.Fatalf("expected fallback follow-ups, got %+v", response)
+	}
+}

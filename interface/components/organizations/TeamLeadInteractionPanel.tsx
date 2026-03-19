@@ -46,8 +46,12 @@ export default function TeamLeadInteractionPanel({
     const [requestState, setRequestState] = useState<RequestState>("idle");
     const [error, setError] = useState<string | null>(null);
     const [guidance, setGuidance] = useState<TeamLeadGuidanceResponse | null>(null);
+    const isLoading = requestState === "loading";
 
     const triggerAction = async (action: TeamLeadGuidedAction) => {
+        if (isLoading) {
+            return;
+        }
         setSelectedAction(action);
         setRequestState("loading");
         setError(null);
@@ -63,7 +67,8 @@ export default function TeamLeadInteractionPanel({
             if (!response.ok) {
                 throw new Error(extractApiError(responsePayload) || "Team Lead guidance is unavailable right now.");
             }
-            setGuidance(extractApiData<TeamLeadGuidanceResponse>(responsePayload));
+            const rawGuidance = extractApiData<Partial<TeamLeadGuidanceResponse> | null>(responsePayload);
+            setGuidance(normalizeGuidanceResponse(rawGuidance, action, organizationName, teamLeadName));
             setRequestState("ready");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Team Lead guidance is unavailable right now.");
@@ -91,11 +96,13 @@ export default function TeamLeadInteractionPanel({
                     <button
                         key={item.action}
                         onClick={() => triggerAction(item.action)}
+                        disabled={isLoading}
                         className={`w-full rounded-2xl border p-4 text-left transition-colors ${
                             selectedAction === item.action
                                 ? "border-cortex-primary/40 bg-cortex-primary/10"
                                 : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/20"
-                        }`}
+                        } disabled:cursor-not-allowed disabled:opacity-70`}
+                        aria-busy={selectedAction === item.action && isLoading}
                     >
                         <div className="flex items-start justify-between gap-3">
                             <div>
@@ -129,10 +136,17 @@ export default function TeamLeadInteractionPanel({
                     <div>
                         <p className="text-sm font-semibold text-cortex-text-main">Team Lead guidance is unavailable</p>
                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{error}</p>
+                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                            {teamLeadName} and the AI Organization context are still here. Retry the same action when you are ready.
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                            You can also choose another guided Team Lead action below without leaving {organizationName}.
+                        </p>
                         {selectedAction && (
                             <button
                                 onClick={() => triggerAction(selectedAction)}
-                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                                disabled={isLoading}
+                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 <RefreshCcw className="h-4 w-4" />
                                 Retry Team Lead action
@@ -181,6 +195,116 @@ export default function TeamLeadInteractionPanel({
             </div>
         </section>
     );
+}
+
+function normalizeGuidanceResponse(
+    payload: Partial<TeamLeadGuidanceResponse> | null,
+    action: TeamLeadGuidedAction,
+    organizationName: string,
+    teamLeadName: string,
+): TeamLeadGuidanceResponse {
+    const requestLabel = sanitizeGuidanceText(payload?.request_label, defaultRequestLabel(action));
+    const headline = sanitizeGuidanceText(payload?.headline, `${teamLeadName} guidance for ${organizationName}`);
+    const summary = sanitizeGuidanceText(
+        payload?.summary,
+        `${teamLeadName} has guidance ready for ${organizationName}.`,
+    );
+    const prioritySteps = normalizeGuidanceList(payload?.priority_steps, defaultPrioritySteps(action, organizationName));
+    const suggestedFollowUps = normalizeGuidanceList(
+        payload?.suggested_follow_ups,
+        defaultFollowUps(action),
+    );
+
+    return {
+        action,
+        request_label: requestLabel,
+        headline,
+        summary,
+        priority_steps: prioritySteps,
+        suggested_follow_ups: suggestedFollowUps,
+    };
+}
+
+function defaultRequestLabel(action: TeamLeadGuidedAction) {
+    return GUIDED_ACTIONS.find((item) => item.action === action)?.label ?? "Work with the Team Lead";
+}
+
+function defaultPrioritySteps(action: TeamLeadGuidedAction, organizationName: string) {
+    switch (action) {
+        case "focus_first":
+            return [
+                `Confirm the first priority for ${organizationName}.`,
+                "Keep the Team Lead as the working counterpart while the next step is clarified.",
+            ];
+        case "review_setup":
+            return [
+                "Check whether Advisors, Departments, and Specialists are ready for the next move.",
+                "Confirm the organization shape before expanding the workflow.",
+            ];
+        case "plan_next_steps":
+        default:
+            return [
+                `Turn ${organizationName} into a focused first delivery loop.`,
+                "Use the Team Lead guidance to choose the next concrete move.",
+            ];
+    }
+}
+
+function defaultFollowUps(action: TeamLeadGuidedAction) {
+    const fallbacks = [
+        "Plan next steps for this organization",
+        "What should I focus on first?",
+        "Review my organization setup",
+    ];
+    return fallbacks.filter((label) => label !== defaultRequestLabel(action));
+}
+
+function normalizeGuidanceList(value: unknown, fallback: string[]) {
+    if (!Array.isArray(value)) {
+        return fallback;
+    }
+    const normalized = value
+        .map((entry) => sanitizeGuidanceText(entry, ""))
+        .filter((entry) => entry.length > 0);
+    return normalized.length > 0 ? normalized : fallback;
+}
+
+function sanitizeGuidanceText(value: unknown, fallback: string) {
+    if (typeof value !== "string") {
+        return fallback;
+    }
+
+    const normalized = value
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .filter((line) => !/^(system|debug|trace|tool|agent_id)\s*:/i.test(line))
+        .filter((line) => !containsForbiddenGuidanceCopy(line))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!normalized || normalized.startsWith("{") || normalized.startsWith("[")) {
+        return fallback;
+    }
+
+    return normalized;
+}
+
+function containsForbiddenGuidanceCopy(value: string) {
+    return [
+        /v8 entry flow/i,
+        /bounded slice/i,
+        /implementation slice/i,
+        /context shell/i,
+        /raw architecture controls/i,
+        /\bcontract\b/i,
+        /inception/i,
+        /soma kernel/i,
+        /central council/i,
+        /provider policy/i,
+        /identity\s*\/\s*continuity/i,
+    ].some((pattern) => pattern.test(value));
 }
 
 function GuidanceRow({ children }: { children: React.ReactNode }) {
