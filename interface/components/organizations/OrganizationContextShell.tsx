@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
-import type { OrganizationAIEngineProfileId, OrganizationAIEngineUpdateRequest, OrganizationHomePayload } from "@/lib/organizations";
+import type {
+    DepartmentAIEngineUpdateRequest,
+    OrganizationAIEngineProfileId,
+    OrganizationAIEngineUpdateRequest,
+    OrganizationDepartmentSummary,
+    OrganizationHomePayload,
+} from "@/lib/organizations";
 import TeamLeadInteractionPanel from "@/components/organizations/TeamLeadInteractionPanel";
 
 async function readJson(response: Response) {
@@ -63,6 +69,10 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [selectedAIEngineProfile, setSelectedAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
     const [aiEngineUpdatePending, setAIEngineUpdatePending] = useState(false);
     const [aiEngineUpdateError, setAIEngineUpdateError] = useState<string | null>(null);
+    const [activeDepartmentAIEngineId, setActiveDepartmentAIEngineId] = useState<string | null>(null);
+    const [selectedDepartmentAIEngineProfile, setSelectedDepartmentAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
+    const [departmentAIEngineUpdatePendingId, setDepartmentAIEngineUpdatePendingId] = useState<string | null>(null);
+    const [departmentAIEngineUpdateError, setDepartmentAIEngineUpdateError] = useState<{ departmentId: string; message: string } | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -104,6 +114,12 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             setAIEngineUpdateError(null);
             setAIEngineUpdatePending(false);
         }
+        if (activeDetailView !== "departments") {
+            setActiveDepartmentAIEngineId(null);
+            setSelectedDepartmentAIEngineProfile(null);
+            setDepartmentAIEngineUpdatePendingId(null);
+            setDepartmentAIEngineUpdateError(null);
+        }
     }, [activeDetailView]);
 
     const openAIEngineSelector = () => {
@@ -143,6 +159,79 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             setAIEngineUpdateError(err instanceof Error ? err.message : "Unable to update AI Engine Settings.");
         } finally {
             setAIEngineUpdatePending(false);
+        }
+    };
+
+    const openDepartmentAIEngineSelector = (department: OrganizationDepartmentSummary) => {
+        setActiveDetailView("departments");
+        setActiveDepartmentAIEngineId(department.id);
+        setSelectedDepartmentAIEngineProfile((department.ai_engine_effective_profile_id as OrganizationAIEngineProfileId | undefined) ?? null);
+        setDepartmentAIEngineUpdateError(null);
+    };
+
+    const submitDepartmentAIEngineSelection = async (departmentId: string) => {
+        if (!organization || !selectedDepartmentAIEngineProfile || departmentAIEngineUpdatePendingId) {
+            return;
+        }
+
+        setDepartmentAIEngineUpdatePendingId(departmentId);
+        setDepartmentAIEngineUpdateError(null);
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/departments/${departmentId}/ai-engine`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ profile_id: selectedDepartmentAIEngineProfile } satisfies DepartmentAIEngineUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to update this Department AI Engine.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setActiveDepartmentAIEngineId(null);
+            setSelectedDepartmentAIEngineProfile(null);
+        } catch (err) {
+            setDepartmentAIEngineUpdateError({
+                departmentId,
+                message: err instanceof Error ? err.message : "Unable to update this Department AI Engine.",
+            });
+        } finally {
+            setDepartmentAIEngineUpdatePendingId(null);
+        }
+    };
+
+    const revertDepartmentAIEngineSelection = async (departmentId: string) => {
+        if (!organization || departmentAIEngineUpdatePendingId) {
+            return;
+        }
+
+        setDepartmentAIEngineUpdatePendingId(departmentId);
+        setDepartmentAIEngineUpdateError(null);
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/departments/${departmentId}/ai-engine`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ revert_to_organization_default: true } satisfies DepartmentAIEngineUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to return this Department to the organization default.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setActiveDepartmentAIEngineId(null);
+            setSelectedDepartmentAIEngineProfile(null);
+        } catch (err) {
+            setDepartmentAIEngineUpdateError({
+                departmentId,
+                message: err instanceof Error ? err.message : "Unable to return this Department to the organization default.",
+            });
+        } finally {
+            setDepartmentAIEngineUpdatePendingId(null);
         }
     };
 
@@ -280,6 +369,19 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                     setAIEngineUpdateError(null);
                                 }}
                                 onSubmitAIEngineSelection={submitAIEngineSelection}
+                                activeDepartmentAIEngineId={activeDepartmentAIEngineId}
+                                selectedDepartmentAIEngineProfile={selectedDepartmentAIEngineProfile}
+                                departmentAIEngineUpdatePendingId={departmentAIEngineUpdatePendingId}
+                                departmentAIEngineUpdateError={departmentAIEngineUpdateError}
+                                onDepartmentAIEngineProfileSelect={setSelectedDepartmentAIEngineProfile}
+                                onOpenDepartmentAIEngineSelector={openDepartmentAIEngineSelector}
+                                onCloseDepartmentAIEngineSelector={() => {
+                                    setActiveDepartmentAIEngineId(null);
+                                    setSelectedDepartmentAIEngineProfile(null);
+                                    setDepartmentAIEngineUpdateError(null);
+                                }}
+                                onSubmitDepartmentAIEngineSelection={submitDepartmentAIEngineSelection}
+                                onRevertDepartmentAIEngineSelection={revertDepartmentAIEngineSelection}
                                 onBack={() => setActiveDetailView(null)}
                             />
                         )}
@@ -429,19 +531,16 @@ function advisorDetailItems(count: number) {
 }
 
 function departmentDetailItems(organization: OrganizationHomePayload) {
-    if (organization.department_count === 0) {
-        return [];
-    }
+    const departments = organization.departments?.length
+        ? organization.departments
+        : generateFallbackDepartmentSummaries(organization.department_count, organization.specialist_count, organization.ai_engine_profile_id, organization.ai_engine_settings_summary);
 
-    const names =
-        organization.department_count === 1
-            ? ["Core Delivery Department"]
-            : ["Planning Department", "Delivery Department", "Operations Department", "Support Department"];
-
-    return names.slice(0, organization.department_count).map((name, index) => ({
-        name,
-        purpose: departmentPurpose(name),
-        specialists: spreadSpecialists(organization.specialist_count, organization.department_count, index),
+    return departments.map((department) => ({
+        ...department,
+        purpose: departmentPurpose(department.name),
+        aiEngineStateLabel: department.inherits_organization_ai_engine
+            ? `Using Organization Default: ${department.ai_engine_effective_summary}`
+            : `Overridden: ${department.ai_engine_effective_summary}`,
     }));
 }
 
@@ -465,6 +564,38 @@ function spreadSpecialists(total: number, departmentCount: number, index: number
     const base = Math.floor(total / departmentCount);
     const remainder = total % departmentCount;
     return base + (index < remainder ? 1 : 0);
+}
+
+function generateFallbackDepartmentSummaries(
+    departmentCount: number,
+    specialistCount: number,
+    aiEngineProfileId: OrganizationAIEngineProfileId | undefined,
+    aiEngineSummary: string,
+): OrganizationDepartmentSummary[] {
+    if (departmentCount <= 0) {
+        return [];
+    }
+
+    const names = departmentCount === 1 ? ["Core Delivery Department"] : ["Planning Department", "Delivery Department", "Operations Department", "Support Department"];
+    return Array.from({ length: departmentCount }, (_, index) => {
+        const name = names[index] ?? `Department ${index + 1}`;
+        return {
+            id: slugifyDepartmentId(name, index),
+            name,
+            specialist_count: spreadSpecialists(specialistCount, departmentCount, index),
+            ai_engine_effective_profile_id: aiEngineProfileId,
+            ai_engine_effective_summary: aiEngineSummary || "Set up later in Advanced mode",
+            inherits_organization_ai_engine: true,
+        };
+    });
+}
+
+function slugifyDepartmentId(name: string, index: number) {
+    const slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    return slug || `department-${index + 1}`;
 }
 
 function aiEngineSummary(summary: string) {
@@ -653,6 +784,15 @@ function WorkspaceDetailView({
     onOpenAIEngineSelector,
     onCloseAIEngineSelector,
     onSubmitAIEngineSelection,
+    activeDepartmentAIEngineId,
+    selectedDepartmentAIEngineProfile,
+    departmentAIEngineUpdatePendingId,
+    departmentAIEngineUpdateError,
+    onDepartmentAIEngineProfileSelect,
+    onOpenDepartmentAIEngineSelector,
+    onCloseDepartmentAIEngineSelector,
+    onSubmitDepartmentAIEngineSelection,
+    onRevertDepartmentAIEngineSelection,
     onBack,
 }: {
     view: "advisors" | "departments" | "aiEngine";
@@ -666,6 +806,15 @@ function WorkspaceDetailView({
     onOpenAIEngineSelector: () => void;
     onCloseAIEngineSelector: () => void;
     onSubmitAIEngineSelection: () => void;
+    activeDepartmentAIEngineId: string | null;
+    selectedDepartmentAIEngineProfile: OrganizationAIEngineProfileId | null;
+    departmentAIEngineUpdatePendingId: string | null;
+    departmentAIEngineUpdateError: { departmentId: string; message: string } | null;
+    onDepartmentAIEngineProfileSelect: (profile: OrganizationAIEngineProfileId) => void;
+    onOpenDepartmentAIEngineSelector: (department: OrganizationDepartmentSummary) => void;
+    onCloseDepartmentAIEngineSelector: () => void;
+    onSubmitDepartmentAIEngineSelection: (departmentId: string) => void;
+    onRevertDepartmentAIEngineSelection: (departmentId: string) => void;
     onBack: () => void;
 }) {
     const title =
@@ -684,22 +833,19 @@ function WorkspaceDetailView({
                   detail: item.purpose,
                   support: item.supportCue,
               }))
+            : aiEngineDetailItems(organization).map((item) => ({
+                  key: item.name,
+                  title: item.name,
+                  detail: item.purpose,
+                  support: item.supportCue,
+              }));
+    const departmentItems = view === "departments" ? departmentDetailItems(organization) : [];
+    const emptyStateMessage =
+        view === "advisors"
+            ? `${teamLeadName} is handling review directly until Advisors are added.`
             : view === "departments"
-              ? departmentDetailItems(organization).map((item) => ({
-                    key: item.name,
-                    title: item.name,
-                    detail: item.purpose,
-                    support:
-                        item.specialists > 0
-                            ? `${item.specialists} ${item.specialists === 1 ? "Specialist" : "Specialists"} visible here.`
-                            : "No Specialists assigned yet.",
-                }))
-              : aiEngineDetailItems(organization).map((item) => ({
-                    key: item.name,
-                    title: item.name,
-                    detail: item.purpose,
-                    support: item.supportCue,
-                }));
+              ? `${teamLeadName} can still shape the first operating lane before Departments are added.`
+              : `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`;
 
     return (
         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -730,7 +876,80 @@ function WorkspaceDetailView({
                 </div>
             </div>
 
-            {items.length > 0 ? (
+            {view === "departments" ? (
+                departmentItems.length > 0 ? (
+                    <div className="mt-5 grid gap-4">
+                        {departmentItems.map((item) => {
+                            const isEditing = activeDepartmentAIEngineId === item.id;
+                            const isPending = departmentAIEngineUpdatePendingId === item.id;
+                            const errorMessage = departmentAIEngineUpdateError?.departmentId === item.id ? departmentAIEngineUpdateError.message : null;
+
+                            return (
+                                <div key={item.id} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                        <div>
+                                            <p className="text-sm font-semibold text-cortex-text-main">{item.name}</p>
+                                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{item.purpose}</p>
+                                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                                {item.specialist_count > 0
+                                                    ? `${item.specialist_count} ${item.specialist_count === 1 ? "Specialist" : "Specialists"} visible here.`
+                                                    : "No Specialists assigned yet."}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+                                            <p className="font-medium text-cortex-text-main">AI Engine status</p>
+                                            <p className="mt-1 leading-6">{item.aiEngineStateLabel}</p>
+                                            <p className="mt-2 leading-6">
+                                                {item.inherits_organization_ai_engine
+                                                    ? "This Department follows the organization-wide AI Engine unless you set a Department-specific choice."
+                                                    : "This Department is using its own guided AI Engine choice and will keep it until you return it to the organization default."}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 flex flex-wrap gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => onOpenDepartmentAIEngineSelector(item)}
+                                            disabled={Boolean(departmentAIEngineUpdatePendingId && departmentAIEngineUpdatePendingId !== item.id)}
+                                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            <Sparkles className="h-4 w-4 text-cortex-primary" />
+                                            Change for this Team
+                                        </button>
+                                        {!item.inherits_organization_ai_engine && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onRevertDepartmentAIEngineSelection(item.id)}
+                                                disabled={isPending}
+                                                className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                                                Revert to Organization Default
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {isEditing && (
+                                        <DepartmentAIEngineSelectionPanel
+                                            selectedDepartmentAIEngineProfile={selectedDepartmentAIEngineProfile}
+                                            departmentAIEngineUpdatePending={isPending}
+                                            departmentAIEngineUpdateError={errorMessage}
+                                            onDepartmentAIEngineProfileSelect={onDepartmentAIEngineProfileSelect}
+                                            onClose={onCloseDepartmentAIEngineSelector}
+                                            onSubmit={() => onSubmitDepartmentAIEngineSelection(item.id)}
+                                        />
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm leading-6 text-cortex-text-muted">
+                        {`${teamLeadName} can still shape the first operating lane before Departments are added.`}
+                    </div>
+                )
+            ) : items.length > 0 ? (
                 <div className="mt-5 grid gap-3">
                     {items.map((item) => (
                         <div key={item.key} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
@@ -742,11 +961,7 @@ function WorkspaceDetailView({
                 </div>
             ) : (
                 <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm leading-6 text-cortex-text-muted">
-                    {view === "advisors"
-                        ? `${teamLeadName} is handling review directly until Advisors are added.`
-                        : view === "departments"
-                          ? `${teamLeadName} can still shape the first operating lane before Departments are added.`
-                          : `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`}
+                    {emptyStateMessage}
                 </div>
             )}
 
@@ -862,6 +1077,101 @@ function AIEngineSelectionPanel({
                     onClick={onClose}
                     disabled={aiEngineUpdatePending}
                     className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function DepartmentAIEngineSelectionPanel({
+    selectedDepartmentAIEngineProfile,
+    departmentAIEngineUpdatePending,
+    departmentAIEngineUpdateError,
+    onDepartmentAIEngineProfileSelect,
+    onClose,
+    onSubmit,
+}: {
+    selectedDepartmentAIEngineProfile: OrganizationAIEngineProfileId | null;
+    departmentAIEngineUpdatePending: boolean;
+    departmentAIEngineUpdateError: string | null;
+    onDepartmentAIEngineProfileSelect: (profile: OrganizationAIEngineProfileId) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+}) {
+    return (
+        <div className="mt-4 rounded-3xl border border-cortex-primary/20 bg-cortex-surface p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h4 className="text-lg font-semibold text-cortex-text-main">Choose an AI Engine for this Team</h4>
+                    <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
+                        Pick a guided AI Engine only for this Team when it needs a different planning or response style than the rest of the AI Organization.
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Department-level only</p>
+                    <p className="mt-1">The Team Lead and other Departments keep their current AI Engine behavior.</p>
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+                {AI_ENGINE_OPTIONS.map((option) => {
+                    const isSelected = selectedDepartmentAIEngineProfile === option.id;
+                    return (
+                        <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => onDepartmentAIEngineProfileSelect(option.id)}
+                            disabled={departmentAIEngineUpdatePending}
+                            className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                                isSelected
+                                    ? "border-cortex-primary/40 bg-cortex-primary/10"
+                                    : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/20"
+                            } ${departmentAIEngineUpdatePending ? "opacity-75" : ""}`}
+                        >
+                            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-cortex-text-main">{option.label}</p>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{option.description}</p>
+                                </div>
+                                {isSelected && (
+                                    <span className="inline-flex w-fit rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-cortex-primary">
+                                        Selected
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Good for:</span> {option.goodFor}
+                            </p>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {departmentAIEngineUpdateError && (
+                <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Unable to update this Team AI Engine</p>
+                    <p className="mt-2 leading-6">{departmentAIEngineUpdateError}</p>
+                    <p className="mt-2 leading-6">Try again to keep this Department aligned with the Team Lead workspace while the rest of the organization stays visible.</p>
+                </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                    type="button"
+                    onClick={onSubmit}
+                    disabled={!selectedDepartmentAIEngineProfile || departmentAIEngineUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {departmentAIEngineUpdatePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {departmentAIEngineUpdatePending ? "Updating Team AI Engine..." : "Use selected AI Engine"}
+                </button>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={departmentAIEngineUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Cancel
                 </button>
