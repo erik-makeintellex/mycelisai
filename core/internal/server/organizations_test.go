@@ -99,6 +99,7 @@ func TestHandleCreateOrganization_FromTemplateAndGetHome(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
 	mux.HandleFunc("POST /api/v1/organizations", s.handleCreateOrganization)
 
 	body := `{"name":"Northstar Labs","purpose":"Ship a focused AI engineering organization","start_mode":"template","template_id":"engineering-starter"}`
@@ -137,6 +138,23 @@ func TestHandleCreateOrganization_FromTemplateAndGetHome(t *testing.T) {
 	}
 	if homeData["department_count"] != float64(1) || homeData["specialist_count"] != float64(2) {
 		t.Fatalf("unexpected home counts: %+v", homeData)
+	}
+
+	actionRR := doRequest(t, mux, "POST", "/api/v1/organizations/"+id+"/workspace/actions", `{"action":"plan_next_steps"}`)
+	assertStatus(t, actionRR, http.StatusOK)
+
+	var actionResp protocol.APIResponse
+	assertJSON(t, actionRR, &actionResp)
+	actionData, ok := actionResp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object action payload, got %T", actionResp.Data)
+	}
+	if actionData["request_label"] != "Plan next steps for this organization" {
+		t.Fatalf("unexpected action payload: %+v", actionData)
+	}
+	steps, ok := actionData["priority_steps"].([]any)
+	if !ok || len(steps) == 0 {
+		t.Fatalf("expected priority steps, got %+v", actionData)
 	}
 }
 
@@ -180,4 +198,24 @@ func TestHandleListOrganizations_ReturnsCreatedSummaries(t *testing.T) {
 	if len(list) != 1 {
 		t.Fatalf("expected 1 organization summary, got %d", len(list))
 	}
+}
+
+func TestHandleTeamLeadGuidedAction_RejectsUnknownAction(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			ID:            "org-123",
+			Name:          "Northstar Labs",
+			Purpose:       "Ship a focused AI engineering organization",
+			StartMode:     OrganizationStartModeEmpty,
+			TeamLeadLabel: "Team Lead",
+			Status:        "ready",
+		},
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"launch_agents"}`)
+	assertStatus(t, rr, http.StatusBadRequest)
 }

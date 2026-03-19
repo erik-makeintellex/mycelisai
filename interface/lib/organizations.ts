@@ -39,3 +39,18 @@ export interface OrganizationCreateRequest {
     start_mode: OrganizationStartMode;
     template_id?: string;
 }
+
+export type TeamLeadGuidedAction = "plan_next_steps" | "focus_first" | "review_setup";
+
+export interface TeamLeadGuidanceRequest {
+    action: TeamLeadGuidedAction;
+}
+
+export interface TeamLeadGuidanceResponse {
+    action: TeamLeadGuidedAction;
+    request_label: string;
+    headline: string;
+    summary: string;
+    priority_steps: string[];
+    suggested_follow_ups: string[];
+}

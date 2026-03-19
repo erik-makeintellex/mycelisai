@@ -57,11 +57,32 @@ type OrganizationHomePayload struct {
 	Description string `json:"description,omitempty"`
 }
 
+type TeamLeadGuidedAction string
+
+const (
+	TeamLeadGuidedActionPlanNextSteps TeamLeadGuidedAction = "plan_next_steps"
+	TeamLeadGuidedActionFocusFirst    TeamLeadGuidedAction = "focus_first"
+	TeamLeadGuidedActionReviewSetup   TeamLeadGuidedAction = "review_setup"
+)
+
 type OrganizationCreateRequest struct {
 	Name       string                `json:"name"`
 	Purpose    string                `json:"purpose"`
 	StartMode  OrganizationStartMode `json:"start_mode"`
 	TemplateID string                `json:"template_id,omitempty"`
+}
+
+type TeamLeadGuidanceRequest struct {
+	Action TeamLeadGuidedAction `json:"action"`
+}
+
+type TeamLeadGuidanceResponse struct {
+	Action             TeamLeadGuidedAction `json:"action"`
+	RequestLabel       string               `json:"request_label"`
+	Headline           string               `json:"headline"`
+	Summary            string               `json:"summary"`
+	PrioritySteps      []string             `json:"priority_steps"`
+	SuggestedFollowUps []string             `json:"suggested_follow_ups"`
 }
 
 type OrganizationStore struct {
@@ -317,4 +338,147 @@ func (s *AdminServer) handleGetOrganizationHome(w http.ResponseWriter, r *http.R
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(home))
+}
+
+func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		respondAPIError(w, "organization id is required", http.StatusBadRequest)
+		return
+	}
+
+	home, ok := s.organizationStore().Get(id)
+	if !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+
+	var req TeamLeadGuidanceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "invalid Team Lead action request", http.StatusBadRequest)
+		return
+	}
+
+	response, err := buildTeamLeadGuidance(home, req.Action)
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(response))
+}
+
+func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAction) (TeamLeadGuidanceResponse, error) {
+	switch action {
+	case TeamLeadGuidedActionPlanNextSteps:
+		steps := []string{
+			fmt.Sprintf("Align the first outcome with this purpose: %s.", strings.TrimSpace(home.Purpose)),
+			firstDepartmentStep(home),
+			firstSpecialistStep(home),
+		}
+		return TeamLeadGuidanceResponse{
+			Action:        action,
+			RequestLabel:  "Plan next steps for this organization",
+			Headline:      fmt.Sprintf("Team Lead plan for %s", home.Name),
+			Summary:       fmt.Sprintf("%s recommends moving %s from setup into a focused first delivery loop.", home.TeamLeadLabel, home.Name),
+			PrioritySteps: steps,
+			SuggestedFollowUps: []string{
+				"Review my organization setup",
+				"What should I focus on first?",
+				templateSpecificSuggestion(home),
+			},
+		}, nil
+	case TeamLeadGuidedActionFocusFirst:
+		return TeamLeadGuidanceResponse{
+			Action:       action,
+			RequestLabel: "What should I focus on first?",
+			Headline:     fmt.Sprintf("First focus for %s", home.Name),
+			Summary:      firstFocusSummary(home),
+			PrioritySteps: []string{
+				firstDepartmentStep(home),
+				firstAdvisorStep(home),
+				"Keep the Team Lead as the primary working counterpart while the organization takes shape.",
+			},
+			SuggestedFollowUps: []string{
+				"Plan next steps for this organization",
+				"Review my organization setup",
+				"Review the Team Lead guidance before expanding into deeper structure.",
+			},
+		}, nil
+	case TeamLeadGuidedActionReviewSetup:
+		return TeamLeadGuidanceResponse{
+			Action:       action,
+			RequestLabel: "Review my organization setup",
+			Headline:     fmt.Sprintf("Organization setup review for %s", home.Name),
+			Summary:      fmt.Sprintf("%s is ready to review the current AI Organization shape before the next action begins.", home.TeamLeadLabel),
+			PrioritySteps: []string{
+				fmt.Sprintf("Advisors: %s.", formatConfiguredCountForGuidance(home.AdvisorCount, "advisor")),
+				fmt.Sprintf("Departments: %s.", formatConfiguredCountForGuidance(home.DepartmentCount, "department")),
+				fmt.Sprintf("Specialists: %s.", formatConfiguredCountForGuidance(home.SpecialistCount, "specialist")),
+			},
+			SuggestedFollowUps: []string{
+				"Plan next steps for this organization",
+				"What should I focus on first?",
+				fmt.Sprintf("Review the %s summary and confirm the Team Lead has what it needs.", home.startingPointLabel()),
+			},
+		}, nil
+	default:
+		return TeamLeadGuidanceResponse{}, fmt.Errorf("action must be plan_next_steps, focus_first, or review_setup")
+	}
+}
+
+func firstDepartmentStep(home OrganizationHomePayload) string {
+	if home.DepartmentCount > 0 {
+		return fmt.Sprintf("Use %d Department%s as the first routing layer for work.", home.DepartmentCount, pluralSuffix(home.DepartmentCount))
+	}
+	return "Define the first Department so the Team Lead has a clear execution lane."
+}
+
+func firstSpecialistStep(home OrganizationHomePayload) string {
+	if home.SpecialistCount > 0 {
+		return fmt.Sprintf("Bring %d Specialist%s in after the Team Lead confirms the plan.", home.SpecialistCount, pluralSuffix(home.SpecialistCount))
+	}
+	return "Add Specialists only after the Team Lead confirms the first Department-level plan."
+}
+
+func firstAdvisorStep(home OrganizationHomePayload) string {
+	if home.AdvisorCount > 0 {
+		return fmt.Sprintf("Use %d Advisor%s when the Team Lead needs review or decision support.", home.AdvisorCount, pluralSuffix(home.AdvisorCount))
+	}
+	return "Decide whether advisor guidance is needed before the next planning cycle."
+}
+
+func firstFocusSummary(home OrganizationHomePayload) string {
+	if home.StartMode == OrganizationStartModeTemplate && strings.TrimSpace(home.TemplateName) != "" {
+		return fmt.Sprintf("Start by using %s as the first working shape, then let the Team Lead confirm which part of the organization should lead.", home.TemplateName)
+	}
+	return "Start by confirming the first outcome this AI Organization should deliver, then let the Team Lead shape the initial structure around that goal."
+}
+
+func templateSpecificSuggestion(home OrganizationHomePayload) string {
+	if home.StartMode == OrganizationStartModeTemplate && strings.TrimSpace(home.TemplateName) != "" {
+		return fmt.Sprintf("Use the %s starter as the first operating guide.", home.TemplateName)
+	}
+	return "Review how the Team Lead should shape the first Department and Specialist setup."
+}
+
+func formatConfiguredCountForGuidance(count int, label string) string {
+	if count == 0 {
+		return "not configured yet"
+	}
+	return fmt.Sprintf("%d %s%s ready", count, label, pluralSuffix(count))
+}
+
+func pluralSuffix(count int) string {
+	if count == 1 {
+		return ""
+	}
+	return "s"
+}
+
+func (h OrganizationHomePayload) startingPointLabel() string {
+	if h.StartMode == OrganizationStartModeTemplate && strings.TrimSpace(h.TemplateName) != "" {
+		return h.TemplateName
+	}
+	return "starting organization shape"
 }

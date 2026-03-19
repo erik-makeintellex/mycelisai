@@ -69,6 +69,7 @@ async function mockOrganizationEntryApis(
         organizationsStatus?: number;
         organizationsError?: string;
         createHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
+        actionHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         homeResponsesById?: Record<string, unknown>;
     },
 ) {
@@ -80,6 +81,7 @@ async function mockOrganizationEntryApis(
         organizationsStatus = 200,
         organizationsError = "Recent AI Organizations are unavailable right now.",
         createHandler,
+        actionHandler,
         homeResponsesById = {
             [createdTemplateOrganization.id]: createdTemplateOrganization,
             [createdEmptyOrganization.id]: createdEmptyOrganization,
@@ -157,6 +159,38 @@ async function mockOrganizationEntryApis(
         });
     });
 
+    await page.route("**/api/v1/organizations/*/workspace/actions", async (route) => {
+        const requestBody = route.request().postDataJSON() as Record<string, unknown>;
+        const response = actionHandler
+            ? actionHandler(requestBody)
+            : {
+                  status: 200,
+                  body: {
+                      ok: true,
+                      data: {
+                          action: requestBody.action ?? "plan_next_steps",
+                          request_label: "Plan next steps for this organization",
+                          headline: "Team Lead plan for Northstar Labs",
+                          summary: "Team Lead recommends a focused first delivery loop for this AI Organization.",
+                          priority_steps: [
+                              "Align the first outcome with the AI Organization purpose.",
+                              "Use the first Department as the routing layer for work.",
+                          ],
+                          suggested_follow_ups: [
+                              "Review my organization setup",
+                              "What should I focus on first?",
+                          ],
+                      },
+                  },
+              };
+
+        await route.fulfill({
+            status: response.status,
+            contentType: "application/json",
+            body: JSON.stringify(response.body),
+        });
+    });
+
     await page.route("**/api/v1/organizations/*/home", async (route) => {
         const url = new URL(route.request().url());
         const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/home$/);
@@ -223,8 +257,9 @@ test.describe("V8 AI Organization entry flow", () => {
         await saveScreenshot(page, testInfo, "template-mode.png");
     });
 
-    test("creates an AI Organization from a template and lands on the organization home", async ({ page }, testInfo) => {
+    test("creates an AI Organization from a template and starts a guided Team Lead workflow", async ({ page }, testInfo) => {
         let capturedRequestBody: Record<string, unknown> | null = null;
+        let capturedActionBody: Record<string, unknown> | null = null;
 
         await mockOrganizationEntryApis(page, {
             createHandler: (requestBody) => {
@@ -232,6 +267,29 @@ test.describe("V8 AI Organization entry flow", () => {
                 return {
                     status: 201,
                     body: { ok: true, data: createdTemplateOrganization },
+                };
+            },
+            actionHandler: (requestBody) => {
+                capturedActionBody = requestBody;
+                return {
+                    status: 200,
+                    body: {
+                        ok: true,
+                        data: {
+                            action: "plan_next_steps",
+                            request_label: "Plan next steps for this organization",
+                            headline: "Team Lead plan for Northstar Labs",
+                            summary: "Team Lead recommends a focused first delivery loop for this AI Organization.",
+                            priority_steps: [
+                                "Align the first outcome with the AI Organization purpose.",
+                                "Use the first Department as the routing layer for work.",
+                            ],
+                            suggested_follow_ups: [
+                                "Review my organization setup",
+                                "What should I focus on first?",
+                            ],
+                        },
+                    },
                 };
             },
         });
@@ -254,15 +312,20 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByRole("heading", { name: createdTemplateOrganization.name, exact: true })).toBeVisible();
         await expect(page.getByText("Team Lead ready")).toBeVisible();
-        await expect(page.getByText("Team Lead workspace")).toBeVisible();
+        await expect(page.getByText("Work with the Team Lead")).toBeVisible();
         await expect(page.getByText("Organization overview")).toBeVisible();
-        await expect(page.getByRole("button", { name: /Ask Team Lead to plan next steps/i })).toBeVisible();
-        await expect(page.getByText("Recommended next steps")).toBeVisible();
+        await expect(page.getByRole("button", { name: /Plan next steps for this organization/i })).toBeVisible();
+
+        await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();
+        expect(capturedActionBody).toEqual({ action: "plan_next_steps" });
+        await expect(page.getByText("Team Lead plan for Northstar Labs")).toBeVisible();
+        await expect(page.getByText("Priority steps")).toBeVisible();
+        await expect(page.getByText("Keep moving with")).toBeVisible();
         await expect(page.getByText("Mission Control")).toHaveCount(0);
         await expect(page.getByText("New Chat")).toHaveCount(0);
         await expectNoForbiddenCopy(page);
 
-        await saveScreenshot(page, testInfo, "template-success-home.png");
+        await saveScreenshot(page, testInfo, "template-guided-workflow.png");
     });
 
     test("creates an empty-start AI Organization and keeps the organization frame after success", async ({ page }, testInfo) => {
@@ -295,7 +358,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByRole("heading", { name: createdEmptyOrganization.name, exact: true })).toBeVisible();
         await expect(page.getByText("Team Lead ready")).toBeVisible();
-        await expect(page.getByText("Team Lead workspace")).toBeVisible();
+        await expect(page.getByText("Work with the Team Lead")).toBeVisible();
         await expect(page.getByText("Started from")).toBeVisible();
         await expect(page.getByText("Empty")).toBeVisible();
         await expectNoForbiddenCopy(page);
