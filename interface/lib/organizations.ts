@@ -1,5 +1,6 @@
 export type OrganizationStartMode = "template" | "empty";
 export type OrganizationAIEngineProfileId = "starter_defaults" | "balanced" | "high_reasoning" | "fast_lightweight" | "deep_planning";
+export type ResponseContractProfileId = "clear_balanced" | "structured_analytical" | "concise_direct" | "warm_supportive";
 
 export interface OrganizationDepartmentSummary {
     id: string;
@@ -23,6 +24,8 @@ export interface OrganizationTemplateSummary {
     specialist_count: number;
     ai_engine_profile_id?: OrganizationAIEngineProfileId;
     ai_engine_settings_summary: string;
+    response_contract_profile_id?: ResponseContractProfileId;
+    response_contract_summary: string;
     memory_personality_summary: string;
 }
 
@@ -39,6 +42,8 @@ export interface OrganizationSummary {
     specialist_count: number;
     ai_engine_profile_id?: OrganizationAIEngineProfileId;
     ai_engine_settings_summary: string;
+    response_contract_profile_id?: ResponseContractProfileId;
+    response_contract_summary: string;
     memory_personality_summary: string;
     status: string;
 }
@@ -62,6 +67,10 @@ export interface OrganizationAIEngineUpdateRequest {
 export interface DepartmentAIEngineUpdateRequest {
     profile_id?: OrganizationAIEngineProfileId;
     revert_to_organization_default?: boolean;
+}
+
+export interface ResponseContractUpdateRequest {
+    profile_id: ResponseContractProfileId;
 }
 
 export type TeamLeadGuidedAction = "plan_next_steps" | "focus_first" | "review_setup";

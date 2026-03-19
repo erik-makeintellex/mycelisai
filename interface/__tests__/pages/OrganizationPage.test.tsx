@@ -22,6 +22,8 @@ const organizationHome = {
     specialist_count: 2,
     ai_engine_profile_id: "starter_defaults",
     ai_engine_settings_summary: "Starter defaults included",
+    response_contract_profile_id: "clear_balanced",
+    response_contract_summary: "Clear & Balanced",
     memory_personality_summary: "Prepared for Adaptive Delivery work",
     status: "ready",
     description: "Guided AI Organization for engineering work",
@@ -62,11 +64,24 @@ function applyOrganizationAIEngineToDepartments(
     };
 }
 
+function applyResponseContract(
+    home: typeof organizationHome,
+    profileId: string,
+    summary: string,
+) {
+    return {
+        ...home,
+        response_contract_profile_id: profileId,
+        response_contract_summary: summary,
+    };
+}
+
 function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
     actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
     aiEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     departmentAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
+    responseContractUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
 }) {
     let currentOrganizationHome = structuredClone(organizationHome);
 
@@ -96,6 +111,28 @@ function setupOrganizationFetch(options?: {
                 currentOrganizationHome,
                 profileId,
                 summaries[profileId] ?? currentOrganizationHome.ai_engine_settings_summary,
+            );
+
+            return jsonResponse({ ok: true, data: currentOrganizationHome });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/response-contract") && method === "PATCH") {
+            const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
+            if (options?.responseContractUpdateHandler) {
+                return options.responseContractUpdateHandler(body);
+            }
+
+            const summaries: Record<string, string> = {
+                clear_balanced: "Clear & Balanced",
+                structured_analytical: "Structured & Analytical",
+                concise_direct: "Concise & Direct",
+                warm_supportive: "Warm & Supportive",
+            };
+            const profileId = String(body.profile_id ?? "");
+            currentOrganizationHome = applyResponseContract(
+                currentOrganizationHome,
+                profileId,
+                summaries[profileId] ?? currentOrganizationHome.response_contract_summary,
             );
 
             return jsonResponse({ ok: true, data: currentOrganizationHome });
@@ -198,6 +235,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
         expect(screen.getByText("Advisor support")).toBeDefined();
         expect(screen.getByText("Department view")).toBeDefined();
@@ -206,6 +244,9 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getAllByText("What this affects").length).toBeGreaterThan(0);
         expect(screen.getByText("Response style")).toBeDefined();
         expect(screen.getByText("Planning depth")).toBeDefined();
+        expect(screen.getByText("Tone")).toBeDefined();
+        expect(screen.getByText("Structure")).toBeDefined();
+        expect(screen.getByText("Verbosity")).toBeDefined();
         expect(screen.getByText("Working tone")).toBeDefined();
         expect(screen.getByText("Context continuity")).toBeDefined();
         expect(screen.getByRole("button", { name: /Plan next steps for this organization/i })).toBeDefined();
@@ -214,6 +255,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Review AI Engine Settings" }).length).toBeGreaterThan(0);
+        expect(screen.getAllByRole("button", { name: "Review Response Style" }).length).toBeGreaterThan(0);
         expect(screen.queryByText(/context shell/i)).toBeNull();
         expect(screen.queryByText(/bounded slice/i)).toBeNull();
         expect(screen.queryByText(/implementation slice/i)).toBeNull();
@@ -257,6 +299,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
     });
 
@@ -366,6 +409,71 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("No specific role overrides are visible in this workspace right now.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+    });
+
+    it("renders the bounded Response Style summary and lets the operator change it safely", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Response Style" })).toBeDefined();
+        expect(screen.getByText("The current Response Style is clear & balanced, which shapes how the Team Lead presents tone, structure, and detail.")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Review Response Style" }));
+
+        expect(await screen.findByRole("heading", { name: "Response Style details" })).toBeDefined();
+        expect(screen.getByRole("button", { name: "Change Response Style" })).toBeDefined();
+        expect(screen.getByText("Current response style")).toBeDefined();
+        expect(screen.getByText("Tone and style")).toBeDefined();
+        expect(screen.getByText("Structure and detail")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Change Response Style" }));
+        expect(await screen.findByRole("heading", { name: "Choose a Response Style" })).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Warm & Supportive/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected Response Style" }));
+
+        expect(await screen.findByText("Current profile: Warm & Supportive.")).toBeDefined();
+        expect(screen.getByText("The current Response Style is warm & supportive, which shapes how the Team Lead presents tone, structure, and detail.")).toBeDefined();
+    });
+
+    it("shows retry guidance when changing the Response Style fails and then recovers", async () => {
+        let attempts = 0;
+        setupOrganizationFetch({
+            responseContractUpdateHandler: (body) => {
+                attempts += 1;
+                if (attempts === 1) {
+                    return jsonResponse({ ok: false, error: "Response Style update is unavailable right now." }, 500);
+                }
+
+                return jsonResponse({
+                    ok: true,
+                    data: {
+                        ...organizationHome,
+                        response_contract_profile_id: body.profile_id,
+                        response_contract_summary: "Structured & Analytical",
+                    },
+                });
+            },
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Response Style" })).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Review Response Style" }));
+        fireEvent.click(screen.getByRole("button", { name: "Change Response Style" }));
+        fireEvent.click(screen.getByRole("button", { name: /Structured & Analytical/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected Response Style" }));
+
+        expect(await screen.findByText("Unable to update Response Style")).toBeDefined();
+        expect(screen.getByText("Response Style update is unavailable right now.")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Retry Response Style change" })).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Retry Response Style change" }));
+        expect(await screen.findByText("Current profile: Structured & Analytical.")).toBeDefined();
+        expect(screen.queryByText("Unable to update Response Style")).toBeNull();
     });
 
     it("lets the operator change the organization AI Engine through a guided selection flow", async () => {
@@ -512,6 +620,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
         expect(screen.getAllByText("Inspect only").length).toBeGreaterThan(0);
         expect(screen.getByText("Advisor roles appear here once they are added")).toBeDefined();
