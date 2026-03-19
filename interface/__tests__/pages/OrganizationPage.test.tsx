@@ -20,6 +20,7 @@ const organizationHome = {
     advisor_count: 1,
     department_count: 1,
     specialist_count: 2,
+    ai_engine_profile_id: "starter_defaults",
     ai_engine_settings_summary: "Starter defaults included",
     memory_personality_summary: "Prepared for Adaptive Delivery work",
     status: "ready",
@@ -33,13 +34,39 @@ function jsonResponse(body: unknown, status = 200) {
 function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
     actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
+    aiEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
 }) {
+    let currentOrganizationHome = structuredClone(organizationHome);
+
     mockFetch.mockImplementation((input, init) => {
         const url = typeof input === "string" ? input : input instanceof Request ? input.url : String(input);
         const method = init?.method ?? (input instanceof Request ? input.method : "GET");
 
         if (url.includes("/api/v1/organizations/org-123/home")) {
-            return options?.homeHandler?.() ?? jsonResponse({ ok: true, data: organizationHome });
+            return options?.homeHandler?.() ?? jsonResponse({ ok: true, data: currentOrganizationHome });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/ai-engine") && method === "PATCH") {
+            const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
+            if (options?.aiEngineUpdateHandler) {
+                return options.aiEngineUpdateHandler(body);
+            }
+
+            const summaries: Record<string, string> = {
+                starter_defaults: "Starter Defaults",
+                balanced: "Balanced",
+                high_reasoning: "High Reasoning",
+                fast_lightweight: "Fast & Lightweight",
+                deep_planning: "Deep Planning",
+            };
+            const profileId = String(body.profile_id ?? "");
+            currentOrganizationHome = {
+                ...currentOrganizationHome,
+                ai_engine_profile_id: profileId,
+                ai_engine_settings_summary: summaries[profileId] ?? currentOrganizationHome.ai_engine_settings_summary,
+            };
+
+            return jsonResponse({ ok: true, data: currentOrganizationHome });
         }
 
         if (url.includes("/api/v1/organizations/org-123/workspace/actions") && method === "POST") {
@@ -245,14 +272,80 @@ describe("OrganizationPage (/organizations/[id])", () => {
         fireEvent.click(screen.getAllByRole("button", { name: "Review AI Engine Settings" })[0]);
 
         expect(await screen.findByRole("heading", { name: "AI Engine Settings details" })).toBeDefined();
+        expect(screen.getByRole("button", { name: "Change AI Engine" })).toBeDefined();
         expect(screen.getByText("Organization-wide AI engine")).toBeDefined();
         expect(screen.getByText("Team defaults")).toBeDefined();
         expect(screen.getByText("Specific role overrides")).toBeDefined();
         expect(screen.getByText("Current profile: Starter defaults included.")).toBeDefined();
-        expect(screen.getByText("The current starter applies the shared AI engine profile across Departments unless a team-specific setting appears here.")).toBeDefined();
+        expect(screen.getByText("Departments start from the organization-wide AI engine unless a team-specific setting appears here.")).toBeDefined();
         expect(screen.getByText("No specific role overrides are visible in this workspace right now.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+    });
+
+    it("lets the operator change the organization AI Engine through a guided selection flow", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Review AI Engine Settings" })[0]);
+        fireEvent.click(screen.getByRole("button", { name: "Change AI Engine" }));
+
+        expect(await screen.findByRole("heading", { name: "Choose an AI Engine profile" })).toBeDefined();
+        expect(screen.getByText("Balanced")).toBeDefined();
+        expect(screen.getByText("High Reasoning")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /High Reasoning/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected AI Engine" }));
+
+        expect(await screen.findByText("Current profile: High Reasoning.")).toBeDefined();
+        expect(screen.getByText("The current AI Engine Settings profile is high reasoning and shapes how the organization responds, plans, and carries work forward.")).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+    });
+
+    it("shows retry guidance when changing the AI Engine fails and recovers on retry", async () => {
+        let attempts = 0;
+        setupOrganizationFetch({
+            aiEngineUpdateHandler: (body) => {
+                attempts += 1;
+                if (attempts === 1) {
+                    return jsonResponse({ ok: false, error: "AI Engine update is unavailable right now." }, 500);
+                }
+
+                return jsonResponse({
+                    ok: true,
+                    data: {
+                        ...organizationHome,
+                        ai_engine_profile_id: body.profile_id,
+                        ai_engine_settings_summary: "Balanced",
+                    },
+                });
+            },
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Review AI Engine Settings" })[0]);
+        fireEvent.click(screen.getByRole("button", { name: "Change AI Engine" }));
+        fireEvent.click(screen.getByRole("button", { name: /Balanced/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected AI Engine" }));
+
+        expect(await screen.findByText("Unable to update AI Engine Settings")).toBeDefined();
+        expect(screen.getByText("AI Engine update is unavailable right now.")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Retry AI Engine change" })).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+
+        fireEvent.click(screen.getByRole("button", { name: "Retry AI Engine change" }));
+
+        expect(await screen.findByText("Current profile: Balanced.")).toBeDefined();
+        expect(screen.queryByText("Unable to update AI Engine Settings")).toBeNull();
     });
 
     it("shows inspect-only Advisor and Department summaries when the organization starts empty", async () => {

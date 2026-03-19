@@ -99,6 +99,7 @@ func TestHandleCreateOrganization_FromTemplateAndGetHome(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
 	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
 	mux.HandleFunc("POST /api/v1/organizations", s.handleCreateOrganization)
 
@@ -138,6 +139,9 @@ func TestHandleCreateOrganization_FromTemplateAndGetHome(t *testing.T) {
 	}
 	if homeData["department_count"] != float64(1) || homeData["specialist_count"] != float64(2) {
 		t.Fatalf("unexpected home counts: %+v", homeData)
+	}
+	if homeData["ai_engine_profile_id"] != "starter_defaults" {
+		t.Fatalf("unexpected home AI Engine profile: %+v", homeData)
 	}
 
 	actionRR := doRequest(t, mux, "POST", "/api/v1/organizations/"+id+"/workspace/actions", `{"action":"plan_next_steps"}`)
@@ -198,6 +202,80 @@ func TestHandleListOrganizations_ReturnsCreatedSummaries(t *testing.T) {
 	if len(list) != 1 {
 		t.Fatalf("expected 1 organization summary, got %d", len(list))
 	}
+}
+
+func TestHandleUpdateOrganizationAIEngine_StoresCuratedProfile(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			ID:                      "org-123",
+			Name:                    "Northstar Labs",
+			Purpose:                 "Ship a focused AI engineering organization",
+			StartMode:               OrganizationStartModeTemplate,
+			TemplateName:            "Engineering Starter",
+			TeamLeadLabel:           "Team Lead",
+			AdvisorCount:            1,
+			DepartmentCount:         1,
+			SpecialistCount:         2,
+			AIEngineProfileID:       "starter_defaults",
+			AIEngineSettingsSummary: "Starter defaults included",
+			Status:                  "ready",
+		},
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
+	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
+
+	updateRR := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/ai-engine", `{"profile_id":"high_reasoning"}`)
+	assertStatus(t, updateRR, http.StatusOK)
+
+	var updateResp protocol.APIResponse
+	assertJSON(t, updateRR, &updateResp)
+	data, ok := updateResp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object data, got %T", updateResp.Data)
+	}
+	if data["ai_engine_profile_id"] != "high_reasoning" {
+		t.Fatalf("unexpected updated profile id: %+v", data)
+	}
+	if data["ai_engine_settings_summary"] != "High Reasoning" {
+		t.Fatalf("unexpected updated profile summary: %+v", data)
+	}
+
+	homeRR := doRequest(t, mux, "GET", "/api/v1/organizations/"+created.ID+"/home", "")
+	assertStatus(t, homeRR, http.StatusOK)
+
+	var homeResp protocol.APIResponse
+	assertJSON(t, homeRR, &homeResp)
+	homeData, ok := homeResp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object home data, got %T", homeResp.Data)
+	}
+	if homeData["ai_engine_profile_id"] != "high_reasoning" || homeData["ai_engine_settings_summary"] != "High Reasoning" {
+		t.Fatalf("unexpected persisted home payload: %+v", homeData)
+	}
+}
+
+func TestHandleUpdateOrganizationAIEngine_RejectsInvalidProfile(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			ID:                      "org-123",
+			Name:                    "Northstar Labs",
+			Purpose:                 "Ship a focused AI engineering organization",
+			StartMode:               OrganizationStartModeEmpty,
+			TeamLeadLabel:           "Team Lead",
+			AIEngineSettingsSummary: "Set up later in Advanced mode",
+			Status:                  "ready",
+		},
+	})
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
+
+	rr := doRequest(t, mux, "PATCH", "/api/v1/organizations/"+created.ID+"/ai-engine", `{"profile_id":"llama3.2"}`)
+	assertStatus(t, rr, http.StatusBadRequest)
 }
 
 func TestHandleTeamLeadGuidedAction_RejectsUnknownAction(t *testing.T) {

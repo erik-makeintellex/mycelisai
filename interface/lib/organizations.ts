@@ -1,4 +1,5 @@
 export type OrganizationStartMode = "template" | "empty";
+export type OrganizationAIEngineProfileId = "starter_defaults" | "balanced" | "high_reasoning" | "fast_lightweight" | "deep_planning";
 
 export interface OrganizationTemplateSummary {
     id: string;
@@ -9,6 +10,7 @@ export interface OrganizationTemplateSummary {
     advisor_count: number;
     department_count: number;
     specialist_count: number;
+    ai_engine_profile_id?: OrganizationAIEngineProfileId;
     ai_engine_settings_summary: string;
     memory_personality_summary: string;
 }
@@ -24,6 +26,7 @@ export interface OrganizationSummary {
     advisor_count: number;
     department_count: number;
     specialist_count: number;
+    ai_engine_profile_id?: OrganizationAIEngineProfileId;
     ai_engine_settings_summary: string;
     memory_personality_summary: string;
     status: string;
@@ -38,6 +41,10 @@ export interface OrganizationCreateRequest {
     purpose: string;
     start_mode: OrganizationStartMode;
     template_id?: string;
+}
+
+export interface OrganizationAIEngineUpdateRequest {
+    profile_id: OrganizationAIEngineProfileId;
 }
 
 export type TeamLeadGuidedAction = "plan_next_steps" | "focus_first" | "review_setup";
