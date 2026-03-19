@@ -84,6 +84,11 @@ export interface DepartmentAIEngineUpdateRequest {
     revert_to_organization_default?: boolean;
 }
 
+export interface AgentTypeAIEngineUpdateRequest {
+    profile_id?: OrganizationAIEngineProfileId;
+    use_team_default?: boolean;
+}
+
 export interface ResponseContractUpdateRequest {
     profile_id: ResponseContractProfileId;
 }

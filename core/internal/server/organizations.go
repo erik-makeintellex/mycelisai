@@ -151,6 +151,11 @@ type DepartmentAIEngineUpdateRequest struct {
 	RevertToOrganizationDefault bool   `json:"revert_to_organization_default,omitempty"`
 }
 
+type AgentTypeAIEngineUpdateRequest struct {
+	ProfileID      string `json:"profile_id,omitempty"`
+	UseTeamDefault bool   `json:"use_team_default,omitempty"`
+}
+
 type ResponseContractUpdateRequest struct {
 	ProfileID string `json:"profile_id"`
 }
@@ -946,6 +951,78 @@ func (s *AdminServer) handleUpdateDepartmentAIEngine(w http.ResponseWriter, r *h
 	}
 	if !departmentFound {
 		respondAPIError(w, "department not found", http.StatusNotFound)
+		return
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
+}
+
+func (s *AdminServer) handleUpdateAgentTypeAIEngine(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	departmentID := strings.TrimSpace(r.PathValue("departmentId"))
+	agentTypeID := strings.TrimSpace(r.PathValue("agentTypeId"))
+	if id == "" || departmentID == "" || agentTypeID == "" {
+		respondAPIError(w, "organization id, department id, and agent type id are required", http.StatusBadRequest)
+		return
+	}
+
+	var req AgentTypeAIEngineUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "invalid Agent Type AI Engine update request", http.StatusBadRequest)
+		return
+	}
+
+	profileID := strings.TrimSpace(req.ProfileID)
+	if req.UseTeamDefault {
+		profileID = ""
+	} else {
+		if profileID == "" {
+			respondAPIError(w, "profile_id is required unless returning to the Team default", http.StatusBadRequest)
+			return
+		}
+		if _, ok := lookupOrganizationAIEngineProfile(profileID); !ok {
+			respondAPIError(w, "profile_id must be one of the guided AI Engine options", http.StatusBadRequest)
+			return
+		}
+	}
+
+	departmentFound := false
+	agentTypeFound := false
+	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+		home = normalizeOrganizationHome(home)
+		for departmentIndex, department := range home.Departments {
+			if department.ID != departmentID {
+				continue
+			}
+			departmentFound = true
+			for profileIndex, profile := range department.AgentTypeProfiles {
+				if profile.ID != agentTypeID {
+					continue
+				}
+				agentTypeFound = true
+				if profileID == "" || profileID == department.AIEngineEffectiveProfileID {
+					profile.AIEngineBindingProfileID = ""
+				} else {
+					profile.AIEngineBindingProfileID = profileID
+				}
+				department.AgentTypeProfiles[profileIndex] = profile
+				break
+			}
+			home.Departments[departmentIndex] = department
+			break
+		}
+		return normalizeOrganizationHome(home)
+	})
+	if !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+	if !departmentFound {
+		respondAPIError(w, "department not found", http.StatusNotFound)
+		return
+	}
+	if !agentTypeFound {
+		respondAPIError(w, "agent type profile not found", http.StatusNotFound)
 		return
 	}
 

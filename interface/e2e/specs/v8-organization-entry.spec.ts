@@ -134,6 +134,36 @@ function applyResponseContract(home: typeof createdTemplateOrganization, profile
     };
 }
 
+function applyAgentTypeAIEngine(
+    home: typeof createdTemplateOrganization,
+    departmentId: string,
+    agentTypeId: string,
+    profileId: string | undefined,
+    summary: string,
+) {
+    return {
+        ...home,
+        departments: home.departments.map((department) =>
+            department.id === departmentId
+                ? {
+                      ...department,
+                      agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                          profile.id === agentTypeId
+                              ? {
+                                    ...profile,
+                                    ai_engine_binding_profile_id: profileId,
+                                    ai_engine_effective_profile_id: profileId ?? department.ai_engine_effective_profile_id,
+                                    ai_engine_effective_summary: profileId ? summary : department.ai_engine_effective_summary,
+                                    inherits_department_ai_engine: !profileId,
+                                }
+                              : profile,
+                      ),
+                  }
+                : department,
+        ),
+    };
+}
+
 async function saveScreenshot(page: Page, testInfo: TestInfo, name: string) {
     await page.screenshot({
         path: testInfo.outputPath(name),
@@ -163,6 +193,7 @@ async function mockOrganizationEntryApis(
         actionHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         aiEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         departmentAIEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
+        agentTypeAIEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         responseContractUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         homeResponsesById?: Record<string, unknown>;
     },
@@ -178,6 +209,7 @@ async function mockOrganizationEntryApis(
         actionHandler,
         aiEngineUpdateHandler,
         departmentAIEngineUpdateHandler,
+        agentTypeAIEngineUpdateHandler,
         responseContractUpdateHandler,
         homeResponsesById = {
             [createdTemplateOrganization.id]: createdTemplateOrganization,
@@ -216,7 +248,13 @@ async function mockOrganizationEntryApis(
         });
     });
 
-    await page.route("**/api/v1/templates?view=organization-starters*", async (route) => {
+    await page.route(/\/api\/v1\/templates(?:\?.*)?$/, async (route) => {
+        const url = new URL(route.request().url());
+        if (route.request().method() !== "GET" || url.searchParams.get("view") !== "organization-starters") {
+            await route.fallback();
+            return;
+        }
+
         await route.fulfill({
             status: templateStatus,
             contentType: "application/json",
@@ -228,7 +266,13 @@ async function mockOrganizationEntryApis(
         });
     });
 
-    await page.route("**/api/v1/organizations?view=summary*", async (route) => {
+    await page.route(/\/api\/v1\/organizations(?:\?.*)?$/, async (route) => {
+        const url = new URL(route.request().url());
+        if (route.request().method() !== "GET" || url.searchParams.get("view") !== "summary") {
+            await route.fallback();
+            return;
+        }
+
         await route.fulfill({
             status: organizationsStatus,
             contentType: "application/json",
@@ -457,6 +501,55 @@ async function mockOrganizationEntryApis(
         });
     });
 
+    await page.route("**/api/v1/organizations/*/departments/*/agent-types/*/ai-engine", async (route) => {
+        const requestBody = route.request().postDataJSON() as Record<string, unknown>;
+        const url = new URL(route.request().url());
+        const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/departments\/([^/]+)\/agent-types\/([^/]+)\/ai-engine$/);
+        const organizationId = match?.[1];
+        const departmentId = match?.[2];
+        const agentTypeId = match?.[3];
+
+        if (agentTypeAIEngineUpdateHandler) {
+            const response = agentTypeAIEngineUpdateHandler(requestBody);
+            await route.fulfill({
+                status: response.status,
+                contentType: "application/json",
+                body: JSON.stringify(response.body),
+            });
+            return;
+        }
+
+        const summaries: Record<string, string> = {
+            starter_defaults: "Starter Defaults",
+            balanced: "Balanced",
+            high_reasoning: "High Reasoning",
+            fast_lightweight: "Fast & Lightweight",
+            deep_planning: "Deep Planning",
+        };
+
+        if (organizationId && departmentId && agentTypeId && mutableHomeResponsesById[organizationId]) {
+            const home = mutableHomeResponsesById[organizationId] as typeof createdTemplateOrganization;
+            mutableHomeResponsesById[organizationId] = requestBody.use_team_default
+                ? applyAgentTypeAIEngine(home, departmentId, agentTypeId, undefined, "")
+                : applyAgentTypeAIEngine(
+                      home,
+                      departmentId,
+                      agentTypeId,
+                      String(requestBody.profile_id ?? ""),
+                      summaries[String(requestBody.profile_id ?? "")] ?? "Balanced",
+                  );
+        }
+
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                ok: true,
+                data: organizationId ? mutableHomeResponsesById[organizationId] : null,
+            }),
+        });
+    });
+
     await page.route("**/api/v1/organizations/*/home", async (route) => {
         const url = new URL(route.request().url());
         const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/home$/);
@@ -619,8 +712,8 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Agent Type Profiles")).toBeVisible();
         await expect(page.getByText("Planner")).toBeVisible();
         await expect(page.getByText("Delivery Specialist")).toBeVisible();
-        await expect(page.getByText("Type-specific engine binding: High Reasoning")).toBeVisible();
-        await expect(page.getByText("Using Team default: Starter defaults included")).toBeVisible();
+        await expect(page.getByText("Type-specific Engine: High Reasoning")).toBeVisible();
+        await expect(page.getByText("Using Team Default: Starter defaults included")).toBeVisible();
         await expect(page.getByText("Type-specific response binding: Structured & Analytical")).toBeVisible();
         await expect(page.getByText("Using Organization/Team default: Clear & Balanced")).toBeVisible();
         await page.getByRole("button", { name: "Change for this Team" }).click();
@@ -628,7 +721,15 @@ test.describe("V8 AI Organization entry flow", () => {
         await page.getByRole("button", { name: /Balanced/i }).click();
         await page.getByRole("button", { name: "Use selected AI Engine" }).click();
         await expect(page.getByText("Overridden: Balanced")).toBeVisible();
-        await expect(page.getByText("Using Team default: Balanced")).toBeVisible();
+        await expect(page.getByText("Using Team Default: Balanced")).toBeVisible();
+        await page.getByRole("button", { name: "Change for this Agent Type" }).last().click();
+        await expect(page.getByRole("heading", { name: "Choose an AI Engine for this Agent Type" })).toBeVisible();
+        await page.getByRole("button", { name: /Fast & Lightweight/i }).click();
+        await page.getByRole("button", { name: "Use selected AI Engine" }).click();
+        await expect(page.getByText("Type-specific Engine: Fast & Lightweight")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Use Team Default" }).last()).toBeVisible();
+        await page.getByRole("button", { name: "Use Team Default" }).last().click();
+        await expect(page.getByText("Using Team Default: Balanced")).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
@@ -668,7 +769,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Overridden: Balanced")).toBeVisible();
         await page.getByRole("button", { name: "Revert to Organization Default" }).click();
         await expect(page.getByText("Using Organization Default: High Reasoning")).toBeVisible();
-        await expect(page.getByText("Using Team default: High Reasoning")).toBeVisible();
+        await expect(page.getByText("Using Team Default: High Reasoning")).toBeVisible();
         await expect(page.getByText("Using Organization/Team default: Warm & Supportive")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
 

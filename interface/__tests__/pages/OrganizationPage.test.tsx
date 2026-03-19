@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { mockFetch } from "../setup";
+import type { OrganizationAIEngineProfileId, OrganizationHomePayload, ResponseContractProfileId } from "@/lib/organizations";
 
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
@@ -9,7 +10,7 @@ vi.mock("next/navigation", () => ({
 
 import OrganizationPage from "@/app/(app)/organizations/[id]/page";
 
-const organizationHome = {
+const organizationHome: OrganizationHomePayload = {
     id: "org-123",
     name: "Northstar Labs",
     purpose: "Ship a focused AI engineering organization for product delivery.",
@@ -70,15 +71,15 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 function applyOrganizationAIEngineToDepartments(
-    home: typeof organizationHome,
-    profileId: string,
+    home: OrganizationHomePayload,
+    profileId: OrganizationAIEngineProfileId,
     summary: string,
-) {
+): OrganizationHomePayload {
     return {
         ...home,
         ai_engine_profile_id: profileId,
         ai_engine_settings_summary: summary,
-        departments: home.departments.map((department) =>
+        departments: (home.departments ?? []).map((department) =>
             department.inherits_organization_ai_engine
                 ? {
                       ...department,
@@ -100,15 +101,15 @@ function applyOrganizationAIEngineToDepartments(
 }
 
 function applyResponseContract(
-    home: typeof organizationHome,
-    profileId: string,
+    home: OrganizationHomePayload,
+    profileId: ResponseContractProfileId,
     summary: string,
-) {
+): OrganizationHomePayload {
     return {
         ...home,
         response_contract_profile_id: profileId,
         response_contract_summary: summary,
-        departments: home.departments.map((department) => ({
+        departments: (home.departments ?? []).map((department) => ({
             ...department,
             agent_type_profiles: department.agent_type_profiles?.map((profile) =>
                 profile.inherits_default_response_contract
@@ -123,14 +124,45 @@ function applyResponseContract(
     };
 }
 
+function applyAgentTypeAIEngine(
+    home: OrganizationHomePayload,
+    departmentId: string,
+    agentTypeId: string,
+    profileId: OrganizationAIEngineProfileId | undefined,
+    summary: string,
+): OrganizationHomePayload {
+    return {
+        ...home,
+        departments: (home.departments ?? []).map((department) =>
+            department.id === departmentId
+                ? {
+                      ...department,
+                      agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                          profile.id === agentTypeId
+                              ? {
+                                    ...profile,
+                                    ai_engine_binding_profile_id: profileId,
+                                    ai_engine_effective_profile_id: profileId ?? department.ai_engine_effective_profile_id,
+                                    ai_engine_effective_summary: profileId ? summary : department.ai_engine_effective_summary,
+                                    inherits_department_ai_engine: !profileId,
+                                }
+                              : profile,
+                      ),
+                  }
+                : department,
+        ),
+    };
+}
+
 function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
     actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
     aiEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     departmentAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
+    agentTypeAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     responseContractUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
 }) {
-    let currentOrganizationHome = structuredClone(organizationHome);
+    let currentOrganizationHome: OrganizationHomePayload = structuredClone(organizationHome);
 
     mockFetch.mockImplementation((input, init) => {
         const url = typeof input === "string" ? input : input instanceof Request ? input.url : String(input);
@@ -156,7 +188,7 @@ function setupOrganizationFetch(options?: {
             const profileId = String(body.profile_id ?? "");
             currentOrganizationHome = applyOrganizationAIEngineToDepartments(
                 currentOrganizationHome,
-                profileId,
+                profileId as OrganizationAIEngineProfileId,
                 summaries[profileId] ?? currentOrganizationHome.ai_engine_settings_summary,
             );
 
@@ -178,7 +210,7 @@ function setupOrganizationFetch(options?: {
             const profileId = String(body.profile_id ?? "");
             currentOrganizationHome = applyResponseContract(
                 currentOrganizationHome,
-                profileId,
+                profileId as ResponseContractProfileId,
                 summaries[profileId] ?? currentOrganizationHome.response_contract_summary,
             );
 
@@ -194,28 +226,28 @@ function setupOrganizationFetch(options?: {
             if (body.revert_to_organization_default) {
                 currentOrganizationHome = {
                     ...currentOrganizationHome,
-                    departments: currentOrganizationHome.departments.map((department) =>
+                    departments: (currentOrganizationHome.departments ?? []).map((department) =>
                         department.id === "platform"
-                        ? {
-                              ...department,
-                              ai_engine_override_profile_id: undefined,
-                              ai_engine_override_summary: undefined,
-                              ai_engine_effective_profile_id: currentOrganizationHome.ai_engine_profile_id,
-                              ai_engine_effective_summary: currentOrganizationHome.ai_engine_settings_summary,
-                              inherits_organization_ai_engine: true,
-                              agent_type_profiles: department.agent_type_profiles?.map((profile) =>
-                                  profile.inherits_department_ai_engine
-                                      ? {
-                                            ...profile,
-                                            ai_engine_effective_profile_id: currentOrganizationHome.ai_engine_profile_id,
-                                            ai_engine_effective_summary: currentOrganizationHome.ai_engine_settings_summary,
-                                        }
-                                      : profile,
-                              ),
-                          }
-                        : department,
-                ),
-            };
+                            ? {
+                                  ...department,
+                                  ai_engine_override_profile_id: undefined,
+                                  ai_engine_override_summary: undefined,
+                                  ai_engine_effective_profile_id: currentOrganizationHome.ai_engine_profile_id,
+                                  ai_engine_effective_summary: currentOrganizationHome.ai_engine_settings_summary,
+                                  inherits_organization_ai_engine: true,
+                                  agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                                      profile.inherits_department_ai_engine
+                                          ? {
+                                                ...profile,
+                                                ai_engine_effective_profile_id: currentOrganizationHome.ai_engine_profile_id,
+                                                ai_engine_effective_summary: currentOrganizationHome.ai_engine_settings_summary,
+                                            }
+                                          : profile,
+                                  ),
+                              }
+                            : department,
+                    ),
+                };
                 return jsonResponse({ ok: true, data: currentOrganizationHome });
             }
 
@@ -229,20 +261,20 @@ function setupOrganizationFetch(options?: {
             const profileId = String(body.profile_id ?? "");
             currentOrganizationHome = {
                 ...currentOrganizationHome,
-                departments: currentOrganizationHome.departments.map((department) =>
+                departments: (currentOrganizationHome.departments ?? []).map((department) =>
                     department.id === "platform"
                         ? {
                               ...department,
-                              ai_engine_override_profile_id: profileId,
+                              ai_engine_override_profile_id: profileId as OrganizationAIEngineProfileId,
                               ai_engine_override_summary: summaries[profileId],
-                              ai_engine_effective_profile_id: profileId,
+                              ai_engine_effective_profile_id: profileId as OrganizationAIEngineProfileId,
                               ai_engine_effective_summary: summaries[profileId] ?? department.ai_engine_effective_summary,
                               inherits_organization_ai_engine: false,
                               agent_type_profiles: department.agent_type_profiles?.map((profile) =>
                                   profile.inherits_department_ai_engine
                                       ? {
                                             ...profile,
-                                            ai_engine_effective_profile_id: profileId,
+                                            ai_engine_effective_profile_id: profileId as OrganizationAIEngineProfileId,
                                             ai_engine_effective_summary: summaries[profileId] ?? department.ai_engine_effective_summary,
                                         }
                                       : profile,
@@ -251,6 +283,38 @@ function setupOrganizationFetch(options?: {
                         : department,
                 ),
             };
+
+            return jsonResponse({ ok: true, data: currentOrganizationHome });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/departments/platform/agent-types/") && url.includes("/ai-engine") && method === "PATCH") {
+            const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
+            if (options?.agentTypeAIEngineUpdateHandler) {
+                return options.agentTypeAIEngineUpdateHandler(body);
+            }
+
+            const summaries: Record<string, string> = {
+                starter_defaults: "Starter Defaults",
+                balanced: "Balanced",
+                high_reasoning: "High Reasoning",
+                fast_lightweight: "Fast & Lightweight",
+                deep_planning: "Deep Planning",
+            };
+
+            const agentTypeId = url.includes("/delivery-specialist/") ? "delivery-specialist" : "planner";
+            if (body.use_team_default) {
+                currentOrganizationHome = applyAgentTypeAIEngine(currentOrganizationHome, "platform", agentTypeId, undefined, "");
+                return jsonResponse({ ok: true, data: currentOrganizationHome });
+            }
+
+            const profileId = String(body.profile_id ?? "");
+            currentOrganizationHome = applyAgentTypeAIEngine(
+                currentOrganizationHome,
+                "platform",
+                agentTypeId,
+                profileId as OrganizationAIEngineProfileId,
+                summaries[profileId] ?? "Balanced",
+            );
 
             return jsonResponse({ ok: true, data: currentOrganizationHome });
         }
@@ -449,8 +513,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Agent Type Profiles")).toBeDefined();
         expect(screen.getByText("Planner")).toBeDefined();
         expect(screen.getByText("Delivery Specialist")).toBeDefined();
-        expect(screen.getByText("Type-specific engine binding: High Reasoning")).toBeDefined();
-        expect(screen.getByText("Using Team default: Starter defaults included")).toBeDefined();
+        expect(screen.getByText("Type-specific Engine: High Reasoning")).toBeDefined();
+        expect(screen.getByText("Using Team Default: Starter defaults included")).toBeDefined();
         expect(screen.getByText("Type-specific response binding: Structured & Analytical")).toBeDefined();
         expect(screen.getByText("Using Organization/Team default: Clear & Balanced")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
@@ -594,6 +658,29 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByText("Using Organization Default: Starter defaults included")).toBeDefined();
     });
 
+    it("lets the operator bind an Agent Type AI Engine and then return it to the Team default", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Departments" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+
+        expect(await screen.findByText("Using Team Default: Starter defaults included")).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Change for this Agent Type" }).at(-1)!);
+        expect(await screen.findByRole("heading", { name: "Choose an AI Engine for this Agent Type" })).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Balanced/i }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Use selected AI Engine" }).at(-1)!);
+
+        expect(await screen.findByText("Type-specific Engine: Balanced")).toBeDefined();
+        expect(screen.getAllByRole("button", { name: "Use Team Default" }).at(-1)).toBeDefined();
+
+        fireEvent.click(screen.getAllByRole("button", { name: "Use Team Default" }).at(-1)!);
+        expect(await screen.findByText("Using Team Default: Starter defaults included")).toBeDefined();
+    });
+
     it("keeps a Department override when the organization AI Engine changes and reapplies inheritance after revert", async () => {
         setupOrganizationFetch();
 
@@ -621,6 +708,41 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Revert to Organization Default" }));
         expect(await screen.findByText("Using Organization Default: Fast & Lightweight")).toBeDefined();
+    });
+
+    it("shows retry guidance when changing an Agent Type AI Engine fails and recovers on retry", async () => {
+        let attempts = 0;
+        setupOrganizationFetch({
+            agentTypeAIEngineUpdateHandler: (body) => {
+                attempts += 1;
+                if (attempts === 1) {
+                    return jsonResponse({ ok: false, error: "Agent Type AI Engine update is unavailable right now." }, 500);
+                }
+
+                return jsonResponse({
+                    ok: true,
+                    data: applyAgentTypeAIEngine(organizationHome, "platform", "delivery-specialist", String(body.profile_id ?? "") as OrganizationAIEngineProfileId, "Balanced"),
+                });
+            },
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Departments" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+        fireEvent.click(screen.getAllByRole("button", { name: "Change for this Agent Type" }).at(-1)!);
+        fireEvent.click(screen.getByRole("button", { name: /Balanced/i }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Use selected AI Engine" }).at(-1)!);
+
+        expect(await screen.findByText("Unable to update this Agent Type AI Engine")).toBeDefined();
+        expect(screen.getByText("Agent Type AI Engine update is unavailable right now.")).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+
+        fireEvent.click(screen.getAllByRole("button", { name: "Use selected AI Engine" }).at(-1)!);
+        expect(await screen.findByText("Type-specific Engine: Balanced")).toBeDefined();
     });
 
     it("shows retry guidance when changing the AI Engine fails and recovers on retry", async () => {
