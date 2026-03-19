@@ -163,6 +163,7 @@ Delivery updates in this checkpoint:
 23. `COMPLETE` added bounded browser coverage for the AI Organization entry flow so the dominant create path, template path, empty-start path, partial-failure recovery, and forbidden-copy checks now run in Playwright before wider UI slices proceed.
 24. `COMPLETE` turned the post-create organization page into the first Team Lead-first workspace shell: organization context stays visible, the Team Lead now has a concrete identity/presence block, primary next actions drive the active workspace focus, and advanced controls remain summarized instead of becoming the default surface.
 25. `COMPLETE` introduced the first guided Team Lead interaction workflow: the organization workspace now offers structured Team Lead starting actions, sends a minimal workspace action request to the backend, and renders a shaped guidance response without expanding into generic chat or advisor orchestration.
+26. `COMPLETE` hardened the guided Team Lead workflow for bounded production use: action failures now surface clear retry guidance without dropping the AI Organization frame, partial guidance payloads normalize into readable Team Lead sections, duplicate submits stay disabled while loading, and browser coverage now exercises guided-action failure recovery.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -191,6 +192,7 @@ Evidence:
 24. bounded browser automation for the entry flow now lives in `interface/e2e/specs/v8-organization-entry.spec.ts` and covers dominant AI Organization entry framing, template selection, empty start, organization-home landing, retry/recovery under partial failure, and visible forbidden-copy enforcement
 25. the organization page now functions as a Team Lead-first workspace shell rather than a static landing state: `interface/components/organizations/OrganizationContextShell.tsx` keeps the AI Organization header visible, adds a concrete Team Lead identity block plus next-action controls, and switches the active workspace focus between planning, advisor review, department review, AI Engine Settings summary, and Memory & Personality summary with focused page and browser coverage
 26. the first Team Lead interaction workflow now lives in `core/internal/server/organizations.go`, `interface/components/organizations/TeamLeadInteractionPanel.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/organizations/TeamLeadInteractionPanel.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; it intentionally stops at guided Team Lead responses and does not yet implement advisor orchestration, raw agent selection, advanced configuration panels, or a full chat system
+27. guided Team Lead resilience now adds readable fallback shaping in `core/internal/server/organizations.go`, failure/retry and malformed-response rendering in `interface/components/organizations/TeamLeadInteractionPanel.tsx`, focused backend/frontend tests in `core/internal/server/organizations_test.go`, `interface/__tests__/organizations/TeamLeadInteractionPanel.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and bounded browser retry coverage in `interface/e2e/specs/v8-organization-entry.spec.ts`; advisor orchestration, raw agent selection, advanced configuration panels, and a full chat system remain intentionally out of scope
 
 ### 6. V8 contract shell introduction
 
@@ -332,5 +334,6 @@ Next steps:
 7. `NEXT` continue the documentation authority cleanup so active entrypoints stay lean while compatibility docs and archive material remain intentionally separated.
 8. `NEXT` promote generated per-organization bootstrap bundles so startup remains bundle-only without relying on the fixed standing-team bridge asset long term.
 9. `NEXT` extend the Team Lead workspace from guided starting actions into real request/history API flows and deeper structure surfaces while keeping advisor orchestration, raw agent selection, and advanced configuration behind intentional later slices.
+10. `NEXT` add bounded Team Lead response history and operator-visible continuity inside the AI Organization workspace without widening into generic chat or exposing raw agent-selection controls.
 
 

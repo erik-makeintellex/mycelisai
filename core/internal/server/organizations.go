@@ -369,18 +369,22 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 }
 
 func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAction) (TeamLeadGuidanceResponse, error) {
+	organizationName := safeOrganizationName(home.Name)
+	teamLeadLabel := safeTeamLeadLabel(home.TeamLeadLabel)
+	purposeText := safePurposeText(home.Purpose)
+
 	switch action {
 	case TeamLeadGuidedActionPlanNextSteps:
 		steps := []string{
-			fmt.Sprintf("Align the first outcome with this purpose: %s.", strings.TrimSpace(home.Purpose)),
+			fmt.Sprintf("Align the first outcome with this purpose: %s.", purposeText),
 			firstDepartmentStep(home),
 			firstSpecialistStep(home),
 		}
 		return TeamLeadGuidanceResponse{
 			Action:        action,
 			RequestLabel:  "Plan next steps for this organization",
-			Headline:      fmt.Sprintf("Team Lead plan for %s", home.Name),
-			Summary:       fmt.Sprintf("%s recommends moving %s from setup into a focused first delivery loop.", home.TeamLeadLabel, home.Name),
+			Headline:      fmt.Sprintf("Team Lead plan for %s", organizationName),
+			Summary:       fmt.Sprintf("%s recommends moving %s from setup into a focused first delivery loop.", teamLeadLabel, organizationName),
 			PrioritySteps: steps,
 			SuggestedFollowUps: []string{
 				"Review my organization setup",
@@ -392,7 +396,7 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 		return TeamLeadGuidanceResponse{
 			Action:       action,
 			RequestLabel: "What should I focus on first?",
-			Headline:     fmt.Sprintf("First focus for %s", home.Name),
+			Headline:     fmt.Sprintf("First focus for %s", organizationName),
 			Summary:      firstFocusSummary(home),
 			PrioritySteps: []string{
 				firstDepartmentStep(home),
@@ -409,8 +413,8 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 		return TeamLeadGuidanceResponse{
 			Action:       action,
 			RequestLabel: "Review my organization setup",
-			Headline:     fmt.Sprintf("Organization setup review for %s", home.Name),
-			Summary:      fmt.Sprintf("%s is ready to review the current AI Organization shape before the next action begins.", home.TeamLeadLabel),
+			Headline:     fmt.Sprintf("Organization setup review for %s", organizationName),
+			Summary:      fmt.Sprintf("%s is ready to review the current AI Organization shape before the next action begins.", teamLeadLabel),
 			PrioritySteps: []string{
 				fmt.Sprintf("Advisors: %s.", formatConfiguredCountForGuidance(home.AdvisorCount, "advisor")),
 				fmt.Sprintf("Departments: %s.", formatConfiguredCountForGuidance(home.DepartmentCount, "department")),
@@ -452,7 +456,7 @@ func firstFocusSummary(home OrganizationHomePayload) string {
 	if home.StartMode == OrganizationStartModeTemplate && strings.TrimSpace(home.TemplateName) != "" {
 		return fmt.Sprintf("Start by using %s as the first working shape, then let the Team Lead confirm which part of the organization should lead.", home.TemplateName)
 	}
-	return "Start by confirming the first outcome this AI Organization should deliver, then let the Team Lead shape the initial structure around that goal."
+	return fmt.Sprintf("Start by confirming the first outcome this AI Organization should deliver around %s, then let the Team Lead shape the initial structure around that goal.", safePurposeText(home.Purpose))
 }
 
 func templateSpecificSuggestion(home OrganizationHomePayload) string {
@@ -467,6 +471,30 @@ func formatConfiguredCountForGuidance(count int, label string) string {
 		return "not configured yet"
 	}
 	return fmt.Sprintf("%d %s%s ready", count, label, pluralSuffix(count))
+}
+
+func safeOrganizationName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "this AI Organization"
+	}
+	return name
+}
+
+func safeTeamLeadLabel(label string) string {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		return "Team Lead"
+	}
+	return label
+}
+
+func safePurposeText(purpose string) string {
+	purpose = strings.TrimSpace(purpose)
+	if purpose == "" {
+		return "the current AI Organization priorities"
+	}
+	return purpose
 }
 
 func pluralSuffix(count int) string {
