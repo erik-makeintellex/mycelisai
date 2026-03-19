@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type {
+    AgentTypeAIEngineUpdateRequest,
     DepartmentAIEngineUpdateRequest,
     OrganizationAgentTypeProfileSummary,
     OrganizationAIEngineProfileId,
@@ -118,6 +119,10 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [selectedDepartmentAIEngineProfile, setSelectedDepartmentAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
     const [departmentAIEngineUpdatePendingId, setDepartmentAIEngineUpdatePendingId] = useState<string | null>(null);
     const [departmentAIEngineUpdateError, setDepartmentAIEngineUpdateError] = useState<{ departmentId: string; message: string } | null>(null);
+    const [activeAgentTypeAIEngineKey, setActiveAgentTypeAIEngineKey] = useState<string | null>(null);
+    const [selectedAgentTypeAIEngineProfile, setSelectedAgentTypeAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
+    const [agentTypeAIEngineUpdatePendingKey, setAgentTypeAIEngineUpdatePendingKey] = useState<string | null>(null);
+    const [agentTypeAIEngineUpdateError, setAgentTypeAIEngineUpdateError] = useState<{ departmentId: string; agentTypeId: string; message: string } | null>(null);
     const [isResponseContractSelectorOpen, setIsResponseContractSelectorOpen] = useState(false);
     const [selectedResponseContractProfile, setSelectedResponseContractProfile] = useState<ResponseContractProfileId | null>(null);
     const [responseContractUpdatePending, setResponseContractUpdatePending] = useState(false);
@@ -168,6 +173,10 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             setSelectedDepartmentAIEngineProfile(null);
             setDepartmentAIEngineUpdatePendingId(null);
             setDepartmentAIEngineUpdateError(null);
+            setActiveAgentTypeAIEngineKey(null);
+            setSelectedAgentTypeAIEngineProfile(null);
+            setAgentTypeAIEngineUpdatePendingKey(null);
+            setAgentTypeAIEngineUpdateError(null);
         }
         if (activeDetailView !== "responseContract") {
             setIsResponseContractSelectorOpen(false);
@@ -330,6 +339,83 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         }
     };
 
+    const openAgentTypeAIEngineSelector = (departmentId: string, profile: OrganizationAgentTypeProfileSummary) => {
+        setActiveDetailView("departments");
+        setActiveAgentTypeAIEngineKey(agentTypeSelectionKey(departmentId, profile.id));
+        setSelectedAgentTypeAIEngineProfile((profile.ai_engine_effective_profile_id as OrganizationAIEngineProfileId | undefined) ?? null);
+        setAgentTypeAIEngineUpdateError(null);
+    };
+
+    const submitAgentTypeAIEngineSelection = async (departmentId: string, agentTypeId: string) => {
+        if (!organization || !selectedAgentTypeAIEngineProfile || agentTypeAIEngineUpdatePendingKey) {
+            return;
+        }
+
+        const selectionKey = agentTypeSelectionKey(departmentId, agentTypeId);
+        setAgentTypeAIEngineUpdatePendingKey(selectionKey);
+        setAgentTypeAIEngineUpdateError(null);
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/departments/${departmentId}/agent-types/${agentTypeId}/ai-engine`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ profile_id: selectedAgentTypeAIEngineProfile } satisfies AgentTypeAIEngineUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to update this Agent Type AI Engine.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setActiveAgentTypeAIEngineKey(null);
+            setSelectedAgentTypeAIEngineProfile(null);
+        } catch (err) {
+            setAgentTypeAIEngineUpdateError({
+                departmentId,
+                agentTypeId,
+                message: err instanceof Error ? err.message : "Unable to update this Agent Type AI Engine.",
+            });
+        } finally {
+            setAgentTypeAIEngineUpdatePendingKey(null);
+        }
+    };
+
+    const revertAgentTypeAIEngineSelection = async (departmentId: string, agentTypeId: string) => {
+        if (!organization || agentTypeAIEngineUpdatePendingKey) {
+            return;
+        }
+
+        const selectionKey = agentTypeSelectionKey(departmentId, agentTypeId);
+        setAgentTypeAIEngineUpdatePendingKey(selectionKey);
+        setAgentTypeAIEngineUpdateError(null);
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/departments/${departmentId}/agent-types/${agentTypeId}/ai-engine`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ use_team_default: true } satisfies AgentTypeAIEngineUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to return this Agent Type to the Team default.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setActiveAgentTypeAIEngineKey(null);
+            setSelectedAgentTypeAIEngineProfile(null);
+        } catch (err) {
+            setAgentTypeAIEngineUpdateError({
+                departmentId,
+                agentTypeId,
+                message: err instanceof Error ? err.message : "Unable to return this Agent Type to the Team default.",
+            });
+        } finally {
+            setAgentTypeAIEngineUpdatePendingKey(null);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center bg-cortex-bg">
@@ -488,6 +574,19 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 }}
                                 onSubmitDepartmentAIEngineSelection={submitDepartmentAIEngineSelection}
                                 onRevertDepartmentAIEngineSelection={revertDepartmentAIEngineSelection}
+                                activeAgentTypeAIEngineKey={activeAgentTypeAIEngineKey}
+                                selectedAgentTypeAIEngineProfile={selectedAgentTypeAIEngineProfile}
+                                agentTypeAIEngineUpdatePendingKey={agentTypeAIEngineUpdatePendingKey}
+                                agentTypeAIEngineUpdateError={agentTypeAIEngineUpdateError}
+                                onAgentTypeAIEngineProfileSelect={setSelectedAgentTypeAIEngineProfile}
+                                onOpenAgentTypeAIEngineSelector={openAgentTypeAIEngineSelector}
+                                onCloseAgentTypeAIEngineSelector={() => {
+                                    setActiveAgentTypeAIEngineKey(null);
+                                    setSelectedAgentTypeAIEngineProfile(null);
+                                    setAgentTypeAIEngineUpdateError(null);
+                                }}
+                                onSubmitAgentTypeAIEngineSelection={submitAgentTypeAIEngineSelection}
+                                onRevertAgentTypeAIEngineSelection={revertAgentTypeAIEngineSelection}
                                 onBack={() => setActiveDetailView(null)}
                             />
                         )}
@@ -676,13 +775,17 @@ function departmentPurpose(name: string) {
 }
 
 function agentTypeAIEngineSourceLabel(profile: OrganizationAgentTypeProfileSummary) {
-    return profile.inherits_department_ai_engine ? `Using Team default: ${profile.ai_engine_effective_summary}` : `Type-specific engine binding: ${profile.ai_engine_effective_summary}`;
+    return profile.inherits_department_ai_engine ? `Using Team Default: ${profile.ai_engine_effective_summary}` : `Type-specific Engine: ${profile.ai_engine_effective_summary}`;
 }
 
 function agentTypeResponseStyleSourceLabel(profile: OrganizationAgentTypeProfileSummary) {
     return profile.inherits_default_response_contract
         ? `Using Organization/Team default: ${profile.response_contract_effective_summary}`
         : `Type-specific response binding: ${profile.response_contract_effective_summary}`;
+}
+
+function agentTypeSelectionKey(departmentId: string, agentTypeId: string) {
+    return `${departmentId}:${agentTypeId}`;
 }
 
 function spreadSpecialists(total: number, departmentCount: number, index: number) {
@@ -965,6 +1068,15 @@ function WorkspaceDetailView({
     onCloseDepartmentAIEngineSelector,
     onSubmitDepartmentAIEngineSelection,
     onRevertDepartmentAIEngineSelection,
+    activeAgentTypeAIEngineKey,
+    selectedAgentTypeAIEngineProfile,
+    agentTypeAIEngineUpdatePendingKey,
+    agentTypeAIEngineUpdateError,
+    onAgentTypeAIEngineProfileSelect,
+    onOpenAgentTypeAIEngineSelector,
+    onCloseAgentTypeAIEngineSelector,
+    onSubmitAgentTypeAIEngineSelection,
+    onRevertAgentTypeAIEngineSelection,
     onBack,
 }: {
     view: "advisors" | "departments" | "aiEngine" | "responseContract";
@@ -995,6 +1107,15 @@ function WorkspaceDetailView({
     onCloseDepartmentAIEngineSelector: () => void;
     onSubmitDepartmentAIEngineSelection: (departmentId: string) => void;
     onRevertDepartmentAIEngineSelection: (departmentId: string) => void;
+    activeAgentTypeAIEngineKey: string | null;
+    selectedAgentTypeAIEngineProfile: OrganizationAIEngineProfileId | null;
+    agentTypeAIEngineUpdatePendingKey: string | null;
+    agentTypeAIEngineUpdateError: { departmentId: string; agentTypeId: string; message: string } | null;
+    onAgentTypeAIEngineProfileSelect: (profile: OrganizationAIEngineProfileId) => void;
+    onOpenAgentTypeAIEngineSelector: (departmentId: string, profile: OrganizationAgentTypeProfileSummary) => void;
+    onCloseAgentTypeAIEngineSelector: () => void;
+    onSubmitAgentTypeAIEngineSelection: (departmentId: string, agentTypeId: string) => void;
+    onRevertAgentTypeAIEngineSelection: (departmentId: string, agentTypeId: string) => void;
     onBack: () => void;
 }) {
     const title =
@@ -1157,34 +1278,77 @@ function WorkspaceDetailView({
 
                                         {item.agentTypeProfiles.length > 0 ? (
                                             <div className="mt-4 grid gap-3">
-                                                {item.agentTypeProfiles.map((profile) => (
-                                                    <div key={profile.id} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
-                                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                                            <div>
-                                                                <p className="text-sm font-semibold text-cortex-text-main">{profile.name}</p>
-                                                                <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{profile.helps_with}</p>
+                                                {item.agentTypeProfiles.map((profile) => {
+                                                    const agentTypeKey = agentTypeSelectionKey(item.id, profile.id);
+                                                    const isAgentTypeEditing = activeAgentTypeAIEngineKey === agentTypeKey;
+                                                    const isAgentTypePending = agentTypeAIEngineUpdatePendingKey === agentTypeKey;
+                                                    const agentTypeError =
+                                                        agentTypeAIEngineUpdateError?.departmentId === item.id && agentTypeAIEngineUpdateError.agentTypeId === profile.id
+                                                            ? agentTypeAIEngineUpdateError.message
+                                                            : null;
+
+                                                    return (
+                                                        <div key={profile.id} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+                                                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                                                <div>
+                                                                    <p className="text-sm font-semibold text-cortex-text-main">{profile.name}</p>
+                                                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{profile.helps_with}</p>
+                                                                </div>
+                                                                <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+                                                                    <p className="font-medium text-cortex-text-main">Inheritance clarity</p>
+                                                                    <p className="mt-1 leading-6">
+                                                                        {profile.inherits_department_ai_engine
+                                                                            ? "This agent type follows the Team AI Engine unless a type-specific binding is shown here."
+                                                                            : "This agent type keeps its own AI Engine binding instead of following the Team default."}
+                                                                    </p>
+                                                                </div>
                                                             </div>
-                                                            <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
-                                                                <p className="font-medium text-cortex-text-main">Inheritance clarity</p>
-                                                                <p className="mt-1 leading-6">
-                                                                    {profile.inherits_department_ai_engine
-                                                                        ? "This agent type follows the Team AI Engine unless a type-specific binding is shown here."
-                                                                        : "This agent type keeps its own AI Engine binding instead of following the Team default."}
-                                                                </p>
+                                                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                                                <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                                                                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">AI Engine</p>
+                                                                    <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeAIEngineSourceLabel(profile)}</p>
+                                                                </div>
+                                                                <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                                                                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Response Style</p>
+                                                                    <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeResponseStyleSourceLabel(profile)}</p>
+                                                                </div>
                                                             </div>
+                                                            <div className="mt-4 flex flex-wrap gap-3">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => onOpenAgentTypeAIEngineSelector(item.id, profile)}
+                                                                    disabled={Boolean(agentTypeAIEngineUpdatePendingKey && agentTypeAIEngineUpdatePendingKey !== agentTypeKey)}
+                                                                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                >
+                                                                    <Sparkles className="h-4 w-4 text-cortex-primary" />
+                                                                    Change for this Agent Type
+                                                                </button>
+                                                                {!profile.inherits_department_ai_engine && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => onRevertAgentTypeAIEngineSelection(item.id, profile.id)}
+                                                                        disabled={isAgentTypePending}
+                                                                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                    >
+                                                                        {isAgentTypePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                                                                        Use Team Default
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {isAgentTypeEditing && (
+                                                                <AgentTypeAIEngineSelectionPanel
+                                                                    selectedAgentTypeAIEngineProfile={selectedAgentTypeAIEngineProfile}
+                                                                    agentTypeAIEngineUpdatePending={isAgentTypePending}
+                                                                    agentTypeAIEngineUpdateError={agentTypeError}
+                                                                    onAgentTypeAIEngineProfileSelect={onAgentTypeAIEngineProfileSelect}
+                                                                    onClose={onCloseAgentTypeAIEngineSelector}
+                                                                    onSubmit={() => onSubmitAgentTypeAIEngineSelection(item.id, profile.id)}
+                                                                />
+                                                            )}
                                                         </div>
-                                                        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                                                            <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
-                                                                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">AI Engine</p>
-                                                                <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeAIEngineSourceLabel(profile)}</p>
-                                                            </div>
-                                                            <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
-                                                                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Response Style</p>
-                                                                <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeResponseStyleSourceLabel(profile)}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         ) : (
                                             <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm leading-6 text-cortex-text-muted">
@@ -1548,6 +1712,101 @@ function DepartmentAIEngineSelectionPanel({
                     type="button"
                     onClick={onClose}
                     disabled={departmentAIEngineUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function AgentTypeAIEngineSelectionPanel({
+    selectedAgentTypeAIEngineProfile,
+    agentTypeAIEngineUpdatePending,
+    agentTypeAIEngineUpdateError,
+    onAgentTypeAIEngineProfileSelect,
+    onClose,
+    onSubmit,
+}: {
+    selectedAgentTypeAIEngineProfile: OrganizationAIEngineProfileId | null;
+    agentTypeAIEngineUpdatePending: boolean;
+    agentTypeAIEngineUpdateError: string | null;
+    onAgentTypeAIEngineProfileSelect: (profile: OrganizationAIEngineProfileId) => void;
+    onClose: () => void;
+    onSubmit: () => void;
+}) {
+    return (
+        <div className="mt-4 rounded-3xl border border-cortex-primary/20 bg-cortex-surface p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h4 className="text-lg font-semibold text-cortex-text-main">Choose an AI Engine for this Agent Type</h4>
+                    <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
+                        Pick a guided AI Engine only for this Agent Type when this role needs a consistent specialist behavior that should not drift with the Team default.
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Agent Type level only</p>
+                    <p className="mt-1">The Team Lead workspace stays visible, and Team-default inheritance remains in place for every other role type.</p>
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+                {AI_ENGINE_OPTIONS.map((option) => {
+                    const isSelected = selectedAgentTypeAIEngineProfile === option.id;
+                    return (
+                        <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => onAgentTypeAIEngineProfileSelect(option.id)}
+                            disabled={agentTypeAIEngineUpdatePending}
+                            className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                                isSelected
+                                    ? "border-cortex-primary/40 bg-cortex-primary/10"
+                                    : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/20"
+                            } ${agentTypeAIEngineUpdatePending ? "opacity-75" : ""}`}
+                        >
+                            <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-cortex-text-main">{option.label}</p>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{option.description}</p>
+                                </div>
+                                {isSelected && (
+                                    <span className="inline-flex w-fit rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-cortex-primary">
+                                        Selected
+                                    </span>
+                                )}
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-cortex-text-muted">
+                                <span className="font-medium text-cortex-text-main">Good for:</span> {option.goodFor}
+                            </p>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {agentTypeAIEngineUpdateError && (
+                <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Unable to update this Agent Type AI Engine</p>
+                    <p className="mt-2 leading-6">{agentTypeAIEngineUpdateError}</p>
+                    <p className="mt-2 leading-6">Try again to keep this specialist role aligned with the Department while the Team Lead workspace stays visible.</p>
+                </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                    type="button"
+                    onClick={onSubmit}
+                    disabled={!selectedAgentTypeAIEngineProfile || agentTypeAIEngineUpdatePending}
+                    className="inline-flex items-center gap-2 rounded-xl bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {agentTypeAIEngineUpdatePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {agentTypeAIEngineUpdatePending ? "Updating Agent Type AI Engine..." : "Use selected AI Engine"}
+                </button>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={agentTypeAIEngineUpdatePending}
                     className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Cancel
