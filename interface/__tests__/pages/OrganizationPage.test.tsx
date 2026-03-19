@@ -86,10 +86,17 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
         expect(screen.getByText("Advisor support")).toBeDefined();
         expect(screen.getByText("Department view")).toBeDefined();
         expect(screen.getByText("Planning review")).toBeDefined();
         expect(screen.getByText("Started from Engineering Starter")).toBeDefined();
+        expect(screen.getAllByText("What this affects").length).toBeGreaterThan(0);
+        expect(screen.getByText("Response style")).toBeDefined();
+        expect(screen.getByText("Planning depth")).toBeDefined();
+        expect(screen.getByText("Working tone")).toBeDefined();
+        expect(screen.getByText("Context continuity")).toBeDefined();
         expect(screen.getByRole("button", { name: /Plan next steps for this organization/i })).toBeDefined();
         expect(screen.getByRole("button", { name: /What should I focus on first\?/i })).toBeDefined();
         expect(screen.getByRole("button", { name: /Review my organization setup/i })).toBeDefined();
@@ -135,6 +142,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
     });
 
     it("preserves the organization context when a Team Lead action fails and then succeeds on retry", async () => {
@@ -197,6 +206,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
                         advisor_count: 0,
                         department_count: 0,
                         specialist_count: 0,
+                        ai_engine_settings_summary: "Set up later in Advanced mode",
+                        memory_personality_summary: "Set up later in Advanced mode",
                     },
                 }),
         });
@@ -207,10 +218,14 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
         expect(screen.getAllByText("Inspect only").length).toBeGreaterThan(0);
         expect(screen.getByText("Advisor roles appear here once they are added")).toBeDefined();
         expect(screen.getByText("Add the first Department when ready")).toBeDefined();
         expect(screen.getByText("Started from Empty")).toBeDefined();
+        expect(screen.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeDefined();
+        expect(screen.getByText("Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.")).toBeDefined();
     });
 
     it("offers retry guidance when the organization home cannot be loaded", async () => {

@@ -199,16 +199,22 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                         />
 
                         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
-                            <div className="grid gap-3">
-                                <SummaryRow
+                            <div className="grid gap-4">
+                                <InspectOnlySummary
                                     icon={<Bot className="h-4 w-4" />}
-                                    label="AI Engine Settings"
-                                    value={organization.ai_engine_settings_summary}
+                                    title="AI Engine Settings"
+                                    countLabel="Inspect only"
+                                    summary={aiEngineSummary(organization.ai_engine_settings_summary)}
+                                    supportLabel="What this affects"
+                                    items={aiEngineSupportItems(organization.ai_engine_settings_summary)}
                                 />
-                                <SummaryRow
+                                <InspectOnlySummary
                                     icon={<BrainCircuit className="h-4 w-4" />}
-                                    label="Memory & Personality"
-                                    value={organization.memory_personality_summary}
+                                    title="Memory & Personality"
+                                    countLabel="Inspect only"
+                                    summary={memoryPersonalitySummary(organization.memory_personality_summary)}
+                                    supportLabel="What this affects"
+                                    items={memoryPersonalitySupportItems(organization.memory_personality_summary)}
                                 />
                             </div>
                             <div className="mt-5">
@@ -267,6 +273,36 @@ function departmentSupportItems(organization: OrganizationHomePayload) {
     return items;
 }
 
+function aiEngineSummary(summary: string) {
+    const normalized = summary.trim();
+    if (!normalized || normalized === "Set up later in Advanced mode") {
+        return "The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.";
+    }
+    return `The current AI Engine Settings profile is ${normalized.toLowerCase()} and shapes how the organization responds, plans, and carries work forward.`;
+}
+
+function aiEngineSupportItems(summary: string) {
+    if (summary.trim() === "Set up later in Advanced mode") {
+        return ["Response style", "Planning depth", "Inspect only for now"];
+    }
+    return [summary, "Response style", "Planning depth"];
+}
+
+function memoryPersonalitySummary(summary: string) {
+    const normalized = summary.trim();
+    if (!normalized || normalized === "Set up later in Advanced mode") {
+        return "Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.";
+    }
+    return `Memory & Personality are currently ${normalized.toLowerCase()}, which shapes how the Team Lead remembers context and presents guidance.`;
+}
+
+function memoryPersonalitySupportItems(summary: string) {
+    if (summary.trim() === "Set up later in Advanced mode") {
+        return ["Working tone", "Context continuity", "Inspect only for now"];
+    }
+    return [summary, "Working tone", "Context continuity"];
+}
+
 function toTitleCase(value: string) {
     return value
         .split(/[\s_-]+/)
@@ -289,26 +325,6 @@ function HelpPill({ label }: { label: string }) {
         <div className="inline-flex items-center gap-2 rounded-full border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main">
             <Sparkles className="h-4 w-4 text-cortex-primary" />
             <span>{label}</span>
-        </div>
-    );
-}
-
-function SummaryRow({
-    icon,
-    label,
-    value,
-}: {
-    icon: React.ReactNode;
-    label: string;
-    value: string;
-}) {
-    return (
-        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
-            <div className="flex items-center gap-2 text-cortex-primary">
-                {icon}
-                <p className="text-sm font-medium text-cortex-text-main">{label}</p>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{value}</p>
         </div>
     );
 }

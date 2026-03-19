@@ -316,10 +316,17 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Organization overview")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByText("Advisor support")).toBeVisible();
         await expect(page.getByText("Department view")).toBeVisible();
         await expect(page.getByText("Planning review")).toBeVisible();
         await expect(page.getByText("Started from Engineering Starter")).toBeVisible();
+        await expect(page.getByText("What this affects")).toHaveCount(2);
+        await expect(page.getByText("Response style")).toBeVisible();
+        await expect(page.getByText("Planning depth")).toBeVisible();
+        await expect(page.getByText("Working tone")).toBeVisible();
+        await expect(page.getByText("Context continuity")).toBeVisible();
         await expect(page.getByRole("button", { name: /Plan next steps for this organization/i })).toBeVisible();
 
         await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();
@@ -369,8 +376,12 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Empty", { exact: true })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByText("Advisor roles appear here once they are added")).toBeVisible();
         await expect(page.getByText("Add the first Department when ready")).toBeVisible();
+        await expect(page.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeVisible();
+        await expect(page.getByText("Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.")).toBeVisible();
         await expectNoForbiddenCopy(page);
 
         await saveScreenshot(page, testInfo, "empty-success-home.png");
@@ -432,6 +443,8 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Team Lead for Northstar Labs" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry Team Lead action" })).toBeVisible();
         await expectNoForbiddenCopy(page);
 
