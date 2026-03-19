@@ -150,6 +150,24 @@ func TestHandleCreateOrganization_FromTemplateAndGetHome(t *testing.T) {
 	if !ok || len(departments) != 1 {
 		t.Fatalf("expected one department payload, got %+v", homeData)
 	}
+	department, ok := departments[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected object department payload, got %T", departments[0])
+	}
+	profiles, ok := department["agent_type_profiles"].([]any)
+	if !ok || len(profiles) != 2 {
+		t.Fatalf("expected two agent type profiles, got %+v", department)
+	}
+	planner, ok := profiles[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected object agent type profile, got %T", profiles[0])
+	}
+	if planner["name"] != "Planner" || planner["ai_engine_effective_summary"] != "High Reasoning" {
+		t.Fatalf("unexpected planner profile payload: %+v", planner)
+	}
+	if planner["inherits_department_ai_engine"] != false || planner["inherits_default_response_contract"] != false {
+		t.Fatalf("expected Planner to expose type-specific bindings, got %+v", planner)
+	}
 
 	actionRR := doRequest(t, mux, "POST", "/api/v1/organizations/"+id+"/workspace/actions", `{"action":"plan_next_steps"}`)
 	assertStatus(t, actionRR, http.StatusOK)
@@ -498,6 +516,66 @@ func TestDepartmentAIEngineInheritance_PersistsAcrossOrganizationUpdates(t *test
 	}
 	if delivery["ai_engine_effective_summary"] != "Fast & Lightweight" || delivery["inherits_organization_ai_engine"] != true {
 		t.Fatalf("expected delivery to inherit updated organization default, got %+v", delivery)
+	}
+}
+
+func TestNormalizeOrganizationHome_AgentTypeProfilesResolveInheritanceAndTypeBindings(t *testing.T) {
+	home := normalizeOrganizationHome(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			ID:                        "org-123",
+			Name:                      "Northstar Labs",
+			Purpose:                   "Ship a focused AI engineering organization",
+			StartMode:                 OrganizationStartModeTemplate,
+			TeamLeadLabel:             "Team Lead",
+			DepartmentCount:           1,
+			SpecialistCount:           2,
+			AIEngineProfileID:         "balanced",
+			AIEngineSettingsSummary:   "Balanced",
+			ResponseContractProfileID: "warm_supportive",
+			ResponseContractSummary:   "Warm & Supportive",
+			Status:                    "ready",
+		},
+		Departments: []OrganizationDepartmentSummary{
+			{
+				ID:              "platform",
+				Name:            "Platform Department",
+				SpecialistCount: 2,
+				AgentTypeProfiles: []OrganizationAgentTypeProfileSummary{
+					{
+						ID:                               "planner",
+						Name:                             "Planner",
+						HelpsWith:                        "Keeps priorities and sequencing clear.",
+						AIEngineBindingProfileID:         "high_reasoning",
+						ResponseContractBindingProfileID: "structured_analytical",
+					},
+					{
+						ID:        "reviewer",
+						Name:      "Reviewer",
+						HelpsWith: "Checks quality before work moves forward.",
+					},
+				},
+			},
+		},
+	})
+
+	if len(home.Departments) != 1 || len(home.Departments[0].AgentTypeProfiles) != 2 {
+		t.Fatalf("expected normalized agent type profiles, got %+v", home.Departments)
+	}
+
+	planner := home.Departments[0].AgentTypeProfiles[0]
+	if planner.InheritsDepartmentAIEngine || planner.AIEngineEffectiveSummary != "High Reasoning" {
+		t.Fatalf("expected planner AI Engine binding to stay type-specific, got %+v", planner)
+	}
+	if planner.InheritsDefaultResponseContract || planner.ResponseContractEffectiveSummary != "Structured & Analytical" {
+		t.Fatalf("expected planner Response Style binding to stay type-specific, got %+v", planner)
+	}
+
+	reviewer := home.Departments[0].AgentTypeProfiles[1]
+	if !reviewer.InheritsDepartmentAIEngine || reviewer.AIEngineEffectiveSummary != "Balanced" {
+		t.Fatalf("expected reviewer AI Engine to inherit department default, got %+v", reviewer)
+	}
+	if !reviewer.InheritsDefaultResponseContract || reviewer.ResponseContractEffectiveSummary != "Warm & Supportive" {
+		t.Fatalf("expected reviewer Response Style to inherit organization default, got %+v", reviewer)
 	}
 }
 

@@ -41,6 +41,32 @@ const createdTemplateOrganization = {
             ai_engine_effective_profile_id: "starter_defaults",
             ai_engine_effective_summary: "Starter defaults included",
             inherits_organization_ai_engine: true,
+            agent_type_profiles: [
+                {
+                    id: "planner",
+                    name: "Planner",
+                    helps_with: "Turns organization goals into practical next steps, delivery sequencing, and clear priorities.",
+                    ai_engine_binding_profile_id: "high_reasoning",
+                    ai_engine_effective_profile_id: "high_reasoning",
+                    ai_engine_effective_summary: "High Reasoning",
+                    inherits_department_ai_engine: false,
+                    response_contract_binding_profile_id: "structured_analytical",
+                    response_contract_effective_profile_id: "structured_analytical",
+                    response_contract_effective_summary: "Structured & Analytical",
+                    inherits_default_response_contract: false,
+                },
+                {
+                    id: "delivery-specialist",
+                    name: "Delivery Specialist",
+                    helps_with: "Carries the work from plan into execution and keeps the main delivery lane moving.",
+                    ai_engine_effective_profile_id: "starter_defaults",
+                    ai_engine_effective_summary: "Starter defaults included",
+                    inherits_department_ai_engine: true,
+                    response_contract_effective_profile_id: "clear_balanced",
+                    response_contract_effective_summary: "Clear & Balanced",
+                    inherits_default_response_contract: true,
+                },
+            ],
         },
     ],
 };
@@ -73,6 +99,15 @@ function applyOrganizationAIEngineToDepartments(home: typeof createdTemplateOrga
                       ...department,
                       ai_engine_effective_profile_id: profileId,
                       ai_engine_effective_summary: summary,
+                      agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                          profile.inherits_department_ai_engine
+                              ? {
+                                    ...profile,
+                                    ai_engine_effective_profile_id: profileId,
+                                    ai_engine_effective_summary: summary,
+                                }
+                              : profile,
+                      ),
                   }
                 : department,
         ),
@@ -84,6 +119,18 @@ function applyResponseContract(home: typeof createdTemplateOrganization, profile
         ...home,
         response_contract_profile_id: profileId,
         response_contract_summary: summary,
+        departments: home.departments.map((department) => ({
+            ...department,
+            agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                profile.inherits_default_response_contract
+                    ? {
+                          ...profile,
+                          response_contract_effective_profile_id: profileId,
+                          response_contract_effective_summary: summary,
+                      }
+                    : profile,
+            ),
+        })),
     };
 }
 
@@ -367,6 +414,15 @@ async function mockOrganizationEntryApis(
                             ai_engine_effective_profile_id: home.ai_engine_profile_id,
                             ai_engine_effective_summary: home.ai_engine_settings_summary,
                             inherits_organization_ai_engine: true,
+                            agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                                profile.inherits_department_ai_engine
+                                    ? {
+                                          ...profile,
+                                          ai_engine_effective_profile_id: home.ai_engine_profile_id,
+                                          ai_engine_effective_summary: home.ai_engine_settings_summary,
+                                      }
+                                    : profile,
+                            ),
                         };
                     }
                     const profileId = String(requestBody.profile_id ?? "");
@@ -377,6 +433,15 @@ async function mockOrganizationEntryApis(
                         ai_engine_effective_profile_id: profileId,
                         ai_engine_effective_summary: summaries[profileId] ?? department.ai_engine_effective_summary,
                         inherits_organization_ai_engine: false,
+                        agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                            profile.inherits_department_ai_engine
+                                ? {
+                                      ...profile,
+                                      ai_engine_effective_profile_id: profileId,
+                                      ai_engine_effective_summary: summaries[profileId] ?? department.ai_engine_effective_summary,
+                                  }
+                                : profile,
+                        ),
                     };
                 }),
             };
@@ -551,11 +616,19 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Platform Department")).toBeVisible();
         await expect(page.getByText("2 Specialists visible here.").first()).toBeVisible();
         await expect(page.getByText("Using Organization Default: Starter defaults included")).toBeVisible();
+        await expect(page.getByText("Agent Type Profiles")).toBeVisible();
+        await expect(page.getByText("Planner")).toBeVisible();
+        await expect(page.getByText("Delivery Specialist")).toBeVisible();
+        await expect(page.getByText("Type-specific engine binding: High Reasoning")).toBeVisible();
+        await expect(page.getByText("Using Team default: Starter defaults included")).toBeVisible();
+        await expect(page.getByText("Type-specific response binding: Structured & Analytical")).toBeVisible();
+        await expect(page.getByText("Using Organization/Team default: Clear & Balanced")).toBeVisible();
         await page.getByRole("button", { name: "Change for this Team" }).click();
         await expect(page.getByRole("heading", { name: "Choose an AI Engine for this Team" })).toBeVisible();
         await page.getByRole("button", { name: /Balanced/i }).click();
         await page.getByRole("button", { name: "Use selected AI Engine" }).click();
         await expect(page.getByText("Overridden: Balanced")).toBeVisible();
+        await expect(page.getByText("Using Team default: Balanced")).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
@@ -595,6 +668,8 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Overridden: Balanced")).toBeVisible();
         await page.getByRole("button", { name: "Revert to Organization Default" }).click();
         await expect(page.getByText("Using Organization Default: High Reasoning")).toBeVisible();
+        await expect(page.getByText("Using Team default: High Reasoning")).toBeVisible();
+        await expect(page.getByText("Using Organization/Team default: Warm & Supportive")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
 
         await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();

@@ -35,6 +35,32 @@ const organizationHome = {
             ai_engine_effective_profile_id: "starter_defaults",
             ai_engine_effective_summary: "Starter defaults included",
             inherits_organization_ai_engine: true,
+            agent_type_profiles: [
+                {
+                    id: "planner",
+                    name: "Planner",
+                    helps_with: "Turns organization goals into practical next steps, delivery sequencing, and clear priorities.",
+                    ai_engine_binding_profile_id: "high_reasoning",
+                    ai_engine_effective_profile_id: "high_reasoning",
+                    ai_engine_effective_summary: "High Reasoning",
+                    inherits_department_ai_engine: false,
+                    response_contract_binding_profile_id: "structured_analytical",
+                    response_contract_effective_profile_id: "structured_analytical",
+                    response_contract_effective_summary: "Structured & Analytical",
+                    inherits_default_response_contract: false,
+                },
+                {
+                    id: "delivery-specialist",
+                    name: "Delivery Specialist",
+                    helps_with: "Carries the work from plan into execution and keeps the main delivery lane moving.",
+                    ai_engine_effective_profile_id: "starter_defaults",
+                    ai_engine_effective_summary: "Starter defaults included",
+                    inherits_department_ai_engine: true,
+                    response_contract_effective_profile_id: "clear_balanced",
+                    response_contract_effective_summary: "Clear & Balanced",
+                    inherits_default_response_contract: true,
+                },
+            ],
         },
     ],
 };
@@ -58,6 +84,15 @@ function applyOrganizationAIEngineToDepartments(
                       ...department,
                       ai_engine_effective_profile_id: profileId,
                       ai_engine_effective_summary: summary,
+                      agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                          profile.inherits_department_ai_engine
+                              ? {
+                                    ...profile,
+                                    ai_engine_effective_profile_id: profileId,
+                                    ai_engine_effective_summary: summary,
+                                }
+                              : profile,
+                      ),
                   }
                 : department,
         ),
@@ -73,6 +108,18 @@ function applyResponseContract(
         ...home,
         response_contract_profile_id: profileId,
         response_contract_summary: summary,
+        departments: home.departments.map((department) => ({
+            ...department,
+            agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                profile.inherits_default_response_contract
+                    ? {
+                          ...profile,
+                          response_contract_effective_profile_id: profileId,
+                          response_contract_effective_summary: summary,
+                      }
+                    : profile,
+            ),
+        })),
     };
 }
 
@@ -149,17 +196,26 @@ function setupOrganizationFetch(options?: {
                     ...currentOrganizationHome,
                     departments: currentOrganizationHome.departments.map((department) =>
                         department.id === "platform"
-                            ? {
-                                  ...department,
-                                  ai_engine_override_profile_id: undefined,
-                                  ai_engine_override_summary: undefined,
-                                  ai_engine_effective_profile_id: currentOrganizationHome.ai_engine_profile_id,
-                                  ai_engine_effective_summary: currentOrganizationHome.ai_engine_settings_summary,
-                                  inherits_organization_ai_engine: true,
-                              }
-                            : department,
-                    ),
-                };
+                        ? {
+                              ...department,
+                              ai_engine_override_profile_id: undefined,
+                              ai_engine_override_summary: undefined,
+                              ai_engine_effective_profile_id: currentOrganizationHome.ai_engine_profile_id,
+                              ai_engine_effective_summary: currentOrganizationHome.ai_engine_settings_summary,
+                              inherits_organization_ai_engine: true,
+                              agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                                  profile.inherits_department_ai_engine
+                                      ? {
+                                            ...profile,
+                                            ai_engine_effective_profile_id: currentOrganizationHome.ai_engine_profile_id,
+                                            ai_engine_effective_summary: currentOrganizationHome.ai_engine_settings_summary,
+                                        }
+                                      : profile,
+                              ),
+                          }
+                        : department,
+                ),
+            };
                 return jsonResponse({ ok: true, data: currentOrganizationHome });
             }
 
@@ -182,6 +238,15 @@ function setupOrganizationFetch(options?: {
                               ai_engine_effective_profile_id: profileId,
                               ai_engine_effective_summary: summaries[profileId] ?? department.ai_engine_effective_summary,
                               inherits_organization_ai_engine: false,
+                              agent_type_profiles: department.agent_type_profiles?.map((profile) =>
+                                  profile.inherits_department_ai_engine
+                                      ? {
+                                            ...profile,
+                                            ai_engine_effective_profile_id: profileId,
+                                            ai_engine_effective_summary: summaries[profileId] ?? department.ai_engine_effective_summary,
+                                        }
+                                      : profile,
+                              ),
                           }
                         : department,
                 ),
@@ -381,6 +446,13 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Platform Department")).toBeDefined();
         expect(screen.getByText("2 Specialists visible here.")).toBeDefined();
         expect(screen.getByText("Using Organization Default: Starter defaults included")).toBeDefined();
+        expect(screen.getByText("Agent Type Profiles")).toBeDefined();
+        expect(screen.getByText("Planner")).toBeDefined();
+        expect(screen.getByText("Delivery Specialist")).toBeDefined();
+        expect(screen.getByText("Type-specific engine binding: High Reasoning")).toBeDefined();
+        expect(screen.getByText("Using Team default: Starter defaults included")).toBeDefined();
+        expect(screen.getByText("Type-specific response binding: Structured & Analytical")).toBeDefined();
+        expect(screen.getByText("Using Organization/Team default: Clear & Balanced")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
 
