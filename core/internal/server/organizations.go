@@ -57,15 +57,30 @@ type responseContractProfile struct {
 	BestFor   string
 }
 
+type OrganizationAgentTypeProfileSummary struct {
+	ID                                 string `json:"id"`
+	Name                               string `json:"name"`
+	HelpsWith                          string `json:"helps_with"`
+	AIEngineBindingProfileID           string `json:"ai_engine_binding_profile_id,omitempty"`
+	AIEngineEffectiveProfileID         string `json:"ai_engine_effective_profile_id,omitempty"`
+	AIEngineEffectiveSummary           string `json:"ai_engine_effective_summary"`
+	InheritsDepartmentAIEngine         bool   `json:"inherits_department_ai_engine"`
+	ResponseContractBindingProfileID   string `json:"response_contract_binding_profile_id,omitempty"`
+	ResponseContractEffectiveProfileID string `json:"response_contract_effective_profile_id,omitempty"`
+	ResponseContractEffectiveSummary   string `json:"response_contract_effective_summary"`
+	InheritsDefaultResponseContract    bool   `json:"inherits_default_response_contract"`
+}
+
 type OrganizationDepartmentSummary struct {
-	ID                           string `json:"id"`
-	Name                         string `json:"name"`
-	SpecialistCount              int    `json:"specialist_count"`
-	AIEngineOverrideProfileID    string `json:"ai_engine_override_profile_id,omitempty"`
-	AIEngineOverrideSummary      string `json:"ai_engine_override_summary,omitempty"`
-	AIEngineEffectiveProfileID   string `json:"ai_engine_effective_profile_id,omitempty"`
-	AIEngineEffectiveSummary     string `json:"ai_engine_effective_summary"`
-	InheritsOrganizationAIEngine bool   `json:"inherits_organization_ai_engine"`
+	ID                           string                                `json:"id"`
+	Name                         string                                `json:"name"`
+	SpecialistCount              int                                   `json:"specialist_count"`
+	AIEngineOverrideProfileID    string                                `json:"ai_engine_override_profile_id,omitempty"`
+	AIEngineOverrideSummary      string                                `json:"ai_engine_override_summary,omitempty"`
+	AIEngineEffectiveProfileID   string                                `json:"ai_engine_effective_profile_id,omitempty"`
+	AIEngineEffectiveSummary     string                                `json:"ai_engine_effective_summary"`
+	InheritsOrganizationAIEngine bool                                  `json:"inherits_organization_ai_engine"`
+	AgentTypeProfiles            []OrganizationAgentTypeProfileSummary `json:"agent_type_profiles,omitempty"`
 }
 
 type OrganizationTemplateSummary struct {
@@ -308,9 +323,10 @@ func summarizeStarterBundle(bundle *bootstrap.TemplateBundle) OrganizationTempla
 		memberCount := len(team.Members)
 		specialistCount += memberCount
 		departments = append(departments, OrganizationDepartmentSummary{
-			ID:              team.ID,
-			Name:            strings.TrimSpace(team.Name),
-			SpecialistCount: memberCount,
+			ID:                team.ID,
+			Name:              strings.TrimSpace(team.Name),
+			SpecialistCount:   memberCount,
+			AgentTypeProfiles: summarizeAgentTypeProfiles(team),
 		})
 	}
 
@@ -384,6 +400,97 @@ func defaultResponseContractProfile() responseContractProfile {
 	return responseContractProfiles[0]
 }
 
+func summarizeAgentTypeProfiles(team *swarm.TeamManifest) []OrganizationAgentTypeProfileSummary {
+	if team == nil || len(team.Members) == 0 {
+		return nil
+	}
+
+	profiles := make([]OrganizationAgentTypeProfileSummary, 0, len(team.Members))
+	seen := make(map[string]struct{}, len(team.Members))
+	for index, member := range team.Members {
+		profile := buildAgentTypeProfileSummary(member, index)
+		if _, exists := seen[profile.ID]; exists {
+			continue
+		}
+		seen[profile.ID] = struct{}{}
+		profiles = append(profiles, profile)
+	}
+	return profiles
+}
+
+func buildAgentTypeProfileSummary(member protocol.AgentManifest, fallbackIndex int) OrganizationAgentTypeProfileSummary {
+	id, name, helpsWith := agentTypeProfileIdentity(member, fallbackIndex)
+	return OrganizationAgentTypeProfileSummary{
+		ID:                               id,
+		Name:                             name,
+		HelpsWith:                        helpsWith,
+		AIEngineBindingProfileID:         inferAgentTypeAIEngineBinding(member),
+		ResponseContractBindingProfileID: inferAgentTypeResponseBinding(member),
+	}
+}
+
+func agentTypeProfileIdentity(member protocol.AgentManifest, fallbackIndex int) (string, string, string) {
+	role := strings.TrimSpace(strings.ToLower(member.Role))
+	switch role {
+	case "lead", "planner":
+		return "planner", "Planner", "Turns organization goals into practical next steps, delivery sequencing, and clear priorities."
+	case "research", "researcher":
+		return "research-specialist", "Research Specialist", "Builds the background, options, and supporting context the Team Lead needs before decisions move forward."
+	case "review", "reviewer", "qa", "quality":
+		return "reviewer", "Reviewer", "Checks work for quality, risk, and readiness before the Team Lead advances the next move."
+	case "builder", "implementer", "delivery":
+		return "delivery-specialist", "Delivery Specialist", "Carries the work from plan into execution and keeps the main delivery lane moving."
+	case "operations", "operator", "coordinator":
+		return "operations-specialist", "Operations Specialist", "Keeps follow-through organized, reduces friction, and supports steady execution across the Department."
+	case "support", "assistant", "guide":
+		return "support-specialist", "Support Specialist", "Helps the Team Lead keep operator requests clear, coordinated, and easy to act on."
+	}
+
+	baseName := strings.TrimSpace(member.Role)
+	if baseName == "" {
+		baseName = strings.TrimSpace(member.ID)
+	}
+	baseName = humanizeMode(baseName)
+	if baseName == "Guided" {
+		baseName = fmt.Sprintf("Specialist %d", fallbackIndex+1)
+	}
+	return slugifyDepartmentID(baseName, fallbackIndex), baseName, "Supports the Department with a focused specialist role when the Team Lead needs more targeted help."
+}
+
+func inferAgentTypeAIEngineBinding(member protocol.AgentManifest) string {
+	if strings.TrimSpace(member.Model) == "" && strings.TrimSpace(member.Provider) == "" {
+		return ""
+	}
+
+	switch strings.TrimSpace(strings.ToLower(member.Role)) {
+	case "lead", "planner", "review", "reviewer", "qa", "quality":
+		return string(OrganizationAIEngineProfileHighReasoning)
+	case "research", "researcher":
+		return string(OrganizationAIEngineProfileDeepPlanning)
+	case "builder", "implementer", "delivery", "operations", "operator", "coordinator":
+		return string(OrganizationAIEngineProfileFastLightweight)
+	default:
+		return string(OrganizationAIEngineProfileBalanced)
+	}
+}
+
+func inferAgentTypeResponseBinding(member protocol.AgentManifest) string {
+	if strings.TrimSpace(member.SystemPrompt) == "" {
+		return ""
+	}
+
+	switch strings.TrimSpace(strings.ToLower(member.Role)) {
+	case "lead", "planner", "review", "reviewer", "qa", "quality":
+		return string(ResponseContractProfileStructuredAnalytical)
+	case "builder", "implementer", "delivery", "operations", "operator", "coordinator":
+		return string(ResponseContractProfileConciseDirect)
+	case "support", "assistant", "guide":
+		return string(ResponseContractProfileWarmSupportive)
+	default:
+		return ""
+	}
+}
+
 func normalizeDepartmentName(name string, fallbackIndex int) string {
 	name = strings.TrimSpace(name)
 	if name != "" {
@@ -438,6 +545,13 @@ func normalizeOrganizationHome(home OrganizationHomePayload) OrganizationHomePay
 			if strings.TrimSpace(department.AIEngineEffectiveSummary) == "" {
 				department.AIEngineEffectiveSummary = "Set up later in Advanced mode"
 			}
+			department.AgentTypeProfiles = normalizeAgentTypeProfiles(
+				department.AgentTypeProfiles,
+				department.AIEngineEffectiveProfileID,
+				department.AIEngineEffectiveSummary,
+				home.ResponseContractProfileID,
+				home.ResponseContractSummary,
+			)
 
 			home.Departments[index] = department
 			totalSpecialists += department.SpecialistCount
@@ -446,6 +560,68 @@ func normalizeOrganizationHome(home OrganizationHomePayload) OrganizationHomePay
 	}
 
 	return home
+}
+
+func normalizeAgentTypeProfiles(
+	profiles []OrganizationAgentTypeProfileSummary,
+	departmentAIEngineProfileID string,
+	departmentAIEngineSummary string,
+	responseContractProfileID string,
+	responseContractSummary string,
+) []OrganizationAgentTypeProfileSummary {
+	if len(profiles) == 0 {
+		return nil
+	}
+
+	normalized := make([]OrganizationAgentTypeProfileSummary, 0, len(profiles))
+	for index, profile := range profiles {
+		profile.Name = strings.TrimSpace(profile.Name)
+		if profile.Name == "" {
+			profile.Name = fmt.Sprintf("Agent Type %d", index+1)
+		}
+		if profile.ID == "" {
+			profile.ID = slugifyDepartmentID(profile.Name, index)
+		}
+		profile.HelpsWith = strings.TrimSpace(profile.HelpsWith)
+		if profile.HelpsWith == "" {
+			profile.HelpsWith = "Supports the Department with focused specialist work when the Team Lead needs more targeted help."
+		}
+
+		if binding, ok := lookupOrganizationAIEngineProfile(profile.AIEngineBindingProfileID); ok {
+			profile.InheritsDepartmentAIEngine = false
+			profile.AIEngineBindingProfileID = string(binding.ID)
+			profile.AIEngineEffectiveProfileID = string(binding.ID)
+			profile.AIEngineEffectiveSummary = binding.Summary
+		} else {
+			profile.InheritsDepartmentAIEngine = true
+			profile.AIEngineBindingProfileID = ""
+			profile.AIEngineEffectiveProfileID = departmentAIEngineProfileID
+			profile.AIEngineEffectiveSummary = departmentAIEngineSummary
+		}
+		if strings.TrimSpace(profile.AIEngineEffectiveSummary) == "" {
+			profile.AIEngineEffectiveSummary = "Set up later in Advanced mode"
+		}
+
+		if binding, ok := lookupResponseContractProfile(profile.ResponseContractBindingProfileID); ok {
+			profile.InheritsDefaultResponseContract = false
+			profile.ResponseContractBindingProfileID = string(binding.ID)
+			profile.ResponseContractEffectiveProfileID = string(binding.ID)
+			profile.ResponseContractEffectiveSummary = binding.Summary
+		} else {
+			profile.InheritsDefaultResponseContract = true
+			profile.ResponseContractBindingProfileID = ""
+			profile.ResponseContractEffectiveProfileID = responseContractProfileID
+			profile.ResponseContractEffectiveSummary = responseContractSummary
+		}
+		if strings.TrimSpace(profile.ResponseContractEffectiveSummary) == "" {
+			profile.ResponseContractEffectiveProfileID = string(defaultResponseContractProfile().ID)
+			profile.ResponseContractEffectiveSummary = defaultResponseContractProfile().Summary
+		}
+
+		normalized = append(normalized, profile)
+	}
+
+	return normalized
 }
 
 func generateFallbackDepartments(departmentCount, specialistCount int) []OrganizationDepartmentSummary {

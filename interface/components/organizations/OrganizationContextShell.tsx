@@ -6,6 +6,7 @@ import { ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, S
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type {
     DepartmentAIEngineUpdateRequest,
+    OrganizationAgentTypeProfileSummary,
     OrganizationAIEngineProfileId,
     OrganizationAIEngineUpdateRequest,
     OrganizationDepartmentSummary,
@@ -657,6 +658,7 @@ function departmentDetailItems(organization: OrganizationHomePayload) {
         aiEngineStateLabel: department.inherits_organization_ai_engine
             ? `Using Organization Default: ${department.ai_engine_effective_summary}`
             : `Overridden: ${department.ai_engine_effective_summary}`,
+        agentTypeProfiles: department.agent_type_profiles ?? [],
     }));
 }
 
@@ -671,6 +673,16 @@ function departmentPurpose(name: string) {
         return "Handles supporting work that helps the main delivery lane stay clear and focused.";
     }
     return "Carries the main delivery lane so the Team Lead can move from planning into execution.";
+}
+
+function agentTypeAIEngineSourceLabel(profile: OrganizationAgentTypeProfileSummary) {
+    return profile.inherits_department_ai_engine ? `Using Team default: ${profile.ai_engine_effective_summary}` : `Type-specific engine binding: ${profile.ai_engine_effective_summary}`;
+}
+
+function agentTypeResponseStyleSourceLabel(profile: OrganizationAgentTypeProfileSummary) {
+    return profile.inherits_default_response_contract
+        ? `Using Organization/Team default: ${profile.response_contract_effective_summary}`
+        : `Type-specific response binding: ${profile.response_contract_effective_summary}`;
 }
 
 function spreadSpecialists(total: number, departmentCount: number, index: number) {
@@ -1128,6 +1140,58 @@ function WorkspaceDetailView({
                                             onSubmit={() => onSubmitDepartmentAIEngineSelection(item.id)}
                                         />
                                     )}
+
+                                    <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                                        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                                            <div>
+                                                <p className="text-sm font-semibold text-cortex-text-main">Agent Type Profiles</p>
+                                                <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                                    These inspect-only profiles show how this Team's role types inherit the Team default or follow a type-specific AI Engine or Response Style.
+                                                </p>
+                                            </div>
+                                            <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+                                                <p className="font-medium text-cortex-text-main">Inspect only</p>
+                                                <p className="mt-1 leading-6">Use these profiles to understand how specialist role types are set up before any instance-level changes are introduced.</p>
+                                            </div>
+                                        </div>
+
+                                        {item.agentTypeProfiles.length > 0 ? (
+                                            <div className="mt-4 grid gap-3">
+                                                {item.agentTypeProfiles.map((profile) => (
+                                                    <div key={profile.id} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+                                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-cortex-text-main">{profile.name}</p>
+                                                                <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{profile.helps_with}</p>
+                                                            </div>
+                                                            <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+                                                                <p className="font-medium text-cortex-text-main">Inheritance clarity</p>
+                                                                <p className="mt-1 leading-6">
+                                                                    {profile.inherits_department_ai_engine
+                                                                        ? "This agent type follows the Team AI Engine unless a type-specific binding is shown here."
+                                                                        : "This agent type keeps its own AI Engine binding instead of following the Team default."}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                                            <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                                                                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">AI Engine</p>
+                                                                <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeAIEngineSourceLabel(profile)}</p>
+                                                            </div>
+                                                            <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                                                                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Response Style</p>
+                                                                <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeResponseStyleSourceLabel(profile)}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm leading-6 text-cortex-text-muted">
+                                                Agent Type Profiles will appear here as this Team starts assigning specialist role types.
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}

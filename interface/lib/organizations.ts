@@ -2,6 +2,20 @@ export type OrganizationStartMode = "template" | "empty";
 export type OrganizationAIEngineProfileId = "starter_defaults" | "balanced" | "high_reasoning" | "fast_lightweight" | "deep_planning";
 export type ResponseContractProfileId = "clear_balanced" | "structured_analytical" | "concise_direct" | "warm_supportive";
 
+export interface OrganizationAgentTypeProfileSummary {
+    id: string;
+    name: string;
+    helps_with: string;
+    ai_engine_binding_profile_id?: OrganizationAIEngineProfileId;
+    ai_engine_effective_profile_id?: OrganizationAIEngineProfileId;
+    ai_engine_effective_summary: string;
+    inherits_department_ai_engine: boolean;
+    response_contract_binding_profile_id?: ResponseContractProfileId;
+    response_contract_effective_profile_id?: ResponseContractProfileId;
+    response_contract_effective_summary: string;
+    inherits_default_response_contract: boolean;
+}
+
 export interface OrganizationDepartmentSummary {
     id: string;
     name: string;
@@ -11,6 +25,7 @@ export interface OrganizationDepartmentSummary {
     ai_engine_effective_profile_id?: OrganizationAIEngineProfileId;
     ai_engine_effective_summary: string;
     inherits_organization_ai_engine: boolean;
+    agent_type_profiles?: OrganizationAgentTypeProfileSummary[];
 }
 
 export interface OrganizationTemplateSummary {
