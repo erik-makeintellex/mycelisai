@@ -102,6 +102,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("button", { name: /Review my organization setup/i })).toBeDefined();
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
+        expect(screen.getAllByRole("button", { name: "Review AI Engine Settings" }).length).toBeGreaterThan(0);
         expect(screen.queryByText(/context shell/i)).toBeNull();
         expect(screen.queryByText(/bounded slice/i)).toBeNull();
         expect(screen.queryByText(/implementation slice/i)).toBeNull();
@@ -230,6 +231,27 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Back to Team Lead" }));
         expect(screen.queryByRole("heading", { name: "Department details" })).toBeNull();
+        expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+    });
+
+    it("opens AI Engine Settings details and shows organization, team, and role scope labels", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Review AI Engine Settings" })[0]);
+
+        expect(await screen.findByRole("heading", { name: "AI Engine Settings details" })).toBeDefined();
+        expect(screen.getByText("Organization-wide AI engine")).toBeDefined();
+        expect(screen.getByText("Team defaults")).toBeDefined();
+        expect(screen.getByText("Specific role overrides")).toBeDefined();
+        expect(screen.getByText("Current profile: Starter defaults included.")).toBeDefined();
+        expect(screen.getByText("The current starter applies the shared AI engine profile across Departments unless a team-specific setting appears here.")).toBeDefined();
+        expect(screen.getByText("No specific role overrides are visible in this workspace right now.")).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
     });
 

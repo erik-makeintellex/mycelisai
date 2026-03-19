@@ -20,7 +20,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [retryToken, setRetryToken] = useState(0);
-    const [activeDetailView, setActiveDetailView] = useState<"advisors" | "departments" | null>(null);
+    const [activeDetailView, setActiveDetailView] = useState<"advisors" | "departments" | "aiEngine" | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -165,6 +165,11 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                         isActive={activeDetailView === "departments"}
                                         onClick={() => setActiveDetailView("departments")}
                                     />
+                                    <ActionPill
+                                        label="Review AI Engine Settings"
+                                        isActive={activeDetailView === "aiEngine"}
+                                        onClick={() => setActiveDetailView("aiEngine")}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -229,6 +234,8 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                     summary={aiEngineSummary(organization.ai_engine_settings_summary)}
                                     supportLabel="What this affects"
                                     items={aiEngineSupportItems(organization.ai_engine_settings_summary)}
+                                    inspectActionLabel="Review AI Engine Settings"
+                                    onInspect={() => setActiveDetailView("aiEngine")}
                                 />
                                 <InspectOnlySummary
                                     icon={<BrainCircuit className="h-4 w-4" />}
@@ -373,6 +380,35 @@ function aiEngineSupportItems(summary: string) {
     return [summary, "Response style", "Planning depth"];
 }
 
+function aiEngineDetailItems(organization: OrganizationHomePayload) {
+    return [
+        {
+            name: "Organization-wide AI engine",
+            purpose:
+                organization.ai_engine_settings_summary.trim() === "Set up later in Advanced mode"
+                    ? "The organization is still on a simple starter profile until a more specific AI engine assignment is surfaced here."
+                    : `Current profile: ${organization.ai_engine_settings_summary}.`,
+            supportCue: "Affects the overall response style, planning depth, and how work is carried across the organization.",
+        },
+        {
+            name: "Team defaults",
+            purpose:
+                organization.start_mode === "template"
+                    ? `The current starter applies the shared AI engine profile across Departments unless a team-specific setting appears here.`
+                    : "No separate team AI engine defaults are visible in this workspace yet.",
+            supportCue: "Affects how each Department begins its work before any more specific assignment takes over.",
+        },
+        {
+            name: "Specific role overrides",
+            purpose:
+                organization.specialist_count > 0 || organization.advisor_count > 0
+                    ? "No specific role overrides are visible in this workspace right now."
+                    : "No specific role overrides are visible because the organization is still on a simple starter setup.",
+            supportCue: "Affects a single Team Lead, Advisor, or Specialist only when a scoped override is present.",
+        },
+    ];
+}
+
 function memoryPersonalitySummary(summary: string) {
     const normalized = summary.trim();
     if (!normalized || normalized === "Set up later in Advanced mode") {
@@ -505,16 +541,19 @@ function WorkspaceDetailView({
     teamLeadName,
     onBack,
 }: {
-    view: "advisors" | "departments";
+    view: "advisors" | "departments" | "aiEngine";
     organization: OrganizationHomePayload;
     teamLeadName: string;
     onBack: () => void;
 }) {
-    const title = view === "advisors" ? "Advisor details" : "Department details";
+    const title =
+        view === "advisors" ? "Advisor details" : view === "departments" ? "Department details" : "AI Engine Settings details";
     const summary =
         view === "advisors"
             ? `${teamLeadName} can review the current Advisor support in ${organization.name} here without leaving the workspace.`
-            : `${teamLeadName} can inspect the current Department structure in ${organization.name} here without leaving the workspace.`;
+            : view === "departments"
+              ? `${teamLeadName} can inspect the current Department structure in ${organization.name} here without leaving the workspace.`
+              : `${teamLeadName} can inspect the current AI Engine Settings in ${organization.name} here without leaving the workspace.`;
     const items =
         view === "advisors"
             ? advisorDetailItems(organization.advisor_count).map((item) => ({
@@ -523,15 +562,22 @@ function WorkspaceDetailView({
                   detail: item.purpose,
                   support: item.supportCue,
               }))
-            : departmentDetailItems(organization).map((item) => ({
-                  key: item.name,
-                  title: item.name,
-                  detail: item.purpose,
-                  support:
-                      item.specialists > 0
-                          ? `${item.specialists} ${item.specialists === 1 ? "Specialist" : "Specialists"} visible here.`
-                          : "No Specialists assigned yet.",
-              }));
+            : view === "departments"
+              ? departmentDetailItems(organization).map((item) => ({
+                    key: item.name,
+                    title: item.name,
+                    detail: item.purpose,
+                    support:
+                        item.specialists > 0
+                            ? `${item.specialists} ${item.specialists === 1 ? "Specialist" : "Specialists"} visible here.`
+                            : "No Specialists assigned yet.",
+                }))
+              : aiEngineDetailItems(organization).map((item) => ({
+                    key: item.name,
+                    title: item.name,
+                    detail: item.purpose,
+                    support: item.supportCue,
+                }));
 
     return (
         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -564,7 +610,9 @@ function WorkspaceDetailView({
                 <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm leading-6 text-cortex-text-muted">
                     {view === "advisors"
                         ? `${teamLeadName} is handling review directly until Advisors are added.`
-                        : `${teamLeadName} can still shape the first operating lane before Departments are added.`}
+                        : view === "departments"
+                          ? `${teamLeadName} can still shape the first operating lane before Departments are added.`
+                          : `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`}
                 </div>
             )}
         </div>
