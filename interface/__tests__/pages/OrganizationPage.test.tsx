@@ -100,6 +100,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("button", { name: /Plan next steps for this organization/i })).toBeDefined();
         expect(screen.getByRole("button", { name: /What should I focus on first\?/i })).toBeDefined();
         expect(screen.getByRole("button", { name: /Review my organization setup/i })).toBeDefined();
+        expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
+        expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
         expect(screen.queryByText(/context shell/i)).toBeNull();
         expect(screen.queryByText(/bounded slice/i)).toBeNull();
         expect(screen.queryByText(/implementation slice/i)).toBeNull();
@@ -190,6 +192,45 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByText("Team Lead plan for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
+    });
+
+    it("opens Advisor details from the Team Lead action and keeps the Team Lead workspace visible", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByText("Work with the Team Lead")).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Review Advisors" })[0]);
+
+        expect(await screen.findByRole("heading", { name: "Advisor details" })).toBeDefined();
+        expect(screen.getByText("Planning Advisor")).toBeDefined();
+        expect(screen.getByText("Decision support")).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+    });
+
+    it("opens Department details from the support column and preserves organization context", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Departments" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+
+        expect(await screen.findByRole("heading", { name: "Department details" })).toBeDefined();
+        expect(screen.getByText("Core Delivery Department")).toBeDefined();
+        expect(screen.getByText("2 Specialists visible here.")).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+
+        fireEvent.click(screen.getByRole("button", { name: "Back to Team Lead" }));
+        expect(screen.queryByRole("heading", { name: "Department details" })).toBeNull();
+        expect(screen.getByText("Work with the Team Lead")).toBeDefined();
     });
 
     it("shows inspect-only Advisor and Department summaries when the organization starts empty", async () => {
