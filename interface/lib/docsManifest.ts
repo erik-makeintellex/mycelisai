@@ -303,6 +303,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical V8 PRD for first-run, AI Organization creation, Team Lead-first workspace behavior, visibility rules, and screen-to-API mapping",
             },
             {
+                slug: "v8-1-living-organization-architecture",
+                label: "V8.1 Living Organization Architecture",
+                path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
+                description: "Canonical V8.1 PRD for Loop Profiles, Runtime Capabilities, promoted Agent Type/Response Contract inheritance, and bounded Automations visibility",
+            },
+            {
                 slug: "arch-overview",
                 label: "Overview",
                 path: "docs/architecture/OVERVIEW.md",

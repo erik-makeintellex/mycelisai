@@ -13,6 +13,7 @@ DEV_STATE = ROOT / "V7_DEV_STATE.md"
 V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
 V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
 V8_UI_API_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"
+V8_1_LIVING_ARCHITECTURE = ROOT / "docs" / "architecture-library" / "V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md"
 SOMA_COUNCIL_PROTOCOL = ROOT / "docs" / "architecture" / "SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md"
 UI_OPERATOR_EXPERIENCE = ROOT / "docs" / "architecture-library" / "UI_AND_OPERATOR_EXPERIENCE_V7.md"
 CANONICAL_DOCS = [
@@ -64,6 +65,7 @@ def test_docs_manifest_exposes_required_canonical_docs():
         "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+        "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
         "mycelis-architecture-v7.md",
     ]
 
@@ -572,4 +574,52 @@ def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
     assert not missing_contract_snippets, (
         "V8 UI/API contract is missing required operator-flow or terminology coverage: "
         f"{missing_contract_snippets}"
+    )
+
+
+def test_v8_1_living_architecture_is_indexed_exposed_and_complete():
+    index_text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
+    manifest_text = DOCS_MANIFEST.read_text(encoding="utf-8")
+    architecture_text = V8_1_LIVING_ARCHITECTURE.read_text(encoding="utf-8")
+
+    required_index_refs = [
+        "V8.1 Living Organization Architecture",
+        "V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
+    ]
+    missing_index_refs = [snippet for snippet in required_index_refs if snippet not in index_text]
+    assert not missing_index_refs, (
+        "Architecture library index is missing the V8.1 living architecture references: "
+        f"{missing_index_refs}"
+    )
+
+    required_manifest_refs = [
+        'slug: "v8-1-living-organization-architecture"',
+        'path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md"',
+    ]
+    missing_manifest_refs = [snippet for snippet in required_manifest_refs if snippet not in manifest_text]
+    assert not missing_manifest_refs, (
+        "docsManifest is missing the V8.1 living architecture entry: "
+        f"{missing_manifest_refs}"
+    )
+
+    required_architecture_snippets = [
+        "Loop Profiles as the bounded execution layer",
+        "Runtime Capabilities as the bounded action layer",
+        "### 5.1 Loop Profiles",
+        "### 5.2 Runtime Capabilities",
+        "### 5.3 Response Contract",
+        "### 5.4 Agent Type Profiles",
+        "### 8.2 Automations surface",
+        "Automations",
+        "Watchers",
+        "Reviews",
+        "### 11.2 First shippable state",
+        "loops exist as configuration and inspectable architecture, not broad execution",
+        "capabilities are defined but not fully exercised",
+        "the system remains safe and inspectable",
+    ]
+    missing_architecture_snippets = [snippet for snippet in required_architecture_snippets if snippet not in architecture_text]
+    assert not missing_architecture_snippets, (
+        "V8.1 living architecture doc is missing required architecture or release-contract coverage: "
+        f"{missing_architecture_snippets}"
     )
