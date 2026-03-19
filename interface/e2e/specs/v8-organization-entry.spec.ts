@@ -7,8 +7,8 @@ const starterTemplate = {
     organization_type: "AI Organization starter",
     team_lead_label: "Team Lead",
     advisor_count: 1,
-    department_count: 2,
-    specialist_count: 4,
+    department_count: 1,
+    specialist_count: 2,
     ai_engine_profile_id: "starter_defaults",
     ai_engine_settings_summary: "Starter defaults included",
     memory_personality_summary: "Prepared for Adaptive Delivery work",
@@ -23,12 +23,22 @@ const createdTemplateOrganization = {
     template_name: starterTemplate.name,
     team_lead_label: "Team Lead",
     advisor_count: 1,
-    department_count: 2,
-    specialist_count: 4,
+    department_count: 1,
+    specialist_count: 2,
     ai_engine_profile_id: "starter_defaults",
     ai_engine_settings_summary: "Starter defaults included",
     memory_personality_summary: "Prepared for Adaptive Delivery work",
     status: "ready",
+    departments: [
+        {
+            id: "platform",
+            name: "Platform Department",
+            specialist_count: 2,
+            ai_engine_effective_profile_id: "starter_defaults",
+            ai_engine_effective_summary: "Starter defaults included",
+            inherits_organization_ai_engine: true,
+        },
+    ],
 };
 
 const createdEmptyOrganization = {
@@ -43,7 +53,25 @@ const createdEmptyOrganization = {
     ai_engine_settings_summary: "Set up later in Advanced mode",
     memory_personality_summary: "Set up later in Advanced mode",
     status: "ready",
+    departments: [],
 };
+
+function applyOrganizationAIEngineToDepartments(home: typeof createdTemplateOrganization, profileId: string | undefined, summary: string) {
+    return {
+        ...home,
+        ai_engine_profile_id: profileId,
+        ai_engine_settings_summary: summary,
+        departments: home.departments.map((department) =>
+            department.inherits_organization_ai_engine
+                ? {
+                      ...department,
+                      ai_engine_effective_profile_id: profileId,
+                      ai_engine_effective_summary: summary,
+                  }
+                : department,
+        ),
+    };
+}
 
 async function saveScreenshot(page: Page, testInfo: TestInfo, name: string) {
     await page.screenshot({
@@ -73,6 +101,7 @@ async function mockOrganizationEntryApis(
         createHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         actionHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         aiEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
+        departmentAIEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         homeResponsesById?: Record<string, unknown>;
     },
 ) {
@@ -86,6 +115,7 @@ async function mockOrganizationEntryApis(
         createHandler,
         actionHandler,
         aiEngineUpdateHandler,
+        departmentAIEngineUpdateHandler,
         homeResponsesById = {
             [createdTemplateOrganization.id]: createdTemplateOrganization,
             [createdEmptyOrganization.id]: createdEmptyOrganization,
@@ -222,10 +252,76 @@ async function mockOrganizationEntryApis(
         };
 
         if (organizationId && mutableHomeResponsesById[organizationId]) {
+            mutableHomeResponsesById[organizationId] = applyOrganizationAIEngineToDepartments(
+                mutableHomeResponsesById[organizationId] as typeof createdTemplateOrganization,
+                String(requestBody.profile_id ?? ""),
+                summaries[String(requestBody.profile_id ?? "")] ?? "Balanced",
+            );
+        }
+
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                ok: true,
+                data: organizationId ? mutableHomeResponsesById[organizationId] : null,
+            }),
+        });
+    });
+
+    await page.route("**/api/v1/organizations/*/departments/*/ai-engine", async (route) => {
+        const requestBody = route.request().postDataJSON() as Record<string, unknown>;
+        const url = new URL(route.request().url());
+        const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/departments\/([^/]+)\/ai-engine$/);
+        const organizationId = match?.[1];
+        const departmentId = match?.[2];
+
+        if (departmentAIEngineUpdateHandler) {
+            const response = departmentAIEngineUpdateHandler(requestBody);
+            await route.fulfill({
+                status: response.status,
+                contentType: "application/json",
+                body: JSON.stringify(response.body),
+            });
+            return;
+        }
+
+        const summaries: Record<string, string> = {
+            starter_defaults: "Starter Defaults",
+            balanced: "Balanced",
+            high_reasoning: "High Reasoning",
+            fast_lightweight: "Fast & Lightweight",
+            deep_planning: "Deep Planning",
+        };
+
+        if (organizationId && departmentId && mutableHomeResponsesById[organizationId]) {
+            const home = mutableHomeResponsesById[organizationId] as typeof createdTemplateOrganization;
             mutableHomeResponsesById[organizationId] = {
-                ...(mutableHomeResponsesById[organizationId] as Record<string, unknown>),
-                ai_engine_profile_id: requestBody.profile_id,
-                ai_engine_settings_summary: summaries[String(requestBody.profile_id ?? "")] ?? "Balanced",
+                ...home,
+                departments: home.departments.map((department) => {
+                    if (department.id !== departmentId) {
+                        return department;
+                    }
+                    if (requestBody.revert_to_organization_default) {
+                        return {
+                            ...department,
+                            ai_engine_override_profile_id: undefined,
+                            ai_engine_override_summary: undefined,
+                            ai_engine_effective_profile_id: home.ai_engine_profile_id,
+                            ai_engine_effective_summary: home.ai_engine_settings_summary,
+                            inherits_organization_ai_engine: true,
+                        };
+                    }
+                    const profileId = String(requestBody.profile_id ?? "");
+                    return {
+                        ...department,
+                        ai_engine_override_profile_id: profileId,
+                        ai_engine_override_summary: summaries[profileId],
+                        ai_engine_effective_profile_id: profileId,
+                        ai_engine_effective_summary: summaries[profileId] ?? department.ai_engine_effective_summary,
+                        inherits_organization_ai_engine: false,
+                    };
+                }),
             };
         }
 
@@ -389,8 +485,14 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.getByRole("button", { name: "Open Departments" }).last().click();
         await expect(page.getByRole("heading", { name: "Department details" })).toBeVisible();
-        await expect(page.getByText("Planning Department")).toBeVisible();
+        await expect(page.getByText("Platform Department")).toBeVisible();
         await expect(page.getByText("2 Specialists visible here.").first()).toBeVisible();
+        await expect(page.getByText("Using Organization Default: Starter defaults included")).toBeVisible();
+        await page.getByRole("button", { name: "Change for this Team" }).click();
+        await expect(page.getByRole("heading", { name: "Choose an AI Engine for this Team" })).toBeVisible();
+        await page.getByRole("button", { name: /Balanced/i }).click();
+        await page.getByRole("button", { name: "Use selected AI Engine" }).click();
+        await expect(page.getByText("Overridden: Balanced")).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
@@ -412,6 +514,12 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("The current AI Engine Settings profile is high reasoning and shapes how the organization responds, plans, and carries work forward.")).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByText("Work with the Team Lead")).toBeVisible();
+        await page.getByRole("button", { name: "Back to Team Lead" }).click();
+
+        await page.getByRole("button", { name: "Open Departments" }).last().click();
+        await expect(page.getByText("Overridden: Balanced")).toBeVisible();
+        await page.getByRole("button", { name: "Revert to Organization Default" }).click();
+        await expect(page.getByText("Using Organization Default: High Reasoning")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
 
         await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();

@@ -25,16 +25,48 @@ const organizationHome = {
     memory_personality_summary: "Prepared for Adaptive Delivery work",
     status: "ready",
     description: "Guided AI Organization for engineering work",
+    departments: [
+        {
+            id: "platform",
+            name: "Platform Department",
+            specialist_count: 2,
+            ai_engine_effective_profile_id: "starter_defaults",
+            ai_engine_effective_summary: "Starter defaults included",
+            inherits_organization_ai_engine: true,
+        },
+    ],
 };
 
 function jsonResponse(body: unknown, status = 200) {
     return Promise.resolve(new Response(JSON.stringify(body), { status }));
 }
 
+function applyOrganizationAIEngineToDepartments(
+    home: typeof organizationHome,
+    profileId: string,
+    summary: string,
+) {
+    return {
+        ...home,
+        ai_engine_profile_id: profileId,
+        ai_engine_settings_summary: summary,
+        departments: home.departments.map((department) =>
+            department.inherits_organization_ai_engine
+                ? {
+                      ...department,
+                      ai_engine_effective_profile_id: profileId,
+                      ai_engine_effective_summary: summary,
+                  }
+                : department,
+        ),
+    };
+}
+
 function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
     actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
     aiEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
+    departmentAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
 }) {
     let currentOrganizationHome = structuredClone(organizationHome);
 
@@ -60,10 +92,62 @@ function setupOrganizationFetch(options?: {
                 deep_planning: "Deep Planning",
             };
             const profileId = String(body.profile_id ?? "");
+            currentOrganizationHome = applyOrganizationAIEngineToDepartments(
+                currentOrganizationHome,
+                profileId,
+                summaries[profileId] ?? currentOrganizationHome.ai_engine_settings_summary,
+            );
+
+            return jsonResponse({ ok: true, data: currentOrganizationHome });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/departments/platform/ai-engine") && method === "PATCH") {
+            const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
+            if (options?.departmentAIEngineUpdateHandler) {
+                return options.departmentAIEngineUpdateHandler(body);
+            }
+
+            if (body.revert_to_organization_default) {
+                currentOrganizationHome = {
+                    ...currentOrganizationHome,
+                    departments: currentOrganizationHome.departments.map((department) =>
+                        department.id === "platform"
+                            ? {
+                                  ...department,
+                                  ai_engine_override_profile_id: undefined,
+                                  ai_engine_override_summary: undefined,
+                                  ai_engine_effective_profile_id: currentOrganizationHome.ai_engine_profile_id,
+                                  ai_engine_effective_summary: currentOrganizationHome.ai_engine_settings_summary,
+                                  inherits_organization_ai_engine: true,
+                              }
+                            : department,
+                    ),
+                };
+                return jsonResponse({ ok: true, data: currentOrganizationHome });
+            }
+
+            const summaries: Record<string, string> = {
+                starter_defaults: "Starter Defaults",
+                balanced: "Balanced",
+                high_reasoning: "High Reasoning",
+                fast_lightweight: "Fast & Lightweight",
+                deep_planning: "Deep Planning",
+            };
+            const profileId = String(body.profile_id ?? "");
             currentOrganizationHome = {
                 ...currentOrganizationHome,
-                ai_engine_profile_id: profileId,
-                ai_engine_settings_summary: summaries[profileId] ?? currentOrganizationHome.ai_engine_settings_summary,
+                departments: currentOrganizationHome.departments.map((department) =>
+                    department.id === "platform"
+                        ? {
+                              ...department,
+                              ai_engine_override_profile_id: profileId,
+                              ai_engine_override_summary: summaries[profileId],
+                              ai_engine_effective_profile_id: profileId,
+                              ai_engine_effective_summary: summaries[profileId] ?? department.ai_engine_effective_summary,
+                              inherits_organization_ai_engine: false,
+                          }
+                        : department,
+                ),
             };
 
             return jsonResponse({ ok: true, data: currentOrganizationHome });
@@ -251,8 +335,9 @@ describe("OrganizationPage (/organizations/[id])", () => {
         fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
 
         expect(await screen.findByRole("heading", { name: "Department details" })).toBeDefined();
-        expect(screen.getByText("Core Delivery Department")).toBeDefined();
+        expect(screen.getByText("Platform Department")).toBeDefined();
         expect(screen.getByText("2 Specialists visible here.")).toBeDefined();
+        expect(screen.getByText("Using Organization Default: Starter defaults included")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
 
@@ -304,6 +389,58 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("The current AI Engine Settings profile is high reasoning and shapes how the organization responds, plans, and carries work forward.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+    });
+
+    it("shows inherited Department AI Engine state, applies an override, and then reverts to the organization default", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Departments" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+
+        expect(await screen.findByText("Using Organization Default: Starter defaults included")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Change for this Team" }));
+        expect(await screen.findByRole("heading", { name: "Choose an AI Engine for this Team" })).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Balanced/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected AI Engine" }));
+
+        expect(await screen.findByText("Overridden: Balanced")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Revert to Organization Default" })).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Revert to Organization Default" }));
+        expect(await screen.findByText("Using Organization Default: Starter defaults included")).toBeDefined();
+    });
+
+    it("keeps a Department override when the organization AI Engine changes and reapplies inheritance after revert", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Departments" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+        fireEvent.click(screen.getByRole("button", { name: "Change for this Team" }));
+        fireEvent.click(screen.getByRole("button", { name: /High Reasoning/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected AI Engine" }));
+        expect(await screen.findByText("Overridden: High Reasoning")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Back to Team Lead" }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Review AI Engine Settings" })[0]);
+        fireEvent.click(screen.getByRole("button", { name: "Change AI Engine" }));
+        fireEvent.click(screen.getByRole("button", { name: /Fast & Lightweight/i }));
+        fireEvent.click(screen.getByRole("button", { name: "Use selected AI Engine" }));
+        expect(await screen.findByText("Current profile: Fast & Lightweight.")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Back to Team Lead" }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+        expect(await screen.findByText("Overridden: High Reasoning")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Revert to Organization Default" }));
+        expect(await screen.findByText("Using Organization Default: Fast & Lightweight")).toBeDefined();
     });
 
     it("shows retry guidance when changing the AI Engine fails and recovers on retry", async () => {

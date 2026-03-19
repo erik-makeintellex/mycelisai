@@ -40,17 +40,29 @@ type organizationAIEngineProfile struct {
 	BestFor     string
 }
 
+type OrganizationDepartmentSummary struct {
+	ID                           string `json:"id"`
+	Name                         string `json:"name"`
+	SpecialistCount              int    `json:"specialist_count"`
+	AIEngineOverrideProfileID    string `json:"ai_engine_override_profile_id,omitempty"`
+	AIEngineOverrideSummary      string `json:"ai_engine_override_summary,omitempty"`
+	AIEngineEffectiveProfileID   string `json:"ai_engine_effective_profile_id,omitempty"`
+	AIEngineEffectiveSummary     string `json:"ai_engine_effective_summary"`
+	InheritsOrganizationAIEngine bool   `json:"inherits_organization_ai_engine"`
+}
+
 type OrganizationTemplateSummary struct {
-	ID                       string `json:"id"`
-	Name                     string `json:"name"`
-	Description              string `json:"description"`
-	OrganizationType         string `json:"organization_type"`
-	TeamLeadLabel            string `json:"team_lead_label"`
-	AdvisorCount             int    `json:"advisor_count"`
-	DepartmentCount          int    `json:"department_count"`
-	SpecialistCount          int    `json:"specialist_count"`
-	AIEngineSettingsSummary  string `json:"ai_engine_settings_summary"`
-	MemoryPersonalitySummary string `json:"memory_personality_summary"`
+	ID                       string                          `json:"id"`
+	Name                     string                          `json:"name"`
+	Description              string                          `json:"description"`
+	OrganizationType         string                          `json:"organization_type"`
+	TeamLeadLabel            string                          `json:"team_lead_label"`
+	AdvisorCount             int                             `json:"advisor_count"`
+	DepartmentCount          int                             `json:"department_count"`
+	SpecialistCount          int                             `json:"specialist_count"`
+	Departments              []OrganizationDepartmentSummary `json:"departments,omitempty"`
+	AIEngineSettingsSummary  string                          `json:"ai_engine_settings_summary"`
+	MemoryPersonalitySummary string                          `json:"memory_personality_summary"`
 }
 
 type OrganizationSummary struct {
@@ -72,7 +84,8 @@ type OrganizationSummary struct {
 
 type OrganizationHomePayload struct {
 	OrganizationSummary
-	Description string `json:"description,omitempty"`
+	Description string                          `json:"description,omitempty"`
+	Departments []OrganizationDepartmentSummary `json:"departments,omitempty"`
 }
 
 type TeamLeadGuidedAction string
@@ -96,6 +109,11 @@ type TeamLeadGuidanceRequest struct {
 
 type OrganizationAIEngineUpdateRequest struct {
 	ProfileID string `json:"profile_id"`
+}
+
+type DepartmentAIEngineUpdateRequest struct {
+	ProfileID                   string `json:"profile_id,omitempty"`
+	RevertToOrganizationDefault bool   `json:"revert_to_organization_default,omitempty"`
 }
 
 type TeamLeadGuidanceResponse struct {
@@ -225,8 +243,15 @@ func (s *AdminServer) loadOrganizationStarterTemplates() ([]OrganizationTemplate
 func summarizeStarterBundle(bundle *bootstrap.TemplateBundle) OrganizationTemplateSummary {
 	departmentCount := len(bundle.Teams)
 	specialistCount := 0
+	departments := make([]OrganizationDepartmentSummary, 0, len(bundle.Teams))
 	for _, team := range bundle.Teams {
-		specialistCount += len(team.Members)
+		memberCount := len(team.Members)
+		specialistCount += memberCount
+		departments = append(departments, OrganizationDepartmentSummary{
+			ID:              team.ID,
+			Name:            strings.TrimSpace(team.Name),
+			SpecialistCount: memberCount,
+		})
 	}
 
 	return OrganizationTemplateSummary{
@@ -238,6 +263,7 @@ func summarizeStarterBundle(bundle *bootstrap.TemplateBundle) OrganizationTempla
 		AdvisorCount:             countAdvisors(bundle.Council.Mode),
 		DepartmentCount:          departmentCount,
 		SpecialistCount:          specialistCount,
+		Departments:              departments,
 		AIEngineSettingsSummary:  summarizeAIEngineSettings(bundle.ProviderPolicy),
 		MemoryPersonalitySummary: summarizeMemoryPersonality(bundle),
 	}
@@ -274,6 +300,124 @@ func lookupOrganizationAIEngineProfile(id string) (organizationAIEngineProfile, 
 		}
 	}
 	return organizationAIEngineProfile{}, false
+}
+
+func organizationAIEngineSummaryForProfile(id string) string {
+	profile, ok := lookupOrganizationAIEngineProfile(id)
+	if !ok {
+		return "Set up later in Advanced mode"
+	}
+	return profile.Summary
+}
+
+func normalizeDepartmentName(name string, fallbackIndex int) string {
+	name = strings.TrimSpace(name)
+	if name != "" {
+		return name
+	}
+	if fallbackIndex == 0 {
+		return "Core Delivery Department"
+	}
+	return fmt.Sprintf("Department %d", fallbackIndex+1)
+}
+
+func normalizeOrganizationHome(home OrganizationHomePayload) OrganizationHomePayload {
+	if len(home.Departments) == 0 && home.DepartmentCount > 0 {
+		home.Departments = generateFallbackDepartments(home.DepartmentCount, home.SpecialistCount)
+	}
+
+	if len(home.Departments) > 0 {
+		home.DepartmentCount = len(home.Departments)
+		totalSpecialists := 0
+		for index, department := range home.Departments {
+			if department.SpecialistCount <= 0 {
+				department.SpecialistCount = spreadSpecialists(home.SpecialistCount, len(home.Departments), index)
+			}
+			department.Name = normalizeDepartmentName(department.Name, index)
+			if department.ID == "" {
+				department.ID = slugifyDepartmentID(department.Name, index)
+			}
+
+			overrideSummary := ""
+			if strings.TrimSpace(department.AIEngineOverrideProfileID) != "" {
+				if department.AIEngineOverrideProfileID == home.AIEngineProfileID {
+					department.AIEngineOverrideProfileID = ""
+				}
+				overrideSummary = organizationAIEngineSummaryForProfile(department.AIEngineOverrideProfileID)
+				if strings.TrimSpace(overrideSummary) == "Set up later in Advanced mode" {
+					department.AIEngineOverrideProfileID = ""
+				}
+			}
+
+			if strings.TrimSpace(department.AIEngineOverrideProfileID) != "" {
+				department.InheritsOrganizationAIEngine = false
+				department.AIEngineOverrideSummary = overrideSummary
+				department.AIEngineEffectiveProfileID = department.AIEngineOverrideProfileID
+				department.AIEngineEffectiveSummary = overrideSummary
+			} else {
+				department.InheritsOrganizationAIEngine = true
+				department.AIEngineOverrideSummary = ""
+				department.AIEngineEffectiveProfileID = home.AIEngineProfileID
+				department.AIEngineEffectiveSummary = home.AIEngineSettingsSummary
+			}
+
+			if strings.TrimSpace(department.AIEngineEffectiveSummary) == "" {
+				department.AIEngineEffectiveSummary = "Set up later in Advanced mode"
+			}
+
+			home.Departments[index] = department
+			totalSpecialists += department.SpecialistCount
+		}
+		home.SpecialistCount = totalSpecialists
+	}
+
+	return home
+}
+
+func generateFallbackDepartments(departmentCount, specialistCount int) []OrganizationDepartmentSummary {
+	if departmentCount <= 0 {
+		return nil
+	}
+
+	departments := make([]OrganizationDepartmentSummary, 0, departmentCount)
+	names := []string{"Core Delivery Department", "Planning Department", "Operations Department", "Support Department"}
+	for index := 0; index < departmentCount; index++ {
+		name := names[min(index, len(names)-1)]
+		if index >= len(names) {
+			name = fmt.Sprintf("Department %d", index+1)
+		}
+		departments = append(departments, OrganizationDepartmentSummary{
+			ID:              slugifyDepartmentID(name, index),
+			Name:            name,
+			SpecialistCount: spreadSpecialists(specialistCount, departmentCount, index),
+		})
+	}
+	return departments
+}
+
+func slugifyDepartmentID(name string, fallbackIndex int) string {
+	name = strings.TrimSpace(strings.ToLower(name))
+	if name == "" {
+		return fmt.Sprintf("department-%d", fallbackIndex+1)
+	}
+	var b strings.Builder
+	lastDash := false
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if !lastDash {
+			b.WriteRune('-')
+			lastDash = true
+		}
+	}
+	value := strings.Trim(b.String(), "-")
+	if value == "" {
+		return fmt.Sprintf("department-%d", fallbackIndex+1)
+	}
+	return value
 }
 
 func summarizeMemoryPersonality(bundle *bootstrap.TemplateBundle) string {
@@ -360,9 +504,10 @@ func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, templ
 		home.AIEngineSettingsSummary = template.AIEngineSettingsSummary
 		home.MemoryPersonalitySummary = template.MemoryPersonalitySummary
 		home.Description = template.Description
+		home.Departments = append([]OrganizationDepartmentSummary(nil), template.Departments...)
 	}
 
-	return home
+	return normalizeOrganizationHome(home)
 }
 
 func (s *AdminServer) handleListOrganizations(w http.ResponseWriter, r *http.Request) {
@@ -426,7 +571,7 @@ func (s *AdminServer) handleGetOrganizationHome(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(home))
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(normalizeOrganizationHome(home)))
 }
 
 func (s *AdminServer) handleUpdateOrganizationAIEngine(w http.ResponseWriter, r *http.Request) {
@@ -451,10 +596,70 @@ func (s *AdminServer) handleUpdateOrganizationAIEngine(w http.ResponseWriter, r 
 	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
 		home.AIEngineProfileID = string(profile.ID)
 		home.AIEngineSettingsSummary = profile.Summary
-		return home
+		return normalizeOrganizationHome(home)
 	})
 	if !ok {
 		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
+}
+
+func (s *AdminServer) handleUpdateDepartmentAIEngine(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	departmentID := strings.TrimSpace(r.PathValue("departmentId"))
+	if id == "" || departmentID == "" {
+		respondAPIError(w, "organization id and department id are required", http.StatusBadRequest)
+		return
+	}
+
+	var req DepartmentAIEngineUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "invalid Department AI Engine update request", http.StatusBadRequest)
+		return
+	}
+
+	profileID := strings.TrimSpace(req.ProfileID)
+	if req.RevertToOrganizationDefault {
+		profileID = ""
+	} else {
+		if profileID == "" {
+			respondAPIError(w, "profile_id is required unless reverting to the organization default", http.StatusBadRequest)
+			return
+		}
+		if _, ok := lookupOrganizationAIEngineProfile(profileID); !ok {
+			respondAPIError(w, "profile_id must be one of the guided AI Engine options", http.StatusBadRequest)
+			return
+		}
+	}
+
+	departmentFound := false
+	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+		home = normalizeOrganizationHome(home)
+		for index, department := range home.Departments {
+			if department.ID != departmentID {
+				continue
+			}
+			departmentFound = true
+			if profileID == "" || profileID == home.AIEngineProfileID {
+				department.AIEngineOverrideProfileID = ""
+				department.AIEngineOverrideSummary = ""
+			} else {
+				department.AIEngineOverrideProfileID = profileID
+				department.AIEngineOverrideSummary = organizationAIEngineSummaryForProfile(profileID)
+			}
+			home.Departments[index] = department
+			break
+		}
+		return normalizeOrganizationHome(home)
+	})
+	if !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+	if !departmentFound {
+		respondAPIError(w, "department not found", http.StatusNotFound)
 		return
 	}
 
@@ -592,6 +797,25 @@ func formatConfiguredCountForGuidance(count int, label string) string {
 		return "not configured yet"
 	}
 	return fmt.Sprintf("%d %s%s ready", count, label, pluralSuffix(count))
+}
+
+func spreadSpecialists(total, departmentCount, index int) int {
+	if departmentCount <= 0 || total <= 0 {
+		return 0
+	}
+	base := total / departmentCount
+	remainder := total % departmentCount
+	if index < remainder {
+		return base + 1
+	}
+	return base
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func safeOrganizationName(name string) string {
