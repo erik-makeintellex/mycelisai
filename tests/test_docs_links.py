@@ -577,6 +577,30 @@ def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
     )
 
 
+
+
+def test_v8_runtime_contracts_cover_semantic_continuity_and_learning_layers():
+    text = (ROOT / "docs" / "architecture-library" / "V8_RUNTIME_CONTRACTS.md").read_text(encoding="utf-8")
+    required_snippets = [
+        "Learning Loops, semantic continuity, Procedure / Skill Sets",
+        "semantic continuity recall",
+        "reviewed memory promotion inputs",
+        "procedure and skill retrieval for type-bound specialization",
+        "pgvector-backed semantic continuity substrate provides event, action, and result semantic indexing",
+        "Soma Kernel interprets and orchestrates continuity using semantic recall, but it does not become the memory substrate itself",
+        "Loops generate candidates, perform review, and route promotion; they never silently rewrite continuity state.",
+        "raw memory",
+        "reviewed memory",
+        "promoted memory",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, (
+        "V8 runtime contracts are missing semantic continuity or learning-layer coverage: "
+        f"{missing}"
+    )
+
+
 def test_v8_1_living_architecture_is_indexed_exposed_and_complete():
     index_text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
     manifest_text = DOCS_MANIFEST.read_text(encoding="utf-8")
@@ -605,10 +629,22 @@ def test_v8_1_living_architecture_is_indexed_exposed_and_complete():
     required_architecture_snippets = [
         "Loop Profiles as the bounded execution layer",
         "Runtime Capabilities as the bounded action layer",
+        "Learning Loops as the bounded candidate-capture and promotion-review layer",
+        "Memory Promotion and Semantic Continuity as the pgvector-backed recall substrate",
+        "Procedure / Skill Sets as reviewed specialist memory bound to Agent Type Profiles",
         "### 5.1 Loop Profiles",
         "### 5.2 Runtime Capabilities",
         "### 5.3 Response Contract",
         "### 5.4 Agent Type Profiles",
+        "### 5.5 Memory Promotion and Semantic Continuity",
+        "### 5.6 Procedure / Skill Sets",
+        "### 5.7 Layering clarification",
+        "Learning Loop",
+        "pgvector",
+        "raw memory",
+        "reviewed memory",
+        "promoted memory",
+        "no silent self-rewrite",
         "### 8.2 Automations surface",
         "Automations",
         "Watchers",
@@ -616,6 +652,7 @@ def test_v8_1_living_architecture_is_indexed_exposed_and_complete():
         "### 11.2 First shippable state",
         "loops exist as configuration and inspectable architecture, not broad execution",
         "capabilities are defined but not fully exercised",
+        "learning continuity architecture is defined even when raw/reviewed/promoted memory promotion is not fully implemented yet",
         "the system remains safe and inspectable",
     ]
     missing_architecture_snippets = [snippet for snippet in required_architecture_snippets if snippet not in architecture_text]

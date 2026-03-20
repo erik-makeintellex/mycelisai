@@ -1,7 +1,7 @@
 # Architecture Library Index
 
 > Status: Canonical
-> Last Updated: 2026-03-19
+> Last Updated: 2026-03-20
 > Purpose: Replace monolithic planning with a modular, cross-linked architecture and target-delivery library.
 
 ## Why This Library Exists
@@ -37,13 +37,13 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | defining the new V8 runtime contract surface during migration | contract shells for inception, kernel, council, provider policy, and continuity state |
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning how V8 concepts enter the system through config and bootstrap behavior | configuration sources, templates, instantiation entry points, bootstrap resolution, scope inheritance, precedence rules, and the V7-to-V8 bootstrap migration contract |
 | [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | working on first-run flow, AI Organization creation, Team Lead-first workspace, or screen-to-API mapping | canonical V8 operator PRD, anti-generic-chat UX guardrails, visibility rules, advanced-mode boundaries, and API/UI contracts |
-| [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) | defining loop profiles, runtime capabilities, promoted response/style inheritance, or Automations visibility | canonical V8.1 architecture PRD for persistent execution, policy-bounded automation, Agent Type Profile runtime truth, and the first bounded Automations posture |
+| [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) | defining loop profiles, learning loops, semantic continuity, procedure/skill memory, runtime capabilities, promoted response/style inheritance, or Automations visibility | canonical V8.1 architecture PRD for persistent execution, policy-bounded automation, semantic continuity, Agent Type Profile runtime truth, and the first bounded Automations posture |
 
 ### V8 migration reminder
 
 - V7 docs in this table stay authoritative migration inputs until replaced, but they do not override the V8 bootstrap contract.
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` is the canonical V7->V8 migration and bootstrap source; every YAML/runtime/DB/operator asset must be translated through it before shaping a running organization.
-- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` extends the V8 contract library with Loop Profiles, Runtime Capabilities, promoted Response Contract inheritance, promoted Agent Type Profiles, and the first bounded Automations operator surface.
+- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` extends the V8 contract library with Loop Profiles, Learning Loops, Runtime Capabilities, semantic continuity, Procedure / Skill Sets, promoted Response Contract inheritance, promoted Agent Type Profiles, and the first bounded Automations operator surface.
 - `Template ≠ instantiated organization`; templates remain reusable blueprints while instantiated Inceptions inherit, override, and resolve configuration through the V8 flow.
 
 ## How To Use This Library
@@ -62,7 +62,7 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 12. Use [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) when defining the new canonical V8 runtime contracts during migration.
 13. Use [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) when planning how V8 contracts enter the system through configuration, templates, organization entry points, bootstrap resolution, and precedence rules.
 14. Use [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) when defining first-run flow, AI Organization creation, Team Lead-first workspace behavior, role visibility, advanced-mode boundaries, and screen-to-API mapping.
-15. Use [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) when defining Loop Profiles, Runtime Capabilities, Agent Type runtime truth, promoted Response Style inheritance, and the read-only Automations surface.
+15. Use [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) when defining Loop Profiles, Learning Loops, semantic continuity, Procedure / Skill Sets, Runtime Capabilities, Agent Type runtime truth, promoted Response Style inheritance, and the read-only Automations surface.
 
 Execution governance reminder:
 - `NEXT_EXECUTION_SLICES_V7.md`, `DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, and `TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` now describe V8 migration slices; apply the V8 bootstrap pipeline (`docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`) and update `V8_DEV_STATE.md` whenever those docs change.

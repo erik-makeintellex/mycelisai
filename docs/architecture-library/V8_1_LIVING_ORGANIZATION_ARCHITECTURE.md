@@ -1,8 +1,8 @@
 # V8.1 Living Organization Architecture
 
 > Status: Canonical V8.1 PRD
-> Last Updated: 2026-03-19
-> Purpose: Define the first implementation-grade V8.1 architecture for persistent execution, bounded automation, runtime capabilities, and reproducible specialist behavior.
+> Last Updated: 2026-03-20
+> Purpose: Define the first implementation-grade V8.1 architecture for persistent execution, bounded automation, semantic continuity, learning promotion, and reproducible specialist behavior.
 > Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 
 ## 1. Why V8.1 exists
@@ -16,12 +16,16 @@ V8.1 introduces:
 - Runtime Capabilities as the bounded action layer
 - Response Contract as a first-class inheritance contract
 - Agent Type Profiles as a first-class runtime layer between Team defaults and Agent instances
+- Learning Loops as the bounded candidate-capture and promotion-review layer
+- Memory Promotion and Semantic Continuity as the pgvector-backed recall substrate
+- Procedure / Skill Sets as reviewed specialist memory bound to Agent Type Profiles
 
 This enables:
 - continuous but governed operation
 - event-driven workflows
 - safe automation
 - reproducible specialist behavior
+- policy-bounded learning continuity without silent self-rewrite
 
 ## 2. Product goals
 
@@ -56,11 +60,15 @@ Inception
   -> Central Council
   -> Specialist Teams
     -> Agent Type Profiles
+      -> Procedure / Skill Sets
       -> Agent Instances
   -> Loop Profiles
+    -> Review Loops
+    -> Learning Loops
   -> Runs
   -> Events
   -> Memory
+    -> Semantic Continuity
   -> Reflection
 ```
 
@@ -89,6 +97,10 @@ Loop Profiles are configuration and policy objects first. The first shippable V8
 - Review Loop
   - trigger: completion of another process
   - example: QA reviewing outputs
+- Learning Loop
+  - trigger: review completion, event, or schedule
+  - example: candidate capture, reviewed promotion, procedure-memory update
+  - posture: bounded review and promotion only, never silent self-rewrite
 - Actuation Loop
   - trigger: schedule or event
   - example: hardware or system action
@@ -99,7 +111,7 @@ Loop Profiles are configuration and policy objects first. The first shippable V8
 ```yaml
 id: string
 name: string
-type: scheduled | event | review | actuation
+type: scheduled | event | review | learning | actuation
 
 owner:
   type: team | agent_type
@@ -107,6 +119,7 @@ owner:
 
 trigger:
   schedule: optional cron
+  interval_seconds: optional integer
   event_subject: optional string
 
 inputs:
@@ -121,6 +134,7 @@ policy:
 
 state:
   persistence: short | long
+  memory_stage: raw | reviewed | promoted
 ```
 
 #### Required rules
@@ -129,6 +143,9 @@ state:
 - loops never imply capabilities
 - actuation loops always require stronger gating than passive review loops
 - loops must remain auditable even when not yet executable
+- Learning Loops capture candidates, route them through review and promotion, and never silently rewrite memory or specialist behavior
+- Learning Loops follow a no silent self-rewrite rule even when they surface strong promotion candidates
+- memory promotion must stay policy-bounded even when the execution path is automated
 
 ### 5.2 Runtime Capabilities
 
@@ -215,6 +232,10 @@ response_contract:
   default: string
   override_allowed: boolean
 
+procedure_skill_sets:
+  references: []
+  promotion_allowed: boolean
+
 capabilities:
   required: []
   optional: []
@@ -228,6 +249,68 @@ policy:
 - Agent Type Profiles always define baseline specialist behavior
 - Team Lead auto-instantiation must still resolve through Agent Type Profile defaults
 - agent-instance mutation must not ship before Agent Type Profile truth is stable and visible
+
+### 5.5 Memory Promotion and Semantic Continuity
+
+#### Definition
+
+Memory Promotion and Semantic Continuity define how an AI Organization preserves, reviews, promotes, and recalls meaning across runs without collapsing into ungoverned self-modification.
+
+In V8.1, pgvector is not just action storage. It is the semantic continuity substrate for:
+- event, action, and result semantic indexing
+- review memory
+- learning candidates
+- promoted organization memory
+- promoted team memory
+- promoted agent-type memory
+- procedure and skill retrieval
+- continuity recall
+
+#### Required memory stages
+
+- raw memory
+  - unreviewed records, observations, outputs, and candidate patterns
+- reviewed memory
+  - findings that have passed a bounded review step and are safe to compare or retrieve as governed evidence
+- promoted memory
+  - organization, team, agent-type, or procedure memory that has passed policy-bounded promotion and becomes reusable runtime truth
+
+#### Required rules
+
+- pgvector acts as the semantic persistence and recall substrate, not as a hidden policy engine
+- promotion never happens through silent self-rewrite
+- reviewed and promoted memory must preserve lineage back to raw evidence
+- promoted memory may inform continuity and retrieval, but it does not replace Response Contract, AI Engine Settings, or Runtime Capabilities
+
+### 5.6 Procedure / Skill Sets
+
+#### Definition
+
+Procedure / Skill Sets are reusable specialist procedures and reviewed execution patterns attached to Agent Type Profiles.
+
+They represent type-bound skill memory, not ad hoc one-off run history.
+
+#### Required properties
+
+- reusable specialist procedures
+- reviewed execution patterns
+- type-bound skill memory
+- retrieval through semantic continuity
+- governed promotion path before becoming reusable runtime truth
+
+#### Required rules
+
+- Procedure / Skill Sets sit under Agent Type Profiles and must resolve before agent-instance behavior diverges
+- procedure retrieval must use semantic continuity rather than hidden prompt mutation
+- skill memory remains inspectable and policy-bounded even when execution becomes more continuous later
+
+### 5.7 Layering clarification
+
+The required V8.1 layering is:
+- pgvector = semantic persistence and recall substrate
+- Team Lead / Soma Kernel = orchestration and interpretation
+- loops = candidate generation, review, and promotion
+- Response Contract, AI Engine Settings, and Runtime Capabilities = separate governed behavior layers, not interchangeable memory fields
 
 ## 6. Execution model
 
@@ -251,6 +334,8 @@ V8.1 introduces Loop mode as an architecture contract before broad live executio
 3. Agent Type Profiles always define baseline behavior.
 4. Response Contract always applies.
 5. Bundle-driven configuration remains the single source of truth.
+6. Learning Loops may produce candidates and reviewed promotion decisions, but they never silently rewrite organization truth.
+7. Semantic continuity supports recall and promotion lineage; it does not replace policy, engine, response, or capability contracts.
 
 ## 8. Operator UI architecture
 
@@ -316,18 +401,21 @@ Default UI must not leak architecture terms or raw control surfaces unnecessaril
 - loop schema validation
 - capability inheritance correctness
 - policy enforcement
+- memory-promotion path validation
 
 ### 10.2 Frontend
 
 - automation visibility
 - no architecture leakage
 - inheritance clarity
+- semantic continuity and promotion language stays user-facing
 
 ### 10.3 End-to-end
 
 - create AI Organization
 - view Automations
 - inspect loop behavior without enabling execution yet
+- confirm learning continuity remains bounded and inspectable
 
 ## 11. Release target
 
@@ -336,9 +424,12 @@ Default UI must not leak architecture terms or raw control surfaces unnecessaril
 #### Must have
 
 - Loop Profiles defined in architecture and schema
+- Learning Loop subtype defined in architecture and schema
 - Runtime Capabilities contract defined
 - Agent Type Profiles fully surfaced
 - Response Contract integrated at organization and Agent Type level
+- Memory Promotion and Semantic Continuity model defined
+- Procedure / Skill Sets defined under Agent Type Profiles
 - Team Lead workspace stable
 - Automations UI visible, even if read-only
 
@@ -353,13 +444,14 @@ Default UI must not leak architecture terms or raw control surfaces unnecessaril
 - loops exist as configuration and inspectable architecture, not broad execution
 - automations are visible in the workspace
 - capabilities are defined but not fully exercised
+- learning continuity architecture is defined even when raw/reviewed/promoted memory promotion is not fully implemented yet
 - the system remains safe and inspectable
 
 ## 12. Post-release V8.2 targets
 
-- first Review Loop execution
+- first bounded Learning Loop implementation
+- memory-promotion and procedure-skill retrieval runtime slices
 - capability-based tool execution
-- event-driven loop triggers
 - hardware-safe actuation
 
 ## 13. Delivery implication
@@ -369,6 +461,9 @@ This document is the canonical V8.1 architecture contract for:
 - Runtime Capabilities
 - promoted Response Contract inheritance
 - promoted Agent Type Profile runtime truth
+- Learning Loops
+- Memory Promotion and Semantic Continuity
+- Procedure / Skill Sets
 - read-only Automations visibility in the Team Lead workspace
 
 Implementation that touches these areas must align with:
