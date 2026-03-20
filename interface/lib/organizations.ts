@@ -1,6 +1,15 @@
 export type OrganizationStartMode = "template" | "empty";
 export type OrganizationAIEngineProfileId = "starter_defaults" | "balanced" | "high_reasoning" | "fast_lightweight" | "deep_planning";
 export type ResponseContractProfileId = "clear_balanced" | "structured_analytical" | "concise_direct" | "warm_supportive";
+export type LoopActivityStatus = "success" | "warning" | "failed";
+
+export interface OrganizationLoopActivityItem {
+    id: string;
+    name: string;
+    last_run_at: string;
+    status: LoopActivityStatus;
+    summary: string;
+}
 
 export interface OrganizationAgentTypeProfileSummary {
     id: string;

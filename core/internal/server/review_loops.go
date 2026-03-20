@@ -48,10 +48,19 @@ type LoopOwnerResolution struct {
 }
 
 type ReviewLoopStructuredOutput struct {
-	Status      string   `json:"status"`
-	Findings    []string `json:"findings"`
-	Suggestions []string `json:"suggestions"`
+	Status       string   `json:"status"`
+	FlaggedItems int      `json:"flagged_items,omitempty"`
+	Findings     []string `json:"findings"`
+	Suggestions  []string `json:"suggestions"`
 }
+
+type LoopActivityStatus string
+
+const (
+	LoopActivityStatusSuccess LoopActivityStatus = "success"
+	LoopActivityStatusWarning LoopActivityStatus = "warning"
+	LoopActivityStatusFailed  LoopActivityStatus = "failed"
+)
 
 type ReviewLoopResult struct {
 	ID               string                     `json:"id"`
@@ -62,8 +71,18 @@ type ReviewLoopResult struct {
 	OrganizationName string                     `json:"organization_name"`
 	Trigger          string                     `json:"trigger"`
 	Owner            LoopOwnerResolution        `json:"owner"`
+	ActivityStatus   LoopActivityStatus         `json:"activity_status"`
+	ActivitySummary  string                     `json:"activity_summary"`
 	Review           ReviewLoopStructuredOutput `json:"review"`
 	ReviewedAt       string                     `json:"reviewed_at"`
+}
+
+type LoopActivityItem struct {
+	ID        string             `json:"id"`
+	Name      string             `json:"name"`
+	LastRunAt string             `json:"last_run_at"`
+	Status    LoopActivityStatus `json:"status"`
+	Summary   string             `json:"summary"`
 }
 
 type LoopProfileStore struct {
@@ -263,8 +282,10 @@ func buildReviewLoopOutput(home OrganizationHomePayload, owner LoopOwnerResoluti
 	}
 
 	status := "healthy"
+	flaggedItems := 0
 	if home.DepartmentCount == 0 {
 		status = "attention_needed"
+		flaggedItems++
 		findings = append(findings, "No Departments are configured yet, so the Team Lead does not have a clear execution lane.")
 		suggestions = append(suggestions, "Add at least one Department before broadening beyond Team Lead guidance.")
 	} else {
@@ -274,12 +295,14 @@ func buildReviewLoopOutput(home OrganizationHomePayload, owner LoopOwnerResoluti
 
 	if home.SpecialistCount == 0 {
 		status = "attention_needed"
+		flaggedItems++
 		findings = append(findings, "No Specialists are currently attached, so follow-through still depends on Team Lead planning alone.")
 		suggestions = append(suggestions, "Add Specialists only after the Team Lead confirms the first execution lane.")
 	}
 
 	if strings.TrimSpace(home.ResponseContractSummary) == "" {
 		status = "attention_needed"
+		flaggedItems++
 		findings = append(findings, "No Response Style is visible yet for this AI Organization.")
 		suggestions = append(suggestions, "Set a Response Style so future guidance stays consistent and reviewable.")
 	} else {
@@ -294,9 +317,10 @@ func buildReviewLoopOutput(home OrganizationHomePayload, owner LoopOwnerResoluti
 	}
 
 	return ReviewLoopStructuredOutput{
-		Status:      status,
-		Findings:    findings,
-		Suggestions: suggestions,
+		Status:       status,
+		FlaggedItems: flaggedItems,
+		Findings:     findings,
+		Suggestions:  suggestions,
 	}
 }
 
@@ -323,10 +347,95 @@ func (s *AdminServer) executeReviewLoop(home OrganizationHomePayload, profile Lo
 		Review:           buildReviewLoopOutput(home, owner),
 		ReviewedAt:       time.Now().UTC().Format(time.RFC3339),
 	}
+	result.ActivityStatus, result.ActivitySummary = summarizeActivityFromReview(result.Review)
 
 	s.loopResultStore().Add(home.ID, result)
 	log.Printf("[review-loop] organization=%s loop=%s owner_type=%s owner_id=%s status=%s findings=%d suggestions=%d", home.ID, profile.ID, owner.Type, owner.ID, result.Review.Status, len(result.Review.Findings), len(result.Review.Suggestions))
 	return result, nil
+}
+
+func summarizeActivityFromReview(review ReviewLoopStructuredOutput) (LoopActivityStatus, string) {
+	if review.Status == "attention_needed" {
+		flagged := review.FlaggedItems
+		if flagged <= 0 {
+			flagged = 1
+		}
+		return LoopActivityStatusWarning, fmt.Sprintf("%d item%s flagged", flagged, pluralSuffix(flagged))
+	}
+	return LoopActivityStatusSuccess, "No issues detected"
+}
+
+func summarizeActivityFromError(err error) (LoopActivityStatus, string) {
+	if err == nil {
+		return LoopActivityStatusFailed, "Review unavailable"
+	}
+	message := strings.TrimSpace(err.Error())
+	switch {
+	case strings.Contains(message, "owner"):
+		return LoopActivityStatusFailed, "Review owner unavailable"
+	case strings.Contains(message, "interval_seconds"):
+		return LoopActivityStatusFailed, "Review timing needs attention"
+	default:
+		return LoopActivityStatusFailed, "Review unavailable"
+	}
+}
+
+func safeActivityName(loopName string) string {
+	name := strings.TrimSpace(loopName)
+	if name == "" {
+		return "Organization review"
+	}
+	lower := strings.ToLower(name)
+	switch {
+	case strings.Contains(lower, "department"):
+		return "Department check"
+	case strings.Contains(lower, "agent type"):
+		return "Specialist review"
+	default:
+		return name
+	}
+}
+
+func (s *AdminServer) recordFailedLoopResult(home OrganizationHomePayload, profile LoopProfile, trigger string, err error) ReviewLoopResult {
+	status, summary := summarizeActivityFromError(err)
+	result := ReviewLoopResult{
+		ID:               uuid.NewString(),
+		LoopID:           profile.ID,
+		LoopName:         profile.Name,
+		LoopType:         profile.Type,
+		OrganizationID:   home.ID,
+		OrganizationName: safeOrganizationName(home.Name),
+		Trigger:          trigger,
+		ActivityStatus:   status,
+		ActivitySummary:  summary,
+		ReviewedAt:       time.Now().UTC().Format(time.RFC3339),
+	}
+	s.loopResultStore().Add(home.ID, result)
+	return result
+}
+
+func recentLoopActivity(results []ReviewLoopResult, limit int) []LoopActivityItem {
+	if len(results) == 0 {
+		return nil
+	}
+	if limit <= 0 {
+		limit = 5
+	}
+	if len(results) > limit {
+		results = results[:limit]
+	}
+
+	items := make([]LoopActivityItem, 0, len(results))
+	for _, result := range results {
+		items = append(items, LoopActivityItem{
+			ID:        result.ID,
+			Name:      safeActivityName(result.LoopName),
+			LastRunAt: result.ReviewedAt,
+			Status:    result.ActivityStatus,
+			Summary:   result.ActivitySummary,
+		})
+	}
+	return items
 }
 
 func validateLoopProfile(profile LoopProfile) error {
@@ -391,4 +500,19 @@ func (s *AdminServer) handleListLoopResults(w http.ResponseWriter, r *http.Reque
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(s.loopResultStore().List(orgID)))
+}
+
+func (s *AdminServer) handleListLoopActivity(w http.ResponseWriter, r *http.Request) {
+	orgID := strings.TrimSpace(r.PathValue("id"))
+	if orgID == "" {
+		respondAPIError(w, "organization id is required", http.StatusBadRequest)
+		return
+	}
+
+	if _, ok := s.organizationStore().Get(orgID); !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(recentLoopActivity(s.loopResultStore().List(orgID), 8)))
 }

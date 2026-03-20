@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
+import { Activity, ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type {
     AgentTypeAIEngineUpdateRequest,
@@ -13,6 +13,7 @@ import type {
     OrganizationAIEngineUpdateRequest,
     OrganizationDepartmentSummary,
     OrganizationHomePayload,
+    OrganizationLoopActivityItem,
     ResponseContractProfileId,
     ResponseContractUpdateRequest,
 } from "@/lib/organizations";
@@ -132,6 +133,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [selectedResponseContractProfile, setSelectedResponseContractProfile] = useState<ResponseContractProfileId | null>(null);
     const [responseContractUpdatePending, setResponseContractUpdatePending] = useState(false);
     const [responseContractUpdateError, setResponseContractUpdateError] = useState<string | null>(null);
+    const [recentActivity, setRecentActivity] = useState<OrganizationLoopActivityItem[]>([]);
+    const [activityLoading, setActivityLoading] = useState(true);
+    const [activityError, setActivityError] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -166,6 +170,48 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             cancelled = true;
         };
     }, [organizationId, retryToken]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadActivity = async (background: boolean) => {
+            if (!background && !cancelled) {
+                setActivityLoading(true);
+            }
+
+            try {
+                const response = await fetch(`/api/v1/organizations/${organizationId}/loop-activity`, { cache: "no-store" });
+                const payload = await readJson(response);
+                if (!response.ok) {
+                    throw new Error(extractApiError(payload) || "Activity unavailable");
+                }
+                if (cancelled) {
+                    return;
+                }
+                setRecentActivity(extractApiData<OrganizationLoopActivityItem[]>(payload) ?? []);
+                setActivityError(null);
+            } catch {
+                if (cancelled) {
+                    return;
+                }
+                setActivityError("Activity unavailable");
+            } finally {
+                if (!cancelled) {
+                    setActivityLoading(false);
+                }
+            }
+        };
+
+        void loadActivity(false);
+        const intervalId = window.setInterval(() => {
+            void loadActivity(true);
+        }, 15000);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(intervalId);
+        };
+    }, [organizationId]);
 
     useEffect(() => {
         if (activeDetailView !== "aiEngine") {
@@ -736,6 +782,12 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             items={departmentSupportItems(organization)}
                             inspectActionLabel="Open Departments"
                             onInspect={() => setActiveDetailView("departments")}
+                        />
+
+                        <RecentActivityPanel
+                            items={recentActivity}
+                            loading={activityLoading}
+                            error={activityError}
                         />
 
                         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -2095,4 +2147,130 @@ function AgentTypeResponseContractSelectionPanel({
             </div>
         </div>
     );
+}
+
+function RecentActivityPanel({
+    items,
+    loading,
+    error,
+}: {
+    items: OrganizationLoopActivityItem[];
+    loading: boolean;
+    error: string | null;
+}) {
+    const visibleItems = items.slice(0, 8);
+
+    return (
+        <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
+            <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-full border border-cortex-primary/20 bg-cortex-primary/10 p-2 text-cortex-primary">
+                    <Activity className="h-4 w-4" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-semibold text-cortex-text-main">Recent Activity</h2>
+                    <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
+                        Your AI Organization is actively working through recent reviews, checks, and updates in the background.
+                    </p>
+                </div>
+            </div>
+
+            {error && (
+                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Activity unavailable</p>
+                    <p className="mt-1 leading-6">Recent reviews and updates are not available right now. The Team Lead workspace is still ready.</p>
+                </div>
+            )}
+
+            {!error && loading && visibleItems.length === 0 && (
+                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Checking for recent updates</p>
+                    <p className="mt-1 leading-6">The latest reviews and checks will appear here shortly.</p>
+                </div>
+            )}
+
+            {!error && !loading && visibleItems.length === 0 && (
+                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">No recent reviews yet</p>
+                    <p className="mt-1 leading-6">Activity will appear here as your AI Organization completes its first checks and updates.</p>
+                </div>
+            )}
+
+            {visibleItems.length > 0 && (
+                <div className="mt-4 space-y-3">
+                    {visibleItems.map((item) => (
+                        <div key={item.id} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-sm font-semibold text-cortex-text-main">{item.name}</p>
+                                        <ActivityStatusBadge status={item.status} />
+                                    </div>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{item.summary}</p>
+                                </div>
+                                <p className="text-xs font-medium uppercase tracking-[0.14em] text-cortex-text-muted">{formatRelativeActivityTime(item.last_run_at)}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ActivityStatusBadge({ status }: { status: OrganizationLoopActivityItem["status"] }) {
+    const config =
+        status === "warning"
+            ? {
+                  label: "Needs review",
+                  className: "border-amber-500/30 bg-amber-500/10 text-amber-200",
+              }
+            : status === "failed"
+              ? {
+                    label: "Unavailable",
+                    className: "border-cortex-danger/30 bg-cortex-danger/10 text-cortex-danger",
+                }
+              : {
+                    label: "Ready",
+                    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+                };
+
+    return (
+        <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] ${config.className}`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {config.label}
+        </span>
+    );
+}
+
+function formatRelativeActivityTime(timestamp: string) {
+    const parsed = Date.parse(timestamp);
+    if (Number.isNaN(parsed)) {
+        return "Recently";
+    }
+
+    const diffMs = Math.max(0, Date.now() - parsed);
+    const diffMinutes = Math.floor(diffMs / 60000);
+    if (diffMinutes <= 0) {
+        return "Just now";
+    }
+    if (diffMinutes === 1) {
+        return "1 minute ago";
+    }
+    if (diffMinutes < 60) {
+        return `${diffMinutes} minutes ago`;
+    }
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours === 1) {
+        return "1 hour ago";
+    }
+    if (diffHours < 24) {
+        return `${diffHours} hours ago`;
+    }
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) {
+        return "1 day ago";
+    }
+    return `${diffDays} days ago`;
 }
