@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { mockFetch } from "../setup";
 import type { OrganizationAIEngineProfileId, OrganizationHomePayload, ResponseContractProfileId } from "@/lib/organizations";
@@ -65,6 +65,23 @@ const organizationHome: OrganizationHomePayload = {
         },
     ],
 };
+
+const recentActivity = [
+    {
+        id: "activity-1",
+        name: "Department check",
+        last_run_at: "2026-03-19T17:58:00Z",
+        status: "success",
+        summary: "No issues detected",
+    },
+    {
+        id: "activity-2",
+        name: "Specialist review",
+        last_run_at: "2026-03-19T17:55:00Z",
+        status: "warning",
+        summary: "2 items flagged",
+    },
+] as const;
 
 function jsonResponse(body: unknown, status = 200) {
     return Promise.resolve(new Response(JSON.stringify(body), { status }));
@@ -186,6 +203,7 @@ function applyAgentTypeResponseContract(
 
 function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
+    loopActivityHandler?: () => Promise<Response>;
     actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
     aiEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     departmentAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
@@ -201,6 +219,10 @@ function setupOrganizationFetch(options?: {
 
         if (url.includes("/api/v1/organizations/org-123/home")) {
             return options?.homeHandler?.() ?? jsonResponse({ ok: true, data: currentOrganizationHome });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/loop-activity")) {
+            return options?.loopActivityHandler?.() ?? jsonResponse({ ok: true, data: recentActivity });
         }
 
         if (url.includes("/api/v1/organizations/org-123/ai-engine") && method === "PATCH") {
@@ -411,7 +433,13 @@ describe("OrganizationPage (/organizations/[id])", () => {
         mockFetch.mockReset();
     });
 
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
+    });
+
     it("renders a Team Lead-first organization workspace with guided actions and no generic or dev wording", async () => {
+        vi.spyOn(Date, "now").mockReturnValue(new Date("2026-03-19T18:00:00Z").valueOf());
         setupOrganizationFetch();
 
         await act(async () => {
@@ -425,11 +453,19 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Recent Activity" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
         expect(screen.getByText("Advisor support")).toBeDefined();
         expect(screen.getByText("Department view")).toBeDefined();
+        expect(screen.getByText("Your AI Organization is actively working through recent reviews, checks, and updates in the background.")).toBeDefined();
+        expect(screen.getByText("Department check")).toBeDefined();
+        expect(screen.getByText("Specialist review")).toBeDefined();
+        expect(screen.getByText("2 minutes ago")).toBeDefined();
+        expect(screen.getByText("5 minutes ago")).toBeDefined();
+        expect(screen.getByText("No issues detected")).toBeDefined();
+        expect(screen.getByText("2 items flagged")).toBeDefined();
         expect(screen.getByText("Planning review")).toBeDefined();
         expect(screen.getByText("Started from Engineering Starter")).toBeDefined();
         expect(screen.getAllByText("What this affects").length).toBeGreaterThan(0);
@@ -453,6 +489,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.queryByText(/contract/i)).toBeNull();
         expect(screen.queryByText(/New Chat/i)).toBeNull();
         expect(screen.queryByText(/generic chat/i)).toBeNull();
+        expect(screen.queryByText(/scheduler/i)).toBeNull();
     });
 
     it("keeps the organization frame visible while moving from home into the Team Lead interaction flow", async () => {
@@ -538,6 +575,37 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByText("Team Lead plan for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
+    });
+
+    it("shows a clean empty Recent Activity state when no checks have run yet", async () => {
+        setupOrganizationFetch({
+            loopActivityHandler: () => jsonResponse({ ok: true, data: [] }),
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Recent Activity" })).toBeDefined();
+        expect(screen.getByText("No recent reviews yet")).toBeDefined();
+        expect(screen.getByText("Activity will appear here as your AI Organization completes its first checks and updates.")).toBeDefined();
+    });
+
+    it("shows Activity unavailable without breaking the workspace when recent updates cannot be loaded", async () => {
+        setupOrganizationFetch({
+            loopActivityHandler: () => jsonResponse({ ok: false, error: "activity unavailable" }, 503),
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Recent Activity" })).toBeDefined();
+        expect(screen.getByText("Activity unavailable")).toBeDefined();
+        expect(screen.getByText("Recent reviews and updates are not available right now. The Team Lead workspace is still ready.")).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Team Lead for Northstar Labs" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
     });
 
     it("opens Advisor details from the Team Lead action and keeps the Team Lead workspace visible", async () => {

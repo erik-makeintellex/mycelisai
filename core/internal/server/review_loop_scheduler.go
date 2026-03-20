@@ -2,12 +2,15 @@ package server
 
 import (
 	"context"
+	"errors"
 	"log"
 	"sync"
 	"time"
 )
 
 const defaultLoopSchedulerTick = time.Second
+
+var errScheduledLoopIntervalRequired = errors.New("interval_seconds must be greater than zero for scheduled execution")
 
 type LoopScheduler struct {
 	server       *AdminServer
@@ -145,11 +148,14 @@ func (ls *LoopScheduler) runDueLoopsAt(now time.Time) loopSchedulerTickStats {
 
 func (ls *LoopScheduler) tryExecuteScheduledLoop(home OrganizationHomePayload, profile LoopProfile, now time.Time) (executed bool, failed bool, skippedBusy bool) {
 	if err := validateLoopProfile(profile); err != nil {
+		ls.server.recordFailedLoopResult(home, profile, "scheduled", err)
 		log.Printf("[review-loop-scheduler] organization=%s loop=%s invalid_config=%v", home.ID, profile.ID, err)
 		return false, true, false
 	}
 	if profile.IntervalSeconds <= 0 {
-		log.Printf("[review-loop-scheduler] organization=%s loop=%s invalid_config=interval_seconds must be greater than zero for scheduled execution", home.ID, profile.ID)
+		err := errScheduledLoopIntervalRequired
+		ls.server.recordFailedLoopResult(home, profile, "scheduled", err)
+		log.Printf("[review-loop-scheduler] organization=%s loop=%s invalid_config=%v", home.ID, profile.ID, err)
 		return false, true, false
 	}
 
@@ -178,6 +184,7 @@ func (ls *LoopScheduler) tryExecuteScheduledLoop(home OrganizationHomePayload, p
 
 	result, err := ls.execute(normalizeOrganizationHome(home), profile, "scheduled")
 	if err != nil {
+		ls.server.recordFailedLoopResult(home, profile, "scheduled", err)
 		log.Printf("[review-loop-scheduler] organization=%s loop=%s failed duration=%s error=%v", home.ID, profile.ID, time.Since(startedAt), err)
 		return false, true, false
 	}

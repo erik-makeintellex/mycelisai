@@ -88,6 +88,32 @@ const createdEmptyOrganization = {
     departments: [],
 };
 
+const recentActivityByOrganizationId: Record<string, Array<{
+    id: string;
+    name: string;
+    last_run_at: string;
+    status: "success" | "warning" | "failed";
+    summary: string;
+}>> = {
+    "org-123": [
+        {
+            id: "activity-1",
+            name: "Department check",
+            last_run_at: "2026-03-19T17:58:00Z",
+            status: "success",
+            summary: "No issues detected",
+        },
+        {
+            id: "activity-2",
+            name: "Specialist review",
+            last_run_at: "2026-03-19T17:55:00Z",
+            status: "warning",
+            summary: "2 items flagged",
+        },
+    ],
+    "org-456": [],
+};
+
 function applyOrganizationAIEngineToDepartments(home: typeof createdTemplateOrganization, profileId: string | undefined, summary: string) {
     return {
         ...home,
@@ -227,6 +253,7 @@ async function mockOrganizationEntryApis(
         agentTypeResponseContractUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         responseContractUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         homeResponsesById?: Record<string, unknown>;
+        loopActivityById?: Record<string, unknown>;
     },
 ) {
     const {
@@ -247,9 +274,11 @@ async function mockOrganizationEntryApis(
             [createdTemplateOrganization.id]: createdTemplateOrganization,
             [createdEmptyOrganization.id]: createdEmptyOrganization,
         },
+        loopActivityById = recentActivityByOrganizationId,
     } = options ?? {};
 
     const mutableHomeResponsesById = structuredClone(homeResponsesById);
+    const mutableLoopActivityById = structuredClone(loopActivityById);
 
     await page.route("**/api/v1/user/me", async (route) => {
         await route.fulfill({
@@ -363,6 +392,23 @@ async function mockOrganizationEntryApis(
             status: response.status,
             contentType: "application/json",
             body: JSON.stringify(response.body),
+        });
+    });
+
+    await page.route("**/api/v1/organizations/*/loop-activity", async (route) => {
+        const url = new URL(route.request().url());
+        const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/loop-activity$/);
+        const organizationId = match?.[1];
+        const payload = organizationId ? mutableLoopActivityById[organizationId] : undefined;
+
+        await route.fulfill({
+            status: payload !== undefined ? 200 : 404,
+            contentType: "application/json",
+            body: JSON.stringify(
+                payload !== undefined
+                    ? { ok: true, data: payload }
+                    : { ok: false, error: "Activity unavailable" },
+            ),
         });
     });
 
@@ -762,11 +808,17 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Organization overview")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByText("Advisor support")).toBeVisible();
         await expect(page.getByText("Department view")).toBeVisible();
+        await expect(page.getByText("Your AI Organization is actively working through recent reviews, checks, and updates in the background.")).toBeVisible();
+        await expect(page.getByText("Department check")).toBeVisible();
+        await expect(page.getByText("Specialist review")).toBeVisible();
+        await expect(page.getByText("No issues detected")).toBeVisible();
+        await expect(page.getByText("2 items flagged")).toBeVisible();
         await expect(page.getByText("Planning review")).toBeVisible();
         await expect(page.getByText("Started from Engineering Starter")).toBeVisible();
         await expect(page.getByText("What this affects")).toHaveCount(2);
@@ -915,11 +967,13 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Empty", { exact: true })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByText("Advisor roles appear here once they are added")).toBeVisible();
         await expect(page.getByText("Add the first Department when ready")).toBeVisible();
+        await expect(page.getByText("No recent reviews yet")).toBeVisible();
         await expect(page.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeVisible();
         await expect(page.getByText("The current Response Style is clear & balanced, which shapes how the Team Lead presents tone, structure, and detail.")).toBeVisible();
         await expect(page.getByText("Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.")).toBeVisible();

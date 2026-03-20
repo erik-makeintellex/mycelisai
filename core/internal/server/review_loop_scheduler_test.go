@@ -161,7 +161,11 @@ func TestLoopScheduler_RejectsInvalidConfig(t *testing.T) {
 		t.Fatalf("expected one invalid-config failure and no executions, got %+v", stats)
 	}
 
-	if results := s.loopResultStore().List(home.ID); len(results) != 0 {
-		t.Fatalf("expected no stored loop results for invalid config, got %+v", results)
+	results := s.loopResultStore().List(home.ID)
+	if len(results) != 1 {
+		t.Fatalf("expected one failed activity record for invalid config, got %+v", results)
+	}
+	if results[0].ActivityStatus != LoopActivityStatusFailed || results[0].ActivitySummary != "Review timing needs attention" {
+		t.Fatalf("expected safe failed activity summary, got %+v", results[0])
 	}
 }
