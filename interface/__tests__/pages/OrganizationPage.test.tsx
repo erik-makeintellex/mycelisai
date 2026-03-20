@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { mockFetch } from "../setup";
-import type { OrganizationAIEngineProfileId, OrganizationAutomationItem, OrganizationHomePayload, ResponseContractProfileId } from "@/lib/organizations";
+import type {
+    OrganizationAIEngineProfileId,
+    OrganizationAutomationItem,
+    OrganizationHomePayload,
+    OrganizationLearningInsightItem,
+    ResponseContractProfileId,
+} from "@/lib/organizations";
 
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
@@ -115,6 +121,23 @@ const automations: OrganizationAutomationItem[] = [
                 occurred_at: "2026-03-19T17:55:00Z",
             },
         ],
+    },
+];
+
+const learningInsights: OrganizationLearningInsightItem[] = [
+    {
+        id: "insight-1",
+        summary: "Platform Department is building a steadier execution lane for the organization.",
+        source: "Team: Platform Department",
+        observed_at: "2026-03-19T17:58:00Z",
+        strength: "strong",
+    },
+    {
+        id: "insight-2",
+        summary: "Planner specialists are identifying recurring gaps while turning organization goals into practical next steps, delivery sequencing, and clear priorities.",
+        source: "Specialist role: Planner",
+        observed_at: "2026-03-19T17:55:00Z",
+        strength: "emerging",
     },
 ];
 
@@ -240,6 +263,7 @@ function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
     automationsHandler?: () => Promise<Response>;
     loopActivityHandler?: () => Promise<Response>;
+    learningInsightsHandler?: () => Promise<Response>;
     actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
     aiEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     departmentAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
@@ -263,6 +287,10 @@ function setupOrganizationFetch(options?: {
 
         if (url.includes("/api/v1/organizations/org-123/loop-activity")) {
             return options?.loopActivityHandler?.() ?? jsonResponse({ ok: true, data: recentActivity });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/learning-insights")) {
+            return options?.learningInsightsHandler?.() ?? jsonResponse({ ok: true, data: learningInsights });
         }
 
         if (url.includes("/api/v1/organizations/org-123/ai-engine") && method === "PATCH") {
@@ -495,6 +523,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Recent Activity" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
@@ -503,10 +532,14 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Your AI Organization is actively working through recent reviews, checks, and updates in the background.")).toBeDefined();
         expect(screen.getByText("Department check")).toBeDefined();
         expect(screen.getByText("Specialist review")).toBeDefined();
-        expect(screen.getByText("2 minutes ago")).toBeDefined();
-        expect(screen.getByText("5 minutes ago")).toBeDefined();
+        expect(screen.getAllByText("2 minutes ago").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("5 minutes ago").length).toBeGreaterThan(0);
         expect(screen.getByText("No issues detected")).toBeDefined();
         expect(screen.getByText("2 items flagged")).toBeDefined();
+        expect(screen.getByText("Platform Department is building a steadier execution lane for the organization.")).toBeDefined();
+        expect(screen.getAllByText("Team: Platform Department").length).toBeGreaterThan(0);
+        expect(screen.getByText("Strong")).toBeDefined();
+        expect(screen.getByText("Emerging")).toBeDefined();
         expect(screen.getByText("Planning review")).toBeDefined();
         expect(screen.getByText("Started from Engineering Starter")).toBeDefined();
         expect(screen.getByText("Department readiness review • Scheduled")).toBeDefined();
@@ -653,6 +686,40 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
     });
 
+    it("shows a clean empty learning state when no recent highlights are available yet", async () => {
+        setupOrganizationFetch({
+            learningInsightsHandler: () => jsonResponse({ ok: true, data: [] }),
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
+        expect(screen.getByText("No learning highlights yet")).toBeDefined();
+        expect(screen.getByText("As the organization works, new themes and improvements will appear here in plain language.")).toBeDefined();
+    });
+
+    it("shows learning updates unavailable without breaking the workspace when insights cannot be loaded", async () => {
+        setupOrganizationFetch({
+            learningInsightsHandler: () => jsonResponse({ ok: false, error: "learning updates unavailable" }, 503),
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
+        expect(screen.getByText("Learning updates unavailable")).toBeDefined();
+        expect(screen.getByText("Recent learning highlights are not available right now. The Team Lead workspace is still ready.")).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Team Lead for Northstar Labs" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.queryByText(/vector/i)).toBeNull();
+        expect(screen.queryByText(/pgvector/i)).toBeNull();
+        expect(screen.queryByText(/memory promotion/i)).toBeNull();
+    });
+
     it("opens Automation details from the support column and keeps the Team Lead workspace visible", async () => {
         setupOrganizationFetch();
 
@@ -666,7 +733,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByRole("heading", { name: "Automation details" })).toBeDefined();
         expect(screen.getByText("Department readiness review")).toBeDefined();
         expect(screen.getByText("Scheduled")).toBeDefined();
-        expect(screen.getByText("Team: Platform Department")).toBeDefined();
+        expect(screen.getAllByText("Team: Platform Department").length).toBeGreaterThan(0);
         expect(screen.getAllByText("What it watches").length).toBeGreaterThan(0);
         expect(screen.getAllByText("How it runs").length).toBeGreaterThan(0);
         expect(screen.getAllByText("Recent outcomes").length).toBeGreaterThan(0);
@@ -676,6 +743,9 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
         expect(screen.queryByText(/loop profile/i)).toBeNull();
         expect(screen.queryByText(/scheduler/i)).toBeNull();
+        expect(screen.queryByText(/vector/i)).toBeNull();
+        expect(screen.queryByText(/pgvector/i)).toBeNull();
+        expect(screen.queryByText(/memory promotion/i)).toBeNull();
     });
 
     it("shows Automations unavailable without breaking the workspace when definitions cannot be loaded", async () => {

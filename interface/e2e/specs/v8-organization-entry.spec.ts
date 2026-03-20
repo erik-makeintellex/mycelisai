@@ -165,6 +165,32 @@ const automationsByOrganizationId: Record<string, Array<{
     "org-456": [],
 };
 
+const learningInsightsByOrganizationId: Record<string, Array<{
+    id: string;
+    summary: string;
+    source: string;
+    observed_at: string;
+    strength: "emerging" | "consistent" | "strong";
+}>> = {
+    "org-123": [
+        {
+            id: "insight-1",
+            summary: "Platform Department is building a steadier execution lane for the organization.",
+            source: "Team: Platform Department",
+            observed_at: "2026-03-19T17:58:00Z",
+            strength: "strong",
+        },
+        {
+            id: "insight-2",
+            summary: "Planner specialists are identifying recurring gaps while turning organization goals into practical next steps, delivery sequencing, and clear priorities.",
+            source: "Specialist role: Planner",
+            observed_at: "2026-03-19T17:55:00Z",
+            strength: "emerging",
+        },
+    ],
+    "org-456": [],
+};
+
 function applyOrganizationAIEngineToDepartments(home: typeof createdTemplateOrganization, profileId: string | undefined, summary: string) {
     return {
         ...home,
@@ -286,6 +312,9 @@ async function expectNoForbiddenCopy(page: Page) {
     await expect(page.getByText(/loop profile/i)).toHaveCount(0);
     await expect(page.getByText(/raw architecture controls/i)).toHaveCount(0);
     await expect(page.getByText(/contract/i)).toHaveCount(0);
+    await expect(page.getByText(/vector/i)).toHaveCount(0);
+    await expect(page.getByText(/pgvector/i)).toHaveCount(0);
+    await expect(page.getByText(/memory promotion/i)).toHaveCount(0);
 }
 
 async function mockOrganizationEntryApis(
@@ -307,6 +336,7 @@ async function mockOrganizationEntryApis(
         homeResponsesById?: Record<string, unknown>;
         automationsById?: Record<string, unknown>;
         loopActivityById?: Record<string, unknown>;
+        learningInsightsById?: Record<string, unknown>;
     },
 ) {
     const {
@@ -329,11 +359,13 @@ async function mockOrganizationEntryApis(
         },
         automationsById = automationsByOrganizationId,
         loopActivityById = recentActivityByOrganizationId,
+        learningInsightsById = learningInsightsByOrganizationId,
     } = options ?? {};
 
     const mutableHomeResponsesById = structuredClone(homeResponsesById);
     const mutableAutomationsById = structuredClone(automationsById);
     const mutableLoopActivityById = structuredClone(loopActivityById);
+    const mutableLearningInsightsById = structuredClone(learningInsightsById);
 
     await page.route("**/api/v1/user/me", async (route) => {
         await route.fulfill({
@@ -463,6 +495,23 @@ async function mockOrganizationEntryApis(
                 payload !== undefined
                     ? { ok: true, data: payload }
                     : { ok: false, error: "Activity unavailable" },
+            ),
+        });
+    });
+
+    await page.route("**/api/v1/organizations/*/learning-insights", async (route) => {
+        const url = new URL(route.request().url());
+        const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/learning-insights$/);
+        const organizationId = match?.[1];
+        const payload = organizationId ? mutableLearningInsightsById[organizationId] : undefined;
+
+        await route.fulfill({
+            status: payload !== undefined ? 200 : 404,
+            contentType: "application/json",
+            body: JSON.stringify(
+                payload !== undefined
+                    ? { ok: true, data: payload }
+                    : { ok: false, error: "Learning updates unavailable" },
             ),
         });
     });
@@ -882,6 +931,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Automations" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "What the Organization is Learning" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
@@ -894,6 +944,9 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Specialist review")).toBeVisible();
         await expect(page.getByText("No issues detected")).toBeVisible();
         await expect(page.getByText("2 items flagged")).toBeVisible();
+        await expect(page.getByText("Platform Department is building a steadier execution lane for the organization.")).toBeVisible();
+        await expect(page.getByText("Team: Platform Department")).toBeVisible();
+        await expect(page.getByText("Strong")).toBeVisible();
         await expect(page.getByText("Planning review")).toBeVisible();
         await expect(page.getByText("Started from Engineering Starter")).toBeVisible();
         await expect(page.getByText("What this affects")).toHaveCount(2);
@@ -1057,6 +1110,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Automations" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "What the Organization is Learning" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
@@ -1064,6 +1118,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Add the first Department when ready")).toBeVisible();
         await expect(page.getByText("Reviews appear here")).toBeVisible();
         await expect(page.getByText("No recent reviews yet")).toBeVisible();
+        await expect(page.getByText("No learning highlights yet")).toBeVisible();
         await expect(page.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeVisible();
         await expect(page.getByText("The current Response Style is clear & balanced, which shapes how the Team Lead presents tone, structure, and detail.")).toBeVisible();
         await expect(page.getByText("Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.")).toBeVisible();
