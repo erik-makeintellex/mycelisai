@@ -13,7 +13,7 @@ Migration note:
 - V7 architecture-library docs remain migration inputs.
 - This file is the new V8 contract surface being introduced incrementally.
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` is the canonical source for translating V7 assets into instantiated V8 organizations; this doc defines what the runtime must support, while the bootstrap model defines how those contracts enter the system.
-- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` extends the runtime contract library with Loop Profiles, Runtime Capabilities, promoted Response Contract inheritance, promoted Agent Type Profiles, and the first bounded Automations posture.
+- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` extends the runtime contract library with Loop Profiles, Runtime Capabilities, promoted Response Contract inheritance, promoted Agent Type Profiles, Learning Loops, semantic continuity, Procedure / Skill Sets, and the first bounded Automations posture.
 - `Template ≠ instantiated organization`; templates remain blueprints until the bootstrap model resolves them into live Inceptions.
 
 ## Inception
@@ -365,6 +365,9 @@ Identity and Continuity State is responsible for:
 - persistent self-state boundaries
 - cross-run continuity support
 - memory-linked identity persistence
+- semantic continuity recall
+- reviewed memory promotion inputs
+- procedure and skill retrieval for type-bound specialization
 - support for reflection inputs where enabled
 
 This layer exists so the organization can preserve governed continuity without collapsing identity into ad hoc prompt text alone.
@@ -378,6 +381,8 @@ At minimum, Identity and Continuity State may carry:
 - active organizational self-description
 - persistent boundaries or constraints
 - references to memory/continuity sources
+- raw, reviewed, and promoted memory stage references
+- procedure/skill continuity references where policy allows
 - reflection-linked updates where policy allows
 
 These are contract-level state components, not final schema definitions.
@@ -407,11 +412,20 @@ Identity and Continuity State is not freeform conversational style alone.
 Identity and Continuity State relates to the runtime this way:
 - Inception defines the organization-level contract
 - Soma Kernel uses continuity state during coordination and interaction
-- Memory provides supporting continuity evidence and recall sources
+- Soma Kernel interprets and orchestrates continuity using semantic recall, but it does not become the memory substrate itself
+- pgvector-backed semantic continuity substrate provides event, action, and result semantic indexing, review memory, learning candidates, promoted organization/team/agent-type memory, procedure and skill retrieval, and continuity recall
+- Loops generate candidates, perform review, and route promotion; they never silently rewrite continuity state.
 - Runs occur within, but do not replace, cross-run continuity
 - Reflection may update or refine continuity state where policy allows
 
-This layer persists across runs while being informed by memory and reflection.
+#### 5.1 Semantic continuity and memory promotion
+
+Memory stages within semantic continuity are:
+- raw memory
+- reviewed memory
+- promoted memory
+
+This layer persists across runs while being informed by memory, review, promotion, and reflection. Response Contract, AI Engine Settings, Runtime Capabilities, and Provider Policy remain separate governed layers even when semantic retrieval informs continuity.
 
 ### 6. Migration note
 

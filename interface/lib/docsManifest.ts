@@ -306,7 +306,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-1-living-organization-architecture",
                 label: "V8.1 Living Organization Architecture",
                 path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
-                description: "Canonical V8.1 PRD for Loop Profiles, Runtime Capabilities, promoted Agent Type/Response Contract inheritance, and bounded Automations visibility",
+                description: "Canonical V8.1 PRD for Loop Profiles, Learning Loops, semantic continuity, Procedure / Skill Sets, promoted Agent Type/Response Contract inheritance, and bounded Automations visibility",
             },
             {
                 slug: "arch-overview",
