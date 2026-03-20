@@ -15,12 +15,18 @@ import (
 
 type LoopProfileType string
 type LoopOwnerType string
+type ReviewLoopEventKind string
 
 const (
 	LoopProfileTypeReview LoopProfileType = "review"
 
 	LoopOwnerTypeTeam      LoopOwnerType = "team"
 	LoopOwnerTypeAgentType LoopOwnerType = "agent_type"
+
+	ReviewLoopEventOrganizationCreated         ReviewLoopEventKind = "organization_created"
+	ReviewLoopEventTeamLeadActionCompleted     ReviewLoopEventKind = "team_lead_action_completed"
+	ReviewLoopEventOrganizationAIEngineChanged ReviewLoopEventKind = "organization_ai_engine_changed"
+	ReviewLoopEventResponseContractChanged     ReviewLoopEventKind = "response_contract_changed"
 
 	DefaultDepartmentReviewLoopID = "department-readiness-review"
 	DefaultAgentTypeReviewLoopID  = "agent-type-readiness-review"
@@ -32,12 +38,13 @@ type LoopOwnerRef struct {
 }
 
 type LoopProfile struct {
-	ID              string          `json:"id"`
-	Name            string          `json:"name"`
-	Type            LoopProfileType `json:"type"`
-	Description     string          `json:"description,omitempty"`
-	Owner           LoopOwnerRef    `json:"owner"`
-	IntervalSeconds int             `json:"interval_seconds,omitempty"`
+	ID              string                `json:"id"`
+	Name            string                `json:"name"`
+	Type            LoopProfileType       `json:"type"`
+	Description     string                `json:"description,omitempty"`
+	Owner           LoopOwnerRef          `json:"owner"`
+	IntervalSeconds int                   `json:"interval_seconds,omitempty"`
+	EventTriggers   []ReviewLoopEventKind `json:"event_triggers,omitempty"`
 }
 
 type LoopOwnerResolution struct {
@@ -83,6 +90,38 @@ type LoopActivityItem struct {
 	LastRunAt string             `json:"last_run_at"`
 	Status    LoopActivityStatus `json:"status"`
 	Summary   string             `json:"summary"`
+}
+
+type LoopExecutionTracker struct {
+	mu         sync.Mutex
+	inProgress map[string]bool
+}
+
+type loopEventDispatchStats struct {
+	executed    int
+	failed      int
+	skippedBusy int
+}
+
+func NewLoopExecutionTracker() *LoopExecutionTracker {
+	return &LoopExecutionTracker{inProgress: make(map[string]bool)}
+}
+
+func (t *LoopExecutionTracker) TryStart(key string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.inProgress[key] {
+		return false
+	}
+	t.inProgress[key] = true
+	return true
+}
+
+func (t *LoopExecutionTracker) Finish(key string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	delete(t.inProgress, key)
 }
 
 type LoopProfileStore struct {
@@ -203,6 +242,13 @@ func (s *AdminServer) loopResultStore() *LoopResultStore {
 	return s.LoopResults
 }
 
+func (s *AdminServer) loopExecutionTracker() *LoopExecutionTracker {
+	if s.LoopExecution == nil {
+		s.LoopExecution = NewLoopExecutionTracker()
+	}
+	return s.LoopExecution
+}
+
 func defaultReviewLoopProfiles(home OrganizationHomePayload) []LoopProfile {
 	home = normalizeOrganizationHome(home)
 	profiles := make([]LoopProfile, 0, 2)
@@ -219,6 +265,12 @@ func defaultReviewLoopProfiles(home OrganizationHomePayload) []LoopProfile {
 				ID:   firstDepartment.ID,
 			},
 			IntervalSeconds: 60,
+			EventTriggers: []ReviewLoopEventKind{
+				ReviewLoopEventOrganizationCreated,
+				ReviewLoopEventTeamLeadActionCompleted,
+				ReviewLoopEventOrganizationAIEngineChanged,
+				ReviewLoopEventResponseContractChanged,
+			},
 		})
 
 		if len(firstDepartment.AgentTypeProfiles) > 0 {
@@ -231,6 +283,11 @@ func defaultReviewLoopProfiles(home OrganizationHomePayload) []LoopProfile {
 				Owner: LoopOwnerRef{
 					Type: LoopOwnerTypeAgentType,
 					ID:   firstProfile.ID,
+				},
+				EventTriggers: []ReviewLoopEventKind{
+					ReviewLoopEventOrganizationCreated,
+					ReviewLoopEventOrganizationAIEngineChanged,
+					ReviewLoopEventResponseContractChanged,
 				},
 			})
 		}
@@ -396,6 +453,77 @@ func safeActivityName(loopName string) string {
 	}
 }
 
+func isAllowedReviewLoopEventKind(kind ReviewLoopEventKind) bool {
+	switch kind {
+	case ReviewLoopEventOrganizationCreated,
+		ReviewLoopEventTeamLeadActionCompleted,
+		ReviewLoopEventOrganizationAIEngineChanged,
+		ReviewLoopEventResponseContractChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+func matchesReviewLoopEvent(profile LoopProfile, eventKind ReviewLoopEventKind) bool {
+	for _, trigger := range profile.EventTriggers {
+		if trigger == eventKind {
+			return true
+		}
+	}
+	return false
+}
+
+func loopEventTriggerLabel(eventKind ReviewLoopEventKind) string {
+	return "event:" + string(eventKind)
+}
+
+func (s *AdminServer) triggerReviewLoopsForEvent(orgID string, eventKind ReviewLoopEventKind) (loopEventDispatchStats, error) {
+	if !isAllowedReviewLoopEventKind(eventKind) {
+		return loopEventDispatchStats{}, fmt.Errorf("review event must be one of the allowed internal review events")
+	}
+
+	home, ok := s.organizationStore().Get(orgID)
+	if !ok {
+		return loopEventDispatchStats{}, fmt.Errorf("organization not found")
+	}
+
+	home = normalizeOrganizationHome(home)
+	s.loopProfileStore().EnsureDefaults(home)
+
+	stats := loopEventDispatchStats{}
+	triggerLabel := loopEventTriggerLabel(eventKind)
+	for _, profile := range s.loopProfileStore().ListByOrganization(home.ID) {
+		if !matchesReviewLoopEvent(profile, eventKind) {
+			continue
+		}
+
+		key := scheduledLoopExecutionKey(home.ID, profile.ID)
+		if !s.loopExecutionTracker().TryStart(key) {
+			stats.skippedBusy++
+			log.Printf("[review-loop-event] organization=%s loop=%s event=%s skipped_previous_execution_still_running=true", home.ID, profile.ID, eventKind)
+			continue
+		}
+
+		func() {
+			defer s.loopExecutionTracker().Finish(key)
+
+			result, err := s.executeReviewLoop(home, profile, triggerLabel)
+			if err != nil {
+				s.recordFailedLoopResult(home, profile, triggerLabel, err)
+				stats.failed++
+				log.Printf("[review-loop-event] organization=%s loop=%s event=%s failed error=%v", home.ID, profile.ID, eventKind, err)
+				return
+			}
+
+			stats.executed++
+			log.Printf("[review-loop-event] organization=%s loop=%s event=%s completed result_id=%s", home.ID, profile.ID, eventKind, result.ID)
+		}()
+	}
+
+	return stats, nil
+}
+
 func (s *AdminServer) recordFailedLoopResult(home OrganizationHomePayload, profile LoopProfile, trigger string, err error) ReviewLoopResult {
 	status, summary := summarizeActivityFromError(err)
 	result := ReviewLoopResult{
@@ -453,6 +581,11 @@ func validateLoopProfile(profile LoopProfile) error {
 	}
 	if profile.IntervalSeconds < 0 {
 		return fmt.Errorf("interval_seconds must be greater than or equal to zero")
+	}
+	for _, trigger := range profile.EventTriggers {
+		if !isAllowedReviewLoopEventKind(trigger) {
+			return fmt.Errorf("event_triggers must use allowed internal review events only")
+		}
 	}
 	return nil
 }

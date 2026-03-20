@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"sort"
@@ -779,6 +780,12 @@ func (s *AdminServer) handleListOrganizations(w http.ResponseWriter, r *http.Req
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(summaries))
 }
 
+func (s *AdminServer) emitReviewLoopEvent(orgID string, eventKind ReviewLoopEventKind) {
+	if _, err := s.triggerReviewLoopsForEvent(orgID, eventKind); err != nil {
+		log.Printf("[review-loop-event] organization=%s event=%s skipped error=%v", orgID, eventKind, err)
+	}
+}
+
 func (s *AdminServer) handleCreateOrganization(w http.ResponseWriter, r *http.Request) {
 	var req OrganizationCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -820,6 +827,7 @@ func (s *AdminServer) handleCreateOrganization(w http.ResponseWriter, r *http.Re
 	home := s.buildOrganizationHome(req, template)
 	home = s.organizationStore().Save(home)
 	s.loopProfileStore().EnsureDefaults(home)
+	s.emitReviewLoopEvent(home.ID, ReviewLoopEventOrganizationCreated)
 	respondAPIJSON(w, http.StatusCreated, protocol.NewAPISuccess(home))
 }
 
@@ -868,6 +876,7 @@ func (s *AdminServer) handleUpdateOrganizationAIEngine(w http.ResponseWriter, r 
 		return
 	}
 
+	s.emitReviewLoopEvent(updated.ID, ReviewLoopEventOrganizationAIEngineChanged)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
 }
 
@@ -900,6 +909,7 @@ func (s *AdminServer) handleUpdateResponseContract(w http.ResponseWriter, r *htt
 		return
 	}
 
+	s.emitReviewLoopEvent(updated.ID, ReviewLoopEventResponseContractChanged)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
 }
 
@@ -1136,6 +1146,7 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 		return
 	}
 
+	s.emitReviewLoopEvent(home.ID, ReviewLoopEventTeamLeadActionCompleted)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(response))
 }
 

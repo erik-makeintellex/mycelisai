@@ -23,7 +23,6 @@ type LoopScheduler struct {
 
 	mu          sync.Mutex
 	lastAttempt map[string]time.Time
-	inProgress  map[string]bool
 }
 
 type loopSchedulerTickStats struct {
@@ -41,7 +40,6 @@ func NewLoopScheduler(server *AdminServer) *LoopScheduler {
 			return server.executeReviewLoop(home, profile, trigger)
 		},
 		lastAttempt: make(map[string]time.Time),
-		inProgress:  make(map[string]bool),
 	}
 }
 
@@ -162,24 +160,21 @@ func (ls *LoopScheduler) tryExecuteScheduledLoop(home OrganizationHomePayload, p
 	key := scheduledLoopExecutionKey(home.ID, profile.ID)
 
 	ls.mu.Lock()
-	if ls.inProgress[key] {
-		ls.mu.Unlock()
-		log.Printf("[review-loop-scheduler] organization=%s loop=%s skipped_previous_execution_still_running=true", home.ID, profile.ID)
-		return false, false, true
-	}
 	if lastAttempt, ok := ls.lastAttempt[key]; ok && now.Sub(lastAttempt) < time.Duration(profile.IntervalSeconds)*time.Second {
 		ls.mu.Unlock()
 		return false, false, false
 	}
-	ls.inProgress[key] = true
 	ls.lastAttempt[key] = now
 	ls.mu.Unlock()
 
+	if !ls.server.loopExecutionTracker().TryStart(key) {
+		log.Printf("[review-loop-scheduler] organization=%s loop=%s skipped_previous_execution_still_running=true", home.ID, profile.ID)
+		return false, false, true
+	}
+
 	startedAt := time.Now()
 	defer func() {
-		ls.mu.Lock()
-		delete(ls.inProgress, key)
-		ls.mu.Unlock()
+		ls.server.loopExecutionTracker().Finish(key)
 	}()
 
 	result, err := ls.execute(normalizeOrganizationHome(home), profile, "scheduled")

@@ -207,6 +207,34 @@ func TestHandleCreateOrganization_StartEmpty(t *testing.T) {
 	}
 }
 
+func TestHandleCreateOrganization_TriggersEventDrivenReviews(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+
+	rr := doRequest(t, http.HandlerFunc(s.handleCreateOrganization), "POST", "/api/v1/organizations", `{"name":"Northstar Labs","purpose":"Ship a focused AI engineering organization","start_mode":"template","template_id":"engineering-starter"}`)
+	assertStatus(t, rr, http.StatusCreated)
+
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object data, got %T", resp.Data)
+	}
+	id, _ := data["id"].(string)
+	if id == "" {
+		t.Fatalf("expected organization id, got %+v", data)
+	}
+
+	results := s.loopResultStore().List(id)
+	if len(results) != 2 {
+		t.Fatalf("expected default event-driven review activity after create, got %+v", results)
+	}
+	for _, result := range results {
+		if result.Trigger != "event:organization_created" {
+			t.Fatalf("expected organization-created trigger label, got %+v", result)
+		}
+	}
+}
+
 func TestHandleListOrganizations_ReturnsCreatedSummaries(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
 
@@ -280,6 +308,10 @@ func TestHandleUpdateOrganizationAIEngine_StoresCuratedProfile(t *testing.T) {
 	if homeData["ai_engine_profile_id"] != "high_reasoning" || homeData["ai_engine_settings_summary"] != "High Reasoning" {
 		t.Fatalf("unexpected persisted home payload: %+v", homeData)
 	}
+	results := s.loopResultStore().List(created.ID)
+	if len(results) != 1 || results[0].Trigger != "event:organization_ai_engine_changed" {
+		t.Fatalf("expected event-driven review activity after AI Engine update, got %+v", results)
+	}
 }
 
 func TestHandleUpdateOrganizationAIEngine_RejectsInvalidProfile(t *testing.T) {
@@ -312,9 +344,21 @@ func TestHandleUpdateResponseContract_StoresCuratedProfile(t *testing.T) {
 			Purpose:                   "Ship a focused AI engineering organization",
 			StartMode:                 OrganizationStartModeTemplate,
 			TeamLeadLabel:             "Team Lead",
+			DepartmentCount:           1,
+			SpecialistCount:           1,
 			ResponseContractProfileID: "clear_balanced",
 			ResponseContractSummary:   "Clear & Balanced",
 			Status:                    "ready",
+		},
+		Departments: []OrganizationDepartmentSummary{
+			{
+				ID:              "platform",
+				Name:            "Platform Department",
+				SpecialistCount: 1,
+				AgentTypeProfiles: []OrganizationAgentTypeProfileSummary{
+					{ID: "planner", Name: "Planner", HelpsWith: "Keeps priorities clear."},
+				},
+			},
 		},
 	})
 
@@ -346,6 +390,15 @@ func TestHandleUpdateResponseContract_StoresCuratedProfile(t *testing.T) {
 	}
 	if homeData["response_contract_profile_id"] != "warm_supportive" || homeData["response_contract_summary"] != "Warm & Supportive" {
 		t.Fatalf("unexpected persisted response contract: %+v", homeData)
+	}
+	results := s.loopResultStore().List(created.ID)
+	if len(results) != 2 {
+		t.Fatalf("expected event-driven review activity after Response Style update, got %+v", results)
+	}
+	for _, result := range results {
+		if result.Trigger != "event:response_contract_changed" {
+			t.Fatalf("expected response-style event trigger label, got %+v", results)
+		}
 	}
 }
 
@@ -1001,6 +1054,49 @@ func TestHandleTeamLeadGuidedAction_ReturnsNotFoundForMissingOrganization(t *tes
 
 	rr := doRequest(t, mux, "POST", "/api/v1/organizations/org-missing/workspace/actions", `{"action":"plan_next_steps"}`)
 	assertStatus(t, rr, http.StatusNotFound)
+}
+
+func TestHandleTeamLeadGuidedAction_TriggersEventDrivenReview(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			ID:                        "org-123",
+			Name:                      "Northstar Labs",
+			Purpose:                   "Ship a focused AI engineering organization",
+			StartMode:                 OrganizationStartModeTemplate,
+			TeamLeadLabel:             "Team Lead",
+			AdvisorCount:              1,
+			DepartmentCount:           1,
+			SpecialistCount:           2,
+			AIEngineProfileID:         "balanced",
+			AIEngineSettingsSummary:   "Balanced",
+			ResponseContractProfileID: "clear_balanced",
+			ResponseContractSummary:   "Clear & Balanced",
+			Status:                    "ready",
+		},
+		Departments: []OrganizationDepartmentSummary{
+			{
+				ID:              "platform",
+				Name:            "Platform Department",
+				SpecialistCount: 2,
+				AgentTypeProfiles: []OrganizationAgentTypeProfileSummary{
+					{ID: "planner", Name: "Planner", HelpsWith: "Keeps priorities clear."},
+				},
+			},
+		},
+	})
+	s.loopProfileStore().EnsureDefaults(created)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"plan_next_steps"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	results := s.loopResultStore().List(created.ID)
+	if len(results) != 1 || results[0].Trigger != "event:team_lead_action_completed" {
+		t.Fatalf("expected event-driven review activity after Team Lead action, got %+v", results)
+	}
 }
 
 func TestBuildTeamLeadGuidance_UsesReadableFallbacksForPartialHome(t *testing.T) {
