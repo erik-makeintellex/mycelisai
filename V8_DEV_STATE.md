@@ -366,7 +366,8 @@ Status:
 4. `COMPLETE` interval-backed Review Loops now execute automatically through a minimal in-process scheduler that only runs profiles with `interval_seconds`, prevents overlap, and stays stoppable during shutdown.
 5. `COMPLETE` read-only Recent Activity visibility now surfaces the latest review/check/update outcomes inside the Team Lead workspace without exposing loop controls, raw logs, or technical internals.
 6. `COMPLETE` the first event-driven Review Loop milestone now reacts to bounded internal organization events (`organization created`, Team Lead guidance completion, organization AI Engine change, and Response Style change), executes read-only reviews, records safe activity results, and shares overlap protection with scheduled execution.
-7. `NEXT` promote loop definitions into bundle/config truth and surface bounded Automations visibility in the Team Lead workspace without widening into unsafe execution.
+7. `COMPLETE` the Team Lead workspace now exposes a read-only `Automations` surface that shows what ongoing reviews/checks exist, whether they are scheduled or event-driven, who owns them in user-facing terms, and what they have reported recently without exposing raw loop/scheduler internals or editing controls.
+8. `NEXT` promote loop definitions into bundle/config truth so scheduled and event-driven Automations come from reproducible organization configuration rather than only seeded defaults.
 
 Evidence:
 1. `core/internal/server/review_loops.go` now defines the first V8.1 Review Loop framework, default loop profiles, team/agent-type owner resolution, structured findings/suggestions/status output, and read-only result logging.
@@ -375,6 +376,7 @@ Evidence:
 4. `core/internal/server/review_loop_scheduler.go` and `core/internal/server/review_loop_scheduler_test.go` now add the first bounded scheduled-loop runner with interval-based execution, invalid-config rejection, overlap protection, stoppable lifecycle wiring, and result/failure logging.
 5. `GET /api/v1/organizations/{id}/loop-activity` now exposes safe user-facing activity summaries, and `interface/components/organizations/OrganizationContextShell.tsx` now renders them in a non-intrusive `Recent Activity` support panel with lightweight polling, empty-state handling, and failure-safe fallback.
 6. `core/internal/server/review_loops.go`, `core/internal/server/organizations.go`, `core/internal/server/review_loops_test.go`, and `core/internal/server/organizations_test.go` now add bounded event-driven review execution for allowed internal organization events, safe failure logging into Recent Activity, and shared overlap protection so reactive reviews stay read-only and operator-visible without exposing raw event-bus internals.
+7. `GET /api/v1/organizations/{id}/automations` now exposes safe read-only Automation definitions, and `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts` now render and validate an inspect-only `Automations` support surface that stays separate from `Recent Activity` while preserving the Team Lead-first workspace.
 
 ## Immediate Next Actions
 
