@@ -32,11 +32,12 @@ type LoopOwnerRef struct {
 }
 
 type LoopProfile struct {
-	ID          string          `json:"id"`
-	Name        string          `json:"name"`
-	Type        LoopProfileType `json:"type"`
-	Description string          `json:"description,omitempty"`
-	Owner       LoopOwnerRef    `json:"owner"`
+	ID              string          `json:"id"`
+	Name            string          `json:"name"`
+	Type            LoopProfileType `json:"type"`
+	Description     string          `json:"description,omitempty"`
+	Owner           LoopOwnerRef    `json:"owner"`
+	IntervalSeconds int             `json:"interval_seconds,omitempty"`
 }
 
 type LoopOwnerResolution struct {
@@ -95,6 +96,25 @@ func (s *LoopProfileStore) Get(orgID, loopID string) (LoopProfile, bool) {
 	}
 	profile, ok := profiles[loopID]
 	return profile, ok
+}
+
+func (s *LoopProfileStore) ListByOrganization(orgID string) []LoopProfile {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	profiles := s.items[orgID]
+	if len(profiles) == 0 {
+		return nil
+	}
+
+	items := make([]LoopProfile, 0, len(profiles))
+	for _, profile := range profiles {
+		items = append(items, profile)
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].ID < items[j].ID
+	})
+	return items
 }
 
 func (s *LoopProfileStore) EnsureDefaults(home OrganizationHomePayload) {
@@ -179,6 +199,7 @@ func defaultReviewLoopProfiles(home OrganizationHomePayload) []LoopProfile {
 				Type: LoopOwnerTypeTeam,
 				ID:   firstDepartment.ID,
 			},
+			IntervalSeconds: 60,
 		})
 
 		if len(firstDepartment.AgentTypeProfiles) > 0 {
@@ -280,8 +301,8 @@ func buildReviewLoopOutput(home OrganizationHomePayload, owner LoopOwnerResoluti
 }
 
 func (s *AdminServer) executeReviewLoop(home OrganizationHomePayload, profile LoopProfile, trigger string) (ReviewLoopResult, error) {
-	if profile.Type != LoopProfileTypeReview {
-		return ReviewLoopResult{}, fmt.Errorf("loop profile must be a review loop")
+	if err := validateLoopProfile(profile); err != nil {
+		return ReviewLoopResult{}, err
 	}
 
 	home = normalizeOrganizationHome(home)
@@ -306,6 +327,25 @@ func (s *AdminServer) executeReviewLoop(home OrganizationHomePayload, profile Lo
 	s.loopResultStore().Add(home.ID, result)
 	log.Printf("[review-loop] organization=%s loop=%s owner_type=%s owner_id=%s status=%s findings=%d suggestions=%d", home.ID, profile.ID, owner.Type, owner.ID, result.Review.Status, len(result.Review.Findings), len(result.Review.Suggestions))
 	return result, nil
+}
+
+func validateLoopProfile(profile LoopProfile) error {
+	if profile.Type != LoopProfileTypeReview {
+		return fmt.Errorf("loop profile must be a review loop")
+	}
+	if strings.TrimSpace(profile.ID) == "" {
+		return fmt.Errorf("loop profile id is required")
+	}
+	if profile.Owner.Type != LoopOwnerTypeTeam && profile.Owner.Type != LoopOwnerTypeAgentType {
+		return fmt.Errorf("loop owner type must be team or agent_type")
+	}
+	if strings.TrimSpace(profile.Owner.ID) == "" {
+		return fmt.Errorf("loop owner id is required")
+	}
+	if profile.IntervalSeconds < 0 {
+		return fmt.Errorf("interval_seconds must be greater than or equal to zero")
+	}
+	return nil
 }
 
 func (s *AdminServer) handleTriggerLoop(w http.ResponseWriter, r *http.Request) {

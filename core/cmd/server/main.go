@@ -596,6 +596,7 @@ func main() {
 		adminSrv.MCPToolSets = mcpToolSets
 	}
 	adminSrv.RegisterRoutes(mux)
+	adminSrv.StartLoopScheduler(ctx)
 
 	// V7 Team B: Trigger Engine — evaluates rules against CTS event stream.
 	// Requires: sharedDB (for trigger_rules table) + eventStore + runsManager.
@@ -674,6 +675,7 @@ func main() {
 		if adminSrv.TriggerEngine != nil {
 			adminSrv.TriggerEngine.Stop()
 		}
+		adminSrv.StopLoopScheduler()
 
 		if mcpPool != nil {
 			mcpPool.ShutdownAll()
