@@ -8,6 +8,7 @@ import type {
     AgentTypeAIEngineUpdateRequest,
     AgentTypeResponseContractUpdateRequest,
     DepartmentAIEngineUpdateRequest,
+    OrganizationAutomationItem,
     OrganizationAgentTypeProfileSummary,
     OrganizationAIEngineProfileId,
     OrganizationAIEngineUpdateRequest,
@@ -112,7 +113,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [retryToken, setRetryToken] = useState(0);
-    const [activeDetailView, setActiveDetailView] = useState<"advisors" | "departments" | "aiEngine" | "responseContract" | null>(null);
+    const [activeDetailView, setActiveDetailView] = useState<"advisors" | "departments" | "automations" | "aiEngine" | "responseContract" | null>(null);
     const [isAIEngineSelectorOpen, setIsAIEngineSelectorOpen] = useState(false);
     const [selectedAIEngineProfile, setSelectedAIEngineProfile] = useState<OrganizationAIEngineProfileId | null>(null);
     const [aiEngineUpdatePending, setAIEngineUpdatePending] = useState(false);
@@ -136,6 +137,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [recentActivity, setRecentActivity] = useState<OrganizationLoopActivityItem[]>([]);
     const [activityLoading, setActivityLoading] = useState(true);
     const [activityError, setActivityError] = useState<string | null>(null);
+    const [automations, setAutomations] = useState<OrganizationAutomationItem[]>([]);
+    const [automationsLoading, setAutomationsLoading] = useState(true);
+    const [automationsError, setAutomationsError] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -206,6 +210,48 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         const intervalId = window.setInterval(() => {
             void loadActivity(true);
         }, 15000);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(intervalId);
+        };
+    }, [organizationId]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadAutomations = async (background: boolean) => {
+            if (!background && !cancelled) {
+                setAutomationsLoading(true);
+            }
+
+            try {
+                const response = await fetch(`/api/v1/organizations/${organizationId}/automations`, { cache: "no-store" });
+                const payload = await readJson(response);
+                if (!response.ok) {
+                    throw new Error(extractApiError(payload) || "Automations unavailable");
+                }
+                if (cancelled) {
+                    return;
+                }
+                setAutomations(extractApiData<OrganizationAutomationItem[]>(payload) ?? []);
+                setAutomationsError(null);
+            } catch {
+                if (cancelled) {
+                    return;
+                }
+                setAutomationsError("Automations unavailable");
+            } finally {
+                if (!cancelled) {
+                    setAutomationsLoading(false);
+                }
+            }
+        };
+
+        void loadAutomations(false);
+        const intervalId = window.setInterval(() => {
+            void loadAutomations(true);
+        }, 20000);
 
         return () => {
             cancelled = true;
@@ -664,6 +710,11 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                         onClick={() => setActiveDetailView("departments")}
                                     />
                                     <ActionPill
+                                        label="Review Automations"
+                                        isActive={activeDetailView === "automations"}
+                                        onClick={() => setActiveDetailView("automations")}
+                                    />
+                                    <ActionPill
                                         label="Review AI Engine Settings"
                                         isActive={activeDetailView === "aiEngine"}
                                         onClick={() => setActiveDetailView("aiEngine")}
@@ -677,6 +728,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 view={activeDetailView}
                                 organization={organization}
                                 teamLeadName={teamLeadName}
+                                automations={automations}
+                                automationsLoading={automationsLoading}
+                                automationsError={automationsError}
                                 isAIEngineSelectorOpen={isAIEngineSelectorOpen}
                                 selectedAIEngineProfile={selectedAIEngineProfile}
                                 aiEngineUpdatePending={aiEngineUpdatePending}
@@ -784,6 +838,18 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             onInspect={() => setActiveDetailView("departments")}
                         />
 
+                        <InspectOnlySummary
+                            icon={<Blocks className="h-4 w-4" />}
+                            title="Automations"
+                            countLabel={formatAutomationCount(automations.length, automationsLoading, automationsError)}
+                            statusLabel={automationStatusLabel(automationsLoading, automationsError)}
+                            summary={automationSummary(automations.length, teamLeadName)}
+                            supportLabel="What these cover"
+                            items={automationSupportItems(automations, automationsLoading, automationsError)}
+                            inspectActionLabel="Review Automations"
+                            onInspect={() => setActiveDetailView("automations")}
+                        />
+
                         <RecentActivityPanel
                             items={recentActivity}
                             loading={activityLoading}
@@ -877,6 +943,58 @@ function departmentSupportItems(organization: OrganizationHomePayload) {
         organization.department_count > 0 ? "Inspect only for now" : "Add the first Department when ready",
     ];
     return items;
+}
+
+function formatAutomationCount(count: number, loading: boolean, error: string | null) {
+    if (error) {
+        return "Unavailable right now";
+    }
+    if (loading && count === 0) {
+        return "Checking now";
+    }
+    if (count === 0) {
+        return "Not configured yet";
+    }
+    return `${count} ${count === 1 ? "Automation" : "Automations"}`;
+}
+
+function automationStatusLabel(loading: boolean, error: string | null) {
+    if (error) {
+        return "Read only";
+    }
+    if (loading) {
+        return "Refreshing";
+    }
+    return "Read only";
+}
+
+function automationSummary(count: number, teamLeadName: string) {
+    if (count === 0) {
+        return `${teamLeadName} will show ongoing reviews, checks, and watchers here as this AI Organization becomes more active.`;
+    }
+    if (count === 1) {
+        return `1 Automation is visible here so ${teamLeadName} can explain what ongoing review is supporting this AI Organization.`;
+    }
+    return `${count} Automations are visible here so ${teamLeadName} can explain what ongoing reviews and checks are supporting this AI Organization.`;
+}
+
+function automationSupportItems(items: OrganizationAutomationItem[], loading: boolean, error: string | null) {
+    if (error) {
+        return ["Automations unavailable", "Workspace still ready", "Read only"];
+    }
+    if (loading && items.length === 0) {
+        return ["Checking Reviews", "Checking Watchers", "Read only"];
+    }
+    if (items.length === 0) {
+        return ["Reviews appear here", "Watchers appear here", "Read only"];
+    }
+
+    return items.slice(0, 3).map((item) => {
+        if (item.trigger_type === "scheduled") {
+            return `${item.name} • Scheduled`;
+        }
+        return `${item.name} • Event-driven`;
+    });
 }
 
 function advisorDetailItems(count: number) {
@@ -1200,6 +1318,9 @@ function WorkspaceDetailView({
     view,
     organization,
     teamLeadName,
+    automations,
+    automationsLoading,
+    automationsError,
     isAIEngineSelectorOpen,
     selectedAIEngineProfile,
     aiEngineUpdatePending,
@@ -1245,9 +1366,12 @@ function WorkspaceDetailView({
     onRevertAgentTypeResponseContractSelection,
     onBack,
 }: {
-    view: "advisors" | "departments" | "aiEngine" | "responseContract";
+    view: "advisors" | "departments" | "automations" | "aiEngine" | "responseContract";
     organization: OrganizationHomePayload;
     teamLeadName: string;
+    automations: OrganizationAutomationItem[];
+    automationsLoading: boolean;
+    automationsError: string | null;
     isAIEngineSelectorOpen: boolean;
     selectedAIEngineProfile: OrganizationAIEngineProfileId | null;
     aiEngineUpdatePending: boolean;
@@ -1298,6 +1422,8 @@ function WorkspaceDetailView({
             ? "Advisor details"
             : view === "departments"
               ? "Department details"
+              : view === "automations"
+                ? "Automation details"
               : view === "aiEngine"
                 ? "AI Engine Settings details"
                 : "Response Style details";
@@ -1306,6 +1432,8 @@ function WorkspaceDetailView({
             ? `${teamLeadName} can review the current Advisor support in ${organization.name} here without leaving the workspace.`
             : view === "departments"
               ? `${teamLeadName} can inspect the current Department structure in ${organization.name} here without leaving the workspace.`
+              : view === "automations"
+                ? `${teamLeadName} can inspect the ongoing reviews, checks, and watchers that support ${organization.name} here without leaving the workspace.`
               : view === "aiEngine"
                 ? `${teamLeadName} can inspect the current AI Engine Settings in ${organization.name} here without leaving the workspace.`
                 : `${teamLeadName} can inspect the current Response Style in ${organization.name} here without leaving the workspace.`;
@@ -1317,6 +1445,8 @@ function WorkspaceDetailView({
                   detail: item.purpose,
                   support: item.supportCue,
               }))
+            : view === "automations"
+              ? []
             : (view === "aiEngine" ? aiEngineDetailItems(organization) : responseContractDetailItems(organization.response_contract_summary)).map((item) => ({
                   key: item.name,
                   title: item.name,
@@ -1324,11 +1454,14 @@ function WorkspaceDetailView({
                   support: item.supportCue,
               }));
     const departmentItems = view === "departments" ? departmentDetailItems(organization) : [];
+    const automationItems = view === "automations" ? automations : [];
     const emptyStateMessage =
         view === "advisors"
             ? `${teamLeadName} is handling review directly until Advisors are added.`
             : view === "departments"
               ? `${teamLeadName} can still shape the first operating lane before Departments are added.`
+              : view === "automations"
+                ? "Automations will appear here as ongoing reviews, checks, and watchers become available for this AI Organization."
               : view === "aiEngine"
                 ? `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`
                 : `${teamLeadName} is still using the organization-wide Response Style until a different guided profile is selected here.`;
@@ -1584,6 +1717,12 @@ function WorkspaceDetailView({
                         {`${teamLeadName} can still shape the first operating lane before Departments are added.`}
                     </div>
                 )
+            ) : view === "automations" ? (
+                <AutomationDetailPanel
+                    items={automationItems}
+                    loading={automationsLoading}
+                    error={automationsError}
+                />
             ) : items.length > 0 ? (
                 <div className="mt-5 grid gap-3">
                     {items.map((item) => (
@@ -2147,6 +2286,100 @@ function AgentTypeResponseContractSelectionPanel({
             </div>
         </div>
     );
+}
+
+function AutomationDetailPanel({
+    items,
+    loading,
+    error,
+}: {
+    items: OrganizationAutomationItem[];
+    loading: boolean;
+    error: string | null;
+}) {
+    if (error) {
+        return (
+            <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                <p className="font-medium text-cortex-text-main">Automations unavailable</p>
+                <p className="mt-2 leading-6">Reviews and checks are temporarily unavailable here. The Team Lead workspace is still ready.</p>
+            </div>
+        );
+    }
+
+    if (loading && items.length === 0) {
+        return (
+            <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                <p className="font-medium text-cortex-text-main">Checking active reviews</p>
+                <p className="mt-2 leading-6">The latest Automations will appear here shortly.</p>
+            </div>
+        );
+    }
+
+    if (items.length === 0) {
+        return (
+            <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                <p className="font-medium text-cortex-text-main">No Automations visible yet</p>
+                <p className="mt-2 leading-6">Reviews, checks, and watchers will appear here as this AI Organization adds ongoing activity.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="mt-5 grid gap-4">
+            {items.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-semibold text-cortex-text-main">{item.name}</p>
+                                <ActivityStatusBadge status={item.status} />
+                            </div>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{item.purpose}</p>
+                        </div>
+                        <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+                            <p className="font-medium text-cortex-text-main">{automationTriggerLabel(item.trigger_type)}</p>
+                            <p className="mt-1 leading-6">{item.owner_label}</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">What it watches</p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{item.watches}</p>
+                        </div>
+                        <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">How it runs</p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{item.trigger_summary}</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                        <p className="text-sm font-semibold text-cortex-text-main">Recent outcomes</p>
+                        {item.recent_outcomes && item.recent_outcomes.length > 0 ? (
+                            <div className="mt-3 space-y-3">
+                                {item.recent_outcomes.map((outcome) => (
+                                    <div key={`${item.id}-${outcome.occurred_at}-${outcome.summary}`} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3">
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                            <p className="text-sm leading-6 text-cortex-text-muted">{outcome.summary}</p>
+                                            <p className="text-xs font-medium uppercase tracking-[0.14em] text-cortex-text-muted">
+                                                {formatRelativeActivityTime(outcome.occurred_at)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="mt-3 text-sm leading-6 text-cortex-text-muted">This Automation is ready, but it has not reported a recent review yet.</p>
+                        )}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function automationTriggerLabel(triggerType: OrganizationAutomationItem["trigger_type"]) {
+    return triggerType === "scheduled" ? "Scheduled" : "Event-driven";
 }
 
 function RecentActivityPanel({

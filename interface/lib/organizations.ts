@@ -11,6 +11,25 @@ export interface OrganizationLoopActivityItem {
     summary: string;
 }
 
+export type OrganizationAutomationTriggerType = "scheduled" | "event_driven";
+
+export interface OrganizationAutomationOutcomeItem {
+    summary: string;
+    occurred_at: string;
+}
+
+export interface OrganizationAutomationItem {
+    id: string;
+    name: string;
+    purpose: string;
+    trigger_type: OrganizationAutomationTriggerType;
+    owner_label: string;
+    status: LoopActivityStatus;
+    watches: string;
+    trigger_summary: string;
+    recent_outcomes?: OrganizationAutomationOutcomeItem[];
+}
+
 export interface OrganizationAgentTypeProfileSummary {
     id: string;
     name: string;

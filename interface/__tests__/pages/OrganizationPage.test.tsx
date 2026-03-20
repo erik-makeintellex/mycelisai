@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { mockFetch } from "../setup";
-import type { OrganizationAIEngineProfileId, OrganizationHomePayload, ResponseContractProfileId } from "@/lib/organizations";
+import type { OrganizationAIEngineProfileId, OrganizationAutomationItem, OrganizationHomePayload, ResponseContractProfileId } from "@/lib/organizations";
 
 vi.mock("next/navigation", () => ({
     useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
@@ -82,6 +82,41 @@ const recentActivity = [
         summary: "2 items flagged",
     },
 ] as const;
+
+const automations: OrganizationAutomationItem[] = [
+    {
+        id: "department-readiness-review",
+        name: "Department readiness review",
+        purpose: "Reviews the current Department structure and operating readiness without taking action.",
+        trigger_type: "scheduled",
+        owner_label: "Team: Platform Department",
+        status: "success",
+        watches: "Watches Platform Department structure, specialist coverage, and current organization defaults inside Northstar Labs.",
+        trigger_summary: "Runs every minute and also after organization setup, Team Lead guidance, AI Engine changes, or Response Style changes.",
+        recent_outcomes: [
+            {
+                summary: "No issues detected",
+                occurred_at: "2026-03-19T17:58:00Z",
+            },
+        ],
+    },
+    {
+        id: "agent-type-readiness-review",
+        name: "Agent type readiness review",
+        purpose: "Reviews a specialist profile and its inherited defaults without taking action.",
+        trigger_type: "event_driven",
+        owner_label: "Specialist role: Planner",
+        status: "warning",
+        watches: "Watches the Planner specialist role, its working focus, and the defaults it inherits inside Northstar Labs.",
+        trigger_summary: "Runs after organization setup, AI Engine changes, or Response Style changes.",
+        recent_outcomes: [
+            {
+                summary: "2 items flagged",
+                occurred_at: "2026-03-19T17:55:00Z",
+            },
+        ],
+    },
+];
 
 function jsonResponse(body: unknown, status = 200) {
     return Promise.resolve(new Response(JSON.stringify(body), { status }));
@@ -203,6 +238,7 @@ function applyAgentTypeResponseContract(
 
 function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
+    automationsHandler?: () => Promise<Response>;
     loopActivityHandler?: () => Promise<Response>;
     actionHandler?: (body: Record<string, unknown>) => Promise<Response>;
     aiEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
@@ -219,6 +255,10 @@ function setupOrganizationFetch(options?: {
 
         if (url.includes("/api/v1/organizations/org-123/home")) {
             return options?.homeHandler?.() ?? jsonResponse({ ok: true, data: currentOrganizationHome });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/automations")) {
+            return options?.automationsHandler?.() ?? jsonResponse({ ok: true, data: automations });
         }
 
         if (url.includes("/api/v1/organizations/org-123/loop-activity")) {
@@ -453,6 +493,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Recent Activity" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
@@ -468,6 +509,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("2 items flagged")).toBeDefined();
         expect(screen.getByText("Planning review")).toBeDefined();
         expect(screen.getByText("Started from Engineering Starter")).toBeDefined();
+        expect(screen.getByText("Department readiness review • Scheduled")).toBeDefined();
+        expect(screen.getByText("Agent type readiness review • Event-driven")).toBeDefined();
         expect(screen.getAllByText("What this affects").length).toBeGreaterThan(0);
         expect(screen.getByText("Response style")).toBeDefined();
         expect(screen.getByText("Planning depth")).toBeDefined();
@@ -481,12 +524,14 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("button", { name: /Review my organization setup/i })).toBeDefined();
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
+        expect(screen.getAllByRole("button", { name: "Review Automations" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Review AI Engine Settings" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Review Response Style" }).length).toBeGreaterThan(0);
         expect(screen.queryByText(/context shell/i)).toBeNull();
         expect(screen.queryByText(/bounded slice/i)).toBeNull();
         expect(screen.queryByText(/implementation slice/i)).toBeNull();
         expect(screen.queryByText(/contract/i)).toBeNull();
+        expect(screen.queryByText(/loop profile/i)).toBeNull();
         expect(screen.queryByText(/New Chat/i)).toBeNull();
         expect(screen.queryByText(/generic chat/i)).toBeNull();
         expect(screen.queryByText(/scheduler/i)).toBeNull();
@@ -606,6 +651,48 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Team Lead for Northstar Labs" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+    });
+
+    it("opens Automation details from the support column and keeps the Team Lead workspace visible", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Automations" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Review Automations" })[0]);
+
+        expect(await screen.findByRole("heading", { name: "Automation details" })).toBeDefined();
+        expect(screen.getByText("Department readiness review")).toBeDefined();
+        expect(screen.getByText("Scheduled")).toBeDefined();
+        expect(screen.getByText("Team: Platform Department")).toBeDefined();
+        expect(screen.getAllByText("What it watches").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("How it runs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Recent outcomes").length).toBeGreaterThan(0);
+        expect(screen.getByText("Runs every minute and also after organization setup, Team Lead guidance, AI Engine changes, or Response Style changes.")).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getByText("Work with the Team Lead")).toBeDefined();
+        expect(screen.queryByText(/loop profile/i)).toBeNull();
+        expect(screen.queryByText(/scheduler/i)).toBeNull();
+    });
+
+    it("shows Automations unavailable without breaking the workspace when definitions cannot be loaded", async () => {
+        setupOrganizationFetch({
+            automationsHandler: () => jsonResponse({ ok: false, error: "automations unavailable" }, 503),
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Automations" })).toBeDefined();
+        expect(screen.getByText("Automations unavailable")).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Review Automations" })[0]);
+        expect(await screen.findByText("Reviews and checks are temporarily unavailable here. The Team Lead workspace is still ready.")).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
     });
 
     it("opens Advisor details from the Team Lead action and keeps the Team Lead workspace visible", async () => {
@@ -1029,6 +1116,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
                         memory_personality_summary: "Set up later in Advanced mode",
                     },
                 }),
+            automationsHandler: () => jsonResponse({ ok: true, data: [] }),
         });
 
         await act(async () => {
@@ -1037,12 +1125,14 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
         expect(screen.getAllByText("Inspect only").length).toBeGreaterThan(0);
         expect(screen.getByText("Advisor roles appear here once they are added")).toBeDefined();
         expect(screen.getByText("Add the first Department when ready")).toBeDefined();
+        expect(screen.getByText("Reviews appear here")).toBeDefined();
         expect(screen.getByText("Started from Empty")).toBeDefined();
         expect(screen.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeDefined();
         expect(screen.getByText("Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.")).toBeDefined();

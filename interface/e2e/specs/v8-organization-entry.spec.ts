@@ -114,6 +114,57 @@ const recentActivityByOrganizationId: Record<string, Array<{
     "org-456": [],
 };
 
+const automationsByOrganizationId: Record<string, Array<{
+    id: string;
+    name: string;
+    purpose: string;
+    trigger_type: "scheduled" | "event_driven";
+    owner_label: string;
+    status: "success" | "warning" | "failed";
+    watches: string;
+    trigger_summary: string;
+    recent_outcomes: Array<{
+        summary: string;
+        occurred_at: string;
+    }>;
+}>> = {
+    "org-123": [
+        {
+            id: "department-readiness-review",
+            name: "Department readiness review",
+            purpose: "Reviews the current Department structure and operating readiness without taking action.",
+            trigger_type: "scheduled",
+            owner_label: "Team: Platform Department",
+            status: "success",
+            watches: "Watches Platform Department structure, specialist coverage, and current organization defaults inside Northstar Labs.",
+            trigger_summary: "Runs every minute and also after organization setup, Team Lead guidance, AI Engine changes, or Response Style changes.",
+            recent_outcomes: [
+                {
+                    summary: "No issues detected",
+                    occurred_at: "2026-03-19T17:58:00Z",
+                },
+            ],
+        },
+        {
+            id: "agent-type-readiness-review",
+            name: "Agent type readiness review",
+            purpose: "Reviews a specialist profile and its inherited defaults without taking action.",
+            trigger_type: "event_driven",
+            owner_label: "Specialist role: Planner",
+            status: "warning",
+            watches: "Watches the Planner specialist role, its working focus, and the defaults it inherits inside Northstar Labs.",
+            trigger_summary: "Runs after organization setup, AI Engine changes, or Response Style changes.",
+            recent_outcomes: [
+                {
+                    summary: "2 items flagged",
+                    occurred_at: "2026-03-19T17:55:00Z",
+                },
+            ],
+        },
+    ],
+    "org-456": [],
+};
+
 function applyOrganizationAIEngineToDepartments(home: typeof createdTemplateOrganization, profileId: string | undefined, summary: string) {
     return {
         ...home,
@@ -232,6 +283,7 @@ async function expectNoForbiddenCopy(page: Page) {
     await expect(page.getByText(/bounded slice/i)).toHaveCount(0);
     await expect(page.getByText(/implementation slice/i)).toHaveCount(0);
     await expect(page.getByText(/context shell/i)).toHaveCount(0);
+    await expect(page.getByText(/loop profile/i)).toHaveCount(0);
     await expect(page.getByText(/raw architecture controls/i)).toHaveCount(0);
     await expect(page.getByText(/contract/i)).toHaveCount(0);
 }
@@ -253,6 +305,7 @@ async function mockOrganizationEntryApis(
         agentTypeResponseContractUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         responseContractUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         homeResponsesById?: Record<string, unknown>;
+        automationsById?: Record<string, unknown>;
         loopActivityById?: Record<string, unknown>;
     },
 ) {
@@ -274,10 +327,12 @@ async function mockOrganizationEntryApis(
             [createdTemplateOrganization.id]: createdTemplateOrganization,
             [createdEmptyOrganization.id]: createdEmptyOrganization,
         },
+        automationsById = automationsByOrganizationId,
         loopActivityById = recentActivityByOrganizationId,
     } = options ?? {};
 
     const mutableHomeResponsesById = structuredClone(homeResponsesById);
+    const mutableAutomationsById = structuredClone(automationsById);
     const mutableLoopActivityById = structuredClone(loopActivityById);
 
     await page.route("**/api/v1/user/me", async (route) => {
@@ -408,6 +463,23 @@ async function mockOrganizationEntryApis(
                 payload !== undefined
                     ? { ok: true, data: payload }
                     : { ok: false, error: "Activity unavailable" },
+            ),
+        });
+    });
+
+    await page.route("**/api/v1/organizations/*/automations", async (route) => {
+        const url = new URL(route.request().url());
+        const match = url.pathname.match(/\/api\/v1\/organizations\/([^/]+)\/automations$/);
+        const organizationId = match?.[1];
+        const payload = organizationId ? mutableAutomationsById[organizationId] : undefined;
+
+        await route.fulfill({
+            status: payload !== undefined ? 200 : 404,
+            contentType: "application/json",
+            body: JSON.stringify(
+                payload !== undefined
+                    ? { ok: true, data: payload }
+                    : { ok: false, error: "Automations unavailable" },
             ),
         });
     });
@@ -808,12 +880,15 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Organization overview")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Automations" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByText("Advisor support")).toBeVisible();
         await expect(page.getByText("Department view")).toBeVisible();
+        await expect(page.getByText("Department readiness review • Scheduled")).toBeVisible();
+        await expect(page.getByText("Agent type readiness review • Event-driven")).toBeVisible();
         await expect(page.getByText("Your AI Organization is actively working through recent reviews, checks, and updates in the background.")).toBeVisible();
         await expect(page.getByText("Department check")).toBeVisible();
         await expect(page.getByText("Specialist review")).toBeVisible();
@@ -833,8 +908,21 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("button", { name: /Plan next steps for this organization/i })).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Advisors" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Open Departments" }).first()).toBeVisible();
+        await expect(page.getByRole("button", { name: "Review Automations" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Review AI Engine Settings" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Response Style" }).first()).toBeVisible();
+
+        await page.getByRole("button", { name: "Review Automations" }).first().click();
+        await expect(page.getByRole("heading", { name: "Automation details" })).toBeVisible();
+        await expect(page.getByText("Department readiness review", { exact: true })).toBeVisible();
+        await expect(page.getByText("Team: Platform Department")).toBeVisible();
+        await expect(page.getByText("What it watches")).toHaveCount(2);
+        await expect(page.getByText("How it runs")).toHaveCount(2);
+        await expect(page.getByText("Recent outcomes")).toHaveCount(2);
+        await expect(page.getByText("Runs every minute and also after organization setup, Team Lead guidance, AI Engine changes, or Response Style changes.")).toBeVisible();
+        await expect(page.getByText("AI Organization Home")).toBeVisible();
+        await expect(page.getByText("Work with the Team Lead")).toBeVisible();
+        await page.getByRole("button", { name: "Back to Team Lead" }).click();
 
         await page.getByRole("button", { name: "Review Advisors" }).first().click();
         await expect(page.getByRole("heading", { name: "Advisor details" })).toBeVisible();
@@ -967,12 +1055,14 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Empty", { exact: true })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Automations" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
         await expect(page.getByText("Advisor roles appear here once they are added")).toBeVisible();
         await expect(page.getByText("Add the first Department when ready")).toBeVisible();
+        await expect(page.getByText("Reviews appear here")).toBeVisible();
         await expect(page.getByText("No recent reviews yet")).toBeVisible();
         await expect(page.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeVisible();
         await expect(page.getByText("The current Response Style is clear & balanced, which shapes how the Team Lead presents tone, structure, and detail.")).toBeVisible();
