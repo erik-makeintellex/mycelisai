@@ -76,6 +76,7 @@ type AdminServer struct {
 	Organizations       *OrganizationStore
 	LoopProfiles        *LoopProfileStore
 	LoopResults         *LoopResultStore
+	LoopScheduler       *LoopScheduler
 	TemplateBundlesPath string
 }
 
@@ -115,6 +116,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		Organizations:       NewOrganizationStore(),
 		LoopProfiles:        NewLoopProfileStore(),
 		LoopResults:         NewLoopResultStore(),
+		LoopScheduler:       nil,
 		TemplateBundlesPath: "config/templates",
 	}
 }
