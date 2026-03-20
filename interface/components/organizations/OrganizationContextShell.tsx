@@ -14,6 +14,7 @@ import type {
     OrganizationAIEngineUpdateRequest,
     OrganizationDepartmentSummary,
     OrganizationHomePayload,
+    OrganizationLearningInsightItem,
     OrganizationLoopActivityItem,
     ResponseContractProfileId,
     ResponseContractUpdateRequest,
@@ -140,6 +141,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [automations, setAutomations] = useState<OrganizationAutomationItem[]>([]);
     const [automationsLoading, setAutomationsLoading] = useState(true);
     const [automationsError, setAutomationsError] = useState<string | null>(null);
+    const [learningInsights, setLearningInsights] = useState<OrganizationLearningInsightItem[]>([]);
+    const [learningInsightsLoading, setLearningInsightsLoading] = useState(true);
+    const [learningInsightsError, setLearningInsightsError] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -252,6 +256,48 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         const intervalId = window.setInterval(() => {
             void loadAutomations(true);
         }, 20000);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(intervalId);
+        };
+    }, [organizationId]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadLearningInsights = async (background: boolean) => {
+            if (!background && !cancelled) {
+                setLearningInsightsLoading(true);
+            }
+
+            try {
+                const response = await fetch(`/api/v1/organizations/${organizationId}/learning-insights`, { cache: "no-store" });
+                const payload = await readJson(response);
+                if (!response.ok) {
+                    throw new Error(extractApiError(payload) || "Learning updates unavailable");
+                }
+                if (cancelled) {
+                    return;
+                }
+                setLearningInsights(extractApiData<OrganizationLearningInsightItem[]>(payload) ?? []);
+                setLearningInsightsError(null);
+            } catch {
+                if (cancelled) {
+                    return;
+                }
+                setLearningInsightsError("Learning updates unavailable");
+            } finally {
+                if (!cancelled) {
+                    setLearningInsightsLoading(false);
+                }
+            }
+        };
+
+        void loadLearningInsights(false);
+        const intervalId = window.setInterval(() => {
+            void loadLearningInsights(true);
+        }, 25000);
 
         return () => {
             cancelled = true;
@@ -854,6 +900,12 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             items={recentActivity}
                             loading={activityLoading}
                             error={activityError}
+                        />
+
+                        <LearningVisibilityPanel
+                            items={learningInsights}
+                            loading={learningInsightsLoading}
+                            error={learningInsightsError}
                         />
 
                         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -2450,6 +2502,74 @@ function RecentActivityPanel({
     );
 }
 
+function LearningVisibilityPanel({
+    items,
+    loading,
+    error,
+}: {
+    items: OrganizationLearningInsightItem[];
+    loading: boolean;
+    error: string | null;
+}) {
+    const visibleItems = items.slice(0, 6);
+
+    return (
+        <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
+            <div className="flex items-start gap-3">
+                <div className="mt-0.5 rounded-full border border-cortex-primary/20 bg-cortex-primary/10 p-2 text-cortex-primary">
+                    <Sparkles className="h-4 w-4" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-semibold text-cortex-text-main">What the Organization is Learning</h2>
+                    <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
+                        See the recurring improvements and themes your AI Organization is picking up across recent work.
+                    </p>
+                </div>
+            </div>
+
+            {error && (
+                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Learning updates unavailable</p>
+                    <p className="mt-1 leading-6">Recent learning highlights are not available right now. The Team Lead workspace is still ready.</p>
+                </div>
+            )}
+
+            {!error && loading && visibleItems.length === 0 && (
+                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Checking recent learning</p>
+                    <p className="mt-1 leading-6">The latest improvements and patterns will appear here shortly.</p>
+                </div>
+            )}
+
+            {!error && !loading && visibleItems.length === 0 && (
+                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">No learning highlights yet</p>
+                    <p className="mt-1 leading-6">As the organization works, new themes and improvements will appear here in plain language.</p>
+                </div>
+            )}
+
+            {visibleItems.length > 0 && (
+                <div className="mt-4 space-y-3">
+                    {visibleItems.map((item) => (
+                        <div key={item.id} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-sm font-semibold text-cortex-text-main">{item.summary}</p>
+                                        <LearningStrengthBadge strength={item.strength} />
+                                    </div>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{item.source}</p>
+                                </div>
+                                <p className="text-xs font-medium uppercase tracking-[0.14em] text-cortex-text-muted">{formatRelativeActivityTime(item.observed_at)}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function ActivityStatusBadge({ status }: { status: OrganizationLoopActivityItem["status"] }) {
     const config =
         status === "warning"
@@ -2465,6 +2585,31 @@ function ActivityStatusBadge({ status }: { status: OrganizationLoopActivityItem[
               : {
                     label: "Ready",
                     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+                };
+
+    return (
+        <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.16em] ${config.className}`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {config.label}
+        </span>
+    );
+}
+
+function LearningStrengthBadge({ strength }: { strength: OrganizationLearningInsightItem["strength"] }) {
+    const config =
+        strength === "strong"
+            ? {
+                  label: "Strong",
+                  className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+              }
+            : strength === "consistent"
+              ? {
+                    label: "Consistent",
+                    className: "border-cortex-primary/30 bg-cortex-primary/10 text-cortex-primary",
+                }
+              : {
+                    label: "Emerging",
+                    className: "border-amber-500/30 bg-amber-500/10 text-amber-200",
                 };
 
     return (

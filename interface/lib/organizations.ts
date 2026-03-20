@@ -12,6 +12,7 @@ export interface OrganizationLoopActivityItem {
 }
 
 export type OrganizationAutomationTriggerType = "scheduled" | "event_driven";
+export type OrganizationLearningInsightStrength = "emerging" | "consistent" | "strong";
 
 export interface OrganizationAutomationOutcomeItem {
     summary: string;
@@ -28,6 +29,14 @@ export interface OrganizationAutomationItem {
     watches: string;
     trigger_summary: string;
     recent_outcomes?: OrganizationAutomationOutcomeItem[];
+}
+
+export interface OrganizationLearningInsightItem {
+    id: string;
+    summary: string;
+    source: string;
+    observed_at: string;
+    strength: OrganizationLearningInsightStrength;
 }
 
 export interface OrganizationAgentTypeProfileSummary {

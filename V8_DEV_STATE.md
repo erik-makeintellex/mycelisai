@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-19
+> Updated: 2026-03-20
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -135,7 +135,13 @@ Task 008  Planning-integration validation pass                      [COMPLETE]
 Task 009  Next-execution/governance guidance migration              [NEXT]
 ```
 
-## Current Checkpoint (2026-03-19)
+## Current Checkpoint (2026-03-20)
+
+Restart handoff:
+- latest local checkpoint: `12bda0d` `V8.1 architecture: add learning loops and semantic continuity model`
+- restart focus: bundle-defined Loop Profile truth, semantic continuity and memory-promotion implementation planning, and the first bounded Learning Loop slice
+- preserved V8.1 truth at restart: read-only Automations visibility is complete; Learning Loops, semantic continuity, and Procedure / Skill Sets are now canonical architecture contract layers
+- keep unrelated dirty work out of the next slice unless explicitly pulled in (`README.md`, `docs/**`, `ops/misc.py`, `tests/test_misc_tasks.py`, `v8-1.md`)
 
 Delivery updates in this checkpoint:
 1. `COMPLETE` reviewed the new root `README.md` and adopted V8 as the active development/grading target.
@@ -175,6 +181,7 @@ Delivery updates in this checkpoint:
 35. `COMPLETE` added controlled Agent Type AI Engine binding in Department details so operators can pin a curated AI Engine to a role type, cleanly return that role type to the Team default, and preserve inheritance clarity between Team-level engine choices and type-specific specialist behavior.
 36. `COMPLETE` added controlled Agent Type Response Style binding in Department details so operators can pin a curated Response Style to a role type, return that role type to the Organization / Team default, and preserve inheritance clarity between the organization-wide Response Style and type-specific specialist output behavior.
 37. `COMPLETE` aligned the root page with the V8.1 living AI Organization model so product-facing entry messaging now centers AI Organizations, Team Lead-guided operation, continuous reviews/checks/updates, and the post-creation workspace instead of legacy swarm-console framing.
+38. `COMPLETE` added a read-only `What the Organization is Learning` workspace surface so operators can now see safe, human-readable learning highlights with source, recency, and simple strength labels without exposing raw memory internals or any mutation controls.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -215,6 +222,7 @@ Evidence:
 36. the first bounded Agent Type AI Engine binding path now lives in `core/internal/server/organizations.go`, `core/internal/server/admin.go`, `core/internal/server/organizations_test.go`, `interface/lib/organizations.ts`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; Department details now let operators apply a curated AI Engine to an Agent Type, retry in place on failure, return that role type to the Team default, and preserve Team-default inheritance for other role types without exposing raw model IDs, raw provider terms, or agent-instance overrides
 37. the first bounded Agent Type Response Style binding path now lives in `core/internal/server/organizations.go`, `core/internal/server/admin.go`, `core/internal/server/organizations_test.go`, `interface/lib/organizations.ts`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; Department details now let operators apply a curated Response Style to an Agent Type, retry in place on failure, return that role type to the Organization / Team default, and preserve inherited organization-wide Response Style behavior for other role types without exposing raw prompt text, raw policy text, or agent-instance overrides
 38. `interface/app/(marketing)/page.tsx` and `interface/__tests__/pages/LandingPage.test.tsx` now present and enforce the V8.1 root-page story around AI Organizations, Team Lead-guided work, recent activity, safe guided control, and post-creation workspace expectations without leaking internal architecture terms or old console/chat framing
+39. `GET /api/v1/organizations/{id}/learning-insights` now exposes safe read-only learning highlights derived from reviewed organization activity, and `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts` now render and validate a failure-safe `What the Organization is Learning` support surface without exposing raw embeddings, raw memory stages, or editing controls
 
 ### 6. V8 contract shell introduction
 
@@ -350,7 +358,7 @@ Next steps:
 Status:
 1. `COMPLETE` `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` now defines the canonical V8.1 architecture contract for Loop Profiles, Learning Loops, Runtime Capabilities, promoted Response Contract inheritance, promoted Agent Type Profiles, Memory Promotion and Semantic Continuity, Procedure / Skill Sets, and bounded Automations visibility.
 2. `COMPLETE` the architecture-library index, in-app docs manifest, and doc-test contract now expose V8.1 as canonical architecture truth rather than leaving `v8-1.md` as a loose planning draft.
-3. `ACTIVE` the first shippable V8.1 state now includes bounded read-only Review Loop execution, scheduled and event-driven activity visibility, and read-only Automations visibility; next work centers on bundle/config loop truth, capability contract surfaces, semantic continuity planning, and the first bounded Learning Loop implementation.
+3. `ACTIVE` the first shippable V8.1 state now includes bounded read-only Review Loop execution, scheduled and event-driven activity visibility, read-only Automations visibility, and read-only learning visibility in the Team Lead workspace; next work centers on bundle/config loop truth, capability contract surfaces, semantic continuity planning, and the first bounded Learning Loop implementation behind this operator surface.
 
 Evidence:
 1. `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` now carries the canonical V8.1 PRD for Loop Profiles, Learning Loops, Runtime Capabilities, promoted Response Contract and Agent Type Profile runtime truth, semantic continuity, procedure/skill memory, safety rules, testing requirements, and initial release definition.
@@ -367,7 +375,8 @@ Status:
 5. `COMPLETE` read-only Recent Activity visibility now surfaces the latest review/check/update outcomes inside the Team Lead workspace without exposing loop controls, raw logs, or technical internals.
 6. `COMPLETE` the first event-driven Review Loop milestone now reacts to bounded internal organization events (`organization created`, Team Lead guidance completion, organization AI Engine change, and Response Style change), executes read-only reviews, records safe activity results, and shares overlap protection with scheduled execution.
 7. `COMPLETE` the Team Lead workspace now exposes a read-only `Automations` surface that shows what ongoing reviews/checks exist, whether they are scheduled or event-driven, who owns them in user-facing terms, and what they have reported recently without exposing raw loop/scheduler internals or editing controls.
-8. `NEXT` promote loop definitions into bundle/config truth so scheduled and event-driven Automations come from reproducible organization configuration rather than only seeded defaults.
+8. `COMPLETE` the Team Lead workspace now exposes a read-only `What the Organization is Learning` surface that summarizes recent learning highlights in operator language with user-facing source, recency, and strength labels while remaining failure-safe and non-mutating.
+9. `NEXT` promote loop definitions into bundle/config truth so scheduled and event-driven Automations come from reproducible organization configuration rather than only seeded defaults.
 
 Evidence:
 1. `core/internal/server/review_loops.go` now defines the first V8.1 Review Loop framework, default loop profiles, team/agent-type owner resolution, structured findings/suggestions/status output, and read-only result logging.
@@ -377,6 +386,7 @@ Evidence:
 5. `GET /api/v1/organizations/{id}/loop-activity` now exposes safe user-facing activity summaries, and `interface/components/organizations/OrganizationContextShell.tsx` now renders them in a non-intrusive `Recent Activity` support panel with lightweight polling, empty-state handling, and failure-safe fallback.
 6. `core/internal/server/review_loops.go`, `core/internal/server/organizations.go`, `core/internal/server/review_loops_test.go`, and `core/internal/server/organizations_test.go` now add bounded event-driven review execution for allowed internal organization events, safe failure logging into Recent Activity, and shared overlap protection so reactive reviews stay read-only and operator-visible without exposing raw event-bus internals.
 7. `GET /api/v1/organizations/{id}/automations` now exposes safe read-only Automation definitions, and `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts` now render and validate an inspect-only `Automations` support surface that stays separate from `Recent Activity` while preserving the Team Lead-first workspace.
+8. `GET /api/v1/organizations/{id}/learning-insights` now exposes safe read-only learning highlights derived from reviewed organization activity, and `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts` now render and validate a failure-safe `What the Organization is Learning` panel that stays operator-friendly and non-mutating.
 
 ### 23. V8.1 learning continuity architecture synchronization
 
@@ -384,7 +394,8 @@ Status:
 1. `COMPLETE` synchronized the canonical V8.1 architecture and linked runtime/index/state surfaces so Learning Loops are now first-class loop subtypes with candidate capture, review/promotion pathing, policy-bounded memory promotion, and no silent self-rewrite.
 2. `COMPLETE` clarified pgvector as the semantic continuity substrate for event/action/result indexing, review memory, learning candidates, promoted organization/team/agent-type memory, procedure/skill retrieval, and continuity recall.
 3. `COMPLETE` defined Procedure / Skill Sets as reviewed, type-bound specialist memory under Agent Type Profiles, and removed stale state wording that still implied read-only Automations visibility was pending.
-4. `NEXT` turn this architecture sync into implementation planning for bundle-defined loop truth, memory-promotion runtime contracts, and the first bounded Learning Loop slice.
+4. `COMPLETE` added the first operator-visible learning surface as a safe read-only summary layer over reviewed organization activity without exposing raw semantic-continuity or memory-internal terms.
+5. `NEXT` turn this architecture sync into implementation planning for bundle-defined loop truth, memory-promotion runtime contracts, and the first bounded Learning Loop slice behind the read-only visibility layer.
 
 Evidence:
 1. `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` now defines Learning Loops, raw/reviewed/promoted memory stages, semantic continuity layering, and Procedure / Skill Sets as canonical V8.1 architecture truth.
@@ -405,7 +416,7 @@ Evidence:
 10. `NEXT` add bounded Team Lead response history and operator-visible continuity inside the AI Organization workspace without widening into generic chat or exposing raw agent-selection controls.
 11. `NEXT` define the first bundle/config contract slice for Loop Profiles and Runtime Capabilities so V8.1 execution surfaces exist as safe, inspectable configuration before live execution is introduced.
 12. `NEXT` plan the semantic continuity and memory-promotion implementation around pgvector-backed raw, reviewed, and promoted memory stages plus reviewed procedure/skill retrieval.
-13. `NEXT` implement the first bounded Learning Loop path for candidate capture, reviewed promotion, and safe operator-visible outcomes without silent self-rewrite.
+13. `NEXT` implement the first bounded Learning Loop path for candidate capture, reviewed promotion, and safe operator-visible outcomes behind the new read-only learning surface without silent self-rewrite.
 14. `NEXT` replace hard-coded/default interval loop seeding with bundle-defined Loop Profiles so scheduled and event-driven Automations stay reproducible and organization-specific.
 15. `NEXT` define the first bounded Runtime Capabilities implementation slice so capability visibility and policy enforcement can land without exposing advanced controls too early.
 

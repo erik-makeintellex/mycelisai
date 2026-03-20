@@ -221,6 +221,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
 	mux.HandleFunc("GET /api/v1/organizations/{id}/automations", s.handleListAutomations)
 	mux.HandleFunc("GET /api/v1/organizations/{id}/loop-activity", s.handleListLoopActivity)
+	mux.HandleFunc("GET /api/v1/organizations/{id}/learning-insights", s.handleListLearningInsights)
 	mux.HandleFunc("POST /api/v1/internal/organizations/{id}/loops/{loopId}/trigger", s.handleTriggerLoop)
 	mux.HandleFunc("GET /api/v1/internal/organizations/{id}/loops/results", s.handleListLoopResults)
 	mux.HandleFunc("GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
