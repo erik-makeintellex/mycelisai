@@ -74,6 +74,8 @@ type AdminServer struct {
 	GroupBus *GroupBusMonitor
 	// V8 AI Organization entry flow support.
 	Organizations       *OrganizationStore
+	LoopProfiles        *LoopProfileStore
+	LoopResults         *LoopResultStore
 	TemplateBundlesPath string
 }
 
@@ -111,6 +113,8 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		Reactive:            reactiveEngine,
 		GroupBus:            NewGroupBusMonitor(),
 		Organizations:       NewOrganizationStore(),
+		LoopProfiles:        NewLoopProfileStore(),
+		LoopResults:         NewLoopResultStore(),
 		TemplateBundlesPath: "config/templates",
 	}
 }
@@ -211,6 +215,8 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/ai-engine", s.handleUpdateAgentTypeAIEngine)
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/response-contract", s.handleUpdateAgentTypeResponseContract)
 	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+	mux.HandleFunc("POST /api/v1/internal/organizations/{id}/loops/{loopId}/trigger", s.handleTriggerLoop)
+	mux.HandleFunc("GET /api/v1/internal/organizations/{id}/loops/results", s.handleListLoopResults)
 	mux.HandleFunc("GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
 
 	// Phase 6.0: Symbiotic Seed (built-in sensor team, no LLM required)
