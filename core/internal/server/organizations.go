@@ -819,6 +819,7 @@ func (s *AdminServer) handleCreateOrganization(w http.ResponseWriter, r *http.Re
 
 	home := s.buildOrganizationHome(req, template)
 	home = s.organizationStore().Save(home)
+	s.loopProfileStore().EnsureDefaults(home)
 	respondAPIJSON(w, http.StatusCreated, protocol.NewAPISuccess(home))
 }
 
