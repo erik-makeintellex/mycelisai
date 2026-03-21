@@ -26,3 +26,6 @@ Recently archived (superseded by current execution and migration docs):
 4. `UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md`
 5. `V7_IMPLEMENTATION_PLAN_2026-03-07.md`
 6. purged UI lane boards, execution boards, and extension-of-self planning docs now replaced by the architecture library
+
+Draft archive rule:
+- superseded root-level notes or draft PRDs should move under `docs/archive/drafts/` with a superseded header instead of remaining loose at repo root

@@ -7,6 +7,13 @@ This README is the primary development-swarm inception document. It defines the 
 - current release target
 - current implementation state
 
+Canonical ownership reminder:
+- `README.md` = development-swarm inception and layered truth
+- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` = current release architecture
+- `v8-2.md` = canonical full actuation / production target
+- `V8_DEV_STATE.md` = actual implementation truth
+- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` = UX/operator truth
+
 ## README TOC
 
 - [Fresh Agent Start Here](#fresh-agent-start-here)
