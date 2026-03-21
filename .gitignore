@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *$py.class
 .venv/
@@ -57,3 +58,5 @@ uv.lock
 # Local agent/session artifacts
 .claude/settings.local.json
 interface/test-results/
+interface/playwright-report/
+workspace/tool-cache/

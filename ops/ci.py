@@ -12,9 +12,27 @@ Usage:
 
 import time
 from invoke import task, Collection
-from .config import CORE_DIR, is_windows, API_HOST, API_PORT, INTERFACE_PORT
+from .config import (
+    API_HOST,
+    API_PORT,
+    CORE_DIR,
+    INTERFACE_PORT,
+    ensure_managed_cache_dirs,
+    is_windows,
+    managed_cache_env,
+)
 from . import logging as logging_tasks
+from . import interface as interface_tasks
 from . import quality
+
+
+def _task_env(extra=None):
+    ensure_managed_cache_dirs()
+    return managed_cache_env(extra=extra)
+
+
+def _run_interface_command(c, command: str, **run_kwargs):
+    return interface_tasks.run_interface_command(c, command, cleanup=True, **run_kwargs)
 
 
 @task
@@ -28,7 +46,7 @@ def lint(c):
     # 1. Go vet
     print("[1/2] go vet ./...")
     with c.cd(str(CORE_DIR)):
-        result = c.run("go vet ./...", warn=True)
+        result = c.run("go vet ./...", warn=True, env=_task_env())
         if result.exited != 0:
             errors.append("go vet failed")
         else:
@@ -36,7 +54,7 @@ def lint(c):
 
     # 2. Next.js lint
     print("[2/2] next lint")
-    result = c.run("cd interface && npm run lint", warn=True)
+    result = _run_interface_command(c, "npm run lint", warn=True)
     if result.exited != 0:
         errors.append("next lint failed")
     else:
@@ -60,7 +78,7 @@ def test(c):
     # 1. Go tests
     print("[1/2] go test ./...")
     with c.cd(str(CORE_DIR)):
-        result = c.run("go test ./...", warn=True)
+        result = c.run("go test ./...", warn=True, env=_task_env())
         if result.exited != 0:
             errors.append("go tests failed")
         else:
@@ -68,7 +86,7 @@ def test(c):
 
     # 2. Interface tests
     print("[2/2] interface vitest run")
-    result = c.run("cd interface && npx vitest run --reporter=dot", warn=True)
+    result = _run_interface_command(c, "npx vitest run --reporter=dot", warn=True)
     if result.exited != 0:
         errors.append("interface tests failed")
     else:
@@ -93,7 +111,7 @@ def build(c):
     print("[1/2] go build")
     with c.cd(str(CORE_DIR)):
         bin_cmd = "go build -v -o bin/server.exe ./cmd/server" if is_windows() else "go build -v -o bin/server ./cmd/server"
-        result = c.run(bin_cmd, warn=True)
+        result = c.run(bin_cmd, warn=True, env=_task_env())
         if result.exited != 0:
             errors.append("go build failed")
         else:
@@ -101,7 +119,7 @@ def build(c):
 
     # 2. Next.js production build (type-checks + compiles)
     print("[2/2] next build")
-    result = c.run("cd interface && npx next build", warn=True)
+    result = _run_interface_command(c, "npx next build", warn=True)
     if result.exited != 0:
         errors.append("next build failed")
     else:
@@ -186,28 +204,28 @@ def baseline(c, e2e=False):
 
     print("[4/7] core go test ./... -count=1")
     with c.cd(str(CORE_DIR)):
-        result = c.run("go test ./... -count=1", warn=True, hide=True)
+        result = c.run("go test ./... -count=1", warn=True, hide=True, env=_task_env())
         if result.exited != 0:
             errors.append("core go tests failed")
         else:
             print("  OK")
 
     print("[5/7] interface npm run build")
-    result = c.run("cd interface && npm run build", warn=True, hide=True)
+    result = _run_interface_command(c, "npm run build", warn=True, hide=True)
     if result.exited != 0:
         errors.append("interface build failed")
     else:
         print("  OK")
 
     print("[6/7] interface tsc --noEmit")
-    result = c.run("cd interface && npx tsc --noEmit", warn=True, hide=True)
+    result = _run_interface_command(c, "npx tsc --noEmit", warn=True, hide=True)
     if result.exited != 0:
         errors.append("interface typecheck failed")
     else:
         print("  OK")
 
     print("[7/7] interface vitest run")
-    result = c.run("cd interface && npx vitest run --reporter=dot", warn=True, hide=True)
+    result = _run_interface_command(c, "npx vitest run --reporter=dot", warn=True, hide=True)
     if result.exited != 0:
         errors.append("interface vitest failed")
     else:
@@ -215,8 +233,9 @@ def baseline(c, e2e=False):
 
     if e2e:
         print("[E2E] interface playwright run")
-        result = c.run("cd interface && npx playwright test --reporter=dot", warn=True, hide=True)
-        if result.exited != 0:
+        try:
+            interface_tasks.e2e.body(c)
+        except SystemExit:
             errors.append("interface playwright failed")
         else:
             print("  OK")

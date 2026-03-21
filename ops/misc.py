@@ -9,12 +9,6 @@ WORKTREE_REVIEW_TARGETS = (
     "docs/TESTING.md",
 )
 
-WORKTREE_REVIEW_ROLES = (
-    "temporary local review lead: scope the dirty worktree, preserve user edits, and map changes to the active V8 queue",
-    "temporary local test auditor: turn changed paths into focused test/build evidence before broader gates",
-    "temporary local dependency sentry: confirm install prerequisites, runner contract, and release-preflight safety",
-)
-
 WORKTREE_BASELINE_INSTALLS = (
     "uv run inv install",
 )
@@ -185,7 +179,12 @@ def _build_worktree_triage(status_output: str):
 
 @task(name="worktree-triage")
 def worktree_triage(c):
-    """Summarize dirty-worktree scope, install checks, and evidence commands."""
+    """Summarize dirty-worktree scope, install checks, and evidence commands.
+
+    This is a local maintenance helper under ops/. It must not register,
+    persist, or imply runtime teams inside core/config/teams or runtime
+    registries.
+    """
     print("=== WORKTREE TRIAGE ===")
 
     status = c.run("git status --porcelain", hide=True, warn=True)
@@ -203,10 +202,6 @@ def worktree_triage(c):
     print("\nExpected review targets:")
     for target in WORKTREE_REVIEW_TARGETS:
         print(f"  - {target}")
-
-    print("\nTemporary local review team:")
-    for role in WORKTREE_REVIEW_ROLES:
-        print(f"  - {role}")
 
     print("\nDependency reset:")
     for command in WORKTREE_BASELINE_INSTALLS:

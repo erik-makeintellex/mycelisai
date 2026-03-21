@@ -39,6 +39,14 @@ SERVICES = {
 }
 
 CORE_STARTUP_LOG = ROOT_DIR / "workspace" / "logs" / "core-startup.log"
+WINDOWS_COMPILED_GO_PROCESS_NAMES = (
+    "go.exe",
+    "server.exe",
+    "probe.exe",
+    "signal_gen.exe",
+    "smoke.exe",
+)
+WINDOWS_COMPILED_GO_PROCESS_BASENAMES = tuple(name.removesuffix(".exe") for name in WINDOWS_COMPILED_GO_PROCESS_NAMES)
 COMPILED_GO_PROCESS_HINTS = tuple(
     hint.lower()
     for hint in {
@@ -189,7 +197,7 @@ def _kill_pid(pid: int):
     try:
         if is_windows():
             subprocess.run(
-                ["powershell", "-NoProfile", "-Command", f"Stop-Process -Id {pid} -Force"],
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
                 capture_output=True,
                 timeout=5,
             )
@@ -233,12 +241,41 @@ def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:
     processes: list[dict[str, str | int]] = []
     try:
         if is_windows():
+            candidate_cmd = (
+                "@(Get-Process -Name "
+                + ",".join(WINDOWS_COMPILED_GO_PROCESS_BASENAMES)
+                + " -ErrorAction SilentlyContinue) | "
+                "Select-Object Id,ProcessName | "
+                "ConvertTo-Json -Compress; exit 0"
+            )
             result = subprocess.run(
                 [
                     "powershell",
                     "-NoProfile",
                     "-Command",
-                    "Get-CimInstance Win32_Process | "
+                    candidate_cmd,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.strip() or "process query failed")
+            raw = result.stdout.strip()
+            if not raw:
+                return []
+            candidate_payload = json.loads(raw)
+            candidate_rows = candidate_payload if isinstance(candidate_payload, list) else [candidate_payload]
+            candidate_pids = [row.get("Id") for row in candidate_rows if isinstance(row.get("Id"), int)]
+            if not candidate_pids:
+                return []
+            filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in candidate_pids)
+            result = subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
                     "Select-Object ProcessId,Name,CommandLine | "
                     "ConvertTo-Json -Compress",
                 ],
@@ -596,24 +633,13 @@ def up(c, frontend=False, build=False):
         if _port_open(INTERFACE_PORT):
             print(f"  Frontend already running on :{INTERFACE_PORT}")
         else:
-            from .interface import dev as interface_dev
-            # Run in background via subprocess
-            if is_windows():
-                subprocess.Popen(
-                    ["cmd", "/c", f"cd interface && npx next dev --port {INTERFACE_PORT}"],
-                    cwd=str(ROOT_DIR),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-                )
-            else:
-                subprocess.Popen(
-                    ["npx", "next", "dev", "--port", str(INTERFACE_PORT)],
-                    cwd=str(ROOT_DIR / "interface"),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
+            from . import interface as interface_tasks
+
+            interface_tasks.start_dev_server_detached(
+                interface_tasks.interface_task_env(),
+                host=INTERFACE_HOST,
+                port=INTERFACE_PORT,
+            )
             if _wait_for_port(INTERFACE_PORT, "Frontend", timeout=30):
                 print(f"  Frontend online on :{INTERFACE_PORT}")
             else:
@@ -662,17 +688,26 @@ def down(c):
                     "-NoProfile",
                     "-Command",
                     "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | "
-                    "Where-Object { $_.CommandLine -match 'next dev --port 3000' } | "
+                    f"Where-Object {{ $_.CommandLine -match 'next dev --port {INTERFACE_PORT}' }} | "
                     "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
                 ],
             )
         else:
-            _run_best_effort(["pkill", "-f", "next dev --port 3000"])
+            _run_best_effort(["pkill", "-f", f"next dev --port {INTERFACE_PORT}"])
 
         if _wait_for_port_closed(INTERFACE_PORT, "Frontend"):
             print("  Frontend stopped (by command line)")
         else:
             print("  Frontend not running")
+    from . import interface as interface_tasks
+    remaining_interface = interface_tasks._cleanup_repo_local_interface_processes()
+    if remaining_interface:
+        summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in remaining_interface[:6])
+        raise SystemExit(
+            "STACK DOWN INCOMPLETE: repo-local Interface residuals still running ("
+            + summary
+            + "). Re-run lifecycle.down or inspect Interface node workers."
+        )
 
     # 3. Compiled Go helpers
     print("[3/4] Cleaning compiled Go services...")

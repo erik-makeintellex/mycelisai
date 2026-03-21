@@ -35,6 +35,7 @@ Do not use bare `uvx inv ...`.
 Lifecycle tasks must not report success until Core `/healthz` is actually ready; open-port-only checks are insufficient.
 Background Core startup must write to `workspace/logs/core-startup.log` so lifecycle failures have a deterministic diagnostic surface.
 Lifecycle teardown must use bounded cleanup subprocesses, sweep repo-local Interface worker residue, and wait for ports to close before reporting success.
+Interface-focused Invoke and CI tasks must execute from the `interface/` working directory and reuse the same `npm`/`node` entrypoints on Windows and Linux rather than depending on host-shell `cd ... &&` wrappers.
 
 > **Tip:** If you `uv venv && .venv/Scripts/activate` (Windows) or `source .venv/bin/activate` (Linux), you can use `inv` directly.
 
@@ -60,7 +61,7 @@ Lifecycle teardown must use bounded cleanup subprocesses, sweep repo-local Inter
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
 | `uv run inv interface.test` | `npm run test` (Vitest) |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
-| `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle plus repo-managed Playwright browsers, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
+| `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle plus repo-managed Playwright browsers, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`; Playwright owns Next.js server lifecycle for the default gate) |
 | `uv run inv interface.stop` | Kill process on port 3000 |
 | `uv run inv interface.clean` | rm -rf .next cache |
 | `uv run inv interface.restart` | stop → clean → build → dev → check |
@@ -89,6 +90,19 @@ Lifecycle teardown must use bounded cleanup subprocesses, sweep repo-local Inter
 | `uv run inv cache.clean` | Clear repo-managed tool caches and local build artifacts under `workspace/tool-cache` |
 | `uv run inv cache.clean --user` | Also clear user-level tool caches configured by `cache.apply-user-policy` |
 | `uv run inv cache.apply-user-policy` | Persist Windows user cache env vars so pip/npm/go/uv stop defaulting back to `C:` |
+
+### Suggested Development Build Configuration
+
+- Windows:
+  - keep the repo and `workspace/tool-cache` on a drive with real headroom when possible
+  - run `uv run inv cache.apply-user-policy` on first setup if the user profile lives on a smaller `C:` volume
+  - treat Docker Desktop / WSL storage as a separate disk budget from repo-managed build/test caches
+- Linux/macOS:
+  - keep `MYCELIS_PROJECT_CACHE_ROOT` on the volume intended for repeated builds if the default workspace disk is constrained
+  - set user-level cache roots only when tool defaults would otherwise refill a small home/root volume
+- Cross-platform:
+  - prefer Invoke-managed build/test/browser tasks over raw tool commands so cache roots, browser binaries, telemetry suppression, and worker cleanup stay consistent
+  - use `uv run inv cache.status` before large validation runs when free space is tight, then `uv run inv cache.clean` as the first repo-safe reclaim path
 
 ### Lifecycle Tasks (`ops/lifecycle.py`)
 
@@ -177,7 +191,7 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `uv run inv ci.test` | Go tests + Interface tests |
 | `uv run inv ci.build` | Go binary + Next.js production build (no Docker) |
 | `uv run inv ci.check` | Full pipeline: lint → test → build (with stage timers) |
-| `uv run inv ci.baseline` | Strict delivery baseline covering gates, focused runtime tests, interface build/typecheck, and Vitest |
+| `uv run inv ci.baseline` | Strict delivery baseline covering gates, focused runtime tests, interface build/typecheck, Vitest, and the shared `interface.e2e` path when `--e2e` is enabled |
 | `uv run inv ci.entrypoint-check` | Verify the supported invoke runner matrix and reject unsupported bare aliases |
 | `uv run inv ci.toolchain-check` | Report toolchain versions and optionally enforce Go lock policy |
 | `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline |

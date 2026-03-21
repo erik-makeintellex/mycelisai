@@ -1,9 +1,16 @@
 from invoke import task, Collection
 from pathlib import Path
-from .config import ROOT_DIR, is_windows
+import os
+
+from .config import ROOT_DIR, ensure_managed_cache_dirs, is_windows, managed_cache_env
 
 COGNITIVE_DIR = ROOT_DIR / "cognitive"
 ENGINE_CONFIG = COGNITIVE_DIR / "config" / "engine.yaml"
+
+
+def _task_env(extra=None):
+    ensure_managed_cache_dirs()
+    return managed_cache_env(extra=extra)
 
 
 def _load_engine_config():
@@ -18,7 +25,7 @@ def install(c):
     """Install cognitive engine dependencies via uv (vLLM + Diffusers)."""
     print("Installing Mycelis Cognitive Engine dependencies...")
     with c.cd(str(COGNITIVE_DIR)):
-        c.run("uv sync", pty=not is_windows())
+        c.run("uv sync", pty=not is_windows(), env=_task_env())
     print("Cognitive engine dependencies installed.")
 
 
@@ -62,7 +69,7 @@ def llm(c):
     )
 
     with c.cd(str(COGNITIVE_DIR)):
-        c.run(cmd, pty=not is_windows(), in_stream=False)
+        c.run(cmd, pty=not is_windows(), in_stream=False, env=_task_env())
 
 
 @task
@@ -88,7 +95,7 @@ def media(c):
     )
 
     with c.cd(str(COGNITIVE_DIR)):
-        c.run(cmd, pty=not is_windows(), in_stream=False)
+        c.run(cmd, pty=not is_windows(), in_stream=False, env=_task_env())
 
 
 @task
@@ -136,11 +143,13 @@ def up(c):
     print(f"  Media Engine (Diffusers): port {media_cfg['port']}")
 
     try:
-        llm_proc = subprocess.Popen(llm_cmd, cwd=str(COGNITIVE_DIR))
+        env = os.environ.copy()
+        env.update(_task_env())
+        llm_proc = subprocess.Popen(llm_cmd, cwd=str(COGNITIVE_DIR), env=env)
         procs.append(llm_proc)
         print(f"  vLLM PID: {llm_proc.pid}")
 
-        media_proc = subprocess.Popen(media_cmd, cwd=str(COGNITIVE_DIR))
+        media_proc = subprocess.Popen(media_cmd, cwd=str(COGNITIVE_DIR), env=env)
         procs.append(media_proc)
         print(f"  Media PID: {media_proc.pid}")
 

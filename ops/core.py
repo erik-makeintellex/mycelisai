@@ -1,18 +1,23 @@
 from invoke import task, Collection
-from .config import CORE_DIR, ROOT_DIR, is_windows
+from .config import CORE_DIR, ROOT_DIR, ensure_managed_cache_dirs, is_windows, managed_cache_env
+
+
+def _task_env(extra=None):
+    ensure_managed_cache_dirs()
+    return managed_cache_env(extra=extra)
 
 @task
 def test(c):
     """Run Go Core Unit Tests."""
     with c.cd(str(CORE_DIR)):
-        c.run("go test ./...")
+        c.run("go test ./...", env=_task_env())
 
 @task
 def clean(c):
     """Clean Go Build Artifacts."""
     print("Cleaning Core...")
     with c.cd(str(CORE_DIR)):
-        c.run("go clean")
+        c.run("go clean", env=_task_env())
         if (CORE_DIR / "bin").exists():
            import shutil
            shutil.rmtree(str(CORE_DIR / "bin"))
@@ -31,7 +36,10 @@ def build(c):
     # 1. Build Go Binary
     print("   Compiling Go Binary...")
     with c.cd(str(CORE_DIR)):
-        c.run("go build -v -o bin/server.exe ./cmd/server" if is_windows() else "go build -v -o bin/server ./cmd/server")
+        c.run(
+            "go build -v -o bin/server.exe ./cmd/server" if is_windows() else "go build -v -o bin/server ./cmd/server",
+            env=_task_env(),
+        )
     
     # 2. Build Docker Image
     print(f"   Building Container...")
@@ -69,7 +77,7 @@ def run(c):
     print("Starting Mycelis Core (Native)...")
     with c.cd(str(CORE_DIR)):
         bin_name = "server.exe" if is_windows() else "server"
-        env = {"PYTHONIOENCODING": "utf-8"}
+        env = _task_env({"PYTHONIOENCODING": "utf-8"})
         if is_windows():
             c.run(f"bin\\{bin_name}", pty=False, in_stream=False, env=env)
         else:
@@ -104,7 +112,7 @@ def smoke(c):
     """
     print("Running Smoke Tests...")
     with c.cd(str(CORE_DIR)):
-        c.run("go run ./cmd/smoke/main.go")
+        c.run("go run ./cmd/smoke/main.go", env=_task_env())
 
 ns = Collection("core")
 ns.add_task(test)

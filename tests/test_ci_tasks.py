@@ -21,13 +21,15 @@ class FakeContext(Context):
         super().__init__()
         self.command_results = command_results
         self.commands: list[str] = []
+        self.cd_paths: list[str] = []
 
     def run(self, command: str, **_kwargs) -> FakeResult:
         self.commands.append(command)
         return self.command_results.get(command, FakeResult())
 
     @contextmanager
-    def cd(self, _path: str):
+    def cd(self, path: str):
+        self.cd_paths.append(path)
         yield
 
 
@@ -35,43 +37,50 @@ def test_baseline_runs_expected_commands_without_e2e(monkeypatch):
     monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
+    cleanup_calls: list[str] = []
+    monkeypatch.setattr(ci.interface_tasks, "_cleanup_repo_local_interface_processes", lambda: cleanup_calls.append("cleanup") or [])
 
     ctx = FakeContext(
         {
             "go test ./... -count=1": FakeResult(),
-            "cd interface && npm run build": FakeResult(),
-            "cd interface && npx tsc --noEmit": FakeResult(),
-            "cd interface && npx vitest run --reporter=dot": FakeResult(),
+            "npm run build": FakeResult(),
+            "npx tsc --noEmit": FakeResult(),
+            "npx vitest run --reporter=dot": FakeResult(),
         }
     )
 
     ci.baseline.body(ctx, e2e=False)
 
     assert "go test ./... -count=1" in ctx.commands
-    assert "cd interface && npm run build" in ctx.commands
-    assert "cd interface && npx tsc --noEmit" in ctx.commands
-    assert "cd interface && npx vitest run --reporter=dot" in ctx.commands
-    assert "cd interface && npx playwright test --reporter=dot" not in ctx.commands
+    assert "npm run build" in ctx.commands
+    assert "npx tsc --noEmit" in ctx.commands
+    assert "npx vitest run --reporter=dot" in ctx.commands
+    assert "npx playwright test --reporter=dot" not in ctx.commands
+    assert cleanup_calls == ["cleanup", "cleanup", "cleanup"]
 
 
 def test_baseline_runs_playwright_when_e2e_enabled(monkeypatch):
     monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
+    cleanup_calls: list[str] = []
+    monkeypatch.setattr(ci.interface_tasks, "_cleanup_repo_local_interface_processes", lambda: cleanup_calls.append("cleanup") or [])
+    e2e_calls: list[str] = []
+    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **_kwargs: e2e_calls.append("e2e"))
 
     ctx = FakeContext(
         {
             "go test ./... -count=1": FakeResult(),
-            "cd interface && npm run build": FakeResult(),
-            "cd interface && npx tsc --noEmit": FakeResult(),
-            "cd interface && npx vitest run --reporter=dot": FakeResult(),
-            "cd interface && npx playwright test --reporter=dot": FakeResult(),
+            "npm run build": FakeResult(),
+            "npx tsc --noEmit": FakeResult(),
+            "npx vitest run --reporter=dot": FakeResult(),
         }
     )
 
     ci.baseline.body(ctx, e2e=True)
 
-    assert "cd interface && npx playwright test --reporter=dot" in ctx.commands
+    assert e2e_calls == ["e2e"]
+    assert cleanup_calls == ["cleanup", "cleanup", "cleanup"]
 
 
 def test_toolchain_check_warns_when_not_strict():
@@ -155,9 +164,9 @@ def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
             "node -v": FakeResult(stdout="v25.2.1\n"),
             "npm -v": FakeResult(stdout="11.6.2\n"),
             "go test ./... -count=1": FakeResult(),
-            "cd interface && npm run build": FakeResult(),
-            "cd interface && npx tsc --noEmit": FakeResult(),
-            "cd interface && npx vitest run --reporter=dot": FakeResult(),
+            "npm run build": FakeResult(),
+            "npx tsc --noEmit": FakeResult(),
+            "npx vitest run --reporter=dot": FakeResult(),
         }
     )
 
@@ -166,5 +175,5 @@ def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
     assert "git status --porcelain" in ctx.commands
     assert "go version" in ctx.commands
     assert "go test ./... -count=1" in ctx.commands
-    assert "cd interface && npm run build" in ctx.commands
-    assert "cd interface && npx tsc --noEmit" in ctx.commands
+    assert "npm run build" in ctx.commands
+    assert "npx tsc --noEmit" in ctx.commands

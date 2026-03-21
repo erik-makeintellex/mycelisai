@@ -32,6 +32,15 @@ Handles Go compilation and Docker image building.
 Keeps local API-key development access aligned.
 - **Dev Key**: `uv run inv auth.dev-key`
 
+### `cache.py` (Cache Hygiene)
+Keeps project and user-level tool caches off the system drive hot path and easy to prune.
+- **Status**: `uv run inv cache.status`
+- **Clean**: `uv run inv cache.clean`
+- **Clean User Cache Too**: `uv run inv cache.clean --user`
+- **Apply Windows User Policy**: `uv run inv cache.apply-user-policy`
+- Project-owned backstops: root `.npmrc` keeps direct npm/npx cache local to `workspace/tool-cache`, pytest cache metadata lives in `workspace/tool-cache/pytest`, and task-managed browser runs export `PLAYWRIGHT_BROWSERS_PATH`
+- Suggested platform posture: on Windows, stamp the user-level cache env vars early if `C:` is the small drive; on Linux/macOS, move project/user cache roots only when the default workspace or home volume is the wrong place for repeated build churn
+
 ### `logging.py` (Logging Gates)
 Enforces logging contract quality checks before delivery.
 - **Schema**: `uv run inv logging.check-schema` (event taxonomy + docs coverage)
@@ -47,12 +56,14 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Down**: `uv run inv lifecycle.down`
 - **Health**: `uv run inv lifecycle.health`
 - **Memory Restart**: `uv run inv lifecycle.memory-restart --frontend`
+- `lifecycle.down` now treats repo-local Interface worker residue as part of the teardown contract, not just bound ports
 
 ## Clean Run Discipline for Runtime and Integration Checks
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect running compiled Go services before the test begins. Check repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
+- Detect repo-local Interface worker residue before and after browser/build/test runs. Windows `node.exe` children from `.next`, Vitest, or Playwright count as leaked dev state and should be swept by the task wrappers.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -81,6 +92,7 @@ Delivery-focused validation, runner checks, and release preflight.
 - **Entrypoint Check**: `uv run inv ci.entrypoint-check`
 - **Baseline**: `uv run inv ci.baseline`
 - **Release Preflight**: `uv run inv ci.release-preflight --strict-toolchain`
+- Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
 
 ### `misc.py` (Team Coordination)
 Central architect sync path and utility task surfaces.
@@ -89,3 +101,4 @@ Central architect sync path and utility task surfaces.
 ## ⚡ Directives
 - **Never tag `latest`** for production.
 - **Always pinning** dependencies in `charts/`.
+- **Prefer repo-managed caches** under `workspace/tool-cache` for Invoke-driven work so local validation does not silently refill `C:`.

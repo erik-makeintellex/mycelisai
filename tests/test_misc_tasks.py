@@ -184,7 +184,6 @@ def test_worktree_triage_reports_clean_tree(capsys):
 
     output = capsys.readouterr().out
     assert "Working tree: clean" in output
-    assert "Temporary local review team:" in output
     assert "uv run inv install" in output
     assert "uv run inv ci.entrypoint-check" in output
     assert "uv run inv ci.baseline" in output

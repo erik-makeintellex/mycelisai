@@ -121,7 +121,7 @@ Stopping containers or port-forwards alone is not enough. The pre-test cleanup p
 # Unsupported bare alias: uvx inv ...
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv interface.test        # Vitest unit tests (jsdom)
-uv run inv interface.e2e         # Playwright E2E tests (Invoke manages the Next.js server, managed browser cache, and repo-local UI worker cleanup)
+uv run inv interface.e2e         # Playwright E2E tests (Invoke manages the Next.js server, managed browser cache, and repo-local UI worker cleanup; Playwright starts/stops the Next.js server for the default gate)
 uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real Core-backed Workspace UI contract
 uv run inv core.smoke            # Governance smoke tests
 uv run inv ci.test               # Blocking Go + Vitest validation
@@ -142,6 +142,7 @@ Runner matrix:
 - `uvx inv ...` is expected to fail and is checked as a negative control by `uv run inv ci.entrypoint-check`.
 - Invoke-managed Node/Go/Python validation now routes caches through `workspace/tool-cache` by default; on Windows, `uv run inv cache.apply-user-policy` persists the same posture for direct per-user tool usage.
 - Project-owned backstops keep direct commands aligned too: root `.npmrc` anchors npm/npx cache under `workspace/tool-cache/npm`, pytest uses `workspace/tool-cache/pytest`, and Invoke-managed browser runs export `PLAYWRIGHT_BROWSERS_PATH` plus `NEXT_TELEMETRY_DISABLED=1`.
+- Invoke-managed Interface and CI validation now runs from the `interface/` working directory with the same `npm`/`node` entrypoints on Windows and Linux, so browser/build/test cleanup does not depend on shell-specific `cd ... &&` wrappers.
 
 Signal/channel standard:
 - When tests touch NATS channel behavior, use the canonical subject families and source metadata defined in `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`.
@@ -522,5 +523,3 @@ test.describe('Feature Page', () => {
     })
 })
 ```
-
-

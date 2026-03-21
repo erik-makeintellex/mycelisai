@@ -1,5 +1,5 @@
 from invoke import task, Collection
-from .config import is_windows
+from .config import CORE_DIR, is_windows
 from . import core, interface
 
 @task
@@ -26,10 +26,11 @@ def coverage(c):
     print("=== Coverage Report ===")
     print()
     print("[Core] Running Go tests with coverage...")
-    c.run("cd core && go test -coverprofile=coverage.out ./...", pty=not is_windows())
+    with c.cd(str(CORE_DIR)):
+        c.run("go test -coverprofile=coverage.out ./...", pty=not is_windows())
     print()
     print("[Interface] Running Vitest with V8 coverage...")
-    c.run("cd interface && npx vitest run --coverage", pty=not is_windows())
+    interface.run_interface_command(c, "npx vitest run --coverage", cleanup=True, pty=not is_windows())
     print()
     print("Coverage reports generated.")
 
