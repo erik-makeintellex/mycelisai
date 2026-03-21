@@ -77,6 +77,8 @@ cp .env.example .env
 > **Windows gotcha:** If Ollama is installed locally, it sets `OLLAMA_HOST=0.0.0.0` as a **Windows User environment variable** (listen address). The Go server detects this and skips endpoint patching. Your `.env` value will be used via the YAML config instead.
 
 > **Deployment automation rule:** Prefer `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` for automation-driven cognitive config overrides. Do not rely on the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps.
+>
+> **Architecture boundary:** These env overrides are for deployment-time provider definition, environment-specific endpoint/model configuration, and profile default wiring only. They are not runtime organization behavior, do not control team/role routing directly, and do not replace bundle-defined truth.
 
 ### `core/config/cognitive.yaml` — LLM Provider Routing
 
@@ -115,6 +117,12 @@ MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_MODEL_ID=qwen3:8b
 MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED=true
 MYCELIS_PROFILE_CHAT_PROVIDER=local_ollama_dev
 MYCELIS_PROFILE_CODER_PROVIDER=local_ollama_dev
+```
+
+Runtime truth still follows:
+
+```text
+Bundle -> Instantiated Organization -> Inheritance -> Routing
 ```
 
 ### `core/config/templates/*.yaml` — Bootstrap Template Bundles

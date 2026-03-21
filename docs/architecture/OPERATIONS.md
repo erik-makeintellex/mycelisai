@@ -403,6 +403,9 @@ defaults:
 Deployment automation rule:
 - use `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` when automation tools need to stamp environment-specific cognitive config
 - do not use the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps; provider routing now comes from provider config plus instantiated organization policy
+- treat env overrides as deployment-time infrastructure configuration only: provider definitions, profile defaults, and environment-specific endpoint/model wiring
+- do not treat env overrides as runtime organization behavior or team/role routing control
+- runtime truth remains `Bundle -> Instantiated Organization -> Inheritance -> Routing`
 
 ---
 
