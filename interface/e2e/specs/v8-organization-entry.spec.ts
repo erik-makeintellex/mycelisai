@@ -306,12 +306,44 @@ async function saveScreenshot(page: Page, testInfo: TestInfo, name: string) {
     });
 }
 
+async function openCreatedOrganization(page: Page, organizationId: string) {
+    const organizationPath = `/organizations/${organizationId}`;
+    const organizationUrl = new RegExp(`${organizationPath}$`);
+
+    try {
+        await page.waitForURL(organizationUrl, {
+            timeout: 5000,
+            waitUntil: "domcontentloaded",
+        });
+    } catch {
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+                await page.goto(organizationPath, { waitUntil: "domcontentloaded" });
+            } catch (error) {
+                if (!(error instanceof Error) || !error.message.includes("ERR_ABORTED")) {
+                    throw error;
+                }
+            }
+
+            if (page.url().endsWith(organizationPath)) {
+                break;
+            }
+        }
+    }
+
+    await expect(page).toHaveURL(organizationUrl, { timeout: 15000 });
+    await page.waitForLoadState("domcontentloaded");
+}
+
 async function expectNoForbiddenCopy(page: Page) {
     await expect(page.getByText("V8 Entry Flow")).toHaveCount(0);
     await expect(page.getByText(/bounded slice/i)).toHaveCount(0);
     await expect(page.getByText(/implementation slice/i)).toHaveCount(0);
     await expect(page.getByText(/context shell/i)).toHaveCount(0);
     await expect(page.getByText(/loop profile/i)).toHaveCount(0);
+    await expect(page.getByText(/scheduler/i)).toHaveCount(0);
+    await expect(page.getByText(/Memory & Personality/i)).toHaveCount(0);
+    await expect(page.getByText(/\bcouncil\b/i)).toHaveCount(0);
     await expect(page.getByText(/raw architecture controls/i)).toHaveCount(0);
     await expect(page.getByText(/contract/i)).toHaveCount(0);
     await expect(page.getByText(/vector/i)).toHaveCount(0);
@@ -462,16 +494,16 @@ async function mockOrganizationEntryApis(
                       ok: true,
                       data: {
                           action: requestBody.action ?? "plan_next_steps",
-                          request_label: "Plan next steps for this organization",
+                          request_label: "Run a quick strategy check",
                           headline: "Team Lead plan for Northstar Labs",
-                          summary: "Team Lead recommends a focused first delivery loop for this AI Organization.",
+                          summary: "Team Lead recommends a clear next move for Northstar Labs.",
                           priority_steps: [
                               "Align the first outcome with the AI Organization purpose.",
                               "Use the first Department as the routing layer for work.",
                           ],
                           suggested_follow_ups: [
-                              "Review my organization setup",
-                              "What should I focus on first?",
+                              "Review your organization setup",
+                              "Choose the first priority",
                           ],
                       },
                   },
@@ -859,7 +891,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(starterCard).toContainText("Departments");
         await expect(starterCard).toContainText("Specialists");
         await expect(starterCard).toContainText("AI Engine Settings");
-        await expect(starterCard).toContainText("Memory & Personality");
+        await expect(starterCard).toContainText("Learning & Context");
         await expect(page.getByText("Hidden until Advanced mode")).toBeVisible();
         await expect(page.getByText("Learn about AI Organizations")).toBeVisible();
         await expect(page.getByText("Inception")).toHaveCount(0);
@@ -892,16 +924,16 @@ test.describe("V8 AI Organization entry flow", () => {
                         ok: true,
                         data: {
                             action: "plan_next_steps",
-                            request_label: "Plan next steps for this organization",
+                            request_label: "Run a quick strategy check",
                             headline: "Team Lead plan for Northstar Labs",
-                            summary: "Team Lead recommends a focused first delivery loop for this AI Organization.",
+                            summary: "Team Lead recommends a clear next move for Northstar Labs.",
                             priority_steps: [
                                 "Align the first outcome with the AI Organization purpose.",
                                 "Use the first Department as the routing layer for work.",
                             ],
                             suggested_follow_ups: [
-                                "Review my organization setup",
-                                "What should I focus on first?",
+                                "Review your organization setup",
+                                "Choose the first priority",
                             ],
                         },
                     },
@@ -915,9 +947,10 @@ test.describe("V8 AI Organization entry flow", () => {
         await page.getByLabel("AI Organization name").fill(createdTemplateOrganization.name);
         await page.getByLabel("Purpose").fill(createdTemplateOrganization.purpose);
         await Promise.all([
-            page.waitForURL(/\/organizations\/org-123$/),
+            page.waitForResponse((response) => response.url().endsWith("/api/v1/organizations") && response.request().method() === "POST"),
             page.getByRole("button", { name: "Create AI Organization", exact: true }).last().click(),
         ]);
+        await openCreatedOrganization(page, createdTemplateOrganization.id);
         expect(capturedRequestBody).toEqual({
             name: createdTemplateOrganization.name,
             purpose: createdTemplateOrganization.purpose,
@@ -937,7 +970,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "What the Organization is Learning" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Learning & Context" })).toBeVisible();
         await expect(page.getByText("Advisor support")).toBeVisible();
         await expect(page.getByText("Department view")).toBeVisible();
         await expect(page.getByText("Department readiness review • Scheduled")).toBeVisible();
@@ -949,7 +982,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("2 items flagged")).toBeVisible();
         await expect(page.getByText("Platform Department is building a steadier execution lane for the organization.")).toBeVisible();
         await expect(page.getByText("Team: Platform Department").first()).toBeVisible();
-        await expect(page.getByText("Strong")).toBeVisible();
+        await expect(page.getByText("Strong", { exact: true })).toBeVisible();
         await expect(page.getByText("Planning review")).toBeVisible();
         await expect(page.getByText("Started from Engineering Starter")).toBeVisible();
         await expect(page.getByText("What this affects")).toHaveCount(2);
@@ -959,9 +992,9 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Tone", { exact: true })).toBeVisible();
         await expect(page.getByText("Structure", { exact: true })).toBeVisible();
         await expect(page.getByText("Verbosity", { exact: true })).toBeVisible();
-        await expect(page.getByText("Working tone")).toBeVisible();
+        await expect(page.getByText("Learning visibility")).toBeVisible();
         await expect(page.getByText("Context continuity")).toBeVisible();
-        await expect(page.getByRole("button", { name: /Plan next steps for this organization/i })).toBeVisible();
+        await expect(page.getByRole("button", { name: /Run a quick strategy check/i })).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Advisors" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Open Departments" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Automations" }).first()).toBeVisible();
@@ -1064,7 +1097,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Using Organization or Team Default: Warm & Supportive")).toBeVisible();
         await page.getByRole("button", { name: "Back to Team Lead" }).click();
 
-        await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();
+        await page.getByRole("button", { name: /Run a quick strategy check/i }).click();
         expect(capturedActionBody).toEqual({ action: "plan_next_steps" });
         await expect(page.getByText("Team Lead plan for Northstar Labs")).toBeVisible();
         await expect(page.getByText("Priority steps")).toBeVisible();
@@ -1095,9 +1128,10 @@ test.describe("V8 AI Organization entry flow", () => {
         await page.getByLabel("AI Organization name").fill(createdEmptyOrganization.name);
         await page.getByLabel("Purpose").fill(createdEmptyOrganization.purpose);
         await Promise.all([
-            page.waitForURL(/\/organizations\/org-456$/),
+            page.waitForResponse((response) => response.url().endsWith("/api/v1/organizations") && response.request().method() === "POST"),
             page.getByRole("button", { name: "Create AI Organization", exact: true }).last().click(),
         ]);
+        await openCreatedOrganization(page, createdEmptyOrganization.id);
         expect(capturedRequestBody).toEqual({
             name: createdEmptyOrganization.name,
             purpose: createdEmptyOrganization.purpose,
@@ -1117,15 +1151,15 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "What the Organization is Learning" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
-        await expect(page.getByText("Advisor roles appear here once they are added")).toBeVisible();
-        await expect(page.getByText("Add the first Department when ready")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Learning & Context" })).toBeVisible();
+        await expect(page.getByText("Review support appears here")).toBeVisible();
+        await expect(page.getByText("Try reviewing your organization setup").first()).toBeVisible();
         await expect(page.getByText("Reviews appear here")).toBeVisible();
-        await expect(page.getByText("No recent reviews yet")).toBeVisible();
+        await expect(page.getByText("No recent activity yet")).toBeVisible();
         await expect(page.getByText("No learning highlights yet")).toBeVisible();
         await expect(page.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeVisible();
         await expect(page.getByText("The current Response Style is clear & balanced, which shapes how the Team Lead presents tone, structure, and detail.")).toBeVisible();
-        await expect(page.getByText("Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.")).toBeVisible();
+        await expect(page.getByText("Learning & Context stay on a simple starter posture so the Team Lead keeps a steady working style while the organization gets established.")).toBeVisible();
         await expectNoForbiddenCopy(page);
 
         await saveScreenshot(page, testInfo, "empty-success-home.png");
@@ -1154,16 +1188,16 @@ test.describe("V8 AI Organization entry flow", () => {
                         ok: true,
                         data: {
                             action: requestBody.action ?? "plan_next_steps",
-                            request_label: "Plan next steps for this organization",
+                            request_label: "Run a quick strategy check",
                             headline: "Team Lead plan for Northstar Labs",
-                            summary: "Team Lead recommends a focused first delivery loop for this AI Organization.",
+                            summary: "Team Lead recommends a clear next move for Northstar Labs.",
                             priority_steps: [
                                 "Align the first outcome with the AI Organization purpose.",
                                 "Use the first Department as the routing layer for work.",
                             ],
                             suggested_follow_ups: [
-                                "Review my organization setup",
-                                "What should I focus on first?",
+                                "Review your organization setup",
+                                "Choose the first priority",
                             ],
                         },
                     },
@@ -1177,10 +1211,11 @@ test.describe("V8 AI Organization entry flow", () => {
         await page.getByLabel("AI Organization name").fill(createdTemplateOrganization.name);
         await page.getByLabel("Purpose").fill(createdTemplateOrganization.purpose);
         await Promise.all([
-            page.waitForURL(/\/organizations\/org-123$/),
+            page.waitForResponse((response) => response.url().endsWith("/api/v1/organizations") && response.request().method() === "POST"),
             page.getByRole("button", { name: "Create AI Organization", exact: true }).last().click(),
         ]);
-        await page.getByRole("button", { name: /Plan next steps for this organization/i }).click();
+        await openCreatedOrganization(page, createdTemplateOrganization.id);
+        await page.getByRole("button", { name: /Run a quick strategy check/i }).click();
 
         await expect(page.getByText("Team Lead guidance is unavailable", { exact: true })).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
@@ -1190,7 +1225,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Memory & Personality" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Learning & Context" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry Team Lead action" })).toBeVisible();
         await expectNoForbiddenCopy(page);
 

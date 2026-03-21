@@ -477,16 +477,16 @@ function setupOrganizationFetch(options?: {
                 ok: true,
                 data: {
                     action: "plan_next_steps",
-                    request_label: "Plan next steps for this organization",
+                    request_label: "Run a quick strategy check",
                     headline: "Team Lead plan for Northstar Labs",
-                    summary: "Team Lead recommends a focused first delivery loop.",
+                    summary: "Team Lead recommends a clear next move for Northstar Labs.",
                     priority_steps: [
                         "Align the first outcome with the AI Organization purpose.",
                         "Use the first Department as the routing layer for work.",
                     ],
                     suggested_follow_ups: [
-                        "Review my organization setup",
-                        "What should I focus on first?",
+                        "Review your organization setup",
+                        "Choose the first priority",
                     ],
                 },
             });
@@ -526,7 +526,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Learning & Context" })).toBeDefined();
         expect(screen.getByText("Advisor support")).toBeDefined();
         expect(screen.getByText("Department view")).toBeDefined();
         expect(screen.getByText("Your AI Organization is actively working through recent reviews, checks, and updates in the background.")).toBeDefined();
@@ -550,11 +550,11 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Tone")).toBeDefined();
         expect(screen.getByText("Structure")).toBeDefined();
         expect(screen.getByText("Verbosity")).toBeDefined();
-        expect(screen.getByText("Working tone")).toBeDefined();
+        expect(screen.getByText("Learning visibility")).toBeDefined();
         expect(screen.getByText("Context continuity")).toBeDefined();
-        expect(screen.getByRole("button", { name: /Plan next steps for this organization/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /What should I focus on first\?/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Review my organization setup/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Run a quick strategy check/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Choose the first priority/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Review your organization setup/i })).toBeDefined();
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Review Automations" }).length).toBeGreaterThan(0);
@@ -576,7 +576,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
                 ok: true,
                 data: {
                     action: body.action,
-                    request_label: "Review my organization setup",
+                    request_label: "Review your organization setup",
                     headline: "Organization setup review for Northstar Labs",
                     summary: "Team Lead is reviewing the current AI Organization shape.",
                     priority_steps: [
@@ -584,8 +584,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
                         "Departments: 1 department ready.",
                     ],
                     suggested_follow_ups: [
-                        "Plan next steps for this organization",
-                        "What should I focus on first?",
+                        "Run a quick strategy check",
+                        "Choose the first priority",
                     ],
                 },
             }),
@@ -596,7 +596,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByText("Work with the Team Lead")).toBeDefined();
-        fireEvent.click(screen.getByRole("button", { name: /Review my organization setup/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Review your organization setup/i }));
         expect(await screen.findByText("Organization setup review for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
         expect(screen.getByText("Northstar Labs")).toBeDefined();
@@ -606,7 +606,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Learning & Context" })).toBeDefined();
     });
 
     it("preserves the organization context when a Team Lead action fails and then succeeds on retry", async () => {
@@ -621,16 +621,16 @@ describe("OrganizationPage (/organizations/[id])", () => {
                     ok: true,
                     data: {
                         action: body.action,
-                        request_label: "Plan next steps for this organization",
+                        request_label: "Run a quick strategy check",
                         headline: "Team Lead plan for Northstar Labs",
-                        summary: "Team Lead recommends a focused first delivery loop.",
+                        summary: "Team Lead recommends a clear next move for Northstar Labs.",
                         priority_steps: [
                             "Align the first outcome with the AI Organization purpose.",
                             "Use the first Department as the routing layer for work.",
                         ],
                         suggested_follow_ups: [
-                            "Review my organization setup",
-                            "What should I focus on first?",
+                            "Review your organization setup",
+                            "Choose the first priority",
                         ],
                     },
                 });
@@ -642,7 +642,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByText("Work with the Team Lead")).toBeDefined();
-        fireEvent.click(screen.getByRole("button", { name: /Plan next steps for this organization/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Run a quick strategy check/i }));
 
         expect(await screen.findByText("Team Lead guidance is unavailable")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
@@ -665,8 +665,9 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByRole("heading", { name: "Recent Activity" })).toBeDefined();
-        expect(screen.getByText("No recent reviews yet")).toBeDefined();
-        expect(screen.getByText("Activity will appear here as your AI Organization completes its first checks and updates.")).toBeDefined();
+        expect(screen.getByText("No recent activity yet")).toBeDefined();
+        expect(screen.getByText("This is where reviews, checks, and updates will appear as your AI Organization starts operating.")).toBeDefined();
+        expect(screen.getByText("Take a guided Team Lead action to start creating visible movement here.")).toBeDefined();
     });
 
     it("shows Activity unavailable without breaking the workspace when recent updates cannot be loaded", async () => {
@@ -681,6 +682,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByRole("heading", { name: "Recent Activity" })).toBeDefined();
         expect(screen.getByText("Activity unavailable")).toBeDefined();
         expect(screen.getByText("Recent reviews and updates are not available right now. The Team Lead workspace is still ready.")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Retry Recent Activity" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Team Lead for Northstar Labs" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
@@ -697,7 +699,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
         expect(screen.getByText("No learning highlights yet")).toBeDefined();
-        expect(screen.getByText("As the organization works, new themes and improvements will appear here in plain language.")).toBeDefined();
+        expect(screen.getByText("This is where recurring patterns, improvements, and stronger working habits will appear in plain language.")).toBeDefined();
+        expect(screen.getByText("Use the Team Lead guidance and early reviews to give the organization enough signal to learn from.")).toBeDefined();
     });
 
     it("shows learning updates unavailable without breaking the workspace when insights cannot be loaded", async () => {
@@ -712,6 +715,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
         expect(screen.getByText("Learning updates unavailable")).toBeDefined();
         expect(screen.getByText("Recent learning highlights are not available right now. The Team Lead workspace is still ready.")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Retry Learning" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Team Lead for Northstar Labs" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
@@ -738,6 +742,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getAllByText("How it runs").length).toBeGreaterThan(0);
         expect(screen.getAllByText("Recent outcomes").length).toBeGreaterThan(0);
         expect(screen.getByText("Runs every minute and also after organization setup, Team Lead guidance, AI Engine changes, or Response Style changes.")).toBeDefined();
+        expect(screen.getByText("This system runs ongoing reviews and checks to help your organization improve over time.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
@@ -761,6 +766,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Automations unavailable")).toBeDefined();
         fireEvent.click(screen.getAllByRole("button", { name: "Review Automations" })[0]);
         expect(await screen.findByText("Reviews and checks are temporarily unavailable here. The Team Lead workspace is still ready.")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Retry Automations" })).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
     });
@@ -1198,14 +1204,14 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Memory & Personality" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Learning & Context" })).toBeDefined();
         expect(screen.getAllByText("Inspect only").length).toBeGreaterThan(0);
-        expect(screen.getByText("Advisor roles appear here once they are added")).toBeDefined();
-        expect(screen.getByText("Add the first Department when ready")).toBeDefined();
+        expect(screen.getByText("Review support appears here")).toBeDefined();
+        expect(screen.getAllByText("Try reviewing your organization setup").length).toBeGreaterThan(0);
         expect(screen.getByText("Reviews appear here")).toBeDefined();
         expect(screen.getByText("Started from Empty")).toBeDefined();
         expect(screen.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeDefined();
-        expect(screen.getByText("Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.")).toBeDefined();
+        expect(screen.getByText("Learning & Context stay on a simple starter posture so the Team Lead keeps a steady working style while the organization gets established.")).toBeDefined();
     });
 
     it("offers retry guidance when the organization home cannot be loaded", async () => {

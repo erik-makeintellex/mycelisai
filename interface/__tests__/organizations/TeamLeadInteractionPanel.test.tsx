@@ -22,9 +22,10 @@ describe("TeamLeadInteractionPanel", () => {
         );
 
         expect(screen.getByText("Work with the Team Lead")).toBeDefined();
-        expect(screen.getByRole("button", { name: /Plan next steps for this organization/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /What should I focus on first\?/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Review my organization setup/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Run a quick strategy check/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Choose the first priority/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Review your organization setup/i })).toBeDefined();
+        expect(screen.getByText(/Each one updates this workspace immediately/i)).toBeDefined();
         expect(screen.queryByText(/chat/i)).toBeNull();
         expect(screen.queryByText(/context shell/i)).toBeNull();
         expect(screen.queryByText(/bounded slice/i)).toBeNull();
@@ -35,16 +36,16 @@ describe("TeamLeadInteractionPanel", () => {
             ok: true,
             data: {
                 action: "plan_next_steps",
-                request_label: "Plan next steps for this organization",
+                request_label: "Run a quick strategy check",
                 headline: "Team Lead plan for Northstar Labs",
-                summary: "Team Lead recommends a focused first delivery loop.",
+                summary: "Team Lead recommends a clear next move for Northstar Labs.",
                 priority_steps: [
                     "Align the first outcome with the AI Organization purpose.",
                     "Use the first Department as the routing layer for work.",
                 ],
                 suggested_follow_ups: [
-                    "Review my organization setup",
-                    "What should I focus on first?",
+                    "Review your organization setup",
+                    "Choose the first priority",
                 ],
             },
         }));
@@ -57,7 +58,7 @@ describe("TeamLeadInteractionPanel", () => {
             />,
         );
 
-        fireEvent.click(screen.getByRole("button", { name: /Plan next steps for this organization/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Run a quick strategy check/i }));
 
         await waitFor(() => {
             expect(mockFetch).toHaveBeenCalledWith(
@@ -71,7 +72,7 @@ describe("TeamLeadInteractionPanel", () => {
         expect(await screen.findByText("Team Lead plan for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
         expect(screen.getByText("Keep moving with")).toBeDefined();
-        expect(screen.getAllByText("Review my organization setup").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Review your organization setup").length).toBeGreaterThan(0);
     });
 
     it("shows a loading state and prevents duplicate action submission while guidance is loading", async () => {
@@ -91,7 +92,7 @@ describe("TeamLeadInteractionPanel", () => {
             />,
         );
 
-        const actionButton = screen.getByRole("button", { name: /Plan next steps for this organization/i });
+        const actionButton = screen.getByRole("button", { name: /Run a quick strategy check/i });
         fireEvent.click(actionButton);
         fireEvent.click(actionButton);
 
@@ -105,11 +106,11 @@ describe("TeamLeadInteractionPanel", () => {
                     ok: true,
                     data: {
                         action: "plan_next_steps",
-                        request_label: "Plan next steps for this organization",
+                        request_label: "Run a quick strategy check",
                         headline: "Team Lead plan for Northstar Labs",
-                        summary: "Team Lead recommends a focused first delivery loop.",
+                        summary: "Team Lead recommends a clear next move for Northstar Labs.",
                         priority_steps: ["Align the first outcome with the AI Organization purpose."],
-                        suggested_follow_ups: ["Review my organization setup"],
+                        suggested_follow_ups: ["Review your organization setup"],
                     },
                 }),
                 { status: 200 },
@@ -129,11 +130,11 @@ describe("TeamLeadInteractionPanel", () => {
                 summary: "{debug:true}",
                 priority_steps: [
                     "debug: internal trace",
-                    "Turn Northstar Labs into a focused first delivery loop.",
+                    "Turn Northstar Labs into a clear next move.",
                 ],
                 suggested_follow_ups: [
                     "contract",
-                    "What should I focus on first?",
+                    "Choose the first priority",
                 ],
             },
         }));
@@ -146,11 +147,11 @@ describe("TeamLeadInteractionPanel", () => {
             />,
         );
 
-        fireEvent.click(screen.getByRole("button", { name: /Plan next steps for this organization/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Run a quick strategy check/i }));
 
         expect(await screen.findByText("Team Lead for Northstar Labs guidance for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Team Lead for Northstar Labs has guidance ready for Northstar Labs.")).toBeDefined();
-        expect(screen.getByText("Turn Northstar Labs into a focused first delivery loop.")).toBeDefined();
+        expect(screen.getByText("Turn Northstar Labs into a clear next move.")).toBeDefined();
         expect(screen.queryByText(/debug/i)).toBeNull();
         expect(screen.queryByText(/^contract$/i)).toBeNull();
     });
@@ -166,7 +167,7 @@ describe("TeamLeadInteractionPanel", () => {
             />,
         );
 
-        fireEvent.click(screen.getByRole("button", { name: /What should I focus on first\?/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Choose the first priority/i }));
 
         expect(await screen.findByText("Team Lead guidance is unavailable")).toBeDefined();
         expect(screen.getByRole("button", { name: "Retry Team Lead action" })).toBeDefined();
@@ -181,7 +182,7 @@ describe("TeamLeadInteractionPanel", () => {
                 ok: true,
                 data: {
                     action: "focus_first",
-                    request_label: "What should I focus on first?",
+                    request_label: "Choose the first priority",
                     headline: "First focus for Northstar Labs",
                     summary: "Start by confirming the first outcome this AI Organization should deliver.",
                     priority_steps: [
@@ -189,8 +190,8 @@ describe("TeamLeadInteractionPanel", () => {
                         "Use 1 Advisor when the Team Lead needs review or decision support.",
                     ],
                     suggested_follow_ups: [
-                        "Plan next steps for this organization",
-                        "Review my organization setup",
+                        "Run a quick strategy check",
+                        "Review your organization setup",
                     ],
                 },
             }));
@@ -203,7 +204,7 @@ describe("TeamLeadInteractionPanel", () => {
             />,
         );
 
-        fireEvent.click(screen.getByRole("button", { name: /What should I focus on first\?/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Choose the first priority/i }));
         expect(await screen.findByText("Team Lead guidance is unavailable")).toBeDefined();
 
         fireEvent.click(screen.getByRole("button", { name: "Retry Team Lead action" }));

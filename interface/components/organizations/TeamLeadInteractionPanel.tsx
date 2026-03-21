@@ -10,18 +10,18 @@ type RequestState = "idle" | "loading" | "ready" | "error";
 const GUIDED_ACTIONS: Array<{ action: TeamLeadGuidedAction; label: string; detail: string }> = [
     {
         action: "plan_next_steps",
-        label: "Plan next steps for this organization",
-        detail: "Ask the Team Lead for a focused first plan tied to the current AI Organization.",
+        label: "Run a quick strategy check",
+        detail: "See the next priorities the Team Lead would set so the workspace starts moving in a visible direction.",
     },
     {
         action: "focus_first",
-        label: "What should I focus on first?",
-        detail: "Let the Team Lead surface the first operating priority before work fans out.",
+        label: "Choose the first priority",
+        detail: "Ask the Team Lead to identify the first move most likely to create visible progress across the workspace.",
     },
     {
         action: "review_setup",
-        label: "Review my organization setup",
-        detail: "Check whether Advisors, Departments, and Specialists are ready for the next move.",
+        label: "Review your organization setup",
+        detail: "Check whether Advisors, Departments, and Specialists are ready and see what to inspect next.",
     },
 ];
 
@@ -120,7 +120,7 @@ export default function TeamLeadInteractionPanel({
                     <div>
                         <p className="text-sm font-semibold text-cortex-text-main">Choose a guided Team Lead action</p>
                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                            The Team Lead will return structured guidance for {organizationName} with clear steps and follow-through suggestions.
+                            These starting options are here to help you get oriented quickly. Each one updates this workspace immediately with clear guidance and helps the rest of the organization start showing activity, structure, or learning over time.
                         </p>
                     </div>
                 )}
@@ -234,27 +234,27 @@ function defaultPrioritySteps(action: TeamLeadGuidedAction, organizationName: st
         case "focus_first":
             return [
                 `Confirm the first priority for ${organizationName}.`,
-                "Keep the Team Lead as the working counterpart while the next step is clarified.",
+                "Use that priority to create the first visible movement across the workspace.",
             ];
         case "review_setup":
             return [
                 "Check whether Advisors, Departments, and Specialists are ready for the next move.",
-                "Confirm the organization shape before expanding the workflow.",
+                "Open the parts of the organization that need attention first.",
             ];
         case "plan_next_steps":
         default:
             return [
-                `Turn ${organizationName} into a focused first delivery loop.`,
-                "Use the Team Lead guidance to choose the next concrete move.",
+                `Turn ${organizationName} into a clear next move.`,
+                "Use the Team Lead guidance to choose the next action that will show up across the workspace.",
             ];
     }
 }
 
 function defaultFollowUps(action: TeamLeadGuidedAction) {
     const fallbacks = [
-        "Plan next steps for this organization",
-        "What should I focus on first?",
-        "Review my organization setup",
+        "Run a quick strategy check",
+        "Choose the first priority",
+        "Review your organization setup",
     ];
     return fallbacks.filter((label) => label !== defaultRequestLabel(action));
 }
@@ -299,11 +299,15 @@ function containsForbiddenGuidanceCopy(value: string) {
         /context shell/i,
         /raw architecture controls/i,
         /\bcontract\b/i,
+        /\bloop\b/i,
+        /scheduler/i,
         /inception/i,
         /soma kernel/i,
-        /central council/i,
+        /\bcouncil\b/i,
         /provider policy/i,
         /identity\s*\/\s*continuity/i,
+        /memory promotion/i,
+        /pgvector/i,
     ].some((pattern) => pattern.test(value));
 }
 

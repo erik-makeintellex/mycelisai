@@ -105,11 +105,13 @@ V8.1 defines the MVP release we are aligning implementation to now: a Team Lead-
 
 Included in the V8.1 release target:
 - AI Organization creation and Team Lead-first workspace flow
+- guided first-run Team Lead actions that help a new operator choose a visible next step quickly
 - organization, department, advisor, and role-type visibility in operator language
 - bundle-driven startup truth with policy-bounded inheritance
 - bounded AI Engine and Response Style controls
 - read-only Automations visibility
 - read-only learning visibility
+- intentional empty states, retry guidance, and partial-failure-safe workspace panels
 - Loop Profiles, Runtime Capabilities, semantic continuity, and Procedure / Skill Sets defined as architecture truth even where implementation is still partial
 
 Excluded from the V8.1 release target:
@@ -135,6 +137,11 @@ Use that file for:
 
 Do not duplicate the full live checklist in this README. Keep the implementation truth in the state file and update it in the same slice as any architecture, release-target, or UI-surface change.
 
+Current operator experience summary:
+- a new operator lands in AI Organization setup, not a blank assistant thread
+- the Team Lead always presents guided starting actions instead of a dead-end blank state
+- Recent Activity, Automations, Learning, Advisors, and Departments keep readable empty, loading, and failure states without collapsing the workspace
+
 ## Architecture Terms To Operator Terms
 
 Use these translations consistently:
@@ -148,7 +155,7 @@ Use these translations consistently:
 | Agent Instances / Agent Types | Specialists / Roles |
 | Provider Policy / Routing | AI Engine Settings |
 | Response Contract | Response Style |
-| Identity / Continuity State | Memory & Personality |
+| Identity / Continuity State | Learning & Context |
 | Loop Profiles | Automations |
 | Learning Loops / reviewed learning | What the Organization is Learning |
 
@@ -253,6 +260,13 @@ Suggested development build configuration by platform:
 - Windows: keep repo work on a spacious non-system drive when possible, use `uv run inv cache.apply-user-policy` so uv/pip/npm/go/Playwright stop drifting back onto `C:`, and treat Docker Desktop / WSL storage separately from repo-managed cache cleanup
 - Linux/macOS: keep `MYCELIS_PROJECT_CACHE_ROOT` on a volume with headroom if the default workspace disk is small, and export user-level cache roots only when you need tool caches off your default home volume; the repo task path already keeps build/test/browser churn inside `workspace/tool-cache`
 - All platforms: prefer `uv run inv ...` over raw tool commands for repeated build/test cycles, because the task path applies the managed cache roots, disables low-value telemetry writes, and sweeps leftover Interface workers that can hold build outputs open
+
+Deployment guidance by host architecture:
+- Windows x86_64: supported as the main local development and operator host; prefer repo-managed caches on a non-system drive and treat Docker Desktop / WSL storage as a separate disk budget
+- Linux x86_64: preferred for longer-running single-host or containerized deployments when you want the cleanest service-host posture for Core, Postgres, NATS, and chart-driven deployment
+- Linux arm64: use for lighter edge/control-host roles or remote-provider-connected deployments; do not assume local heavyweight model serving on small ARM hosts unless you have verified headroom
+- Mixed-architecture deployments: keep runtime truth bundle-driven, use env overrides only for deployment-time provider/profile/media wiring, and point smaller hosts at remote Ollama or hosted providers instead of reintroducing host-local routing hacks
+- Build rule: binaries, images, and provider endpoints must be selected for the target host architecture; do not assume a Windows dev build or amd64 image is the correct artifact for an arm64 deployment
 
 ## Development Contract
 

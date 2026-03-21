@@ -101,6 +101,8 @@ describe("Dashboard Page (V8 AI Organization entry flow)", () => {
         expect(screen.getByText("AI Organization Setup")).toBeDefined();
         expect(screen.getByRole("button", { name: "Explore Templates" })).toBeDefined();
         expect(screen.getByRole("button", { name: "Start Empty" })).toBeDefined();
+        expect(screen.getByText("Learning & Context")).toBeDefined();
+        expect(screen.queryByText("Memory & Personality")).toBeNull();
         expect(screen.queryByText("V8 Entry Flow")).toBeNull();
         expect(screen.queryByText(/contract/i)).toBeNull();
         expect(screen.queryByText(/context shell/i)).toBeNull();
