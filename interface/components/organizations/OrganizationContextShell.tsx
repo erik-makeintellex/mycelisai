@@ -57,7 +57,7 @@ const AI_ENGINE_OPTIONS: Array<{
         id: "fast_lightweight",
         label: "Fast & Lightweight",
         description: "Keeps responses quick and planning lighter for rapid iteration.",
-        goodFor: "Best for quick loops, check-ins, and lighter day-to-day coordination.",
+        goodFor: "Best for quick reviews, check-ins, and lighter day-to-day coordination.",
     },
     {
         id: "deep_planning",
@@ -97,7 +97,7 @@ const RESPONSE_CONTRACT_OPTIONS: Array<{
         toneStyle: "Focused, efficient, and low-friction.",
         structure: "Keeps responses short and action-led unless more detail is needed.",
         verbosity: "Intentionally brief with only the highest-signal details.",
-        bestFor: "Best for quick decisions, status checks, and fast-moving execution loops.",
+        bestFor: "Best for quick decisions, status checks, and fast-moving execution work.",
     },
     {
         id: "warm_supportive",
@@ -138,12 +138,15 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [recentActivity, setRecentActivity] = useState<OrganizationLoopActivityItem[]>([]);
     const [activityLoading, setActivityLoading] = useState(true);
     const [activityError, setActivityError] = useState<string | null>(null);
+    const [activityReloadToken, setActivityReloadToken] = useState(0);
     const [automations, setAutomations] = useState<OrganizationAutomationItem[]>([]);
     const [automationsLoading, setAutomationsLoading] = useState(true);
     const [automationsError, setAutomationsError] = useState<string | null>(null);
+    const [automationsReloadToken, setAutomationsReloadToken] = useState(0);
     const [learningInsights, setLearningInsights] = useState<OrganizationLearningInsightItem[]>([]);
     const [learningInsightsLoading, setLearningInsightsLoading] = useState(true);
     const [learningInsightsError, setLearningInsightsError] = useState<string | null>(null);
+    const [learningInsightsReloadToken, setLearningInsightsReloadToken] = useState(0);
 
     useEffect(() => {
         let cancelled = false;
@@ -219,7 +222,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             cancelled = true;
             window.clearInterval(intervalId);
         };
-    }, [organizationId]);
+    }, [organizationId, activityReloadToken]);
 
     useEffect(() => {
         let cancelled = false;
@@ -261,7 +264,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             cancelled = true;
             window.clearInterval(intervalId);
         };
-    }, [organizationId]);
+    }, [organizationId, automationsReloadToken]);
 
     useEffect(() => {
         let cancelled = false;
@@ -303,7 +306,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             cancelled = true;
             window.clearInterval(intervalId);
         };
-    }, [organizationId]);
+    }, [organizationId, learningInsightsReloadToken]);
 
     useEffect(() => {
         if (activeDetailView !== "aiEngine") {
@@ -744,7 +747,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             <div className="mt-6">
                                 <p className="text-sm font-medium text-cortex-text-main">What I can help with</p>
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                    <HelpPill label="Plan the next steps" />
+                                    <HelpPill label="Run a quick strategy check" />
                                     <ActionPill
                                         label="Review Advisors"
                                         isActive={activeDetailView === "advisors"}
@@ -777,6 +780,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 automations={automations}
                                 automationsLoading={automationsLoading}
                                 automationsError={automationsError}
+                                onRetryAutomations={() => setAutomationsReloadToken((value) => value + 1)}
                                 isAIEngineSelectorOpen={isAIEngineSelectorOpen}
                                 selectedAIEngineProfile={selectedAIEngineProfile}
                                 aiEngineUpdatePending={aiEngineUpdatePending}
@@ -900,12 +904,14 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             items={recentActivity}
                             loading={activityLoading}
                             error={activityError}
+                            onRetry={() => setActivityReloadToken((value) => value + 1)}
                         />
 
                         <LearningVisibilityPanel
                             items={learningInsights}
                             loading={learningInsightsLoading}
                             error={learningInsightsError}
+                            onRetry={() => setLearningInsightsReloadToken((value) => value + 1)}
                         />
 
                         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -934,11 +940,11 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 />
                                 <InspectOnlySummary
                                     icon={<BrainCircuit className="h-4 w-4" />}
-                                    title="Memory & Personality"
+                                    title="Learning & Context"
                                     countLabel="Inspect only"
-                                    summary={memoryPersonalitySummary(organization.memory_personality_summary)}
+                                    summary={learningContextSummary(organization.memory_personality_summary)}
                                     supportLabel="What this affects"
-                                    items={memoryPersonalitySupportItems(organization.memory_personality_summary)}
+                                    items={learningContextSupportItems(organization.memory_personality_summary)}
                                 />
                             </div>
                             <div className="mt-5">
@@ -964,7 +970,7 @@ function formatConfiguredCount(count: number, label: string) {
 
 function advisorSummary(count: number, teamLeadName: string) {
     if (count === 0) {
-        return `${teamLeadName} is handling planning and review directly until Advisors are added.`;
+        return `${teamLeadName} is handling planning and review directly for now. Advisor support will appear here when the organization is ready for a second set of eyes.`;
     }
     if (count === 1) {
         return `1 Advisor is ready to help ${teamLeadName} with review, priorities, and decision support.`;
@@ -974,14 +980,18 @@ function advisorSummary(count: number, teamLeadName: string) {
 
 function advisorSupportItems(count: number) {
     if (count === 0) {
-        return ["Inspect only for now", "Advisor roles appear here once they are added"];
+        return [
+            "Review support appears here",
+            "Advisors help with decisions and checks",
+            "Try reviewing your organization setup",
+        ];
     }
     return ["Planning review", "Decision support", "Priority checks"].slice(0, Math.max(2, Math.min(count + 1, 3)));
 }
 
 function departmentSummary(count: number, specialistCount: number, teamLeadName: string) {
     if (count === 0) {
-        return `${teamLeadName} can still shape the first operating lane before Departments are configured.`;
+        return `${teamLeadName} can still shape the first working lane before Departments are configured. Departments will appear here once the organization has a clear first focus.`;
     }
     return `${count} Departments and ${formatConfiguredCount(specialistCount, "Specialist").toLowerCase()} are visible here so ${teamLeadName} can work with a clear delivery structure.`;
 }
@@ -992,7 +1002,7 @@ function departmentSupportItems(organization: OrganizationHomePayload) {
             ? `Started from ${organization.template_name}`
             : "Started from Empty",
         formatConfiguredCount(organization.specialist_count, "Specialist"),
-        organization.department_count > 0 ? "Inspect only for now" : "Add the first Department when ready",
+        organization.department_count > 0 ? "Open the current team structure" : "Try reviewing your organization setup",
     ];
     return items;
 }
@@ -1021,13 +1031,14 @@ function automationStatusLabel(loading: boolean, error: string | null) {
 }
 
 function automationSummary(count: number, teamLeadName: string) {
+    const mentalModel = "This system runs ongoing reviews and checks to help your organization improve over time.";
     if (count === 0) {
-        return `${teamLeadName} will show ongoing reviews, checks, and watchers here as this AI Organization becomes more active.`;
+        return `${mentalModel} ${teamLeadName} will show those ongoing reviews and checks here as this AI Organization becomes more active.`;
     }
     if (count === 1) {
-        return `1 Automation is visible here so ${teamLeadName} can explain what ongoing review is supporting this AI Organization.`;
+        return `${mentalModel} 1 Automation is visible here so ${teamLeadName} can explain what ongoing review is supporting this AI Organization.`;
     }
-    return `${count} Automations are visible here so ${teamLeadName} can explain what ongoing reviews and checks are supporting this AI Organization.`;
+    return `${mentalModel} ${count} Automations are visible here so ${teamLeadName} can explain what ongoing reviews and checks are supporting this AI Organization.`;
 }
 
 function automationSupportItems(items: OrganizationAutomationItem[], loading: boolean, error: string | null) {
@@ -1238,19 +1249,19 @@ function responseContractDetailItems(summary: string) {
     ];
 }
 
-function memoryPersonalitySummary(summary: string) {
+function learningContextSummary(summary: string) {
     const normalized = summary.trim();
     if (!normalized || normalized === "Set up later in Advanced mode") {
-        return "Memory & Personality stay on a simple starter posture so the Team Lead keeps a consistent tone and working style.";
+        return "Learning & Context stay on a simple starter posture so the Team Lead keeps a steady working style while the organization gets established.";
     }
-    return `Memory & Personality are currently ${normalized.toLowerCase()}, which shapes how the Team Lead remembers context and presents guidance.`;
+    return `Learning & Context are currently ${normalized.toLowerCase()}, which shapes how the Team Lead carries context forward and keeps guidance grounded.`;
 }
 
-function memoryPersonalitySupportItems(summary: string) {
+function learningContextSupportItems(summary: string) {
     if (summary.trim() === "Set up later in Advanced mode") {
-        return ["Working tone", "Context continuity", "Inspect only for now"];
+        return ["Learning visibility", "Context continuity", "Inspect only for now"];
     }
-    return [summary, "Working tone", "Context continuity"];
+    return [summary, "Learning visibility", "Context continuity"];
 }
 
 function toTitleCase(value: string) {
@@ -1373,6 +1384,7 @@ function WorkspaceDetailView({
     automations,
     automationsLoading,
     automationsError,
+    onRetryAutomations,
     isAIEngineSelectorOpen,
     selectedAIEngineProfile,
     aiEngineUpdatePending,
@@ -1424,6 +1436,7 @@ function WorkspaceDetailView({
     automations: OrganizationAutomationItem[];
     automationsLoading: boolean;
     automationsError: string | null;
+    onRetryAutomations: () => void;
     isAIEngineSelectorOpen: boolean;
     selectedAIEngineProfile: OrganizationAIEngineProfileId | null;
     aiEngineUpdatePending: boolean;
@@ -1485,7 +1498,7 @@ function WorkspaceDetailView({
             : view === "departments"
               ? `${teamLeadName} can inspect the current Department structure in ${organization.name} here without leaving the workspace.`
               : view === "automations"
-                ? `${teamLeadName} can inspect the ongoing reviews, checks, and watchers that support ${organization.name} here without leaving the workspace.`
+                ? `${teamLeadName} can inspect the ongoing reviews and checks that support ${organization.name} here without leaving the workspace.`
               : view === "aiEngine"
                 ? `${teamLeadName} can inspect the current AI Engine Settings in ${organization.name} here without leaving the workspace.`
                 : `${teamLeadName} can inspect the current Response Style in ${organization.name} here without leaving the workspace.`;
@@ -1509,11 +1522,11 @@ function WorkspaceDetailView({
     const automationItems = view === "automations" ? automations : [];
     const emptyStateMessage =
         view === "advisors"
-            ? `${teamLeadName} is handling review directly until Advisors are added.`
+            ? "Advisor support will appear here when the Team Lead starts working with additional review help. Try reviewing your organization setup to decide where that support is needed first."
             : view === "departments"
-              ? `${teamLeadName} can still shape the first operating lane before Departments are added.`
+              ? "Departments are the working lanes for this organization. They will appear here once the first lane is defined. Try reviewing your organization setup or running a quick strategy check."
               : view === "automations"
-                ? "Automations will appear here as ongoing reviews, checks, and watchers become available for this AI Organization."
+                ? "Automations will appear here as ongoing reviews and checks become available for this AI Organization. Run a quick strategy check or review your organization setup to start creating visible signals."
               : view === "aiEngine"
                 ? `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`
                 : `${teamLeadName} is still using the organization-wide Response Style until a different guided profile is selected here.`;
@@ -1774,6 +1787,7 @@ function WorkspaceDetailView({
                     items={automationItems}
                     loading={automationsLoading}
                     error={automationsError}
+                    onRetry={onRetryAutomations}
                 />
             ) : items.length > 0 ? (
                 <div className="mt-5 grid gap-3">
@@ -2344,16 +2358,30 @@ function AutomationDetailPanel({
     items,
     loading,
     error,
+    onRetry,
 }: {
     items: OrganizationAutomationItem[];
     loading: boolean;
     error: string | null;
+    onRetry: () => void;
 }) {
+    const guidanceText = "This system runs ongoing reviews and checks to help your organization improve over time.";
+
     if (error) {
         return (
             <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                <p className="font-medium text-cortex-text-main">How Automations help</p>
+                <p className="mt-2 leading-6">{guidanceText}</p>
                 <p className="font-medium text-cortex-text-main">Automations unavailable</p>
                 <p className="mt-2 leading-6">Reviews and checks are temporarily unavailable here. The Team Lead workspace is still ready.</p>
+                <button
+                    type="button"
+                    onClick={onRetry}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                >
+                    <RefreshCcw className="h-4 w-4" />
+                    Retry Automations
+                </button>
             </div>
         );
     }
@@ -2361,6 +2389,8 @@ function AutomationDetailPanel({
     if (loading && items.length === 0) {
         return (
             <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                <p className="font-medium text-cortex-text-main">How Automations help</p>
+                <p className="mt-2 leading-6">{guidanceText}</p>
                 <p className="font-medium text-cortex-text-main">Checking active reviews</p>
                 <p className="mt-2 leading-6">The latest Automations will appear here shortly.</p>
             </div>
@@ -2370,14 +2400,21 @@ function AutomationDetailPanel({
     if (items.length === 0) {
         return (
             <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                <p className="font-medium text-cortex-text-main">How Automations help</p>
+                <p className="mt-2 leading-6">{guidanceText}</p>
                 <p className="font-medium text-cortex-text-main">No Automations visible yet</p>
-                <p className="mt-2 leading-6">Reviews, checks, and watchers will appear here as this AI Organization adds ongoing activity.</p>
+                <p className="mt-2 leading-6">Reviews and checks will appear here as this AI Organization begins operating.</p>
+                <p className="mt-2 leading-6">Try reviewing your organization setup or running a quick strategy check to create the first visible signals.</p>
             </div>
         );
     }
 
     return (
         <div className="mt-5 grid gap-4">
+            <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
+                <p className="font-medium text-cortex-text-main">How Automations help</p>
+                <p className="mt-2 leading-6">{guidanceText}</p>
+            </div>
             {items.map((item) => (
                 <div key={item.id} className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -2438,10 +2475,12 @@ function RecentActivityPanel({
     items,
     loading,
     error,
+    onRetry,
 }: {
     items: OrganizationLoopActivityItem[];
     loading: boolean;
     error: string | null;
+    onRetry: () => void;
 }) {
     const visibleItems = items.slice(0, 8);
 
@@ -2463,6 +2502,14 @@ function RecentActivityPanel({
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Activity unavailable</p>
                     <p className="mt-1 leading-6">Recent reviews and updates are not available right now. The Team Lead workspace is still ready.</p>
+                    <button
+                        type="button"
+                        onClick={onRetry}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                    >
+                        <RefreshCcw className="h-4 w-4" />
+                        Retry Recent Activity
+                    </button>
                 </div>
             )}
 
@@ -2475,8 +2522,9 @@ function RecentActivityPanel({
 
             {!error && !loading && visibleItems.length === 0 && (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                    <p className="font-medium text-cortex-text-main">No recent reviews yet</p>
-                    <p className="mt-1 leading-6">Activity will appear here as your AI Organization completes its first checks and updates.</p>
+                    <p className="font-medium text-cortex-text-main">No recent activity yet</p>
+                    <p className="mt-1 leading-6">This is where reviews, checks, and updates will appear as your AI Organization starts operating.</p>
+                    <p className="mt-1 leading-6">Take a guided Team Lead action to start creating visible movement here.</p>
                 </div>
             )}
 
@@ -2506,10 +2554,12 @@ function LearningVisibilityPanel({
     items,
     loading,
     error,
+    onRetry,
 }: {
     items: OrganizationLearningInsightItem[];
     loading: boolean;
     error: string | null;
+    onRetry: () => void;
 }) {
     const visibleItems = items.slice(0, 6);
 
@@ -2522,7 +2572,7 @@ function LearningVisibilityPanel({
                 <div>
                     <h2 className="text-xl font-semibold text-cortex-text-main">What the Organization is Learning</h2>
                     <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
-                        See the recurring improvements and themes your AI Organization is picking up across recent work.
+                        See the recurring improvements and themes your AI Organization is picking up across recent work, and why they matter for what happens next.
                     </p>
                 </div>
             </div>
@@ -2531,6 +2581,14 @@ function LearningVisibilityPanel({
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Learning updates unavailable</p>
                     <p className="mt-1 leading-6">Recent learning highlights are not available right now. The Team Lead workspace is still ready.</p>
+                    <button
+                        type="button"
+                        onClick={onRetry}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                    >
+                        <RefreshCcw className="h-4 w-4" />
+                        Retry Learning
+                    </button>
                 </div>
             )}
 
@@ -2544,7 +2602,8 @@ function LearningVisibilityPanel({
             {!error && !loading && visibleItems.length === 0 && (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">No learning highlights yet</p>
-                    <p className="mt-1 leading-6">As the organization works, new themes and improvements will appear here in plain language.</p>
+                    <p className="mt-1 leading-6">This is where recurring patterns, improvements, and stronger working habits will appear in plain language.</p>
+                    <p className="mt-1 leading-6">Use the Team Lead guidance and early reviews to give the organization enough signal to learn from.</p>
                 </div>
             )}
 
@@ -2555,9 +2614,13 @@ function LearningVisibilityPanel({
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <p className="text-sm font-semibold text-cortex-text-main">{item.summary}</p>
+                                        <p className="text-sm font-semibold text-cortex-text-main">{learningHeadline(item)}</p>
                                         <LearningStrengthBadge strength={item.strength} />
                                     </div>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{item.summary}</p>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                        <span className="font-medium text-cortex-text-main">Why it matters:</span> {learningWhyItMatters(item)}
+                                    </p>
                                     <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{item.source}</p>
                                 </div>
                                 <p className="text-xs font-medium uppercase tracking-[0.14em] text-cortex-text-muted">{formatRelativeActivityTime(item.observed_at)}</p>
@@ -2568,6 +2631,26 @@ function LearningVisibilityPanel({
             )}
         </div>
     );
+}
+
+function learningHeadline(item: OrganizationLearningInsightItem) {
+    if (item.strength === "strong") {
+        return "Consistently improving";
+    }
+    if (item.strength === "consistent") {
+        return "Identifying recurring patterns";
+    }
+    return "Detecting new opportunities";
+}
+
+function learningWhyItMatters(item: OrganizationLearningInsightItem) {
+    if (/^Team:/i.test(item.source)) {
+        return "It gives the Team Lead a clearer view of how this part of the organization is getting stronger over time.";
+    }
+    if (/role:/i.test(item.source)) {
+        return "It helps the Team Lead see where specialist support is becoming more reliable or where more guidance may be needed.";
+    }
+    return "It helps the Team Lead turn repeated signals into clearer next steps for the organization.";
 }
 
 function ActivityStatusBadge({ status }: { status: OrganizationLoopActivityItem["status"] }) {

@@ -185,12 +185,12 @@ export default function CreateOrganizationEntry() {
                                 </ActionButton>
                             </div>
                         </div>
-                        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
-                            <p className="font-medium text-cortex-text-main">Hidden until Advanced mode</p>
-                            <p className="mt-1 leading-6">
-                                AI Engine Settings and Memory &amp; Personality stay out of the default flow until the operator intentionally opens advanced controls.
-                            </p>
-                        </div>
+                            <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+                                <p className="font-medium text-cortex-text-main">Hidden until Advanced mode</p>
+                                <p className="mt-1 leading-6">
+                                    AI Engine Settings and Learning &amp; Context stay out of the default flow until the operator intentionally opens advanced controls.
+                                </p>
+                            </div>
                     </div>
                 </section>
 
@@ -343,7 +343,7 @@ export default function CreateOrganizationEntry() {
                                                 <Metric label="Departments" value={String(template.department_count)} />
                                                 <Metric label="Specialists" value={String(template.specialist_count)} />
                                                 <Metric label="AI Engine Settings" value={template.ai_engine_settings_summary} />
-                                                <Metric label="Memory & Personality" value={template.memory_personality_summary} />
+                                                <Metric label="Learning & Context" value={template.memory_personality_summary} />
                                             </div>
                                         </button>
                                     ))}
@@ -424,7 +424,7 @@ export default function CreateOrganizationEntry() {
                             <p className="font-medium text-cortex-text-main">What stays hidden for now</p>
                             <div className="mt-3 grid gap-2 sm:grid-cols-2">
                                 <HiddenLater label="AI Engine Settings" icon={<Bot className="h-4 w-4" />} />
-                                <HiddenLater label="Memory & Personality" icon={<BrainCircuit className="h-4 w-4" />} />
+                                <HiddenLater label="Learning & Context" icon={<BrainCircuit className="h-4 w-4" />} />
                             </div>
                             <p className="mt-3 text-xs leading-6 text-cortex-text-muted">
                                 Advanced setup opens later so you can focus on the organization name, purpose, and starting point first.
