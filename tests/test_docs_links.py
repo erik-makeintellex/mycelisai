@@ -153,6 +153,30 @@ def test_readme_exposes_layered_architecture_truth():
     assert not missing_snippets, f"README is missing required layered-truth snippets: {missing_snippets}"
 
 
+def test_readme_declares_development_contract():
+    text = README.read_text(encoding="utf-8")
+
+    required_sections = [
+        "## Development Contract",
+    ]
+    missing_sections = [section for section in required_sections if section not in text]
+    assert not missing_sections, f"README is missing the development contract section: {missing_sections}"
+
+    required_snippets = [
+        "A slice is not complete unless:",
+        "- tests pass",
+        "- documentation is updated where meaning changed",
+        "- architecture alignment is verified across the layered truth surfaces",
+        "`README.md` is the primary architecture inception document",
+        "`v8-2.md` is the canonical full architecture",
+        "`V8_DEV_STATE.md` is the source of actual implementation truth",
+        "all slices must update these surfaces when implementation, release posture, or target meaning changes",
+        "end-of-slice reporting must explicitly state which tests ran, which docs changed, and which scoped docs were reviewed but left unchanged",
+    ]
+    missing_snippets = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing_snippets, f"README is missing required development-contract guidance: {missing_snippets}"
+
+
 def test_canonical_docs_do_not_ship_executable_bare_uvx_inv_examples():
     offenders: list[str] = []
 
@@ -762,4 +786,45 @@ def test_v8_docs_keep_current_release_and_full_target_distinct():
     assert not missing_state_snippets, (
         "V8 dev state is missing the current-release vs full-target distinction: "
         f"{missing_state_snippets}"
+    )
+
+
+def test_v8_dev_state_declares_architecture_synchronization_rule():
+    text = V8_DEV_STATE.read_text(encoding="utf-8")
+
+    required_snippets = [
+        "## Architecture Synchronization Rule",
+        "Every slice must:",
+        "- update state",
+        "- verify README alignment",
+        "- verify V8.2 alignment",
+        "a slice is not complete unless tests pass, documentation is updated where meaning changed, and architecture alignment is verified",
+        "`COMPLETE` records accepted delivered work",
+        "`ACTIVE` records work in progress",
+        "`NEXT` records the next committed follow-on slices",
+        "slice close-out should explicitly report tests run, docs changed, and docs reviewed unchanged for the touched scope",
+    ]
+    missing_snippets = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing_snippets, (
+        "V8 dev state is missing the architecture synchronization rule: "
+        f"{missing_snippets}"
+    )
+
+
+def test_v8_2_declares_development_alignment():
+    text = V8_2_FULL_ARCHITECTURE.read_text(encoding="utf-8")
+
+    required_snippets = [
+        "## Development Alignment",
+        "V8.2 is the full target.",
+        "Implementation progresses incrementally from the current V8.1 release toward this architecture.",
+        "Documentation must always reflect:",
+        "- what is implemented",
+        "- what is planned",
+        "no silent divergence is allowed between implementation, release contract, and full architecture target",
+    ]
+    missing_snippets = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing_snippets, (
+        "V8.2 full architecture doc is missing the development-alignment contract: "
+        f"{missing_snippets}"
     )
