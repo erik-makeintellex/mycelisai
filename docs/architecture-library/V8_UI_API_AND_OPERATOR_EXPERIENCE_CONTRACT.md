@@ -1,13 +1,13 @@
 # V8 UI API and Operator Experience Contract
 
 > Status: Canonical V8 PRD
-> Last Updated: 2026-03-19
+> Last Updated: 2026-03-21
 > Purpose: Define the exact V8 operator and user-facing flows so UI implementation reflects AI Organization behavior instead of collapsing into generic chat UX.
 > Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
 
 ## 1. Why this document exists
 
-V8 introduces AI Organizations, Team Leads, Advisors, Departments, Specialists, AI Engine Settings, and Memory & Personality as first-class product concepts.
+V8 introduces AI Organizations, Team Leads, Advisors, Departments, Specialists, AI Engine Settings, and Learning & Context as first-class product concepts.
 
 Those terms are not decorative renames for a generic assistant UI.
 
@@ -28,7 +28,7 @@ The default product experience must feel like creating and operating an AI Organ
 - **Departments**: grouped execution areas within the AI Organization. Departments organize Specialist work and scoped operating context.
 - **Specialists**: individual role-focused workers inside a Department or a governed roster. They are visible as organizational members, not presented as a flat buddy list by default.
 - **AI Engine Settings**: provider-policy and model-routing controls that shape how the organization runs. These are real configuration surfaces, but they are advanced by default.
-- **Memory & Personality**: continuity, identity, memory posture, tone, and behavioral defaults for the AI Organization. These settings exist, but they should not overwhelm first-run creation.
+- **Learning & Context**: continuity, learning visibility, reviewed memory posture, tone, and behavioral defaults for the AI Organization. These settings exist, but they should not overwhelm first-run creation.
 
 Terminology rule:
 - UI copy should use these names directly.
@@ -65,12 +65,58 @@ Advanced operators may inspect:
 - Department structure
 - Specialist roster
 - AI Engine Settings
-- Memory & Personality
+- Learning & Context
 - deeper org configuration
 
 But those advanced surfaces should be hidden until the operator intentionally opens them.
 
-### 3.3 API normalization rule
+### 3.3 Two explicit UX and control layers
+
+Default Operator Surface:
+- create AI Organization
+- Team Lead-first workspace
+- intent-driven interaction
+- Advisors, Departments, Automations, Recent Activity, and Learning & Context
+- AI Engine Settings and Response Style as guided, bounded controls
+
+Advanced Architecture / Runtime Surface:
+- separate and non-default
+- organization defaults and inheritance visibility
+- department overrides and Specialist role bindings
+- automation definitions
+- capability posture
+- response-style inheritance
+- bundle/config source truth
+- deployment/env influence
+- runtime availability and distributed execution posture later
+
+Advanced-surface rules:
+- it must remain separate from the default Team Lead-first flow
+- it must make inheritance legible
+- it must make config origin legible
+- it must not expose raw jargon without context
+- it must not undermine the simplicity of the default operator experience
+
+### 3.4 Source-of-truth layers
+
+The product must keep these layers distinct:
+
+1. guided UI settings
+   - safe, bounded operator controls for the current release surface
+2. bundle/file configuration
+   - reproducible organization defaults, inheritance inputs, and automation truth
+3. deployment/env overrides
+   - environment-specific provider/media/runtime wiring only
+4. runtime state
+   - the live resolved organization, execution posture, and service availability
+5. state and architecture docs
+   - README, V8.1, V8.2, and `V8_DEV_STATE.md` explain target, release, and implementation truth
+
+Critical rule:
+- deployment/env overrides must not replace bundle-defined runtime organization truth
+- advanced UI may explain deployment/env influence, but it must not become a second source of runtime truth
+
+### 3.5 API normalization rule
 
 Every screen in this PRD expects normalized API envelopes.
 
@@ -101,7 +147,7 @@ Help a new operator understand that Mycelis creates AI Organizations, not dispos
   - Departments
   - Specialists
   - AI Engine Settings
-  - Memory & Personality
+  - Learning & Context
 
 **User actions**
 
@@ -125,7 +171,7 @@ Help a new operator understand that Mycelis creates AI Organizations, not dispos
 - full Advisor roster defaults
 - Department/Specialist editable structure
 - AI Engine Settings internals
-- Memory & Personality internals
+- Learning & Context internals
 
 **Success state**
 
@@ -163,7 +209,7 @@ Guide the operator through creating a real AI Organization with a clear structur
   - Specialists
 - advanced sections collapsed by default:
   - AI Engine Settings
-  - Memory & Personality
+  - Learning & Context
 
 **User actions**
 
@@ -223,7 +269,7 @@ Make the start-mode decision explicit without confusing templates with live orga
   - Department count
   - Specialist count
   - AI Engine Settings summary
-  - Memory & Personality summary
+  - Learning & Context summary
 - an `Empty AI Organization` card that clearly states the operator will define structure manually
 
 **User actions**
@@ -282,7 +328,7 @@ Provide a stable home screen that makes the AI Organization legible before the o
   - Departments summary
   - Specialists summary
   - AI Engine Settings summary
-  - Memory & Personality summary
+  - Learning & Context summary
 - primary actions:
   - `Open Team Lead Workspace`
   - `Review Organization Structure`
@@ -427,39 +473,50 @@ Keep organization structure visible without overwhelming the operator or flatten
 
 **Purpose**
 
-Protect the default AI Organization experience from collapsing into a config dashboard while still supporting serious operator control.
+Protect the default AI Organization experience from collapsing into a config dashboard while still supporting serious operator understanding and control later.
 
 **User sees**
 
 - an explicit `Advanced` entrypoint, not always-open raw settings
-- advanced sections:
-  - AI Engine Settings
-  - Memory & Personality
-  - deeper structure editing when allowed
+- advanced sections that may later expose:
+  - organization defaults and inheritance visibility
+  - Department overrides
+  - Specialist role bindings
+  - detailed automation definitions
+  - capability posture
+  - Response Style inheritance
+  - bundle/config source truth
+  - deployment/env influence
+  - runtime availability and distributed execution posture when that later ships
 
 **User actions**
 
 - intentionally enter advanced mode
-- review or edit AI Engine Settings
-- review or edit Memory & Personality
+- inspect or edit organization defaults where allowed
+- inspect or edit Department overrides and Specialist role bindings where allowed
+- inspect automations, capability posture, and runtime influence in more detail
 - return to the standard organization surfaces
 
 **API data required**
 
-- `GET /api/v1/organizations/{organization_id}/advanced-config`
-  - returns advanced organization configuration in normalized form
-- `PATCH /api/v1/organizations/{organization_id}/advanced-config`
-  - persists validated advanced updates
+- future advanced endpoints must be split by concern and return normalized, origin-aware data
+- advanced APIs must make the difference legible between:
+  - guided UI settings
+  - bundle/file configuration
+  - deployment/env influence
+  - live runtime state
+- advanced APIs must not dump raw YAML, raw secrets, or opaque provider internals into the default product contract
 
 **Hidden advanced details**
 
 - secret material
-- backend-only implementation knobs
-- debug-only inheritance traces unless explicitly exposed through diagnostics
+- low-level provider auth and endpoint wiring where those belong in file/env/config only
+- host-specific runtime plumbing
+- cluster or distributed node plumbing unless intentionally promoted later
 
 **Success state**
 
-- advanced settings save without breaking the operator's mental model of the AI Organization
+- advanced inspection or editing makes inheritance and config origin easier to understand without breaking the operator's mental model of the AI Organization
 
 **Empty state**
 
@@ -483,7 +540,7 @@ Protect the default AI Organization experience from collapsing into a config das
 | Organization home | open Team Lead workspace, inspect structure | `GET /api/v1/organizations/{organization_id}/home`, `PATCH /api/v1/organizations/{organization_id}` | header, summary cards, editable org metadata |
 | Team Lead workspace | send message, inspect roster | `GET /api/v1/organizations/{organization_id}/workspace`, `POST /api/v1/organizations/{organization_id}/workspace/messages`, `GET /api/v1/organizations/{organization_id}/roster` | Team Lead context, message history, terminal result payloads, roster summary |
 | Visibility rules | inspect Advisors, Departments, Specialists | `GET /api/v1/organizations/{organization_id}/roster` | grouped member lists with summaries and visibility metadata |
-| Advanced mode | edit advanced config | `GET /api/v1/organizations/{organization_id}/advanced-config`, `PATCH /api/v1/organizations/{organization_id}/advanced-config` | normalized advanced config, validation results, persisted summary |
+| Advanced architecture / runtime surface | inspect or edit advanced configuration later | future normalized endpoints grouped by organization defaults, overrides, automations, capability posture, config origin, and runtime influence | origin-aware summaries, inheritance context, validation results, and scoped persisted summaries |
 
 ## 6. UX rules that implementation must not violate
 
@@ -491,7 +548,7 @@ Protect the default AI Organization experience from collapsing into a config das
 2. The default conversation surface must always be the Team Lead workspace for that AI Organization.
 3. Advisors, Departments, and Specialists must appear as organization structure, not as a flat chat-contact list by default.
 4. Template selection must be framed as choosing an AI Organization starting blueprint, not as selecting a chat persona.
-5. AI Engine Settings and Memory & Personality must be real product concepts, but they must stay behind progressive disclosure until the operator intentionally opens advanced mode.
+5. AI Engine Settings and Learning & Context must be real product concepts, but they must stay behind progressive disclosure until the operator intentionally opens advanced mode.
 6. Empty-start flows must still feel like creating an AI Organization, not like launching a blank assistant session.
 7. Every screen must define purpose, visible structure, user actions, API data requirements, and explicit loading/empty/error/success states before UI implementation begins.
 

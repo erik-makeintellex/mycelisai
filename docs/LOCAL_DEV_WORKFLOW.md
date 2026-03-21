@@ -125,6 +125,25 @@ Runtime truth still follows:
 Bundle -> Instantiated Organization -> Inheritance -> Routing
 ```
 
+## Deployment Guidance By Host Architecture
+
+- Windows x86_64:
+  - best fit for local development, operator workflow iteration, and desktop Docker Desktop / Kind usage
+  - move tool caches off a tight `C:` volume early with `uv run inv cache.apply-user-policy`
+  - use remote Ollama or hosted providers when the desktop is not meant to be the long-running inference host
+- Linux x86_64:
+  - preferred for longer-running Core, Postgres, NATS, and container/Helm-driven environments
+  - keep repo-managed caches and workspace data on the volume intended for repeated build/test/deploy cycles
+  - use the same env override contract for deployment automation rather than forking config files per host
+- Linux arm64:
+  - appropriate for lighter control-host, edge-host, or remote-provider-connected setups
+  - do not assume local heavyweight Ollama/model serving is a good fit on smaller ARM boards; prefer remote provider endpoints unless the host has been validated
+  - keep the bootstrap bundle and instantiated-organization path identical to other hosts so architecture truth does not fork by platform
+- Mixed-architecture deployments:
+  - build binaries/images for the target architecture instead of reusing desktop-local artifacts blindly
+  - keep deployment concerns in env/files/config, while runtime behavior still comes from `Bundle -> Instantiated Organization -> Inheritance -> Routing`
+  - use `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` to stamp environment-specific provider wiring without changing organizational routing rules
+
 ### `core/config/templates/*.yaml` — Bootstrap Template Bundles
 
 | File | Purpose |

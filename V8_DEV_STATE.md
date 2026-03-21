@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-20
+> Updated: 2026-03-21
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -29,7 +29,9 @@ Development is progressing toward the V8.2 full production target.
 
 Release posture:
 - `ACTIVE` current posture is `V1 MVP Release Candidate`.
+- `COMPLETE` the default Team Lead-first operator flow is now release-candidate ready with guided first-run actions, resilient support panels, and user-facing vocabulary aligned around Automations, Learning & Context, AI Engine, Response Style, Advisors, and Departments.
 - the default Team Lead-first workspace now expects guided first-run actions, intentional empty states, and partial-failure-safe support panels before release lock.
+- `NEXT` advanced architecture/runtime configuration remains a separate contract and implementation lane; it must stay non-default until the dedicated advanced surface ships without polluting the MVP operator flow.
 
 ## Architecture Synchronization Rule
 
@@ -221,6 +223,8 @@ Delivery updates in this checkpoint:
 45. `COMPLETE` hardened the env override architecture boundary in README, operations docs, local workflow docs, and doc tests so deployment-time env configuration stays separate from runtime organizational truth and routing remains `Bundle -> Instantiated Organization -> Inheritance -> Routing`.
 46. `COMPLETE` added explicit deployment guidance for Windows x86_64, Linux x86_64, Linux arm64, and mixed-architecture host layouts so operators have one documented contract for how deployment-time configuration should vary without forking runtime organizational truth.
 47. `COMPLETE` hardened the V8.1 Team Lead-first UX for release readiness so first-run guidance is always visible, default workspace panels now have intentional empty/loading/error states with retry paths, and the operator-facing vocabulary now stays aligned around Automations, Learning & Context, AI Engine, Response Style, Advisors, and Departments.
+48. `COMPLETE` defined the advanced architecture/runtime surface contract before further UI work so default operator behavior, advanced inheritance/config inspection, source-of-truth layering, deployment/env influence, and file/env-only boundaries now have one explicit doc-backed contract.
+49. `NEXT` implement the advanced architecture/runtime UI only through a separate non-default surface that makes inheritance and config origin legible without undermining the Team Lead-first MVP release posture.
 
 Evidence:
 1. README directive review completed against `README.md`
