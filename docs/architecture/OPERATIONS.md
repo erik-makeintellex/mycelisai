@@ -104,6 +104,25 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
   - prefer Invoke-managed build/test/browser tasks over raw tool commands so cache roots, browser binaries, telemetry suppression, and worker cleanup stay consistent
   - use `uv run inv cache.status` before large validation runs when free space is tight, then `uv run inv cache.clean` as the first repo-safe reclaim path
 
+### Deployment Guidance Across Host Architectures
+
+- Windows x86_64:
+  - supported as the primary development/operator workstation
+  - best used for local iteration, UI work, local validation, and Docker Desktop / Kind-backed development
+  - keep repo caches off constrained system volumes and do not treat the workstation image/layout as the canonical production host shape
+- Linux x86_64:
+  - preferred for longer-running local services, CI-like hosts, and container/Helm-driven deployment targets
+  - build binaries and container images for the target Linux host instead of assuming desktop-generated artifacts are portable
+  - use the standard env override contract to stamp provider endpoints, model ids, and profile defaults per environment
+- Linux arm64:
+  - valid for lighter edge/control-host roles, Raspberry Pi style control nodes, and remote-provider-connected deployments
+  - keep local service expectations modest unless the ARM host has been explicitly validated for heavier workloads
+  - prefer remote Ollama or hosted providers for smaller boards rather than forcing heavyweight local inference onto them
+- Mixed-architecture deployment rule:
+  - runtime organization truth must stay bundle-driven on every host
+  - deployment-time env overrides may vary by environment, but they must not become a replacement for instantiated-organization routing
+  - do not reintroduce per-host team/agent env-map routing to compensate for hardware differences
+
 ### Lifecycle Tasks (`ops/lifecycle.py`)
 
 | Command | Description |

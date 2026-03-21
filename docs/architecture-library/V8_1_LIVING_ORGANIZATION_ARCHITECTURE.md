@@ -1,7 +1,7 @@
 # V8.1 Living Organization Architecture
 
 > Status: Canonical V8.1 PRD
-> Last Updated: 2026-03-20
+> Last Updated: 2026-03-21
 > Purpose: Define the current bounded V8.1 release architecture for persistent execution, bounded automation, semantic continuity, learning promotion, and reproducible specialist behavior.
 > Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 
@@ -353,9 +353,10 @@ The primary workspace includes:
 - Team Lead
 - Advisors
 - Departments
+- Recent Activity
+- Learning & Context
 - AI Engine Settings
 - Response Style
-- Memory & Personality
 - Automations
 
 ### 8.2 Automations surface
@@ -379,12 +380,25 @@ The first shippable V8.1 state may keep this surface read-only.
 Advanced UI remains hidden by default.
 
 Advanced-only detail may include:
+- organization defaults and inheritance visibility
+- Department overrides
+- Specialist role bindings
 - Loop Profile details
+- detailed automation definitions
 - Capability assignments
+- Response Style inheritance
+- bundle/config source truth
+- deployment/env influence
 - inheritance chains
 - policy boundaries
 
 Default UI must not leak architecture terms or raw control surfaces unnecessarily.
+
+Even with advanced UI later:
+- sensitive deployment secrets stay file/env/config driven
+- host-specific runtime wiring stays file/env/config driven
+- low-level provider auth and endpoints stay file/env/config driven where appropriate
+- cluster or distributed node plumbing stays out of default V8.1 scope unless intentionally promoted later
 
 ## 9. Safety model
 

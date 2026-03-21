@@ -300,7 +300,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-ui-api-operator-experience-contract",
                 label: "V8 UI/API/Operator Contract",
                 path: "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
-                description: "Canonical V8 PRD for first-run, AI Organization creation, Team Lead-first workspace behavior, visibility rules, and screen-to-API mapping",
+                description: "Canonical V8 PRD for first-run, Team Lead-first operator flow, advanced architecture/runtime boundaries, and screen-to-API mapping",
             },
             {
                 slug: "v8-1-living-organization-architecture",

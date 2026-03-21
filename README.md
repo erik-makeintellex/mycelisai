@@ -14,6 +14,7 @@ This README is the primary development-swarm inception document. It defines the 
 - [Final Production Architecture (V8.2)](#final-production-architecture-v82)
 - [Current Release Target (V8.1)](#current-release-target-v81)
 - [Current Implementation State](#current-implementation-state)
+- [Default And Advanced Surfaces](#default-and-advanced-surfaces)
 - [Architecture Terms To Operator Terms](#architecture-terms-to-operator-terms)
 - [Detailed Framework Memory](#detailed-framework-memory)
 - [Feature Status Standard](#feature-status-standard)
@@ -141,6 +142,40 @@ Current operator experience summary:
 - a new operator lands in AI Organization setup, not a blank assistant thread
 - the Team Lead always presents guided starting actions instead of a dead-end blank state
 - Recent Activity, Automations, Learning, Advisors, and Departments keep readable empty, loading, and failure states without collapsing the workspace
+
+## Default And Advanced Surfaces
+
+Mycelis intentionally supports two separate UX/control layers.
+
+Default Operator Surface:
+- Create AI Organization
+- Team Lead-first workspace
+- intent-driven interaction
+- Advisors, Departments, Automations, Recent Activity, and Learning & Context
+- AI Engine Settings and Response Style as guided, bounded controls
+
+Advanced Architecture / Runtime Surface:
+- separate and non-default for operators who understand the system deeply
+- organization defaults and inheritance visibility
+- department overrides and specialist role bindings
+- automation definitions, capability posture, and response-style inheritance
+- bundle/config source truth, deployment/env influence, and later runtime availability or distributed execution posture
+
+source-of-truth layers remain separate:
+- guided UI settings for bounded operator-visible changes
+- bundle/file configuration for reproducible organization defaults and automation truth
+- deployment/env overrides for environment-specific provider/media/runtime wiring
+- runtime state for the live resolved organization and service posture
+- README, V8.1, V8.2, and `V8_DEV_STATE.md` for architecture, release, and implementation truth
+
+Contract rule:
+- the default UX must stay simple and intent-first
+- the advanced architecture/runtime surface must stay separate, make inheritance legible, and make config origin legible
+- the advanced layer must not replace bundle/file/env/runtime truth or collapse the Team Lead-first MVP into a config dashboard
+
+Implementation note:
+- V8.1 currently ships the default operator surface plus bounded guided controls and inspect-only detail where explicitly called out in `V8_DEV_STATE.md`
+- the advanced architecture/runtime surface is now defined as a contract, but it is not fully implemented yet
 
 ## Architecture Terms To Operator Terms
 

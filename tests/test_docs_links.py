@@ -153,6 +153,30 @@ def test_readme_exposes_layered_architecture_truth():
     assert not missing_snippets, f"README is missing required layered-truth snippets: {missing_snippets}"
 
 
+def test_readme_defines_default_and_advanced_surface_contract():
+    text = README.read_text(encoding="utf-8")
+
+    required_sections = [
+        "## Default And Advanced Surfaces",
+    ]
+    missing_sections = [section for section in required_sections if section not in text]
+    assert not missing_sections, f"README is missing the default/advanced surface section: {missing_sections}"
+
+    required_snippets = [
+        "Default Operator Surface:",
+        "Advanced Architecture / Runtime Surface:",
+        "source-of-truth layers remain separate:",
+        "the advanced architecture/runtime surface is now defined as a contract, but it is not fully implemented yet",
+        "the default UX must stay simple and intent-first",
+        "the advanced architecture/runtime surface must stay separate, make inheritance legible, and make config origin legible",
+    ]
+    missing_snippets = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing_snippets, (
+        "README is missing required default-vs-advanced surface guidance: "
+        f"{missing_snippets}"
+    )
+
+
 def test_readme_declares_development_contract():
     text = README.read_text(encoding="utf-8")
 
@@ -239,6 +263,41 @@ def test_docs_keep_env_overrides_separate_from_runtime_organization_truth():
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "Docs are missing the env/runtime architecture boundary:\n" + "\n".join(missing)
+
+
+def test_docs_cover_deployment_guidance_across_host_architectures():
+    expectations = {
+        README: [
+            "Deployment guidance by host architecture:",
+            "Windows x86_64",
+            "Linux x86_64",
+            "Linux arm64",
+            "Mixed-architecture deployments",
+        ],
+        ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md": [
+            "## Deployment Guidance By Host Architecture",
+            "Windows x86_64",
+            "Linux x86_64",
+            "Linux arm64",
+            "Mixed-architecture deployments",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "### Deployment Guidance Across Host Architectures",
+            "Windows x86_64",
+            "Linux x86_64",
+            "Linux arm64",
+            "Mixed-architecture deployment rule",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in expectations.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Docs are missing deployment guidance across host architectures:\n" + "\n".join(missing)
 
 
 def test_canonical_docs_do_not_ship_executable_bare_uvx_inv_examples():
@@ -670,7 +729,12 @@ def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
         "Departments",
         "Specialists",
         "AI Engine Settings",
-        "Memory & Personality",
+        "Learning & Context",
+        "### 3.3 Two explicit UX and control layers",
+        "### 3.4 Source-of-truth layers",
+        "Default Operator Surface:",
+        "Advanced Architecture / Runtime Surface:",
+        "deployment/env overrides must not replace bundle-defined runtime organization truth",
         "### 4.1 First-run flow",
         "### 4.2 Create AI Organization flow",
         "### 4.3 Choose template vs empty start",
@@ -761,6 +825,9 @@ def test_v8_1_living_architecture_is_indexed_exposed_and_complete():
         "Automations",
         "Watchers",
         "Reviews",
+        "### 8.3 Advanced UI boundaries",
+        "organization defaults and inheritance visibility",
+        "deployment/env influence",
         "### 11.2 First shippable state",
         "loops exist as configuration and inspectable architecture, not broad execution",
         "capabilities are defined but not fully exercised",
@@ -808,12 +875,48 @@ def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
         "learning, capability, and actuation target state",
         "Not all elements described here are implemented yet.",
         "V8.1 remains the current bounded release target",
+        "default operator experience remains Team Lead-first, intent-first, and simple by default",
+        "advanced architecture/runtime control exists as a separate non-default layer for deep users",
     ]
     missing_architecture_snippets = [snippet for snippet in required_architecture_snippets if snippet not in architecture_text]
     assert not missing_architecture_snippets, (
         "V8.2 full architecture doc is missing required canonical-target coverage: "
         f"{missing_architecture_snippets}"
     )
+
+
+def test_layered_docs_align_on_advanced_surface_contract():
+    surfaces = {
+        README: [
+            "Advanced Architecture / Runtime Surface:",
+            "source-of-truth layers remain separate:",
+        ],
+        V8_UI_API_CONTRACT: [
+            "Advanced Architecture / Runtime Surface:",
+            "The product must keep these layers distinct:",
+            "advanced UI may explain deployment/env influence, but it must not become a second source of runtime truth",
+        ],
+        V8_1_LIVING_ARCHITECTURE: [
+            "### 8.3 Advanced UI boundaries",
+            "organization defaults and inheritance visibility",
+            "sensitive deployment secrets stay file/env/config driven",
+        ],
+        V8_2_FULL_ARCHITECTURE: [
+            "advanced architecture/runtime control exists as a separate non-default layer for deep users",
+        ],
+        V8_DEV_STATE: [
+            "`NEXT` advanced architecture/runtime configuration remains a separate contract and implementation lane",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in surfaces.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Layered docs are missing the advanced-surface contract:\n" + "\n".join(missing)
 
 
 def test_v8_docs_keep_current_release_and_full_target_distinct():
