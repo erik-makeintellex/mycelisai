@@ -39,12 +39,12 @@ const AI_ENGINE_OPTIONS: Array<{
         id: "starter_defaults",
         label: "Starter Defaults",
         description: "Keeps the guided starter profile that already came with this AI Organization.",
-        goodFor: "Best for keeping the original setup intact while the Team Lead settles the first workflow.",
+        goodFor: "Best for keeping the original setup intact while Soma settles the first workflow.",
     },
     {
         id: "balanced",
         label: "Balanced",
-        description: "Steady planning depth and response quality for everyday Team Lead work.",
+        description: "Steady planning depth and response quality for everyday Soma work.",
         goodFor: "Best for most organizations that want dependable guidance across planning and execution.",
     },
     {
@@ -81,7 +81,7 @@ const RESPONSE_CONTRACT_OPTIONS: Array<{
         toneStyle: "Straightforward and steady without sounding cold.",
         structure: "Uses clear sections and practical takeaways when helpful.",
         verbosity: "Balanced detail with enough context to act confidently.",
-        bestFor: "Best for everyday Team Lead guidance, reviews, and general coordination.",
+        bestFor: "Best for everyday Soma guidance, reviews, and general coordination.",
     },
     {
         id: "structured_analytical",
@@ -687,6 +687,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         );
     }
 
+    const somaName = `Soma for ${organization.name}`;
     const teamLeadName = `${organization.team_lead_label} for ${organization.name}`;
     const overviewItems = [
         { label: "Started from", value: organization.start_mode === "template" ? (organization.template_name || "Template") : "Empty" },
@@ -712,9 +713,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             </div>
                         </div>
                         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
-                            <p className="font-medium text-cortex-text-main">Team Lead ready</p>
+                            <p className="font-medium text-cortex-text-main">Soma ready</p>
                             <p className="mt-1 leading-6">
-                                {teamLeadName} is ready to guide planning, structure review, and organization setup decisions without leaving the AI Organization frame.
+                                {somaName} is ready to guide planning, structure review, and organization setup decisions while working through the right Team Lead support when needed.
                             </p>
                         </div>
                     </div>
@@ -727,19 +728,19 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 <div className="space-y-3">
                                     <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/20 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
                                         <Sparkles className="h-3.5 w-3.5" />
-                                        Team Lead
+                                        Soma
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-semibold text-cortex-text-main">{teamLeadName}</h2>
+                                        <h2 className="text-2xl font-semibold text-cortex-text-main">{somaName}</h2>
                                         <p className="mt-2 max-w-2xl text-sm leading-7 text-cortex-text-muted">
-                                            Your Team Lead is the working counterpart for {organization.name}, coordinating Advisors, Departments, and Specialists around the organization purpose.
+                                            Soma is the primary counterpart for {organization.name}, coordinating the right Team Leads, Advisors, Departments, and Specialists around the organization purpose.
                                         </p>
                                     </div>
                                 </div>
                                 <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-xs">
-                                    <p className="font-medium text-cortex-text-main">Current role</p>
+                                    <p className="font-medium text-cortex-text-main">Operational layer</p>
                                     <p className="mt-1 leading-6">
-                                        Keep the organization focused, surface the next best actions, and help the operator move from setup into coordinated delivery.
+                                        {teamLeadName} leads day-to-day operational follow-through while Soma keeps the organization focused and surfaces the next best actions.
                                     </p>
                                 </div>
                             </div>
@@ -849,6 +850,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                         <TeamLeadInteractionPanel
                             organizationId={organization.id}
                             organizationName={organization.name}
+                            somaName={somaName}
                             teamLeadName={teamLeadName}
                         />
                     </div>
@@ -857,7 +859,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
                             <div>
                                 <h2 className="text-xl font-semibold text-cortex-text-main">Organization overview</h2>
-                                <p className="mt-1 text-sm text-cortex-text-muted">See the Team Lead, structure, and starting point for this AI Organization at a glance.</p>
+                                <p className="mt-1 text-sm text-cortex-text-muted">See Soma, the operational structure, and the starting point for this AI Organization at a glance.</p>
                             </div>
                             <div className="mt-4 grid gap-3 md:grid-cols-2">
                                 {overviewItems.map((item) => (
@@ -970,12 +972,12 @@ function formatConfiguredCount(count: number, label: string) {
 
 function advisorSummary(count: number, teamLeadName: string) {
     if (count === 0) {
-        return `${teamLeadName} is handling planning and review directly for now. Advisor support will appear here when the organization is ready for a second set of eyes.`;
+        return `Soma is handling planning and review directly for now. Advisor support will appear here when ${teamLeadName} needs a second set of eyes.`;
     }
     if (count === 1) {
-        return `1 Advisor is ready to help ${teamLeadName} with review, priorities, and decision support.`;
+        return `1 Advisor is ready to help Soma and ${teamLeadName} with review, priorities, and decision support.`;
     }
-    return `${count} Advisors are ready to help ${teamLeadName} review decisions and keep the organization aligned.`;
+    return `${count} Advisors are ready to help Soma and ${teamLeadName} review decisions and keep the organization aligned.`;
 }
 
 function advisorSupportItems(count: number) {
@@ -991,9 +993,9 @@ function advisorSupportItems(count: number) {
 
 function departmentSummary(count: number, specialistCount: number, teamLeadName: string) {
     if (count === 0) {
-        return `${teamLeadName} can still shape the first working lane before Departments are configured. Departments will appear here once the organization has a clear first focus.`;
+        return `Soma can still shape the first working lane through ${teamLeadName} before Departments are configured. Departments will appear here once the organization has a clear first focus.`;
     }
-    return `${count} Departments and ${formatConfiguredCount(specialistCount, "Specialist").toLowerCase()} are visible here so ${teamLeadName} can work with a clear delivery structure.`;
+    return `${count} Departments and ${formatConfiguredCount(specialistCount, "Specialist").toLowerCase()} are visible here so Soma and ${teamLeadName} can work with a clear delivery structure.`;
 }
 
 function departmentSupportItems(organization: OrganizationHomePayload) {
@@ -1033,12 +1035,12 @@ function automationStatusLabel(loading: boolean, error: string | null) {
 function automationSummary(count: number, teamLeadName: string) {
     const mentalModel = "This system runs ongoing reviews and checks to help your organization improve over time.";
     if (count === 0) {
-        return `${mentalModel} ${teamLeadName} will show those ongoing reviews and checks here as this AI Organization becomes more active.`;
+        return `${mentalModel} Soma will show those ongoing reviews and checks here as this AI Organization becomes more active.`;
     }
     if (count === 1) {
-        return `${mentalModel} 1 Automation is visible here so ${teamLeadName} can explain what ongoing review is supporting this AI Organization.`;
+        return `${mentalModel} 1 Automation is visible here so Soma can explain what ongoing review is supporting this AI Organization through ${teamLeadName}.`;
     }
-    return `${mentalModel} ${count} Automations are visible here so ${teamLeadName} can explain what ongoing reviews and checks are supporting this AI Organization.`;
+    return `${mentalModel} ${count} Automations are visible here so Soma can explain what ongoing reviews and checks are supporting this AI Organization through ${teamLeadName}.`;
 }
 
 function automationSupportItems(items: OrganizationAutomationItem[], loading: boolean, error: string | null) {
@@ -1068,7 +1070,7 @@ function advisorDetailItems(count: number) {
     return [
         {
             name: "Planning Advisor",
-            purpose: "Helps the Team Lead test priorities, sequence work, and keep the first plan practical.",
+            purpose: "Helps Soma and the Team Lead test priorities, sequence work, and keep the first plan practical.",
             supportCue: "Best when the operator wants a second look at the next move.",
         },
         {
@@ -1079,7 +1081,7 @@ function advisorDetailItems(count: number) {
         {
             name: "Decision Advisor",
             purpose: "Supports tradeoffs, review points, and operator-facing choices before work expands.",
-            supportCue: "Useful when the Team Lead needs a clear go/no-go perspective.",
+            supportCue: "Useful when Soma needs a clear go/no-go perspective from the Team Lead layer.",
         },
     ].slice(0, Math.min(count, 3));
 }
@@ -1109,7 +1111,7 @@ function departmentPurpose(name: string) {
     if (name.includes("Support")) {
         return "Handles supporting work that helps the main delivery lane stay clear and focused.";
     }
-    return "Carries the main delivery lane so the Team Lead can move from planning into execution.";
+    return "Carries the main delivery lane so Soma can move from planning into execution through the operational team.";
 }
 
 function agentTypeAIEngineSourceLabel(profile: OrganizationAgentTypeProfileSummary) {
@@ -1190,7 +1192,7 @@ function aiEngineDetailItems(organization: OrganizationHomePayload) {
             name: "Organization-wide AI engine",
             purpose:
                 !hasOrganizationLevelSelection || organization.ai_engine_settings_summary.trim() === "Set up later in Advanced mode"
-                    ? "No organization-wide AI engine has been chosen yet. Pick one here when you want to tune how the Team Lead plans and responds."
+                    ? "No organization-wide AI engine has been chosen yet. Pick one here when you want to tune how Soma plans and responds."
                     : `Current profile: ${organization.ai_engine_settings_summary}.`,
             supportCue: "Affects the overall response style, planning depth, and how work is carried across the organization.",
         },
@@ -1218,7 +1220,7 @@ function responseContractSummary(summary: string) {
     if (!normalized) {
         return "The current Response Style keeps the organization on a clear, steady default for safe day-to-day guidance.";
     }
-    return `The current Response Style is ${normalized.toLowerCase()}, which shapes how the Team Lead presents tone, structure, and detail.`;
+    return `The current Response Style is ${normalized.toLowerCase()}, which shapes how Soma presents tone, structure, and detail.`;
 }
 
 function responseContractSupportItems(summary: string) {
@@ -1239,7 +1241,7 @@ function responseContractDetailItems(summary: string) {
         {
             name: "Tone and style",
             purpose: option.toneStyle,
-            supportCue: "Guides how supportive, direct, or analytical the Team Lead should sound by default.",
+            supportCue: "Guides how supportive, direct, or analytical Soma should sound by default.",
         },
         {
             name: "Structure and detail",
@@ -1252,9 +1254,9 @@ function responseContractDetailItems(summary: string) {
 function learningContextSummary(summary: string) {
     const normalized = summary.trim();
     if (!normalized || normalized === "Set up later in Advanced mode") {
-        return "Learning & Context stay on a simple starter posture so the Team Lead keeps a steady working style while the organization gets established.";
+        return "Learning & Context stay on a simple starter posture so Soma keeps a steady working style while the organization gets established.";
     }
-    return `Learning & Context are currently ${normalized.toLowerCase()}, which shapes how the Team Lead carries context forward and keeps guidance grounded.`;
+    return `Learning & Context are currently ${normalized.toLowerCase()}, which shapes how Soma carries context forward and keeps guidance grounded.`;
 }
 
 function learningContextSupportItems(summary: string) {
@@ -1494,14 +1496,14 @@ function WorkspaceDetailView({
                 : "Response Style details";
     const summary =
         view === "advisors"
-            ? `${teamLeadName} can review the current Advisor support in ${organization.name} here without leaving the workspace.`
+            ? `Soma can review the current Advisor support in ${organization.name} here without leaving the workspace.`
             : view === "departments"
-              ? `${teamLeadName} can inspect the current Department structure in ${organization.name} here without leaving the workspace.`
+              ? `Soma can inspect the current Department structure in ${organization.name} here without leaving the workspace while keeping ${teamLeadName} in view.`
               : view === "automations"
-                ? `${teamLeadName} can inspect the ongoing reviews and checks that support ${organization.name} here without leaving the workspace.`
+                ? `Soma can inspect the ongoing reviews and checks that support ${organization.name} here without leaving the workspace.`
               : view === "aiEngine"
-                ? `${teamLeadName} can inspect the current AI Engine Settings in ${organization.name} here without leaving the workspace.`
-                : `${teamLeadName} can inspect the current Response Style in ${organization.name} here without leaving the workspace.`;
+                ? `Soma can inspect the current AI Engine Settings in ${organization.name} here without leaving the workspace.`
+                : `Soma can inspect the current Response Style in ${organization.name} here without leaving the workspace.`;
     const items =
         view === "advisors"
             ? advisorDetailItems(organization.advisor_count).map((item) => ({
@@ -1522,14 +1524,14 @@ function WorkspaceDetailView({
     const automationItems = view === "automations" ? automations : [];
     const emptyStateMessage =
         view === "advisors"
-            ? "Advisor support will appear here when the Team Lead starts working with additional review help. Try reviewing your organization setup to decide where that support is needed first."
+            ? "Advisor support will appear here when Soma starts working with additional review help. Try reviewing your organization setup to decide where that support is needed first."
             : view === "departments"
               ? "Departments are the working lanes for this organization. They will appear here once the first lane is defined. Try reviewing your organization setup or running a quick strategy check."
               : view === "automations"
                 ? "Automations will appear here as ongoing reviews and checks become available for this AI Organization. Run a quick strategy check or review your organization setup to start creating visible signals."
               : view === "aiEngine"
-                ? `${teamLeadName} is still using the shared AI engine profile until more scoped settings are surfaced here.`
-                : `${teamLeadName} is still using the organization-wide Response Style until a different guided profile is selected here.`;
+                ? `Soma is still using the shared AI engine profile until more scoped settings are surfaced here.`
+                : `Soma is still using the organization-wide Response Style until a different guided profile is selected here.`;
 
     return (
         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -1565,7 +1567,7 @@ function WorkspaceDetailView({
                         className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
                     >
                         <ArrowLeft className="h-4 w-4" />
-                        Back to Team Lead
+                        Back to Soma
                     </button>
                 </div>
             </div>
@@ -1851,7 +1853,7 @@ function AIEngineSelectionPanel({
                 <div>
                     <h4 className="text-lg font-semibold text-cortex-text-main">Choose an AI Engine profile</h4>
                     <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
-                        Pick one guided AI Engine profile for the whole AI Organization. This tunes how the Team Lead plans, responds, and carries work forward.
+                        Pick one guided AI Engine profile for the whole AI Organization. This tunes how Soma plans, responds, and carries work forward.
                     </p>
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted">
@@ -1898,7 +1900,7 @@ function AIEngineSelectionPanel({
                 <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-surface px-4 py-4 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Unable to update AI Engine Settings</p>
                     <p className="mt-2 leading-6">{aiEngineUpdateError}</p>
-                    <p className="mt-2 leading-6">Try again to apply the selected AI Engine profile while keeping this Team Lead workspace in place.</p>
+                    <p className="mt-2 leading-6">Try again to apply the selected AI Engine profile while keeping this Soma workspace in place.</p>
                 </div>
             )}
 
@@ -2012,7 +2014,7 @@ function ResponseContractSelectionPanel({
                 <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-surface px-4 py-4 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Unable to update Response Style</p>
                     <p className="mt-2 leading-6">{responseContractUpdateError}</p>
-                    <p className="mt-2 leading-6">Try again to keep the Team Lead workspace visible while the organization-wide response style is updated.</p>
+                    <p className="mt-2 leading-6">Try again to keep the Soma workspace visible while the organization-wide response style is updated.</p>
                 </div>
             )}
 
@@ -2076,7 +2078,7 @@ function DepartmentAIEngineSelectionPanel({
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Department-level only</p>
-                    <p className="mt-1">The Team Lead and other Departments keep their current AI Engine behavior.</p>
+                    <p className="mt-1">Soma and the other Departments keep their current AI Engine behavior.</p>
                 </div>
             </div>
 
@@ -2118,7 +2120,7 @@ function DepartmentAIEngineSelectionPanel({
                 <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Unable to update this Team AI Engine</p>
                     <p className="mt-2 leading-6">{departmentAIEngineUpdateError}</p>
-                    <p className="mt-2 leading-6">Try again to keep this Department aligned with the Team Lead workspace while the rest of the organization stays visible.</p>
+                    <p className="mt-2 leading-6">Try again to keep this Department aligned with the Soma workspace while the rest of the organization stays visible.</p>
                 </div>
             )}
 
@@ -2171,7 +2173,7 @@ function AgentTypeAIEngineSelectionPanel({
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Agent Type level only</p>
-                    <p className="mt-1">The Team Lead workspace stays visible, and Team-default inheritance remains in place for every other role type.</p>
+                    <p className="mt-1">The Soma workspace stays visible, and Team-default inheritance remains in place for every other role type.</p>
                 </div>
             </div>
 
@@ -2213,7 +2215,7 @@ function AgentTypeAIEngineSelectionPanel({
                 <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Unable to update this Agent Type AI Engine</p>
                     <p className="mt-2 leading-6">{agentTypeAIEngineUpdateError}</p>
-                    <p className="mt-2 leading-6">Try again to keep this specialist role aligned with the Department while the Team Lead workspace stays visible.</p>
+                    <p className="mt-2 leading-6">Try again to keep this specialist role aligned with the Department while the Soma workspace stays visible.</p>
                 </div>
             )}
 
@@ -2266,7 +2268,7 @@ function AgentTypeResponseContractSelectionPanel({
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Agent Type level only</p>
-                    <p className="mt-1">The Team Lead workspace stays visible, and Organization / Team default behavior remains in place for every other role type.</p>
+                    <p className="mt-1">The Soma workspace stays visible, and Organization / Team default behavior remains in place for every other role type.</p>
                 </div>
             </div>
 
@@ -2316,7 +2318,7 @@ function AgentTypeResponseContractSelectionPanel({
                 <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Unable to update this Agent Type Response Style</p>
                     <p className="mt-2 leading-6">{agentTypeResponseContractUpdateError}</p>
-                    <p className="mt-2 leading-6">Try again to keep this specialist role aligned with the Team Lead workspace while the wider organization stays visible.</p>
+                    <p className="mt-2 leading-6">Try again to keep this specialist role aligned with the Soma workspace while the wider organization stays visible.</p>
                 </div>
             )}
 
@@ -2373,7 +2375,7 @@ function AutomationDetailPanel({
                 <p className="font-medium text-cortex-text-main">How Automations help</p>
                 <p className="mt-2 leading-6">{guidanceText}</p>
                 <p className="font-medium text-cortex-text-main">Automations unavailable</p>
-                <p className="mt-2 leading-6">Reviews and checks are temporarily unavailable here. The Team Lead workspace is still ready.</p>
+                <p className="mt-2 leading-6">Reviews and checks are temporarily unavailable here. The Soma workspace is still ready.</p>
                 <button
                     type="button"
                     onClick={onRetry}
@@ -2501,7 +2503,7 @@ function RecentActivityPanel({
             {error && (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Activity unavailable</p>
-                    <p className="mt-1 leading-6">Recent reviews and updates are not available right now. The Team Lead workspace is still ready.</p>
+                    <p className="mt-1 leading-6">Recent reviews and updates are not available right now. The Soma workspace is still ready.</p>
                     <button
                         type="button"
                         onClick={onRetry}
@@ -2524,7 +2526,7 @@ function RecentActivityPanel({
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">No recent activity yet</p>
                     <p className="mt-1 leading-6">This is where reviews, checks, and updates will appear as your AI Organization starts operating.</p>
-                    <p className="mt-1 leading-6">Take a guided Team Lead action to start creating visible movement here.</p>
+                    <p className="mt-1 leading-6">Take a guided Soma action to start creating visible movement here.</p>
                 </div>
             )}
 
@@ -2580,7 +2582,7 @@ function LearningVisibilityPanel({
             {error && (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Learning updates unavailable</p>
-                    <p className="mt-1 leading-6">Recent learning highlights are not available right now. The Team Lead workspace is still ready.</p>
+                    <p className="mt-1 leading-6">Recent learning highlights are not available right now. The Soma workspace is still ready.</p>
                     <button
                         type="button"
                         onClick={onRetry}
@@ -2603,7 +2605,7 @@ function LearningVisibilityPanel({
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">No learning highlights yet</p>
                     <p className="mt-1 leading-6">This is where recurring patterns, improvements, and stronger working habits will appear in plain language.</p>
-                    <p className="mt-1 leading-6">Use the Team Lead guidance and early reviews to give the organization enough signal to learn from.</p>
+                    <p className="mt-1 leading-6">Use Soma guidance and early reviews to give the organization enough signal to learn from.</p>
                 </div>
             )}
 
@@ -2645,12 +2647,12 @@ function learningHeadline(item: OrganizationLearningInsightItem) {
 
 function learningWhyItMatters(item: OrganizationLearningInsightItem) {
     if (/^Team:/i.test(item.source)) {
-        return "It gives the Team Lead a clearer view of how this part of the organization is getting stronger over time.";
+        return "It gives Soma a clearer view of how this part of the organization is getting stronger over time.";
     }
     if (/role:/i.test(item.source)) {
-        return "It helps the Team Lead see where specialist support is becoming more reliable or where more guidance may be needed.";
+        return "It helps Soma see where specialist support is becoming more reliable or where more guidance may be needed.";
     }
-    return "It helps the Team Lead turn repeated signals into clearer next steps for the organization.";
+    return "It helps Soma turn repeated signals into clearer next steps for the organization.";
 }
 
 function ActivityStatusBadge({ status }: { status: OrganizationLoopActivityItem["status"] }) {

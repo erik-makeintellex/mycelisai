@@ -1,6 +1,6 @@
 # Mycelis
 
-Mycelis is an AI Organization platform for creating, operating, and evolving governed multi-role systems through a Team Lead-first operator experience.
+Mycelis is an AI Organization platform for creating, operating, and evolving governed multi-role systems through a Soma-primary operator experience.
 
 This README is the primary development-swarm inception document. It defines the top-level architecture truth split for active work:
 - final production architecture target
@@ -74,14 +74,14 @@ Mycelis is a governed AI Organization system.
 
 In operator-facing language, the product lets someone:
 - create an AI Organization
-- work through a Team Lead instead of a raw agent swarm
+- work through Soma instead of a raw agent swarm
 - inspect advisors, departments, automations, learning signals, and settings in human-readable terms
 - keep execution, automation, and future learning behavior bounded by policy and inheritance
 
 In architecture terms, Mycelis is built around:
 - instantiated organizations as runtime truth
-- a Team Lead / Soma Kernel coordination layer
-- advisory and specialist layers beneath that coordinator
+- a Soma coordination layer that can engage Team Leads, advisors, departments, and specialists
+- advisory and specialist layers beneath that orchestrator
 - auditable execution, automation, memory, and continuity contracts
 
 ## Final Production Architecture (V8.2)
@@ -109,11 +109,11 @@ V8.2 is not the current MVP release surface. It is the final production architec
 
 The current release target is [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md).
 
-V8.1 defines the MVP release we are aligning implementation to now: a Team Lead-first AI Organization system with bounded automation visibility, learning visibility, inheritance contracts, and safe organization structure surfaces.
+V8.1 defines the MVP release we are aligning implementation to now: a Soma-primary AI Organization system with bounded automation visibility, learning visibility, inheritance contracts, and safe organization structure surfaces.
 
 Included in the V8.1 release target:
-- AI Organization creation and Team Lead-first workspace flow
-- guided first-run Team Lead actions that help a new operator choose a visible next step quickly
+- AI Organization creation and Soma-primary workspace flow
+- guided first-run Soma actions that help a new operator choose a visible next step quickly
 - organization, department, advisor, and role-type visibility in operator language
 - bundle-driven startup truth with policy-bounded inheritance
 - bounded AI Engine and Response Style controls
@@ -147,7 +147,8 @@ Do not duplicate the full live checklist in this README. Keep the implementation
 
 Current operator experience summary:
 - a new operator lands in AI Organization setup, not a blank assistant thread
-- the Team Lead always presents guided starting actions instead of a dead-end blank state
+- Soma always presents guided starting actions instead of a dead-end blank state
+- Team Leads remain visible as the operational leaders Soma works through
 - Recent Activity, Automations, Learning, Advisors, and Departments keep readable empty, loading, and failure states without collapsing the workspace
 
 ## Default And Advanced Surfaces
@@ -156,7 +157,7 @@ Mycelis intentionally supports two separate UX/control layers.
 
 Default Operator Surface:
 - Create AI Organization
-- Team Lead-first workspace
+- Soma-primary workspace
 - intent-driven interaction
 - Advisors, Departments, Automations, Recent Activity, and Learning & Context
 - AI Engine Settings and Response Style as guided, bounded controls
@@ -178,7 +179,7 @@ source-of-truth layers remain separate:
 Contract rule:
 - the default UX must stay simple and intent-first
 - the advanced architecture/runtime surface must stay separate, make inheritance legible, and make config origin legible
-- the advanced layer must not replace bundle/file/env/runtime truth or collapse the Team Lead-first MVP into a config dashboard
+- the advanced layer must not replace bundle/file/env/runtime truth or collapse the Soma-primary MVP into a config dashboard
 
 Implementation note:
 - V8.1 currently ships the default operator surface plus bounded guided controls and inspect-only detail where explicitly called out in `V8_DEV_STATE.md`
@@ -191,7 +192,8 @@ Use these translations consistently:
 | Architecture term | User-facing term |
 | --- | --- |
 | Inception | AI Organization |
-| Soma Kernel | Team Lead |
+| Soma Kernel | Soma |
+| Team Leads | Team Leads |
 | Central Council | Advisors |
 | Specialist Teams | Departments |
 | Agent Instances / Agent Types | Specialists / Roles |
@@ -210,15 +212,15 @@ Translation rule:
 Use these as the top detailed references when you need the deeper framework contract rather than just the quick-start path.
 
 1. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-   - canonical runtime layer contract for organization, Team Lead / Soma Kernel, advisors, provider-policy scope, and continuity
+   - canonical runtime layer contract for organization, Soma, Team Leads, advisors, provider-policy scope, and continuity
 2. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
-   - canonical V8.1 release architecture for loops, learning, semantic continuity, capabilities, and the current Team Lead-first release posture
+   - canonical V8.1 release architecture for loops, learning, semantic continuity, capabilities, and the current Soma-primary release posture
 3. [V8.2 Production Architecture Target](v8-2.md)
    - final production architecture target for distributed execution, active learning, capability-backed execution, and editable automations
 4. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
    - canonical memory for template vs instantiated organization, bootstrap resolution, inheritance, precedence, and V7-to-V8 bootstrap translation
 5. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-   - canonical operator workflow contract for AI Organization creation, Team Lead-first workspace behavior, visibility boundaries, and screen-to-API mapping
+   - canonical operator workflow contract for AI Organization creation, Soma-primary workspace behavior, visibility boundaries, and screen-to-API mapping
 6. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
    - canonical map of which detailed planning doc owns which part of the framework
 7. [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
@@ -237,7 +239,7 @@ Use these as the top detailed references when you need the deeper framework cont
 Rule:
 - when framework behavior, bootstrap posture, organization shape, or operator model is unclear, load the owning detailed doc above before making assumptions
 - keep README as the entrypoint and inception summary, but treat the documents in this section as the deeper memory surface for framework specifics
-- current MVP UI release posture is Team Lead-first by default; `Resources`, `Memory`, and `System` are advanced support routes rather than default operator entrypoints
+- current MVP UI release posture is Soma-primary by default; `Resources`, `Memory`, and `System` are advanced support routes rather than default operator entrypoints
 
 ## Feature Status Standard
 
@@ -386,7 +388,7 @@ The architecture-library remains the authoritative detailed planning surface unt
 
 ## Status
 
-Mycelis is currently shipping toward a V8.1 Team Lead-first MVP while aligning its long-range architecture to the V8.2 distributed, learning, capability-governed production target.
+Mycelis is currently shipping toward a V8.1 Soma-primary MVP while aligning its long-range architecture to the V8.2 distributed, learning, capability-governed production target.
 
 The V7 system still provides important migration input and substrate memory.
 The V8.1 release defines what belongs in the current MVP.

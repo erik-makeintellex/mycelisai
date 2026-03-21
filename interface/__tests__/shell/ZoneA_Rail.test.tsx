@@ -34,7 +34,7 @@ const DEFAULT_NAV_ENTRIES = [
     { href: '/docs', label: 'Docs' },
 ];
 
-describe('ZoneA_Rail (V8.1 Team Lead-first Navigation)', () => {
+describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     beforeEach(() => {
         mockPathname.mockReturnValue('/dashboard');
         mockAdvancedMode.mockReturnValue(false);

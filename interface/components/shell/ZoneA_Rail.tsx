@@ -39,7 +39,7 @@ export function ZoneA() {
                 </span>
             </Link>
 
-            {/* 2. Team Lead-first Navigation */}
+            {/* 2. Soma-primary Navigation */}
             <div className="flex-1 flex flex-col py-4 gap-1 px-2">
                 {primaryNav.map((item) => (
                     <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} />

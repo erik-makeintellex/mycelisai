@@ -13,7 +13,7 @@ Not every V8.2 production target belongs in the current V8.1 release.
 
 ## 1. Why V8.1 exists
 
-V8 established the AI Organization, Team Lead-first workspace, bundle-driven startup truth, and bounded operator settings.
+V8 established the AI Organization, Soma-primary workspace, bundle-driven startup truth, and bounded operator settings.
 
 V8.1 extends that work from a structured interactive system into a living, persistent, policy-bounded intelligence runtime.
 
@@ -33,6 +33,11 @@ This enables:
 - reproducible specialist behavior
 - policy-bounded learning continuity without silent self-rewrite
 
+V8.1 operator posture:
+- Soma is the primary user-facing interface and orchestrator
+- Team Leads remain visible as the operational leaders Soma works through
+- the default workspace stays simple and user-facing even when deeper architecture remains structured beneath it
+
 ## 2. Product goals
 
 ### 2.1 Primary goal
@@ -45,7 +50,7 @@ Enable AI Organizations to:
 
 ### 2.2 Secondary goals
 
-- maintain strict Team Lead-first UX discipline
+- maintain strict Soma-primary UX discipline
 - avoid unbounded multi-agent chaos
 - ensure safe extensibility for future hardware and tool integration
 - preserve bundle-driven reproducibility as runtime truth
@@ -314,7 +319,7 @@ They represent type-bound skill memory, not ad hoc one-off run history.
 
 The required V8.1 layering is:
 - pgvector = semantic persistence and recall substrate
-- Team Lead / Soma Kernel = orchestration and interpretation
+- Soma Kernel / Team Leads = orchestration and interpretation through a primary Soma interface and subordinate operational leaders
 - loops = candidate generation, review, and promotion
 - Response Contract, AI Engine Settings, and Runtime Capabilities = separate governed behavior layers, not interchangeable memory fields
 
@@ -323,7 +328,7 @@ The required V8.1 layering is:
 ### 6.1 Interactive mode
 
 - user-driven
-- Team Lead is primary
+- Soma is primary
 
 ### 6.2 Loop mode
 
@@ -347,9 +352,10 @@ V8.1 introduces Loop mode as an architecture contract before broad live executio
 
 ### 8.1 Primary operator workspace
 
-The Team Lead remains the primary operating counterpart.
+Soma remains the primary operating counterpart.
 
 The primary workspace includes:
+- Soma
 - Team Lead
 - Advisors
 - Departments
@@ -450,7 +456,7 @@ Even with advanced UI later:
 - Response Contract integrated at organization and Agent Type level
 - Memory Promotion and Semantic Continuity model defined
 - Procedure / Skill Sets defined under Agent Type Profiles
-- Team Lead workspace stable
+- Soma workspace stable
 - Automations UI visible, even if read-only
 
 #### Must not
@@ -484,7 +490,7 @@ This document is the canonical V8.1 architecture contract for:
 - Learning Loops
 - Memory Promotion and Semantic Continuity
 - Procedure / Skill Sets
-- read-only Automations visibility in the Team Lead workspace
+- read-only Automations visibility in the Soma workspace
 
 Implementation that touches these areas must align with:
 - `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`

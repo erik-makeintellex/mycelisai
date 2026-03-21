@@ -741,6 +741,7 @@ def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
         "The default product experience must feel like creating and operating an AI Organization.",
         "## 2. Canonical terminology",
         "AI Organization",
+        "Soma",
         "Team Lead",
         "Advisors",
         "Departments",
@@ -749,6 +750,7 @@ def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
         "Learning & Context",
         "### 3.3 Two explicit UX and control layers",
         "### 3.4 Source-of-truth layers",
+        "### 3.5 Primary orchestration flow",
         "Default Operator Surface:",
         "Advanced Architecture / Runtime Surface:",
         "deployment/env overrides must not replace bundle-defined runtime organization truth",
@@ -756,12 +758,12 @@ def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
         "### 4.2 Create AI Organization flow",
         "### 4.3 Choose template vs empty start",
         "### 4.4 AI Organization home and header contract",
-        "### 4.5 Team Lead-first workspace behavior",
+        "### 4.5 Soma-primary workspace behavior",
         "### 4.6 Advisor, Department, and Specialist visibility rules",
         "### 4.7 Advanced-mode boundaries",
         "## 5. API/UI contract mapping by screen and action",
         "The product must not open into a raw assistant conversation as its primary identity.",
-        "Open Team Lead Workspace",
+        "Open Soma Workspace",
     ]
     missing_contract_snippets = [snippet for snippet in required_contract_snippets if snippet not in contract_text]
     assert not missing_contract_snippets, (
@@ -892,7 +894,7 @@ def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
         "learning, capability, and actuation target state",
         "Not all elements described here are implemented yet.",
         "V8.1 remains the current bounded release target",
-        "default operator experience remains Team Lead-first, intent-first, and simple by default",
+        "default operator experience remains Soma-primary, intent-first, and simple by default",
         "advanced architecture/runtime control exists as a separate non-default layer for deep users",
     ]
     missing_architecture_snippets = [snippet for snippet in required_architecture_snippets if snippet not in architecture_text]
