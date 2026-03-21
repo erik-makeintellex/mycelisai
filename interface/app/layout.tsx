@@ -14,8 +14,8 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cortex V6.2 | Mycelis",
-  description: "Recursive Swarm Operating System",
+  title: "Mycelis | AI Organizations",
+  description: "Team Lead-first AI Organizations with governed execution, reviews, and operator control.",
 };
 
 export default function RootLayout({

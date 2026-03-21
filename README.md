@@ -9,6 +9,7 @@ The V7 architecture-library remains the current authoritative planning surface u
 ## README TOC
 
 - [Fresh Agent Start Here](#fresh-agent-start-here)
+- [Detailed Framework Memory](#detailed-framework-memory)
 - [V8 Directive](#v8-directive)
 - [Versioning Update](#versioning-update)
 - [Feature Status Standard](#feature-status-standard)
@@ -45,6 +46,34 @@ Fresh-agent review rule:
 - V7 docs define the current authoritative architecture/planning contract until migrated.
 - `V7_DEV_STATE.md` is legacy migration history.
 - `V8_DEV_STATE.md` is the active grading target for new work.
+
+## Detailed Framework Memory
+
+Use these as the top detailed references when you need the deeper framework contract rather than just the quick-start path.
+
+1. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+   - canonical memory for template vs instantiated organization, bootstrap resolution, inheritance, precedence, and V7-to-V8 bootstrap translation
+2. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+   - canonical memory for Inception, Soma Kernel, Central Council, Provider Policy, and Identity / Continuity State
+3. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
+   - canonical map of which detailed planning doc owns which part of the framework
+4. [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
+   - detailed runtime, storage, NATS, deployment, and service-boundary memory until V8 replacements land
+5. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+   - detailed workflow, run, manifest, recurring-plan, and activation memory
+6. [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+   - detailed acceptance, gate, and proof requirements for implementation slices
+7. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
+   - detailed state-file, coordination, and execution-discipline memory for multi-slice work
+8. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
+   - detailed operator experience, simplification, and anti-complexity memory for the UI layer
+9. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+   - detailed UI transaction/state expectations for operator-visible behavior
+
+Rule:
+- when framework behavior, bootstrap posture, organization shape, or operator model is unclear, load the owning detailed doc above before making assumptions
+- keep README as the entrypoint, but treat the documents in this section as the deeper memory surface for framework specifics
+- current MVP UI release posture is Team Lead-first by default; `Resources`, `Memory`, and `System` are advanced support routes rather than default operator entrypoints
 
 ## V8 Directive
 
@@ -147,6 +176,8 @@ Particular attention belongs on:
 
 Required command references for active V8 work:
 - `uv run inv ci.entrypoint-check`
+- `uv run inv cache.status`
+- `uv run inv cache.clean`
 - `uv run inv lifecycle.memory-restart`
 - `uv run inv team.architecture-sync`
 
@@ -158,23 +189,28 @@ Provider/runtime workflow reminders:
 - review architecture and state docs before implementation slices
 - attach tests and evidence in the same delivery window
 - keep state-file updates current with gate results and blocker changes
+- keep repo-managed caches under `workspace/tool-cache` and use `cache.apply-user-policy` when a Windows user profile needs heavy tool caches moved off `C:`
+- expect Invoke-managed Interface build/test/browser tasks to sweep repo-local Next/Vitest/Playwright worker residue after each run so old `node.exe` workers do not accumulate between sessions
+- project-owned config backstops now keep direct local commands aligned too: root `.npmrc` anchors npm/npx cache in `workspace/tool-cache`, pytest stores cache metadata in `workspace/tool-cache/pytest`, and task-managed Interface runs disable Next telemetry while routing Playwright browser binaries through the managed cache root
 
 ## Playwright Contract
 
-Playwright owns the Next.js server lifecycle for browser test runs.
+`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits.
 
 Browser matrix baseline:
 - `chromium firefox webkit`
 - `mobile-chromium` when route/mobile smoke is part of the gate
 
 Documentation rule:
-- root and testing docs must not imply that Playwright depends on manually pre-started servers
+- root and testing docs must not imply that default browser validation depends on a manually pre-started server
+- default release-candidate browser coverage is MVP-aligned; legacy V7 or raw-endpoint-only specs should stay outside the default gate unless a slice explicitly revives them
 - live-backend browser checks are still required when proxy/runtime contracts change
 
 ## Development Workflow
 
 Agents implementing V8 should follow this process:
 1. clean runtime environment and running services when the slice requires a deterministic baseline
+   - `uv run inv lifecycle.down` now treats repo-local Interface worker residue as part of the shutdown contract, not just bound ports
 2. review the implementation tracker
 3. review V7 architecture-library documentation as migration input
 4. identify migration targets and required contract updates

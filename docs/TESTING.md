@@ -2,17 +2,16 @@
 
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
-Latest verification baseline (2026-03-10):
+Latest verification baseline (2026-03-20):
 - `cd core && go test ./... -count=1` -> pass
-- `uv run inv interface.test` -> pass (`60` files, `356` tests)
-- `cd interface && npx vitest run --reporter=dot` -> pass (`60` files, `356` tests)
+- `uv run inv interface.test` -> pass (`65` files, `401` tests)
+- `cd interface && npx vitest run --reporter=dot` -> pass (`65` files, `401` tests)
 - `cd interface && npm run build` -> pass
 - `cd interface && npx tsc --noEmit` -> pass
-- `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py tests/test_lifecycle_tasks.py -q` -> pass (`29` passed)
+- `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q` -> pass (`25` passed)
 - focused UI browser proof:
-  - `cd interface && npx playwright test e2e/specs/v7-operational-ux.spec.ts --project=chromium -g "council failure reroutes via Soma in one click"` -> pass (`1` passed)
-  - `cd interface && npx playwright test e2e/specs/memory.spec.ts --project=chromium` -> skipped (`requires a live Core backend`)
-  - `uv run inv interface.e2e` -> partial pass (`141` passed, `9` failed, `21` skipped); failures are currently WebKit timeout/stability under parallel load
+  - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/navigation.spec.ts` -> pass (`6` passed)
+  - `uv run inv interface.e2e` -> pass (`129` passed, `63` skipped); default gate now covers MVP-aligned routes/tabs and skips legacy V7/raw-endpoint specs
 - coverage/status gates:
   - `uv run inv ci.baseline` -> pass
   - `uv run inv test.coverage` -> fail in this environment (Go toolchain drift: lock expects `go1.26`, local `go1.25.6`)
@@ -44,20 +43,20 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 
 | GUI surface | Unit/component coverage | Playwright coverage | Status |
 | --- | --- | --- | --- |
-| `/dashboard` Workspace | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `v7-operational-ux.spec.ts`, `workspace-live-backend.spec.ts`, accessibility baseline | `ACTIVE` |
-| `/automations` | `AutomationsPage.test.tsx`, automations component suites | `v7-operational-ux.spec.ts`, `layout.spec.ts` | `ACTIVE` |
+| `/dashboard` AI Organization entry | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `navigation.spec.ts`, `workspace-live-backend.spec.ts`, accessibility baseline | `ACTIVE` |
+| `/automations` | `AutomationsPage.test.tsx`, automations component suites | `layout.spec.ts`, `proposals.spec.ts` | `ACTIVE` |
 | `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial) | `ACTIVE` |
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
-| `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | `v7-operational-ux.spec.ts` quick-check scenarios | `ACTIVE` |
+| `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | route-level smoke remains unit-first; live-backend/browser depth is still selective | `ACTIVE` |
 | `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites | `settings.spec.ts` | `ACTIVE` |
-| `/runs`, `/runs/[id]` | run component suites (`RunDetailPage`, timeline, cards) + `RunsPage.test.tsx` | `docs-and-runs.spec.ts` route/detail smoke | `ACTIVE` |
+| `/runs`, `/runs/[id]` | run component suites (`RunDetailPage`, timeline, cards) + `RunsPage.test.tsx` | browser depth intentionally secondary to the MVP route gate | `ACTIVE` |
 | `/docs` in-app browser | `DocsPage.test.tsx` | `docs-and-runs.spec.ts` docs manifest/render smoke | `ACTIVE` |
 | Legacy redirect routes (`/wiring`, `/architect`, `/teams`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
 
 Immediate test additions required for full GUI confidence:
 1. expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches
 2. deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states
-3. stabilize WebKit Playwright execution under full parallel load (current flakes: accessibility Axe runs, nav/team/status interactions)
+3. expand selective browser depth for non-primary routes only when those routes re-enter the MVP surface
 
 ## Backend/API -> UI Target Plan (Required)
 
@@ -90,6 +89,7 @@ Minimum policy:
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect running compiled binaries with process inspection before the test begins. Look for repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
+- Treat repo-local Interface worker residue as part of the same cleanup surface. On Windows in particular, `next`, `vitest`, `playwright`, and generated `.next/dev/build/postcss.js` workers can survive after the owning command exits unless the task wrapper sweeps them.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -121,11 +121,13 @@ Stopping containers or port-forwards alone is not enough. The pre-test cleanup p
 # Unsupported bare alias: uvx inv ...
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv interface.test        # Vitest unit tests (jsdom)
-uv run inv interface.e2e         # Playwright E2E tests (Playwright starts/stops the Next.js server; Invoke clears stale UI listeners)
+uv run inv interface.e2e         # Playwright E2E tests (Invoke manages the Next.js server, managed browser cache, and repo-local UI worker cleanup)
 uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real Core-backed Workspace UI contract
 uv run inv core.smoke            # Governance smoke tests
 uv run inv ci.test               # Blocking Go + Vitest validation
 uv run inv interface.check       # HTTP smoke test against running dev server
+uv run inv cache.status          # Inspect managed repo/user cache roots before large local validation runs
+uv run inv cache.clean           # Prune repo-managed caches and build artifacts when disk pressure returns
 uv run inv logging.check-schema  # Event schema + docs coverage gate
 uv run inv logging.check-topics  # Hardcoded swarm topic gate
 uv run inv quality.max-lines --limit 350  # Hot-path max-lines gate with legacy caps
@@ -138,6 +140,8 @@ Runner matrix:
 - `uv run inv ...` is the supported path for real task execution and testing.
 - `uvx --from invoke inv -l` is a lightweight compatibility probe only.
 - `uvx inv ...` is expected to fail and is checked as a negative control by `uv run inv ci.entrypoint-check`.
+- Invoke-managed Node/Go/Python validation now routes caches through `workspace/tool-cache` by default; on Windows, `uv run inv cache.apply-user-policy` persists the same posture for direct per-user tool usage.
+- Project-owned backstops keep direct commands aligned too: root `.npmrc` anchors npm/npx cache under `workspace/tool-cache/npm`, pytest uses `workspace/tool-cache/pytest`, and Invoke-managed browser runs export `PLAYWRIGHT_BROWSERS_PATH` plus `NEXT_TELEMETRY_DISABLED=1`.
 
 Signal/channel standard:
 - When tests touch NATS channel behavior, use the canonical subject families and source metadata defined in `docs/architecture/NATS_SIGNAL_STANDARD_V7.md`.
@@ -297,7 +301,7 @@ npx vitest run __tests__/shell/            # Single directory
 ## Tier 3: End-to-End Tests (Playwright)
 
 **Goal:** Verify full user journeys through the running application.
-**Speed:** 30s-2min (Playwright owns the Interface server; start Core separately only for live-backend specs).
+**Speed:** 30s-2min (Invoke manages the Interface server for default Playwright runs; start Core separately only for live-backend specs).
 
 For execution-facing UI work, Playwright coverage should prefer user stories with real closure:
 - direct answer returned
@@ -309,20 +313,20 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 
 | Spec | Coverage |
 |------|----------|
-| `interface/e2e/specs/missions.spec.ts` | Dashboard load, nav rail, telemetry, mission cards, dark mode |
+| `interface/e2e/specs/missions.spec.ts` | Dashboard load, default navigation, organization-entry actions |
 | `interface/e2e/specs/governance.spec.ts` | Approvals page, policy tab, pending section |
 | `interface/e2e/specs/catalogue.spec.ts` | Catalogue page, agent cards, create button |
 | `interface/e2e/specs/settings.spec.ts` | Settings page, MCP registry |
 | `interface/e2e/specs/layout.spec.ts` | Shell structure, zone rendering |
 | `interface/e2e/specs/navigation.spec.ts` | Route transitions, active states |
-| `interface/e2e/specs/trust_economy.spec.ts` | Trust slider, threshold updates |
-| `interface/e2e/specs/telemetry.spec.ts` | Telemetry dashboard, metric cards |
+| `interface/e2e/specs/trust_economy.spec.ts` | Automations approvals reachability |
+| `interface/e2e/specs/telemetry.spec.ts` | Legacy raw-endpoint probe (skipped in default MVP gate) |
 | `interface/e2e/specs/memory.spec.ts` | Memory explorer, search |
 | `interface/e2e/specs/proposals.spec.ts` | Proposal CRUD flow |
 | `interface/e2e/specs/teams.spec.ts` | Team management, roster |
 | `interface/e2e/specs/wiring-edit.spec.ts` | Neural wiring, agent edit/delete |
-| `interface/e2e/specs/v7-operational-ux.spec.ts` | Execution-facing degraded-state, recovery, status drawer, and operator UX checks |
-| `interface/e2e/specs/mobile.spec.ts` | Mobile viewport smoke coverage under the dedicated mobile Playwright project |
+| `interface/e2e/specs/v7-operational-ux.spec.ts` | Legacy V7 operator UX probe (skipped in default MVP gate) |
+| `interface/e2e/specs/mobile.spec.ts` | Mobile landing-page smoke coverage under the dedicated mobile Playwright project |
 | `interface/e2e/specs/accessibility.spec.ts` | Axe-backed accessibility baseline for key operator surfaces |
 | `interface/e2e/specs/workspace-live-backend.spec.ts` | Real Workspace contract coverage against live `/api/v1/services/status` and `/api/v1/council/members` traffic |
 
@@ -332,7 +336,8 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 - **Base URL:** `http://127.0.0.1:3000` by default (`INTERFACE_HOST` / `INTERFACE_PORT` override supported)
 - **Browser Projects:** `chromium`, `firefox`, `webkit`, `mobile-chromium`
 - **Server Lifecycle:** Playwright `webServer` starts/stops the Next.js app for local and CI E2E runs
-- **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run
+- **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run, launches a managed local Next.js server, and sweeps repo-local Next/Vitest/Playwright worker residue
+- **Managed Browsers:** default task runs expect Playwright browser binaries under `workspace/tool-cache/playwright`
 - **Live Backend Mode:** `uv run inv interface.e2e --live-backend ...` loads proxy auth env and enables specs that require a real Core backend
 - **Accessibility Gate:** `@axe-core/playwright` is a required dev dependency; accessibility specs must fail when violated, not skip because the package is missing
 - **Dark mode compliance:** Every spec includes `no bg-white` assertion
@@ -436,7 +441,7 @@ Three GitHub Actions workflows enforce quality on every push/PR to `main` and `d
 - **Go Lint:** GolangCI-Lint v1.64.5
 - **TypeScript:** `npx tsc --noEmit` (strict type checking)
 - **Frontend Lint:** `npm run lint` (ESLint)
-- **Frontend Tests:** `npm run test` (Vitest)
+- **Frontend Tests:** `npm run test` (Vitest non-watch run)
 - **E2E:** Playwright browser matrix (`chromium`, `firefox`, `webkit`, `mobile-chromium`) with axe accessibility baseline, test results uploaded as artifact on failure
 
 ---

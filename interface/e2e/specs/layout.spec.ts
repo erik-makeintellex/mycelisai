@@ -13,10 +13,10 @@ test.describe('Automations Layout Geometry', () => {
     test('automations header and tabs render', async ({ page }) => {
         await expect(page.locator('h1:has-text("Automations")')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Active Automations' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Draft Blueprints' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Trigger Rules' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Approvals' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Teams' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Shared Teams' })).not.toBeVisible();
+        await expect(page.getByRole('button', { name: 'Workflow Builder' })).not.toBeVisible();
     });
 
     test('automation hub baseline renders', async ({ page }) => {

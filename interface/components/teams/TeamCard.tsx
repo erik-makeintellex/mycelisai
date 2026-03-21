@@ -165,9 +165,9 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
                     <Network className="w-3 h-3" />
                     View wiring
                 </a>
-                <a href="/system?tab=debug" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-logs`}>
+                <a href="/system?tab=services" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-logs`}>
                     <ScrollText className="w-3 h-3" />
-                    View logs
+                    View system
                 </a>
             </div>
         </div>

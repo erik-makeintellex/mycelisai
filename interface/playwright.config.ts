@@ -1,17 +1,25 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const configDir = typeof __dirname === 'string' ? __dirname : process.cwd();
 const interfaceHost = process.env.INTERFACE_HOST ?? '127.0.0.1';
 const interfacePort = process.env.INTERFACE_PORT ?? '3000';
 const baseURL = `http://${interfaceHost}:${interfacePort}`;
+const quotedConfigDir = `"${configDir}"`;
+const shouldManageWebServer = !process.env.PLAYWRIGHT_SKIP_WEBSERVER;
+const defaultDevCommand =
+    process.platform === 'win32'
+        ? `cmd /d /s /c "cd /d ${quotedConfigDir} && node .\\node_modules\\next\\dist\\bin\\next dev --webpack --hostname ${interfaceHost} --port ${interfacePort}"`
+        : `node ./node_modules/next/dist/bin/next dev --webpack --hostname ${interfaceHost} --port ${interfacePort}`;
 const webServerCommand =
     process.env.PLAYWRIGHT_UI_SERVER_COMMAND ??
-    `npm run dev -- --hostname ${interfaceHost} --port ${interfacePort}`;
+    defaultDevCommand;
 
 /**
  * Playwright E2E configuration for Mycelis Interface.
  *
- * Playwright owns the Next.js dev server lifecycle so `uv run inv interface.e2e`
- * remains reproducible and does not depend on a manually started UI process.
+ * Direct Playwright runs can own the Next.js dev server lifecycle, while
+ * `uv run inv interface.e2e` may pre-start a known-good local server and
+ * opt out via PLAYWRIGHT_SKIP_WEBSERVER when Windows shell startup is flaky.
  */
 export default defineConfig({
     testDir: './e2e/specs',
@@ -30,15 +38,17 @@ export default defineConfig({
         video: 'retain-on-failure',
     },
 
-    webServer: {
-        command: webServerCommand,
-        cwd: __dirname,
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        stdout: 'ignore',
-        stderr: 'pipe',
-        timeout: 120_000,
-    },
+    webServer: shouldManageWebServer
+        ? {
+              command: webServerCommand,
+              cwd: configDir,
+              url: baseURL,
+              reuseExistingServer: !process.env.CI,
+              stdout: 'ignore',
+              stderr: 'pipe',
+              timeout: 120_000,
+          }
+        : undefined,
 
     projects: [
         {

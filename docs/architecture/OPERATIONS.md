@@ -34,7 +34,7 @@ Use `uvx --from invoke inv -l` only as a lightweight compatibility probe.
 Do not use bare `uvx inv ...`.
 Lifecycle tasks must not report success until Core `/healthz` is actually ready; open-port-only checks are insufficient.
 Background Core startup must write to `workspace/logs/core-startup.log` so lifecycle failures have a deterministic diagnostic surface.
-Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to close before reporting success.
+Lifecycle teardown must use bounded cleanup subprocesses, sweep repo-local Interface worker residue, and wait for ports to close before reporting success.
 
 > **Tip:** If you `uv venv && .venv/Scripts/activate` (Windows) or `source .venv/bin/activate` (Linux), you can use `inv` directly.
 
@@ -60,7 +60,7 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
 | `uv run inv interface.test` | `npm run test` (Vitest) |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
-| `uv run inv interface.e2e` | `npm run e2e` (Playwright owns Next.js server lifecycle; Invoke clears stale Interface listeners before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
+| `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle plus repo-managed Playwright browsers, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
 | `uv run inv interface.stop` | Kill process on port 3000 |
 | `uv run inv interface.clean` | rm -rf .next cache |
 | `uv run inv interface.restart` | stop → clean → build → dev → check |
@@ -81,12 +81,21 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 |---------|-------------|
 | `uv run inv auth.dev-key` | Ensure a local `MYCELIS_API_KEY` exists and keep `.env.example` on a sample value |
 
+### Cache Tasks (`ops/cache.py`)
+
+| Command | Description |
+|---------|-------------|
+| `uv run inv cache.status` | Report repo-managed cache sizes plus configured user-cache roots |
+| `uv run inv cache.clean` | Clear repo-managed tool caches and local build artifacts under `workspace/tool-cache` |
+| `uv run inv cache.clean --user` | Also clear user-level tool caches configured by `cache.apply-user-policy` |
+| `uv run inv cache.apply-user-policy` | Persist Windows user cache env vars so pip/npm/go/uv stop defaulting back to `C:` |
+
 ### Lifecycle Tasks (`ops/lifecycle.py`)
 
 | Command | Description |
 |---------|-------------|
 | `uv run inv lifecycle.up` | Idempotent bring-up: bridge -> dependencies -> Core (waits for `/healthz`; supports `--build` and `--frontend`) |
-| `uv run inv lifecycle.down` | Clean teardown: Core -> Frontend -> compiled Go service sweep -> port-forwards with bounded cleanup and port-close waits |
+| `uv run inv lifecycle.down` | Clean teardown: Core -> Frontend -> repo-local Interface worker sweep -> compiled Go service sweep -> port-forwards with bounded cleanup and port-close waits |
 | `uv run inv lifecycle.status` | Dashboard for PostgreSQL, NATS, Core, Frontend, Ollama, compiled Go leftovers, and related PIDs |
 | `uv run inv lifecycle.health` | Deep health probe against actual API endpoints with auth |
 | `uv run inv lifecycle.restart` | Full local restart: down -> settle -> up (supports `--build` and `--frontend`) |
@@ -97,6 +106,7 @@ Lifecycle teardown must use bounded cleanup subprocesses and wait for ports to c
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect compiled Go binaries before starting the check. Inspect for repo-local command lines or binary paths plus listeners on declared dev/test ports, terminate them through lifecycle/task helpers when found, and never assume they belong to the current slice.
+- Treat repo-local Interface workers as the same cleanup surface. Build/test/browser runs must not leave `node.exe` helpers from `.next`, Vitest, or Playwright behind after the command exits.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -180,6 +190,8 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `ops/proto_relay.py` | `proto.generate` | Protobuf codegen (Go + Python) |
 | `ops/proto_relay.py` | `relay.test`, `relay.demo` | Python SDK tests + demo |
 | `ops/device.py` | `device.boot --id=ghost-01` | Device simulation (NATS announce) |
+| `ops/cache.py` | `cache.status`, `cache.clean`, `cache.apply-user-policy` | Managed cache reporting, cleanup, and Windows user-policy stamping |
+| `.dockerignore` | root Docker build-context exclusions | Excludes Interface build/test outputs so repo-root Docker builds do not ingest stale `.next`, coverage, or browser artifacts |
 | `ops/misc.py` | `clean.legacy` | Remove legacy Makefile/docker-compose |
 | `ops/misc.py` | `team.sensors`, `team.output`, `team.test`, `team.architecture-sync` | Python agent teams and central architect sync |
 
@@ -195,6 +207,8 @@ CLUSTER_NAME = "mycelis-cluster"
 NAMESPACE = "mycelis"
 ROOT_DIR = project root
 CORE_DIR, SDK_DIR = relative paths
+WORKSPACE_DIR = project workspace root
+PROJECT_CACHE_ROOT = workspace-managed cache root
 API_HOST/PORT = localhost:8081 (env-overridable)
 INTERFACE_HOST/PORT = localhost:3000 (env-overridable)
 ```
@@ -255,8 +269,8 @@ uv run inv interface.dev
 
 ### Configure Cognitive Engine
 
-- **UI:** `/settings` → Cognitive Matrix tab → change provider routing, configure endpoints
-- **MCP:** `/settings` → MCP Tools tab → install from curated library or manually
+- **UI:** `/settings` → AI Engines (Advanced mode) → change provider routing, configure endpoints
+- **Tools:** `/settings` → Connected Tools (Advanced mode) → install from curated library or manually
 - **YAML:** Edit `core/config/cognitive.yaml` directly
 
 ---
@@ -267,10 +281,10 @@ uv run inv interface.dev
 
 | Config | Location | Managed Via |
 |--------|----------|-------------|
-| Cognitive (Bootstrap) | `core/config/cognitive.yaml` | UI (`/settings` → Matrix) or YAML |
+| Cognitive (Bootstrap) | `core/config/cognitive.yaml` | UI (`/settings` → AI Engines, Advanced mode) or YAML |
 | Bootstrap Templates | `core/config/templates/*.yaml` | YAML (startup-selected transitional V8 migration bundles that instantiate the runtime organization; Task 005 bridge layer) |
 | Standing Teams | `core/config/teams/*.yaml` | YAML (transitional migration inputs mirrored for compatibility packaging; normal startup now requires a bootstrap bundle and does not read them directly) |
-| MCP Servers | Database | UI (`/settings` → MCP Tools) or API |
+| MCP Servers | Database | UI (`/settings` → Connected Tools, Advanced mode) or API |
 | Governance Policy | `core/config/policy.yaml` | UI (`/approvals` → Policy tab) or YAML |
 | MCP Library | `core/config/mcp-library.yaml` | YAML (curated registry) |
 | Environment | `.env` | Manual |
@@ -349,6 +363,15 @@ defaults:
 | `PORT` | `8080` | Core HTTP listen port |
 | `MYCELIS_WORKSPACE` | `./workspace` (local) / `/data/workspace` (K8s) | Workspace sandbox root for manifested files and filesystem tools |
 | `DATA_DIR` | `./workspace/artifacts` (local) / `/data/artifacts` (K8s) | Artifact storage root for file-backed outputs |
+| `MYCELIS_PROJECT_CACHE_ROOT` | `./workspace/tool-cache` | Repo-managed cache root used by Invoke tasks for uv/pip/npm/go/python bytecode |
+| `MYCELIS_USER_CACHE_ROOT` | platform-specific | Optional user cache root stamped by `uv run inv cache.apply-user-policy` on Windows |
+| `UV_CACHE_DIR` | managed by task env or user policy | uv download/build cache location |
+| `PIP_CACHE_DIR` | managed by task env or user policy | pip wheel/http cache location |
+| `NPM_CONFIG_CACHE` | managed by task env or user policy | npm/npx cache location |
+| `GOCACHE` | managed by task env or user policy | Go build cache location |
+| `GOMODCACHE` | managed by task env or user policy | Go module cache location |
+| `PLAYWRIGHT_BROWSERS_PATH` | managed by task env or user policy | Playwright browser binary cache location |
+| `NEXT_TELEMETRY_DISABLED` | `1` in task-managed Interface runs | Prevents Next telemetry writes during local build/test/browser execution |
 | `OLLAMA_HOST` | — | Override Ollama endpoint |
 | `OPENAI_API_KEY` | — | OpenAI API key |
 | `ANTHROPIC_API_KEY` | — | Anthropic API key |
@@ -586,3 +609,7 @@ GET /api/v1/cognitive/status:
 ```
 
 
+Project-owned config backstops:
+- root `.npmrc` anchors direct npm/npx cache usage inside `workspace/tool-cache/npm` and trims low-value cache churn
+- `pyproject.toml` routes pytest cache metadata into `workspace/tool-cache/pytest`
+- `interface/package.json` keeps `npm run test` non-watch by default; use `npm run test:watch` only when an interactive watch session is explicitly intended

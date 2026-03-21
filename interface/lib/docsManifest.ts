@@ -67,13 +67,13 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "automations-guide",
                 label: "Automations",
                 path: "docs/user/automations.md",
-                description: "Active missions, drafts, trigger rules, approvals, scheduled runs",
+                description: "Active automations, trigger rules, approvals, and advanced workflow tools",
             },
             {
                 slug: "resources-guide",
                 label: "Resources",
                 path: "docs/user/resources.md",
-                description: "Brains/providers, MCP tools, workspace filesystem, agent catalogue",
+                description: "Advanced tools, workspace files, AI engines, and reusable role definitions",
             },
             {
                 slug: "memory-guide",

@@ -182,6 +182,9 @@ Delivery updates in this checkpoint:
 36. `COMPLETE` added controlled Agent Type Response Style binding in Department details so operators can pin a curated Response Style to a role type, return that role type to the Organization / Team default, and preserve inheritance clarity between the organization-wide Response Style and type-specific specialist output behavior.
 37. `COMPLETE` aligned the root page with the V8.1 living AI Organization model so product-facing entry messaging now centers AI Organizations, Team Lead-guided operation, continuous reviews/checks/updates, and the post-creation workspace instead of legacy swarm-console framing.
 38. `COMPLETE` added a read-only `What the Organization is Learning` workspace surface so operators can now see safe, human-readable learning highlights with source, recency, and simple strength labels without exposing raw memory internals or any mutation controls.
+39. `COMPLETE` added managed cache hygiene for local delivery work so Invoke-driven uv/pip/npm/go flows now centralize repo caches under `workspace/tool-cache`, project build artifacts have an explicit cleanup path, and Windows operators have a first-class user-policy command to keep heavy per-user caches off `C:`.
+40. `COMPLETE` audited the full MVP route/tab surface against the V8.1 Team Lead-first workflow, removed the dead `Draft Blueprints` placeholder tab, tightened the default rail to core operator paths, moved `Resources`, `Memory`, and `System` behind explicit Advanced mode, and renamed stale route labels like `Neural Wiring`, `Brains`, and `Cognitive Matrix` into operator-facing release wording.
+41. `COMPLETE` refreshed the frontend route contract and user-facing docs so surviving MVP surfaces, advanced boundaries, and compatibility redirects now align in code, tests, and internal docs.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -223,6 +226,7 @@ Evidence:
 37. the first bounded Agent Type Response Style binding path now lives in `core/internal/server/organizations.go`, `core/internal/server/admin.go`, `core/internal/server/organizations_test.go`, `interface/lib/organizations.ts`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; Department details now let operators apply a curated Response Style to an Agent Type, retry in place on failure, return that role type to the Organization / Team default, and preserve inherited organization-wide Response Style behavior for other role types without exposing raw prompt text, raw policy text, or agent-instance overrides
 38. `interface/app/(marketing)/page.tsx` and `interface/__tests__/pages/LandingPage.test.tsx` now present and enforce the V8.1 root-page story around AI Organizations, Team Lead-guided work, recent activity, safe guided control, and post-creation workspace expectations without leaking internal architecture terms or old console/chat framing
 39. `GET /api/v1/organizations/{id}/learning-insights` now exposes safe read-only learning highlights derived from reviewed organization activity, and `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts` now render and validate a failure-safe `What the Organization is Learning` support surface without exposing raw embeddings, raw memory stages, or editing controls
+40. `ops/cache.py`, `ops/config.py`, `ops/core.py`, `ops/interface.py`, `ops/cognitive.py`, `ops/ci.py`, `tasks.py`, and `tests/test_cache_tasks.py` now define and validate the managed cache policy: repo task runs route uv/pip/npm/go/python-bytecode caches into `workspace/tool-cache`, cleanup/report tasks are explicit, `.pytest_cache` and `workspace/tool-cache/` stay out of git, and operator docs now point at `cache.status`, `cache.clean`, and `cache.apply-user-policy`
 
 ### 6. V8 contract shell introduction
 
@@ -387,6 +391,7 @@ Evidence:
 6. `core/internal/server/review_loops.go`, `core/internal/server/organizations.go`, `core/internal/server/review_loops_test.go`, and `core/internal/server/organizations_test.go` now add bounded event-driven review execution for allowed internal organization events, safe failure logging into Recent Activity, and shared overlap protection so reactive reviews stay read-only and operator-visible without exposing raw event-bus internals.
 7. `GET /api/v1/organizations/{id}/automations` now exposes safe read-only Automation definitions, and `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts` now render and validate an inspect-only `Automations` support surface that stays separate from `Recent Activity` while preserving the Team Lead-first workspace.
 8. `GET /api/v1/organizations/{id}/learning-insights` now exposes safe read-only learning highlights derived from reviewed organization activity, and `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts` now render and validate a failure-safe `What the Organization is Learning` panel that stays operator-friendly and non-mutating.
+9. `interface/components/shell/ZoneA_Rail.tsx`, `interface/app/(app)/automations/page.tsx`, `interface/components/automations/AutomationHub.tsx`, `interface/app/(app)/resources/page.tsx`, `interface/app/(app)/system/page.tsx`, `interface/app/(app)/memory/page.tsx`, `interface/app/(app)/settings/page.tsx`, and supporting redirect routes now enforce the MVP route audit: core Team Lead-first paths stay visible by default, advanced support surfaces are explicitly gated, and stale labels are replaced with operator-facing terms.
 
 ### 23. V8.1 learning continuity architecture synchronization
 
@@ -401,6 +406,20 @@ Evidence:
 1. `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` now defines Learning Loops, raw/reviewed/promoted memory stages, semantic continuity layering, and Procedure / Skill Sets as canonical V8.1 architecture truth.
 2. `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `interface/lib/docsManifest.ts`, and `tests/test_docs_links.py` now cross-link and enforce the semantic continuity and learning-layer model.
 3. `V8_DEV_STATE.md` now reflects that read-only Automations visibility is complete, while memory-promotion planning and the first bounded Learning Loop remain next.
+
+### 24. V8.1 MVP route/tab and UI/API audit before RC lock
+
+Status:
+1. `COMPLETE` audited the default operator-visible route set against the Team Lead-first V8.1 model and reduced the default shell to `AI Organization`, `Automations`, `Docs`, and `Settings`, with `Resources`, `Memory`, and `System` kept as advanced support routes.
+2. `COMPLETE` revised or redirected stale MVP surfaces so legacy `Draft Blueprints`, `Matrix`, direct `Catalogue` / `Marketplace`, and other pre-V8.1 labels now either route into the surviving advanced tabs or stay out of the default workflow.
+3. `COMPLETE` tightened request handling and browser validation around the MVP route gate: loading/error states remain failure-safe, Playwright now runs through a managed local server + managed browser cache path, and the default E2E suite skips legacy V7/raw-endpoint probes that no longer define the MVP surface.
+4. `COMPLETE` reviewed advanced-config boundaries and kept AI engine / connected-tool setup behind advanced mode while leaving bundle/bootstrap/provider-policy truth in file/env/config surfaces instead of widening default UI controls.
+
+Evidence:
+1. `interface/components/shell/ZoneA_Rail.tsx`, `interface/app/(app)/automations/page.tsx`, `interface/app/(app)/resources/page.tsx`, `interface/app/(app)/memory/page.tsx`, `interface/app/(app)/system/page.tsx`, `interface/app/(app)/settings/page.tsx`, and their redirect pages now reflect the MVP keep/revise/remove decisions in code.
+2. `docs/architecture/FRONTEND.md`, `docs/TESTING.md`, `README.md`, and `docs/architecture/OPERATIONS.md` now document the Team Lead-first route inventory, advanced-route boundary, and managed Playwright runtime/testing contract.
+3. `interface/e2e/specs/navigation.spec.ts`, `interface/e2e/specs/missions.spec.ts`, `interface/e2e/specs/mobile.spec.ts`, `interface/e2e/specs/v8-organization-entry.spec.ts`, and the skipped legacy/raw coverage specs now align the default browser gate with the surviving MVP workflow.
+4. Validation on 2026-03-20: `uv run pytest tests/test_docs_links.py -q` -> pass (`25` passed), `cd interface && npm test` -> pass (`65` files, `401` tests), `cd interface && npx tsc --noEmit` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `63` skipped).
 
 ## Immediate Next Actions
 

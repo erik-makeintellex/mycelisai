@@ -111,14 +111,14 @@ initializeStream() --> Zustand streamLogs[] (capped at 100)
 Use the `inv` (invoke) task runner from the project root:
 
 ```bash
-inv interface.dev       # Start dev server (Turbopack)
-inv interface.build     # Production build
-inv interface.lint      # ESLint check
-inv interface.test      # Run Vitest unit tests
-inv interface.check     # Smoke-test running server (fetches key pages, checks for errors)
-inv interface.stop      # Kill dev server by port
-inv interface.clean     # Clear .next build cache
-inv interface.restart   # Full restart: stop → clean → build → dev → check
+uv run inv interface.dev       # Start dev server (Turbopack)
+uv run inv interface.build     # Production build
+uv run inv interface.lint      # ESLint check
+uv run inv interface.test      # Run Vitest unit tests
+uv run inv interface.check     # Smoke-test running server (fetches key pages, checks for errors)
+uv run inv interface.stop      # Kill dev server by port
+uv run inv interface.clean     # Clear .next build cache
+uv run inv interface.restart   # Full restart: stop → clean → build → dev → check
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the Cortex UI.
@@ -127,11 +127,14 @@ Open [http://localhost:3000](http://localhost:3000) to see the Cortex UI.
 
 | Route | Component |
 | :--- | :--- |
-| `/architect` | Workspace (ArchitectChat + CircuitBoard) |
-| `/dashboard` | System dashboard |
-| `/wiring` | Workspace (Neural Wiring — same split-pane as Architect) |
-| `/telemetry` | Telemetry view |
-| `/settings` | Configuration |
+| `/dashboard` | AI Organization entry flow |
+| `/organizations/[id]` | Team Lead-first AI Organization workspace |
+| `/automations` | Automation hub with approvals, trigger rules, and advanced orchestration tabs |
+| `/docs` | In-app docs browser |
+| `/settings` | Preferences, mission profiles, people access, and advanced setup |
+| `/resources` | Advanced support hub for connected tools, workspace files, AI engines, and role library |
+| `/memory` | Advanced memory explorer |
+| `/system` | Advanced diagnostics and recovery checks |
 
 ## Design Tokens
 

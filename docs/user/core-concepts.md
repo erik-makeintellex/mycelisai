@@ -70,13 +70,13 @@ No mutation executes until confirmation.
 
 ---
 
-## Brain / Provider
+## AI Engine / Provider
 
-A brain is a configured model provider endpoint (local or remote).
-Role routing is managed through brains and mission profiles.
+An AI engine is a curated model-provider posture used by the product.
+Role routing is managed through AI engines and mission profiles.
 
 Primary management surfaces:
-- `Resources -> Brains`
+- `Resources -> AI Engines` (Advanced mode)
 - `Settings -> Profiles`
 
 ---
@@ -122,18 +122,18 @@ Toggle from the rail footer (`Advanced: On/Off`).
 
 Typical unlocks:
 - System diagnostics depth
-- Neural Wiring tab in Automations
+- Workflow Builder tab in Automations
 - Workspace telemetry row (hidden in standard mode to keep chat-first layout)
 
 ---
 
 ## Users and Groups
 
-`Settings -> Users & Groups` provides:
+`Settings -> People & Access` provides:
 - user management elements (role, remote-provider allowance, active/disabled state)
 - collaboration group management (goal/work-mode/team membership + group broadcast)
 
-Group management is also available in `Automations -> Teams`.
+Group management is also available in `Automations -> Shared Teams`.
 
 ---
 
@@ -157,12 +157,12 @@ If NATS degrades, UI enters degraded mode and offers recovery actions.
 
 ---
 
-## MCP Tools
+## Connected Tools
 
-MCP extends agent capabilities (filesystem, fetch, memory, etc.).
+Connected tools extend agent capabilities (filesystem, fetch, memory, etc.).
 
 Primary surfaces:
-- `Resources -> MCP Tools` for server/tool visibility and install flows
+- `Resources -> Connected Tools` for server/tool visibility and install flows
 - `Workspace` for actual tool usage via agent execution
 
 Baseline profile (V7):

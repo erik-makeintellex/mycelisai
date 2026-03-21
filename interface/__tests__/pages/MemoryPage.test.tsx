@@ -18,10 +18,17 @@ vi.mock('next/dynamic', () => ({
     },
 }));
 
+const mockAdvancedMode = vi.fn(() => true);
+vi.mock('@/store/useCortexStore', () => ({
+    useCortexStore: (selector: any) => selector({ advancedMode: mockAdvancedMode() }),
+}));
+
 import MemoryRoute from '@/app/(app)/memory/page';
 
 describe('Memory Page (app/memory/page.tsx)', () => {
-    beforeEach(() => {});
+    beforeEach(() => {
+        mockAdvancedMode.mockReturnValue(true);
+    });
 
     it('mounts without crashing', async () => {
         await act(async () => {
@@ -47,5 +54,14 @@ describe('Memory Page (app/memory/page.tsx)', () => {
         expect(screen.getByTestId('memory-route-content')).toBeDefined();
         expect(screen.getByText('Recent Work')).toBeDefined();
         expect(screen.getByText('Search Memory')).toBeDefined();
+    });
+
+    it('shows the advanced gate when advanced mode is off', async () => {
+        mockAdvancedMode.mockReturnValue(false);
+        await act(async () => {
+            render(<MemoryRoute />);
+        });
+
+        expect(screen.getByText(/Memory views stay behind Advanced mode/i)).toBeDefined();
     });
 });

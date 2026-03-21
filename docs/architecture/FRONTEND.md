@@ -31,6 +31,9 @@
 
 Primary app layout is implemented in `interface/app/(app)/layout.tsx` and `interface/components/shell/ShellLayout.tsx`.
 
+Release-candidate MVP note:
+- default operator navigation is intentionally smaller than the full route set: `AI Organization`, `Automations`, `Docs`, and `Settings` stay visible by default, while `Resources`, `Memory`, and `System` are advanced-mode support routes
+
 | Shell area | Component | Purpose |
 | --- | --- | --- |
 | Rail | `ZoneA_Rail.tsx` | Workflow-first navigation + advanced toggle + settings |
@@ -53,13 +56,13 @@ Current `page.tsx` route count: `21`.
 | Route | Source | Primary surface |
 | --- | --- | --- |
 | `/` | `app/(marketing)/page.tsx` | Product landing |
-| `/dashboard` | `app/(app)/dashboard/page.tsx` | Workspace mission control (`MissionControl`) |
+| `/dashboard` | `app/(app)/dashboard/page.tsx` | AI Organization entry flow |
 | `/automations` | `app/(app)/automations/page.tsx` | Automation hub + tabs |
-| `/resources` | `app/(app)/resources/page.tsx` | Brains/tools/workspace/catalogue tabs |
-| `/memory` | `app/(app)/memory/page.tsx` | Memory explorer |
+| `/resources` | `app/(app)/resources/page.tsx` | Advanced resources (tools/files/AI engines/roles) |
+| `/memory` | `app/(app)/memory/page.tsx` | Advanced memory explorer |
 | `/docs` | `app/(app)/docs/page.tsx` | In-app markdown docs browser |
 | `/system` | `app/(app)/system/page.tsx` | Advanced diagnostics and quick checks |
-| `/settings` | `app/(app)/settings/page.tsx` | Profile/team/brains/matrix/profiles/tools/users tabs |
+| `/settings` | `app/(app)/settings/page.tsx` | Profile, mission profiles, people/access, and advanced setup |
 
 ### 3.2 Execution and inspection routes
 
@@ -68,7 +71,7 @@ Current `page.tsx` route count: `21`.
 | `/runs` | `app/(app)/runs/page.tsx` | Run list and status summary |
 | `/runs/[id]` | `app/(app)/runs/[id]/page.tsx` | Run conversation/events tabs |
 | `/missions/[id]/teams` | `app/(app)/missions/[id]/teams/page.tsx` | Mission team actuation view |
-| `/settings/tools` | `app/(app)/settings/tools/page.tsx` | Dedicated MCP tool registry surface |
+| `/settings/tools` | `app/(app)/settings/tools/page.tsx` | Redirect into Settings tools tab |
 
 ### 3.3 In-app docs API routes
 
@@ -85,12 +88,12 @@ Current `page.tsx` route count: `21`.
 | `/wiring` | `/automations?tab=wiring` |
 | `/architect` | `/automations?tab=wiring` |
 | `/teams` | `/automations?tab=teams` |
-| `/catalogue` | `/resources?tab=catalogue` |
-| `/marketplace` | `/resources?tab=catalogue` |
+| `/catalogue` | `/resources?tab=roles` |
+| `/marketplace` | `/resources?tab=roles` |
 | `/approvals` | `/automations?tab=approvals` |
 | `/telemetry` | `/system?tab=health` |
-| `/matrix` | `/system?tab=matrix` |
-| `/settings/brain` | `/settings` |
+| `/matrix` | `/settings?tab=engines` |
+| `/settings/brain` | `/settings?tab=engines` |
 
 ---
 
@@ -119,11 +122,24 @@ Component files under `interface/components`: `112` (`.tsx` and `.ts`).
 
 | Surface | Tabs / modes | Notes |
 | --- | --- | --- |
-| `/automations` | `active`, `drafts`, `triggers`, `approvals`, `teams`, `wiring` | `wiring` is advanced-mode gated |
-| `/resources` | `brains`, `tools`, `workspace`, `catalogue` | Capability-management hub |
-| `/system` | `health`, `nats`, `database`, `services`, `matrix`, `debug` | Advanced diagnostics |
-| `/settings` | `profile`, `teams`, `brains`, `matrix`, `profiles`, `tools`, `users` | Operator/admin configuration |
+| `/automations` | `active`, `triggers`, `approvals`, `teams`, `wiring` | `teams` and `wiring` are advanced-mode gated |
+| `/resources` | `tools`, `workspace`, `engines`, `roles` | Advanced support hub |
+| `/system` | `health`, `nats`, `database`, `services` | Advanced diagnostics |
+| `/settings` | `profile`, `profiles`, `users`, `engines`, `tools` | Preferences, access, and optional advanced setup |
 | `/runs/[id]` | `conversation`, `events` | Split run investigation view |
+
+### 5.1 MVP audit decisions (RC lock)
+
+| Route / tab | Decision | Team Lead-first reason |
+| --- | --- | --- |
+| `/dashboard` | keep | first-run entry and AI Organization creation remain the primary operator start |
+| `/organizations/[id]` | keep | Team Lead workspace is the default V8.1 operating surface |
+| `/automations` `active`, `triggers`, `approvals` | keep | directly support guided operation, recurring work, and governed decisions |
+| `/automations` `teams`, `wiring` | revise | keep available, but only in advanced mode so the default workflow stays simpler |
+| `/resources`, `/memory`, `/system` | revise | remain shipped as advanced support routes, not default operator navigation |
+| `/settings` `profile`, `profiles`, `users` | keep | operator-visible preferences and access are still MVP-worthy |
+| `/settings` `engines`, `tools` | revise | advanced setup belongs behind explicit advanced mode |
+| legacy redirects | keep as redirects | preserve bookmarks while funneling usage back into the reduced MVP route set |
 
 ---
 
@@ -191,7 +207,7 @@ Rules:
 
 | Area | Current state | Delivery status |
 | --- | --- | --- |
-| Operational UX reroute contract | `v7-operational-ux.spec.ts` now validates reroute copy and one-click recovery path; keep this as a standing regression gate | `ACTIVE` guard |
+| MVP browser gate scope | default Playwright coverage is now trimmed to Team Lead-first MVP routes/tabs; legacy V7 operational and raw telemetry specs remain out of the default RC gate | `COMPLETE` audit alignment |
 | Max-lines gate pressure | `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts` over cap | `REQUIRED` Slice 4 |
 | Created-team communications inspector | architecture contract exists but dedicated team workspace/communications tabs are not fully delivered | `BLOCKED` Slice 7 |
 | Docs and runs route browser depth | route-level smoke coverage now exists, but failure/recovery depth (error branches + interjection/terminal transitions) still needs expansion | `NEXT` |
@@ -223,8 +239,8 @@ Scope:
 - align reroute/recovery copy and interactions across `MissionControlChat`, `CouncilCallErrorCard`, and `DegradedModeBanner`
 
 Proof targets:
-- focused Vitest for chat/failure/reroute components
-- Playwright `v7-operational-ux.spec.ts` full green
+- focused Vitest for Team Lead action, blocker, and degraded-state components
+- Playwright MVP route/tab coverage (`navigation`, `layout`, `missions`, `automations`, `settings`, `teams`, `proposals`, `accessibility`)
 
 ### 10.2 Stream B - Contract-safe store/API cleanup (`ACTIVE`)
 

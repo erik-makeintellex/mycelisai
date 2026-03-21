@@ -11,9 +11,8 @@ test.describe('Mobile Viewport', () => {
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
 
-        // Marketing nav is the default mobile landing experience.
-        await expect(page.getByText('MYCELIS', { exact: true })).toBeVisible();
-        await expect(page.getByRole('link', { name: /launch console/i }).first()).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Create AI Organization' }).first()).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Explore Templates' }).first()).toBeVisible();
     });
 
     test('hero content renders correctly on mobile', async ({ page }) => {
@@ -25,7 +24,7 @@ test.describe('Mobile Viewport', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.locator('body')).toBeVisible();
-        await expect(page.getByRole('heading', { name: /Your AI Agents\. Your Rules\./i })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Build AI Organizations that think, review, and evolve.' })).toBeVisible();
 
         // Verify content is not clipped — the main content area should have
         // a height that extends beyond the viewport (scrollable) or fit within it

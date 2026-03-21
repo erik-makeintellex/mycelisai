@@ -4,8 +4,9 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/automations');
         await page.waitForLoadState('domcontentloaded');
-        await page.getByRole('button', { name: 'Teams' }).click();
-        await expect(page.locator('h1:has-text("Team Management")')).toBeVisible();
+        await page.getByRole('button', { name: 'Advanced: Off' }).click();
+        await page.getByRole('button', { name: 'Shared Teams' }).click();
+        await expect(page.locator('h1:has-text("Shared Teams")')).toBeVisible();
     });
 
     test('header and filter controls render', async ({ page }) => {
@@ -50,7 +51,7 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
         await expect(openChatLinks.first()).toHaveAttribute('href', '/dashboard');
         await expect(page.locator('[data-testid$="-view-runs"]').first()).toHaveAttribute('href', '/runs');
         await expect(page.locator('[data-testid$="-view-wiring"]').first()).toHaveAttribute('href', '/automations?tab=wiring');
-        await expect(page.locator('[data-testid$="-view-logs"]').first()).toHaveAttribute('href', '/system?tab=debug');
+        await expect(page.locator('[data-testid$="-view-logs"]').first()).toHaveAttribute('href', '/system?tab=services');
     });
 
     test('clicking a team card opens and closes the detail drawer', async ({ page }) => {
