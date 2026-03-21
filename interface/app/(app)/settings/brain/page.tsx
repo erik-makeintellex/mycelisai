@@ -3,5 +3,5 @@
 import { redirect } from "next/navigation";
 
 export default function BrainSettingsRedirect() {
-    redirect("/settings");
+    redirect("/settings?tab=engines");
 }

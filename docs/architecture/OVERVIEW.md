@@ -159,11 +159,11 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 | 5.2 | Sovereign UX & Trust | Trust Economy (CTS TrustScore, Governance Valve, SSE governance_halt), Telemetry API, Trust API, AgentNode iconography (4 categories), TrustSlider, BlueprintDrawer, Panopticon layout |
 | 5.3 | RAG & Sensory UI | EmbedProvider interface, pgvector auto-embed, SemanticSearch, SensorLibrary (grouped subscriptions), ManifestationPanel, NatsWaterfall signal classification (input/output/internal), MissionControl 3-column responsive grid |
 | 6.0 | Host Internalization | Activation Bridge (commitAndActivate), SensorAgent (poll-based), Blueprint Converter (mission-scoped IDs), Symbiotic Seed (Gmail+Weather, no LLM), Team.sensorConfigs, Migration 010 |
-| 7.7 | Admin & Council | HandleChat NATS-only (no raw LLM fallback), provider naming (vllm/ollama/lmstudio), dynamic cognitive status, Settings 4-tab page, Cognitive Matrix UI + ProviderConfigModal, 17 internal tools, Council YAML, ToolsPalette drawer |
+| 7.7 | Admin & Council | HandleChat NATS-only (no raw LLM fallback), provider naming (vllm/ollama/lmstudio), dynamic cognitive status, advanced AI Engines settings, 17 internal tools, Council YAML, ToolsPalette drawer |
 | 8.0 | Visualization | Observable Plot (bar/line/area/dot/waffle/tree), Leaflet geo maps, DataTable, ChartRenderer, MycelisChartSpec type system, ArtifactViewer inline chart rendering, SquadRoom ProofCard |
-| 9.0 | Neural Wiring CRUD | WiringAgentEditor drawer, CircuitBoard edit/delete, mission CRUD API (GET/PUT/DELETE), Migration 020 (FK cascade), Zustand wiring actions (7 new), draft mode vs active mode |
+| 9.0 | Workflow Builder CRUD | WiringAgentEditor drawer, CircuitBoard edit/delete, mission CRUD API (GET/PUT/DELETE), Migration 020 (FK cascade), Zustand wiring actions (7 new), draft mode vs active mode |
 | 10.0 | Meta-Agent Research | research_for_blueprint tool, admin-routed negotiate via NATS |
-| 11.0 | Team Management | /teams route, TeamCard, TeamDetailDrawer, GET /api/v1/teams/detail |
+| 11.0 | Shared Teams | `/teams` redirect, TeamCard, TeamDetailDrawer, GET /api/v1/teams/detail |
 
 ---
 

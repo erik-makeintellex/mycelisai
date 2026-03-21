@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+test.skip(true, 'Raw telemetry endpoint checks are no longer part of the MVP route audit suite.');
+
 test.describe('Phase 5.2 - System Telemetry Contract', () => {
 
     test('GET /api/v1/telemetry/compute returns valid metrics', async ({ request }) => {

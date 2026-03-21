@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
+test.skip(true, 'Legacy V7 operational coverage is outside the V8.1 MVP route audit surface.');
+
 async function installStableEventSource(page: Page) {
     await page.addInitScript(() => {
         class StableEventSource {

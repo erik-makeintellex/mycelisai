@@ -1,15 +1,19 @@
 import { test, expect } from '@playwright/test';
 
-const V7_NAV_ENTRIES = [
-    { href: '/dashboard', label: 'Workspace' },
+const DEFAULT_NAV_ENTRIES = [
+    { href: '/dashboard', label: 'AI Organization' },
     { href: '/automations', label: 'Automations' },
-    { href: '/resources', label: 'Resources' },
-    { href: '/memory', label: 'Memory' },
     { href: '/docs', label: 'Docs' },
     { href: '/settings', label: 'Settings' },
 ];
 
-test.describe('V7 Workflow-First Navigation', () => {
+const ADVANCED_NAV_ENTRIES = [
+    { href: '/resources', label: 'Resources' },
+    { href: '/memory', label: 'Memory' },
+    { href: '/system', label: 'System' },
+];
+
+test.describe('V8.1 Team Lead-first Navigation', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/dashboard');
         await page.waitForLoadState('domcontentloaded');
@@ -17,25 +21,26 @@ test.describe('V7 Workflow-First Navigation', () => {
     });
 
     test('ZoneA rail is visible on page load', async ({ page }) => {
-        await expect(page.getByRole('link', { name: 'Workspace' })).toBeVisible();
+        await expect(page.locator('a[href="/dashboard"]').first()).toBeVisible();
     });
 
-    test('all V7 navigation entries are present', async ({ page }) => {
-        for (const entry of V7_NAV_ENTRIES) {
+    test('default MVP navigation entries are present', async ({ page }) => {
+        for (const entry of DEFAULT_NAV_ENTRIES) {
             await expect(page.locator(`a[href="${entry.href}"]`).first()).toBeVisible();
+        }
+        for (const entry of ADVANCED_NAV_ENTRIES) {
+            await expect(page.locator(`a[href="${entry.href}"]`)).toHaveCount(0);
         }
     });
 
     test('active route gets primary highlight', async ({ page }) => {
-        const dashboardLink = page.getByRole('link', { name: 'Workspace' });
+        const dashboardLink = page.locator('a[href="/dashboard"]').first();
         await expect(dashboardLink).toHaveClass(/bg-cortex-primary/);
     });
 
     test('navigating to each primary route highlights the corresponding nav item', async ({ page }) => {
         const routes: Array<{ href: string; url: RegExp }> = [
             { href: '/automations', url: /\/automations/ },
-            { href: '/resources', url: /\/resources/ },
-            { href: '/memory', url: /\/memory/ },
             { href: '/docs', url: /\/docs/ },
             { href: '/settings', url: /\/settings/ },
         ];
@@ -52,11 +57,14 @@ test.describe('V7 Workflow-First Navigation', () => {
         await expect(page.locator('a[href="/system"]')).not.toBeVisible();
     });
 
-    test('Advanced toggle shows/hides System tab', async ({ page }) => {
+    test('Advanced toggle shows and hides advanced support routes', async ({ page }) => {
         await page.getByRole('button', { name: 'Advanced: Off' }).click();
-        await expect(page.locator('a[href="/system"]')).toBeVisible();
+        for (const entry of ADVANCED_NAV_ENTRIES) {
+            await expect(page.locator(`a[href="${entry.href}"]`).first()).toBeVisible();
+        }
         await page.getByRole('button', { name: 'Advanced: On' }).click();
-        await expect(page.locator('a[href="/system"]')).not.toBeVisible();
+        for (const entry of ADVANCED_NAV_ENTRIES) {
+            await expect(page.locator(`a[href="${entry.href}"]`)).toHaveCount(0);
+        }
     });
-
 });

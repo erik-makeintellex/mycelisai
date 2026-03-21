@@ -155,7 +155,7 @@ export default function TeamBuilder() {
 
                     {/* Communication Wiring */}
                     <div>
-                        <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">Neural Wiring</label>
+                        <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">Workflow Builder</label>
                         <div className="space-y-4 bg-zinc-950 border border-zinc-800 rounded-md p-3">
                             {/* Inputs */}
                             <div>

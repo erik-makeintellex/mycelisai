@@ -94,7 +94,7 @@ profiles:
   chat: "ollama"      # Which provider handles general chat
 ```
 
-**Change provider routing:** Edit the `profiles` section or use the UI at `/settings` → **Cognitive Matrix**.
+**Change provider routing:** Edit the `profiles` section or use the UI at `/settings` → **AI Engines** (Advanced mode).
 By default, startup probes focus on `ollama`. Additional backends should be explicitly enabled and profile-routed before Mycelis attempts startup connectivity checks.
 
 ### `core/config/templates/*.yaml` — Bootstrap Template Bundles

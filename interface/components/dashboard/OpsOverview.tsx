@@ -92,7 +92,7 @@ function SystemStatus() {
     const onlineSensors = sensors.filter((s) => s.status === "online").length;
 
     return (
-        <SectionCard title="System" subtitle="LLM engines and sensor feeds powering the organism" icon={Cpu} href="/settings/brain">
+        <SectionCard title="System" subtitle="AI engines and connected feeds powering the organization" icon={Cpu} href="/settings?tab=engines">
             <div className="px-3.5 py-2.5 space-y-2">
                 <EngineRow
                     label="Text"
@@ -322,7 +322,7 @@ function TeamsSection() {
     if (standingTeams.length === 0) return null;
 
     return (
-        <SectionCard title="Teams" subtitle={`Standing teams always online — ${assistantName}, Council, and more`} icon={Users} href="/automations?tab=teams">
+        <SectionCard title="Shared Teams" subtitle={`Standing teams always online — ${assistantName}, Council, and more`} icon={Users} href="/automations?tab=teams">
             <div className="max-h-44 overflow-y-auto">
                 {standingTeams.map((team) => {
                     const status = aggregateStatus(team.agents);
@@ -348,7 +348,7 @@ function TeamsSection() {
     );
 }
 
-// ── MCP Tools ────────────────────────────────────────────────
+// ── Connected Tools ──────────────────────────────────────────
 
 const RECOMMENDED_SERVERS = ["brave-search", "github"];
 
@@ -366,7 +366,7 @@ function MCPToolsSection() {
     const missingRecommended = RECOMMENDED_SERVERS.filter((n) => !installedNames.has(n));
 
     return (
-        <SectionCard title="MCP Tools" subtitle="External tool servers agents can use — files, web, APIs" icon={Wrench} href="/settings/tools">
+        <SectionCard title="Connected Tools" subtitle="External tool servers the organization can use — files, web, APIs" icon={Wrench} href="/settings?tab=tools">
             <div className="px-3.5 py-2.5 space-y-2">
                 {mcpServers.length === 0 ? (
                     <div>
@@ -412,7 +412,7 @@ function MCPToolsSection() {
                         {missingRecommended.map((name) => (
                             <button
                                 key={name}
-                                onClick={() => router.push("/settings/tools")}
+                                onClick={() => router.push("/settings?tab=tools")}
                                 className="w-full flex items-center gap-2 py-1 text-left hover:text-cortex-primary transition-colors"
                             >
                                 <Plus className="w-3.5 h-3.5 text-cortex-text-muted" />

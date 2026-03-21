@@ -72,7 +72,7 @@ vi.mock('@/components/matrix/MatrixGrid', () => ({
 // Mock Zustand store
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) => {
-        const state = { advancedMode: false };
+        const state = { advancedMode: false, toggleAdvancedMode: vi.fn() };
         return selector(state);
     },
 }));

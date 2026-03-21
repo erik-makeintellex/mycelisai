@@ -29,13 +29,15 @@ describe("AutomationHub", () => {
         expect(screen.queryByTestId("team-instantiation-wizard")).toBeNull();
     });
 
-    it("only shows neural wiring card in advanced mode", () => {
+    it("only shows advanced workflow cards in advanced mode", () => {
         const openTab = vi.fn();
         const { rerender } = render(<AutomationHub openTab={openTab} advancedMode={false} />);
-        expect(screen.queryByText("Neural Wiring")).toBeNull();
+        expect(screen.queryByText("Workflow Builder")).toBeNull();
+        expect(screen.queryByText("Shared Teams")).toBeNull();
 
         rerender(<AutomationHub openTab={openTab} advancedMode />);
-        expect(screen.getByText("Neural Wiring")).toBeDefined();
+        expect(screen.getByText("Workflow Builder")).toBeDefined();
+        expect(screen.getByText("Shared Teams")).toBeDefined();
 
         const createButtons = screen.getAllByRole("button", { name: "Create" });
         const create = createButtons[createButtons.length - 1];

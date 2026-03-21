@@ -47,7 +47,7 @@ The banner auto-clears once health recovers.
 
 ---
 
-## System Quick Checks (`/system`)
+## System Quick Checks (`/system`, Advanced mode)
 
 Quick Checks lets you run targeted validations:
 - NATS connected

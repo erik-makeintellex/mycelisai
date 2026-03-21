@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { User, Users, BrainCircuit, Settings, Shield, Wrench, Brain, Layers } from "lucide-react";
-import MatrixGrid from "@/components/matrix/MatrixGrid";
+import { User, Settings, Shield, Wrench, Brain, Layers } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
 import UsersPage from "@/components/settings/UsersPage";
 import MissionProfilesPage from "@/components/settings/MissionProfilesPage";
@@ -19,7 +19,24 @@ const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegis
 });
 
 export default function SettingsPage() {
-    const [activeTab, setActiveTab] = useState("profile");
+    return (
+        <Suspense fallback={<div className="h-full bg-cortex-bg" />}>
+            <SettingsContent />
+        </Suspense>
+    );
+}
+
+function SettingsContent() {
+    const searchParams = useSearchParams();
+    const advancedMode = useCortexStore((s) => s.advancedMode);
+    type TabId = "profile" | "profiles" | "users" | "engines" | "tools";
+    const validTabs: TabId[] = ["profile", "profiles", "users", "engines", "tools"];
+    const requestedTab = searchParams.get("tab") as TabId | null;
+    const initialTab =
+        requestedTab && validTabs.includes(requestedTab) && (advancedMode || (requestedTab !== "engines" && requestedTab !== "tools"))
+            ? requestedTab
+            : "profile";
+    const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 
     return (
         <div className="h-full flex flex-col">
@@ -29,19 +46,21 @@ export default function SettingsPage() {
                     <Settings className="w-6 h-6 text-cortex-text-muted" />
                     Settings
                 </h1>
-                <p className="text-cortex-text-muted mt-1">Manage your neural interface preferences.</p>
+                <p className="text-cortex-text-muted mt-1">Manage workspace preferences, people access, and optional advanced setup.</p>
             </div>
 
             {/* Tabs */}
             <div className="max-w-5xl mx-auto w-full px-6 mt-6">
                 <div className="flex items-center gap-1 border-b border-cortex-border">
-                    <Tab id="profile" label="Profile" icon={User} active={activeTab === "profile"} onClick={() => setActiveTab("profile")} />
-                    <Tab id="teams" label="Teams" icon={Users} active={activeTab === "teams"} onClick={() => setActiveTab("teams")} />
-                    <Tab id="brains" label="Brains" icon={Brain} active={activeTab === "brains"} onClick={() => setActiveTab("brains")} />
-                    <Tab id="matrix" label="Cognitive Matrix" icon={BrainCircuit} active={activeTab === "matrix"} onClick={() => setActiveTab("matrix")} />
-                    <Tab id="profiles" label="Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => setActiveTab("profiles")} />
-                    <Tab id="tools" label="MCP Tools" icon={Wrench} active={activeTab === "tools"} onClick={() => setActiveTab("tools")} />
-                    <Tab id="users" label="Users & Groups" icon={Shield} active={activeTab === "users"} onClick={() => setActiveTab("users")} />
+                    <Tab label="Profile" icon={User} active={activeTab === "profile"} onClick={() => setActiveTab("profile")} />
+                    <Tab label="Mission Profiles" icon={Layers} active={activeTab === "profiles"} onClick={() => setActiveTab("profiles")} />
+                    <Tab label="People & Access" icon={Shield} active={activeTab === "users"} onClick={() => setActiveTab("users")} />
+                    {advancedMode && (
+                        <>
+                            <Tab label="AI Engines" icon={Brain} active={activeTab === "engines"} onClick={() => setActiveTab("engines")} />
+                            <Tab label="Connected Tools" icon={Wrench} active={activeTab === "tools"} onClick={() => setActiveTab("tools")} />
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -53,10 +72,8 @@ export default function SettingsPage() {
             ) : (
                 <div className="max-w-5xl mx-auto w-full px-6 py-6 min-h-[400px]">
                     {activeTab === "profile" && <ProfileSettings />}
-                    {activeTab === "teams" && <TeamSettings />}
-                    {activeTab === "brains" && <BrainsPage />}
+                    {activeTab === "engines" && advancedMode && <BrainsPage />}
                     {activeTab === "profiles" && <MissionProfilesPage />}
-                    {activeTab === "matrix" && <div className="p-1"><MatrixGrid /></div>}
                     {activeTab === "users" && <UsersPage />}
                 </div>
             )}
@@ -64,7 +81,7 @@ export default function SettingsPage() {
     );
 }
 
-function Tab({ id, label, icon: Icon, active, onClick }: any) {
+function Tab({ label, icon: Icon, active, onClick }: any) {
     return (
         <button
             onClick={onClick}
@@ -151,28 +168,6 @@ function ProfileSettings() {
                     <span className="text-cortex-text-main text-sm">Task Completion</span>
                     <div className="w-8 h-4 bg-cortex-success/20 rounded-full relative cursor-pointer border border-cortex-success/30">
                         <div className="absolute right-0 w-4 h-4 bg-cortex-success rounded-full shadow-sm"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function TeamSettings() {
-    return (
-        <div className="space-y-6">
-            <div className="p-6 rounded-lg border border-cortex-border bg-cortex-surface shadow-sm">
-                <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider mb-4">Operations Team</h3>
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 hover:bg-cortex-bg rounded border border-transparent hover:border-cortex-border transition-colors">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-cortex-primary/10 flex items-center justify-center text-cortex-primary font-bold text-xs border border-cortex-primary/30">AD</div>
-                            <div>
-                                <p className="text-sm font-medium text-cortex-text-main">Admin User</p>
-                                <p className="text-xs text-cortex-text-muted">Tier 0 (Owner)</p>
-                            </div>
-                        </div>
-                        <Shield className="w-4 h-4 text-cortex-success" />
                     </div>
                 </div>
             </div>

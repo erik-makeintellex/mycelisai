@@ -53,13 +53,30 @@ vi.mock('@/components/catalogue/CataloguePage', () => ({
     default: () => <div data-testid="catalogue-page">CataloguePage</div>,
 }));
 
+const mockAdvancedMode = vi.fn(() => true);
+const mockFetchMCPServers = vi.fn();
+const mockInstallMCPServer = vi.fn();
+const mockDeleteMCPServer = vi.fn();
+vi.mock('@/store/useCortexStore', () => ({
+    useCortexStore: (selector: any) =>
+        selector({
+            advancedMode: mockAdvancedMode(),
+            mcpServers: [],
+            isFetchingMCPServers: false,
+            fetchMCPServers: mockFetchMCPServers,
+            installMCPServer: mockInstallMCPServer,
+            deleteMCPServer: mockDeleteMCPServer,
+        }),
+}));
+
 import ResourcesPage from '@/app/(app)/resources/page';
 
-describe('Resources Page (V7)', () => {
+describe('Resources Page (V8.1 advanced support)', () => {
     beforeEach(() => {
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
+        mockAdvancedMode.mockReturnValue(true);
     });
 
     it('renders page title', async () => {
@@ -69,22 +86,30 @@ describe('Resources Page (V7)', () => {
 
     it('renders all tabs', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(screen.getByText('Brains')).toBeDefined();
-        expect(screen.getByText('MCP Tools')).toBeDefined();
-        expect(screen.getByText('Workspace Explorer')).toBeDefined();
-        expect(screen.getByText('Capabilities')).toBeDefined();
+        expect(screen.getByText('Connected Tools')).toBeDefined();
+        expect(screen.getByText('Workspace Files')).toBeDefined();
+        expect(screen.getByText('AI Engines')).toBeDefined();
+        expect(screen.getByText('Role Library')).toBeDefined();
     });
 
-    it('defaults to Brains tab', async () => {
+    it('defaults to connected tools tab', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(screen.getByTestId('brains-page')).toBeDefined();
+        await waitFor(() => {
+            expect(screen.getByText('MCP Tool Registry')).toBeDefined();
+        });
     });
 
-    it('deep-links to catalogue tab via search param', async () => {
-        mockSearchParams.set('tab', 'catalogue');
+    it('deep-links to role library tab via search param', async () => {
+        mockSearchParams.set('tab', 'roles');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
             expect(screen.getByTestId('catalogue-page')).toBeDefined();
         });
+    });
+
+    it('shows the advanced gate when advanced mode is off', async () => {
+        mockAdvancedMode.mockReturnValue(false);
+        await act(async () => { render(<ResourcesPage />); });
+        expect(screen.getByText(/Advanced resources stay tucked away by default/i)).toBeDefined();
     });
 });

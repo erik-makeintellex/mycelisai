@@ -67,7 +67,7 @@ export default function TeamsPage() {
                 <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-cortex-primary" />
                     <h1 className="text-sm font-mono font-bold text-cortex-text-main uppercase tracking-wider">
-                        Team Management
+                        Shared Teams
                     </h1>
                     <span className="text-[10px] font-mono text-cortex-text-muted">
                         {filteredTeams.length} team{filteredTeams.length !== 1 ? 's' : ''}
@@ -130,7 +130,7 @@ export default function TeamsPage() {
                                 Refresh
                             </button>
                             <a href="/dashboard" className="px-2.5 py-1.5 rounded border border-cortex-border text-cortex-text-main text-[10px] font-mono hover:bg-cortex-border">
-                                Open Workspace
+                                Open AI Organization
                             </a>
                         </div>
                     </div>

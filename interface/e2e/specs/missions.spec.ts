@@ -11,21 +11,25 @@ test.describe('Mission Control Dashboard (/dashboard)', () => {
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
 
-        await expect(page.getByRole('link', { name: 'Workspace' })).toBeVisible();
-        await expect(page.locator('text=SOMA')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Create AI Organization' })).toBeVisible();
+        await expect(page.getByText(/Use a starter that already defines a Team Lead/i)).toBeVisible();
     });
 
     test('navigation rail is visible', async ({ page }) => {
+        await expect(page.locator('a[href="/dashboard"]').first()).toBeVisible();
         await expect(page.getByRole('link', { name: 'Automations' })).toBeVisible();
     });
 
-    test('workspace command input renders', async ({ page }) => {
-        await expect(page.locator('h1:has-text("Workspace")')).toBeVisible();
-        await expect(page.locator('body')).toContainText(/SOMA|Workspace/i);
+    test('organization entry actions render', async ({ page }) => {
+        await expect(page.getByRole('button', { name: 'Start from template' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Start Empty', exact: true })).toBeVisible();
     });
 
-    test('workspace system cards render', async ({ page }) => {
-        await expect(page.locator('text=SYSTEM').first()).toBeVisible();
+    test('recent organization guidance renders', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Recent AI Organizations' })).toBeVisible();
+        await expect(
+            page.getByText(/Create the AI Organization first so Mycelis opens with structure, not a one-off assistant session\./i),
+        ).toBeVisible();
     });
 
     test('no bg-white leak on dashboard', async ({ page }) => {

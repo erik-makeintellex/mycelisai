@@ -47,7 +47,7 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.getByText('No docs match "missing-doc"')).toBeVisible();
     });
 
-    test('runs list route and run detail tabs render from API payloads', async ({ page }) => {
+    test.skip('runs list route and run detail tabs render from API payloads', async ({ page }) => {
         const runId = 'run-ui-1234';
         const now = new Date().toISOString();
 

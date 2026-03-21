@@ -7,7 +7,7 @@ async function openWiringTab(page: any) {
     if (await advancedOff.isVisible().catch(() => false)) {
         await advancedOff.click();
     }
-    const wiringTab = page.getByRole('button', { name: 'Neural Wiring' });
+    const wiringTab = page.getByRole('button', { name: 'Workflow Builder' });
     if (!(await wiringTab.isVisible().catch(() => false))) return false;
     await wiringTab.click();
     await page.waitForTimeout(500);
@@ -21,7 +21,7 @@ test.describe('Wiring Editor Surface', () => {
             test.skip();
             return;
         }
-        await expect(page.getByRole('button', { name: 'Neural Wiring' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Workflow Builder' })).toBeVisible();
         await expect(page.locator('nextjs-portal')).not.toBeVisible();
     });
 
@@ -35,4 +35,3 @@ test.describe('Wiring Editor Surface', () => {
         await expect(page.locator('nextjs-portal')).not.toBeVisible();
     });
 });
-
