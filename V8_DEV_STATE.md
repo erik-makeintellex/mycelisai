@@ -214,6 +214,7 @@ Delivery updates in this checkpoint:
 42. `COMPLETE` declared `v8-2.md` as the canonical full production architecture and full actuation target, while keeping V8.1 explicit as the current bounded release across README, the architecture index, docs manifest, and doc-test enforcement.
 43. `COMPLETE` enforced documentation synchronization as part of the execution contract so slices are now incomplete until tests pass, documentation is updated where meaning changed, and README, V8.1, V8.2, state, and doc tests stay aligned.
 44. `COMPLETE` added deployment-friendly env override support for cognitive config so provider endpoints, model ids, provider enablement, profile routing, and media config can now be stamped by automation tools without reviving the retired team/agent provider env-map path.
+45. `COMPLETE` hardened the env override architecture boundary in README, operations docs, local workflow docs, and doc tests so deployment-time env configuration stays separate from runtime organizational truth and routing remains `Bundle -> Instantiated Organization -> Inheritance -> Routing`.
 
 Evidence:
 1. README directive review completed against `README.md`

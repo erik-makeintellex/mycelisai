@@ -184,6 +184,7 @@ def test_docs_cover_env_override_contract_for_deployment_automation():
             "MYCELIS_PROFILE_<PROFILE>_PROVIDER",
             "MYCELIS_MEDIA_*",
             "retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP`",
+            "Bundle -> Instantiated Organization -> Inheritance -> Routing",
         ],
         ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md": [
             "MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID",
@@ -191,6 +192,7 @@ def test_docs_cover_env_override_contract_for_deployment_automation():
             "MYCELIS_PROFILE_<PROFILE>_PROVIDER",
             "MYCELIS_MEDIA_ENDPOINT",
             "retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP`",
+            "Bundle -> Instantiated Organization -> Inheritance -> Routing",
         ],
         ROOT / "docs" / "architecture" / "OPERATIONS.md": [
             "MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID",
@@ -198,6 +200,7 @@ def test_docs_cover_env_override_contract_for_deployment_automation():
             "MYCELIS_PROFILE_<PROFILE>_PROVIDER",
             "MYCELIS_MEDIA_MODEL_ID",
             "retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP`",
+            "Bundle -> Instantiated Organization -> Inheritance -> Routing",
         ],
     }
 
@@ -209,6 +212,33 @@ def test_docs_cover_env_override_contract_for_deployment_automation():
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "Docs are missing the deployment env-override contract:\n" + "\n".join(missing)
+
+
+def test_docs_keep_env_overrides_separate_from_runtime_organization_truth():
+    expectations = {
+        README: [
+            "env overrides are deployment-time infrastructure wiring, not runtime organization behavior",
+            "do not replace bundle-defined runtime organization truth",
+        ],
+        ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md": [
+            "These env overrides are for deployment-time provider definition",
+            "They are not runtime organization behavior",
+            "do not replace bundle-defined truth",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "deployment-time infrastructure configuration only",
+            "do not treat env overrides as runtime organization behavior",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in expectations.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Docs are missing the env/runtime architecture boundary:\n" + "\n".join(missing)
 
 
 def test_canonical_docs_do_not_ship_executable_bare_uvx_inv_examples():

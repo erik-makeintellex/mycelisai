@@ -240,6 +240,8 @@ Provider/runtime workflow reminders:
 - attach tests and evidence in the same delivery window
 - keep state-file updates current with gate results and blocker changes
 - deployment automation may override provider/model/profile/media config through env vars using `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*`; use that path instead of the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps
+- env overrides are deployment-time infrastructure wiring, not runtime organization behavior: they define provider instances, profile defaults, and environment-specific endpoints or model ids
+- env overrides must not become a shadow runtime architecture: team, role, and agent routing truth still comes from `Bundle -> Instantiated Organization -> Inheritance -> Routing`
 - keep repo-managed caches under `workspace/tool-cache` and use `cache.apply-user-policy` when a Windows user profile needs heavy tool caches moved off `C:`
 - check `uv run inv cache.status` before large build/test/browser runs when disk headroom is tight; the main repo-local growth surfaces are `workspace/tool-cache`, `interface/.next`, Playwright browser binaries, and other generated test artifacts
 - use `uv run inv cache.clean` as the first repo-safe reclaim path when builds or tests start failing under disk pressure instead of manually deleting random working files
@@ -258,6 +260,13 @@ A slice is not complete unless:
 - tests pass
 - documentation is updated where meaning changed
 - architecture alignment is verified across the layered truth surfaces
+
+Deployment/runtime boundary:
+- README is the primary architecture inception document for active work
+- `v8-2.md` is the canonical full architecture target
+- V8.1 is the current release target
+- `V8_DEV_STATE.md` is the source of actual implementation truth
+- deployment env overrides configure infrastructure and profile defaults, but they do not replace bundle-defined runtime organization truth
 
 Development contract:
 - `README.md` is the primary architecture inception document
