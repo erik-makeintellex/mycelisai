@@ -120,13 +120,19 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		log.Println("DEBUG: No OLLAMA_HOST env var found.")
 	}
 
+	// 4. Deployment-friendly env overrides
+	// These support automation tooling without reviving the retired
+	// team/agent env-map routing path. Overrides apply at provider/profile/media
+	// config surfaces and win over YAML/DB defaults.
+	applyEnvOverrides(&config)
+
 	r := &Router{
 		Config:     &config,
 		ConfigPath: configPath,
 		Adapters:   make(map[string]LLMProvider),
 	}
 
-	// 4. Initialize Adapters
+	// 5. Initialize Adapters
 	for id, pConfig := range config.Providers {
 		log.Printf("DEBUG: Initializing provider %s with endpoint %s", id, pConfig.Endpoint)
 		var adapter LLMProvider
@@ -164,7 +170,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		r.Adapters[id] = adapter
 	}
 
-	// 5. Emergency Sovereign Fallback
+	// 6. Emergency Sovereign Fallback
 	// If zero adapters were initialized (YAML missing + DB down), attempt to
 	// discover a local Ollama instance at well-known endpoints. This implements
 	// the Universal Sovereignty principle: the organism must survive in isolation.
@@ -215,7 +221,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		}
 	}
 
-	// 6. Discovery & Grading (startup scope)
+	// 7. Discovery & Grading (startup scope)
 	// Only auto-configure if we have providers.
 	// Startup intentionally probes only default Ollama and profile-routed providers,
 	// so we don't try connecting to every declared backend unless explicitly configured.

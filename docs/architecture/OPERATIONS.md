@@ -387,9 +387,22 @@ defaults:
 | `PLAYWRIGHT_BROWSERS_PATH` | managed by task env or user policy | Playwright browser binary cache location |
 | `NEXT_TELEMETRY_DISABLED` | `1` in task-managed Interface runs | Prevents Next telemetry writes during local build/test/browser execution |
 | `OLLAMA_HOST` | — | Override Ollama endpoint |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID` | — | Override provider model selection at startup/runtime config load |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT` | — | Override provider endpoint from automation tooling |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_ENABLED` | — | Enable/disable a provider via env (`true` / `false`) |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_TYPE` | — | Define provider type for env-defined providers |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_API_KEY` | — | Direct provider API key override |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_API_KEY_ENV` | — | Provider API key env indirection |
+| `MYCELIS_PROFILE_<PROFILE>_PROVIDER` | — | Route a profile to a provider via env |
+| `MYCELIS_MEDIA_ENDPOINT` | — | Override media/image endpoint |
+| `MYCELIS_MEDIA_MODEL_ID` | — | Override media/image model id |
 | `OPENAI_API_KEY` | — | OpenAI API key |
 | `ANTHROPIC_API_KEY` | — | Anthropic API key |
 | `GEMINI_API_KEY` | — | Gemini API key |
+
+Deployment automation rule:
+- use `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` when automation tools need to stamp environment-specific cognitive config
+- do not use the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps; provider routing now comes from provider config plus instantiated organization policy
 
 ---
 

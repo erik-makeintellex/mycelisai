@@ -39,6 +39,15 @@ cp .env.example .env
 |:--|:--|:--|
 | **Cognitive Engine** | | |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama API endpoint. Use `127.0.0.1` for local, or LAN IP for remote. |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID` | — | Override a provider model at startup/runtime config load time. Example: `MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_MODEL_ID=qwen3:8b` |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT` | — | Override a provider endpoint. Example: `MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT=http://192.168.50.156:11434/v1` |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_ENABLED` | — | Enable/disable a provider from automation tools using `true` / `false` |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_TYPE` | — | Define a provider type from env for deployment-created providers (`ollama`, `openai_compatible`, `anthropic`, `google`) |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_API_KEY` | — | Override a provider API key directly when automation tooling must inject it |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_API_KEY_ENV` | — | Point a provider at another env var containing the API key |
+| `MYCELIS_PROFILE_<PROFILE>_PROVIDER` | — | Route a profile to a provider from env. Example: `MYCELIS_PROFILE_CHAT_PROVIDER=local_ollama_dev` |
+| `MYCELIS_MEDIA_ENDPOINT` | — | Override the image/media engine endpoint |
+| `MYCELIS_MEDIA_MODEL_ID` | — | Override the image/media model id |
 | **Database** | | |
 | `DB_HOST` | `127.0.0.1` | PostgreSQL host (localhost via bridge, or K8s service name in-cluster) |
 | `DB_PORT` | `5432` | PostgreSQL port |
@@ -66,6 +75,8 @@ cp .env.example .env
 | `GH_TOKEN` | — | GitHub PAT for integrations |
 
 > **Windows gotcha:** If Ollama is installed locally, it sets `OLLAMA_HOST=0.0.0.0` as a **Windows User environment variable** (listen address). The Go server detects this and skips endpoint patching. Your `.env` value will be used via the YAML config instead.
+
+> **Deployment automation rule:** Prefer `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` for automation-driven cognitive config overrides. Do not rely on the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps.
 
 ### `core/config/cognitive.yaml` — LLM Provider Routing
 
@@ -96,6 +107,15 @@ profiles:
 
 **Change provider routing:** Edit the `profiles` section or use the UI at `/settings` → **AI Engines** (Advanced mode).
 By default, startup probes focus on `ollama`. Additional backends should be explicitly enabled and profile-routed before Mycelis attempts startup connectivity checks.
+
+Automation override examples:
+
+```bash
+MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_MODEL_ID=qwen3:8b
+MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED=true
+MYCELIS_PROFILE_CHAT_PROVIDER=local_ollama_dev
+MYCELIS_PROFILE_CODER_PROVIDER=local_ollama_dev
+```
 
 ### `core/config/templates/*.yaml` — Bootstrap Template Bundles
 

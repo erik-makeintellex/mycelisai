@@ -177,6 +177,40 @@ def test_readme_declares_development_contract():
     assert not missing_snippets, f"README is missing required development-contract guidance: {missing_snippets}"
 
 
+def test_docs_cover_env_override_contract_for_deployment_automation():
+    expectations = {
+        README: [
+            "MYCELIS_PROVIDER_<PROVIDER_ID>_*",
+            "MYCELIS_PROFILE_<PROFILE>_PROVIDER",
+            "MYCELIS_MEDIA_*",
+            "retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP`",
+        ],
+        ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md": [
+            "MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID",
+            "MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT",
+            "MYCELIS_PROFILE_<PROFILE>_PROVIDER",
+            "MYCELIS_MEDIA_ENDPOINT",
+            "retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP`",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID",
+            "MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT",
+            "MYCELIS_PROFILE_<PROFILE>_PROVIDER",
+            "MYCELIS_MEDIA_MODEL_ID",
+            "retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP`",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in expectations.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Docs are missing the deployment env-override contract:\n" + "\n".join(missing)
+
+
 def test_canonical_docs_do_not_ship_executable_bare_uvx_inv_examples():
     offenders: list[str] = []
 
