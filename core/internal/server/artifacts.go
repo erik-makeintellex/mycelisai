@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/google/uuid"
@@ -63,6 +64,45 @@ func (s *AdminServer) handleListArtifacts(w http.ResponseWriter, r *http.Request
 	}
 
 	respondJSON(w, result)
+}
+
+// handleSaveArtifactToFolder persists a cached image artifact into the workspace.
+// POST /api/v1/artifacts/{id}/save
+func (s *AdminServer) handleSaveArtifactToFolder(w http.ResponseWriter, r *http.Request) {
+	if s.Artifacts == nil {
+		http.Error(w, `{"error":"artifacts not initialized"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"invalid id: %s"}`, idStr), http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Folder   string `json:"folder,omitempty"`
+		Filename string `json:"filename,omitempty"`
+	}
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&body)
+	}
+
+	workspaceRoot := os.Getenv("MYCELIS_WORKSPACE")
+	if workspaceRoot == "" {
+		workspaceRoot = "./workspace"
+	}
+	path, err := s.Artifacts.SaveImageToWorkspace(r.Context(), id, workspaceRoot, body.Folder, body.Filename)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	respondJSON(w, map[string]string{
+		"id":        id.String(),
+		"file_path": path,
+	})
 }
 
 // handleGetArtifact returns a single artifact by ID.

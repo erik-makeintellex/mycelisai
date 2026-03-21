@@ -28,15 +28,13 @@ vi.mock('@/store/useCortexStore', () => ({
 
 import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
-const V7_NAV_ENTRIES = [
-    { href: '/dashboard', label: 'Workspace' },
+const DEFAULT_NAV_ENTRIES = [
+    { href: '/dashboard', label: 'AI Organization' },
     { href: '/automations', label: 'Automations' },
-    { href: '/resources', label: 'Resources' },
-    { href: '/memory', label: 'Memory' },
     { href: '/docs', label: 'Docs' },
 ];
 
-describe('ZoneA_Rail (V7 Workflow-First Navigation)', () => {
+describe('ZoneA_Rail (V8.1 Team Lead-first Navigation)', () => {
     beforeEach(() => {
         mockPathname.mockReturnValue('/dashboard');
         mockAdvancedMode.mockReturnValue(false);
@@ -47,9 +45,9 @@ describe('ZoneA_Rail (V7 Workflow-First Navigation)', () => {
         expect(screen.getByText('Mycelis')).toBeDefined();
     });
 
-    it('renders all primary navigation links', () => {
+    it('renders default navigation links', () => {
         render(<ZoneA />);
-        for (const entry of V7_NAV_ENTRIES) {
+        for (const entry of DEFAULT_NAV_ENTRIES) {
             expect(screen.getByText(entry.label)).toBeDefined();
         }
     });
@@ -80,16 +78,20 @@ describe('ZoneA_Rail (V7 Workflow-First Navigation)', () => {
         expect(automationsLink?.className).toContain('bg-cortex-primary');
     });
 
-    it('does not show System tab when advancedMode is off', () => {
+    it('keeps advanced routes hidden when advancedMode is off', () => {
         mockAdvancedMode.mockReturnValue(false);
         const { container } = render(<ZoneA />);
+        expect(container.querySelector('a[href="/resources"]')).toBeNull();
+        expect(container.querySelector('a[href="/memory"]')).toBeNull();
         const systemLink = container.querySelector('a[href="/system"]');
         expect(systemLink).toBeNull();
     });
 
-    it('shows System tab when advancedMode is on', () => {
+    it('shows advanced routes when advancedMode is on', () => {
         mockAdvancedMode.mockReturnValue(true);
         render(<ZoneA />);
+        expect(screen.getByText('Resources')).toBeDefined();
+        expect(screen.getByText('Memory')).toBeDefined();
         expect(screen.getByText('System')).toBeDefined();
     });
 

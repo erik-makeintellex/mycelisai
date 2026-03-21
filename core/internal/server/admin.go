@@ -13,10 +13,11 @@ import (
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/internal/events"
-	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/overseer"
@@ -25,10 +26,10 @@ import (
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/runs"
-	"github.com/mycelis/core/internal/triggers"
 	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
 	"github.com/mycelis/core/internal/swarm"
+	"github.com/mycelis/core/internal/triggers"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
@@ -38,36 +39,46 @@ type AdminServer struct {
 	Router        *router.Router
 	Guard         *governance.Guard
 	Mem           *memory.Service
-	DB            *sql.DB             // direct DB for context snapshots + mission profiles
+	DB            *sql.DB // direct DB for context snapshots + mission profiles
 	Cognitive     *cognitive.Router
 	Provisioner   *provisioning.Engine
 	Registry      *registry.Service
 	Soma          *swarm.Soma
-	NC            *nats.Conn          // NATS for chat request-reply routing
+	NC            *nats.Conn // NATS for chat request-reply routing
 	Stream        *signal.StreamHandler
 	MetaArchitect *cognitive.MetaArchitect
-	Overseer      *overseer.Engine    // Phase 5.2: Trust Economy
-	Archivist     *memory.Archivist   // Phase 5.3: RAG Persistence
-	Proposals     *ProposalStore      // Phase 5.3: Team Manifestation
-	MCP           *mcp.Service        // Phase 7.0: MCP Ingress
-	MCPPool       *mcp.ClientPool     // Phase 7.0: MCP Ingress
-	MCPLibrary    *mcp.Library        // Phase 7.7: Curated MCP Library
-	Catalogue     *catalogue.Service  // Phase 7.5: Agent Catalogue
-	Artifacts     *artifacts.Service  // Phase 7.5: Agent Outputs
+	Overseer      *overseer.Engine   // Phase 5.2: Trust Economy
+	Archivist     *memory.Archivist  // Phase 5.3: RAG Persistence
+	Proposals     *ProposalStore     // Phase 5.3: Team Manifestation
+	MCP           *mcp.Service       // Phase 7.0: MCP Ingress
+	MCPPool       *mcp.ClientPool    // Phase 7.0: MCP Ingress
+	MCPLibrary    *mcp.Library       // Phase 7.7: Curated MCP Library
+	Catalogue     *catalogue.Service // Phase 7.5: Agent Catalogue
+	Artifacts     *artifacts.Service // Phase 7.5: Agent Outputs
+	Comms         *comms.Gateway     // External communication providers (whatsapp/telegram/slack/etc.)
 	// V7 Event Spine (Team A)
-	Events        *events.Store       // V7: persistent mission event audit trail
-	Runs          *runs.Manager       // V7: mission run lifecycle management
+	Events *events.Store // V7: persistent mission event audit trail
+	Runs   *runs.Manager // V7: mission run lifecycle management
 	// Mission Profiles & Reactive Subscriptions
-	Reactive      *reactive.Engine    // watches NATS topics for active profiles
+	Reactive *reactive.Engine // watches NATS topics for active profiles
 	// V7 Team B: Trigger Engine
-	Triggers      *triggers.Store     // trigger rule CRUD + in-memory cache
-	TriggerEngine *triggers.Engine    // evaluates rules against CTS events
+	Triggers      *triggers.Store  // trigger rule CRUD + in-memory cache
+	TriggerEngine *triggers.Engine // evaluates rules against CTS events
 	// V7 Conversation Log
 	Conversations *conversations.Store // full-fidelity agent conversation turns
 	// V7 Inception Recipes — structured prompt patterns for RAG recall
-	Inception     *inception.Store     // inception recipe CRUD + search
+	Inception *inception.Store // inception recipe CRUD + search
 	// MCP Tool Sets — agent-scoped MCP tool bundles
-	MCPToolSets   *mcp.ToolSetService  // tool set CRUD
+	MCPToolSets *mcp.ToolSetService // tool set CRUD
+	// Root-admin collaboration groups (DB-backed), with live bus monitor for status UI.
+	GroupBus *GroupBusMonitor
+	// V8 AI Organization entry flow support.
+	Organizations       *OrganizationStore
+	LoopProfiles        *LoopProfileStore
+	LoopResults         *LoopResultStore
+	LoopExecution       *LoopExecutionTracker
+	LoopScheduler       *LoopScheduler
+	TemplateBundlesPath string
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -80,28 +91,35 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 	})
 
 	return &AdminServer{
-		Router:        r,
-		Guard:         guard,
-		Mem:           mem,
-		DB:            db,
-		Cognitive:     cog,
-		Provisioner:   prov,
-		Registry:      reg,
-		Soma:          soma,
-		NC:            nc,
-		Stream:        stream,
-		MetaArchitect: architect,
-		Overseer:      ov,
-		Archivist:     arch,
-		Proposals:     NewProposalStore(),
-		MCP:           mcpSvc,
-		MCPPool:       mcpPool,
-		MCPLibrary:    mcpLib,
-		Catalogue:     cat,
-		Artifacts:     art,
-		Events:        evStore,
-		Runs:          runsManager,
-		Reactive:      reactiveEngine,
+		Router:              r,
+		Guard:               guard,
+		Mem:                 mem,
+		DB:                  db,
+		Cognitive:           cog,
+		Provisioner:         prov,
+		Registry:            reg,
+		Soma:                soma,
+		NC:                  nc,
+		Stream:              stream,
+		MetaArchitect:       architect,
+		Overseer:            ov,
+		Archivist:           arch,
+		Proposals:           NewProposalStore(),
+		MCP:                 mcpSvc,
+		MCPPool:             mcpPool,
+		MCPLibrary:          mcpLib,
+		Catalogue:           cat,
+		Artifacts:           art,
+		Events:              evStore,
+		Runs:                runsManager,
+		Reactive:            reactiveEngine,
+		GroupBus:            NewGroupBusMonitor(),
+		Organizations:       NewOrganizationStore(),
+		LoopProfiles:        NewLoopProfileStore(),
+		LoopResults:         NewLoopResultStore(),
+		LoopExecution:       NewLoopExecutionTracker(),
+		LoopScheduler:       nil,
+		TemplateBundlesPath: "config/templates",
 	}
 }
 
@@ -143,6 +161,11 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
 	mux.HandleFunc("GET /api/v1/teams/detail", s.HandleTeamsDetail)
 	mux.HandleFunc("/api/v1/user/settings", s.HandleUpdateSettings)
+	mux.HandleFunc("GET /api/v1/groups", s.HandleListGroups)
+	mux.HandleFunc("GET /api/v1/groups/monitor", s.HandleGroupMonitor)
+	mux.HandleFunc("POST /api/v1/groups", s.HandleCreateGroup)
+	mux.HandleFunc("PUT /api/v1/groups/{id}", s.HandleUpdateGroup)
+	mux.HandleFunc("POST /api/v1/groups/{id}/broadcast", s.HandleGroupBroadcast)
 
 	// Missions API (Dashboard + Phase 9: Neural Wiring Edit/Delete)
 	mux.HandleFunc("GET /api/v1/missions", s.handleListMissions)
@@ -187,6 +210,20 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// CE-1: Orchestration Templates & Intent Proofs
 	mux.HandleFunc("GET /api/v1/templates", s.handleListTemplatesAPI)
+	mux.HandleFunc("GET /api/v1/organizations", s.handleListOrganizations)
+	mux.HandleFunc("POST /api/v1/organizations", s.handleCreateOrganization)
+	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/response-contract", s.handleUpdateResponseContract)
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/ai-engine", s.handleUpdateDepartmentAIEngine)
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/ai-engine", s.handleUpdateAgentTypeAIEngine)
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/response-contract", s.handleUpdateAgentTypeResponseContract)
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+	mux.HandleFunc("GET /api/v1/organizations/{id}/automations", s.handleListAutomations)
+	mux.HandleFunc("GET /api/v1/organizations/{id}/loop-activity", s.handleListLoopActivity)
+	mux.HandleFunc("GET /api/v1/organizations/{id}/learning-insights", s.handleListLearningInsights)
+	mux.HandleFunc("POST /api/v1/internal/organizations/{id}/loops/{loopId}/trigger", s.handleTriggerLoop)
+	mux.HandleFunc("GET /api/v1/internal/organizations/{id}/loops/results", s.handleListLoopResults)
 	mux.HandleFunc("GET /api/v1/intent/proof/{id}", s.handleGetIntentProof)
 
 	// Phase 6.0: Symbiotic Seed (built-in sensor team, no LLM required)
@@ -199,7 +236,11 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Phase 5.3: RAG Memory & Sensory
 	mux.HandleFunc("GET /api/v1/memory/search", s.HandleMemorySearch)
 	mux.HandleFunc("GET /api/v1/memory/sitreps", s.HandleListSitReps)
+	mux.HandleFunc("/api/v1/memory/temp", s.HandleTempMemory)
 	mux.HandleFunc("GET /api/v1/sensors", s.HandleSensors)
+	mux.HandleFunc("GET /api/v1/comms/providers", s.HandleCommsProviders)
+	mux.HandleFunc("POST /api/v1/comms/send", s.HandleCommsSend)
+	mux.HandleFunc("POST /api/v1/comms/inbound/{provider}", s.HandleCommsInbound)
 
 	// Phase 5.3: Team Manifestation Proposals
 	mux.HandleFunc("/api/v1/proposals", s.HandleProposals)
@@ -238,8 +279,9 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/artifacts/{id}", s.handleGetArtifact)
 	mux.HandleFunc("POST /api/v1/artifacts", s.handleStoreArtifact)
 	mux.HandleFunc("PUT /api/v1/artifacts/{id}/status", s.handleUpdateArtifactStatus)
+	mux.HandleFunc("POST /api/v1/artifacts/{id}/save", s.handleSaveArtifactToFolder)
 
-	// Phase 19: Brains API (Provider Management)
+	// Brains API (provider management)
 	mux.HandleFunc("GET /api/v1/brains", s.HandleListBrains)
 	mux.HandleFunc("PUT /api/v1/brains/{id}/toggle", s.HandleToggleBrain)
 	mux.HandleFunc("PUT /api/v1/brains/{id}/policy", s.HandleUpdateBrainPolicy)
@@ -276,6 +318,9 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Service health dashboard
 	mux.HandleFunc("GET /api/v1/services/status", s.HandleServicesStatus)
+	mux.HandleFunc("GET /api/v1/host/status", s.HandleHostStatus)
+	mux.HandleFunc("GET /api/v1/host/actions", s.HandleHostActions)
+	mux.HandleFunc("POST /api/v1/host/actions/{id}/invoke", s.HandleInvokeHostAction)
 
 	// V7 Conversation Log: agent transcript browsing + user interjection
 	mux.HandleFunc("GET /api/v1/runs/{id}/conversation", s.HandleGetRunConversation)
@@ -283,6 +328,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/runs/{id}/interject", s.HandleRunInterject)
 
 	// V7 Inception Recipes: structured prompt patterns for RAG recall
+	mux.HandleFunc("GET /api/v1/inception/contracts", s.HandleInceptionContracts)
 	mux.HandleFunc("GET /api/v1/inception/recipes", s.HandleListInceptionRecipes)
 	mux.HandleFunc("GET /api/v1/inception/recipes/search", s.HandleSearchInceptionRecipes)
 	mux.HandleFunc("GET /api/v1/inception/recipes/{id}", s.HandleGetInceptionRecipe)

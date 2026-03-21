@@ -4,7 +4,7 @@ test.describe('Agent Catalogue Page (/catalogue)', () => {
 
     test.beforeEach(async ({ page }) => {
         await page.goto('/catalogue');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('page loads without errors', async ({ page }) => {

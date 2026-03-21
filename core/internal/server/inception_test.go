@@ -38,6 +38,52 @@ func recipeColumns() []string {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// HandleInceptionContracts — GET /api/v1/inception/contracts
+// ════════════════════════════════════════════════════════════════════
+
+func TestHandleInceptionContracts_HappyPath(t *testing.T) {
+	s := newTestServer()
+
+	mux := setupMux(t, "GET /api/v1/inception/contracts", s.HandleInceptionContracts)
+	rr := doRequest(t, mux, "GET", "/api/v1/inception/contracts", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["ok"] != true {
+		t.Errorf("expected ok=true, got %v", resp["ok"])
+	}
+
+	data, ok := resp["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected data object, got %T", resp["data"])
+	}
+	paths, ok := data["allowed_paths"].([]any)
+	if !ok {
+		t.Fatalf("expected allowed_paths array, got %T", data["allowed_paths"])
+	}
+	if len(paths) != 4 {
+		t.Fatalf("expected 4 allowed paths, got %d", len(paths))
+	}
+	lifetimes, ok := data["allowed_lifetimes"].([]any)
+	if !ok {
+		t.Fatalf("expected allowed_lifetimes array, got %T", data["allowed_lifetimes"])
+	}
+	if len(lifetimes) != 3 {
+		t.Fatalf("expected 3 allowed lifetimes, got %d", len(lifetimes))
+	}
+	if _, ok := data["decision_frame"].(map[string]any); !ok {
+		t.Fatalf("expected decision_frame object, got %T", data["decision_frame"])
+	}
+	if _, ok := data["heartbeat_budget"].(map[string]any); !ok {
+		t.Fatalf("expected heartbeat_budget object, got %T", data["heartbeat_budget"])
+	}
+	if _, ok := data["universal_invoke"].(map[string]any); !ok {
+		t.Fatalf("expected universal_invoke object, got %T", data["universal_invoke"])
+	}
+}
+
+// ════════════════════════════════════════════════════════════════════
 // HandleListInceptionRecipes — GET /api/v1/inception/recipes
 // ════════════════════════════════════════════════════════════════════
 

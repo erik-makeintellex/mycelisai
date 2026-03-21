@@ -2,7 +2,7 @@
 Lifecycle management for the Mycelis development stack.
 
 Provides unified start/stop/status/health commands that handle the full
-dependency graph: port-forwards → core server → frontend.
+dependency graph: port-forwards -> core server -> frontend.
 
 All probes are Python-native (socket/urllib) — no shell wrappers.
 """
@@ -11,6 +11,7 @@ import os
 import socket
 import subprocess
 import time
+import json
 from pathlib import Path
 
 from invoke import task, Collection
@@ -37,6 +38,55 @@ SERVICES = {
     "ollama":   {"port": 11434,          "label": "Ollama"},
 }
 
+CORE_STARTUP_LOG = ROOT_DIR / "workspace" / "logs" / "core-startup.log"
+WINDOWS_COMPILED_GO_PROCESS_NAMES = (
+    "go.exe",
+    "server.exe",
+    "probe.exe",
+    "signal_gen.exe",
+    "smoke.exe",
+)
+WINDOWS_COMPILED_GO_PROCESS_BASENAMES = tuple(name.removesuffix(".exe") for name in WINDOWS_COMPILED_GO_PROCESS_NAMES)
+COMPILED_GO_PROCESS_HINTS = tuple(
+    hint.lower()
+    for hint in {
+        "go run ./cmd/server",
+        "go run .\\cmd\\server",
+        "go run ./cmd/probe",
+        "go run .\\cmd\\probe",
+        "go run ./cmd/signal_gen",
+        "go run .\\cmd\\signal_gen",
+        "go run ./cmd/smoke/main.go",
+        "go run .\\cmd\\smoke\\main.go",
+        "cmd/server",
+        "cmd\\server",
+        "cmd/probe",
+        "cmd\\probe",
+        "cmd/signal_gen",
+        "cmd\\signal_gen",
+        "cmd/smoke",
+        "cmd\\smoke",
+        "bin/server",
+        "bin\\server",
+        "bin/probe",
+        "bin\\probe",
+        "bin/signal_gen",
+        "bin\\signal_gen",
+        "bin/smoke",
+        "bin\\smoke",
+        str((CORE_DIR / "bin" / "server").resolve()),
+        str((CORE_DIR / "bin" / "server.exe").resolve()),
+        str((CORE_DIR / "bin" / "probe").resolve()),
+        str((CORE_DIR / "bin" / "probe.exe").resolve()),
+        str((CORE_DIR / "bin" / "signal_gen").resolve()),
+        str((CORE_DIR / "bin" / "signal_gen.exe").resolve()),
+        str((CORE_DIR / "cmd" / "server").resolve()),
+        str((CORE_DIR / "cmd" / "probe").resolve()),
+        str((CORE_DIR / "cmd" / "signal_gen").resolve()),
+        str((CORE_DIR / "cmd" / "smoke").resolve()),
+    }
+)
+
 
 # ── Low-Level Probes ─────────────────────────────────────────────────
 
@@ -49,12 +99,12 @@ def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool
         return False
 
 
-def _http_get(url: str, timeout: float = 3.0) -> tuple[int, str]:
+def _http_get(url: str, timeout: float = 3.0, headers: dict[str, str] | None = None) -> tuple[int, str]:
     """HTTP GET returning (status_code, body). Returns (0, error) on failure."""
     import urllib.request
     import urllib.error
     try:
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, headers=headers or {})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as e:
@@ -72,6 +122,40 @@ def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1
         time.sleep(interval)
     print(f"  TIMEOUT waiting for {label} on port {port} ({timeout}s)")
     return False
+
+
+def _wait_for_port_closed(port: int, label: str, timeout: int = 3, interval: float = 0.25) -> bool:
+    """Block until a port is no longer open or timeout expires."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not _port_open(port):
+            return True
+        time.sleep(interval)
+    print(f"  WARN: {label} still holds port {port} after {timeout}s")
+    return False
+
+
+def _wait_for_http_ok(
+    url: str,
+    label: str,
+    timeout: int = 30,
+    interval: float = 1.0,
+    headers: dict[str, str] | None = None,
+) -> bool:
+    """Block until an HTTP endpoint returns 200 or timeout expires."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        code, _body = _http_get(url, timeout=5.0, headers=headers)
+        if code == 200:
+            return True
+        time.sleep(interval)
+    print(f"  TIMEOUT waiting for {label} at {url} ({timeout}s)")
+    return False
+
+
+def _core_startup_log_path() -> Path:
+    """Return the log file used for background Core startup diagnostics."""
+    return CORE_STARTUP_LOG
 
 
 def _find_pid_on_port(port: int) -> int | None:
@@ -109,13 +193,168 @@ def _find_pid_on_port(port: int) -> int | None:
 
 
 def _kill_pid(pid: int):
-    """Kill a process by PID."""
-    if is_windows():
-        subprocess.run(["taskkill", "/F", "/PID", str(pid)],
-                       capture_output=True, timeout=15)
-    else:
-        subprocess.run(["kill", "-9", str(pid)],
-                       capture_output=True, timeout=5)
+    """Kill a process by PID without failing the workflow on slow OS cleanup."""
+    try:
+        if is_windows():
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                capture_output=True,
+                timeout=5,
+            )
+        else:
+            subprocess.run(["kill", "-9", str(pid)],
+                           capture_output=True, timeout=5)
+    except subprocess.TimeoutExpired:
+        # Windows taskkill can hang after the target is already terminating.
+        # Treat this as best-effort and let the caller re-check the port.
+        pass
+
+
+def _run_best_effort(cmd: list[str], timeout: int = 5):
+    """Run a cleanup command without letting a hung subprocess block the workflow."""
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def _remaining_managed_services() -> list[str]:
+    """Return managed service labels that still have listening ports."""
+    return [
+        svc["label"]
+        for key, svc in SERVICES.items()
+        if key in ("postgres", "nats", "core", "frontend") and _port_open(svc["port"])
+    ]
+
+
+def _matches_compiled_go_service(name: str, command_line: str) -> bool:
+    """Return True when a process looks like a repo-local Go service run."""
+    _normalized_name = (name or "").lower()
+    normalized_cmd = (command_line or "").lower().replace("\\", "/")
+    if not normalized_cmd:
+        return False
+    return any(hint.replace("\\", "/") in normalized_cmd for hint in COMPILED_GO_PROCESS_HINTS)
+
+
+def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:
+    """Find repo-local Go service processes that may outlive prior test runs."""
+    processes: list[dict[str, str | int]] = []
+    try:
+        if is_windows():
+            candidate_cmd = (
+                "@(Get-Process -Name "
+                + ",".join(WINDOWS_COMPILED_GO_PROCESS_BASENAMES)
+                + " -ErrorAction SilentlyContinue) | "
+                "Select-Object Id,ProcessName | "
+                "ConvertTo-Json -Compress; exit 0"
+            )
+            result = subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    candidate_cmd,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.strip() or "process query failed")
+            raw = result.stdout.strip()
+            if not raw:
+                return []
+            candidate_payload = json.loads(raw)
+            candidate_rows = candidate_payload if isinstance(candidate_payload, list) else [candidate_payload]
+            candidate_pids = [row.get("Id") for row in candidate_rows if isinstance(row.get("Id"), int)]
+            if not candidate_pids:
+                return []
+            filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in candidate_pids)
+            result = subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
+                    "Select-Object ProcessId,Name,CommandLine | "
+                    "ConvertTo-Json -Compress",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.strip() or "process query failed")
+            raw = result.stdout.strip()
+            if not raw:
+                return []
+            payload = json.loads(raw)
+            rows = payload if isinstance(payload, list) else [payload]
+            for row in rows:
+                pid = row.get("ProcessId")
+                name = row.get("Name") or ""
+                command_line = row.get("CommandLine") or ""
+                if isinstance(pid, int) and _matches_compiled_go_service(name, command_line):
+                    processes.append({"pid": pid, "name": name, "command": command_line})
+            return processes
+
+        result = subprocess.run(
+            ["ps", "-eo", "pid=,comm=,args="],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or "process query failed")
+        for line in result.stdout.splitlines():
+            parts = line.strip().split(None, 2)
+            if len(parts) < 2 or not parts[0].isdigit():
+                continue
+            pid = int(parts[0])
+            name = parts[1]
+            command_line = parts[2] if len(parts) > 2 else ""
+            if _matches_compiled_go_service(name, command_line):
+                processes.append({"pid": pid, "name": name, "command": command_line})
+    except (subprocess.SubprocessError, json.JSONDecodeError, OSError, ValueError, RuntimeError) as exc:
+        raise RuntimeError(f"compiled Go service inspection failed: {exc}") from exc
+    return processes
+
+
+def _kill_compiled_go_services() -> list[dict[str, str | int]]:
+    """Terminate stray compiled or go-run Mycelis services from prior runs."""
+    try:
+        processes = _list_compiled_go_service_processes()
+    except RuntimeError as exc:
+        raise SystemExit(
+            "STACK DOWN INCOMPLETE: unable to inspect compiled Go services. "
+            + str(exc)
+            + ". Resolve the local process-inspection failure before running tests."
+        ) from exc
+    if not processes:
+        print("  No stray compiled Go services detected")
+        return []
+
+    print("  Cleaning stray compiled Go services from prior runs...")
+    for proc in processes:
+        print(f"    - {proc['name']} (PID {proc['pid']})")
+        _kill_pid(int(proc["pid"]))
+
+    time.sleep(0.5)
+    remaining = _list_compiled_go_service_processes()
+    if remaining:
+        for proc in remaining:
+            _kill_pid(int(proc["pid"]))
+        time.sleep(0.5)
+        remaining = _list_compiled_go_service_processes()
+    return remaining
+
+
+def _service_keys_by_label(labels: list[str]) -> list[str]:
+    keys: list[str] = []
+    for key, svc in SERVICES.items():
+        if key in ("postgres", "nats", "core", "frontend") and svc["label"] in labels:
+            keys.append(key)
+    return keys
 
 
 def _kill_port(port: int, label: str) -> bool:
@@ -123,6 +362,8 @@ def _kill_port(port: int, label: str) -> bool:
     pid = _find_pid_on_port(port)
     if pid:
         _kill_pid(pid)
+        if not _wait_for_port_closed(port, label):
+            return False
         print(f"  Killed {label} (PID {pid}) on port {port}")
         return True
     return False
@@ -178,7 +419,16 @@ def _kill_bridges():
 
 def _load_env():
     """Load .env into the process environment."""
-    from dotenv import load_dotenv
+    try:
+        from dotenv import load_dotenv
+    except ModuleNotFoundError as exc:
+        if exc.name != "dotenv":
+            raise
+        raise SystemExit(
+            "Missing python-dotenv in the current invoke environment. "
+            "Run tasks with 'uv run inv ...' or '.\\.venv\\Scripts\\inv.exe ...'; "
+            "do not use 'uvx --from invoke inv ...'."
+        ) from exc
     load_dotenv(str(ROOT_DIR / ".env"), override=True)
 
 
@@ -187,29 +437,34 @@ def _start_core_background():
     _load_env()
     bin_path = CORE_DIR / ("bin/server.exe" if is_windows() else "bin/server")
     if not bin_path.exists():
-        print(f"  ERROR: Binary not found at {bin_path}. Run 'uvx inv core.build' first.")
+        print(f"  ERROR: Binary not found at {bin_path}. Run 'uv run inv core.build' first.")
         return False
 
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    log_path = _core_startup_log_path()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if is_windows():
-        subprocess.Popen(
-            [str(bin_path)],
-            cwd=str(CORE_DIR),
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-        )
-    else:
-        subprocess.Popen(
-            [str(bin_path)],
-            cwd=str(CORE_DIR),
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
+    with log_path.open("w", encoding="utf-8") as log_file:
+        if is_windows():
+            subprocess.Popen(
+                [str(bin_path)],
+                cwd=str(CORE_DIR),
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+            )
+        else:
+            subprocess.Popen(
+                [str(bin_path)],
+                cwd=str(CORE_DIR),
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
     return True
 
 
@@ -269,6 +524,19 @@ def status(c):
     else:
         print("  Core API probe  : OFFLINE")
 
+    try:
+        compiled_go = _list_compiled_go_service_processes()
+    except RuntimeError as exc:
+        print(f"  Compiled Go svc : UNKNOWN ({exc})")
+    else:
+        if compiled_go:
+            summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in compiled_go[:4])
+            if len(compiled_go) > 4:
+                summary += ", ..."
+            print(f"  Compiled Go svc : DETECTED ({summary})")
+        else:
+            print("  Compiled Go svc : CLEAR")
+
     print()
 
 
@@ -281,9 +549,14 @@ def status(c):
 def up(c, frontend=False, build=False):
     """
     Bring up the full dev stack (idempotent).
-    Order: port-forwards → core server → (optional) frontend.
+    Order: port-forwards -> core server -> (optional) frontend.
     """
     print("=== Mycelis Stack Up ===\n")
+
+    # Capture dependency state before we touch bridges. If Core is already up while one
+    # of these is down, Core is likely running in degraded mode and should be restarted
+    # after dependencies are healthy.
+    deps_were_down_before_up = (not _port_open(5432)) or (not _port_open(4222))
 
     # 0. Optionally build
     if build:
@@ -293,7 +566,7 @@ def up(c, frontend=False, build=False):
     else:
         bin_path = CORE_DIR / ("bin/server.exe" if is_windows() else "bin/server")
         if not bin_path.exists():
-            print("ERROR: No binary found. Run with --build or 'uvx inv core.build' first.")
+            print("ERROR: No binary found. Run with --build or 'uv run inv core.build' first.")
             return
 
     # 1. Port-forwards
@@ -309,7 +582,7 @@ def up(c, frontend=False, build=False):
 
     if not pg_ok:
         print("  WARN: PostgreSQL not yet reachable — Core will retry for 90s after start.")
-        print("        If this persists, check: uvx inv k8s.status")
+        print("        If this persists, check: uv run inv k8s.status")
     else:
         print("  PostgreSQL ready")
 
@@ -324,12 +597,34 @@ def up(c, frontend=False, build=False):
     print("[3/4] Starting Core server...")
     if _port_open(API_PORT):
         print(f"  Core already running on :{API_PORT}")
+        if deps_were_down_before_up:
+            print("  Restarting Core to exit degraded startup mode after dependency recovery...")
+            _kill_port(API_PORT, "Core")
+            if _start_core_background():
+                if _wait_for_port(API_PORT, "Core API", timeout=120):
+                    print(f"  Core restarted on :{API_PORT}")
+                else:
+                    raise SystemExit(
+                        "STACK UP FAILED: Core restart did not open its port in time. "
+                        f"Check {_core_startup_log_path()} or run 'uv run inv core.run'."
+                    )
     else:
         if _start_core_background():
             if _wait_for_port(API_PORT, "Core API", timeout=120):
-                print(f"  Core online on :{API_PORT}")
+                print(f"  Core port open on :{API_PORT}")
             else:
-                print("  WARN: Core did not come up in time. Check logs with: uvx inv core.run")
+                raise SystemExit(
+                    "STACK UP FAILED: Core did not open its port in time. "
+                    f"Check {_core_startup_log_path()} or run 'uv run inv core.run'."
+                )
+
+    if _wait_for_http_ok(f"http://{API_HOST}:{API_PORT}/healthz", "Core health", timeout=45):
+        print(f"  Core healthy on :{API_PORT}")
+    else:
+        raise SystemExit(
+            "STACK UP FAILED: Core port opened but /healthz never became ready. "
+            f"Check {_core_startup_log_path()} or run 'uv run inv core.run'."
+        )
     print()
 
     # 4. Frontend (optional)
@@ -338,24 +633,13 @@ def up(c, frontend=False, build=False):
         if _port_open(INTERFACE_PORT):
             print(f"  Frontend already running on :{INTERFACE_PORT}")
         else:
-            from .interface import dev as interface_dev
-            # Run in background via subprocess
-            if is_windows():
-                subprocess.Popen(
-                    ["cmd", "/c", f"cd interface && npx next dev --port {INTERFACE_PORT}"],
-                    cwd=str(ROOT_DIR),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-                )
-            else:
-                subprocess.Popen(
-                    ["npx", "next", "dev", "--port", str(INTERFACE_PORT)],
-                    cwd=str(ROOT_DIR / "interface"),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
+            from . import interface as interface_tasks
+
+            interface_tasks.start_dev_server_detached(
+                interface_tasks.interface_task_env(),
+                host=INTERFACE_HOST,
+                port=INTERFACE_PORT,
+            )
             if _wait_for_port(INTERFACE_PORT, "Frontend", timeout=30):
                 print(f"  Frontend online on :{INTERFACE_PORT}")
             else:
@@ -363,51 +647,119 @@ def up(c, frontend=False, build=False):
     else:
         print("[4/4] Frontend: skipped (use --frontend to include)")
 
-    print("\nStack ready. Run 'uvx inv lifecycle.status' to verify.")
+    print("\nStack ready. Run 'uv run inv lifecycle.status' to verify.")
 
 
 @task
 def down(c):
     """
     Stop all dev stack services cleanly.
-    Order: core → frontend → port-forwards.
+    Order: core -> frontend -> compiled Go cleanup -> port-forwards.
     """
     print("=== Mycelis Stack Down ===\n")
 
     # 1. Core
-    print("[1/3] Stopping Core...")
+    print("[1/4] Stopping Core...")
     if _kill_port(API_PORT, "Core"):
         pass
     else:
         # Fallback: kill by process name
         if is_windows():
-            subprocess.run(["taskkill", "/F", "/IM", "server.exe"],
-                           capture_output=True)
+            _run_best_effort(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "Get-Process server -ErrorAction SilentlyContinue | Stop-Process -Force",
+                ]
+            )
         else:
-            subprocess.run(["pkill", "-f", "bin/server"], capture_output=True)
+            _run_best_effort(["pkill", "-f", "bin/server"])
+        _wait_for_port_closed(API_PORT, "Core")
         print("  Core stopped (by name)")
 
     # 2. Frontend
-    print("[2/3] Stopping Frontend...")
+    print("[2/4] Stopping Frontend...")
     if not _kill_port(INTERFACE_PORT, "Frontend"):
-        print("  Frontend not running")
+        if is_windows():
+            _run_best_effort(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | "
+                    f"Where-Object {{ $_.CommandLine -match 'next dev --port {INTERFACE_PORT}' }} | "
+                    "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
+                ],
+            )
+        else:
+            _run_best_effort(["pkill", "-f", f"next dev --port {INTERFACE_PORT}"])
 
-    # 3. Port-forwards
-    print("[3/3] Stopping port-forwards...")
+        if _wait_for_port_closed(INTERFACE_PORT, "Frontend"):
+            print("  Frontend stopped (by command line)")
+        else:
+            print("  Frontend not running")
+    from . import interface as interface_tasks
+    remaining_interface = interface_tasks._cleanup_repo_local_interface_processes()
+    if remaining_interface:
+        summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in remaining_interface[:6])
+        raise SystemExit(
+            "STACK DOWN INCOMPLETE: repo-local Interface residuals still running ("
+            + summary
+            + "). Re-run lifecycle.down or inspect Interface node workers."
+        )
+
+    # 3. Compiled Go helpers
+    print("[3/4] Cleaning compiled Go services...")
+    remaining_compiled = _kill_compiled_go_services()
+
+    # 4. Port-forwards
+    print("[4/4] Stopping port-forwards...")
     _kill_bridges()
 
     # Also kill any remaining kubectl port-forward processes
     if is_windows():
-        subprocess.run(
+        _run_best_effort(
             ["powershell", "-NoProfile", "-Command",
              "Get-Process kubectl -ErrorAction SilentlyContinue | "
              "Where-Object { $_.CommandLine -match 'port-forward' } | "
              "Stop-Process -Force"],
-            capture_output=True,
         )
     else:
-        subprocess.run(["pkill", "-f", "kubectl port-forward"],
-                       capture_output=True)
+        _run_best_effort(["pkill", "-f", "kubectl port-forward"])
+
+    remaining = []
+    deadline = time.time() + 8
+    while time.time() < deadline:
+        remaining = _remaining_managed_services()
+        if not remaining:
+            break
+        time.sleep(0.5)
+    if remaining:
+        # Windows can report the listener a moment after the first kill wave; retry by port.
+        for key in _service_keys_by_label(remaining):
+            svc = SERVICES[key]
+            _kill_port(svc["port"], svc["label"])
+
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            remaining = _remaining_managed_services()
+            if not remaining:
+                break
+            time.sleep(0.5)
+    if remaining:
+        raise SystemExit(
+            "STACK DOWN INCOMPLETE: remaining listeners on "
+            + ", ".join(remaining)
+            + ". Re-run lifecycle.down or inspect the reported ports/PIDs with lifecycle.status."
+        )
+    if remaining_compiled:
+        compiled_summary = ", ".join(f"{proc['name']}:{proc['pid']}" for proc in remaining_compiled)
+        raise SystemExit(
+            "STACK DOWN INCOMPLETE: stray compiled Go services still running ("
+            + compiled_summary
+            + "). Re-run lifecycle.down or inspect the reported ports/PIDs with lifecycle.status."
+        )
 
     print("\nAll services stopped.")
 
@@ -482,12 +834,82 @@ def health(c):
 @task
 def restart(c, build=False, frontend=False):
     """
-    Full stack restart: down → (optional build) → up.
+    Full stack restart: down -> (optional build) -> up.
     """
     down(c)
     print()
     time.sleep(2)  # brief settle
     up(c, frontend=frontend, build=build)
+
+
+@task(
+    help={
+        "build": "Build the Go binary before restart (default: False).",
+        "frontend": "Also start frontend after restart (default: False).",
+    }
+)
+def memory_restart(c, build=False, frontend=False):
+    """
+    Fresh memory restart workflow:
+    down -> db.reset -> up -> health -> memory endpoint probes.
+    """
+    print("=== Mycelis Memory Fresh Restart ===\n")
+
+    print("[1/6] Stopping stack...")
+    down(c)
+    print()
+    time.sleep(2)
+
+    print("[2/6] Restoring database bridge...")
+    _ensure_bridge()
+    if not _wait_for_port(5432, "PostgreSQL", timeout=30):
+        raise SystemExit(
+            "MEMORY RESTART FAILED: PostgreSQL bridge not reachable on 127.0.0.1:5432. "
+            "Run 'uv run inv k8s.up' or 'uv run inv k8s.bridge' and retry."
+        )
+    print()
+
+    print("[3/6] Resetting database...")
+    from . import db as db_tasks
+    db_tasks.reset(c)
+    print()
+
+    print("[4/6] Starting stack...")
+    up(c, frontend=frontend, build=build)
+    print()
+
+    print("[5/6] Running stack health checks...")
+    health(c)
+    print()
+
+    print("[6/6] Verifying memory endpoints...")
+    _load_env()
+    api_key = os.environ.get("MYCELIS_API_KEY", "")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    base = f"http://{API_HOST}:{API_PORT}"
+
+    checks = [
+        ("/api/v1/memory/stream", "Memory Stream"),
+        ("/api/v1/memory/sitreps?limit=1", "Memory SitReps"),
+    ]
+    errors: list[str] = []
+
+    for path, label in checks:
+        code, body = _http_get(f"{base}{path}", timeout=5.0, headers=headers)
+        if code == 200:
+            print(f"  [OK] {label:<20} {path} [200]")
+        else:
+            print(f"  [FAIL] {label:<20} {path} [{code}]")
+            errors.append(f"{label}: HTTP {code} ({body[:120]})")
+
+    if errors:
+        print()
+        for item in errors:
+            print(f"  - {item}")
+        raise SystemExit("MEMORY RESTART FAILED: one or more memory probes failed.")
+
+    print()
+    print("MEMORY RESTART READY.")
 
 
 # ── Collection ───────────────────────────────────────────────────────
@@ -498,3 +920,4 @@ ns.add_task(up)
 ns.add_task(down)
 ns.add_task(health)
 ns.add_task(restart)
+ns.add_task(memory_restart, name="memory-restart")

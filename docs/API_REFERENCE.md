@@ -52,10 +52,26 @@
 | **Agent Catalogue** | | |
 | `/api/v1/catalogue/agents` | GET/POST | List/create agent blueprints |
 | `/api/v1/catalogue/agents/{id}` | PUT/DELETE | Update/delete agent blueprint |
+| **Template Marketplace (Planned V7.x)** | | |
+| `/api/v1/template-market/sources` | GET/POST | List/register marketplace sources (clawhub/private hubs) |
+| `/api/v1/template-market/sources/{source_id}` | PATCH | Update source credentials/status |
+| `/api/v1/template-market/sources/{source_id}/probe` | POST | Probe source connectivity/auth |
+| `/api/v1/template-market/templates` | GET | Discover templates across configured sources |
+| `/api/v1/template-market/templates/{template_id}` | GET | Template package detail (requirements/pricing/license) |
+| `/api/v1/template-market/templates/{template_id}/purchase-intent` | POST | Create governed purchase proposal |
+| `/api/v1/template-market/purchases/{purchase_id}/confirm` | POST | Confirm purchase after approval |
+| `/api/v1/template-market/templates/{template_id}/install` | POST | Install template into tenant catalog |
+| `/api/v1/template-market/installs` | GET | List installed marketplace templates |
+| `/api/v1/template-market/installs/{install_id}/upgrade` | POST | Upgrade installed template version |
+| `/api/v1/templates/custom` | GET/POST | List/create tenant custom templates |
+| `/api/v1/templates/custom/{template_id}` | GET/PUT/DELETE | Read/update/archive custom template |
+| `/api/v1/templates/custom/{template_id}/publish` | POST | Publish immutable custom template version |
+| `/api/v1/templates/custom/{template_id}/fork` | POST | Fork marketplace/builtin/custom template |
 | **Artifacts** | | |
 | `/api/v1/artifacts` | GET/POST | List/store artifacts (filterable) |
 | `/api/v1/artifacts/{id}` | GET | Artifact detail |
 | `/api/v1/artifacts/{id}/status` | PUT | Update artifact status |
+| `/api/v1/artifacts/{id}/save` | POST | Persist cached image artifact to workspace folder (`saved-media` default) |
 | **MCP Ingress** | | |
 | `/api/v1/mcp/install` | POST | Raw MCP install endpoint — **disabled by Phase 0 security** (`403`), use library install |
 | `/api/v1/mcp/servers` | GET | List installed MCP servers |
@@ -63,6 +79,7 @@
 | `/api/v1/mcp/tools` | GET | List all MCP tools across servers |
 | `/api/v1/mcp/servers/{id}/tools/{tool}/call` | POST | Invoke a specific MCP tool |
 | `/api/v1/mcp/library` | GET | Browse curated MCP server library (categorized) |
+| `/api/v1/mcp/library/inspect` | POST | Policy inspection preview for a library candidate (`allow|require_approval|deny`) before install |
 | `/api/v1/mcp/library/install` | POST | One-click install from library by name |
 | `/api/v1/mcp/toolsets` | GET | List MCP tool sets (`tenant_id='default'`) |
 | `/api/v1/mcp/toolsets` | POST | Create MCP tool set (name, description, tool_refs) |
@@ -81,6 +98,10 @@
 | **Identity** | | |
 | `/api/v1/user/me` | GET | Current user identity |
 | `/api/v1/user/settings` | PUT | Update user settings |
+| `/api/v1/groups` | GET/POST | List/create root-admin collaboration groups (DB-backed, tenant scoped) |
+| `/api/v1/groups/{id}` | PUT | Update root-admin collaboration group |
+| `/api/v1/groups/{id}/broadcast` | POST | Publish group coordination message to group + team NATS channels |
+| `/api/v1/groups/monitor` | GET | Live group-bus monitor snapshot (published count, last group, last error) |
 | `/healthz` | GET | Health check |
 | **Brains (Provider CRUD)** | | |
 | `/api/v1/brains` | GET | List all providers with health status, location, data boundary |
@@ -101,7 +122,11 @@
 | `/api/v1/context/snapshots` | GET | List 20 most recent snapshots (no messages payload) |
 | `/api/v1/context/snapshots/{id}` | GET | Full snapshot including messages array |
 | **Service Health** | | |
-| `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive (N/M enabled), Reactive (subscription count) |
+| `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Comms, Group Bus monitor |
+| **Host Actions (Local Command V0)** | | |
+| `/api/v1/host/status` | GET | Local host actuation status (OS/arch/workspace + effective local command allowlist) |
+| `/api/v1/host/actions` | GET | List host actions available for invocation (currently `local-command`) |
+| `/api/v1/host/actions/{id}/invoke` | POST | Invoke host action by ID. V0 supports allowlisted no-shell local commands only |
 | **Mission Runs & Events (V7)** | | |
 | `/api/v1/runs` | GET | List recent runs across all missions — status, timing, trigger source |
 | `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (MissionEventEnvelope records) |
@@ -109,4 +134,8 @@
 | **Intent (CE-1)** | | |
 | `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return run_id |
 | `/api/v1/intent/proof/{id}` | GET | Retrieve intent proof bundle by ID |
-| `/api/v1/templates` | GET | List CE-1 orchestration templates |
+| `/api/v1/templates` | GET | List CE-1 orchestration templates or V8 AI Organization starters when `view=organization-starters` |
+| **AI Organizations (V8)** | | |
+| `/api/v1/organizations` | GET | List created AI Organization summaries for the entry flow |
+| `/api/v1/organizations` | POST | Create an AI Organization from template or empty start |
+| `/api/v1/organizations/{id}/home` | GET | Load the minimal AI Organization context shell |

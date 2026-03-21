@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mycelis/core/internal/cognitive"
@@ -41,6 +42,80 @@ func chatToolRisk(tools []string) string {
 		}
 	}
 	return "low"
+}
+
+func uniqueOrderedTools(tools []string) []string {
+	seen := make(map[string]struct{}, len(tools))
+	out := make([]string, 0, len(tools))
+	for _, tool := range tools {
+		t := strings.TrimSpace(tool)
+		if t == "" {
+			continue
+		}
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out
+}
+
+func inferAdapterKindFromTool(tool string) string {
+	t := strings.ToLower(strings.TrimSpace(tool))
+	switch {
+	case strings.HasPrefix(t, "mcp_"), strings.Contains(t, "mcp"):
+		return "mcp"
+	case strings.HasPrefix(t, "http_"), strings.Contains(t, "api"), strings.Contains(t, "webhook"):
+		return "openapi"
+	case strings.HasPrefix(t, "host_"), t == "local_command":
+		return "host"
+	default:
+		return "internal"
+	}
+}
+
+func buildTeamExpressionsFromTools(tools []string, teamID string, rolePlan []string) []protocol.ChatTeamExpression {
+	deduped := uniqueOrderedTools(tools)
+	if strings.TrimSpace(teamID) == "" {
+		teamID = "admin-core"
+	}
+	if len(rolePlan) == 0 {
+		rolePlan = []string{"admin"}
+	}
+	expressions := make([]protocol.ChatTeamExpression, 0, len(deduped))
+	for i, tool := range deduped {
+		idx := i + 1
+		bindingID := fmt.Sprintf("binding-%d-%s", idx, strings.ReplaceAll(tool, "_", "-"))
+		expressionID := fmt.Sprintf("expr-%d", idx)
+		expressions = append(expressions, protocol.ChatTeamExpression{
+			ExpressionID: expressionID,
+			TeamID:       teamID,
+			Objective:    fmt.Sprintf("Execute %s through governed module binding", tool),
+			RolePlan:     rolePlan,
+			ModuleBindings: []protocol.ChatModuleBinding{
+				{
+					BindingID:   bindingID,
+					ModuleID:    tool,
+					AdapterKind: inferAdapterKindFromTool(tool),
+					Operation:   tool,
+				},
+			},
+		})
+	}
+	return expressions
+}
+
+func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID string, rolePlan []string) *protocol.ChatProposal {
+	deduped := uniqueOrderedTools(mutTools)
+	return &protocol.ChatProposal{
+		Intent:          "chat-action",
+		Tools:           deduped,
+		RiskLevel:       chatToolRisk(deduped),
+		ConfirmToken:    confirmToken,
+		IntentProofID:   proofID,
+		TeamExpressions: buildTeamExpressionsFromTools(deduped, teamID, rolePlan),
+	}
 }
 
 // GET /api/v1/cognitive/status
@@ -237,7 +312,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		Consultations: agentResult.Consultations,
 	}
 
-	// Phase 19: Build brain provenance from agent's inference metadata
+	// Build brain provenance from agent inference metadata.
 	if agentResult.ProviderID != "" && s.Cognitive != nil {
 		brain := &protocol.BrainProvenance{
 			ProviderID: agentResult.ProviderID,
@@ -259,7 +334,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		chatPayload.Brain = brain
 	}
 
-	// Phase 19-B: Detect mutation tools → switch to proposal mode
+	// Detect mutation tools and switch to proposal mode when needed.
 	isMutation, mutTools := hasMutationTools(agentResult.ToolsUsed)
 
 	var templateID protocol.TemplateID
@@ -288,17 +363,15 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 			confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal)
 		}
 
-		chatPayload.Proposal = &protocol.ChatProposal{
-			Intent:    "chat-action",
-			Tools:     mutTools,
-			RiskLevel: chatToolRisk(mutTools),
-		}
+		var proofID string
+		var token string
 		if proof != nil {
-			chatPayload.Proposal.IntentProofID = proof.ID
+			proofID = proof.ID
 		}
 		if confirmToken != nil {
-			chatPayload.Proposal.ConfirmToken = confirmToken.Token
+			token = confirmToken.Token
 		}
+		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, "admin-core", []string{"admin"})
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",
@@ -491,7 +564,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		Consultations: agentResult.Consultations,
 	}
 
-	// Phase 19: Build brain provenance from agent's inference metadata
+	// Build brain provenance from agent inference metadata.
 	if agentResult.ProviderID != "" && s.Cognitive != nil {
 		brain := &protocol.BrainProvenance{
 			ProviderID: agentResult.ProviderID,
@@ -514,7 +587,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		chatPayload.Brain = brain
 	}
 
-	// Phase 19-B: Detect mutation tools → switch to proposal mode
+	// Detect mutation tools and switch to proposal mode when needed.
 	isMutation, mutTools := hasMutationTools(agentResult.ToolsUsed)
 
 	var templateID protocol.TemplateID
@@ -543,17 +616,15 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 			confirmToken, _ = s.generateConfirmToken(proof.ID, protocol.TemplateChatToProposal)
 		}
 
-		chatPayload.Proposal = &protocol.ChatProposal{
-			Intent:    "chat-action",
-			Tools:     mutTools,
-			RiskLevel: chatToolRisk(mutTools),
-		}
+		var proofID string
+		var token string
 		if proof != nil {
-			chatPayload.Proposal.IntentProofID = proof.ID
+			proofID = proof.ID
 		}
 		if confirmToken != nil {
-			chatPayload.Proposal.ConfirmToken = confirmToken.Token
+			token = confirmToken.Token
 		}
+		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, teamID, []string{memberID})
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",
@@ -657,11 +728,11 @@ func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req struct {
-		Endpoint   string `json:"endpoint,omitempty"`
-		ModelID    string `json:"model_id,omitempty"`
-		APIKey     string `json:"api_key,omitempty"`     // Direct key (stored in-memory only, not persisted to YAML)
-		APIKeyEnv  string `json:"api_key_env,omitempty"` // Env var name (persisted to YAML)
-		Type       string `json:"type,omitempty"`
+		Endpoint  string `json:"endpoint,omitempty"`
+		ModelID   string `json:"model_id,omitempty"`
+		APIKey    string `json:"api_key,omitempty"`     // Direct key (stored in-memory only, not persisted to YAML)
+		APIKeyEnv string `json:"api_key_env,omitempty"` // Env var name (persisted to YAML)
+		Type      string `json:"type,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
@@ -703,10 +774,10 @@ func (s *AdminServer) HandleUpdateProvider(w http.ResponseWriter, r *http.Reques
 
 	// Return sanitized provider info (no secrets)
 	respondJSON(w, map[string]any{
-		"id":       providerID,
-		"type":     existing.Type,
-		"endpoint": existing.Endpoint,
-		"model_id": existing.ModelID,
+		"id":         providerID,
+		"type":       existing.Type,
+		"endpoint":   existing.Endpoint,
+		"model_id":   existing.ModelID,
 		"configured": existing.AuthKey != "" || existing.AuthKeyEnv != "",
 	})
 }

@@ -60,29 +60,31 @@ export default function AutomationHub({
                         onCreate={() => openTab("approvals")}
                         onView={() => openTab("approvals")}
                     />
-                    <ActionCard
-                        title="Teams"
-                        description="Inspect team readiness, online agents, and operating roles."
-                        onCreate={() => openTab("teams")}
-                        onView={() => openTab("teams")}
-                    />
                     {advancedMode && (
-                        <ActionCard
-                            title="Neural Wiring"
-                            description="Design and iterate team-agent wiring in advanced mode."
-                            onCreate={() => openTab("wiring")}
-                            onView={() => openTab("wiring")}
-                        />
+                        <>
+                            <ActionCard
+                                title="Shared Teams"
+                                description="Inspect shared execution teams, online specialists, and current readiness."
+                                onCreate={() => openTab("teams")}
+                                onView={() => openTab("teams")}
+                            />
+                            <ActionCard
+                                title="Workflow Builder"
+                                description="Inspect and adjust advanced workflow structure when you need lower-level control."
+                                onCreate={() => openTab("wiring")}
+                                onView={() => openTab("wiring")}
+                            />
+                        </>
                     )}
                     <div className="rounded-xl border border-cortex-primary/25 bg-cortex-primary/10 p-4 space-y-3">
                         <div className="flex items-start justify-between gap-2">
                             <div>
                                 <h3 className="text-sm font-semibold text-cortex-text-main flex items-center gap-2">
                                     <Sparkles className="w-4 h-4 text-cortex-primary" />
-                                    Sprint 0 Team Instantiation
+                                    Guided Setup
                                 </h3>
                                 <p className="text-xs text-cortex-text-muted mt-1">
-                                    Scaffold the guided objective {"->"} profile {"->"} readiness {"->"} launch workflow.
+                                    Walk through a guided path from objective to readiness without dropping into advanced workflow editing.
                                 </p>
                             </div>
                             <button
@@ -104,7 +106,7 @@ export default function AutomationHub({
                             <Clock3 className="w-4 h-4" />
                             <h3 className="text-sm font-semibold">Scheduler</h3>
                         </div>
-                        <p className="text-xs text-cortex-text-muted">Cron scheduling and recurring execution are planned for the next V7 milestone.</p>
+                        <p className="text-xs text-cortex-text-muted">Recurring schedules are still being tightened for the current V8.1 release path.</p>
                     </div>
 
                     <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4">

@@ -12,6 +12,7 @@ const (
 	// Global Input (Ingress - guarded)
 	TopicGlobalInputWild = "swarm.global.input.>"
 	TopicGlobalInputUser = "swarm.global.input.user"
+	TopicGlobalInputFmt  = "swarm.global.input.%s" // provider/source suffix
 
 	// Global Broadcast (Mission Control → All Teams)
 	TopicGlobalBroadcast = "swarm.global.broadcast"
@@ -22,6 +23,7 @@ const (
 	TopicTeamInternalRespond = "swarm.team.%s.internal.response" // team ID
 	TopicTeamInternalCommand = "swarm.team.%s.internal.command"  // team ID
 	TopicTeamSignalStatus    = "swarm.team.%s.signal.status"     // team ID
+	TopicTeamSignalResult    = "swarm.team.%s.signal.result"     // team ID
 
 	// Telemetry (CTS Envelope bus)
 	TopicTeamTelemetryFmt  = "swarm.team.%s.telemetry" // team ID
@@ -53,4 +55,8 @@ const (
 	// V7 Conversation Log: user interjection into in-progress agent runs.
 	// Published by HTTP handler, consumed by agent between ReAct iterations.
 	TopicAgentInterjectionFmt = "swarm.agent.%s.interjection" // agent_id
+
+	// Root-admin collaboration groups (multi-user orchestration).
+	// Group-scoped collaboration channel; may be fanned out to team internal command lanes.
+	TopicGroupCollabFmt = "swarm.group.%s.collab" // group_id
 )

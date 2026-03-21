@@ -6,7 +6,7 @@
 
 ## Overview
 
-The **Memory** page (`/memory`) provides a unified view of the system's three-tier memory architecture:
+The **Memory** page (`/memory`) is available in Advanced mode and provides a unified view of the system's three-tier memory architecture:
 
 ```
 HOT   → Live signal stream (real-time events, last N minutes)

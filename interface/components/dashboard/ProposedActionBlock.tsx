@@ -12,9 +12,12 @@ interface Props {
 export default function ProposedActionBlock({ message }: Props) {
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
+    const assistantName = useCortexStore((s) => s.assistantName);
 
     const proposal = message.proposal;
     if (!proposal) return null;
+    const expressions = proposal.team_expressions ?? [];
+    const bindingCount = expressions.reduce((sum, expr) => sum + (expr.module_bindings?.length ?? 0), 0);
 
     const riskColor = proposal.risk_level === "high"
         ? "text-red-400 border-red-400/30"
@@ -34,7 +37,7 @@ export default function ProposedActionBlock({ message }: Props) {
             <div className="px-4 py-3 space-y-2 text-xs font-mono">
                 <div className="flex items-center gap-4">
                     <span className="text-cortex-text-muted w-16">Role</span>
-                    <span className="text-cortex-text-main">{sourceNodeLabel(message.source_node || "admin")}</span>
+                    <span className="text-cortex-text-main">{sourceNodeLabel(message.source_node || "admin", assistantName)}</span>
                 </div>
                 {message.brain && (
                     <div className="flex items-center gap-4">
@@ -73,6 +76,35 @@ export default function ProposedActionBlock({ message }: Props) {
                         {proposal.teams} team{proposal.teams !== 1 ? "s" : ""}, {proposal.agents} agent{proposal.agents !== 1 ? "s" : ""}
                     </span>
                 </div>
+                {expressions.length > 0 && (
+                    <div className="flex items-start gap-4">
+                        <span className="text-cortex-text-muted w-16 pt-0.5">Expressions</span>
+                        <div className="flex-1 space-y-1.5">
+                            <div className="text-cortex-text-muted text-[10px]">
+                                {expressions.length} expression{expressions.length !== 1 ? "s" : ""}, {bindingCount} module binding{bindingCount !== 1 ? "s" : ""}
+                            </div>
+                            {expressions.map((expr, idx) => (
+                                <div key={expr.expression_id || `expr-${idx}`} className="rounded border border-cortex-border px-2 py-1.5 bg-cortex-bg/40">
+                                    <div className="text-cortex-text-main text-[10px]">{expr.objective}</div>
+                                    {expr.module_bindings && expr.module_bindings.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {expr.module_bindings.map((binding, bIdx) => (
+                                                <span
+                                                    key={binding.binding_id || `${binding.module_id}-${bIdx}`}
+                                                    className="px-1.5 py-0.5 rounded border text-[10px] bg-cortex-primary/10 text-cortex-primary border-cortex-primary/20"
+                                                    title={binding.operation || binding.module_id}
+                                                >
+                                                    {binding.module_id}
+                                                    {binding.adapter_kind ? ` (${binding.adapter_kind})` : ''}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Actions */}

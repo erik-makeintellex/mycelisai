@@ -156,7 +156,7 @@ The Architect draws from the **Agent Catalogue** when generating blueprints — 
 - The Architect matches catalogue templates to roles in the blueprint goal
 - If no good match exists, a new agent definition is generated inline
 
-To improve blueprint quality for recurring task types, add good agent templates to the catalogue (`/resources?tab=catalogue`). The Architect will use them automatically.
+To improve blueprint quality for recurring task types, add good reusable role definitions in the Role Library (`/resources?tab=roles`). The Architect will use them automatically.
 
 ---
 

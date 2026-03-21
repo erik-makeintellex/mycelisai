@@ -1,46 +1,35 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Mission Control Dashboard (/)', () => {
+test.describe('Mission Control Dashboard (/dashboard)', () => {
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/dashboard');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('dashboard loads without errors', async ({ page }) => {
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
 
-        // Mission Control heading or branding
-        await expect(page.locator('text=Mission Control')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Create AI Organization' })).toBeVisible();
+        await expect(page.getByText(/Use a starter that already defines a Team Lead/i)).toBeVisible();
     });
 
     test('navigation rail is visible', async ({ page }) => {
-        await expect(page.locator('text=Mycelis')).toBeVisible();
+        await expect(page.locator('a[href="/dashboard"]').first()).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Automations' })).toBeVisible();
     });
 
-    test('telemetry row renders metric cards or skeleton', async ({ page }) => {
-        // Telemetry section should show cards or loading state
-        const telemetryCards = page.locator('[data-testid="telemetry-card"]');
-        const skeletons = page.locator('.animate-pulse');
-        const cardCount = await telemetryCards.count();
-        const skeletonCount = await skeletons.count();
-
-        // Either metrics loaded or showing skeleton
-        expect(cardCount + skeletonCount).toBeGreaterThan(0);
+    test('organization entry actions render', async ({ page }) => {
+        await expect(page.getByRole('button', { name: 'Start from template' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Start Empty', exact: true })).toBeVisible();
     });
 
-    test('mission cards render when data exists', async ({ page }) => {
-        // Mission cards in the dashboard
-        const missionCards = page.locator('[class*="rounded"]').filter({
-            has: page.locator('text=/active|draft|mission/i'),
-        });
-        const count = await missionCards.count();
-        if (count === 0) {
-            // No missions — empty state is valid
-            return;
-        }
-        await expect(missionCards.first()).toBeVisible();
+    test('recent organization guidance renders', async ({ page }) => {
+        await expect(page.getByRole('heading', { name: 'Recent AI Organizations' })).toBeVisible();
+        await expect(
+            page.getByText(/Create the AI Organization first so Mycelis opens with structure, not a one-off assistant session\./i),
+        ).toBeVisible();
     });
 
     test('no bg-white leak on dashboard', async ({ page }) => {

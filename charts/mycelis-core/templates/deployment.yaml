@@ -23,13 +23,23 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.service.port }}
               protocol: TCP
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if and .Values.probes .Values.probes.enabled }}
+          startupProbe:
+            {{- toYaml .Values.probes.startup | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.probes.readiness | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.probes.liveness | nindent 12 }}
+          {{- end }}
           env:
+            - name: PORT
+              value: "{{ .Values.service.port }}"
             - name: NATS_URL
               value: "nats://{{ .Release.Name }}-nats:4222"
             - name: DB_HOST
@@ -49,6 +59,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-postgresql-secret
                   key: postgres-db
+            {{- if or .Values.coreAuth.apiKey .Values.coreAuth.existingSecret }}
+            - name: MYCELIS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (include "mycelis-core.coreAuthSecretName" .) .Values.coreAuth.existingSecret }}
+                  key: mycelis-api-key
+            {{- end }}
             {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
             {{- end }}
@@ -56,10 +73,38 @@ spec:
             - name: tmp-volume
               mountPath: /tmp
             - name: data-volume
-              mountPath: /data/artifacts
+              mountPath: /data
+            - name: config-volume
+              mountPath: /app/config
+              readOnly: true
       volumes:
         - name: tmp-volume
           emptyDir: {}
         - name: data-volume
           persistentVolumeClaim:
             claimName: {{ .Chart.Name }}-data
+        - name: config-volume
+          configMap:
+            name: {{ .Chart.Name }}-config
+            defaultMode: 0444
+            items:
+              - key: cognitive.yaml
+                path: cognitive.yaml
+              - key: policy.yaml
+                path: policy.yaml
+              - key: v8-migration-standing-team-bridge.yaml
+                path: templates/v8-migration-standing-team-bridge.yaml
+              - key: admin.yaml
+                path: teams/admin.yaml
+              - key: agui-design-architect.yaml
+                path: teams/agui-design-architect.yaml
+              - key: council.yaml
+                path: teams/council.yaml
+              - key: genesis.yaml
+                path: teams/genesis.yaml
+              - key: prime-architect.yaml
+                path: teams/prime-architect.yaml
+              - key: prime-development.yaml
+                path: teams/prime-development.yaml
+              - key: telemetry.yaml
+                path: teams/telemetry.yaml

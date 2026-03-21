@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -10,13 +11,13 @@ import (
 type SignalType string
 
 const (
-	SignalTelemetry      SignalType = "telemetry"
-	SignalTaskComplete   SignalType = "task_complete"
-	SignalTaskFailed     SignalType = "task_failed"
-	SignalError          SignalType = "error"
-	SignalHeartbeat      SignalType = "heartbeat"
-	SignalGovernanceHalt SignalType = "governance_halt"
-	SignalSensorData     SignalType = "sensor_data"
+	SignalTelemetry         SignalType = "telemetry"
+	SignalTaskComplete      SignalType = "task_complete"
+	SignalTaskFailed        SignalType = "task_failed"
+	SignalError             SignalType = "error"
+	SignalHeartbeat         SignalType = "heartbeat"
+	SignalGovernanceHalt    SignalType = "governance_halt"
+	SignalSensorData        SignalType = "sensor_data"
 	SignalChatResponse      SignalType = "chat_response"
 	SignalBlueprintProposal SignalType = "blueprint_proposal" // CE-1: proposal with confirm token
 )
@@ -81,24 +82,42 @@ func (e *CTSEnvelope) Validate() error {
 }
 
 // BrainProvenance carries metadata about which provider/model executed a request.
-// Phase 19: Every LLM response must be traceable to its source brain.
+// Every LLM response should be traceable to its source brain.
 type BrainProvenance struct {
-	ProviderID   string `json:"provider_id"`              // "ollama", "claude"
-	ProviderName string `json:"provider_name,omitempty"`  // display name
-	ModelID      string `json:"model_id"`                 // "qwen2.5-coder:7b"
-	Location     string `json:"location"`                 // "local" | "remote"
-	DataBoundary string `json:"data_boundary"`            // "local_only" | "leaves_org"
+	ProviderID   string `json:"provider_id"`             // "ollama", "claude"
+	ProviderName string `json:"provider_name,omitempty"` // display name
+	ModelID      string `json:"model_id"`                // "qwen2.5-coder:7b"
+	Location     string `json:"location"`                // "local" | "remote"
+	DataBoundary string `json:"data_boundary"`           // "local_only" | "leaves_org"
 	TokensUsed   int    `json:"tokens_used,omitempty"`
 }
 
 // ChatProposal carries proposal metadata for chat-based mutation actions.
-// Phase 19-B: When an agent uses mutation tools, the response is tagged as a proposal.
+// When an agent uses mutation tools, the response is tagged as a proposal.
+// Slice 6: Team expressions + module bindings are optional structured fields
+// that bridge intent-level proposals to executable binding contracts.
+type ChatModuleBinding struct {
+	BindingID   string `json:"binding_id,omitempty"`
+	ModuleID    string `json:"module_id"`
+	AdapterKind string `json:"adapter_kind,omitempty"` // internal | mcp | openapi | host
+	Operation   string `json:"operation,omitempty"`
+}
+
+type ChatTeamExpression struct {
+	ExpressionID   string              `json:"expression_id,omitempty"`
+	TeamID         string              `json:"team_id,omitempty"`
+	Objective      string              `json:"objective"`
+	RolePlan       []string            `json:"role_plan,omitempty"`
+	ModuleBindings []ChatModuleBinding `json:"module_bindings,omitempty"`
+}
+
 type ChatProposal struct {
-	Intent        string   `json:"intent"`
-	Tools         []string `json:"tools"`
-	RiskLevel     string   `json:"risk_level"`      // "low" | "medium" | "high"
-	ConfirmToken  string   `json:"confirm_token"`
-	IntentProofID string   `json:"intent_proof_id"`
+	Intent          string               `json:"intent"`
+	Tools           []string             `json:"tools"`
+	RiskLevel       string               `json:"risk_level"` // "low" | "medium" | "high"
+	ConfirmToken    string               `json:"confirm_token"`
+	IntentProofID   string               `json:"intent_proof_id"`
+	TeamExpressions []ChatTeamExpression `json:"team_expressions,omitempty"`
 }
 
 // ConsultationEntry records a single council member consultation made by an agent
@@ -118,11 +137,11 @@ type ChatResponsePayload struct {
 	ToolsUsed     []string            `json:"tools_used,omitempty"`
 	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`
 	// CE-1: Answer provenance (audit linkage for Chat-to-Answer template)
-	Provenance    *AnswerProvenance   `json:"provenance,omitempty"`
-	// Phase 19: Brain provenance (which provider/model executed this response)
-	Brain         *BrainProvenance    `json:"brain,omitempty"`
-	// Phase 19-B: Chat proposal (when agent uses mutation tools)
-	Proposal      *ChatProposal       `json:"proposal,omitempty"`
+	Provenance *AnswerProvenance `json:"provenance,omitempty"`
+	// Brain provenance (which provider/model executed this response)
+	Brain *BrainProvenance `json:"brain,omitempty"`
+	// Chat proposal (when agent uses mutation tools)
+	Proposal *ChatProposal `json:"proposal,omitempty"`
 }
 
 // ChatArtifactRef is an inline artifact reference embedded in a chat response.
@@ -130,12 +149,16 @@ type ChatResponsePayload struct {
 // field carries the data directly. For large/binary content, ID references an
 // artifact in the artifacts table that can be fetched separately.
 type ChatArtifactRef struct {
-	ID          string `json:"id,omitempty"`           // artifact table ID (for stored artifacts)
-	Type        string `json:"type"`                   // code | document | image | audio | data | chart | file
+	ID          string `json:"id,omitempty"` // artifact table ID (for stored artifacts)
+	Type        string `json:"type"`         // code | document | image | audio | data | chart | file
 	Title       string `json:"title"`
 	ContentType string `json:"content_type,omitempty"` // MIME type
 	Content     string `json:"content,omitempty"`      // inline content (text, JSON, base64 for images)
 	URL         string `json:"url,omitempty"`          // external URL (for links, images)
+	// Optional image-cache lifecycle metadata.
+	Cached    bool   `json:"cached,omitempty"`
+	ExpiresAt string `json:"expires_at,omitempty"`
+	SavedPath string `json:"saved_path,omitempty"`
 }
 
 // DelegationHint carries optional scoring metadata for task delegation.
@@ -156,6 +179,52 @@ type APIResponse struct {
 	Error string      `json:"error,omitempty"`
 }
 
+// SignalSourceKind identifies where a governed product signal originated.
+type SignalSourceKind string
+
+const (
+	SourceKindWorkspaceUI       SignalSourceKind = "workspace_ui"
+	SourceKindWebAPI            SignalSourceKind = "web_api"
+	SourceKindAutomationTrigger SignalSourceKind = "automation_trigger"
+	SourceKindScheduler         SignalSourceKind = "scheduler"
+	SourceKindSensor            SignalSourceKind = "sensor"
+	SourceKindIoT               SignalSourceKind = "iot"
+	SourceKindInternalTool      SignalSourceKind = "internal_tool"
+	SourceKindMCP               SignalSourceKind = "mcp"
+	SourceKindSystem            SignalSourceKind = "system"
+)
+
+// SignalPayloadKind classifies the intent of a bus payload.
+type SignalPayloadKind string
+
+const (
+	PayloadKindCommand   SignalPayloadKind = "command"
+	PayloadKindStatus    SignalPayloadKind = "status"
+	PayloadKindResult    SignalPayloadKind = "result"
+	PayloadKindTelemetry SignalPayloadKind = "telemetry"
+	PayloadKindEvent     SignalPayloadKind = "event"
+	PayloadKindArtifact  SignalPayloadKind = "artifact"
+	PayloadKindError     SignalPayloadKind = "error"
+)
+
+// SignalMeta is the standard product-signal metadata contract for NATS traffic.
+type SignalMeta struct {
+	Timestamp     time.Time         `json:"timestamp"`
+	SourceKind    SignalSourceKind  `json:"source_kind"`
+	SourceChannel string            `json:"source_channel"`
+	PayloadKind   SignalPayloadKind `json:"payload_kind"`
+	RunID         string            `json:"run_id,omitempty"`
+	TeamID        string            `json:"team_id,omitempty"`
+	AgentID       string            `json:"agent_id,omitempty"`
+}
+
+// SignalEnvelope is the standardized operator-facing wrapper for status/result signals.
+type SignalEnvelope struct {
+	Meta    SignalMeta      `json:"meta"`
+	Text    string          `json:"text,omitempty"`
+	Payload json.RawMessage `json:"payload,omitempty"`
+}
+
 // NewAPISuccess creates a successful response envelope.
 func NewAPISuccess(data interface{}) APIResponse {
 	return APIResponse{OK: true, Data: data}
@@ -164,6 +233,53 @@ func NewAPISuccess(data interface{}) APIResponse {
 // NewAPIError creates an error response envelope.
 func NewAPIError(msg string) APIResponse {
 	return APIResponse{OK: false, Error: msg}
+}
+
+// WrapSignalPayload normalizes status/result signals with source metadata while preserving raw JSON payloads.
+func WrapSignalPayload(
+	sourceKind SignalSourceKind,
+	sourceChannel string,
+	payloadKind SignalPayloadKind,
+	teamID string,
+	raw []byte,
+) ([]byte, error) {
+	return WrapSignalPayloadWithMeta(sourceKind, sourceChannel, payloadKind, "", teamID, "", raw)
+}
+
+// WrapSignalPayloadWithMeta normalizes status/result/command signals while
+// preserving optional run/agent linkage metadata.
+func WrapSignalPayloadWithMeta(
+	sourceKind SignalSourceKind,
+	sourceChannel string,
+	payloadKind SignalPayloadKind,
+	runID string,
+	teamID string,
+	agentID string,
+	raw []byte,
+) ([]byte, error) {
+	env := SignalEnvelope{
+		Meta: SignalMeta{
+			Timestamp:     time.Now().UTC(),
+			SourceKind:    sourceKind,
+			SourceChannel: sourceChannel,
+			PayloadKind:   payloadKind,
+			RunID:         runID,
+			TeamID:        teamID,
+			AgentID:       agentID,
+		},
+	}
+
+	trimmed := bytes.TrimSpace(raw)
+	switch {
+	case len(trimmed) == 0:
+		// Keep the envelope metadata-only for empty payloads.
+	case json.Valid(trimmed):
+		env.Payload = append(json.RawMessage(nil), trimmed...)
+	default:
+		env.Text = string(raw)
+	}
+
+	return json.Marshal(env)
 }
 
 // ValidateTelemetryMessage is NATS middleware that rejects any message on

@@ -8,7 +8,13 @@ __pycache__
 .pytest_cache
 .coverage
 htmlcov
-ui/node_modules
-ui/.next
+/.next
+workspace/tool-cache
+interface/node_modules
+interface/.next
+interface/coverage
+interface/test-results
+interface/playwright-report
+interface/tsconfig.tsbuildinfo
 .DS_Store
 *.log

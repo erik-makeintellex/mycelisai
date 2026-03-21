@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function MarketplaceRedirect() {
-    redirect('/resources?tab=catalogue');
+    redirect('/resources?tab=roles');
 }

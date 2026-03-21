@@ -198,7 +198,7 @@ func main() {
 ```
 
 ## 5. Verification Plan
-1.  **Deploy:** `inv k8s.deploy`
+1.  **Deploy:** `uv run inv k8s.deploy`
 2.  **Generate Traffic:** Run the bridge and send a test message.
 3.  **Verify State:**
     ```bash

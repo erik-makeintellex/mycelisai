@@ -23,6 +23,7 @@ export const TOOL_LABELS: Record<string, string> = {
   read_file: "Read File",
   write_file: "Write File",
   generate_image: "Generate Image",
+  save_cached_image: "Save Image",
   research_for_blueprint: "Research Mission",
   summarize_conversation: "Save Context",
 };
@@ -47,18 +48,24 @@ export const COUNCIL_LABELS: Record<string, CouncilLabel> = {
   "council-sentry": { name: "Sentry", subtitle: "Risk & Security" },
 };
 
-export function councilLabel(id: string): CouncilLabel {
+export function councilLabel(id: string, assistantName = "Soma"): CouncilLabel {
+  if (id === "admin") {
+    return { ...COUNCIL_LABELS.admin, name: assistantName || "Soma" };
+  }
   return COUNCIL_LABELS[id] ?? { name: id, subtitle: "" };
 }
 
-export function councilOptionLabel(id: string, role: string): string {
-  const label = COUNCIL_LABELS[id];
-  if (label) return `${label.name} — ${label.subtitle}`;
+export function councilOptionLabel(id: string, role: string, assistantName = "Soma"): string {
+  const label = councilLabel(id, assistantName);
+  if (id === "admin") return `${label.name} — ${label.subtitle}`;
+  const known = COUNCIL_LABELS[id];
+  if (known) return `${known.name} — ${known.subtitle}`;
   // Fallback: capitalize role
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-export function sourceNodeLabel(sourceNode: string): string {
+export function sourceNodeLabel(sourceNode: string, assistantName = "Soma"): string {
+  if (sourceNode === "admin") return assistantName || "Soma";
   const label = COUNCIL_LABELS[sourceNode];
   if (label) return label.name;
   // Strip "council-" prefix and capitalize
@@ -115,6 +122,8 @@ export const WORKSPACE_LABELS = {
 export const MODE_LABELS: Record<string, { label: string; color: string }> = {
   answer: { label: "ANSWER", color: "text-cortex-primary" },
   proposal: { label: "PROPOSAL", color: "text-amber-400" },
+  execution_result: { label: "RESULT", color: "text-cortex-success" },
+  blocker: { label: "BLOCKER", color: "text-cortex-danger" },
   broadcast: { label: "BROADCAST", color: "text-cortex-warning" },
   execute: { label: "EXECUTE", color: "text-cortex-success" },
 };
@@ -168,6 +177,7 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   read_signals: "Subscribes to NATS topic pattern",
   read_file: "Reads file from sandboxed workspace",
   generate_image: "Generates image via cognitive pipeline",
+  save_cached_image: "Persists cached generated image to workspace saved-media",
   summarize_conversation: "Compresses conversation for long-term memory",
 };
 
@@ -182,7 +192,7 @@ export const MEMORY_LABELS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Phase 19: Brain / Provider labels
+// Brain / Provider labels
 // ---------------------------------------------------------------------------
 
 export const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
@@ -212,7 +222,7 @@ export function brainBadge(providerId: string, location: string): string {
 
 // Tool origin classification for enhanced badges
 export const MCP_TOOL_PREFIX = "mcp.";
-export const SANDBOXED_TOOLS = new Set(["read_file", "write_file"]);
+export const SANDBOXED_TOOLS = new Set(["read_file", "write_file", "save_cached_image"]);
 
 export function toolOrigin(name: string): 'internal' | 'external' | 'sandboxed' {
   if (name.startsWith(MCP_TOOL_PREFIX)) return 'external';

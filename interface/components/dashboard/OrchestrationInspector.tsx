@@ -9,6 +9,7 @@ export default function OrchestrationInspector() {
     const msg = useCortexStore((s) => s.inspectedMessage);
     const isOpen = useCortexStore((s) => s.isInspectorOpen);
     const setInspected = useCortexStore((s) => s.setInspectedMessage);
+    const assistantName = useCortexStore((s) => s.assistantName);
 
     if (!isOpen || !msg) return null;
 
@@ -36,7 +37,7 @@ export default function OrchestrationInspector() {
                 <InspectorSection icon={Shield} title="Execution">
                     <Row label="Mode" value={modeInfo.label} valueClass={modeInfo.color} />
                     <Row label="Template" value={msg.template_id || "chat-to-answer"} />
-                    <Row label="Source" value={sourceNodeLabel(msg.source_node || "admin")} />
+                    <Row label="Source" value={sourceNodeLabel(msg.source_node || "admin", assistantName)} />
                     {msg.trust_score != null && (
                         <Row label="Confidence" value={`${(msg.trust_score * 100).toFixed(0)}%`} />
                     )}
@@ -103,6 +104,20 @@ export default function OrchestrationInspector() {
                         <Row label="Intent" value={msg.proposal.intent} />
                         <Row label="Teams" value={String(msg.proposal.teams)} />
                         <Row label="Agents" value={String(msg.proposal.agents)} />
+                        {(msg.proposal.team_expressions?.length ?? 0) > 0 && (
+                            <>
+                                <Row label="Expressions" value={String(msg.proposal.team_expressions?.length ?? 0)} />
+                                <Row
+                                    label="Bindings"
+                                    value={String(
+                                        (msg.proposal.team_expressions ?? []).reduce(
+                                            (sum, expr) => sum + (expr.module_bindings?.length ?? 0),
+                                            0,
+                                        ),
+                                    )}
+                                />
+                            </>
+                        )}
                         <Row label="Risk" value={msg.proposal.risk_level?.toUpperCase() || "LOW"} />
                         <Row label="Proof ID" value={msg.proposal.intent_proof_id || "\u2014"} mono />
                     </InspectorSection>

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 
@@ -396,5 +397,25 @@ func TestService_FindServerByName_NotFound(t *testing.T) {
 	}
 	if srv != nil {
 		t.Error("expected nil for not found")
+	}
+}
+
+func TestResolveFilesystemWorkspaceRoot(t *testing.T) {
+	t.Setenv("MYCELIS_WORKSPACE", "/data/workspace")
+
+	root := resolveFilesystemWorkspaceRoot()
+
+	if root != "/data/workspace" {
+		t.Fatalf("root = %q, want /data/workspace", root)
+	}
+}
+
+func TestResolveFilesystemWorkspaceRoot_Default(t *testing.T) {
+	_ = os.Unsetenv("MYCELIS_WORKSPACE")
+
+	root := resolveFilesystemWorkspaceRoot()
+
+	if root != "./workspace" {
+		t.Fatalf("root = %q, want ./workspace", root)
 	}
 }

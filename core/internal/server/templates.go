@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -204,8 +205,19 @@ const (
 
 // ── API Handlers ────────────────────────────────────────────────────
 
-// GET /api/v1/templates — list all registered orchestration templates.
+// GET /api/v1/templates — list registered templates.
 func (s *AdminServer) handleListTemplatesAPI(w http.ResponseWriter, r *http.Request) {
+	view := strings.TrimSpace(r.URL.Query().Get("view"))
+	if view == "starter" || view == "organization-starters" {
+		templates, err := s.loadOrganizationStarterTemplates()
+		if err != nil {
+			respondAPIError(w, "failed to load organization starter templates", http.StatusInternalServerError)
+			return
+		}
+		respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(templates))
+		return
+	}
+
 	templates := make([]protocol.TemplateSpec, 0, len(protocol.TemplateRegistry))
 	for _, t := range protocol.TemplateRegistry {
 		templates = append(templates, t)

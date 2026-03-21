@@ -27,8 +27,7 @@ export default function StatusDrawer() {
     const councilMembers = useCortexStore((s) => s.councilMembers);
     const fetchCouncilMembers = useCortexStore((s) => s.fetchCouncilMembers);
     const missionChat = useCortexStore((s) => s.missionChat);
-    const missionChatError = useCortexStore((s) => s.missionChatError);
-    const councilTarget = useCortexStore((s) => s.councilTarget);
+    const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
     const activeBrain = useCortexStore((s) => s.activeBrain);
     const governanceMode = useCortexStore((s) => s.governanceMode);
@@ -52,25 +51,15 @@ export default function StatusDrawer() {
 
     const natsHealth = statusFromService(serviceMap.get("nats")?.status);
     const dbHealth = statusFromService(serviceMap.get("postgres")?.status);
+    const groupBusHealth = statusFromService(serviceMap.get("groups_bus")?.status);
     const sseHealth: Health = isStreamConnected ? "healthy" : "failure";
     const govHealth: Health = governanceMode === "strict" ? "failure" : governanceMode === "active" ? "degraded" : "healthy";
 
     const activeMissions = missions.filter((m) => m.status === "active").length;
-    const failingMember = useMemo(() => {
-        if (!missionChatError) return null;
-        const lastFailure = [...missionChat]
-            .reverse()
-            .find((m) =>
-                m.role === "council" &&
-                typeof m.source_node === "string" &&
-                typeof m.content === "string" &&
-                /(unreachable|timeout|error|failed)/i.test(m.content)
-            );
-        return lastFailure?.source_node ?? councilTarget;
-    }, [missionChatError, missionChat, councilTarget]);
+    const failingMember = missionChatFailure?.targetLabel ?? null;
 
     const councilHealth = (memberId: string): Health => {
-        if (failingMember && memberId === failingMember) return "failure";
+        if (missionChatFailure && missionChatFailure.targetId === memberId) return "failure";
         const lastMsg = [...missionChat]
             .reverse()
             .find((m) => m.source_node === memberId && m.role === "council");
@@ -120,6 +109,12 @@ export default function StatusDrawer() {
                         )}
                     </div>
                     <StatusRow icon={Wifi} label="NATS Connection" value={serviceMap.get("nats")?.status ?? "unknown"} health={natsHealth} />
+                    <StatusRow
+                        icon={Users}
+                        label="Group Bus"
+                        value={serviceMap.get("groups_bus")?.detail ?? serviceMap.get("groups_bus")?.status ?? "unknown"}
+                        health={groupBusHealth}
+                    />
                     <StatusRow icon={Radio} label="SSE Stream" value={isStreamConnected ? "live" : "offline"} health={sseHealth} />
                     <StatusRow icon={Database} label="Database" value={serviceMap.get("postgres")?.status ?? "unknown"} health={dbHealth} />
                     <StatusRow
@@ -130,10 +125,10 @@ export default function StatusDrawer() {
                     />
                     <StatusRow icon={Shield} label="Governance" value={governanceMode} health={govHealth} />
                     <StatusRow icon={Users} label="Active Missions" value={String(activeMissions)} health={activeMissions > 0 ? "info" : "offline"} />
-                    {failingMember && (
+                    {missionChatFailure && (
                         <div className="rounded-md border border-cortex-danger/40 bg-cortex-danger/10 px-3 py-2 text-xs font-mono text-cortex-danger flex items-start gap-2">
                             <AlertTriangle className="w-3.5 h-3.5 mt-0.5" />
-                            <div>Last council failure: {failingMember}</div>
+                            <div>Last workspace failure: {missionChatFailure.targetLabel} ({missionChatFailure.type})</div>
                         </div>
                     )}
                 </div>

@@ -9,6 +9,12 @@ service:
   type: ClusterIP
   port: 8080
 
+coreAuth:
+  # Either provide apiKey (for dev) or reference an existing secret
+  apiKey: ""
+  existingSecret: ""
+  secretName: ""
+
 resources:
   requests:
     cpu: 50m
@@ -31,6 +37,31 @@ securityContext:
   capabilities:
     drop: ["ALL"]
 
+probes:
+  enabled: true
+  startup:
+    httpGet:
+      path: /healthz
+      port: http
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
+  readiness:
+    httpGet:
+      path: /healthz
+      port: http
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 12
+  liveness:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 20
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5
+
 # Agent output data volume (artifacts, generated files, media)
 dataVolume:
   size: 2Gi
@@ -42,6 +73,8 @@ env:
     value: "http://192.168.50.156:11434"
   - name: DATA_DIR
     value: "/data/artifacts"
+  - name: MYCELIS_WORKSPACE
+    value: "/data/workspace"
 
 # NATS JetStream Configuration
 nats:

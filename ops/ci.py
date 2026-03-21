@@ -3,16 +3,36 @@ Local CI Pipeline — runs on dev machine or configured host.
 No GitHub Actions, no auto-triggers. Manual invocation only.
 
 Usage:
-    inv ci.lint          # Go vet + Next.js lint
-    inv ci.test          # Go tests + Interface tests
-    inv ci.build         # Go binary + Next.js production build (no Docker)
-    inv ci.check         # Full pipeline: lint → test → build
-    inv ci.deploy        # Build + Docker + K8s deploy (requires cluster)
+    uv run inv ci.lint          # Go vet + Next.js lint
+    uv run inv ci.test          # Go tests + Interface tests
+    uv run inv ci.build         # Go binary + Next.js production build (no Docker)
+    uv run inv ci.check         # Full pipeline: lint -> test -> build
+    uv run inv ci.deploy        # Build + Docker + K8s deploy (requires cluster)
 """
 
 import time
 from invoke import task, Collection
-from .config import CORE_DIR, is_windows, API_HOST, API_PORT, INTERFACE_PORT
+from .config import (
+    API_HOST,
+    API_PORT,
+    CORE_DIR,
+    INTERFACE_PORT,
+    ensure_managed_cache_dirs,
+    is_windows,
+    managed_cache_env,
+)
+from . import logging as logging_tasks
+from . import interface as interface_tasks
+from . import quality
+
+
+def _task_env(extra=None):
+    ensure_managed_cache_dirs()
+    return managed_cache_env(extra=extra)
+
+
+def _run_interface_command(c, command: str, **run_kwargs):
+    return interface_tasks.run_interface_command(c, command, cleanup=True, **run_kwargs)
 
 
 @task
@@ -26,7 +46,7 @@ def lint(c):
     # 1. Go vet
     print("[1/2] go vet ./...")
     with c.cd(str(CORE_DIR)):
-        result = c.run("go vet ./...", warn=True)
+        result = c.run("go vet ./...", warn=True, env=_task_env())
         if result.exited != 0:
             errors.append("go vet failed")
         else:
@@ -34,7 +54,7 @@ def lint(c):
 
     # 2. Next.js lint
     print("[2/2] next lint")
-    result = c.run("cd interface && npm run lint", warn=True)
+    result = _run_interface_command(c, "npm run lint", warn=True)
     if result.exited != 0:
         errors.append("next lint failed")
     else:
@@ -58,21 +78,19 @@ def test(c):
     # 1. Go tests
     print("[1/2] go test ./...")
     with c.cd(str(CORE_DIR)):
-        result = c.run("go test ./...", warn=True)
+        result = c.run("go test ./...", warn=True, env=_task_env())
         if result.exited != 0:
             errors.append("go tests failed")
         else:
             print("  OK")
 
-    # 2. Interface tests (may not have test suite yet — warn only)
-    print("[2/2] interface tests")
-    result = c.run("cd interface && npm run test -- --run 2>/dev/null", warn=True)
+    # 2. Interface tests
+    print("[2/2] interface vitest run")
+    result = _run_interface_command(c, "npx vitest run --reporter=dot", warn=True)
     if result.exited != 0:
-        # Check if it's "no tests found" vs actual failure
-        if result.stderr and "no test" in result.stderr.lower():
-            print("  SKIP (no test files)")
-        else:
-            print("  WARN: interface tests failed (non-blocking)")
+        errors.append("interface tests failed")
+    else:
+        print("  OK")
 
     print()
     if errors:
@@ -93,7 +111,7 @@ def build(c):
     print("[1/2] go build")
     with c.cd(str(CORE_DIR)):
         bin_cmd = "go build -v -o bin/server.exe ./cmd/server" if is_windows() else "go build -v -o bin/server ./cmd/server"
-        result = c.run(bin_cmd, warn=True)
+        result = c.run(bin_cmd, warn=True, env=_task_env())
         if result.exited != 0:
             errors.append("go build failed")
         else:
@@ -101,7 +119,7 @@ def build(c):
 
     # 2. Next.js production build (type-checks + compiles)
     print("[2/2] next build")
-    result = c.run("cd interface && npx next build", warn=True)
+    result = _run_interface_command(c, "npx next build", warn=True)
     if result.exited != 0:
         errors.append("next build failed")
     else:
@@ -117,7 +135,7 @@ def build(c):
 @task
 def check(c):
     """
-    Full local CI pipeline: lint → test → build.
+    Full local CI pipeline: lint -> test -> build.
     Run this before pushing code or creating PRs.
     """
     start = time.time()
@@ -152,6 +170,182 @@ def check(c):
     print("=" * 60)
 
 
+@task(help={"e2e": "Include Playwright E2E run (default: False)."})
+def baseline(c, e2e=False):
+    """
+    Strict baseline validation for delivery readiness.
+    Runs: core tests, interface build, interface typecheck, vitest, and optional playwright.
+    """
+    errors = []
+
+    print("=== BASELINE ===")
+    print()
+
+    print("[1/7] logging.check-schema")
+    try:
+        logging_tasks.check_schema.body(c)
+        print("  OK")
+    except SystemExit:
+        errors.append("logging schema check failed")
+
+    print("[2/7] logging.check-topics")
+    try:
+        logging_tasks.check_topics.body(c)
+        print("  OK")
+    except SystemExit:
+        errors.append("logging topic check failed")
+
+    print("[3/7] quality.max-lines --limit=350")
+    try:
+        quality.max_lines.body(c, limit=350, paths=quality.DEFAULT_HOT_PATHS, strict=False)
+        print("  OK")
+    except SystemExit:
+        errors.append("quality max-lines check failed")
+
+    print("[4/7] core go test ./... -count=1")
+    with c.cd(str(CORE_DIR)):
+        result = c.run("go test ./... -count=1", warn=True, hide=True, env=_task_env())
+        if result.exited != 0:
+            errors.append("core go tests failed")
+        else:
+            print("  OK")
+
+    print("[5/7] interface npm run build")
+    result = _run_interface_command(c, "npm run build", warn=True, hide=True)
+    if result.exited != 0:
+        errors.append("interface build failed")
+    else:
+        print("  OK")
+
+    print("[6/7] interface tsc --noEmit")
+    result = _run_interface_command(c, "npx tsc --noEmit", warn=True, hide=True)
+    if result.exited != 0:
+        errors.append("interface typecheck failed")
+    else:
+        print("  OK")
+
+    print("[7/7] interface vitest run")
+    result = _run_interface_command(c, "npx vitest run --reporter=dot", warn=True, hide=True)
+    if result.exited != 0:
+        errors.append("interface vitest failed")
+    else:
+        print("  OK")
+
+    if e2e:
+        print("[E2E] interface playwright run")
+        try:
+            interface_tasks.e2e.body(c)
+        except SystemExit:
+            errors.append("interface playwright failed")
+        else:
+            print("  OK")
+    else:
+        print("[E2E] interface playwright run")
+        print("  SKIP (--e2e not set)")
+
+    print()
+    if errors:
+        print(f"BASELINE FAILED: {', '.join(errors)}")
+        raise SystemExit(1)
+    print("BASELINE PASSED")
+
+
+@task(help={"strict": "Fail if Go version does not match the locked policy (default: False)."})
+def toolchain_check(c, strict=False):
+    """
+    Report local toolchain versions and optionally enforce Go lock policy.
+    """
+    print("=== TOOLCHAIN CHECK ===")
+    go_result = c.run("go version", hide=True, warn=True)
+    node_result = c.run("node -v", hide=True, warn=True)
+    npm_result = c.run("npm -v", hide=True, warn=True)
+
+    go_text = (go_result.stdout or "").strip()
+    node_text = (node_result.stdout or "").strip()
+    npm_text = (npm_result.stdout or "").strip()
+
+    print(f"go:   {go_text or 'unavailable'}")
+    print(f"node: {node_text or 'unavailable'}")
+    print(f"npm:  {npm_text or 'unavailable'}")
+
+    if go_result.exited != 0:
+        raise SystemExit("TOOLCHAIN CHECK FAILED: go is unavailable.")
+
+    locked_go_prefix = "go1.26"
+    go_matches = locked_go_prefix in go_text
+    if not go_matches:
+        message = (
+            f"Go version drift: expected {locked_go_prefix} (locked docs), found '{go_text}'."
+        )
+        if strict:
+            raise SystemExit(f"TOOLCHAIN CHECK FAILED: {message}")
+        print(f"WARN: {message}")
+    else:
+        print("Go version matches lock policy.")
+
+
+@task
+def entrypoint_check(c):
+    """
+    Verify the supported invoke runner matrix.
+    - uv run inv ...          => supported primary path
+    - uvx inv ...             => unsupported bare alias
+    - uvx --from invoke inv   => lightweight compatibility path
+    """
+    print("=== ENTRYPOINT CHECK ===")
+
+    primary = c.run("uv run inv -l", hide=True, warn=True)
+    if primary.exited != 0:
+        raise SystemExit("ENTRYPOINT CHECK FAILED: 'uv run inv -l' did not succeed.")
+    print("uv run inv -l: OK")
+
+    bare_uvx = c.run("uvx inv -l", hide=True, warn=True)
+    bare_uvx_text = f"{bare_uvx.stdout or ''}{bare_uvx.stderr or ''}"
+    expected_error = "does not provide any executables"
+    if bare_uvx.exited == 0 or expected_error not in bare_uvx_text:
+        raise SystemExit(
+            "ENTRYPOINT CHECK FAILED: expected bare 'uvx inv -l' to fail with the package-executable message."
+        )
+    print("uvx inv -l: expected failure confirmed")
+
+    compat = c.run("uvx --from invoke inv -l", hide=True, warn=True)
+    if compat.exited != 0:
+        raise SystemExit("ENTRYPOINT CHECK FAILED: 'uvx --from invoke inv -l' did not succeed.")
+    print("uvx --from invoke inv -l: OK")
+
+    print("ENTRYPOINT CHECK PASSED")
+
+
+@task(
+    help={
+        "e2e": "Include Playwright in baseline gate (default: False).",
+        "strict_toolchain": "Fail on Go lock mismatch (default: False).",
+    }
+)
+def release_preflight(c, e2e=False, strict_toolchain=False):
+    """
+    Enforce release preflight gate:
+    - clean working tree
+    - toolchain check
+    - strict baseline validation
+    """
+    print("=== RELEASE PREFLIGHT ===")
+    status = c.run("git status --porcelain", hide=True, warn=True)
+    dirty_lines = [ln for ln in (status.stdout or "").splitlines() if ln.strip()]
+    if dirty_lines:
+        print("Working tree is not clean:")
+        preview = dirty_lines[:20]
+        for ln in preview:
+            print(f"  {ln}")
+        if len(dirty_lines) > len(preview):
+            print(f"  ... and {len(dirty_lines) - len(preview)} more")
+        raise SystemExit("RELEASE PREFLIGHT FAILED: clean-tree requirement not met.")
+
+    toolchain_check(c, strict=strict_toolchain)
+    baseline(c, e2e=e2e)
+    print("RELEASE PREFLIGHT PASSED")
+
+
 @task
 def deploy(c):
     """
@@ -180,4 +374,8 @@ ns.add_task(lint)
 ns.add_task(test)
 ns.add_task(build)
 ns.add_task(check)
+ns.add_task(baseline)
+ns.add_task(toolchain_check, name="toolchain-check")
+ns.add_task(entrypoint_check, name="entrypoint-check")
+ns.add_task(release_preflight, name="release-preflight")
 ns.add_task(deploy)

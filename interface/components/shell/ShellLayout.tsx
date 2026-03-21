@@ -16,14 +16,16 @@ interface ShellLayoutProps {
 export function ShellLayout({ children }: ShellLayoutProps) {
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
+    const fetchUserSettings = useCortexStore((s) => s.fetchUserSettings);
 
     useEffect(() => {
+        fetchUserSettings();
         fetchServicesStatus();
         const interval = setInterval(() => {
             fetchServicesStatus();
         }, 6000);
         return () => clearInterval(interval);
-    }, [fetchServicesStatus]);
+    }, [fetchServicesStatus, fetchUserSettings]);
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-cortex-bg text-cortex-text-main font-sans selection:bg-cortex-primary/30 selection:text-white">

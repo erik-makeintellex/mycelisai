@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import CouncilCallErrorCard from "@/components/dashboard/CouncilCallErrorCard";
+import { buildMissionChatFailure } from "@/lib/missionChatFailure";
 
 describe("CouncilCallErrorCard", () => {
     beforeEach(() => {
@@ -14,8 +15,11 @@ describe("CouncilCallErrorCard", () => {
     it("classifies timeout failures", () => {
         render(
             <CouncilCallErrorCard
-                member="council-sentry"
-                errorMessage="request timeout after 30s"
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "council-sentry",
+                    message: "request timeout after 30s",
+                })}
                 onRetry={vi.fn()}
                 onSwitchToSoma={vi.fn()}
                 onContinueWithSoma={vi.fn()}
@@ -26,6 +30,25 @@ describe("CouncilCallErrorCard", () => {
         expect(screen.getByText("timeout")).toBeDefined();
     });
 
+    it("classifies mixed unreachable 500 errors as server errors", () => {
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "council-architect",
+                    message: "Council agent unreachable (500)",
+                    statusCode: 500,
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("server_error")).toBeDefined();
+        expect(screen.getByText(/returned an internal error/i)).toBeDefined();
+    });
+
     it("fires retry, switch, and continue handlers", () => {
         const onRetry = vi.fn();
         const onSwitchToSoma = vi.fn();
@@ -33,8 +56,12 @@ describe("CouncilCallErrorCard", () => {
 
         render(
             <CouncilCallErrorCard
-                member="council-architect"
-                errorMessage="Council agent unreachable (500)"
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "council-architect",
+                    message: "Council agent unreachable (500)",
+                    statusCode: 500,
+                })}
                 onRetry={onRetry}
                 onSwitchToSoma={onSwitchToSoma}
                 onContinueWithSoma={onContinueWithSoma}
@@ -53,8 +80,11 @@ describe("CouncilCallErrorCard", () => {
     it("copies diagnostics", async () => {
         render(
             <CouncilCallErrorCard
-                member="council-coder"
-                errorMessage="failed to fetch"
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "council-coder",
+                    message: "failed to fetch",
+                })}
                 onRetry={vi.fn()}
                 onSwitchToSoma={vi.fn()}
                 onContinueWithSoma={vi.fn()}
@@ -65,4 +95,3 @@ describe("CouncilCallErrorCard", () => {
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith("failed to fetch");
     });
 });
-

@@ -32,18 +32,20 @@ type Soma struct {
 	cancel        context.CancelFunc
 	registry      *Registry
 	brain         *cognitive.Router
-	toolExecutor  MCPToolExecutor         // composite (internal + MCP) — interface for backward compat
-	compositeExec *CompositeToolExecutor  // concrete type for ScopedToolExecutor wrapping
+	toolExecutor  MCPToolExecutor        // composite (internal + MCP) — interface for backward compat
+	compositeExec *CompositeToolExecutor // concrete type for ScopedToolExecutor wrapping
 	internalTools *InternalToolRegistry
 	// MCP agent-scoped binding: server name map + tool descriptions for per-agent filtering.
-	mcpServerNames map[uuid.UUID]string  // serverID → server name
-	mcpToolDescs   map[string]string     // MCP tool name → description
+	mcpServerNames map[uuid.UUID]string // serverID → server name
+	mcpToolDescs   map[string]string    // MCP tool name → description
 	// V7 Event Spine: optional run tracking + event audit (interfaces from pkg/protocol).
 	// Both may be nil — degraded mode: teams still activate, events just aren't recorded.
 	runsManager  protocol.RunsManager  // creates mission_run records
 	eventEmitter protocol.EventEmitter // persists + publishes events
 	// V7 Conversation Log: optional full-fidelity turn logger.
 	conversationLogger protocol.ConversationLogger
+	// Provider policy drives runtime routing for instantiated organizations.
+	providerPolicy ProviderPolicy
 }
 
 // NewSoma creates a new Executive instance.
@@ -97,7 +99,7 @@ func (s *Soma) Start() error {
 		log.Printf("WARN: Failed to load team manifests: %v", err)
 	}
 	for _, m := range manifests {
-		team := NewTeam(m, s.nc, s.brain, s.toolExecutor)
+		team := NewTeam(s.applyProviderPolicy(m), s.nc, s.brain, s.toolExecutor)
 		if len(toolDescs) > 0 {
 			team.SetToolDescriptions(toolDescs)
 		}
@@ -161,7 +163,7 @@ func (s *Soma) SpawnTeam(manifest *TeamManifest) error {
 	// Persist? For now, just runtime spawn.
 	// TODO: Save to Registry (YAML)
 
-	team := NewTeam(manifest, s.nc, s.brain, s.toolExecutor)
+	team := NewTeam(s.applyProviderPolicy(manifest), s.nc, s.brain, s.toolExecutor)
 	if s.internalTools != nil {
 		team.SetToolDescriptions(s.internalTools.ListDescriptions())
 	}
@@ -272,7 +274,7 @@ func (s *Soma) HandleCommand(w http.ResponseWriter, r *http.Request) {
 	// Topic: swarm.global.input.user
 	subject := protocol.TopicGlobalInputUser
 	if payload.Source != "" {
-		subject = fmt.Sprintf("swarm.global.input.%s", payload.Source)
+		subject = fmt.Sprintf(protocol.TopicGlobalInputFmt, payload.Source)
 	}
 
 	// 2. Publish
@@ -418,4 +420,27 @@ func (s *Soma) SetMCPServerNames(names map[uuid.UUID]string) {
 // Must be called before Start() so teams can inject MCP tool descriptions into agent prompts.
 func (s *Soma) SetMCPToolDescs(descs map[string]string) {
 	s.mcpToolDescs = descs
+}
+
+// SetProviderPolicy wires scoped provider routing into runtime team activation.
+func (s *Soma) SetProviderPolicy(policy ProviderPolicy) {
+	s.providerPolicy = policy.Clone()
+}
+
+func (s *Soma) applyProviderPolicy(manifest *TeamManifest) *TeamManifest {
+	if manifest == nil {
+		return nil
+	}
+	if s.providerPolicy.IsEmpty() {
+		return manifest
+	}
+
+	resolved, blocked := s.providerPolicy.ResolveManifest(manifest)
+	for _, blockedOverride := range blocked {
+		log.Printf("WARN: provider override blocked for team %s: %s", manifest.ID, blockedOverride.String())
+	}
+	if resolved == nil {
+		return manifest
+	}
+	return resolved
 }

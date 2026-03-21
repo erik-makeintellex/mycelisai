@@ -92,7 +92,7 @@ function SystemStatus() {
     const onlineSensors = sensors.filter((s) => s.status === "online").length;
 
     return (
-        <SectionCard title="System" subtitle="LLM engines and sensor feeds powering the organism" icon={Cpu} href="/settings/brain">
+        <SectionCard title="System" subtitle="AI engines and connected feeds powering the organization" icon={Cpu} href="/settings?tab=engines">
             <div className="px-3.5 py-2.5 space-y-2">
                 <EngineRow
                     label="Text"
@@ -240,6 +240,7 @@ function MissionsSection() {
     const fetchMissions = useCortexStore((s) => s.fetchMissions);
     const teamsDetail = useCortexStore((s) => s.teamsDetail);
     const fetchTeamsDetail = useCortexStore((s) => s.fetchTeamsDetail);
+    const assistantName = useCortexStore((s) => s.assistantName);
 
     useEffect(() => {
         fetchMissions();
@@ -278,7 +279,7 @@ function MissionsSection() {
             {sortedMissions.length === 0 ? (
                 <div className="px-4 py-5 text-center">
                     <p className="text-sm font-mono text-cortex-text-muted">No active missions</p>
-                    <p className="text-xs font-mono text-cortex-text-muted/50 mt-1">Launch a crew from Workspace, or ask Soma</p>
+                    <p className="text-xs font-mono text-cortex-text-muted/50 mt-1">Launch a crew from Workspace, or ask {assistantName}</p>
                 </div>
             ) : (
                 <div className="max-h-64 overflow-y-auto">
@@ -315,12 +316,13 @@ function MissionsSection() {
 
 function TeamsSection() {
     const teamsDetail = useCortexStore((s) => s.teamsDetail);
+    const assistantName = useCortexStore((s) => s.assistantName);
     const standingTeams = teamsDetail.filter((t) => t.type === "standing");
 
     if (standingTeams.length === 0) return null;
 
     return (
-        <SectionCard title="Teams" subtitle="Standing teams always online — Soma, Council, and more" icon={Users} href="/automations?tab=teams">
+        <SectionCard title="Shared Teams" subtitle={`Standing teams always online — ${assistantName}, Council, and more`} icon={Users} href="/automations?tab=teams">
             <div className="max-h-44 overflow-y-auto">
                 {standingTeams.map((team) => {
                     const status = aggregateStatus(team.agents);
@@ -346,7 +348,7 @@ function TeamsSection() {
     );
 }
 
-// ── MCP Tools ────────────────────────────────────────────────
+// ── Connected Tools ──────────────────────────────────────────
 
 const RECOMMENDED_SERVERS = ["brave-search", "github"];
 
@@ -364,7 +366,7 @@ function MCPToolsSection() {
     const missingRecommended = RECOMMENDED_SERVERS.filter((n) => !installedNames.has(n));
 
     return (
-        <SectionCard title="MCP Tools" subtitle="External tool servers agents can use — files, web, APIs" icon={Wrench} href="/settings/tools">
+        <SectionCard title="Connected Tools" subtitle="External tool servers the organization can use — files, web, APIs" icon={Wrench} href="/settings?tab=tools">
             <div className="px-3.5 py-2.5 space-y-2">
                 {mcpServers.length === 0 ? (
                     <div>
@@ -410,7 +412,7 @@ function MCPToolsSection() {
                         {missingRecommended.map((name) => (
                             <button
                                 key={name}
-                                onClick={() => router.push("/settings/tools")}
+                                onClick={() => router.push("/settings?tab=tools")}
                                 className="w-full flex items-center gap-2 py-1 text-left hover:text-cortex-primary transition-colors"
                             >
                                 <Plus className="w-3.5 h-3.5 text-cortex-text-muted" />
@@ -457,6 +459,7 @@ function RecentRunsSection() {
     const router = useRouter();
     const recentRuns = useCortexStore((s) => s.recentRuns);
     const fetchRecentRuns = useCortexStore((s) => s.fetchRecentRuns);
+    const assistantName = useCortexStore((s) => s.assistantName);
 
     useEffect(() => {
         fetchRecentRuns();
@@ -477,7 +480,7 @@ function RecentRunsSection() {
                 <div className="px-4 py-5 text-center">
                     <p className="text-sm font-mono text-cortex-text-muted">No runs yet</p>
                     <p className="text-xs font-mono text-cortex-text-muted/50 mt-1">
-                        Ask Soma to launch a crew to start a run
+                        Ask {assistantName} to launch a crew to start a run
                     </p>
                 </div>
             ) : (

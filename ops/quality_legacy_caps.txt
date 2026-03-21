@@ -1,0 +1,10 @@
+# Temporary no-regression caps for known oversized hot-path files.
+# Format: relative/path=maximum_lines
+# Rules:
+# - File must not exceed cap.
+# - Cap should only move downward as files are decomposed.
+
+core/internal/swarm/agent.go=1121
+core/internal/swarm/internal_tools.go=2491
+core/internal/swarm/soma.go=462
+interface/store/useCortexStore.ts=2714

@@ -9,7 +9,9 @@ export default function DegradedModeBanner() {
     const loading = useCortexStore((s) => s.isFetchingServicesStatus);
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
     const missionChatError = useCortexStore((s) => s.missionChatError);
+    const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
+    const assistantName = useCortexStore((s) => s.assistantName);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
     const fetchCouncilMembers = useCortexStore((s) => s.fetchCouncilMembers);
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
@@ -33,9 +35,10 @@ export default function DegradedModeBanner() {
         if (m.get("nats") && m.get("nats") !== "online") r.push(`NATS ${m.get("nats")}`);
         if (m.get("postgres") && m.get("postgres") !== "online") r.push(`Database ${m.get("postgres")}`);
         if (!isStreamConnected) r.push("SSE stream offline");
-        if (missionChatError) r.push("Council call failure");
+        if (missionChatFailure) r.push(missionChatFailure.bannerLabel);
+        else if (missionChatError) r.push("Workspace chat blocked");
         return r;
-    }, [services, isStreamConnected, missionChatError]);
+    }, [services, isStreamConnected, missionChatError, missionChatFailure]);
 
     const degraded = reasons.length > 0;
     if (!degraded) return null;
@@ -63,7 +66,7 @@ export default function DegradedModeBanner() {
                     }}
                     className="px-2 py-1 rounded border border-cortex-primary/30 text-cortex-primary text-[10px] font-mono hover:bg-cortex-primary/15 transition-colors"
                 >
-                    Switch to Soma
+                    Switch to {assistantName}
                 </button>
                 <button
                     onClick={() => setStatusDrawerOpen(true)}

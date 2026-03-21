@@ -1,5 +1,5 @@
 from invoke import task, Collection
-from .config import is_windows
+from .config import CORE_DIR, is_windows
 from . import core, interface
 
 @task
@@ -26,20 +26,30 @@ def coverage(c):
     print("=== Coverage Report ===")
     print()
     print("[Core] Running Go tests with coverage...")
-    c.run("cd core && go test -coverprofile=coverage.out ./...", pty=not is_windows())
+    with c.cd(str(CORE_DIR)):
+        c.run("go test -coverprofile=coverage.out ./...", pty=not is_windows())
     print()
     print("[Interface] Running Vitest with V8 coverage...")
-    c.run("cd interface && npx vitest run --coverage", pty=not is_windows())
+    interface.run_interface_command(c, "npx vitest run --coverage", cleanup=True, pty=not is_windows())
     print()
     print("Coverage reports generated.")
 
-@task
-def e2e(c, headed=False):
+@task(
+    help={
+        "headed": "Open a visible browser window.",
+        "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
+        "spec": "Optional Playwright spec path or glob.",
+        "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
+    }
+)
+def e2e(c, headed=False, project="", spec="", live_backend=False):
     """
     Run Playwright E2E tests (alias for interface.e2e).
-    Requires: core.run + interface.dev running.
+    Playwright owns the Interface dev server lifecycle. Start Core separately
+    only when the spec needs a live backend instead of route stubs. The task
+    clears stale Interface listeners before and after the browser run.
     """
-    interface.e2e(c, headed=headed)
+    interface.e2e(c, headed=headed, project=project, spec=spec, live_backend=live_backend)
 
 ns = Collection("test")
 ns.add_task(all)

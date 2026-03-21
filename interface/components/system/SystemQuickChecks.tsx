@@ -28,10 +28,10 @@ function statusIcon(status: CheckStatus) {
 }
 
 export default function SystemQuickChecks() {
-    const servicesStatus = useCortexStore((s) => s.servicesStatus);
-    const isFetchingServicesStatus = useCortexStore((s) => s.isFetchingServicesStatus);
-    const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
-    const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
+    const servicesStatus = useCortexStore((s) => s.servicesStatus ?? []);
+    const isFetchingServicesStatus = useCortexStore((s) => s.isFetchingServicesStatus ?? false);
+    const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus ?? (async () => {}));
+    const isStreamConnected = useCortexStore((s) => s.isStreamConnected ?? false);
 
     const [checkedAt, setCheckedAt] = useState<Record<string, Date | undefined>>({});
     const [manualStatus, setManualStatus] = useState<Record<string, CheckStatus | undefined>>({});

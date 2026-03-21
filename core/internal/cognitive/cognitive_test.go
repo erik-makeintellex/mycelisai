@@ -17,9 +17,14 @@ func TestInfer_Mock(t *testing.T) {
 		t.Fatalf("Failed to load generic config: %v", err)
 	}
 
-	// 2. Inject Mock for "ollama" (which "sentry" profile uses)
-	// We use "sentry" profile in the request. In cognitive.yaml, sentry -> ollama.
-	r.Adapters["ollama"] = &cognitive.MockAdapter{FixedResponse: "Explicit Mock"}
+	// 2. Inject deterministic mock adapter and pin the profile mapping explicitly.
+	// This prevents test drift when local config remaps "sentry" to a different provider.
+	const mockProviderID = "mock-test"
+	r.Adapters[mockProviderID] = &cognitive.MockAdapter{FixedResponse: "Explicit Mock"}
+	if r.Config.Profiles == nil {
+		r.Config.Profiles = make(map[string]string)
+	}
+	r.Config.Profiles["sentry"] = mockProviderID
 
 	// 3. Execute
 	req := cognitive.InferRequest{

@@ -1,59 +1,125 @@
-# Cortex Memory (Logging) Schema
+# Logging Standard (V7)
 
-> 🔙 **Navigation**: [Back to README](../README.md) | [Architecture Overview](../architecture.md)
+> Status: Authoritative
+> Last Updated: 2026-03-05
+> Scope: Required logging contract for all agents, services, and delivery teams
 
-The "Cortex" is the centralized memory stream of the Mycelis Swarm. All actions, thoughts, and events are normalized into a strict `LogEntry` format and published to the `cortex.logs` NATS subject.
+## 1. Why This Exists
 
-## 1. The LogEntry Protocol
+Mycelis currently has two active telemetry surfaces:
 
-**Protobuf Definition**: `proto/swarm/v1/swarm.proto`
+1. V7 mission event spine (`mission_events` + run timelines).
+2. Memory stream logs (`log_entries` via `/api/v1/memory/stream`).
 
-Every entry in the log stream follows this structure. This ensures that agents (like the Verifier or SRE-Bot) can deterministically parse history without guessing formats.
+This document standardizes how work must be logged so incoming agents can reason over logs without guessing format or source.
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| **`timestamp`** | `Timestamp` | Precise UTC time of the event. |
-| **`trace_id`** | `string` | The distributed trace ID (Correlation ID). Critical for debugging huge workflows. |
-| **`span_id`** | `string` | The specific step/span within the trace. |
-| **`agent_id`** | `string` | The specific ACTOR (e.g., `process-01`, `gpt-4-01`). |
-| **`team_id`** | `string` | The logic GROUP (e.g., `marketing`, `sensors`). |
-| **`source_uri`** | `string` | The CAPABILITY signature (e.g., `swarm:model:llama3`, `swarm:driver:rpi`). |
-| **`intent`** | `string` | The high-level GOAL or classification (e.g., `process_image`, `error`, `startup`). |
-| **`context_snapshot`** | `Struct` | A copy of the Global State (`swarm_context`) at the exact moment of the event. |
-| **`status`** | `string` | `SUCCESS`, `FAILURE`, or `PENDING`. |
-| **`error_message`** | `string` | Human-readable details if status is FAILURE. |
-| **`raw_payload`** | `Any` | The full original message or tool result (for replayability). |
+## 2. Canonical Sources
 
-## 2. Parsing Guide (for Agents)
+### 2.1 Persistent Execution Events (Primary for agent reasoning)
 
-When an agent needs to "read memory" (e.g., "What did we do last week?"):
+- Storage: `mission_events` table.
+- Producer path: `core/internal/events/store.go` (`Emit` = DB-first, CTS publish best effort).
+- Transport topic: `swarm.mission.events.{run_id}` (`TopicMissionEventsFmt`).
+- Primary query surfaces:
+  - `GET /api/v1/runs/{id}/events`
+  - `GET /api/v1/runs/{id}/chain`
 
-1.  **Filter by `trace_id`** to reconstruct a single thought process.
-2.  **Filter by `intent`** to find specific actions (e.g., `intent="tool_call"`) without noise.
-3.  **Inspect `context_snapshot`** to understand *why* a decision was made (the state of the world at that time).
+Use this source for execution lineage, causality, and run-level diagnostics.
 
-## 3. JSON Example
+### 2.2 Memory Stream Logs (Operational stream)
 
-When consumed via the API or CLI, the Protobuf is serialized to JSON:
+- Storage: `log_entries` table.
+- Producer path: `core/internal/memory/service.go` (`Push` -> async `persist`).
+- Primary query surface:
+  - `GET /api/v1/memory/stream`
 
-```json
-{
-  "timestamp": "2026-02-01T20:00:00Z",
-  "trace_id": "corr_12345",
-  "agent_id": "payment-bot-01",
-  "team_id": "finance",
-  "intent": "charge_card",
-  "status": "SUCCESS",
-  "context_snapshot": {
-    "user_tier": "gold",
-    "risk_score": 0.1
-  },
-  "raw_payload": { ... }
-}
-```
+Use this source for lightweight operational signal feeds and UI stream rendering.
 
-## 4. Best Practices
+## 3. Required Event Taxonomy (Mission Events)
 
--   **Don't log noise.** If it's a debug print, keep it local. If it affects state, send it to Cortex.
--   **Always include `trace_id`.** An orphan log is a lost memory.
--   **Use broad `intents`.** Don't use `started_processing_file_a`, use `intent="processing" file="a"`.
+Use `core/pkg/protocol/events.go` constants only. Do not invent ad-hoc event names.
+
+Core families:
+
+- Mission: `mission.started`, `mission.completed`, `mission.failed`, `mission.cancelled`
+- Team: `team.spawned`, `team.stopped`
+- Agent: `agent.started`, `agent.stopped`
+- Tool: `tool.invoked`, `tool.completed`, `tool.failed`
+- Artifact: `artifact.created`
+- Memory: `memory.stored`, `memory.recalled`
+- Orchestration: `trigger.fired`, `trigger.skipped`, `scheduler.tick`
+
+## 4. Required Field Contract
+
+### 4.1 Mission event minimums
+
+Every emission must include:
+
+- `run_id` (non-empty)
+- `event_type` (from constants)
+- `severity` (`info|warn|error`)
+- `source_agent` and/or `source_team` where available
+- `payload` (map; use empty object when no details)
+
+### 4.2 Payload keys by type
+
+Use stable keys to keep agent parsing deterministic.
+
+- `tool.*`: `tool_name`, `call_id`, `status`, `duration_ms`, `error` (if failed)
+- `mission.*`: `mission_id`, `status`, `reason` (if non-success)
+- `team.*`: `team_id`, `action`, `lifetime`
+- `trigger.*`: `rule_id`, `matched`, `mode`, `decision`
+- `scheduler.tick`: `schedule_id`, `due_count`, `dispatch_count`
+
+## 5. Agent Onboarding Checklist (Mandatory Before Coding)
+
+Any agent starting delivery work must do this first:
+
+1. Read this file and `core/pkg/protocol/events.go`.
+2. Verify topic constants in `core/pkg/protocol/topics.go`.
+3. Confirm event persistence behavior in `core/internal/events/store.go`.
+4. Confirm stream log behavior in `core/internal/memory/service.go`.
+5. Run current test baseline before changing logging behavior.
+
+If any logging change is made, agent must update:
+
+1. `docs/logging.md`
+2. relevant tests in `core/internal/events/*` or `core/internal/memory/*`
+3. `README.md` and `V7_DEV_STATE.md` when behavior changes operator-facing outputs
+
+## 6. Operator Failure Contract
+
+Operator-facing execution paths must not classify failures independently in each component.
+
+Current required rule for Workspace and council chat:
+
+- store raw diagnostics separately from the operator-facing failure model
+- classify Workspace/council chat failures once in shared UI/store logic
+- render the same failure type, banner label, summary, and recovery action across:
+  - Workspace blocker cards
+  - degraded-mode banner
+  - system status drawer
+
+This prevents drift where one surface says "unreachable", another says "server error", and the store only holds an opaque string.
+
+## 7. Anti-Patterns (Disallowed)
+
+- Hardcoded topic strings in handlers/services (must use constants).
+- New event names not declared in `protocol/events.go`.
+- Missing `run_id` on mission event emissions.
+- Emitting CTS-only event signals without DB persistence.
+- Unbounded free-form payload blobs for common event classes.
+
+## 8. Near-Term Hardening Tasks
+
+Add/standardize invoke tasks for logging quality gates:
+
+- `uv run inv logging.check-schema`
+  - validate event types and required keys across targeted tests/fixtures.
+- `uv run inv logging.check-topics`
+  - detect hardcoded `swarm.` topic strings outside `protocol/topics.go`.
+
+Current note:
+- `logging.check-coverage` is not a live invoke task yet. Coverage for new logging/event paths is enforced through focused tests plus `uv run inv ci.baseline` until a dedicated task is added.
+
+These tasks are required before enabling broader autonomous agent execution.

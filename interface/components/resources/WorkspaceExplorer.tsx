@@ -216,11 +216,11 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                         <h3 className="text-sm font-semibold">Filesystem MCP not installed</h3>
                     </div>
                     <p className="text-xs text-cortex-text-muted mb-3">
-                        Workspace Explorer requires the `filesystem` MCP server. Install/connect it from Resources / MCP Tools.
+                        Workspace Files requires the `filesystem` connected tool. Install or reconnect it from Resources / Connected Tools.
                     </p>
                     <div className="flex gap-2">
                         <button onClick={onOpenToolsTab} className="px-3 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10">
-                            Open MCP Tools
+                            Open Connected Tools
                         </button>
                         <button onClick={fetchMCPServers} className="px-3 py-1.5 rounded border border-cortex-border text-cortex-text-main text-xs font-mono hover:bg-cortex-border">
                             Refresh
@@ -240,11 +240,11 @@ export default function WorkspaceExplorer({ onOpenToolsTab }: { onOpenToolsTab: 
                         <h3 className="text-sm font-semibold">Filesystem MCP not connected</h3>
                     </div>
                     <p className="text-xs text-cortex-text-muted mb-3">
-                        Current status: <span className="font-mono">{filesystemServer.status}</span>. Connect/reinstall from MCP Tools, then retry.
+                        Current status: <span className="font-mono">{filesystemServer.status}</span>. Reconnect it from Connected Tools, then retry.
                     </p>
                     <div className="flex gap-2">
                         <button onClick={onOpenToolsTab} className="px-3 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10">
-                            Open MCP Tools
+                            Open Connected Tools
                         </button>
                         <button onClick={fetchMCPServers} className="px-3 py-1.5 rounded border border-cortex-border text-cortex-text-main text-xs font-mono hover:bg-cortex-border">
                             Refresh

@@ -43,16 +43,22 @@ describe('ManifestationPanel', () => {
         vi.useRealTimers();
     });
 
-    it('renders manifestation panel', () => {
+    async function renderPanel() {
+        await act(async () => {
+            render(<ManifestationPanel />);
+        });
+    }
+
+    it('renders manifestation panel', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => ({ proposals: [] }) });
-        render(<ManifestationPanel />);
+        await renderPanel();
         expect(screen.getByTestId('manifestation-panel')).toBeDefined();
     });
 
     it('shows empty state when no proposals', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => ({ proposals: [] }) });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             expect(screen.getByText('No team proposals')).toBeDefined();
@@ -62,7 +68,7 @@ describe('ManifestationPanel', () => {
     it('renders proposal cards from API data', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => PROPOSALS_RESPONSE });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             expect(screen.getByText('Signal Analytics Squad')).toBeDefined();
@@ -73,7 +79,7 @@ describe('ManifestationPanel', () => {
     it('shows pending count badge', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => PROPOSALS_RESPONSE });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             expect(screen.getByText('2 PENDING')).toBeDefined();
@@ -83,7 +89,7 @@ describe('ManifestationPanel', () => {
     it('shows agent count on each proposal card', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => PROPOSALS_RESPONSE });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             expect(screen.getByText('2 agents proposed')).toBeDefined();
@@ -94,7 +100,7 @@ describe('ManifestationPanel', () => {
     it('shows MANIFEST and DISMISS buttons for pending proposals', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => PROPOSALS_RESPONSE });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             const manifestButtons = screen.getAllByText('MANIFEST');
@@ -107,7 +113,7 @@ describe('ManifestationPanel', () => {
     it('calls approveProposal when MANIFEST is clicked', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => PROPOSALS_RESPONSE });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             expect(screen.getByText('Signal Analytics Squad')).toBeDefined();
@@ -131,7 +137,7 @@ describe('ManifestationPanel', () => {
     it('calls rejectProposal when DISMISS is clicked', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => PROPOSALS_RESPONSE });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             expect(screen.getByText('Signal Analytics Squad')).toBeDefined();
@@ -154,7 +160,7 @@ describe('ManifestationPanel', () => {
     it('fetches proposals on mount', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => PROPOSALS_RESPONSE });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/proposals');
@@ -164,7 +170,7 @@ describe('ManifestationPanel', () => {
     it('polls proposals every 10 seconds', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => PROPOSALS_RESPONSE });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await act(async () => { await vi.advanceTimersByTimeAsync(100); });
         const initial = mockFetch.mock.calls.filter(c => c[0] === '/api/v1/proposals').length;
@@ -184,7 +190,7 @@ describe('ManifestationPanel', () => {
         };
         mockFetch.mockResolvedValue({ ok: true, json: async () => approved });
 
-        render(<ManifestationPanel />);
+        await renderPanel();
 
         await waitFor(() => {
             expect(screen.getByText('Signal Analytics Squad')).toBeDefined();

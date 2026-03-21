@@ -16,6 +16,16 @@ export function ZoneA() {
     }, []);
 
     const effectiveAdvancedMode = isHydrated ? advancedMode : false;
+    const primaryNav = [
+        { href: '/dashboard', icon: Home, label: 'AI Organization' },
+        { href: '/automations', icon: Workflow, label: 'Automations' },
+        { href: '/docs', icon: BookOpen, label: 'Docs' },
+    ];
+    const advancedNav = [
+        { href: '/resources', icon: FolderCog, label: 'Resources' },
+        { href: '/memory', icon: Brain, label: 'Memory' },
+        { href: '/system', icon: Activity, label: 'System' },
+    ];
 
     return (
         <div className="w-16 md:w-64 bg-cortex-surface text-cortex-text-main flex flex-col border-r border-cortex-border z-50 flex-shrink-0 transition-all duration-300">
@@ -29,15 +39,20 @@ export function ZoneA() {
                 </span>
             </Link>
 
-            {/* 2. Workflow-First Navigation (V7) */}
+            {/* 2. Team Lead-first Navigation */}
             <div className="flex-1 flex flex-col py-4 gap-1 px-2">
-                <NavItem href="/dashboard" icon={Home} label="Workspace" />
-                <NavItem href="/automations" icon={Workflow} label="Automations" />
-                <NavItem href="/resources" icon={FolderCog} label="Resources" />
-                <NavItem href="/memory" icon={Brain} label="Memory" />
-                <NavItem href="/docs" icon={BookOpen} label="Docs" />
+                {primaryNav.map((item) => (
+                    <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} />
+                ))}
                 {effectiveAdvancedMode && (
-                    <NavItem href="/system" icon={Activity} label="System" />
+                    <div className="mt-3 space-y-1">
+                        <div className="hidden px-2 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-cortex-text-muted/70 md:block">
+                            Advanced
+                        </div>
+                        {advancedNav.map((item) => (
+                            <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} />
+                        ))}
+                    </div>
                 )}
             </div>
 

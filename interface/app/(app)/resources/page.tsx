@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Brain, Wrench, BookOpen, FolderOpen } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
+import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
+import { useCortexStore } from "@/store/useCortexStore";
 
 const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegistry"), {
     ssr: false,
@@ -21,8 +23,8 @@ const WorkspaceExplorer = dynamic(() => import("@/components/resources/Workspace
     loading: () => <TabLoading label="workspace" />,
 });
 
-type TabId = "brains" | "tools" | "workspace" | "catalogue";
-const VALID_TABS: TabId[] = ["brains", "tools", "workspace", "catalogue"];
+type TabId = "engines" | "tools" | "workspace" | "roles";
+const VALID_TABS: TabId[] = ["engines", "tools", "workspace", "roles"];
 
 export default function ResourcesPage() {
     return (
@@ -34,10 +36,20 @@ export default function ResourcesPage() {
 
 function ResourcesContent() {
     const searchParams = useSearchParams();
+    const advancedMode = useCortexStore((s) => s.advancedMode);
     const tabParam = searchParams.get("tab") as TabId | null;
     const [activeTab, setActiveTab] = useState<TabId>(
-        tabParam && VALID_TABS.includes(tabParam) ? tabParam : "brains"
+        tabParam && VALID_TABS.includes(tabParam) ? tabParam : "tools"
     );
+
+    if (!advancedMode) {
+        return (
+            <AdvancedModeGate
+                title="Advanced resources stay tucked away by default"
+                summary="Connected tools, workspace file access, role libraries, and global AI engine setup are available when you intentionally open Advanced mode."
+            />
+        );
+    }
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg">
@@ -48,21 +60,21 @@ function ResourcesContent() {
                             Resources
                         </h1>
                         <p className="text-cortex-text-muted text-sm mt-1">
-                            Brains, tools, workspace, and agent capabilities
+                            Connected tools, workspace files, and advanced organization resources
                         </p>
                     </div>
                 </div>
 
                 <div className="flex gap-1 border-b border-cortex-border">
-                    <TabButton active={activeTab === "brains"} onClick={() => setActiveTab("brains")} icon={<Brain size={14} />} label="Brains" />
-                    <TabButton active={activeTab === "tools"} onClick={() => setActiveTab("tools")} icon={<Wrench size={14} />} label="MCP Tools" />
-                    <TabButton active={activeTab === "workspace"} onClick={() => setActiveTab("workspace")} icon={<FolderOpen size={14} />} label="Workspace Explorer" />
-                    <TabButton active={activeTab === "catalogue"} onClick={() => setActiveTab("catalogue")} icon={<BookOpen size={14} />} label="Capabilities" />
+                    <TabButton active={activeTab === "tools"} onClick={() => setActiveTab("tools")} icon={<Wrench size={14} />} label="Connected Tools" />
+                    <TabButton active={activeTab === "workspace"} onClick={() => setActiveTab("workspace")} icon={<FolderOpen size={14} />} label="Workspace Files" />
+                    <TabButton active={activeTab === "engines"} onClick={() => setActiveTab("engines")} icon={<Brain size={14} />} label="AI Engines" />
+                    <TabButton active={activeTab === "roles"} onClick={() => setActiveTab("roles")} icon={<BookOpen size={14} />} label="Role Library" />
                 </div>
             </header>
 
             <div className="flex-1 overflow-hidden">
-                {activeTab === "brains" && (
+                {activeTab === "engines" && (
                     <div className="h-full overflow-y-auto">
                         <div className="max-w-5xl mx-auto w-full px-6 py-6">
                             <BrainsPage />
@@ -73,7 +85,7 @@ function ResourcesContent() {
                 {activeTab === "workspace" && (
                     <WorkspaceExplorer onOpenToolsTab={() => setActiveTab("tools")} />
                 )}
-                {activeTab === "catalogue" && <CataloguePage />}
+                {activeTab === "roles" && <CataloguePage />}
             </div>
         </div>
     );

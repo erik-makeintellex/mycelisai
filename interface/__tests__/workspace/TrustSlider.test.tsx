@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
 vi.mock('lucide-react', () => ({
     Shield: (props: any) => <svg data-testid="shield-icon" {...props} />,
@@ -52,7 +52,9 @@ describe('TrustSlider', () => {
 
     it('displays value synced with store state', () => {
         // Set a specific trust value
-        useCortexStore.setState({ trustThreshold: 0.30 });
+        act(() => {
+            useCortexStore.setState({ trustThreshold: 0.30 });
+        });
         const { rerender } = render(<TrustSlider />);
 
         // Should show PERMISSIVE label (threshold < 0.5)
@@ -60,8 +62,10 @@ describe('TrustSlider', () => {
         expect(screen.getByText('0.30')).toBeDefined();
 
         // Update store to a higher value
-        useCortexStore.setState({ trustThreshold: 0.90 });
-        rerender(<TrustSlider />);
+        act(() => {
+            useCortexStore.setState({ trustThreshold: 0.90 });
+            rerender(<TrustSlider />);
+        });
 
         // Should now show STRICT label (threshold >= 0.8)
         expect(screen.getByText('STRICT')).toBeDefined();

@@ -1,9 +1,12 @@
 package swarm
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,10 +26,11 @@ const (
 
 // TeamManifest defines the configuration for a Swarm Team.
 type TeamManifest struct {
-	ID          string                   `yaml:"id"`
-	Name        string                   `yaml:"name"`
-	Type        TeamType                 `yaml:"type"`
-	Description string                   `yaml:"description"`
+	ID          string   `yaml:"id"`
+	Name        string   `yaml:"name"`
+	Type        TeamType `yaml:"type"`
+	Description string   `yaml:"description"`
+	Provider    string   `yaml:"provider,omitempty"` // Default provider target for all members unless member.provider is set
 	// Members are the Agents (and their roles) that form this team
 	Members []protocol.AgentManifest `yaml:"members"`
 	// Inputs are the NATS subjects this team listens to (Triggers)
@@ -44,13 +48,13 @@ type Team struct {
 	nc            *nats.Conn
 	brain         *cognitive.Router
 	toolExecutor  MCPToolExecutor
-	toolDescs     map[string]string        // tool name → description for agent prompt injection
-	internalTools *InternalToolRegistry    // live system state + context builder
+	toolDescs     map[string]string     // tool name → description for agent prompt injection
+	internalTools *InternalToolRegistry // live system state + context builder
 	ctx           context.Context
 	cancel        context.CancelFunc
 	mu            sync.Mutex
-	sensorConfigs map[string]SensorConfig  // agent.ID → config; nil = all cognitive
-	scheduler     *TeamScheduler           // Optional scheduled auto-trigger
+	sensorConfigs map[string]SensorConfig // agent.ID → config; nil = all cognitive
+	scheduler     *TeamScheduler          // Optional scheduled auto-trigger
 	// V7 Event Spine: optional event emitter + run_id for tool audit trail.
 	// Set by Soma.ActivateBlueprint BEFORE team.Start() so agents receive them.
 	eventEmitter protocol.EventEmitter
@@ -58,9 +62,9 @@ type Team struct {
 	// V7 Conversation Log: optional full-fidelity turn logger.
 	conversationLogger protocol.ConversationLogger
 	// MCP agent-scoped binding: concrete executor + server names + MCP tool descriptions.
-	compositeExec  *CompositeToolExecutor  // concrete type for ScopedToolExecutor wrapping
-	mcpServerNames map[uuid.UUID]string    // serverID → server name
-	mcpToolDescs   map[string]string       // MCP tool name → description
+	compositeExec  *CompositeToolExecutor // concrete type for ScopedToolExecutor wrapping
+	mcpServerNames map[uuid.UUID]string   // serverID → server name
+	mcpToolDescs   map[string]string      // MCP tool name → description
 }
 
 // NewTeam creates a new Team instance.
@@ -92,21 +96,28 @@ func (t *Team) Start() error {
 
 	// 2. Spawn Agents (sensor-aware: SensorAgent for poll-based, Agent for cognitive)
 	for _, manifest := range t.Manifest.Members {
+		member := manifest
+		// Team-level provider targeting fallback:
+		// if a member does not pin a provider, inherit team's provider target.
+		if member.Provider == "" && t.Manifest.Provider != "" {
+			member.Provider = t.Manifest.Provider
+		}
+
 		if cfg, isSensor := t.sensorConfigs[manifest.ID]; isSensor {
-			sensor := NewSensorAgent(t.ctx, manifest, cfg, t.Manifest.ID, t.nc)
+			sensor := NewSensorAgent(t.ctx, member, cfg, t.Manifest.ID, t.nc)
 			go sensor.Start()
 		} else {
 			// Build per-agent scoped tool executor if MCP binding is available
 			var agentToolExec MCPToolExecutor = t.toolExecutor
 			if t.compositeExec != nil {
-				mcpRefs := mcp.ExtractMCPRefs(manifest.Tools)
+				mcpRefs := mcp.ExtractMCPRefs(member.Tools)
 				agentToolExec = NewScopedToolExecutor(t.compositeExec, mcpRefs, t.mcpServerNames)
 			}
-			agent := NewAgent(t.ctx, manifest, t.Manifest.ID, t.nc, t.brain, agentToolExec)
+			agent := NewAgent(t.ctx, member, t.Manifest.ID, t.nc, t.brain, agentToolExec)
 			// Inject tool descriptions for the agent's bound tools
-			if len(manifest.Tools) > 0 && len(t.toolDescs) > 0 {
-				agentDescs := make(map[string]string, len(manifest.Tools))
-				for _, name := range manifest.Tools {
+			if len(member.Tools) > 0 && len(t.toolDescs) > 0 {
+				agentDescs := make(map[string]string, len(member.Tools))
+				for _, name := range member.Tools {
 					if desc, ok := t.toolDescs[name]; ok {
 						agentDescs[name] = desc
 					}
@@ -148,7 +159,7 @@ func (t *Team) Start() error {
 	internalResponse := fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID)
 	t.nc.Subscribe(internalResponse, t.handleResponse)
 
-	// 4. Start scheduler if configured (Phase 19: scheduled team execution)
+	// 4. Start scheduler if configured (scheduled team execution).
 	if t.Manifest.Schedule != nil && t.Manifest.Schedule.Interval != "" {
 		interval, err := time.ParseDuration(t.Manifest.Schedule.Interval)
 		if err != nil {
@@ -181,14 +192,66 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 
 	// Forward to Internal Bus for Agents to react
 	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
-	t.nc.Publish(internalSubject, msg.Data)
+	t.nc.Publish(internalSubject, normalizeCommandPayload(msg.Data))
+}
+
+func normalizeCommandPayload(data []byte) []byte {
+	var env protocol.SignalEnvelope
+	if err := json.Unmarshal(data, &env); err != nil {
+		return data
+	}
+	if env.Meta.PayloadKind != protocol.PayloadKindCommand {
+		return data
+	}
+	if strings.TrimSpace(env.Text) != "" {
+		return []byte(env.Text)
+	}
+	if len(env.Payload) == 0 {
+		return data
+	}
+
+	trimmed := bytes.TrimSpace(env.Payload)
+	var asString string
+	if err := json.Unmarshal(trimmed, &asString); err == nil {
+		return []byte(asString)
+	}
+	return append([]byte(nil), trimmed...)
 }
 
 // handleResponse receives an internal signal and broadens it to the external team bus (Deliveries).
 func (t *Team) handleResponse(msg *nats.Msg) {
 	log.Printf("Team [%s] Response: %s", t.Manifest.Name, string(msg.Data))
 	for _, subject := range t.Manifest.Deliveries {
-		t.nc.Publish(subject, msg.Data)
+		payload := msg.Data
+		switch {
+		case strings.HasSuffix(subject, ".signal.status"):
+			wrapped, err := protocol.WrapSignalPayload(
+				protocol.SourceKindSystem,
+				fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID),
+				protocol.PayloadKindStatus,
+				t.Manifest.ID,
+				msg.Data,
+			)
+			if err != nil {
+				log.Printf("Team [%s] failed to wrap status signal for [%s]: %v", t.Manifest.Name, subject, err)
+			} else {
+				payload = wrapped
+			}
+		case strings.HasSuffix(subject, ".signal.result"):
+			wrapped, err := protocol.WrapSignalPayload(
+				protocol.SourceKindSystem,
+				fmt.Sprintf(protocol.TopicTeamInternalRespond, t.Manifest.ID),
+				protocol.PayloadKindResult,
+				t.Manifest.ID,
+				msg.Data,
+			)
+			if err != nil {
+				log.Printf("Team [%s] failed to wrap result signal for [%s]: %v", t.Manifest.Name, subject, err)
+			} else {
+				payload = wrapped
+			}
+		}
+		t.nc.Publish(subject, payload)
 	}
 }
 
