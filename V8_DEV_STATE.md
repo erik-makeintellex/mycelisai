@@ -2,7 +2,7 @@
 
 > Updated: 2026-03-20
 > Canonical state file for active V8 grading and delivery tracking
-> References: `README.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
+> References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
 ---
 
@@ -18,6 +18,14 @@ Use this file to track:
 - immediate next actions
 
 Use `V7_DEV_STATE.md` only as a migration input and historical checkpoint source while V7 planning artifacts are being migrated.
+
+## Layered Architecture Truth
+
+Development is progressing toward the V8.2 full production target.
+
+- V8.1 is the current bounded release target.
+- V8.2 is the distributed, learning, capability-enabled, and actuation target beyond the current release.
+- `README.md` is the primary inception summary that must distinguish those two layers and point to this live implementation state.
 
 ## Feature Status Legend
 
@@ -185,6 +193,7 @@ Delivery updates in this checkpoint:
 39. `COMPLETE` added managed cache hygiene for local delivery work so Invoke-driven uv/pip/npm/go flows now centralize repo caches under `workspace/tool-cache`, project build artifacts have an explicit cleanup path, and Windows operators have a first-class user-policy command to keep heavy per-user caches off `C:`.
 40. `COMPLETE` audited the full MVP route/tab surface against the V8.1 Team Lead-first workflow, removed the dead `Draft Blueprints` placeholder tab, tightened the default rail to core operator paths, moved `Resources`, `Memory`, and `System` behind explicit Advanced mode, and renamed stale route labels like `Neural Wiring`, `Brains`, and `Cognitive Matrix` into operator-facing release wording.
 41. `COMPLETE` refreshed the frontend route contract and user-facing docs so surviving MVP surfaces, advanced boundaries, and compatibility redirects now align in code, tests, and internal docs.
+42. `COMPLETE` declared `v8-2.md` as the canonical full production architecture and full actuation target, while keeping V8.1 explicit as the current bounded release across README, the architecture index, docs manifest, and doc-test enforcement.
 
 Evidence:
 1. README directive review completed against `README.md`
