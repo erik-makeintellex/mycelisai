@@ -11,17 +11,17 @@ const GUIDED_ACTIONS: Array<{ action: TeamLeadGuidedAction; label: string; detai
     {
         action: "plan_next_steps",
         label: "Run a quick strategy check",
-        detail: "See the next priorities the Team Lead would set so the workspace starts moving in a visible direction.",
+        detail: "See the next priorities Soma would set so the workspace starts moving in a visible direction.",
     },
     {
         action: "focus_first",
         label: "Choose the first priority",
-        detail: "Ask the Team Lead to identify the first move most likely to create visible progress across the workspace.",
+        detail: "Ask Soma to identify the first move most likely to create visible progress across the workspace.",
     },
     {
         action: "review_setup",
         label: "Review your organization setup",
-        detail: "Check whether Advisors, Departments, and Specialists are ready and see what to inspect next.",
+        detail: "Check whether Advisors, Departments, and Specialists are ready and see what Soma recommends inspecting next.",
     },
 ];
 
@@ -36,10 +36,12 @@ async function readJson(response: Response) {
 export default function TeamLeadInteractionPanel({
     organizationId,
     organizationName,
+    somaName,
     teamLeadName,
 }: {
     organizationId: string;
     organizationName: string;
+    somaName: string;
     teamLeadName: string;
 }) {
     const [selectedAction, setSelectedAction] = useState<TeamLeadGuidedAction | null>(null);
@@ -68,10 +70,11 @@ export default function TeamLeadInteractionPanel({
                 throw new Error(extractApiError(responsePayload) || "Team Lead guidance is unavailable right now.");
             }
             const rawGuidance = extractApiData<Partial<TeamLeadGuidanceResponse> | null>(responsePayload);
-            setGuidance(normalizeGuidanceResponse(rawGuidance, action, organizationName, teamLeadName));
+            setGuidance(normalizeGuidanceResponse(rawGuidance, action, organizationName, somaName, teamLeadName));
             setRequestState("ready");
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Team Lead guidance is unavailable right now.");
+            const message = err instanceof Error ? err.message : "Soma guidance is unavailable right now.";
+            setError(rewriteGuidanceText(message, somaName, teamLeadName));
             setRequestState("error");
         }
     };
@@ -80,13 +83,15 @@ export default function TeamLeadInteractionPanel({
         <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold text-cortex-text-main">Work with the Team Lead</h2>
+                    <h2 className="text-xl font-semibold text-cortex-text-main">Work with Soma</h2>
                     <p className="mt-1 text-sm text-cortex-text-muted">
-                        Start inside {organizationName} with a guided Team Lead action instead of a blank assistant thread.
+                        Start inside {organizationName} with a guided Soma action instead of a blank assistant thread.
                     </p>
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                    <p className="font-medium text-cortex-text-main">Current Team Lead</p>
+                    <p className="font-medium text-cortex-text-main">Primary counterpart</p>
+                    <p className="mt-1">{somaName}</p>
+                    <p className="mt-3 font-medium text-cortex-text-main">Operational lead</p>
                     <p className="mt-1">{teamLeadName}</p>
                 </div>
             </div>
@@ -118,7 +123,7 @@ export default function TeamLeadInteractionPanel({
             <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
                 {requestState === "idle" && (
                     <div>
-                        <p className="text-sm font-semibold text-cortex-text-main">Choose a guided Team Lead action</p>
+                        <p className="text-sm font-semibold text-cortex-text-main">Choose a guided Soma action</p>
                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
                             These starting options are here to help you get oriented quickly. Each one updates this workspace immediately with clear guidance and helps the rest of the organization start showing activity, structure, or learning over time.
                         </p>
@@ -128,19 +133,19 @@ export default function TeamLeadInteractionPanel({
                 {requestState === "loading" && (
                     <div className="flex items-center gap-3 text-sm text-cortex-text-muted">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Team Lead is preparing guidance for this AI Organization...</span>
+                        <span>Soma is preparing guidance for this AI Organization...</span>
                     </div>
                 )}
 
                 {requestState === "error" && error && (
                     <div>
-                        <p className="text-sm font-semibold text-cortex-text-main">Team Lead guidance is unavailable</p>
+                        <p className="text-sm font-semibold text-cortex-text-main">Soma guidance is unavailable</p>
                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{error}</p>
                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                            {teamLeadName} and the AI Organization context are still here. Retry the same action when you are ready.
+                            {somaName} and the AI Organization context are still here. Retry the same action when you are ready.
                         </p>
                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                            You can also choose another guided Team Lead action below without leaving {organizationName}.
+                            You can also choose another guided Soma action below without leaving {organizationName}.
                         </p>
                         {selectedAction && (
                             <button
@@ -149,7 +154,7 @@ export default function TeamLeadInteractionPanel({
                                 className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 <RefreshCcw className="h-4 w-4" />
-                                Retry Team Lead action
+                                Retry Soma action
                             </button>
                         )}
                     </div>
@@ -163,7 +168,7 @@ export default function TeamLeadInteractionPanel({
                         </div>
 
                         <div>
-                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Team Lead guidance</p>
+                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Soma guidance</p>
                             <p className="mt-2 text-base font-semibold text-cortex-text-main">{guidance.headline}</p>
                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{guidance.summary}</p>
                         </div>
@@ -201,18 +206,21 @@ function normalizeGuidanceResponse(
     payload: Partial<TeamLeadGuidanceResponse> | null,
     action: TeamLeadGuidedAction,
     organizationName: string,
+    somaName: string,
     teamLeadName: string,
 ): TeamLeadGuidanceResponse {
-    const requestLabel = sanitizeGuidanceText(payload?.request_label, defaultRequestLabel(action));
-    const headline = sanitizeGuidanceText(payload?.headline, `${teamLeadName} guidance for ${organizationName}`);
-    const summary = sanitizeGuidanceText(
+    const requestLabel = rewriteGuidanceText(sanitizeGuidanceText(payload?.request_label, defaultRequestLabel(action)), somaName, teamLeadName);
+    const headline = rewriteGuidanceText(sanitizeGuidanceText(payload?.headline, `${somaName} guidance for ${organizationName}`), somaName, teamLeadName);
+    const summary = rewriteGuidanceText(sanitizeGuidanceText(
         payload?.summary,
-        `${teamLeadName} has guidance ready for ${organizationName}.`,
-    );
-    const prioritySteps = normalizeGuidanceList(payload?.priority_steps, defaultPrioritySteps(action, organizationName));
+        `${somaName} has guidance ready for ${organizationName}.`,
+    ), somaName, teamLeadName);
+    const prioritySteps = normalizeGuidanceList(payload?.priority_steps, defaultPrioritySteps(action, organizationName), somaName, teamLeadName);
     const suggestedFollowUps = normalizeGuidanceList(
         payload?.suggested_follow_ups,
         defaultFollowUps(action),
+        somaName,
+        teamLeadName,
     );
 
     return {
@@ -226,7 +234,7 @@ function normalizeGuidanceResponse(
 }
 
 function defaultRequestLabel(action: TeamLeadGuidedAction) {
-    return GUIDED_ACTIONS.find((item) => item.action === action)?.label ?? "Work with the Team Lead";
+    return GUIDED_ACTIONS.find((item) => item.action === action)?.label ?? "Work with Soma";
 }
 
 function defaultPrioritySteps(action: TeamLeadGuidedAction, organizationName: string) {
@@ -245,7 +253,7 @@ function defaultPrioritySteps(action: TeamLeadGuidedAction, organizationName: st
         default:
             return [
                 `Turn ${organizationName} into a clear next move.`,
-                "Use the Team Lead guidance to choose the next action that will show up across the workspace.",
+                "Use Soma guidance to choose the next action that will show up across the workspace.",
             ];
     }
 }
@@ -259,14 +267,20 @@ function defaultFollowUps(action: TeamLeadGuidedAction) {
     return fallbacks.filter((label) => label !== defaultRequestLabel(action));
 }
 
-function normalizeGuidanceList(value: unknown, fallback: string[]) {
+function normalizeGuidanceList(value: unknown, fallback: string[], somaName: string, teamLeadName: string) {
     if (!Array.isArray(value)) {
         return fallback;
     }
     const normalized = value
-        .map((entry) => sanitizeGuidanceText(entry, ""))
+        .map((entry) => rewriteGuidanceText(sanitizeGuidanceText(entry, ""), somaName, teamLeadName))
         .filter((entry) => entry.length > 0);
     return normalized.length > 0 ? normalized : fallback;
+}
+
+function rewriteGuidanceText(value: string, somaName: string, teamLeadName: string) {
+    return value
+        .replaceAll(teamLeadName, somaName)
+        .replace(/\bTeam Lead\b/g, "Soma");
 }
 
 function sanitizeGuidanceText(value: unknown, fallback: string) {

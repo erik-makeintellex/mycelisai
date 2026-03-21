@@ -7,7 +7,7 @@
 
 ## 1. Why this document exists
 
-V8 introduces AI Organizations, Team Leads, Advisors, Departments, Specialists, AI Engine Settings, and Learning & Context as first-class product concepts.
+V8 introduces AI Organizations, Soma, Team Leads, Advisors, Departments, Specialists, AI Engine Settings, and Learning & Context as first-class product concepts.
 
 Those terms are not decorative renames for a generic assistant UI.
 
@@ -23,7 +23,8 @@ The default product experience must feel like creating and operating an AI Organ
 ## 2. Canonical terminology
 
 - **AI Organization**: the instantiated, operator-visible organization object. It is a live organization, not a template and not a raw provider session.
-- **Team Lead**: the primary operator-facing lead for an AI Organization. The default workspace opens to the Team Lead, not to an anonymous assistant.
+- **Soma**: the primary operator-facing counterpart and organization orchestrator for an AI Organization. The default workspace opens to Soma, not to an anonymous assistant.
+- **Team Leads**: operational domain leaders Soma engages to coordinate Departments and Specialists. They remain visible and important, but they are not the default front door for the operator.
 - **Advisors**: high-level advisory roles attached to the organization. They are visible as part of the organization structure, but they are not the default conversation surface.
 - **Departments**: grouped execution areas within the AI Organization. Departments organize Specialist work and scoped operating context.
 - **Specialists**: individual role-focused workers inside a Department or a governed roster. They are visible as organizational members, not presented as a flat buddy list by default.
@@ -43,7 +44,7 @@ The product must not open into a raw assistant conversation as its primary ident
 Default entry posture:
 - if no AI Organization exists, show first-run organization creation guidance
 - if one or more AI Organizations exist, show organization selection or the last active AI Organization
-- once an AI Organization is opened, the primary action is "Open Team Lead Workspace", not "New Chat"
+- once an AI Organization is opened, the primary action is "Open Soma Workspace", not "New Chat"
 
 Disallowed default behaviors:
 - empty landing page with only a chat box and placeholder assistant text
@@ -55,10 +56,11 @@ Disallowed default behaviors:
 
 Beginner operators should see:
 - AI Organization identity
-- Team Lead identity
+- Soma identity
+- Team Lead support
 - organization purpose
 - starter template or empty-start choice
-- clear success path into the Team Lead workspace
+- clear success path into the Soma workspace
 
 Advanced operators may inspect:
 - Advisor roster
@@ -74,7 +76,7 @@ But those advanced surfaces should be hidden until the operator intentionally op
 
 Default Operator Surface:
 - create AI Organization
-- Team Lead-first workspace
+- Soma-primary workspace
 - intent-driven interaction
 - Advisors, Departments, Automations, Recent Activity, and Learning & Context
 - AI Engine Settings and Response Style as guided, bounded controls
@@ -91,7 +93,7 @@ Advanced Architecture / Runtime Surface:
 - runtime availability and distributed execution posture later
 
 Advanced-surface rules:
-- it must remain separate from the default Team Lead-first flow
+- it must remain separate from the default Soma-primary flow
 - it must make inheritance legible
 - it must make config origin legible
 - it must not expose raw jargon without context
@@ -116,7 +118,27 @@ Critical rule:
 - deployment/env overrides must not replace bundle-defined runtime organization truth
 - advanced UI may explain deployment/env influence, but it must not become a second source of runtime truth
 
-### 3.5 API normalization rule
+### 3.5 Primary orchestration flow
+
+The default orchestration flow must remain legible in architecture docs even when the default UI stays simple.
+
+```text
+User
+  -> Soma
+  -> Routing / Council
+  -> Team Leads
+  -> Departments / Specialist Roles / Automations
+  -> Reviews / Learning / Activity
+  -> back through Soma
+```
+
+Rules:
+- Soma is the primary interface and organization orchestrator
+- Team Leads are subordinate operational leaders Soma works through
+- Routing / Council remains advisory and policy-aware, but it must not become default visible UX jargon
+- advanced architecture/runtime controls remain separate from this default operator flow
+
+### 3.6 API normalization rule
 
 Every screen in this PRD expects normalized API envelopes.
 
@@ -142,6 +164,7 @@ Help a new operator understand that Mycelis creates AI Organizations, not dispos
 - two primary actions: `Create AI Organization` and `Explore Templates`
 - one secondary action: `Start Empty`
 - a compact preview of what the operator will define:
+  - Soma
   - Team Lead
   - Advisors
   - Departments
@@ -330,13 +353,13 @@ Provide a stable home screen that makes the AI Organization legible before the o
   - AI Engine Settings summary
   - Learning & Context summary
 - primary actions:
-  - `Open Team Lead Workspace`
+  - `Open Soma Workspace`
   - `Review Organization Structure`
   - `Open Advanced Settings`
 
 **User actions**
 
-- open Team Lead workspace
+- open Soma workspace
 - inspect role structure
 - rename or update purpose where allowed
 - open advanced config surfaces intentionally
@@ -370,33 +393,33 @@ Provide a stable home screen that makes the AI Organization legible before the o
 
 - one recoverable organization-home error block with retry, not a blank screen
 
-### 4.5 Team Lead-first workspace behavior
+### 4.5 Soma-primary workspace behavior
 
 **Purpose**
 
-Make the Team Lead the default operating surface for the AI Organization.
+Make Soma the default operating surface for the AI Organization while keeping Team Leads visible as the operational layer.
 
 **User sees**
 
-- a Team Lead workspace header bound to the current AI Organization
-- Team Lead name/role and organization purpose
+- a Soma workspace header bound to the current AI Organization
+- Soma identity, Team Lead visibility, and organization purpose
 - recent organization context
-- a conversation or command surface framed as working with the Team Lead for this AI Organization
+- a conversation or command surface framed as working with Soma for this AI Organization
 - optional roster sidebar or drawer for Advisors, Departments, and Specialists
 
 **User actions**
 
-- send a message or instruction to the Team Lead
-- inspect whether Advisors or Specialists were engaged
+- send a message or instruction to Soma
+- inspect whether Team Leads, Advisors, or Specialists were engaged
 - open organization context panels
 - navigate back to organization home
 
 **API data required**
 
 - `GET /api/v1/organizations/{organization_id}/workspace`
-  - returns Team Lead workspace metadata and recent interaction history
+  - returns Soma workspace metadata and recent interaction history
 - `POST /api/v1/organizations/{organization_id}/workspace/messages`
-  - sends operator input to the Team Lead workspace
+  - sends operator input to the Soma workspace
 - `GET /api/v1/organizations/{organization_id}/roster`
   - fetches organization members for side-panel visibility
 
@@ -408,15 +431,15 @@ Make the Team Lead the default operating surface for the AI Organization.
 
 **Success state**
 
-- operator receives an answer, proposal, execution result, or blocker in the Team Lead workspace while remaining inside the AI Organization frame
+- operator receives an answer, proposal, execution result, or blocker in the Soma workspace while remaining inside the AI Organization frame
 
 **Empty state**
 
-- if no prior activity exists, show a Team Lead-specific starter prompt and organization-aware examples, not a generic assistant empty state
+- if no prior activity exists, show Soma-specific starter guidance and organization-aware examples, not a generic assistant empty state
 
 **Loading state**
 
-- message send state is scoped to the Team Lead thread
+- message send state is scoped to the Soma thread
 
 **Error state**
 
@@ -528,7 +551,7 @@ Protect the default AI Organization experience from collapsing into a config das
 
 **Error state**
 
-- advanced-setting failures remain confined to the advanced surface and do not collapse the Team Lead workspace or organization home
+- advanced-setting failures remain confined to the advanced surface and do not collapse the Soma workspace or organization home
 
 ## 5. API/UI contract mapping by screen and action
 
@@ -537,15 +560,15 @@ Protect the default AI Organization experience from collapsing into a config das
 | First-run | create, explore templates, resume | `GET /api/v1/organizations?view=summary`, `GET /api/v1/templates?view=starter`, `GET /api/v1/system/bootstrap-status` | org summaries, starter templates, readiness state |
 | Create AI Organization | save draft, create organization | `POST /api/v1/organizations/drafts`, `PATCH /api/v1/organizations/drafts/{draft_id}`, `POST /api/v1/organizations` | draft id, validation state, created organization summary |
 | Template vs empty | select start mode, inspect template | `GET /api/v1/templates?view=organization-starters`, `GET /api/v1/templates/{template_id}`, `PATCH /api/v1/organizations/drafts/{draft_id}/start-mode` | template summaries, selected-template detail, draft start mode |
-| Organization home | open Team Lead workspace, inspect structure | `GET /api/v1/organizations/{organization_id}/home`, `PATCH /api/v1/organizations/{organization_id}` | header, summary cards, editable org metadata |
-| Team Lead workspace | send message, inspect roster | `GET /api/v1/organizations/{organization_id}/workspace`, `POST /api/v1/organizations/{organization_id}/workspace/messages`, `GET /api/v1/organizations/{organization_id}/roster` | Team Lead context, message history, terminal result payloads, roster summary |
+| Organization home | open Soma workspace, inspect structure | `GET /api/v1/organizations/{organization_id}/home`, `PATCH /api/v1/organizations/{organization_id}` | header, summary cards, editable org metadata |
+| Soma workspace | send message, inspect roster | `GET /api/v1/organizations/{organization_id}/workspace`, `POST /api/v1/organizations/{organization_id}/workspace/messages`, `GET /api/v1/organizations/{organization_id}/roster` | Soma context, message history, terminal result payloads, roster summary |
 | Visibility rules | inspect Advisors, Departments, Specialists | `GET /api/v1/organizations/{organization_id}/roster` | grouped member lists with summaries and visibility metadata |
 | Advanced architecture / runtime surface | inspect or edit advanced configuration later | future normalized endpoints grouped by organization defaults, overrides, automations, capability posture, config origin, and runtime influence | origin-aware summaries, inheritance context, validation results, and scoped persisted summaries |
 
 ## 6. UX rules that implementation must not violate
 
 1. The operator must always understand which AI Organization they are operating.
-2. The default conversation surface must always be the Team Lead workspace for that AI Organization.
+2. The default conversation surface must always be the Soma workspace for that AI Organization.
 3. Advisors, Departments, and Specialists must appear as organization structure, not as a flat chat-contact list by default.
 4. Template selection must be framed as choosing an AI Organization starting blueprint, not as selecting a chat persona.
 5. AI Engine Settings and Learning & Context must be real product concepts, but they must stay behind progressive disclosure until the operator intentionally opens advanced mode.
@@ -561,7 +584,7 @@ Implementation work that touches:
 - organization creation
 - template selection
 - organization home/header
-- Team Lead workspace behavior
+- Soma workspace behavior
 - role visibility
 - advanced settings boundaries
 - API contracts for those screens

@@ -12,7 +12,7 @@ describe("Landing Page (V8.1 living AI Organization model)", () => {
         ).toBeDefined();
         expect(
             screen.getByText(
-                /Mycelis starts with an AI Organization, keeps the Team Lead at the center of the workspace/i,
+                /Mycelis starts with an AI Organization, keeps Soma at the center of the workspace/i,
             ),
         ).toBeDefined();
         expect(screen.getAllByRole("link", { name: "Create AI Organization" }).length).toBeGreaterThan(0);
@@ -26,7 +26,7 @@ describe("Landing Page (V8.1 living AI Organization model)", () => {
         expect(screen.getByRole("heading", { name: "Control" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Continuous Operation" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "The first screen after creation is a real operating workspace." })).toBeDefined();
-        expect(screen.getByText("Enter the Team Lead workspace")).toBeDefined();
+        expect(screen.getByText("Enter the Soma workspace")).toBeDefined();
         expect(screen.getByText("See Advisors and Departments")).toBeDefined();
         expect(screen.getByText("Watch Recent Activity")).toBeDefined();
         expect(screen.getByText("Follow guided next steps")).toBeDefined();

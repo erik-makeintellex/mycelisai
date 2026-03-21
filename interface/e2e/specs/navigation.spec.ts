@@ -13,7 +13,7 @@ const ADVANCED_NAV_ENTRIES = [
     { href: '/system', label: 'System' },
 ];
 
-test.describe('V8.1 Team Lead-first Navigation', () => {
+test.describe('V8.1 Soma-primary Navigation', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/dashboard');
         await page.waitForLoadState('domcontentloaded');

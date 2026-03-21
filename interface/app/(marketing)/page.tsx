@@ -7,10 +7,10 @@ const truthCards = [
         title: "Structure",
         eyebrow: "Teams and specialists",
         description:
-            "Design an AI Organization with a Team Lead, supporting Advisors, focused Departments, and Specialists that stay visible from the start.",
+            "Design an AI Organization with Soma, supporting Team Leads, Advisors, focused Departments, and Specialists that stay visible from the start.",
         bullets: [
             "Create a clear organization shape before work begins",
-            "Keep Team Lead, Advisors, Departments, and Specialists easy to understand",
+            "Keep Soma, Team Leads, Advisors, Departments, and Specialists easy to understand",
             "Open with an organization workspace, not a blank assistant session",
         ],
         icon: <Blocks className="h-5 w-5" />,
@@ -33,7 +33,7 @@ const truthCards = [
         description:
             "See recent reviews and checks so the organization feels active between operator actions without turning the workspace into a control panel.",
         bullets: [
-            "Keep Recent Activity visible inside the Team Lead workspace",
+            "Keep Recent Activity visible inside the Soma workspace",
             "Surface updates in user-facing language instead of technical noise",
             "Reinforce that your AI Organization keeps watch on ongoing work",
         ],
@@ -43,15 +43,15 @@ const truthCards = [
 
 const postCreationSteps = [
     {
-        title: "Enter the Team Lead workspace",
+        title: "Enter the Soma workspace",
         description:
-            "Open into an AI Organization home where the Team Lead is the primary working counterpart and the organization context stays visible.",
+            "Open into an AI Organization home where Soma is the primary working counterpart and the organization context stays visible.",
         icon: <Bot className="h-5 w-5" />,
     },
     {
         title: "See Advisors and Departments",
         description:
-            "Understand who supports the Team Lead, what each Department handles, and how Specialists fit into the organization.",
+            "Understand who supports Soma, what each Department handles, and how Specialists fit into the organization.",
         icon: <Users className="h-5 w-5" />,
     },
     {
@@ -63,14 +63,14 @@ const postCreationSteps = [
     {
         title: "Follow guided next steps",
         description:
-            "Use Team Lead guidance to plan the next move, review setup choices, and keep the organization moving in a structured way.",
+            "Use Soma guidance to plan the next move, review setup choices, and keep the organization moving in a structured way.",
         icon: <Compass className="h-5 w-5" />,
     },
 ];
 
 const workspaceHighlights = [
     {
-        label: "Team Lead",
+        label: "Soma",
         value: "Primary counterpart",
     },
     {
@@ -97,7 +97,7 @@ const recentActivityPreview = [
     {
         name: "Readiness update",
         time: "18 minutes ago",
-        outcome: "Team Lead guidance refreshed",
+        outcome: "Soma guidance refreshed",
     },
 ];
 
@@ -152,7 +152,7 @@ export default function LandingPage() {
                                     Build AI Organizations that think, review, and evolve.
                                 </h1>
                                 <p className="max-w-2xl text-lg leading-8 text-cortex-text-muted md:text-xl">
-                                    Mycelis starts with an AI Organization, keeps the Team Lead at the center of the workspace,
+                                    Mycelis starts with an AI Organization, keeps Soma at the center of the workspace,
                                     and makes continuous reviews, checks, and updates visible without turning the product into a
                                     generic assistant experience.
                                 </p>
@@ -193,7 +193,7 @@ export default function LandingPage() {
                                             <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">Organization home</p>
                                             <h2 className="mt-2 text-2xl font-semibold text-zinc-100">Northstar Labs</h2>
                                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                                                Team Lead-guided delivery organization for product planning, specialist review, and steady execution.
+                                                Soma-guided delivery organization for product planning, specialist review, and steady execution.
                                             </p>
                                         </div>
                                         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-emerald-200">
@@ -204,8 +204,8 @@ export default function LandingPage() {
 
                                 <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
                                     <div className="rounded-3xl border border-cortex-border bg-cortex-bg px-5 py-5">
-                                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">Work with the Team Lead</p>
-                                        <p className="mt-3 text-lg font-semibold text-zinc-100">Team Lead for Northstar Labs</p>
+                                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">Work with Soma</p>
+                                        <p className="mt-3 text-lg font-semibold text-zinc-100">Soma for Northstar Labs</p>
                                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
                                             Guides planning, reviews structure, and recommends the next move while keeping the wider AI Organization visible.
                                         </p>
@@ -296,13 +296,13 @@ export default function LandingPage() {
                                 The first screen after creation is a real operating workspace.
                             </h2>
                             <p className="text-lg leading-8 text-cortex-text-muted">
-                                You land inside the AI Organization with the Team Lead, supporting structure, recent activity,
+                                You land inside the AI Organization with Soma, supporting structure, recent activity,
                                 and guided next steps already in view.
                             </p>
                             <div className="rounded-[1.75rem] border border-cortex-border bg-cortex-surface/80 p-6">
                                 <p className="text-sm font-semibold text-cortex-text-main">Default operator experience</p>
                                 <p className="mt-3 text-sm leading-7 text-cortex-text-muted">
-                                    Create the AI Organization first, then work through the Team Lead with visible structure,
+                                    Create the AI Organization first, then work through Soma with visible structure,
                                     safe tuning controls, and recent checks that reinforce continuity.
                                 </p>
                             </div>
@@ -323,7 +323,7 @@ export default function LandingPage() {
                             Create an AI Organization with clear structure, guided control, and visible activity.
                         </h2>
                         <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-cortex-text-muted">
-                            Mycelis opens with a Team Lead-first workspace, not a one-off assistant prompt. Build from a
+                            Mycelis opens with a Soma-primary workspace, not a one-off assistant prompt. Build from a
                             template or begin empty, then shape the organization with confidence.
                         </p>
                         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">

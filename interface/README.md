@@ -128,7 +128,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the Cortex UI.
 | Route | Component |
 | :--- | :--- |
 | `/dashboard` | AI Organization entry flow |
-| `/organizations/[id]` | Team Lead-first AI Organization workspace |
+| `/organizations/[id]` | Soma-primary AI Organization workspace |
 | `/automations` | Automation hub with approvals, trigger rules, and advanced orchestration tabs |
 | `/docs` | In-app docs browser |
 | `/settings` | Preferences, mission profiles, people access, and advanced setup |
