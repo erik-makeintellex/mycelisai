@@ -4,6 +4,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+from contextlib import suppress
 
 from invoke import task, Collection
 from .config import (
@@ -55,6 +56,28 @@ def _task_env(extra=None):
     _load_env()
     ensure_managed_cache_dirs()
     return managed_cache_env(extra=extra)
+
+
+def interface_task_env(extra=None):
+    """Public wrapper for callers that need the managed Interface task env."""
+    return _task_env(extra=extra)
+
+
+def run_interface_command(c, command: str, cleanup=False, extra_env=None, **run_kwargs):
+    """Run an Interface-local command from the interface/ working directory."""
+    command_env = run_kwargs.pop("env", None)
+    if command_env is not None and extra_env is None:
+        env = dict(command_env)
+    else:
+        env = _task_env(extra=extra_env)
+        if command_env:
+            env.update(command_env)
+    try:
+        with c.cd(str(INTERFACE_DIR)):
+            return c.run(command, env=env, **run_kwargs)
+    finally:
+        if cleanup:
+            _cleanup_repo_local_interface_processes()
 
 
 def _normalize_process_text(text: str) -> str:
@@ -176,53 +199,88 @@ def _playwright_server_log_path() -> str:
     return str(log_dir / "interface-playwright-webserver.log")
 
 
+def _next_dev_command(host: str, port: int) -> list[str]:
+    return [
+        "node",
+        "./node_modules/next/dist/bin/next",
+        "dev",
+        "--webpack",
+        "--hostname",
+        host,
+        "--port",
+        str(port),
+    ]
+
+
+def _spawn_interface_process(
+    command: list[str],
+    env: dict[str, str],
+    *,
+    stdout,
+    stderr,
+    detached: bool,
+    text: bool = True,
+) -> subprocess.Popen[str]:
+    process_env = os.environ.copy()
+    process_env.update(env)
+    popen_kwargs = {
+        "cwd": str(INTERFACE_DIR),
+        "env": process_env,
+        "stdout": stdout,
+        "stderr": stderr,
+        "text": text,
+    }
+    if detached:
+        popen_kwargs["stdin"] = subprocess.DEVNULL
+        if is_windows():
+            popen_kwargs["creationflags"] = (
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                | getattr(subprocess, "DETACHED_PROCESS", 0)
+            )
+        else:
+            popen_kwargs["start_new_session"] = True
+    return subprocess.Popen(command, **popen_kwargs)
+
+
 def _start_playwright_server(env: dict[str, str], port: int = INTERFACE_PORT) -> subprocess.Popen[str]:
     log_path = _playwright_server_log_path()
     log_handle = open(log_path, "w", encoding="utf-8")
-    process_env = os.environ.copy()
-    process_env.update(env)
     host = env.get("INTERFACE_HOST", INTERFACE_HOST)
+    command = _next_dev_command(host, port)
     try:
-        if is_windows():
-            command = (
-                f'cd /d "{INTERFACE_DIR}" && '
-                f"node .\\node_modules\\next\\dist\\bin\\next dev "
-                f"--webpack --hostname {host} --port {port}"
-            )
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                cwd=str(ROOT_DIR),
-                env=process_env,
-                stdout=log_handle,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
-            log_handle.close()
-            return process
-
-        process = subprocess.Popen(
-            [
-                "node",
-                "./node_modules/next/dist/bin/next",
-                "dev",
-                "--webpack",
-                "--hostname",
-                host,
-                "--port",
-                str(port),
-            ],
-            cwd=str(INTERFACE_DIR),
-            env=process_env,
+        process = _spawn_interface_process(
+            command,
+            env,
             stdout=log_handle,
             stderr=subprocess.STDOUT,
-            text=True,
+            detached=False,
         )
         log_handle.close()
         return process
     except Exception:
         log_handle.close()
         raise
+
+
+def start_dev_server_detached(
+    env: dict[str, str] | None = None,
+    *,
+    host: str = INTERFACE_HOST,
+    port: int = INTERFACE_PORT,
+) -> subprocess.Popen[str]:
+    process_env = _task_env()
+    if env:
+        process_env.update(env)
+    process_env.setdefault("INTERFACE_HOST", host)
+    command = _next_dev_command(process_env["INTERFACE_HOST"], port)
+    return _spawn_interface_process(
+        command,
+        process_env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+        detached=True,
+        text=True,
+    )
 
 
 def _wait_for_interface_ready(host: str = INTERFACE_HOST, port: int = INTERFACE_PORT, timeout_seconds: int = 120):
@@ -260,46 +318,37 @@ def _print_ascii_safe(text: str):
 def dev(c):
     """Start Interface (Next.js) in Dev Mode. Stops existing instance first."""
     stop(c)
-    c.run("npm run dev --prefix interface", pty=not is_windows(), env=_task_env())
+    run_interface_command(c, "npm run dev", pty=not is_windows())
 
 @task
 def install(c):
     """Install Interface dependencies."""
     print("Installing Interface Dependencies...")
-    c.run("cd interface && npm install", env=_task_env())
+    run_interface_command(c, "npm install")
 
 @task
 def build(c):
     """Build the Interface for production."""
     print("Building Interface...")
-    try:
-        c.run("cd interface && npm run build", env=_task_env())
-    finally:
-        _cleanup_repo_local_interface_processes()
+    run_interface_command(c, "npm run build", cleanup=True)
 
 @task
 def lint(c):
     """Lint the Interface code."""
     print("Linting Interface...")
-    c.run("cd interface && npm run lint", env=_task_env())
+    run_interface_command(c, "npm run lint")
 
 @task
 def test(c):
     """Run Interface Unit Tests (Vitest)."""
     print("Running Interface Tests...")
-    try:
-        c.run("cd interface && npm run test", env=_task_env())
-    finally:
-        _cleanup_repo_local_interface_processes()
+    run_interface_command(c, "npm run test", cleanup=True)
 
 @task
 def test_coverage(c):
     """Run Interface unit tests with V8 coverage report."""
     print("Running Interface Tests with Coverage...")
-    try:
-        c.run("cd interface && npx vitest run --coverage", pty=not is_windows(), env=_task_env())
-    finally:
-        _cleanup_repo_local_interface_processes()
+    run_interface_command(c, "npx vitest run --coverage", cleanup=True, pty=not is_windows())
 
 @task(
     help={
@@ -319,7 +368,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False):
     the Next.js proxy instead of relying entirely on route stubs.
     """
     print("Running Playwright E2E Tests...")
-    cmd = "cd interface && npx playwright test --reporter=dot"
+    cmd = "npx playwright test --reporter=dot"
     if project:
         cmd += f" --project={project}"
     if spec:
@@ -338,7 +387,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False):
     try:
         server = _start_playwright_server(env)
         _wait_for_interface_ready(host=env["INTERFACE_HOST"])
-        result = c.run(cmd, pty=not is_windows(), env=env, hide=True, warn=True)
+        result = run_interface_command(c, cmd, pty=not is_windows(), env=env, hide=True, warn=True)
         _print_ascii_safe(result.stdout)
         _print_ascii_safe(result.stderr)
         if result.exited != 0:
@@ -347,6 +396,8 @@ def e2e(c, headed=False, project="", spec="", live_backend=False):
         if server is not None and server.poll() is None:
             _kill_pid_tree(server.pid)
             time.sleep(0.5)
+            with suppress(Exception):
+                server.wait(timeout=5)
         stop(c)
         _cleanup_repo_local_interface_processes()
 
@@ -411,13 +462,7 @@ def restart(c, port=INTERFACE_PORT):
 
     # 4. Start dev server in background
     print(f"\nStarting dev server on port {port}...")
-    if is_windows():
-        c.run(
-            f'start /B cmd /c "cd interface && npx next dev --port {port} > NUL 2>&1"',
-            warn=True, hide=True, env=_task_env(),
-        )
-    else:
-        c.run(f"cd interface && npx next dev --port {port} > /dev/null 2>&1 &", warn=True, env=_task_env())
+    start_dev_server_detached(port=port)
 
     # 5. Wait for server to be ready, then check
     print("Waiting for server startup...")

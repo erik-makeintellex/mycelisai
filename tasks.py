@@ -1,6 +1,7 @@
 from invoke import Collection, task
 
 from ops import auth
+from ops import cache
 from ops import ci
 from ops import cognitive
 from ops import core
@@ -25,23 +26,28 @@ def install(c):
     Assumes the shell/session is already running with admin rights.
     """
     print("Installing workspace Python dependencies...")
-    c.run("uv sync --all-packages --dev")
+    from ops.config import ensure_managed_cache_dirs, managed_cache_env
+
+    ensure_managed_cache_dirs()
+    env = managed_cache_env()
+    c.run("uv sync --all-packages --dev", env=env)
 
     print("Installing Go module dependencies...")
     with c.cd("core"):
-        c.run("go mod download")
+        c.run("go mod download", env=env)
 
     print("Installing Interface dependencies...")
-    c.run("npm install --prefix interface")
+    c.run("npm install --prefix interface", env=env)
 
     print("Installing Cognitive dependencies...")
     with c.cd("cognitive"):
-        c.run("uv sync")
+        c.run("uv sync", env=env)
 
     print("Install complete.")
 
 
 ns.add_task(install)
+ns.add_collection(cache.ns)
 ns.add_collection(core.ns)
 ns.add_collection(k8s.ns)
 ns.add_collection(proto_relay.ns_proto)

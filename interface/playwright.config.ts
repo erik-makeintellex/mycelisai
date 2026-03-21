@@ -4,15 +4,9 @@ const configDir = typeof __dirname === 'string' ? __dirname : process.cwd();
 const interfaceHost = process.env.INTERFACE_HOST ?? '127.0.0.1';
 const interfacePort = process.env.INTERFACE_PORT ?? '3000';
 const baseURL = `http://${interfaceHost}:${interfacePort}`;
-const quotedConfigDir = `"${configDir}"`;
 const shouldManageWebServer = !process.env.PLAYWRIGHT_SKIP_WEBSERVER;
-const defaultDevCommand =
-    process.platform === 'win32'
-        ? `cmd /d /s /c "cd /d ${quotedConfigDir} && node .\\node_modules\\next\\dist\\bin\\next dev --webpack --hostname ${interfaceHost} --port ${interfacePort}"`
-        : `node ./node_modules/next/dist/bin/next dev --webpack --hostname ${interfaceHost} --port ${interfacePort}`;
-const webServerCommand =
-    process.env.PLAYWRIGHT_UI_SERVER_COMMAND ??
-    defaultDevCommand;
+const defaultDevCommand = `node ./node_modules/next/dist/bin/next dev --webpack --hostname ${interfaceHost} --port ${interfacePort}`;
+const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultDevCommand;
 
 /**
  * Playwright E2E configuration for Mycelis Interface.
