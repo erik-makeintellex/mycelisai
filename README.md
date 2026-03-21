@@ -19,6 +19,7 @@ This README is the primary development-swarm inception document. It defines the 
 - [Feature Status Standard](#feature-status-standard)
 - [Required Review Targets](#required-review-targets)
 - [Command Contract](#command-contract)
+- [Development Contract](#development-contract)
 - [Playwright Contract](#playwright-contract)
 - [Development Workflow](#development-workflow)
 - [Documentation Responsibilities](#documentation-responsibilities)
@@ -250,6 +251,26 @@ Suggested development build configuration by platform:
 - Linux/macOS: keep `MYCELIS_PROJECT_CACHE_ROOT` on a volume with headroom if the default workspace disk is small, and export user-level cache roots only when you need tool caches off your default home volume; the repo task path already keeps build/test/browser churn inside `workspace/tool-cache`
 - All platforms: prefer `uv run inv ...` over raw tool commands for repeated build/test cycles, because the task path applies the managed cache roots, disables low-value telemetry writes, and sweeps leftover Interface workers that can hold build outputs open
 
+## Development Contract
+
+A slice is not complete unless:
+- tests pass
+- documentation is updated where meaning changed
+- architecture alignment is verified across the layered truth surfaces
+
+Development contract:
+- `README.md` is the primary architecture inception document
+- `v8-2.md` is the canonical full architecture
+- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` is the current release target
+- `V8_DEV_STATE.md` is the source of actual implementation truth
+- all slices must update these surfaces when implementation, release posture, or target meaning changes
+
+Completion rule:
+- code and tests alone do not finish a slice
+- if implementation changes meaning, the slice must also update the owning docs, verify architecture alignment, and record the resulting state
+- no slice should complete with silent divergence between implementation, V8.1 release scope, V8.2 target scope, and `V8_DEV_STATE.md`
+- end-of-slice reporting must explicitly state which tests ran, which docs changed, and which scoped docs were reviewed but left unchanged
+
 ## Playwright Contract
 
 `uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. Playwright owns the Next.js server lifecycle for the default browser gate.
@@ -293,6 +314,7 @@ Synchronization rule:
 - V8.2 is the final production target
 - `V8_DEV_STATE.md` is the actual implementation scoreboard
 - slices that change architecture, release posture, operator wording, or documentation authority must keep README, the owning docs, `docsManifest.ts`, and `tests/test_docs_links.py` synchronized in the same change
+- slice close-out should explicitly report tests run, docs updated, and docs reviewed unchanged for the touched scope
 
 The architecture-library remains the authoritative detailed planning surface until the V8 library replaces the remaining V7 migration inputs.
 

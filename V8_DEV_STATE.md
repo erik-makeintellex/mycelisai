@@ -27,6 +27,24 @@ Development is progressing toward the V8.2 full production target.
 - V8.2 is the distributed, learning, capability-enabled, and actuation target beyond the current release.
 - `README.md` is the primary inception summary that must distinguish those two layers and point to this live implementation state.
 
+## Architecture Synchronization Rule
+
+Every slice must:
+- update state
+- verify README alignment
+- verify V8.2 alignment
+
+Execution completion rule:
+- a slice is not complete unless tests pass, documentation is updated where meaning changed, and architecture alignment is verified
+- README, V8.1, V8.2, and this state file must remain synchronized when implementation or release meaning changes
+- no silent divergence is allowed between current implementation, current release target, and full architecture target
+
+State reporting rule:
+- `COMPLETE` records accepted delivered work
+- `ACTIVE` records work in progress
+- `NEXT` records the next committed follow-on slices
+- slice close-out should explicitly report tests run, docs changed, and docs reviewed unchanged for the touched scope
+
 ## Feature Status Legend
 
 - `REQUIRED`: must exist for target delivery or gate pass
@@ -194,6 +212,7 @@ Delivery updates in this checkpoint:
 40. `COMPLETE` audited the full MVP route/tab surface against the V8.1 Team Lead-first workflow, removed the dead `Draft Blueprints` placeholder tab, tightened the default rail to core operator paths, moved `Resources`, `Memory`, and `System` behind explicit Advanced mode, and renamed stale route labels like `Neural Wiring`, `Brains`, and `Cognitive Matrix` into operator-facing release wording.
 41. `COMPLETE` refreshed the frontend route contract and user-facing docs so surviving MVP surfaces, advanced boundaries, and compatibility redirects now align in code, tests, and internal docs.
 42. `COMPLETE` declared `v8-2.md` as the canonical full production architecture and full actuation target, while keeping V8.1 explicit as the current bounded release across README, the architecture index, docs manifest, and doc-test enforcement.
+43. `COMPLETE` enforced documentation synchronization as part of the execution contract so slices are now incomplete until tests pass, documentation is updated where meaning changed, and README, V8.1, V8.2, state, and doc tests stay aligned.
 
 Evidence:
 1. README directive review completed against `README.md`
