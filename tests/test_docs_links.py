@@ -14,6 +14,7 @@ V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
 V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
 V8_UI_API_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"
 V8_1_LIVING_ARCHITECTURE = ROOT / "docs" / "architecture-library" / "V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md"
+V8_2_FULL_ARCHITECTURE = ROOT / "v8-2.md"
 SOMA_COUNCIL_PROTOCOL = ROOT / "docs" / "architecture" / "SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md"
 UI_OPERATOR_EXPERIENCE = ROOT / "docs" / "architecture-library" / "UI_AND_OPERATOR_EXPERIENCE_V7.md"
 CANONICAL_DOCS = [
@@ -66,6 +67,7 @@ def test_docs_manifest_exposes_required_canonical_docs():
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
         "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
+        "v8-2.md",
         "mycelis-architecture-v7.md",
     ]
 
@@ -127,6 +129,28 @@ def test_readme_has_feature_status_standard():
     required_markers = ["`REQUIRED`", "`NEXT`", "`ACTIVE`", "`IN_REVIEW`", "`COMPLETE`", "`BLOCKED`"]
     missing = [marker for marker in required_markers if marker not in text]
     assert not missing, f"Feature status standard is missing markers: {missing}"
+
+
+def test_readme_exposes_layered_architecture_truth():
+    text = README.read_text(encoding="utf-8")
+
+    required_sections = [
+        "## Final Production Architecture (V8.2)",
+        "## Current Release Target (V8.1)",
+        "## Current Implementation State",
+    ]
+    missing_sections = [section for section in required_sections if section not in text]
+    assert not missing_sections, f"README is missing required layered-truth sections: {missing_sections}"
+
+    required_snippets = [
+        "v8-2.md",
+        "full actuation architecture",
+        "V8.1 is the current release target",
+        "V8.2 is the full production target",
+        "Actual implementation state lives in [V8_DEV_STATE.md](V8_DEV_STATE.md).",
+    ]
+    missing_snippets = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing_snippets, f"README is missing required layered-truth snippets: {missing_snippets}"
 
 
 def test_canonical_docs_do_not_ship_executable_bare_uvx_inv_examples():
@@ -659,4 +683,83 @@ def test_v8_1_living_architecture_is_indexed_exposed_and_complete():
     assert not missing_architecture_snippets, (
         "V8.1 living architecture doc is missing required architecture or release-contract coverage: "
         f"{missing_architecture_snippets}"
+    )
+
+
+def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
+    index_text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
+    manifest_text = DOCS_MANIFEST.read_text(encoding="utf-8")
+    architecture_text = V8_2_FULL_ARCHITECTURE.read_text(encoding="utf-8")
+
+    required_index_refs = [
+        "V8.2 Full Production Architecture",
+        "../../v8-2.md",
+        "Full Production Architecture (Canonical Target)",
+    ]
+    missing_index_refs = [snippet for snippet in required_index_refs if snippet not in index_text]
+    assert not missing_index_refs, (
+        "Architecture library index is missing the V8.2 full-architecture references: "
+        f"{missing_index_refs}"
+    )
+
+    required_manifest_refs = [
+        'slug: "v8-2-full-production-architecture"',
+        'label: "Full Architecture (V8.2)"',
+        'path: "v8-2.md"',
+    ]
+    missing_manifest_refs = [snippet for snippet in required_manifest_refs if snippet not in manifest_text]
+    assert not missing_manifest_refs, (
+        "docsManifest is missing the V8.2 full-architecture entry: "
+        f"{missing_manifest_refs}"
+    )
+
+    required_architecture_snippets = [
+        "canonical full production architecture",
+        "distributed, learning, capability-enabled, and acting system",
+        "distributed execution target state",
+        "learning, capability, and actuation target state",
+        "Not all elements described here are implemented yet.",
+        "V8.1 remains the current bounded release target",
+    ]
+    missing_architecture_snippets = [snippet for snippet in required_architecture_snippets if snippet not in architecture_text]
+    assert not missing_architecture_snippets, (
+        "V8.2 full architecture doc is missing required canonical-target coverage: "
+        f"{missing_architecture_snippets}"
+    )
+
+
+def test_v8_docs_keep_current_release_and_full_target_distinct():
+    index_text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
+    v8_1_text = V8_1_LIVING_ARCHITECTURE.read_text(encoding="utf-8")
+    state_text = V8_DEV_STATE.read_text(encoding="utf-8")
+
+    required_index_snippets = [
+        "current release architecture",
+        "canonical full production architecture and full actuation target",
+    ]
+    missing_index_snippets = [snippet for snippet in required_index_snippets if snippet not in index_text]
+    assert not missing_index_snippets, (
+        "Architecture library index is missing the current-vs-target distinction: "
+        f"{missing_index_snippets}"
+    )
+
+    required_v8_1_snippets = [
+        "This is the current release architecture.",
+        "canonical full production architecture and full actuation target beyond the current release",
+    ]
+    missing_v8_1_snippets = [snippet for snippet in required_v8_1_snippets if snippet not in v8_1_text]
+    assert not missing_v8_1_snippets, (
+        "V8.1 living architecture doc is missing the current-release distinction: "
+        f"{missing_v8_1_snippets}"
+    )
+
+    required_state_snippets = [
+        "Development is progressing toward the V8.2 full production target.",
+        "V8.1 is the current bounded release target.",
+        "V8.2 is the distributed, learning, capability-enabled, and actuation target beyond the current release.",
+    ]
+    missing_state_snippets = [snippet for snippet in required_state_snippets if snippet not in state_text]
+    assert not missing_state_snippets, (
+        "V8 dev state is missing the current-release vs full-target distinction: "
+        f"{missing_state_snippets}"
     )

@@ -304,9 +304,15 @@ export const DOC_MANIFEST: DocSection[] = [
             },
             {
                 slug: "v8-1-living-organization-architecture",
-                label: "V8.1 Living Organization Architecture",
+                label: "Current Release Architecture (V8.1)",
                 path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
-                description: "Canonical V8.1 PRD for Loop Profiles, Learning Loops, semantic continuity, Procedure / Skill Sets, promoted Agent Type/Response Contract inheritance, and bounded Automations visibility",
+                description: "Current bounded release architecture for Loop Profiles, Learning Loops, semantic continuity, Procedure / Skill Sets, promoted Agent Type/Response Contract inheritance, and bounded Automations visibility",
+            },
+            {
+                slug: "v8-2-full-production-architecture",
+                label: "Full Architecture (V8.2)",
+                path: "v8-2.md",
+                description: "Canonical full production architecture for distributed execution, governed learning, capability-backed execution, and full actuation scope",
             },
             {
                 slug: "arch-overview",

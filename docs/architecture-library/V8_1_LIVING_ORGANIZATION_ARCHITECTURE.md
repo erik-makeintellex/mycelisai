@@ -2,8 +2,14 @@
 
 > Status: Canonical V8.1 PRD
 > Last Updated: 2026-03-20
-> Purpose: Define the first implementation-grade V8.1 architecture for persistent execution, bounded automation, semantic continuity, learning promotion, and reproducible specialist behavior.
+> Purpose: Define the current bounded V8.1 release architecture for persistent execution, bounded automation, semantic continuity, learning promotion, and reproducible specialist behavior.
 > Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
+
+This is the current release architecture.
+
+Use this document for the bounded V8.1 release target.
+Use `../../v8-2.md` for the canonical full production architecture and full actuation target beyond the current release.
+Not every V8.2 production target belongs in the current V8.1 release.
 
 ## 1. Why V8.1 exists
 

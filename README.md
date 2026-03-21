@@ -1,17 +1,21 @@
-# Mycelis - V8 Cognitive Infrastructure
+# Mycelis
 
-Mycelis V8 is the active development target for the platform.
+Mycelis is an AI Organization platform for creating, operating, and evolving governed multi-role systems through a Team Lead-first operator experience.
 
-V8 extends the V7 operational foundation into an inception-driven system that can instantiate configurable AI organizations, preserve governed execution lineage, and support local, hosted, and hybrid cognitive infrastructure.
-
-The V7 architecture-library remains the current authoritative planning surface until V8 replacement documents are written. Treat V7 architecture docs as migration inputs and `V8_DEV_STATE.md` as the live grading/state scoreboard for new work.
+This README is the primary development-swarm inception document. It defines the top-level architecture truth split for active work:
+- final production architecture target
+- current release target
+- current implementation state
 
 ## README TOC
 
 - [Fresh Agent Start Here](#fresh-agent-start-here)
+- [What Mycelis Is](#what-mycelis-is)
+- [Final Production Architecture (V8.2)](#final-production-architecture-v82)
+- [Current Release Target (V8.1)](#current-release-target-v81)
+- [Current Implementation State](#current-implementation-state)
+- [Architecture Terms To Operator Terms](#architecture-terms-to-operator-terms)
 - [Detailed Framework Memory](#detailed-framework-memory)
-- [V8 Directive](#v8-directive)
-- [Versioning Update](#versioning-update)
 - [Feature Status Standard](#feature-status-standard)
 - [Required Review Targets](#required-review-targets)
 - [Command Contract](#command-contract)
@@ -26,120 +30,164 @@ Review these in order before touching code or planning state:
 
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
-3. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md)
-4. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
-5. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
-6. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
-7. [Operations](docs/architecture/OPERATIONS.md)
-8. [Testing](docs/TESTING.md)
-9. [V7 Development State](V7_DEV_STATE.md)
-10. [V8 Development State](V8_DEV_STATE.md)
-11. [Docs Manifest](interface/lib/docsManifest.ts)
+3. [README](README.md)
+4. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
+5. [V8.2 Production Architecture Target](v8-2.md)
+6. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+7. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+8. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+9. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md)
+10. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+11. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
+12. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+13. [Operations](docs/architecture/OPERATIONS.md)
+14. [Testing](docs/TESTING.md)
+15. [V7 Development State](V7_DEV_STATE.md)
+16. [V8 Development State](V8_DEV_STATE.md)
+17. [Docs Manifest](interface/lib/docsManifest.ts)
+
+Fresh-agent review rule:
+- README is the primary architecture inception document for active development.
+- [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the current release target.
+- [V8.2 Production Architecture Target](v8-2.md) is the canonical full production target and full actuation architecture.
+- [V8 Development State](V8_DEV_STATE.md) is the live implementation scoreboard.
+- V7 documents remain migration inputs until replaced, but they do not override the V8 bootstrap and release truth.
 
 Bootstrap reminder:
 - treat `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the canonical V7->V8 migration and bootstrap contract, not just another planning note
 - always translate V7 YAML, runtime config, DB seeding, and operator wizard flows through that model before they touch a live organization
 - `Template ≠ instantiated organization`, so only instantiated orgs enter bootstrap resolution while templates stay reusable blueprints
-- Task 005 bridge layer: `core/config/templates/*.yaml` now instantiates the startup runtime organization through the bundle path, and normal startup fails closed unless a valid bootstrap bundle is present; if more than one bundle is mounted, `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must select one explicitly
+- startup truth is bundle-driven and fail-closed: normal startup fails closed unless a valid bootstrap bundle is present, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must select a bundle whenever more than one is mounted
 
-Fresh-agent review rule:
-- V7 docs define the current authoritative architecture/planning contract until migrated.
-- `V7_DEV_STATE.md` is legacy migration history.
-- `V8_DEV_STATE.md` is the active grading target for new work.
+## What Mycelis Is
+
+Mycelis is a governed AI Organization system.
+
+In operator-facing language, the product lets someone:
+- create an AI Organization
+- work through a Team Lead instead of a raw agent swarm
+- inspect advisors, departments, automations, learning signals, and settings in human-readable terms
+- keep execution, automation, and future learning behavior bounded by policy and inheritance
+
+In architecture terms, Mycelis is built around:
+- instantiated organizations as runtime truth
+- a Team Lead / Soma Kernel coordination layer
+- advisory and specialist layers beneath that coordinator
+- auditable execution, automation, memory, and continuity contracts
+
+## Final Production Architecture (V8.2)
+
+The final production architecture target is [V8.2 Production Architecture Target](v8-2.md), the full actuation architecture for Mycelis.
+
+V8.2 is the distributed end-state we are building toward:
+- distributed execution across a control plane and execution nodes
+- an active learning system that can evaluate, promote, and reuse reviewed learning safely
+- a capability system that governs what execution surfaces agents may use
+- editable automations, policy-bounded actuation, and stronger continuous operation
+
+V8.2 summary:
+- distributed execution means the AI Organization can coordinate work across more than one host or environment
+- the learning system turns reviewed outcomes into governed memory, reusable procedures, and safer organization improvement
+- the capability system keeps action surfaces allowlisted, scoped, auditable, and policy-checked
+
+Explicit distinction:
+- V8.1 is the current release target
+- V8.2 is the full production target and full actuation architecture
+
+V8.2 is not the current MVP release surface. It is the final production architecture truth the rest of the docs must converge toward.
+
+## Current Release Target (V8.1)
+
+The current release target is [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md).
+
+V8.1 defines the MVP release we are aligning implementation to now: a Team Lead-first AI Organization system with bounded automation visibility, learning visibility, inheritance contracts, and safe organization structure surfaces.
+
+Included in the V8.1 release target:
+- AI Organization creation and Team Lead-first workspace flow
+- organization, department, advisor, and role-type visibility in operator language
+- bundle-driven startup truth with policy-bounded inheritance
+- bounded AI Engine and Response Style controls
+- read-only Automations visibility
+- read-only learning visibility
+- Loop Profiles, Runtime Capabilities, semantic continuity, and Procedure / Skill Sets defined as architecture truth even where implementation is still partial
+
+Excluded from the V8.1 release target:
+- distributed multi-host execution
+- editable automations
+- broad live actuation
+- unrestricted capability controls
+- autonomous memory mutation or silent self-rewrite
+- advanced raw architecture/configuration panels in the default operator flow
+
+Release rule:
+- if a surface belongs to V8.2 but not the V8.1 MVP, it should remain out of the default release surface until explicitly promoted
+
+## Current Implementation State
+
+Actual implementation state lives in [V8_DEV_STATE.md](V8_DEV_STATE.md).
+
+Use that file for:
+- completed slices and accepted evidence
+- active work
+- next slices
+- blockers and validation status
+
+Do not duplicate the full live checklist in this README. Keep the implementation truth in the state file and update it in the same slice as any architecture, release-target, or UI-surface change.
+
+## Architecture Terms To Operator Terms
+
+Use these translations consistently:
+
+| Architecture term | User-facing term |
+| --- | --- |
+| Inception | AI Organization |
+| Soma Kernel | Team Lead |
+| Central Council | Advisors |
+| Specialist Teams | Departments |
+| Agent Instances / Agent Types | Specialists / Roles |
+| Provider Policy / Routing | AI Engine Settings |
+| Response Contract | Response Style |
+| Identity / Continuity State | Memory & Personality |
+| Loop Profiles | Automations |
+| Learning Loops / reviewed learning | What the Organization is Learning |
+
+Translation rule:
+- architecture docs may use the precise runtime terms
+- default UI, README summary language, and operator-facing copy should prefer the user-facing terms unless a lower-level contract requires the architecture wording
 
 ## Detailed Framework Memory
 
 Use these as the top detailed references when you need the deeper framework contract rather than just the quick-start path.
 
-1. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+1. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+   - canonical runtime layer contract for organization, Team Lead / Soma Kernel, advisors, provider-policy scope, and continuity
+2. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
+   - canonical V8.1 release architecture for loops, learning, semantic continuity, capabilities, and the current Team Lead-first release posture
+3. [V8.2 Production Architecture Target](v8-2.md)
+   - final production architecture target for distributed execution, active learning, capability-backed execution, and editable automations
+4. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
    - canonical memory for template vs instantiated organization, bootstrap resolution, inheritance, precedence, and V7-to-V8 bootstrap translation
-2. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-   - canonical memory for Inception, Soma Kernel, Central Council, Provider Policy, and Identity / Continuity State
-3. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
+5. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+   - canonical operator workflow contract for AI Organization creation, Team Lead-first workspace behavior, visibility boundaries, and screen-to-API mapping
+6. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
    - canonical map of which detailed planning doc owns which part of the framework
-4. [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
+7. [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
    - detailed runtime, storage, NATS, deployment, and service-boundary memory until V8 replacements land
-5. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+8. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
    - detailed workflow, run, manifest, recurring-plan, and activation memory
-6. [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+9. [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
    - detailed acceptance, gate, and proof requirements for implementation slices
-7. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
+10. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
    - detailed state-file, coordination, and execution-discipline memory for multi-slice work
-8. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
+11. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
    - detailed operator experience, simplification, and anti-complexity memory for the UI layer
-9. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+12. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
    - detailed UI transaction/state expectations for operator-visible behavior
 
 Rule:
 - when framework behavior, bootstrap posture, organization shape, or operator model is unclear, load the owning detailed doc above before making assumptions
-- keep README as the entrypoint, but treat the documents in this section as the deeper memory surface for framework specifics
+- keep README as the entrypoint and inception summary, but treat the documents in this section as the deeper memory surface for framework specifics
 - current MVP UI release posture is Team Lead-first by default; `Resources`, `Memory`, and `System` are advanced support routes rather than default operator entrypoints
-
-## V8 Directive
-
-Mycelis V8 introduces inception-driven AI organizations.
-
-Canonical runtime shape:
-
-```text
-Inception
-  -> Soma Kernel
-  -> Central Council
-  -> Specialist Teams / Agents
-  -> Runs
-  -> Events
-  -> Memory
-  -> Reflection
-```
-
-Initial V8 contract set now covers:
-- Inception
-- Soma Kernel
-- Central Council
-- Provider Policy
-- Identity and Continuity State
-
-The active V8 bootstrap-planning surface now also defines how organizations enter the system through templates, manual creation, operator/API creation, and config-file/bootstrap paths.
-
-For default user-facing experience, these concepts should translate into a simpler team model:
-
-```text
-AI Organization
-  -> Team Lead
-  -> Advisors
-  -> Departments
-  -> Specialists
-```
-
-The continuity layer is intended to persist structured self-related state across runs while being informed by memory and reflection.
-
-V8 implementation philosophy:
-1. preserve existing runtime infrastructure where it already supports the target model
-2. replace fixed Soma/Council assumptions with configurable cognition layers
-3. keep local-first deployment as a core capability
-4. preserve deterministic execution and auditable event trails
-5. support hybrid model-provider infrastructures
-
-## Versioning Update
-
-All references to V7 in the repository should now be interpreted as legacy architecture planning documents supporting the transition to V8.
-
-Migration inputs that remain authoritative until replaced:
-- `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
-- `docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md`
-- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
-- `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
-- `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
-- `V7_DEV_STATE.md` (legacy migration state history)
-- `V8_DEV_STATE.md` (active grading state)
-
-Versioning rule:
-- use V7 documents as migration inputs
-- use `V8_DEV_STATE.md` as the live delivery scoreboard
-- migrate naming, runtime assumptions, and documentation incrementally so planning continuity is not broken
-- treat every V7 bootstrap asset (YAML, runtime config, DB seeding flows, operator wizards) as input material that must be translated into the explicit V8 configuration/bootstrap model before it shapes a running organization
-- remember that templates remain reusable blueprints (`Template ≠ instantiated organization`); only instantiated organizations enter runtime bootstrap resolution
-- the compatibility contract for that translation lives in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 
 ## Feature Status Standard
 
@@ -164,13 +212,14 @@ Agents implementing V8 must review these areas first:
 - `V8_DEV_STATE.md`
 
 Particular attention belongs on:
+- release-target alignment between README, V8.1, V8.2, and `V8_DEV_STATE.md`
 - execution slices
 - team execution protocol
 - delivery governance rules
 - UI operator experience contracts
 - runtime orchestration assumptions
 - provider routing and hybrid deployment posture
-- When working in the execution/gov docs (`docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`, `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`), treat all V7 content as migration input: translate assets through `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, keep `Template ≠ instantiated organization`, and record slice state in `V8_DEV_STATE.md`.
+- when working in the execution/gov docs (`docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`, `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`), treat all V7 content as migration input: translate assets through `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, keep `Template ≠ instantiated organization`, and record slice state in `V8_DEV_STATE.md`
 
 ## Command Contract
 
@@ -220,8 +269,8 @@ Agents implementing V8 should follow this process:
 1. clean runtime environment and running services when the slice requires a deterministic baseline
    - `uv run inv lifecycle.down` now treats repo-local Interface worker residue as part of the shutdown contract, not just bound ports
    - when repeated build/test cycles have been running for a while, clear stale runtime residue before assuming the issue is just disk: leaked Interface workers and long-lived local services can keep caches hot and hold build outputs open
-2. review the implementation tracker
-3. review V7 architecture-library documentation as migration input
+2. review the layered architecture truth in README, the owning architecture doc, and `V8_DEV_STATE.md`
+3. review V7 architecture-library documentation as migration input when a V8 replacement has not fully landed yet
 4. identify migration targets and required contract updates
 5. implement incremental runtime or documentation updates
 6. verify with tests and execution gates
@@ -236,12 +285,22 @@ Every implementation slice must update:
 - `V8_DEV_STATE.md`
 - architecture-library planning documents when target, execution, UI, or delivery rules change
 - documentation manifest when a canonical doc should be visible in the in-app docs page
+- docs tests when the contract they enforce changes
 
-The architecture-library remains the authoritative planning surface until the V8 library replaces it.
+Synchronization rule:
+- README is the primary architecture inception doc for active development
+- V8.1 is the current release target
+- V8.2 is the final production target
+- `V8_DEV_STATE.md` is the actual implementation scoreboard
+- slices that change architecture, release posture, operator wording, or documentation authority must keep README, the owning docs, `docsManifest.ts`, and `tests/test_docs_links.py` synchronized in the same change
+
+The architecture-library remains the authoritative detailed planning surface until the V8 library replaces the remaining V7 migration inputs.
 
 ## Status
 
-Mycelis is currently transitioning from V7 operational architecture to V8 inception-driven cognitive infrastructure.
+Mycelis is currently shipping toward a V8.1 Team Lead-first MVP while aligning its long-range architecture to the V8.2 distributed, learning, capability-governed production target.
 
-The V7 system provides the runtime foundation.
-V8 extends that foundation to support configurable AI organizations, provider-policy scoping, kernel-aware execution architecture, and structured identity/continuity state across runs.
+The V7 system still provides important migration input and substrate memory.
+The V8.1 release defines what belongs in the current MVP.
+The V8.2 PRD defines where the product is ultimately headed.
+`V8_DEV_STATE.md` records what is actually complete, active, next, or blocked right now.
