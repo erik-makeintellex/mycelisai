@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 )
@@ -22,6 +23,13 @@ func TestHandleMe(t *testing.T) {
 	}
 	if user.ID == "" {
 		t.Error("Expected non-empty user ID")
+	}
+	var settings map[string]any
+	if err := json.Unmarshal(user.Settings, &settings); err != nil {
+		t.Fatalf("unmarshal settings: %v", err)
+	}
+	if settings["assistant_name"] != "Soma" {
+		t.Errorf("Expected assistant_name Soma, got %#v", settings["assistant_name"])
 	}
 }
 
@@ -51,6 +59,28 @@ func TestHandleUpdateSettings(t *testing.T) {
 	s := newTestServer()
 	rr := doRequest(t, http.HandlerFunc(s.HandleUpdateSettings), "PUT", "/api/v1/user/settings", `{"theme":"dark"}`)
 	assertStatus(t, rr, http.StatusOK)
+}
+
+func TestHandleUpdateSettings_AssistantNamePersists(t *testing.T) {
+	s := newTestServer()
+	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
+
+	rr := doRequest(t, http.HandlerFunc(s.HandleUpdateSettings), "PUT", "/api/v1/user/settings", `{"assistant_name":"Mycelis Prime"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	me := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
+	assertStatus(t, me, http.StatusOK)
+
+	var user User
+	assertJSON(t, me, &user)
+
+	var settings map[string]any
+	if err := json.Unmarshal(user.Settings, &settings); err != nil {
+		t.Fatalf("unmarshal settings: %v", err)
+	}
+	if settings["assistant_name"] != "Mycelis Prime" {
+		t.Errorf("Expected assistant_name Mycelis Prime, got %#v", settings["assistant_name"])
+	}
 }
 
 // ── GET /api/v1/teams/detail ───────────────────────────────────────

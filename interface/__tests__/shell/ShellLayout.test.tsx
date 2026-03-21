@@ -24,8 +24,9 @@ vi.mock('@/components/dashboard/StatusDrawer', () => ({
 
 const setStatusDrawerOpen = vi.fn();
 const fetchServicesStatus = vi.fn();
+const fetchUserSettings = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => selector({ setStatusDrawerOpen, fetchServicesStatus }),
+    useCortexStore: (selector: any) => selector({ setStatusDrawerOpen, fetchServicesStatus, fetchUserSettings }),
 }));
 
 import { ShellLayout } from '@/components/shell/ShellLayout';

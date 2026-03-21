@@ -19,6 +19,11 @@ describe('useCortexStore', () => {
             isFetchingProposals: false,
             catalogueAgents: [],
             isFetchingCatalogue: false,
+            missionChat: [],
+            missionChatError: null,
+            missionChatFailure: null,
+            councilTarget: 'admin',
+            assistantName: 'Soma',
             mcpServers: [],
             isFetchingMCPServers: false,
             mcpTools: [],
@@ -342,6 +347,257 @@ describe('useCortexStore', () => {
 
             expect(store.getState().pendingArtifacts).toHaveLength(0);
             expect(store.getState().selectedArtifact).toBeNull();
+        });
+    });
+
+    // ── Launch Crew / proposal confirmation ─────────────────────
+
+    describe('sendMissionChat', () => {
+        it('normalizes team expressions and module bindings from proposal payload', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                        signal_type: 'chat_response',
+                        trust_score: 0.5,
+                        template_id: 'chat-to-proposal',
+                        mode: 'proposal',
+                        payload: {
+                            text: 'I prepared a governed execution plan.',
+                            tools_used: ['delegate'],
+                            proposal: {
+                                intent: 'chat-action',
+                                tools: ['delegate'],
+                                risk_level: 'medium',
+                                confirm_token: 'ct-123',
+                                intent_proof_id: 'ip-123',
+                                team_expressions: [
+                                    {
+                                        expression_id: 'expr-1',
+                                        team_id: 'admin-core',
+                                        objective: 'Execute delegate through governed module binding',
+                                        role_plan: ['admin'],
+                                        module_bindings: [
+                                            {
+                                                binding_id: 'binding-1-delegate',
+                                                module_id: 'delegate',
+                                                adapter_kind: 'internal',
+                                                operation: 'delegate',
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                }),
+            });
+
+            await store.getState().sendMissionChat('launch a team');
+
+            expect(store.getState().activeMode).toBe('proposal');
+            expect(store.getState().activeConfirmToken).toBe('ct-123');
+            expect(store.getState().pendingProposal).toMatchObject({
+                intent: 'chat-action',
+                teams: 1,
+                agents: 1,
+                tools: ['delegate'],
+                confirm_token: 'ct-123',
+                intent_proof_id: 'ip-123',
+            });
+            expect(store.getState().pendingProposal?.team_expressions?.[0]).toMatchObject({
+                expression_id: 'expr-1',
+                team_id: 'admin-core',
+                objective: 'Execute delegate through governed module binding',
+            });
+            expect(store.getState().pendingProposal?.team_expressions?.[0].module_bindings?.[0]).toMatchObject({
+                module_id: 'delegate',
+                adapter_kind: 'internal',
+            });
+        });
+
+        it('stores a structured workspace failure when Soma chat returns 500', async () => {
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 500,
+                text: async () => '{"error":"Soma chat blocked (500)"}',
+            });
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('Soma chat blocked (500)');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'workspace',
+                type: 'server_error',
+                bannerLabel: 'Workspace chat server error',
+            });
+        });
+
+        it('routes Soma failures through the workspace contract when no council target is selected', async () => {
+            store.setState({
+                councilTarget: 'admin',
+                councilMembers: [],
+            });
+            mockFetch.mockRejectedValue(new Error('deadline exceeded'));
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/chat', expect.objectContaining({
+                method: 'POST',
+            }));
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('deadline exceeded');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'workspace',
+                targetId: 'admin',
+                type: 'timeout',
+                title: 'Soma Chat Blocked',
+            });
+        });
+
+        it('stores a structured council timeout when a direct council request throws', async () => {
+            store.setState({ councilTarget: 'council-architect' });
+            mockFetch.mockRejectedValue(new Error('deadline exceeded'));
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'council',
+                targetId: 'council-architect',
+                type: 'timeout',
+            });
+        });
+
+        it('routes direct council 5xx failures through the council blocker contract', async () => {
+            store.setState({ councilTarget: 'council-coder' });
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 503,
+                text: async () => '',
+            });
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/council/council-coder/chat', expect.objectContaining({
+                method: 'POST',
+            }));
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('Council agent unreachable (503)');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'council',
+                targetId: 'council-coder',
+                type: 'server_error',
+                title: 'Council Call Failed',
+            });
+        });
+    });
+
+    describe('confirmProposal', () => {
+        it('records an execution result when confirmation succeeds without a run id', async () => {
+            store.setState({
+                pendingProposal: {
+                    intent: 'Launch a docs crew',
+                    teams: 1,
+                    agents: 2,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-123',
+                    intent_proof_id: 'ip-123',
+                },
+                activeConfirmToken: 'ct-123',
+                missionChat: [],
+                missionChatError: null,
+                activeMode: 'proposal',
+                activeRunId: null,
+            });
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({ data: { confirmed: true, run_id: null } }),
+            });
+
+            const result = await store.getState().confirmProposal();
+
+            expect(result).toEqual({ ok: true, runId: null });
+            expect(store.getState().activeMode).toBe('execution_result');
+            expect(store.getState().activeRunId).toBeNull();
+            expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                role: 'system',
+                mode: 'execution_result',
+            });
+        });
+
+        it('records an execution result and run id on successful confirmation', async () => {
+            store.setState({
+                pendingProposal: {
+                    intent: 'Launch a docs crew',
+                    teams: 1,
+                    agents: 2,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-123',
+                    intent_proof_id: 'ip-123',
+                },
+                activeConfirmToken: 'ct-123',
+                missionChat: [],
+                missionChatError: null,
+                activeMode: 'proposal',
+                activeRunId: null,
+            });
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({ data: { run_id: 'run-123' } }),
+            });
+
+            const result = await store.getState().confirmProposal();
+
+            expect(result).toEqual({ ok: true, runId: 'run-123' });
+            expect(store.getState().activeMode).toBe('execution_result');
+            expect(store.getState().activeRunId).toBe('run-123');
+            expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                role: 'system',
+                mode: 'execution_result',
+                run_id: 'run-123',
+            });
+        });
+
+        it('returns a blocker contract when confirmation fails', async () => {
+            store.setState({
+                pendingProposal: {
+                    intent: 'Launch a docs crew',
+                    teams: 1,
+                    agents: 2,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-123',
+                    intent_proof_id: 'ip-123',
+                },
+                activeConfirmToken: 'ct-123',
+                missionChat: [],
+                missionChatError: null,
+                activeMode: 'proposal',
+            });
+            mockFetch.mockResolvedValue({
+                ok: false,
+                text: async () => JSON.stringify({ error: 'confirmation denied' }),
+            });
+
+            const result = await store.getState().confirmProposal();
+
+            expect(result).toEqual({ ok: false, runId: null, error: 'confirmation denied' });
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('confirmation denied');
+            expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                role: 'council',
+                mode: 'blocker',
+                content: 'confirmation denied',
+            });
         });
     });
 });

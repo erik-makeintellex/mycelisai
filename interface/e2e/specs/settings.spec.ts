@@ -4,7 +4,7 @@ test.describe('Settings Page (/settings)', () => {
 
     test.beforeEach(async ({ page }) => {
         await page.goto('/settings');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
     });
 
     test('page loads without errors', async ({ page }) => {

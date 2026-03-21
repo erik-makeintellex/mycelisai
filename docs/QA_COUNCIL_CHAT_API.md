@@ -4,9 +4,9 @@
 >
 > **Prerequisites:** All tests require the full stack running unless noted otherwise.
 > ```
-> Terminal 1: uvx inv k8s.bridge
-> Terminal 2: uvx inv core.run
-> Terminal 3: uvx inv interface.dev
+> Terminal 1: uv run inv k8s.bridge
+> Terminal 2: uv run inv core.run
+> Terminal 3: uv run inv interface.dev
 > ```
 
 ---
@@ -157,7 +157,7 @@ Open `http://localhost:3000` in browser.
 | 5.5 | Telemetry row | Check below header | TelemetryRow renders compute metrics |
 | 5.6 | Wiring page loads | Navigate to `/wiring` | ArchitectChat + CircuitBoard + NatsWaterfall render without error |
 | 5.7 | Teams page loads | Navigate to `/teams` | Team cards render with standing + mission teams |
-| 5.8 | Settings page loads | Navigate to `/settings` | 4 tabs: Profile, Teams, Cognitive Matrix, MCP Tools |
+| 5.8 | Settings page loads | Navigate to `/settings` | 3 default tabs: Profile, Mission Profiles, People & Access; advanced mode adds AI Engines and Connected Tools |
 
 ---
 

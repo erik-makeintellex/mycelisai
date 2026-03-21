@@ -5,6 +5,7 @@ import { Users, RefreshCw } from 'lucide-react';
 import { useCortexStore, type TeamsFilter, type TeamDetailEntry } from '@/store/useCortexStore';
 import TeamCard from './TeamCard';
 import TeamDetailDrawer from './TeamDetailDrawer';
+import GroupManagementPanel from './GroupManagementPanel';
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
     { value: 'all', label: 'All Teams' },
@@ -66,7 +67,7 @@ export default function TeamsPage() {
                 <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-cortex-primary" />
                     <h1 className="text-sm font-mono font-bold text-cortex-text-main uppercase tracking-wider">
-                        Team Management
+                        Shared Teams
                     </h1>
                     <span className="text-[10px] font-mono text-cortex-text-muted">
                         {filteredTeams.length} team{filteredTeams.length !== 1 ? 's' : ''}
@@ -102,7 +103,8 @@ export default function TeamsPage() {
             </div>
 
             {/* Grid */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <GroupManagementPanel />
                 {filteredTeams.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {filteredTeams.map((team) => (
@@ -128,7 +130,7 @@ export default function TeamsPage() {
                                 Refresh
                             </button>
                             <a href="/dashboard" className="px-2.5 py-1.5 rounded border border-cortex-border text-cortex-text-main text-[10px] font-mono hover:bg-cortex-border">
-                                Open Workspace
+                                Open AI Organization
                             </a>
                         </div>
                     </div>

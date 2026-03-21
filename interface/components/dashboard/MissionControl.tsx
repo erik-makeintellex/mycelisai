@@ -15,7 +15,7 @@ import { useCortexStore } from "@/store/useCortexStore";
 const STORAGE_KEY = "workspace-split";
 const STORAGE_KEY_LEGACY = "mission-control-split";
 const FOCUS_KEY = "workspace-focus-mode";
-const DEFAULT_RATIO = 0.55; // 55% chat, 45% ops
+const DEFAULT_RATIO = 0.68; // prioritize chat-first workspace usage
 const MIN_RATIO = 0.25;
 const MAX_RATIO = 0.80;
 
@@ -47,6 +47,7 @@ function DashboardGrid() {
     const missions = useCortexStore((s) => s.missions);
     const streamLogs = useCortexStore((s) => s.streamLogs);
     const servicesStatus = useCortexStore((s) => s.servicesStatus);
+    const advancedMode = useCortexStore((s) => s.advancedMode);
     const containerRef = useRef<HTMLDivElement>(null);
     const [ratio, setRatio] = useState(DEFAULT_RATIO);
     const [focusMode, setFocusMode] = useState(false);
@@ -149,8 +150,8 @@ function DashboardGrid() {
             {/* Mode Ribbon */}
             <ModeRibbon />
 
-            {/* Telemetry Row */}
-            <TelemetryRow />
+            {/* Telemetry Row (advanced surfaces only to keep workspace focused) */}
+            {advancedMode && <TelemetryRow />}
 
             {/* Resizable vertical split: Chat (top) | Ops Overview (bottom) */}
             <div

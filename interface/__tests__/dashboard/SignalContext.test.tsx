@@ -75,6 +75,35 @@ describe('SignalContext', () => {
         expect(screen.getByText('thought: Analyzing data')).toBeDefined();
     });
 
+    it('normalizes standardized signal envelopes from the stream', async () => {
+        render(
+            <SignalProvider>
+                <SignalConsumer />
+            </SignalProvider>
+        );
+
+        await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+
+        const es = MockEventSource.latest()!;
+
+        act(() => {
+            es.simulateMessage({
+                meta: {
+                    timestamp: '2026-03-06T10:00:00Z',
+                    source_kind: 'system',
+                    source_channel: 'swarm.team.alpha.signal.result',
+                    payload_kind: 'result',
+                    team_id: 'alpha',
+                },
+                text: 'execution complete',
+                payload: { summary: 'done' },
+            });
+        });
+
+        expect(screen.getByTestId('count').textContent).toBe('1');
+        expect(screen.getByText('result: execution complete')).toBeDefined();
+    });
+
     it('caps signals at 100', async () => {
         render(
             <SignalProvider>

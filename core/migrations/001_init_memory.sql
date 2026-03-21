@@ -1,5 +1,6 @@
 -- Enable Vector Search for future Intelligence phases
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- 1. The "Log" (Immutable Event History)
 -- Optimized for high-volume time-series writes.

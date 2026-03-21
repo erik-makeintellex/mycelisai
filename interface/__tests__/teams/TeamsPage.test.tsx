@@ -12,6 +12,11 @@ vi.mock('@/components/teams/TeamDetailDrawer', () => ({
     ),
 }));
 
+vi.mock('@/components/teams/GroupManagementPanel', () => ({
+    __esModule: true,
+    default: () => <div data-testid="group-management-panel" />,
+}));
+
 import TeamsPage from '@/components/teams/TeamsPage';
 import { useCortexStore } from '@/store/useCortexStore';
 

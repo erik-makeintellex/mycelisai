@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +18,8 @@ import (
 
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/comms"
+	"github.com/mycelis/core/internal/hostcmd"
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/pkg/protocol"
@@ -80,6 +83,7 @@ type InternalToolRegistry struct {
 	architect *cognitive.MetaArchitect
 	catalogue *catalogue.Service
 	inception *inception.Store
+	comms     *comms.Gateway
 	db        *sql.DB
 	// somaRef is set after Soma is constructed — allows list_teams etc.
 	somaRef *Soma
@@ -93,6 +97,7 @@ type InternalToolDeps struct {
 	Architect *cognitive.MetaArchitect
 	Catalogue *catalogue.Service
 	Inception *inception.Store
+	Comms     *comms.Gateway
 	DB        *sql.DB
 }
 
@@ -106,6 +111,7 @@ func NewInternalToolRegistry(deps InternalToolDeps) *InternalToolRegistry {
 		architect: deps.Architect,
 		catalogue: deps.Catalogue,
 		inception: deps.Inception,
+		comms:     deps.Comms,
 		db:        deps.DB,
 	}
 	r.registerAll()
@@ -164,7 +170,7 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["delegate_task"] = &InternalTool{
 		Name:        "delegate_task",
-		Description: "Publish a task to a specific team's trigger topic for processing.",
+		Description: "Publish a task to a specific team's command topic for processing.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -176,7 +182,7 @@ func (r *InternalToolRegistry) registerAll() {
 					"properties": map[string]any{
 						"confidence": map[string]any{"type": "number", "description": "0.0-1.0 confidence this is the right team"},
 						"urgency":    map[string]any{"type": "string", "enum": []string{"low", "medium", "high", "critical"}},
-						"complexity":  map[string]any{"type": "integer", "description": "1-5 complexity rating"},
+						"complexity": map[string]any{"type": "integer", "description": "1-5 complexity rating"},
 						"risk":       map[string]any{"type": "string", "enum": []string{"low", "medium", "high"}},
 					},
 				},
@@ -184,6 +190,27 @@ func (r *InternalToolRegistry) registerAll() {
 			"required": []string{"team_id", "task"},
 		},
 		Handler: r.handleDelegateTask,
+	}
+
+	r.tools["create_team"] = &InternalTool{
+		Name:        "create_team",
+		Description: "Create and start a new team at runtime with a minimal manifest.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"team_id":       map[string]any{"type": "string", "description": "Unique team ID"},
+				"name":          map[string]any{"type": "string", "description": "Display name (optional)"},
+				"type":          map[string]any{"type": "string", "enum": []string{"action", "expression"}, "description": "Team type (default action)"},
+				"role":          map[string]any{"type": "string", "description": "Primary agent role (default worker)"},
+				"agent_id":      map[string]any{"type": "string", "description": "Optional first agent ID"},
+				"system_prompt": map[string]any{"type": "string", "description": "Optional first agent system prompt"},
+				"tools":         map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional first agent tools"},
+				"inputs":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional team input subjects"},
+				"deliveries":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional team delivery subjects"},
+			},
+			"required": []string{"team_id"},
+		},
+		Handler: r.handleCreateTeam,
 	}
 
 	r.tools["search_memory"] = &InternalTool{
@@ -278,6 +305,50 @@ func (r *InternalToolRegistry) registerAll() {
 		Handler: r.handleRecall,
 	}
 
+	r.tools["temp_memory_write"] = &InternalTool{
+		Name:        "temp_memory_write",
+		Description: "Persist a temporary working-memory checkpoint (restart-safe) for lead-agent continuity. Use channels like lead.shared, lead.<agent_id>, or interaction.contract.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel":        map[string]any{"type": "string", "description": "Channel key, e.g. lead.shared or lead.council-architect"},
+				"content":        map[string]any{"type": "string", "description": "Checkpoint content"},
+				"owner_agent_id": map[string]any{"type": "string", "description": "Optional owner identity"},
+				"ttl_minutes":    map[string]any{"type": "integer", "description": "Optional expiration in minutes (<=0 means no expiry)"},
+				"metadata":       map[string]any{"type": "object", "description": "Optional structured metadata"},
+			},
+			"required": []string{"channel", "content"},
+		},
+		Handler: r.handleTempMemoryWrite,
+	}
+
+	r.tools["temp_memory_read"] = &InternalTool{
+		Name:        "temp_memory_read",
+		Description: "Read recent temporary working-memory checkpoints for a channel.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel": map[string]any{"type": "string", "description": "Channel key"},
+				"limit":   map[string]any{"type": "integer", "description": "Max entries (default 10)"},
+			},
+			"required": []string{"channel"},
+		},
+		Handler: r.handleTempMemoryRead,
+	}
+
+	r.tools["temp_memory_clear"] = &InternalTool{
+		Name:        "temp_memory_clear",
+		Description: "Clear a temporary working-memory channel.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel": map[string]any{"type": "string", "description": "Channel key"},
+			},
+			"required": []string{"channel"},
+		},
+		Handler: r.handleTempMemoryClear,
+	}
+
 	r.tools["store_artifact"] = &InternalTool{
 		Name:        "store_artifact",
 		Description: `Persist an agent output as a typed artifact. For type="chart", content MUST be a JSON chart spec: {"version":"1", "chart_type":"bar|line|area|dot|geo|table", "title":"...", "data":[{...}], "x":"col", "y":"col"}. Max 2000 data rows.`,
@@ -296,14 +367,18 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["publish_signal"] = &InternalTool{
 		Name:        "publish_signal",
-		Description: "Publish a message to any NATS topic in the swarm. Use for broadcasting signals, triggering teams, or inter-agent communication.",
+		Description: "Publish a message to a NATS topic in the swarm. Supports private reference mode for channel-safe file/message handoff plus latest-checkpoint persistence for relaunch continuity.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"subject": map[string]any{"type": "string", "description": "NATS subject (e.g. swarm.team.council-core.internal.trigger, swarm.global.broadcast)"},
-				"message": map[string]any{"type": "string", "description": "The message payload to publish"},
+				"subject":      map[string]any{"type": "string", "description": "NATS subject (e.g. swarm.team.council-core.internal.command, swarm.global.broadcast)"},
+				"message":      map[string]any{"type": "string", "description": "Message payload to publish. In private reference mode this is stored privately and only a reference is published."},
+				"channel_key":  map[string]any{"type": "string", "description": "Optional private checkpoint channel key. Defaults to signal.latest.<subject>."},
+				"privacy_mode": map[string]any{"type": "string", "description": "full (default) or reference. reference publishes only channel/file references while preserving full payload privately."},
+				"private":      map[string]any{"type": "boolean", "description": "Alias for privacy_mode=reference."},
+				"file_path":    map[string]any{"type": "string", "description": "Optional workspace file path to attach as a private file reference in channel payloads."},
 			},
-			"required": []string{"subject", "message"},
+			"required": []string{},
 		},
 		Handler: r.handlePublishSignal,
 	}
@@ -322,13 +397,31 @@ func (r *InternalToolRegistry) registerAll() {
 		Handler: r.handleBroadcast,
 	}
 
+	r.tools["send_external_message"] = &InternalTool{
+		Name:        "send_external_message",
+		Description: "Send a message through an external communication provider (whatsapp, telegram, slack, webhook). Use for operator/user notifications and out-of-band alerts.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"provider":  map[string]any{"type": "string", "description": "Provider name: whatsapp, telegram, slack, webhook"},
+				"recipient": map[string]any{"type": "string", "description": "Recipient handle/ID/number/channel"},
+				"message":   map[string]any{"type": "string", "description": "Message body"},
+				"metadata":  map[string]any{"type": "object", "description": "Optional metadata map"},
+			},
+			"required": []string{"provider", "message"},
+		},
+		Handler: r.handleSendExternalMessage,
+	}
+
 	r.tools["read_signals"] = &InternalTool{
 		Name:        "read_signals",
-		Description: "Subscribe to a NATS topic pattern and collect messages for a brief window. Use to sense what's happening on a bus channel.",
+		Description: "Subscribe to NATS and collect messages for a brief window, or read the latest persisted channel checkpoint (latest_only) for relaunch-safe continuity.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"subject":     map[string]any{"type": "string", "description": "NATS subject or wildcard (e.g. swarm.team.*.signal.status, swarm.global.>)"},
+				"channel_key": map[string]any{"type": "string", "description": "Optional checkpoint channel key. Defaults to signal.latest.<subject>."},
+				"latest_only": map[string]any{"type": "boolean", "description": "When true, returns the latest persisted channel checkpoint instead of live subscription."},
 				"duration_ms": map[string]any{"type": "integer", "description": "How long to listen in milliseconds (default 3000, max 10000)"},
 				"max_msgs":    map[string]any{"type": "integer", "description": "Max messages to collect (default 20)"},
 			},
@@ -364,9 +457,24 @@ func (r *InternalToolRegistry) registerAll() {
 		Handler: r.handleWriteFile,
 	}
 
+	r.tools["local_command"] = &InternalTool{
+		Name:        "local_command",
+		Description: "Execute one local command from the MYCELIS_LOCAL_COMMAND_ALLOWLIST without shell interpolation. Uses bounded timeout and argument validation.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"command":    map[string]any{"type": "string", "description": "Allowlisted command name"},
+				"args":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Command arguments"},
+				"timeout_ms": map[string]any{"type": "integer", "description": "Optional timeout in milliseconds (clamped)"},
+			},
+			"required": []string{"command"},
+		},
+		Handler: r.handleLocalCommand,
+	}
+
 	r.tools["generate_image"] = &InternalTool{
 		Name:        "generate_image",
-		Description: "Generate an image from a text prompt using the local Diffusers media engine (Stable Diffusion XL). Returns generation status and metadata. Use for illustrations, concept art, diagrams, or any visual content.",
+		Description: "Generate an image from a text prompt using the local Diffusers media engine (Stable Diffusion XL). Generated images are cache-first and expire in 60 minutes unless explicitly saved with save_cached_image.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -376,6 +484,20 @@ func (r *InternalToolRegistry) registerAll() {
 			"required": []string{"prompt"},
 		},
 		Handler: r.handleGenerateImage,
+	}
+
+	r.tools["save_cached_image"] = &InternalTool{
+		Name:        "save_cached_image",
+		Description: "Persist a cached generated image into the workspace saved-media folder (or a specified subfolder). Use when user asks to keep an image beyond cache TTL.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"artifact_id": map[string]any{"type": "string", "description": "Optional image artifact ID. If omitted, saves the latest unsaved cached image."},
+				"folder":      map[string]any{"type": "string", "description": "Optional workspace-relative folder (default: saved-media)."},
+				"filename":    map[string]any{"type": "string", "description": "Optional target filename (extension inferred if omitted)."},
+			},
+		},
+		Handler: r.handleSaveCachedImage,
 	}
 
 	r.tools["research_for_blueprint"] = &InternalTool{
@@ -443,7 +565,25 @@ func (r *InternalToolRegistry) registerAll() {
 
 func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args map[string]any) (string, error) {
 	member, _ := args["member"].(string)
+	if strings.TrimSpace(member) == "" {
+		if v, _ := args["agent"].(string); strings.TrimSpace(v) != "" {
+			member = v
+		} else if v, _ := args["target"].(string); strings.TrimSpace(v) != "" {
+			member = v
+		}
+	}
+	member = normalizeCouncilMember(member)
+
 	question, _ := args["question"].(string)
+	if strings.TrimSpace(question) == "" {
+		if v, _ := args["query"].(string); strings.TrimSpace(v) != "" {
+			question = v
+		} else if v, _ := args["prompt"].(string); strings.TrimSpace(v) != "" {
+			question = v
+		} else if v, _ := args["message"].(string); strings.TrimSpace(v) != "" {
+			question = v
+		}
+	}
 	if member == "" || question == "" {
 		return "", fmt.Errorf("consult_council requires 'member' and 'question'")
 	}
@@ -471,8 +611,7 @@ func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args ma
 }
 
 func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[string]any) (string, error) {
-	teamID, _ := args["team_id"].(string)
-	task, _ := args["task"].(string)
+	teamID, task := normalizeDelegateTaskArgs(args)
 	if teamID == "" || task == "" {
 		return "", fmt.Errorf("delegate_task requires 'team_id' and 'task'")
 	}
@@ -493,13 +632,258 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 		return "", fmt.Errorf("NATS not available — cannot delegate task")
 	}
 
-	subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID)
-	if err := r.nc.Publish(subject, []byte(task)); err != nil {
+	subject := fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)
+	payload, err := r.wrapGovernedSignalPayload(
+		ctx,
+		"internal_tool.delegate_task",
+		teamID,
+		protocol.PayloadKindCommand,
+		[]byte(task),
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to wrap delegated task payload: %w", err)
+	}
+	if err := r.nc.Publish(subject, payload); err != nil {
 		return "", fmt.Errorf("failed to publish task to team %s: %w", teamID, err)
 	}
 	r.nc.Flush()
 
 	return fmt.Sprintf("Task delegated to team %s.", teamID), nil
+}
+
+func (r *InternalToolRegistry) handleCreateTeam(_ context.Context, args map[string]any) (string, error) {
+	if r.somaRef == nil {
+		return "", fmt.Errorf("Soma not available — cannot create team")
+	}
+
+	stringFrom := func(v any) string {
+		if s, ok := v.(string); ok {
+			return strings.TrimSpace(s)
+		}
+		return ""
+	}
+	normalizeTeamID := func(raw string) string {
+		s := strings.ToLower(strings.TrimSpace(raw))
+		s = strings.ReplaceAll(s, " ", "-")
+		s = strings.ReplaceAll(s, "_", "-")
+		return s
+	}
+	toStrings := func(v any) []string {
+		switch t := v.(type) {
+		case []string:
+			return t
+		case []any:
+			out := make([]string, 0, len(t))
+			for _, item := range t {
+				if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+					out = append(out, strings.TrimSpace(s))
+				}
+			}
+			return out
+		default:
+			return nil
+		}
+	}
+
+	manifestMap, _ := args["manifest"].(map[string]any)
+	merged := map[string]any{}
+	for k, v := range args {
+		merged[k] = v
+	}
+	for k, v := range manifestMap {
+		if _, exists := merged[k]; !exists {
+			merged[k] = v
+		}
+	}
+	// Nested agents[0] compatibility
+	if agentsRaw, ok := merged["agents"].([]any); ok && len(agentsRaw) > 0 {
+		if first, ok := agentsRaw[0].(map[string]any); ok {
+			if _, exists := merged["agent_id"]; !exists {
+				if v := stringFrom(first["agent_id"]); v != "" {
+					merged["agent_id"] = v
+				} else if v := stringFrom(first["id"]); v != "" {
+					merged["agent_id"] = v
+				}
+			}
+			if _, exists := merged["role"]; !exists {
+				if v := stringFrom(first["role"]); v != "" {
+					merged["role"] = v
+				}
+			}
+			if _, exists := merged["tools"]; !exists {
+				if v, ok := first["tools"]; ok {
+					merged["tools"] = v
+				}
+			}
+			if _, exists := merged["system_prompt"]; !exists {
+				if v := stringFrom(first["system_prompt"]); v != "" {
+					merged["system_prompt"] = v
+				}
+			}
+		}
+	}
+
+	teamID := normalizeTeamID(stringFrom(merged["team_id"]))
+	if teamID == "" {
+		teamID = normalizeTeamID(stringFrom(merged["id"]))
+	}
+	if teamID == "" {
+		teamID = normalizeTeamID(stringFrom(merged["team_name"]))
+	}
+	if teamID == "" {
+		return "", fmt.Errorf("create_team requires 'team_id'")
+	}
+
+	for _, m := range r.somaRef.ListTeams() {
+		if m != nil && m.ID == teamID {
+			out, _ := json.Marshal(map[string]any{
+				"status":  "already_exists",
+				"team_id": teamID,
+			})
+			return string(out), nil
+		}
+	}
+
+	name := stringFrom(merged["name"])
+	if name == "" {
+		name = teamID
+	}
+
+	teamType := TeamType(stringFrom(merged["type"]))
+	if teamType == "" {
+		teamType = TeamTypeAction
+	}
+	if teamType != TeamTypeAction && teamType != TeamTypeExpression {
+		teamType = TeamTypeAction
+	}
+
+	role := stringFrom(merged["role"])
+	if role == "" {
+		role = "worker"
+	}
+	agentID := normalizeTeamID(stringFrom(merged["agent_id"]))
+	if agentID == "" {
+		agentID = teamID + "-agent"
+	}
+	systemPrompt := stringFrom(merged["system_prompt"])
+	if systemPrompt == "" {
+		systemPrompt = fmt.Sprintf("You are %s in team %s. Execute assigned tasks and report outcomes.", role, teamID)
+	}
+
+	inputs := toStrings(merged["inputs"])
+	if len(inputs) == 0 {
+		inputs = []string{protocol.TopicGlobalBroadcast}
+	}
+	deliveries := toStrings(merged["deliveries"])
+	if len(deliveries) == 0 {
+		if teamType == TeamTypeExpression {
+			deliveries = []string{fmt.Sprintf(protocol.TopicTeamSignalStatus, teamID)}
+		} else {
+			deliveries = []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID)}
+		}
+	}
+	tools := toStrings(merged["tools"])
+
+	manifest := &TeamManifest{
+		ID:          teamID,
+		Name:        name,
+		Type:        teamType,
+		Description: "Runtime-created team",
+		Members: []protocol.AgentManifest{
+			{
+				ID:            agentID,
+				Role:          role,
+				SystemPrompt:  systemPrompt,
+				Tools:         tools,
+				MaxIterations: 6,
+			},
+		},
+		Inputs:     inputs,
+		Deliveries: deliveries,
+	}
+
+	if err := r.somaRef.SpawnTeam(manifest); err != nil {
+		return "", fmt.Errorf("create_team failed: %w", err)
+	}
+
+	out, _ := json.Marshal(map[string]any{
+		"status":  "created",
+		"team_id": teamID,
+		"name":    name,
+	})
+	return string(out), nil
+}
+
+func normalizeDelegateTaskArgs(args map[string]any) (teamID string, task string) {
+	stringFrom := func(v any) string {
+		switch s := v.(type) {
+		case string:
+			return strings.TrimSpace(s)
+		default:
+			return ""
+		}
+	}
+	serialize := func(v any) string {
+		if v == nil {
+			return ""
+		}
+		b, err := json.Marshal(v)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(b))
+	}
+
+	teamID = stringFrom(args["team_id"])
+	if teamID == "" {
+		teamID = stringFrom(args["teamId"])
+	}
+	if teamID == "" {
+		if teamMap, ok := args["team"].(map[string]any); ok {
+			teamID = stringFrom(teamMap["id"])
+			if teamID == "" {
+				teamID = stringFrom(teamMap["team_id"])
+			}
+			if teamID == "" {
+				teamID = stringFrom(teamMap["name"])
+			}
+		} else {
+			teamID = stringFrom(args["team"])
+		}
+	}
+	if teamID == "" {
+		teamID = stringFrom(args["target_team"])
+	}
+
+	switch t := args["task"].(type) {
+	case string:
+		task = strings.TrimSpace(t)
+	case map[string]any:
+		task = serialize(t)
+	case []any:
+		task = serialize(t)
+	}
+
+	if task == "" {
+		payload := map[string]any{}
+		if op := stringFrom(args["operation"]); op != "" {
+			payload["operation"] = op
+		}
+		if intent := stringFrom(args["intent"]); intent != "" {
+			payload["intent"] = intent
+		}
+		if msg := stringFrom(args["message"]); msg != "" {
+			payload["message"] = msg
+		}
+		if ctxRaw, ok := args["context"]; ok {
+			payload["context"] = ctxRaw
+		}
+		if len(payload) > 0 {
+			task = serialize(payload)
+		}
+	}
+
+	return teamID, task
 }
 
 func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[string]any) (string, error) {
@@ -612,11 +996,11 @@ func (r *InternalToolRegistry) handleGetSystemStatus(_ context.Context, _ map[st
 	}
 
 	snap := map[string]any{
-		"goroutines":    runtime.NumGoroutine(),
-		"heap_alloc_mb": float64(memStats.HeapAlloc) / 1024 / 1024,
-		"sys_mem_mb":    float64(memStats.Sys) / 1024 / 1024,
+		"goroutines":     runtime.NumGoroutine(),
+		"heap_alloc_mb":  float64(memStats.HeapAlloc) / 1024 / 1024,
+		"sys_mem_mb":     float64(memStats.Sys) / 1024 / 1024,
 		"llm_tokens_sec": tokenRate,
-		"timestamp":     time.Now().Format(time.RFC3339),
+		"timestamp":      time.Now().Format(time.RFC3339),
 	}
 
 	data, _ := json.Marshal(snap)
@@ -935,25 +1319,6 @@ func (r *InternalToolRegistry) handleRecall(ctx context.Context, args map[string
 	return string(data), nil
 }
 
-func (r *InternalToolRegistry) handlePublishSignal(_ context.Context, args map[string]any) (string, error) {
-	subject, _ := args["subject"].(string)
-	message, _ := args["message"].(string)
-	if subject == "" || message == "" {
-		return "", fmt.Errorf("publish_signal requires 'subject' and 'message'")
-	}
-
-	if r.nc == nil {
-		return "", fmt.Errorf("NATS not available — cannot publish signal")
-	}
-
-	if err := r.nc.Publish(subject, []byte(message)); err != nil {
-		return "", fmt.Errorf("failed to publish to %s: %w", subject, err)
-	}
-	r.nc.Flush()
-
-	return fmt.Sprintf("Signal published to %s (%d bytes).", subject, len(message)), nil
-}
-
 func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[string]any) (string, error) {
 	message, _ := args["message"].(string)
 	if message == "" {
@@ -1010,66 +1375,37 @@ func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[strin
 	return sb.String(), nil
 }
 
-func (r *InternalToolRegistry) handleReadSignals(ctx context.Context, args map[string]any) (string, error) {
-	subject, _ := args["subject"].(string)
-	if subject == "" {
-		return "", fmt.Errorf("read_signals requires 'subject'")
+func (r *InternalToolRegistry) handleSendExternalMessage(ctx context.Context, args map[string]any) (string, error) {
+	if r.comms == nil {
+		return "", fmt.Errorf("communications gateway unavailable")
 	}
 
-	if r.nc == nil {
-		return "", fmt.Errorf("NATS not available — cannot read signals")
+	provider, _ := args["provider"].(string)
+	recipient, _ := args["recipient"].(string)
+	message, _ := args["message"].(string)
+	if strings.TrimSpace(provider) == "" || strings.TrimSpace(message) == "" {
+		return "", fmt.Errorf("send_external_message requires provider and message")
 	}
 
-	durationMs := 3000
-	if d, ok := args["duration_ms"].(float64); ok && d > 0 {
-		durationMs = int(d)
-	}
-	if durationMs > 10000 {
-		durationMs = 10000
-	}
-
-	maxMsgs := 20
-	if m, ok := args["max_msgs"].(float64); ok && m > 0 {
-		maxMsgs = int(m)
-	}
-
-	type signalMsg struct {
-		Subject string `json:"subject"`
-		Data    string `json:"data"`
-	}
-
-	var collected []signalMsg
-	sub, err := r.nc.Subscribe(subject, func(msg *nats.Msg) {
-		if len(collected) < maxMsgs {
-			collected = append(collected, signalMsg{
-				Subject: msg.Subject,
-				Data:    string(msg.Data),
-			})
-		}
+	metadata, _ := args["metadata"].(map[string]any)
+	res, err := r.comms.Send(ctx, comms.SendRequest{
+		Provider:  provider,
+		Recipient: recipient,
+		Message:   message,
+		Metadata:  metadata,
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to subscribe to %s: %w", subject, err)
-	}
-	defer sub.Unsubscribe()
-
-	select {
-	case <-time.After(time.Duration(durationMs) * time.Millisecond):
-	case <-ctx.Done():
+		return "", fmt.Errorf("external send failed: %w", err)
 	}
 
-	if collected == nil {
-		collected = []signalMsg{}
+	out := map[string]any{
+		"message":  fmt.Sprintf("external message sent via %s", res.Provider),
+		"provider": res.Provider,
+		"status":   res.Status,
+		"result":   res,
 	}
-
-	result := map[string]any{
-		"subject":   subject,
-		"duration":  fmt.Sprintf("%dms", durationMs),
-		"collected": len(collected),
-		"messages":  collected,
-	}
-
-	data, _ := json.Marshal(result)
-	return string(data), nil
+	b, _ := json.Marshal(out)
+	return string(b), nil
 }
 
 func (r *InternalToolRegistry) handleReadFile(_ context.Context, args map[string]any) (string, error) {
@@ -1124,6 +1460,43 @@ func (r *InternalToolRegistry) handleWriteFile(_ context.Context, args map[strin
 	}
 
 	return fmt.Sprintf("File written: %s (%d bytes).", safePath, len(content)), nil
+}
+
+func (r *InternalToolRegistry) handleLocalCommand(ctx context.Context, args map[string]any) (string, error) {
+	command, _ := args["command"].(string)
+	if strings.TrimSpace(command) == "" {
+		return "", fmt.Errorf("local_command requires 'command'")
+	}
+
+	var cmdArgs []string
+	if raw, ok := args["args"].([]any); ok {
+		cmdArgs = make([]string, 0, len(raw))
+		for _, item := range raw {
+			v, ok := item.(string)
+			if !ok {
+				continue
+			}
+			cmdArgs = append(cmdArgs, v)
+		}
+	}
+
+	timeoutMS := 5000
+	if v, ok := args["timeout_ms"].(float64); ok {
+		timeoutMS = int(v)
+	}
+
+	if len(cmdArgs) == 0 && strings.ContainsAny(command, " \t\r\n'\"`|&;<>") {
+		return "", fmt.Errorf(
+			"local_command requires a bare allowlisted command name in 'command' and separate 'args'; shell snippets are not allowed. For creating text output, answer directly or use write_file with 'path' and 'content'",
+		)
+	}
+
+	result, err := hostcmd.Execute(ctx, command, cmdArgs, time.Duration(timeoutMS)*time.Millisecond)
+	if err != nil {
+		return "", err
+	}
+	payload, _ := json.Marshal(result)
+	return string(payload), nil
 }
 
 func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map[string]any) (string, error) {
@@ -1194,6 +1567,20 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		titleTrunc = titleTrunc[:80]
 	}
 	title := fmt.Sprintf("Generated: %s", titleTrunc)
+	expiresAt := time.Now().UTC().Add(60 * time.Minute).Format(time.RFC3339)
+
+	meta := map[string]any{
+		"cache_policy": "ephemeral",
+		"saved":        false,
+		"ttl_minutes":  60,
+		"expires_at":   expiresAt,
+		"prompt":       prompt,
+		"size":         size,
+	}
+	if len(imgResp.Data) > 0 && imgResp.Data[0].RevisedPrompt != "" {
+		meta["revised_prompt"] = imgResp.Data[0].RevisedPrompt
+	}
+	metaJSON, _ := json.Marshal(meta)
 
 	// Store the image as an artifact if DB is available
 	var artifactID string
@@ -1202,7 +1589,7 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 			INSERT INTO artifacts (agent_id, artifact_type, title, content_type, content, metadata, status)
 			VALUES ('internal', 'image', $1, 'image/png', $2, $3, 'completed')
 			RETURNING id
-		`, title, b64Content, string(respBody)).Scan(&artifactID)
+		`, title, b64Content, metaJSON).Scan(&artifactID)
 		if err != nil {
 			log.Printf("generate_image: failed to store artifact: %v", err)
 		}
@@ -1210,20 +1597,233 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 
 	// Return structured result: message for LLM, artifact for HTTP pipeline
 	result := map[string]any{
-		"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). Stored as artifact.", prompt, size),
+		"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). Cached for 60 minutes unless saved.", prompt, size),
 		"artifact": map[string]any{
 			"id":           artifactID,
 			"type":         "image",
 			"title":        title,
 			"content_type": "image/png",
 			"content":      b64Content,
+			"cached":       true,
+			"expires_at":   expiresAt,
 		},
 	}
 	data, _ := json.Marshal(result)
 	return string(data), nil
 }
 
+func (r *InternalToolRegistry) handleSaveCachedImage(ctx context.Context, args map[string]any) (string, error) {
+	if r.db == nil {
+		return "", fmt.Errorf("database not available — cannot save cached image")
+	}
+
+	artifactID, _ := args["artifact_id"].(string)
+	folder, _ := args["folder"].(string)
+	filename, _ := args["filename"].(string)
+
+	var (
+		id          string
+		title       string
+		contentType string
+		contentB64  string
+	)
+
+	if strings.TrimSpace(artifactID) != "" {
+		err := r.db.QueryRowContext(ctx, `
+			SELECT id::text, title, content_type, content
+			FROM artifacts
+			WHERE id = $1::uuid
+			  AND artifact_type = 'image'
+		`, artifactID).Scan(&id, &title, &contentType, &contentB64)
+		if err != nil {
+			return "", fmt.Errorf("cached image %q not found", artifactID)
+		}
+	} else {
+		err := r.db.QueryRowContext(ctx, `
+			SELECT id::text, title, content_type, content
+			FROM artifacts
+			WHERE artifact_type = 'image'
+			  AND COALESCE(metadata->>'cache_policy', '') = 'ephemeral'
+			  AND COALESCE(metadata->>'saved', 'false') <> 'true'
+			ORDER BY created_at DESC
+			LIMIT 1
+		`).Scan(&id, &title, &contentType, &contentB64)
+		if err != nil {
+			return "", fmt.Errorf("no unsaved cached image found")
+		}
+	}
+
+	if strings.TrimSpace(contentB64) == "" {
+		return "", fmt.Errorf("cached image has no content")
+	}
+
+	data, err := base64.StdEncoding.DecodeString(contentB64)
+	if err != nil {
+		return "", fmt.Errorf("decode cached image: %w", err)
+	}
+
+	if strings.TrimSpace(folder) == "" {
+		folder = "saved-media"
+	}
+	if strings.TrimSpace(filename) == "" {
+		filename = sanitizeImageFilename(title)
+		if filename == "" {
+			filename = fmt.Sprintf("image-%s", id[:8])
+		}
+	}
+	if filepath.Ext(filename) == "" {
+		filename += imageFileExt(contentType)
+	}
+
+	targetPath, err := validateToolPath(filepath.ToSlash(filepath.Join(folder, filename)))
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
+		return "", fmt.Errorf("create target directory: %w", err)
+	}
+	if err := os.WriteFile(targetPath, data, 0o644); err != nil {
+		return "", fmt.Errorf("write target file: %w", err)
+	}
+
+	workspace := os.Getenv("MYCELIS_WORKSPACE")
+	if workspace == "" {
+		workspace = "./workspace"
+	}
+	absWorkspace, _ := filepath.Abs(workspace)
+	rel, relErr := filepath.Rel(absWorkspace, targetPath)
+	if relErr != nil {
+		rel = targetPath
+	}
+	rel = filepath.ToSlash(rel)
+
+	_, err = r.db.ExecContext(ctx, `
+		UPDATE artifacts
+		SET file_path = $1,
+		    file_size_bytes = $2,
+		    metadata = COALESCE(metadata, '{}'::jsonb) ||
+		               jsonb_build_object('saved', true, 'saved_path', $1, 'saved_at', NOW())
+		WHERE id = $3::uuid
+	`, rel, int64(len(data)), id)
+	if err != nil {
+		return "", fmt.Errorf("update image save metadata: %w", err)
+	}
+
+	result := map[string]any{
+		"message": fmt.Sprintf("Saved cached image to %s", rel),
+		"artifact": map[string]any{
+			"id":         id,
+			"type":       "file",
+			"title":      filename,
+			"saved_path": rel,
+		},
+	}
+	out, _ := json.Marshal(result)
+	return string(out), nil
+}
+
+func sanitizeImageFilename(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	if s == "" {
+		return ""
+	}
+	var b strings.Builder
+	lastDash := false
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if !lastDash {
+			b.WriteRune('-')
+			lastDash = true
+		}
+	}
+	out := strings.Trim(b.String(), "-.")
+	if len(out) > 80 {
+		out = out[:80]
+	}
+	return out
+}
+
+func imageFileExt(contentType string) string {
+	switch strings.ToLower(strings.TrimSpace(contentType)) {
+	case "image/jpeg", "image/jpg":
+		return ".jpg"
+	case "image/webp":
+		return ".webp"
+	case "image/gif":
+		return ".gif"
+	default:
+		return ".png"
+	}
+}
+
 // ── Conversation Memory ─────────────────────────────────────────
+
+func (r *InternalToolRegistry) handleTempMemoryWrite(ctx context.Context, args map[string]any) (string, error) {
+	if r.mem == nil {
+		return "", fmt.Errorf("memory service offline — temp channels unavailable")
+	}
+
+	channel, _ := args["channel"].(string)
+	content, _ := args["content"].(string)
+	owner, _ := args["owner_agent_id"].(string)
+	metadata, _ := args["metadata"].(map[string]any)
+	ttl := 0
+	if ttlRaw, ok := args["ttl_minutes"].(float64); ok {
+		ttl = int(ttlRaw)
+	}
+
+	id, err := r.mem.PutTempMemory(ctx, "default", channel, owner, content, metadata, ttl)
+	if err != nil {
+		return "", err
+	}
+
+	result := map[string]any{
+		"message": fmt.Sprintf("temp memory stored in channel %q", channel),
+		"id":      id,
+		"channel": channel,
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
+}
+
+func (r *InternalToolRegistry) handleTempMemoryRead(ctx context.Context, args map[string]any) (string, error) {
+	if r.mem == nil {
+		return "", fmt.Errorf("memory service offline — temp channels unavailable")
+	}
+	channel, _ := args["channel"].(string)
+	limit := 10
+	if l, ok := args["limit"].(float64); ok && l > 0 {
+		limit = int(l)
+	}
+	entries, err := r.mem.GetTempMemory(ctx, "default", channel, limit)
+	if err != nil {
+		return "", err
+	}
+	data, _ := json.Marshal(entries)
+	return string(data), nil
+}
+
+func (r *InternalToolRegistry) handleTempMemoryClear(ctx context.Context, args map[string]any) (string, error) {
+	if r.mem == nil {
+		return "", fmt.Errorf("memory service offline — temp channels unavailable")
+	}
+	channel, _ := args["channel"].(string)
+	deleted, err := r.mem.ClearTempMemory(ctx, "default", channel)
+	if err != nil {
+		return "", err
+	}
+	result := map[string]any{
+		"message": fmt.Sprintf("temp memory channel %q cleared", channel),
+		"deleted": deleted,
+		"channel": channel,
+	}
+	data, _ := json.Marshal(result)
+	return string(data), nil
+}
 
 func (r *InternalToolRegistry) handleSummarizeConversation(ctx context.Context, args map[string]any) (string, error) {
 	messagesText, _ := args["messages"].(string)
@@ -1492,7 +2092,7 @@ func (r *InternalToolRegistry) handleRecallInceptionRecipes(ctx context.Context,
 // BuildContext generates a live system state block for injection into an agent's
 // system prompt. Gives agents awareness of active teams, NATS topology, cognitive
 // config, and installed MCP servers before they process any message.
-func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, teamDeliveries []string, currentInput string) string {
+func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamInputs, teamDeliveries []string, currentInput string) string {
 	var sb strings.Builder
 	sb.WriteString("\n\n## Runtime Context (Live System State)\n")
 	sb.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
@@ -1512,21 +2112,95 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID string, teamInputs, 
 	// 5. Recalled Conversation Context (pgvector semantic recall)
 	r.writeRecalledMemory(&sb, agentID, currentInput)
 
-	// 6. Interaction Protocol
+	// 6. Lead-agent temp memory channels (restart-safe working context)
+	r.writeLeadTempMemory(&sb, agentID, teamID, role)
+
+	// 7. Interaction Protocol
 	sb.WriteString("### Interaction Protocol\n")
 	sb.WriteString("**Pre-response** (before answering):\n")
 	sb.WriteString("1. Check if past context is relevant → `recall` or `search_memory`\n")
 	sb.WriteString("2. Check if specialist knowledge is needed → `consult_council`\n")
 	sb.WriteString("3. Check if actionable work should be delegated → `delegate_task`\n")
-	sb.WriteString("4. Check if MCP tools can fulfill the request directly\n")
-	sb.WriteString("5. Check if data would benefit from visualization → `store_artifact` with type=chart\n\n")
+	sb.WriteString("4. For software/dev tasks, prefer quick ephemeral code execution and bounded validation (`local_command`) before introducing new MCP dependencies\n")
+	sb.WriteString("5. For web access tasks (search/site retrieval), default to coder-owned ephemeral web code first; use adaptive engine/query strategy\n")
+	sb.WriteString("6. Check if installed MCP tools can fulfill remaining external integration requirements or provide easier execution\n")
+	sb.WriteString("7. MCP Translation Procedure: map user intent -> operation/target/constraints/output, pick the narrowest installed MCP tool, then execute with minimal valid arguments\n")
+	sb.WriteString("8. Check if data would benefit from visualization → `store_artifact` with type=chart\n\n")
+	sb.WriteString("9. For explicit image requests, call `generate_image`; if user asks to keep the image, call `save_cached_image`\n\n")
 	sb.WriteString("**Post-response** (after completing a task):\n")
 	sb.WriteString("1. Store important learnings or decisions → `remember`\n")
 	sb.WriteString("2. Store significant outputs → `store_artifact`\n")
 	sb.WriteString("3. Distill successful complex approaches → `store_inception_recipe` (for future reuse)\n")
 	sb.WriteString("4. Report actions taken and outcomes clearly to the user\n")
+	sb.WriteString("5. For lead-agent workflows, checkpoint state via `temp_memory_write` and reload with `temp_memory_read`\n")
+	sb.WriteString("6. Generated images are ephemeral cache by default (60m). Persist only on user request via `save_cached_image`\n")
 
 	return sb.String()
+}
+
+func (r *InternalToolRegistry) isLeadAgent(agentID, teamID, role string) bool {
+	id := strings.ToLower(agentID)
+	tid := strings.ToLower(teamID)
+	rl := strings.ToLower(role)
+
+	if tid == "admin-core" || tid == "council-core" {
+		return true
+	}
+	if id == "admin" || strings.HasPrefix(id, "council-") {
+		return true
+	}
+	if strings.Contains(rl, "lead") || rl == "architect" || rl == "coder" || rl == "creative" || rl == "sentry" {
+		return true
+	}
+	return false
+}
+
+func (r *InternalToolRegistry) writeLeadTempMemory(sb *strings.Builder, agentID, teamID, role string) {
+	if !r.isLeadAgent(agentID, teamID, role) {
+		return
+	}
+
+	sb.WriteString("### Persistent Temp Memory Channels (Restart-Safe)\n")
+	sb.WriteString("Use these checkpoints to continue work consistently across provider/service restarts.\n")
+
+	if r.mem != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		channels := []string{
+			"interaction.contract",
+			"lead.shared",
+			fmt.Sprintf("lead.%s", agentID),
+		}
+
+		type channelDump struct {
+			Channel string
+			Entries []memory.TempMemoryEntry
+		}
+		dumps := []channelDump{}
+		for _, ch := range channels {
+			entries, err := r.mem.GetTempMemory(ctx, "default", ch, 3)
+			if err != nil || len(entries) == 0 {
+				continue
+			}
+			dumps = append(dumps, channelDump{Channel: ch, Entries: entries})
+		}
+
+		for _, dump := range dumps {
+			sb.WriteString(fmt.Sprintf("- **%s**\n", dump.Channel))
+			for _, e := range dump.Entries {
+				content := strings.TrimSpace(e.Content)
+				if len(content) > 220 {
+					content = content[:220] + "..."
+				}
+				sb.WriteString(fmt.Sprintf("  - [%s] %s\n", e.OwnerAgentID, content))
+			}
+		}
+	} else {
+		sb.WriteString("- Memory backend unavailable; rely on current contract and checkpoint once memory is restored.\n")
+	}
+
+	sb.WriteString("Stability rules: preserve user interaction style, output shape, and action sequencing unless user explicitly changes intent.\n\n")
 }
 
 func (r *InternalToolRegistry) writeTeamRoster(sb *strings.Builder) {
@@ -1564,8 +2238,10 @@ func (r *InternalToolRegistry) writeAgentTopology(sb *strings.Builder, agentID, 
 	sb.WriteString("### Your Identity & NATS Topology\n")
 	sb.WriteString(fmt.Sprintf("- **Agent ID**: `%s`\n", agentID))
 	sb.WriteString(fmt.Sprintf("- **Team ID**: `%s`\n", teamID))
-	sb.WriteString(fmt.Sprintf("- **Team trigger bus**: `swarm.team.%s.internal.trigger`\n", teamID))
-	sb.WriteString(fmt.Sprintf("- **Team respond bus**: `swarm.team.%s.internal.respond`\n", teamID))
+	sb.WriteString(fmt.Sprintf("- **Team command bus**: `swarm.team.%s.internal.command`\n", teamID))
+	sb.WriteString(fmt.Sprintf("- **Team status bus**: `swarm.team.%s.signal.status`\n", teamID))
+	sb.WriteString(fmt.Sprintf("- **Team result bus**: `swarm.team.%s.signal.result`\n", teamID))
+	sb.WriteString(fmt.Sprintf("- **Legacy internal worker buses**: `swarm.team.%s.internal.trigger`, `swarm.team.%s.internal.response`\n", teamID, teamID))
 	sb.WriteString(fmt.Sprintf("- **Direct address**: `swarm.council.%s.request`\n", agentID))
 
 	if len(inputs) > 0 {
@@ -1679,6 +2355,11 @@ func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
 	if hasMCPTools {
 		sb.WriteString("\n**MCP tools are callable.** Use the tool name directly in a tool_call:\n")
 		sb.WriteString("```json\n{\"tool_call\": {\"name\": \"<mcp_tool_name>\", \"arguments\": {...}}}\n```\n")
+		sb.WriteString("\n**MCP Translation Procedure (Use Current Inventory):**\n")
+		sb.WriteString("1. Parse user request into operation + target + constraints + expected output.\n")
+		sb.WriteString("2. Match against installed MCP tools listed below (source of truth).\n")
+		sb.WriteString("3. Choose the narrowest matching tool and execute with minimal valid args.\n")
+		sb.WriteString("4. If no match exists, report missing MCP dependency and required credentials.\n")
 
 		// List each MCP tool with its description for the LLM
 		sb.WriteString("\n**MCP Tool Reference:**\n")
@@ -1691,51 +2372,6 @@ func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
 				sb.WriteString(fmt.Sprintf("- **%s**: %s (via %s)\n", t.name, desc, s.name))
 			}
 		}
-	}
-	sb.WriteString("\n")
-}
-
-func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID, currentInput string) {
-	if r.brain == nil || r.mem == nil || currentInput == "" {
-		return
-	}
-
-	// Embed the current input (truncated) for semantic search
-	query := currentInput
-	if len(query) > 200 {
-		query = query[:200]
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	vec, err := r.brain.Embed(ctx, query, "")
-	if err != nil {
-		return // Silent — embedding not available
-	}
-
-	summaries, err := r.mem.RecallConversations(ctx, vec, agentID, 3)
-	if err != nil || len(summaries) == 0 {
-		return
-	}
-
-	sb.WriteString("### Previous Context (from past conversations)\n")
-	for _, s := range summaries {
-		age := time.Since(s.CreatedAt)
-		var ageStr string
-		switch {
-		case age < time.Hour:
-			ageStr = fmt.Sprintf("%d min ago", int(age.Minutes()))
-		case age < 24*time.Hour:
-			ageStr = fmt.Sprintf("%d hours ago", int(age.Hours()))
-		default:
-			ageStr = fmt.Sprintf("%d days ago", int(age.Hours()/24))
-		}
-		sb.WriteString(fmt.Sprintf("- [%s] %s", ageStr, s.Summary))
-		if len(s.KeyTopics) > 0 {
-			sb.WriteString(fmt.Sprintf(" (topics: %s)", strings.Join(s.KeyTopics, ", ")))
-		}
-		sb.WriteString("\n")
 	}
 	sb.WriteString("\n")
 }

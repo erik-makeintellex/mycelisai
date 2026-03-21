@@ -35,6 +35,7 @@ export default function RunsPage() {
     const recentRuns = useCortexStore((s) => s.recentRuns);
     const isFetchingRuns = useCortexStore((s) => s.isFetchingRuns);
     const fetchRecentRuns = useCortexStore((s) => s.fetchRecentRuns);
+    const assistantName = useCortexStore((s) => s.assistantName);
 
     useEffect(() => {
         fetchRecentRuns();
@@ -85,7 +86,7 @@ export default function RunsPage() {
                         <Activity className="w-10 h-10 text-cortex-text-muted/20" />
                         <p className="text-sm font-mono text-cortex-text-muted">No runs yet</p>
                         <p className="text-[10px] font-mono text-cortex-text-muted/60">
-                            Ask Soma to launch a crew to create your first run
+                            Ask {assistantName} to launch a crew to create your first run
                         </p>
                     </div>
                 )}

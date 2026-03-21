@@ -1,27 +1,27 @@
 # Resources
 
-> Configure model providers, MCP capability surfaces, workspace visibility, and agent capabilities.
+> Advanced-mode support surface for connected tools, workspace files, AI engine setup, and reusable role definitions.
 
 ---
 
 ## Overview
 
-Open `/resources`.
+Open `/resources` after turning on Advanced mode.
 
 Current tabs:
 
 | Tab | Purpose |
 |-----|---------|
-| Brains | Provider configuration and health |
-| MCP Tools | Installed MCP servers and tool capability visibility |
-| Workspace Explorer | Filesystem MCP-backed browsing and file operations inside workspace boundary |
-| Capabilities | Agent catalogue/templates |
+| Connected Tools | Installed MCP servers and tool capability visibility |
+| Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
+| AI Engines | Global AI engine configuration and health |
+| Role Library | Reusable specialist-role definitions |
 
 ---
 
-## Brains
+## AI Engines
 
-Brains define available model providers for orchestration roles.
+AI engines define the curated model posture available to advanced operators.
 
 Provider families:
 - local/self-hosted (Ollama, vLLM, LM Studio)
@@ -34,7 +34,7 @@ What you can do:
 
 ---
 
-## MCP Tools
+## Connected Tools
 
 MCP servers expose tool capabilities agents can invoke during execution.
 
@@ -49,9 +49,9 @@ Operators should be able to determine "what the system can access" directly from
 
 ---
 
-## Workspace Explorer
+## Workspace Files
 
-Workspace Explorer now uses the `filesystem` MCP server directly from Resources.
+Workspace Files uses the `filesystem` MCP server directly from Resources.
 
 Supported operator actions:
 - browse directories (`list_dir`)
@@ -66,9 +66,9 @@ Operational behavior:
 
 ---
 
-## Capabilities
+## Role Library
 
-Capabilities tab is the catalogue surface for reusable agent definitions/templates.
+Role Library is the catalogue surface for reusable specialist definitions and templates.
 
 Typical template fields:
 - role
@@ -82,7 +82,7 @@ Typical template fields:
 ## Operational Guidance
 
 Use `Resources` to answer these operator questions quickly:
-1. Which providers are online?
+1. Which AI engines are online?
 2. Which tools are accessible right now?
 3. Are workspace file operations available?
-4. Which capability templates are available for wiring?
+4. Which role definitions are available for advanced workflow work?

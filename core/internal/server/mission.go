@@ -21,7 +21,7 @@ const rootOwnerID = "00000000-0000-0000-0000-000000000000"
 type CommitResponse struct {
 	Status        string                  `json:"status"`
 	MissionID     string                  `json:"mission_id"`
-	RunID         string                  `json:"run_id,omitempty"`  // V7: mission run id
+	RunID         string                  `json:"run_id,omitempty"` // V7: mission run id
 	Teams         int                     `json:"teams"`
 	Agents        int                     `json:"agents"`
 	Activation    *swarm.ActivationResult `json:"activation,omitempty"`
@@ -167,10 +167,10 @@ func (s *AdminServer) commitAndActivate(w http.ResponseWriter, bp *protocol.Miss
 	}
 
 	resp := CommitResponse{
-		Status:    "active",
-		MissionID: missionID.String(),
-		Teams:     len(bp.Teams),
-		Agents:    totalAgents,
+		Status:     "active",
+		MissionID:  missionID.String(),
+		Teams:      len(bp.Teams),
+		Agents:     totalAgents,
 		Activation: activation,
 	}
 	if activation != nil {
@@ -390,10 +390,10 @@ func (s *AdminServer) handleGetMission(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Fetch teams
 	type TeamDetail struct {
-		ID     string                    `json:"id"`
-		Name   string                    `json:"name"`
-		Role   string                    `json:"role"`
-		Agents []protocol.AgentManifest  `json:"agents"`
+		ID     string                   `json:"id"`
+		Name   string                   `json:"name"`
+		Role   string                   `json:"role"`
+		Agents []protocol.AgentManifest `json:"agents"`
 	}
 
 	teamRows, err := db.Query(
@@ -603,6 +603,9 @@ func buildSensorConfigs(bp *protocol.MissionBlueprint) map[string]swarm.SensorCo
 
 // getDB retrieves the shared database connection via the Registry service.
 func (s *AdminServer) getDB() *sql.DB {
+	if s.DB != nil {
+		return s.DB
+	}
 	if s.Registry != nil {
 		return s.Registry.DB
 	}

@@ -10,7 +10,16 @@ MIGRATIONS_DIR = CORE_DIR / "migrations"
 
 
 def _load_env():
-    from dotenv import load_dotenv
+    try:
+        from dotenv import load_dotenv
+    except ModuleNotFoundError as exc:
+        if exc.name != "dotenv":
+            raise
+        raise SystemExit(
+            "Missing python-dotenv in the current invoke environment. "
+            "Run tasks with 'uv run inv ...' or '.\\.venv\\Scripts\\inv.exe ...'; "
+            "do not use 'uvx --from invoke inv ...'."
+        ) from exc
     load_dotenv(str(ROOT_DIR / ".env"))
 
 
@@ -25,16 +34,20 @@ def _dsn(dbname=None):
     return host, port, user, password, db
 
 
-def _psql(sql=None, file=None, dbname=None):
-    """Run psql with connection args. Uses -f for files, -c for strings."""
+def _run_psql(sql=None, file=None, dbname=None):
+    """Run psql and return the completed process."""
     host, port, user, password, db = _dsn(dbname)
     env = {**os.environ, "PGPASSWORD": password}
-    cmd = ["psql", "-h", host, "-p", port, "-U", user, "-d", db]
+    cmd = ["psql", "-v", "ON_ERROR_STOP=1", "-h", host, "-p", port, "-U", user, "-d", db]
     if file:
         cmd += ["-f", str(file)]
     elif sql:
         cmd += ["-c", sql]
-    result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+    return subprocess.run(cmd, env=env, capture_output=True, text=True)
+
+
+def _emit_psql_output(result):
+    """Print psql output while suppressing NOTICE noise."""
     if result.stdout:
         print(result.stdout.rstrip())
     if result.stderr:
@@ -43,7 +56,38 @@ def _psql(sql=None, file=None, dbname=None):
             if "NOTICE:" in line:
                 continue
             print(line)
+
+
+def _psql(sql=None, file=None, dbname=None):
+    """Run psql with connection args. Uses -f for files, -c for strings."""
+    result = _run_psql(sql=sql, file=file, dbname=dbname)
+    _emit_psql_output(result)
     return result.returncode
+
+
+def _migration_files():
+    """Return the canonical forward migration sequence."""
+    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    selected = []
+    for file in files:
+        name = file.name
+        if name.endswith(".down.sql"):
+            continue
+        if name.endswith(".up.sql") or name == "001_init_memory.sql":
+            selected.append(file)
+    return selected
+
+
+def _require_postgres(dbname="postgres"):
+    """Fail fast when the local PostgreSQL bridge is unavailable."""
+    host, port, _user, _password, _db = _dsn(dbname)
+    rc = _psql(sql="SELECT 1;", dbname=dbname)
+    if rc != 0:
+        raise SystemExit(
+            f"Cannot connect to PostgreSQL at {host}:{port}. "
+            "Start the bridge with 'uv run inv k8s.bridge' or use "
+            "'uv run inv lifecycle.memory-restart', which now restores the bridge before reset."
+        )
 
 
 @task
@@ -62,47 +106,63 @@ def status(c):
 @task
 def create(c):
     """Create the cortex database if it doesn't exist."""
+    _ensure_database_exists()
+
+
+def _ensure_database_exists():
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
+    _require_postgres()
     print(f"Creating database '{db}'...")
-    # Check existence first
-    rc = _psql(sql=f"SELECT 1 FROM pg_database WHERE datname = '{db}';",
-               dbname="postgres")
-    # Try create (idempotent)
-    _psql(sql=f"CREATE DATABASE {db};", dbname="postgres")
+    result = _run_psql(
+        sql=f"SELECT 1 FROM pg_database WHERE datname = '{db}';",
+        dbname="postgres",
+    )
+    _emit_psql_output(result)
+    if result.returncode != 0:
+        raise SystemExit(f"Failed checking whether database '{db}' exists.")
+    if "1" not in result.stdout.split():
+        rc = _psql(sql=f"CREATE DATABASE {db};", dbname="postgres")
+        if rc != 0:
+            raise SystemExit(f"Failed creating database '{db}'.")
     print(f"Database '{db}' ready.")
 
 
-@task
-def migrate(c):
-    """Apply all migrations in order to the cortex database."""
+def _apply_migrations(strict=False):
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
 
-    # Ensure DB exists
-    create(c)
+    _ensure_database_exists()
 
-    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    files = _migration_files()
     if not files:
         print("No migration files found.")
         return
 
     print(f"Applying {len(files)} migrations to '{db}'...")
     failures = []
-    for f in files:
-        print(f"  {f.name}...", end=" ")
-        rc = _psql(file=f)
+    for file in files:
+        print(f"  {file.name}...", end=" ")
+        rc = _psql(file=file)
         if rc == 0:
             print("OK")
-        else:
-            print("ERRORS (non-fatal, continuing)")
-            failures.append(f.name)
+            continue
+        print("ERROR")
+        failures.append(file.name)
+        if strict:
+            raise SystemExit(f"Migration failed: {file.name}")
 
     if failures:
         print(f"\nMigrations with errors: {', '.join(failures)}")
-        print("(Some errors are expected on re-runs due to IF NOT EXISTS guards)")
+        print("Fix the failing migration or reset the database before retrying.")
     else:
         print("\nAll migrations applied cleanly.")
+
+
+@task
+def migrate(c):
+    """Apply all migrations in order to the cortex database."""
+    _apply_migrations(strict=False)
 
 
 @task
@@ -110,24 +170,32 @@ def reset(c):
     """Drop and recreate cortex database, then run all migrations."""
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
+    _require_postgres()
 
     print(f"Resetting database '{db}'...")
 
     # Terminate existing connections
-    _psql(
+    rc = _psql(
         sql=(
             f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
             f"WHERE datname = '{db}' AND pid <> pg_backend_pid();"
         ),
         dbname="postgres",
     )
+    if rc != 0:
+        raise SystemExit(f"Failed terminating existing connections to '{db}'.")
 
-    _psql(sql=f"DROP DATABASE IF EXISTS {db};", dbname="postgres")
-    _psql(sql=f"CREATE DATABASE {db} OWNER mycelis;", dbname="postgres")
+    rc = _psql(sql=f"DROP DATABASE IF EXISTS {db};", dbname="postgres")
+    if rc != 0:
+        raise SystemExit(f"Failed dropping database '{db}'.")
+
+    rc = _psql(sql=f"CREATE DATABASE {db} OWNER mycelis;", dbname="postgres")
+    if rc != 0:
+        raise SystemExit(f"Failed creating database '{db}'.")
     print(f"Database '{db}' recreated.")
 
     # Apply migrations
-    migrate(c)
+    _apply_migrations(strict=True)
 
 
 ns = Collection("db")

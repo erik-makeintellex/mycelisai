@@ -120,13 +120,19 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		log.Println("DEBUG: No OLLAMA_HOST env var found.")
 	}
 
+	// 4. Deployment-friendly env overrides
+	// These support automation tooling without reviving the retired
+	// team/agent env-map routing path. Overrides apply at provider/profile/media
+	// config surfaces and win over YAML/DB defaults.
+	applyEnvOverrides(&config)
+
 	r := &Router{
 		Config:     &config,
 		ConfigPath: configPath,
 		Adapters:   make(map[string]LLMProvider),
 	}
 
-	// 4. Initialize Adapters
+	// 5. Initialize Adapters
 	for id, pConfig := range config.Providers {
 		log.Printf("DEBUG: Initializing provider %s with endpoint %s", id, pConfig.Endpoint)
 		var adapter LLMProvider
@@ -164,7 +170,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		r.Adapters[id] = adapter
 	}
 
-	// 5. Emergency Sovereign Fallback
+	// 6. Emergency Sovereign Fallback
 	// If zero adapters were initialized (YAML missing + DB down), attempt to
 	// discover a local Ollama instance at well-known endpoints. This implements
 	// the Universal Sovereignty principle: the organism must survive in isolation.
@@ -215,10 +221,12 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		}
 	}
 
-	// 6. Discovery & Grading
-	// Only auto-configure if we have providers
+	// 7. Discovery & Grading (startup scope)
+	// Only auto-configure if we have providers.
+	// Startup intentionally probes only default Ollama and profile-routed providers,
+	// so we don't try connecting to every declared backend unless explicitly configured.
 	if len(r.Adapters) > 0 {
-		r.AutoConfigure(context.Background())
+		r.AutoConfigureStartup(context.Background())
 	}
 
 	return r, nil
@@ -290,9 +298,32 @@ func loadFromDB(db *sql.DB, config *BrainConfig) error {
 	return nil
 }
 
-// AutoConfigure probes providers and re-routes profiles if necessary
-func (r *Router) AutoConfigure(ctx context.Context) {
-	sd := NewServiceDiscovery(r.Adapters)
+// startupProbeProviderIDs returns the provider IDs that should be probed during startup.
+// Policy:
+//   - Always include default "ollama" when available.
+//   - Include providers explicitly referenced by profiles.
+//   - Do not probe unrelated declared adapters during startup.
+func (r *Router) startupProbeProviderIDs() map[string]struct{} {
+	include := make(map[string]struct{})
+
+	if _, ok := r.Adapters["ollama"]; ok {
+		include["ollama"] = struct{}{}
+	}
+
+	for _, providerID := range r.Config.Profiles {
+		if providerID == "" {
+			continue
+		}
+		if _, ok := r.Adapters[providerID]; ok {
+			include[providerID] = struct{}{}
+		}
+	}
+
+	return include
+}
+
+func (r *Router) autoConfigureWithProviders(ctx context.Context, providers map[string]LLMProvider) {
+	sd := NewServiceDiscovery(providers)
 	discoveryResults := sd.DiscoverAll(ctx)
 
 	// Log Discovery Results
@@ -311,19 +342,18 @@ func (r *Router) AutoConfigure(ctx context.Context) {
 	fmt.Println("----------------------------------")
 
 	// Auto-Config (Profiles)
-	// For each profile, check if its provider is healthy. If not, fallback.
+	// For each profile, check if its provider is in the probe set and unhealthy.
 	for profileName, providerID := range r.Config.Profiles {
 		res, exists := discoveryResults[providerID]
 		if !exists {
-			fmt.Printf("⚠️ Profile '%s' points to unknown provider '%s'\n", profileName, providerID)
+			// Provider wasn't part of this probe set; skip without treating as unknown.
 			continue
 		}
 
 		if !res.Healthy {
 			fmt.Printf("⚠️ Profile '%s' provider '%s' is DOWN. Attempting fallback...\n", profileName, providerID)
 
-			// Simple Fallback: Find FIRST healthy provider
-			// Improvement: Find healthy provider with matching Tier requirement (TODO)
+			// Simple Fallback: Find FIRST healthy provider in the probe set.
 			fallbackFound := false
 			for fbID, fbRes := range discoveryResults {
 				if fbRes.Healthy {
@@ -340,34 +370,69 @@ func (r *Router) AutoConfigure(ctx context.Context) {
 	}
 }
 
+// AutoConfigure probes providers and re-routes profiles if necessary
+func (r *Router) AutoConfigure(ctx context.Context) {
+	r.autoConfigureWithProviders(ctx, r.Adapters)
+}
+
+// AutoConfigureStartup is a constrained startup calibration pass.
+// It probes default Ollama plus any providers explicitly routed by profiles.
+func (r *Router) AutoConfigureStartup(ctx context.Context) {
+	include := r.startupProbeProviderIDs()
+	if len(include) == 0 {
+		return
+	}
+
+	scoped := make(map[string]LLMProvider)
+	for id, adapter := range r.Adapters {
+		if _, ok := include[id]; ok {
+			scoped[id] = adapter
+		}
+	}
+	if len(scoped) == 0 {
+		return
+	}
+
+	r.autoConfigureWithProviders(ctx, scoped)
+}
+
 // InferWithContract executes the request against the configured profile/provider
 func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*InferResponse, error) {
+	var providerID string
+	var ok bool
 
-	// 1. Resolve Profile -> ProviderID (3-tier fallback)
-	providerID, ok := r.Config.Profiles[req.Profile]
-	if !ok {
-		log.Printf("WARN: Profile '%s' not found. Attempting fallback chain...", req.Profile)
+	// 1. Resolve explicit Provider override first, then profile routing fallback.
+	if req.Provider != "" {
+		providerID = req.Provider
+	} else {
+		providerID, ok = r.Config.Profiles[req.Profile]
+		if !ok {
+			log.Printf("WARN: Profile '%s' not found. Attempting fallback chain...", req.Profile)
 
-		// Tier 1: Try sentry (safe default)
-		if sentryID, exists := r.Config.Profiles["sentry"]; exists {
-			log.Printf("Fallback: '%s' -> sentry ('%s')", req.Profile, sentryID)
-			providerID = sentryID
-		} else if len(r.Adapters) > 0 {
-			// Tier 2: First available adapter
-			for k := range r.Adapters {
-				log.Printf("Fallback: '%s' -> first available adapter '%s'", req.Profile, k)
-				providerID = k
-				break
+			// Tier 1: Try sentry (safe default)
+			if sentryID, exists := r.Config.Profiles["sentry"]; exists {
+				log.Printf("Fallback: '%s' -> sentry ('%s')", req.Profile, sentryID)
+				providerID = sentryID
+			} else if len(r.Adapters) > 0 {
+				// Tier 2: First available adapter
+				for k := range r.Adapters {
+					log.Printf("Fallback: '%s' -> first available adapter '%s'", req.Profile, k)
+					providerID = k
+					break
+				}
+			} else {
+				// Tier 3: No profiles, no adapters — total cognitive blackout
+				return nil, fmt.Errorf("profile '%s' not found — no providers available (check config/cognitive.yaml and DB connectivity)", req.Profile)
 			}
-		} else {
-			// Tier 3: No profiles, no adapters — total cognitive blackout
-			return nil, fmt.Errorf("profile '%s' not found — no providers available (check config/cognitive.yaml and DB connectivity)", req.Profile)
 		}
 	}
 
 	// 2. Get Adapter
 	adapter, ok := r.Adapters[providerID]
 	if !ok {
+		if req.Provider != "" {
+			return nil, fmt.Errorf("provider '%s' (explicit override) is not initialized", providerID)
+		}
 		return nil, fmt.Errorf("provider '%s' (for profile '%s') is not initialized", providerID, req.Profile)
 	}
 
@@ -407,9 +472,13 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 			r.AutoConfigure(ctx)
 
 			// 3. Retry on NEW provider
-			newProviderID, ok := r.Config.Profiles[req.Profile]
-			if !ok {
-				return nil, fmt.Errorf("profile lost during recovery")
+			newProviderID := providerID
+			if req.Provider == "" {
+				var exists bool
+				newProviderID, exists = r.Config.Profiles[req.Profile]
+				if !exists {
+					return nil, fmt.Errorf("profile lost during recovery")
+				}
 			}
 
 			if newProviderID == providerID {

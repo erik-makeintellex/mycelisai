@@ -8,12 +8,14 @@ vi.mock("reactflow", async () => {
 });
 
 import DegradedModeBanner from "@/components/dashboard/DegradedModeBanner";
+import { buildMissionChatFailure } from "@/lib/missionChatFailure";
 import { useCortexStore } from "@/store/useCortexStore";
 
 function resetStore() {
     useCortexStore.setState({
         missionChatError: null,
         isStreamConnected: true,
+        assistantName: "Soma",
         councilTarget: "council-sentry",
         isStatusDrawerOpen: false,
     });
@@ -45,6 +47,11 @@ describe("DegradedModeBanner", () => {
     it("renders in degraded mode and supports actions", async () => {
         useCortexStore.setState({
             missionChatError: "Council timeout",
+            missionChatFailure: buildMissionChatFailure({
+                assistantName: "Soma",
+                targetId: "council-architect",
+                message: "Council timeout",
+            }),
             isStreamConnected: false,
             councilTarget: "council-architect",
             disconnectStream: vi.fn(),
@@ -84,5 +91,34 @@ describe("DegradedModeBanner", () => {
         });
         expect(useCortexStore.getState().disconnectStream).toHaveBeenCalled();
         expect(useCortexStore.getState().initializeStream).toHaveBeenCalledWith(true);
+    });
+
+    it("shows a specific workspace chat server-error reason", async () => {
+        useCortexStore.setState({
+            missionChatError: "Council agent unreachable (500)",
+            missionChatFailure: buildMissionChatFailure({
+                assistantName: "Soma",
+                targetId: "admin",
+                message: "Council agent unreachable (500)",
+                statusCode: 500,
+            }),
+            isStreamConnected: true,
+        });
+
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                data: [
+                    { name: "nats", status: "online" },
+                    { name: "postgres", status: "online" },
+                ],
+            }),
+        });
+
+        render(<DegradedModeBanner />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Workspace chat server error/i)).toBeDefined();
+        });
     });
 });

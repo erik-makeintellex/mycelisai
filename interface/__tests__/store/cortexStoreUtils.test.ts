@@ -1,0 +1,152 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('reactflow', () => {
+    const Position = {
+        Left: 'left',
+        Right: 'right',
+        Top: 'top',
+        Bottom: 'bottom',
+    };
+    return {
+        __esModule: true,
+        Position,
+        applyNodeChanges: (_changes: any[], nodes: any[]) => nodes,
+        applyEdgeChanges: (_changes: any[], edges: any[]) => edges,
+    };
+});
+
+import type { MissionBlueprint } from '@/store/useCortexStore';
+import {
+    CHAT_STORAGE_KEY,
+    blueprintToGraph,
+    dispatchSignalToNodes,
+    loadPersistedChat,
+    normalizeProposalData,
+    persistChat,
+    solidifyNodes,
+} from '@/store/cortexStoreUtils';
+
+describe('cortexStoreUtils', () => {
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
+    it('builds graph nodes and edges from blueprint io wiring', () => {
+        const blueprint: MissionBlueprint = {
+            mission_id: 'm-1',
+            intent: 'wire teams',
+            teams: [
+                {
+                    name: 'team-a',
+                    role: 'producer',
+                    agents: [{ id: 'agent-a', role: 'architect', outputs: ['topic.a'] }],
+                },
+                {
+                    name: 'team-b',
+                    role: 'consumer',
+                    agents: [{ id: 'agent-b', role: 'coder', inputs: ['topic.a'] }],
+                },
+            ],
+        };
+
+        const { nodes, edges } = blueprintToGraph(blueprint);
+        expect(nodes.some((n) => n.id === 'team-0')).toBe(true);
+        expect(nodes.some((n) => n.id === 'team-0-label')).toBe(true);
+        expect(nodes.some((n) => n.id === 'agent-0-0')).toBe(true);
+        expect(nodes.some((n) => n.id === 'agent-1-0')).toBe(true);
+        expect(edges).toHaveLength(1);
+        expect(edges[0]).toMatchObject({
+            source: 'agent-0-0',
+            target: 'agent-1-0',
+            type: 'dataWire',
+        });
+    });
+
+    it('solidifies draft nodes by clearing draft class and marking agent online', () => {
+        const nodes: any[] = [
+            {
+                id: 'team-0',
+                type: 'group',
+                className: 'ghost-draft',
+                style: { border: '1px dashed red' },
+                data: {},
+            },
+            {
+                id: 'agent-0-0',
+                type: 'agentNode',
+                className: 'ghost-draft',
+                data: { status: 'offline' },
+            },
+        ];
+
+        const solid = solidifyNodes(nodes);
+        expect(solid[0].className).toBe('');
+        expect(String(solid[0].style?.border)).toContain('solid');
+        expect(solid[1].className).toBe('');
+        expect(solid[1].data?.status).toBe('online');
+    });
+
+    it('dispatches thought and error signals to matching nodes', () => {
+        const nodes: any[] = [
+            { id: 'agent-a', data: { label: 'agent-a', status: 'online' } },
+            { id: 'agent-b', data: { label: 'agent-b', status: 'online' } },
+        ];
+
+        const thought = dispatchSignalToNodes(
+            { type: 'thought', source: 'agent-a', message: 'reasoning' },
+            nodes,
+        );
+        expect(thought).not.toBeNull();
+        expect(thought?.[0].data?.isThinking).toBe(true);
+        expect(thought?.[0].data?.lastThought).toBe('reasoning');
+
+        const errored = dispatchSignalToNodes(
+            { type: 'error', source: 'agent-a', message: 'failed' },
+            thought ?? nodes,
+        );
+        expect(errored).not.toBeNull();
+        expect(errored?.[0].data?.status).toBe('error');
+        expect(errored?.[0].data?.isThinking).toBe(false);
+    });
+
+    it('normalizes proposal data and derives team/agent/tool counts from team expressions', () => {
+        const proposal = normalizeProposalData({
+            intent: 'ship feature',
+            risk_level: 'medium',
+            confirm_token: 'ct-1',
+            intent_proof_id: 'ip-1',
+            team_expressions: [
+                {
+                    team_id: 'admin-core',
+                    objective: 'deliver',
+                    role_plan: ['architect', 'coder'],
+                    module_bindings: [
+                        { module_id: 'delegate_task', adapter_kind: 'internal' },
+                        { module_id: 'mcp:github/create_issue', adapter_kind: 'mcp' },
+                    ],
+                },
+            ],
+        });
+
+        expect(proposal).toBeDefined();
+        expect(proposal?.teams).toBe(1);
+        expect(proposal?.agents).toBe(2);
+        expect(proposal?.tools).toEqual(['delegate_task', 'mcp:github/create_issue']);
+        expect(proposal?.team_expressions?.[0].module_bindings?.[0]).toMatchObject({
+            module_id: 'delegate_task',
+            adapter_kind: 'internal',
+        });
+    });
+
+    it('persists and reloads chat history from storage', () => {
+        persistChat([
+            { role: 'user', content: 'hello' },
+            { role: 'council', content: 'world' },
+        ] as any);
+
+        const loaded = loadPersistedChat();
+        expect(loaded).toHaveLength(2);
+        expect(localStorage.getItem(CHAT_STORAGE_KEY)).toContain('hello');
+        expect(loaded[1]).toMatchObject({ role: 'council', content: 'world' });
+    });
+});

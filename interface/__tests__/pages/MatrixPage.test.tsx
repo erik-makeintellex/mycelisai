@@ -8,8 +8,8 @@ vi.mock('next/navigation', () => ({
 import MatrixRedirect from '@/app/(app)/matrix/page';
 
 describe('Matrix Page (redirect)', () => {
-    it('redirects to /system?tab=matrix', () => {
+    it('redirects to /settings?tab=engines', () => {
         try { MatrixRedirect(); } catch {}
-        expect(mockRedirect).toHaveBeenCalledWith('/system?tab=matrix');
+        expect(mockRedirect).toHaveBeenCalledWith('/settings?tab=engines');
     });
 });

@@ -37,3 +37,6 @@ members = [
     "cli",
     "cognitive",
 ]
+
+[tool.pytest.ini_options]
+cache_dir = "workspace/tool-cache/pytest"

@@ -270,12 +270,12 @@ func (a *Agent) buildToolsBlock() string {
 // ProcessResult holds the structured output of a processMessage call,
 // including the final text and metadata about which tools were invoked.
 type ProcessResult struct {
-	Text       string                      `json:"text"`
-	ToolsUsed  []string                    `json:"tools_used,omitempty"`
-	Artifacts  []protocol.ChatArtifactRef  `json:"artifacts,omitempty"`
-	// Phase 19: Brain provenance — which provider/model executed this request
-	ProviderID string                      `json:"provider_id,omitempty"`
-	ModelUsed  string                      `json:"model_used,omitempty"`
+	Text      string                     `json:"text"`
+	ToolsUsed []string                   `json:"tools_used,omitempty"`
+	Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
+	// Brain provenance: which provider/model executed this request.
+	ProviderID string `json:"provider_id,omitempty"`
+	ModelUsed  string `json:"model_used,omitempty"`
 	// V7: Council consultations made during the ReAct loop (for frontend delegation trace)
 	Consultations []protocol.ConsultationEntry `json:"consultations,omitempty"`
 }
@@ -310,7 +310,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 	// Inject live system state (active teams, MCP servers, NATS topology, cognitive config)
 	if a.internalTools != nil {
-		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.TeamInputs, a.TeamDeliveries, input)
+		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
 	}
 
 	sys += a.buildToolsBlock()
@@ -335,6 +335,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 	req := cognitive.InferRequest{
 		Profile:  profile,
+		Provider: a.Manifest.Provider,
 		Messages: messages,
 	}
 
@@ -352,7 +353,50 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	var toolsUsed []string
 	var artifacts []protocol.ChatArtifactRef
 	var consultations []protocol.ConsultationEntry
+	directAnswerPreferred := preferDirectDraftResponse(input)
 	if a.toolExecutor != nil && len(a.Manifest.Tools) > 0 {
+		reinferWithToolFeedback := func(toolName string, feedback string) bool {
+			req.Messages = append(req.Messages, cognitive.ChatMessage{Role: "assistant", Content: responseText})
+			req.Messages = append(req.Messages, cognitive.ChatMessage{
+				Role:    "user",
+				Content: fmt.Sprintf("Tool result from %s:\n%s\n\nContinue your response:", toolName, feedback),
+			})
+			updated, inferErr := a.brain.InferWithContract(a.ctx, req)
+			if inferErr != nil {
+				log.Printf("Agent [%s] re-inference after tool feedback failed: %v", a.Manifest.ID, inferErr)
+				responseText = feedback
+				return false
+			}
+			resp = updated
+			responseText = updated.Text
+			return true
+		}
+		preflightDone := map[string]bool{}
+		failedToolCalls := map[string]int{}
+
+		// Guardrail: if the model returns a "plan/step" style response instead of
+		// a tool call for an actionable request, force one correction pass before
+		// entering the normal tool loop.
+		if parseToolCall(responseText) == nil && responseSuggestsUnexecutedAction(responseText) {
+			correction := cognitive.ChatMessage{
+				Role: "system",
+				Content: "Policy correction: do not provide step-by-step plans when tools are available. " +
+					"Emit exactly one tool_call JSON now for the user's actionable request, or return a concrete blocker.",
+			}
+			req.Messages = append(req.Messages, correction)
+			req.Messages = append(req.Messages, cognitive.ChatMessage{
+				Role:    "user",
+				Content: "Re-answer the latest request now under the policy correction.",
+			})
+			repaired, repairErr := a.brain.InferWithContract(a.ctx, req)
+			if repairErr != nil {
+				log.Printf("Agent [%s] policy correction re-inference failed: %v", a.Manifest.ID, repairErr)
+			} else if repaired != nil {
+				resp = repaired
+				responseText = repaired.Text
+			}
+		}
+
 		maxIter := a.Manifest.EffectiveMaxIterations()
 		for i := 0; i < maxIter; i++ {
 			// V7 Interjection: check for user redirect between ReAct iterations
@@ -377,6 +421,48 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			if toolCall == nil {
 				break
 			}
+			autofillToolArguments(toolCall, input)
+			// Simple drafting requests should stay in chat instead of bouncing through tools.
+			if directAnswerPreferred && shouldAvoidToolsForDirectDraft(toolCall.Name) {
+				if !reinferWithToolFeedback(toolCall.Name,
+					"Policy correction: the user asked for text content in this chat. Respond with the requested content directly. Do not call tools unless they explicitly asked to read or write files, save output, inspect runtime state, execute commands, or route work to other teams.") {
+					break
+				}
+				continue
+			}
+			fingerprint := toolCallFingerprint(toolCall)
+			if failedToolCalls[fingerprint] >= 2 {
+				if !reinferWithToolFeedback(toolCall.Name,
+					fmt.Sprintf("Policy correction: the exact tool call %s has already failed %d times in this turn. Do not retry it. Choose a different tool or answer directly without tools.",
+						fingerprint, failedToolCalls[fingerprint])) {
+					break
+				}
+				continue
+			}
+			if shouldCouncilPreflight(toolCall.Name) {
+				member := councilPreflightMember(toolCall.Name)
+				if member != "" && !preflightDone[member] {
+					preflightDone[member] = true
+					summary, err := a.runCouncilPreflight(member, input, toolCall)
+					if err != nil {
+						log.Printf("Agent [%s] council preflight failed for %s: %v", a.Manifest.ID, toolCall.Name, err)
+					} else if strings.TrimSpace(summary) != "" {
+						short := strings.TrimSpace(summary)
+						if len(short) > 300 {
+							short = short[:300] + "..."
+						}
+						consultations = append(consultations, protocol.ConsultationEntry{
+							Member:  member,
+							Summary: short,
+						})
+						// Feed the preflight back so the model can refine the next tool call.
+						if !reinferWithToolFeedback("consult_council", fmt.Sprintf("Preflight (%s): %s", member, summary)) {
+							break
+						}
+						continue
+					}
+				}
+			}
 
 			log.Printf("Agent [%s] tool_call [%d/%d]: %s", a.Manifest.ID, i+1, maxIter, toolCall.Name)
 			toolsUsed = append(toolsUsed, toolCall.Name)
@@ -397,8 +483,18 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			}
 			a.logTurn("tool_call", responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 
-			serverID, _, err := a.toolExecutor.FindToolByName(a.ctx, toolCall.Name)
+			toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
+				RunID:         a.runID,
+				TeamID:        a.TeamID,
+				AgentID:       a.Manifest.ID,
+				SourceKind:    protocol.SourceKindSystem,
+				SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
+				PayloadKind:   protocol.PayloadKindCommand,
+			})
+
+			serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, toolCall.Name)
 			if err != nil {
+				failedToolCalls[fingerprint]++
 				log.Printf("Agent [%s] tool lookup failed: %v", a.Manifest.ID, err)
 				// V7: emit tool.failed
 				if a.eventEmitter != nil && a.runID != "" {
@@ -407,12 +503,27 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 						a.Manifest.ID, a.TeamID,
 						map[string]interface{}{"tool": toolCall.Name, "error": err.Error(), "phase": "lookup"})
 				}
-				responseText = fmt.Sprintf("Tool '%s' is not available: %v", toolCall.Name, err)
-				break
+				if !reinferWithToolFeedback(toolCall.Name, fmt.Sprintf("Tool '%s' is not available: %v", toolCall.Name, err)) {
+					break
+				}
+				continue
 			}
 
-			toolResult, err := a.toolExecutor.CallTool(a.ctx, serverID, toolCall.Name, toolCall.Arguments)
+			isMCPTool := serverID != InternalServerID
+			if isMCPTool {
+				a.publishToolBusSignal(protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{
+					"state":      "invoked",
+					"tool":       toolCall.Name,
+					"server_id":  serverID.String(),
+					"iteration":  i + 1,
+					"arguments":  toolCall.Arguments,
+					"team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
+				})
+			}
+
+			toolResult, err := a.toolExecutor.CallTool(toolCtx, serverID, toolCall.Name, toolCall.Arguments)
 			if err != nil {
+				failedToolCalls[fingerprint]++
 				log.Printf("Agent [%s] tool call failed: %v", a.Manifest.ID, err)
 				// V7: emit tool.failed
 				if a.eventEmitter != nil && a.runID != "" {
@@ -421,8 +532,20 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 						a.Manifest.ID, a.TeamID,
 						map[string]interface{}{"tool": toolCall.Name, "error": err.Error(), "phase": "execute"})
 				}
-				responseText = fmt.Sprintf("Tool %s failed: %v", toolCall.Name, err)
-				break
+				if !reinferWithToolFeedback(toolCall.Name, fmt.Sprintf("Tool %s failed: %v", toolCall.Name, err)) {
+					break
+				}
+				if isMCPTool {
+					a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{
+						"state":      "failed",
+						"tool":       toolCall.Name,
+						"server_id":  serverID.String(),
+						"iteration":  i + 1,
+						"error":      err.Error(),
+						"team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
+					})
+				}
+				continue
 			}
 			// V7: emit tool.completed
 			if a.eventEmitter != nil && a.runID != "" {
@@ -456,8 +579,8 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			// Only the text message goes back to the LLM — large payloads
 			// like base64 images are captured here for the HTTP response.
 			var toolOutput struct {
-				Message  string                     `json:"message"`
-				Artifact *protocol.ChatArtifactRef  `json:"artifact"`
+				Message  string                    `json:"message"`
+				Artifact *protocol.ChatArtifactRef `json:"artifact"`
 			}
 			if json.Unmarshal([]byte(toolResult), &toolOutput) == nil && toolOutput.Artifact != nil {
 				artifacts = append(artifacts, *toolOutput.Artifact)
@@ -465,6 +588,16 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 				if toolResult == "" {
 					toolResult = fmt.Sprintf("Tool %s completed successfully.", toolCall.Name)
 				}
+			}
+			if isMCPTool {
+				a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{
+					"state":          "completed",
+					"tool":           toolCall.Name,
+					"server_id":      serverID.String(),
+					"iteration":      i + 1,
+					"result_preview": truncateLog(toolResult, 500),
+					"team_input":     fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
+				})
 			}
 
 			// Append Assistant's tool call and User's tool result to history
@@ -540,6 +673,65 @@ func stripToolCallJSON(text string) string {
 		return cleaned
 	}
 	return text // Don't return empty — keep original if nothing before the JSON
+}
+
+func (a *Agent) publishToolBusSignal(payloadKind protocol.SignalPayloadKind, sourceKind protocol.SignalSourceKind, payload map[string]any) {
+	if a.nc == nil || strings.TrimSpace(a.TeamID) == "" {
+		return
+	}
+
+	var subject string
+	switch payloadKind {
+	case protocol.PayloadKindStatus:
+		subject = fmt.Sprintf(protocol.TopicTeamSignalStatus, a.TeamID)
+	case protocol.PayloadKindResult:
+		subject = fmt.Sprintf(protocol.TopicTeamSignalResult, a.TeamID)
+	default:
+		return
+	}
+
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Agent [%s] signal payload marshal failed: %v", a.Manifest.ID, err)
+		return
+	}
+
+	sourceChannel := fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)
+	wrapped, err := protocol.WrapSignalPayloadWithMeta(
+		sourceKind,
+		sourceChannel,
+		payloadKind,
+		a.runID,
+		a.TeamID,
+		a.Manifest.ID,
+		raw,
+	)
+	if err != nil {
+		log.Printf("Agent [%s] signal envelope wrap failed: %v", a.Manifest.ID, err)
+		return
+	}
+
+	if err := a.nc.Publish(subject, wrapped); err != nil {
+		log.Printf("Agent [%s] publish signal failed on [%s]: %v", a.Manifest.ID, subject, err)
+		return
+	}
+
+	if a.internalTools != nil {
+		channelKey := resolveSignalCheckpointChannelKey(subject, nil)
+		metadata := map[string]any{
+			"subject":      subject,
+			"source_kind":  string(sourceKind),
+			"payload_kind": string(payloadKind),
+			"team_id":      a.TeamID,
+			"agent_id":     a.Manifest.ID,
+		}
+		if strings.TrimSpace(a.runID) != "" {
+			metadata["run_id"] = strings.TrimSpace(a.runID)
+		}
+		if _, err := a.internalTools.upsertSignalCheckpoint(a.ctx, channelKey, a.Manifest.ID, string(wrapped), metadata); err != nil {
+			log.Printf("Agent [%s] checkpoint update failed on [%s]: %v", a.Manifest.ID, channelKey, err)
+		}
+	}
 }
 
 func (a *Agent) handleTrigger(msg *nats.Msg) {
@@ -618,149 +810,59 @@ func (a *Agent) handleDirectRequest(msg *nats.Msg) {
 	log.Printf("Agent [%s] direct request replied (tools: %v).", a.Manifest.ID, result.ToolsUsed)
 }
 
-// parseConversationPayload detects whether the NATS payload is a JSON conversation
-// array or plain text. Returns the last user message as input and any prior turns
-// as ChatMessage history.
-func (a *Agent) parseConversationPayload(data []byte) (string, []cognitive.ChatMessage) {
-	// Quick check: does it look like a JSON array?
-	trimmed := strings.TrimSpace(string(data))
-	if len(trimmed) == 0 || trimmed[0] != '[' {
-		return string(data), nil
+func preferDirectDraftResponse(input string) bool {
+	lower := strings.ToLower(strings.TrimSpace(input))
+	if lower == "" {
+		return false
 	}
 
-	// Try to parse as conversation array
-	type chatTurn struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
+	explicitAction := []string{
+		"file", "path", "workspace", "folder", "directory", "save", "persist", "store",
+		"read ", "open ", "inspect", "command", "run ", "execute", "shell", "terminal",
+		"team", "agent", "council", "signal", "nats", "api", "http", "url", "image",
+		"diagram", "code", "blueprint", "mission", "workflow",
 	}
-	var turns []chatTurn
-	if err := json.Unmarshal(data, &turns); err != nil {
-		// Not valid JSON array — treat as plain text
-		return string(data), nil
-	}
-
-	if len(turns) == 0 {
-		return "", nil
-	}
-
-	// Last turn is the current input; everything before is history
-	last := turns[len(turns)-1]
-	if len(turns) == 1 {
-		return last.Content, nil
-	}
-
-	// Build prior history: map roles to LLM-compatible roles
-	history := make([]cognitive.ChatMessage, 0, len(turns)-1)
-	for _, t := range turns[:len(turns)-1] {
-		role := t.Role
-		switch role {
-		case "admin", "architect", "assistant":
-			role = "assistant"
-		case "user":
-			// keep as-is
-		default:
-			role = "user" // unknown roles treated as user context
-		}
-		history = append(history, cognitive.ChatMessage{Role: role, Content: t.Content})
-	}
-
-	return last.Content, history
-}
-
-// truncateLog shortens a string for log output.
-func truncateLog(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
-}
-
-// toolCallPayload represents a tool invocation extracted from LLM output.
-type toolCallPayload struct {
-	Name      string         `json:"name"`
-	Arguments map[string]any `json:"arguments"`
-}
-
-// parseToolCall extracts a tool_call JSON block from LLM response text.
-// Handles both compact and pretty-printed JSON from LLMs:
-//
-//	Compact:  {"tool_call": {"name": "read_file", "arguments": {...}}}
-//	Pretty:   {\n  "tool_call": {\n    "name": "read_file" ...
-//	Fenced:   ```json\n{"tool_call": ...}\n```
-//
-// Returns nil if no tool call is found.
-func parseToolCall(text string) *toolCallPayload {
-	keyword := `"tool_call"`
-	idx := strings.Index(text, keyword)
-	if idx == -1 {
-		return nil
-	}
-
-	// Walk backwards from "tool_call" to find the opening brace.
-	// LLMs may emit whitespace/newlines between { and "tool_call".
-	start := -1
-	for i := idx - 1; i >= 0; i-- {
-		ch := text[i]
-		if ch == '{' {
-			start = i
-			break
-		}
-		if ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
-			break // unexpected character before "tool_call"
+	for _, token := range explicitAction {
+		if strings.Contains(lower, token) {
+			return false
 		}
 	}
-	if start == -1 {
-		return nil
-	}
 
-	// Find the matching closing brace, respecting JSON string escaping.
-	depth := 0
-	end := -1
-	inStr := false
-	esc := false
-	for i := start; i < len(text); i++ {
-		ch := text[i]
-		if esc {
-			esc = false
-			continue
-		}
-		if ch == '\\' && inStr {
-			esc = true
-			continue
-		}
-		if ch == '"' {
-			inStr = !inStr
-			continue
-		}
-		if inStr {
-			continue
-		}
-		switch ch {
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				end = i + 1
-			}
-		}
-		if end != -1 {
+	requestMarkers := []string{
+		"write ", "draft ", "compose ", "create ", "make ", "generate ",
+	}
+	hasRequestMarker := false
+	for _, marker := range requestMarkers {
+		if strings.Contains(lower, marker) {
+			hasRequestMarker = true
 			break
 		}
 	}
-	if end == -1 {
-		return nil
+	if !hasRequestMarker {
+		return false
 	}
 
-	var wrapper struct {
-		ToolCall toolCallPayload `json:"tool_call"`
+	textOutputs := []string{
+		"letter", "email", "message", "note", "reply", "paragraph",
+		"announcement", "bio", "summary", "caption", "introduction",
 	}
-	if err := json.Unmarshal([]byte(text[start:end]), &wrapper); err != nil {
-		log.Printf("[parseToolCall] JSON unmarshal failed: %v (excerpt: %s)", err, truncateLog(text[start:end], 200))
-		return nil
+	for _, target := range textOutputs {
+		if strings.Contains(lower, target) {
+			return true
+		}
 	}
-	if wrapper.ToolCall.Name == "" {
-		return nil
+	return false
+}
+
+func shouldAvoidToolsForDirectDraft(toolName string) bool {
+	switch strings.TrimSpace(toolName) {
+	case "write_file", "read_file", "local_command", "consult_council", "delegate_task",
+		"research_for_blueprint", "generate_blueprint", "remember", "recall",
+		"store_artifact", "list_teams", "list_missions", "get_system_status",
+		"list_available_tools", "list_catalogue", "publish_signal", "read_signals",
+		"broadcast", "create_team":
+		return true
+	default:
+		return false
 	}
-	return &wrapper.ToolCall
 }

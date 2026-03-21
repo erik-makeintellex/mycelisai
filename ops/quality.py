@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from invoke import Collection, task
+
+from .config import ROOT_DIR
+
+DEFAULT_HOT_PATHS = "core/internal/swarm,interface/store/useCortexStore.ts"
+DEFAULT_EXTENSIONS = {".go", ".py", ".ts", ".tsx"}
+DEFAULT_EXCLUDE_DIRS = {".git", ".next", ".venv", "node_modules", "dist", "build", "coverage"}
+LEGACY_CAPS_PATH = ROOT_DIR / "ops" / "quality_legacy_caps.txt"
+
+
+def _parse_paths(paths: str) -> list[Path]:
+    result: list[Path] = []
+    for raw in paths.split(","):
+        value = raw.strip()
+        if not value:
+            continue
+        path = ROOT_DIR / value
+        if path.exists():
+            result.append(path)
+    return result
+
+
+def _should_skip(path: Path) -> bool:
+    if any(part in DEFAULT_EXCLUDE_DIRS for part in path.parts):
+        return True
+    name = path.name
+    if name.endswith(".pb.go"):
+        return True
+    if name.endswith("_pb2.py") or name.endswith("_pb2_grpc.py"):
+        return True
+    return False
+
+
+def _iter_source_files(paths: list[Path]) -> list[Path]:
+    files: list[Path] = []
+    for root in paths:
+        if root.is_file():
+            if root.suffix in DEFAULT_EXTENSIONS and not _should_skip(root):
+                files.append(root)
+            continue
+
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix not in DEFAULT_EXTENSIONS:
+                continue
+            if _should_skip(path):
+                continue
+            files.append(path)
+    return files
+
+
+def _line_count(path: Path) -> int:
+    return len(path.read_text(encoding="utf-8").splitlines())
+
+
+def _load_legacy_caps(path: Path = LEGACY_CAPS_PATH) -> dict[str, int]:
+    caps: dict[str, int] = {}
+    if not path.exists():
+        return caps
+
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        rel = key.strip().replace("\\", "/")
+        try:
+            caps[rel] = int(value.strip())
+        except ValueError:
+            continue
+    return caps
+
+
+@task(
+    help={
+        "limit": "Maximum allowed lines per file (default: 350).",
+        "paths": "Comma-separated paths to scan (default: hot paths).",
+        "strict": "Ignore legacy caps and fail on every over-limit file.",
+    }
+)
+def max_lines(_c, limit=350, paths=DEFAULT_HOT_PATHS, strict=False):
+    """
+    Enforce maximum file length with temporary no-regression caps for legacy hot paths.
+    """
+    roots = _parse_paths(paths)
+    if not roots:
+        raise SystemExit("QUALITY CHECK FAILED: no valid paths provided.")
+
+    caps = _load_legacy_caps()
+    files = _iter_source_files(roots)
+    violations: list[str] = []
+    legacy_ok: list[str] = []
+
+    for path in files:
+        try:
+            rel = path.relative_to(ROOT_DIR).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        count = _line_count(path)
+        if count <= limit:
+            continue
+
+        cap = caps.get(rel)
+        if strict or cap is None or count > cap:
+            detail = f"{rel}: {count} lines (limit={limit}"
+            if cap is not None and not strict:
+                detail += f", legacy-cap={cap}"
+            detail += ")"
+            violations.append(detail)
+        else:
+            legacy_ok.append(f"{rel}: {count}/{cap}")
+
+    if legacy_ok:
+        print("Legacy files still over global limit but within temporary caps:")
+        for item in legacy_ok:
+            print(f"  {item}")
+
+    if violations:
+        print("Max-line violations:")
+        for item in violations:
+            print(f"  {item}")
+        raise SystemExit("QUALITY CHECK FAILED: file length violations found.")
+
+    print(f"QUALITY CHECK PASSED: scanned {len(files)} files, limit={limit}.")
+
+
+ns = Collection("quality")
+ns.add_task(max_lines, name="max-lines")

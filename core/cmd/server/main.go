@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	os_signal "os/signal"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,10 +24,11 @@ import (
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/internal/events"
-	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/overseer"
@@ -36,11 +39,45 @@ import (
 	"github.com/mycelis/core/internal/server"
 	mycelis_signal "github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/swarm"
-	"github.com/mycelis/core/internal/triggers"
 	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
+	"github.com/mycelis/core/internal/triggers"
 )
 
+func resolveWorkspaceRoot() string {
+	workspace := strings.TrimSpace(os.Getenv("MYCELIS_WORKSPACE"))
+	if workspace == "" {
+		return "./workspace"
+	}
+	return workspace
+}
+
+func ensureStorageLayout(workspaceRoot, dataDir string) error {
+	dirs := []string{
+		workspaceRoot,
+		filepath.Join(workspaceRoot, "saved-media"),
+		dataDir,
+	}
+	for _, dir := range dirs {
+		if strings.TrimSpace(dir) == "" {
+			continue
+		}
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("create storage path %s: %w", dir, err)
+		}
+	}
+	return nil
+}
+
 func main() {
+	// Action CLI mode: use the same binary to call Mycelis API endpoints.
+	// Example: server action GET /api/v1/services/status
+	if len(os.Args) > 1 && os.Args[1] == "action" {
+		if err := runActionCLI(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	log.Println("Starting Mycelis Core [System]...")
 
 	// Root context with signal-based cancellation for graceful shutdown
@@ -280,14 +317,52 @@ func main() {
 	if dataDir == "" {
 		dataDir = "/data/artifacts"
 	}
+	workspaceRoot := resolveWorkspaceRoot()
+	if err := ensureStorageLayout(workspaceRoot, dataDir); err != nil {
+		log.Printf("WARN: Failed to prepare storage layout: %v", err)
+	}
 	var artService *artifacts.Service
 	if sharedDB != nil {
 		artService = artifacts.NewService(sharedDB, dataDir)
 		log.Println("Artifacts Service Active.")
+		// Ephemeral image-cache cleanup loop:
+		// generated images are cache-only unless explicitly saved.
+		go func() {
+			ticker := time.NewTicker(5 * time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					n, err := artService.DeleteExpiredCachedImages(ctx, time.Hour)
+					if err != nil {
+						log.Printf("WARN: image cache cleanup failed: %v", err)
+						continue
+					}
+					if n > 0 {
+						log.Printf("Image cache cleanup: removed %d expired unsaved image artifact(s).", n)
+					}
+				}
+			}
+		}()
 	}
 
 	// 5b. Initialize Provisioning Engine
 	provEngine := provisioning.NewEngine(cogRouter)
+
+	templateConfigPath := "config/templates"
+	var startupTemplateBundle *bootstrap.TemplateBundle
+	startupSelection, startupRegistry, err := loadStartupBundleRegistry(templateConfigPath)
+	if err != nil {
+		log.Fatalf("FATAL: Bootstrap startup selection failed: %v", err)
+	}
+	startupTemplateBundle = startupSelection.Bundle
+	if startupTemplateBundle == nil || startupSelection.Organization == nil {
+		log.Fatal("FATAL: Bootstrap startup selection did not return a bundle-backed runtime organization")
+	}
+	log.Printf("Bootstrap Template Bundle Active: %s", startupTemplateBundle.ID)
+	log.Printf("Bootstrap Runtime Organization Active: %s", startupSelection.Organization.ID)
 
 	// 5c. Initialize Bootstrap Service (requires NATS)
 	var bootstrapSrv *bootstrap.Service
@@ -325,6 +400,16 @@ func main() {
 
 	// Hoisted outside NATS block so MetaArchitect can read tool descriptions even in degraded mode.
 	var internalTools *swarm.InternalToolRegistry
+	commsGateway := comms.NewGatewayFromEnv()
+	if providers := commsGateway.ListProviders(); len(providers) > 0 {
+		ready := 0
+		for _, p := range providers {
+			if p.Configured {
+				ready++
+			}
+		}
+		log.Printf("Communications Gateway Active. %d/%d providers configured.", ready, len(providers))
+	}
 	if nc != nil {
 		internalTools = swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
 			NC:        nc,
@@ -333,6 +418,7 @@ func main() {
 			Architect: metaArchitect,
 			Catalogue: catService,
 			Inception: inceptionStore,
+			Comms:     commsGateway,
 			DB:        sharedDB,
 		})
 	}
@@ -355,10 +441,20 @@ func main() {
 
 	var soma *swarm.Soma
 	if nc != nil {
-		teamConfigPath := "config/teams"
-		swarmReg := swarm.NewRegistry(teamConfigPath)
-
-		soma = swarm.NewSoma(nc, guard, swarmReg, cogRouter, streamHandler, toolExec, internalTools)
+		log.Printf("Soma startup instantiating runtime organization from bootstrap template bundle %s", startupTemplateBundle.ID)
+		soma = swarm.NewSoma(nc, guard, startupRegistry, cogRouter, streamHandler, toolExec, internalTools)
+		startupRouting := resolveStartupProviderRouting(
+			startupSelection,
+			os.Getenv("MYCELIS_TEAM_PROVIDER_MAP"),
+			os.Getenv("MYCELIS_AGENT_PROVIDER_MAP"),
+		)
+		if !startupRouting.Policy.IsEmpty() {
+			soma.SetProviderPolicy(startupRouting.Policy)
+			log.Printf("Provider routing active from runtime organization policy: teams=%d agents=%d", len(startupRouting.Policy.Teams), len(startupRouting.Policy.Agents))
+		}
+		if startupRouting.IgnoredLegacyEnvMaps {
+			log.Printf("WARN: ignoring MYCELIS_TEAM_PROVIDER_MAP / MYCELIS_AGENT_PROVIDER_MAP; provider routing now comes only from the instantiated organization and the env-map compatibility path is retired")
+		}
 		// V7: wire event spine into Soma so ActivateBlueprint creates runs + emits events
 		if runsManager != nil {
 			soma.SetRunsManager(runsManager)
@@ -486,6 +582,7 @@ func main() {
 
 	// Create Admin Server (V7: pass eventStore + runsManager for Event Spine routes)
 	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, eventStore, runsManager)
+	adminSrv.Comms = commsGateway
 	// V7: wire conversation store into AdminServer for transcript browsing + interjection
 	if convStore != nil {
 		adminSrv.Conversations = convStore
@@ -499,6 +596,7 @@ func main() {
 		adminSrv.MCPToolSets = mcpToolSets
 	}
 	adminSrv.RegisterRoutes(mux)
+	adminSrv.StartLoopScheduler(ctx)
 
 	// V7 Team B: Trigger Engine — evaluates rules against CTS event stream.
 	// Requires: sharedDB (for trigger_rules table) + eventStore + runsManager.
@@ -533,7 +631,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8081"
+		port = "8080"
 	}
 
 	// CORS Middleware
@@ -577,6 +675,7 @@ func main() {
 		if adminSrv.TriggerEngine != nil {
 			adminSrv.TriggerEngine.Stop()
 		}
+		adminSrv.StopLoopScheduler()
 
 		if mcpPool != nil {
 			mcpPool.ShutdownAll()

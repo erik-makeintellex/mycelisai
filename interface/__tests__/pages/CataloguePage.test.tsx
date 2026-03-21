@@ -8,8 +8,8 @@ vi.mock('next/navigation', () => ({
 import CatalogueRedirect from '@/app/(app)/catalogue/page';
 
 describe('Catalogue Page (redirect)', () => {
-    it('redirects to /resources?tab=catalogue', () => {
+    it('redirects to /resources?tab=roles', () => {
         try { CatalogueRedirect(); } catch {}
-        expect(mockRedirect).toHaveBeenCalledWith('/resources?tab=catalogue');
+        expect(mockRedirect).toHaveBeenCalledWith('/resources?tab=roles');
     });
 });

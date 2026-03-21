@@ -4,10 +4,15 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mycelis/core/internal/state"
 )
+
+const defaultAssistantName = "Soma"
 
 // User represents the logged-in user
 type User struct {
@@ -25,6 +30,83 @@ type Team struct {
 	Role string `json:"role"` // User's role in this team
 }
 
+func defaultUserSettings() map[string]any {
+	return map[string]any{
+		"theme":          "aero-light",
+		"matrix_view":    "grid",
+		"assistant_name": defaultAssistantName,
+	}
+}
+
+func normalizeAssistantName(v any) string {
+	name, ok := v.(string)
+	if !ok {
+		return defaultAssistantName
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return defaultAssistantName
+	}
+	runes := []rune(name)
+	if len(runes) > 48 {
+		name = string(runes[:48])
+	}
+	return name
+}
+
+func userSettingsPath() string {
+	if p := strings.TrimSpace(os.Getenv("MYCELIS_USER_SETTINGS_PATH")); p != "" {
+		return p
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || strings.TrimSpace(home) == "" {
+		return ""
+	}
+	return filepath.Join(home, ".mycelis", "user-settings.json")
+}
+
+func loadUserSettings() map[string]any {
+	settings := defaultUserSettings()
+	path := userSettingsPath()
+	if path == "" {
+		return settings
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return settings
+	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return settings
+	}
+
+	if theme, ok := raw["theme"].(string); ok && strings.TrimSpace(theme) != "" {
+		settings["theme"] = strings.TrimSpace(theme)
+	}
+	if matrixView, ok := raw["matrix_view"].(string); ok && strings.TrimSpace(matrixView) != "" {
+		settings["matrix_view"] = strings.TrimSpace(matrixView)
+	}
+	settings["assistant_name"] = normalizeAssistantName(raw["assistant_name"])
+	return settings
+}
+
+func saveUserSettings(settings map[string]any) error {
+	path := userSettingsPath()
+	if path == "" {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	payload, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, payload, 0o644)
+}
+
 // HandleMe returns the current authenticated user from context identity.
 func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
 	identity := IdentityFromContext(r.Context())
@@ -39,7 +121,7 @@ func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
 		ID:        identity.UserID,
 		Username:  identity.Username,
 		Role:      identity.Role,
-		Settings:  json.RawMessage(`{"theme": "aero-light", "matrix_view": "grid"}`),
+		Settings:  mustJSON(loadUserSettings()),
 		CreatedAt: time.Now(),
 	}
 	respondJSON(w, user)
@@ -77,11 +159,45 @@ func (s *AdminServer) HandleTeams(w http.ResponseWriter, r *http.Request) {
 
 // HandleUpdateSettings updates user preferences
 func (s *AdminServer) HandleUpdateSettings(w http.ResponseWriter, r *http.Request) {
-	// Check Auth...
-	// Parse Body...
-	// Update DB...
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status": "updated"}`))
+	if r.Method != http.MethodPut {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "invalid JSON body", http.StatusBadRequest)
+		return
+	}
+
+	settings := loadUserSettings()
+	if theme, ok := input["theme"].(string); ok && strings.TrimSpace(theme) != "" {
+		settings["theme"] = strings.TrimSpace(theme)
+	}
+	if matrixView, ok := input["matrix_view"].(string); ok && strings.TrimSpace(matrixView) != "" {
+		settings["matrix_view"] = strings.TrimSpace(matrixView)
+	}
+	if _, hasAssistantName := input["assistant_name"]; hasAssistantName {
+		settings["assistant_name"] = normalizeAssistantName(input["assistant_name"])
+	}
+
+	if err := saveUserSettings(settings); err != nil {
+		http.Error(w, "failed to persist user settings", http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, map[string]any{
+		"status":   "updated",
+		"settings": settings,
+	})
+}
+
+func mustJSON(v any) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return json.RawMessage(`{}`)
+	}
+	return json.RawMessage(b)
 }
 
 // ── Phase 11: Team Detail (aggregated endpoint) ──────────────

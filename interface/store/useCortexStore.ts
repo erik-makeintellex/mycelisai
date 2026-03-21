@@ -6,11 +6,20 @@ import {
     type OnEdgesChange,
     applyNodeChanges,
     applyEdgeChanges,
-    Position,
 } from 'reactflow';
-import type { AgentNodeData } from '@/components/wiring/AgentNode';
 import type { ConversationTurn } from '@/types/conversations';
 import { extractApiData } from '@/lib/apiContracts';
+import { buildMissionChatFailure, type MissionChatFailure } from '@/lib/missionChatFailure';
+import { normalizeIncomingSignal } from '@/lib/signalNormalize';
+import {
+    CHAT_STORAGE_KEY,
+    blueprintToGraph,
+    dispatchSignalToNodes,
+    loadPersistedChat,
+    normalizeProposalData,
+    persistChat,
+    solidifyNodes,
+} from '@/store/cortexStoreUtils';
 
 // ── Domain Types ──────────────────────────────────────────────
 
@@ -26,11 +35,14 @@ export interface ChatArtifactRef {
     content_type?: string;    // MIME type
     content?: string;         // inline content (text, JSON, base64 for images)
     url?: string;             // external URL (for links, images)
+    cached?: boolean;         // ephemeral cache marker
+    expires_at?: string;      // ISO expiry for cached assets
+    saved_path?: string;      // workspace-relative path once persisted
 }
 
 // CE-1: Orchestration Template types
 export type TemplateID = 'chat-to-answer' | 'chat-to-proposal';
-export type ExecutionMode = 'answer' | 'proposal';
+export type ExecutionMode = 'answer' | 'proposal' | 'execution_result' | 'blocker';
 
 export interface AnswerProvenance {
     resolved_intent: string;
@@ -48,6 +60,28 @@ export interface ProposalData {
     risk_level: string;
     confirm_token: string;
     intent_proof_id: string;
+    team_expressions?: TeamExpressionData[];
+}
+
+export interface ModuleBindingData {
+    binding_id?: string;
+    module_id: string;
+    adapter_kind?: string;
+    operation?: string;
+}
+
+export interface TeamExpressionData {
+    expression_id?: string;
+    team_id?: string;
+    objective: string;
+    role_plan?: string[];
+    module_bindings?: ModuleBindingData[];
+}
+
+export interface ConfirmProposalResult {
+    ok: boolean;
+    runId: string | null;
+    error?: string;
 }
 
 // Mission Profiles — named provider-routing configs with optional reactive NATS watches
@@ -83,7 +117,7 @@ export interface ContextSnapshot {
     created_at: string;
 }
 
-// Phase 19: Brain provenance — which provider/model executed a response
+// Brain provenance metadata for provider/model attribution on responses.
 export interface BrainProvenance {
     provider_id: string;
     provider_name?: string;
@@ -107,7 +141,7 @@ export interface ChatMessage {
     mode?: ExecutionMode;
     provenance?: AnswerProvenance;
     proposal?: ProposalData;
-    // Phase 19: Brain provenance
+    // Brain provenance
     brain?: BrainProvenance;
     // V7: run link for system messages
     run_id?: string;
@@ -121,6 +155,12 @@ export interface StreamSignal {
     timestamp?: string;
     payload?: any;
     topic?: string;
+    source_kind?: string;
+    source_channel?: string;
+    payload_kind?: string;
+    team_id?: string;
+    agent_id?: string;
+    run_id?: string;
 }
 
 export interface AgentManifest {
@@ -205,6 +245,12 @@ export interface SignalDetail {
     timestamp: string;
     topic?: string;
     payload?: any;
+    source_kind?: string;
+    source_channel?: string;
+    payload_kind?: string;
+    team_id?: string;
+    agent_id?: string;
+    run_id?: string;
     id?: string;
     trace_id?: string;
     intent?: string;
@@ -256,6 +302,18 @@ export interface CTSChatEnvelope {
             risk_level: string;
             confirm_token: string;
             intent_proof_id: string;
+            team_expressions?: {
+                expression_id?: string;
+                team_id?: string;
+                objective: string;
+                role_plan?: string[];
+                module_bindings?: {
+                    binding_id?: string;
+                    module_id: string;
+                    adapter_kind?: string;
+                    operation?: string;
+                }[];
+            }[];
         };
     };
 }
@@ -608,6 +666,8 @@ export interface CortexState {
     missionChat: ChatMessage[];
     isMissionChatting: boolean;
     missionChatError: string | null;
+    missionChatFailure: MissionChatFailure | null;
+    assistantName: string;
     councilTarget: string;              // active council member ID ("admin" default)
     councilMembers: CouncilMember[];    // populated from GET /council/members
 
@@ -667,7 +727,7 @@ export interface CortexState {
     // Signal Detail Drawer
     selectedSignalDetail: SignalDetail | null;
 
-    // Phase 19: Agent & Provider Orchestration
+    // Agent/provider orchestration
     activeBrain: BrainProvenance | null;
     activeMode: ExecutionMode;
     activeRole: string;
@@ -727,6 +787,8 @@ export interface CortexState {
     // Mission Control Chat (Phase 7.6) + Council API
     sendMissionChat: (message: string) => Promise<void>;
     clearMissionChat: () => void;
+    fetchUserSettings: () => Promise<void>;
+    updateAssistantName: (name: string) => Promise<boolean>;
     setCouncilTarget: (id: string) => void;
     fetchCouncilMembers: () => Promise<void>;
 
@@ -734,7 +796,7 @@ export interface CortexState {
     broadcastToSwarm: (message: string) => Promise<void>;
 
     // CE-1: Template-aware actions
-    confirmProposal: () => Promise<void>;
+    confirmProposal: () => Promise<ConfirmProposalResult>;
     cancelProposal: () => void;
     fetchRunTimeline: (runId: string) => Promise<void>;
     fetchRecentRuns: () => Promise<void>;
@@ -769,7 +831,7 @@ export interface CortexState {
     // Signal Detail Drawer
     selectSignalDetail: (detail: SignalDetail | null) => void;
 
-    // Phase 19: Agent & Provider Orchestration
+    // Agent/provider orchestration
     setInspectedMessage: (msg: ChatMessage | null) => void;
 
     // Mission Profiles & Context Snapshots
@@ -797,234 +859,9 @@ export interface CortexState {
     interjectInRun: (runId: string, message: string, agentId?: string) => Promise<void>;
 }
 
-// ── Layout Constants ──────────────────────────────────────────
-
-const TEAM_WIDTH = 280;
-const TEAM_GAP = 60;
-const AGENT_SPACING_Y = 130;
-const AGENT_OFFSET_X = 60;
-const TEAM_HEADER_Y = 80;
-
-// ── Blueprint → ReactFlow Graph ──────────────────────────────
-
-function blueprintToGraph(bp: MissionBlueprint): { nodes: Node[]; edges: Edge[] } {
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
-    const outputMap = new Map<string, string>(); // topic → agentNodeId
-
-    let teamX = 80;
-
-    bp.teams.forEach((team, tIdx) => {
-        const teamId = `team-${tIdx}`;
-        const teamHeight = TEAM_HEADER_Y + team.agents.length * AGENT_SPACING_Y + 40;
-
-        // Team group node
-        nodes.push({
-            id: teamId,
-            type: 'group',
-            position: { x: teamX, y: 40 },
-            data: { label: '' },
-            className: 'ghost-draft',
-            style: {
-                width: TEAM_WIDTH,
-                height: teamHeight,
-                background: 'rgba(30, 41, 59, 0.4)',
-                border: '1px dashed rgba(6, 182, 212, 0.4)',
-                borderRadius: '12px',
-                padding: '8px',
-            },
-        });
-
-        // Team label
-        nodes.push({
-            id: `${teamId}-label`,
-            type: 'default',
-            position: { x: 12, y: 8 },
-            parentNode: teamId,
-            extent: 'parent' as const,
-            draggable: false,
-            data: { label: team.name },
-            style: {
-                background: 'transparent',
-                border: 'none',
-                color: '#94a3b8',
-                fontSize: '11px',
-                fontWeight: 700,
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.1em',
-                width: TEAM_WIDTH - 24,
-                pointerEvents: 'none' as const,
-            },
-        });
-
-        // Agent nodes
-        team.agents.forEach((agent, aIdx) => {
-            const agentId = `agent-${tIdx}-${aIdx}`;
-
-            nodes.push({
-                id: agentId,
-                type: 'agentNode',
-                position: {
-                    x: AGENT_OFFSET_X,
-                    y: TEAM_HEADER_Y + aIdx * AGENT_SPACING_Y,
-                },
-                parentNode: teamId,
-                extent: 'parent' as const,
-                className: 'ghost-draft',
-                data: {
-                    label: agent.id,
-                    role: agent.role,
-                    status: 'offline',
-                    lastThought: agent.system_prompt
-                        ? agent.system_prompt.slice(0, 60)
-                        : undefined,
-                    teamIdx: tIdx,
-                    agentIdx: aIdx,
-                } as AgentNodeData,
-                sourcePosition: Position.Right,
-                targetPosition: Position.Left,
-            });
-
-            agent.outputs?.forEach((topic) => {
-                outputMap.set(topic, agentId);
-            });
-        });
-
-        teamX += TEAM_WIDTH + TEAM_GAP;
-    });
-
-    // Wire edges by matching output→input topics
-    bp.teams.forEach((team, tIdx) => {
-        team.agents.forEach((agent, aIdx) => {
-            const targetId = `agent-${tIdx}-${aIdx}`;
-            agent.inputs?.forEach((topic) => {
-                const sourceId = outputMap.get(topic);
-                if (sourceId && sourceId !== targetId) {
-                    edges.push({
-                        id: `edge-${sourceId}-${targetId}-${topic}`,
-                        source: sourceId,
-                        target: targetId,
-                        type: 'dataWire',
-                        data: { type: 'output' },
-                        animated: true,
-                    });
-                }
-            });
-        });
-    });
-
-    return { nodes, edges };
-}
-
-// ── Solidify: ghost-draft → active ───────────────────────────
-
-function solidifyNodes(nodes: Node[]): Node[] {
-    return nodes.map((node) => {
-        if (node.className?.includes('ghost-draft')) {
-            const solidNode = { ...node, className: '' };
-
-            if (node.type === 'group') {
-                solidNode.style = {
-                    ...node.style,
-                    border: '1px solid rgba(71, 85, 105, 0.6)',
-                    boxShadow: '0 0 12px rgba(6, 182, 212, 0.15)',
-                };
-            }
-
-            if (node.type === 'agentNode') {
-                solidNode.data = {
-                    ...node.data,
-                    status: 'online',
-                };
-            }
-
-            return solidNode;
-        }
-        return node;
-    });
-}
-
 // ── SSE Connection (module-level ref) ─────────────────────────
 
 let _eventSource: EventSource | null = null;
-
-/** Dispatch an SSE signal to matching ReactFlow nodes */
-function dispatchSignalToNodes(
-    signal: StreamSignal,
-    nodes: Node[],
-): Node[] | null {
-    const src = signal.source;
-    if (!src) return null;
-
-    let changed = false;
-    const updated = nodes.map((node) => {
-        // Match by node ID or agent label
-        if (node.id !== src && node.data?.label !== src) return node;
-        changed = true;
-
-        if (signal.type === 'thought' || signal.type === 'cognitive') {
-            return {
-                ...node,
-                data: { ...node.data, isThinking: true, lastThought: signal.message },
-            };
-        }
-        if (signal.type === 'artifact' || signal.type === 'output') {
-            return {
-                ...node,
-                data: {
-                    ...node.data,
-                    isThinking: false,
-                    lastThought: signal.message ?? node.data.lastThought,
-                },
-            };
-        }
-        if (signal.type === 'error') {
-            return {
-                ...node,
-                data: {
-                    ...node.data,
-                    status: 'error',
-                    isThinking: false,
-                    lastThought: signal.message,
-                },
-            };
-        }
-        return node;
-    });
-
-    return changed ? updated : null;
-}
-
-// ── Chat Persistence (localStorage) ──────────────────────────
-// Soma's memory: chat survives page refreshes. Use clearMissionChat to reset.
-
-const CHAT_STORAGE_KEY = 'mycelis-workspace-chat';
-const CHAT_STORAGE_KEY_LEGACY = 'mycelis-mission-chat'; // migrate old key
-const CHAT_MAX_PERSISTED = 200; // cap to avoid localStorage quota issues
-
-function loadPersistedChat(): ChatMessage[] {
-    if (typeof window === 'undefined') return [];
-    try {
-        // Try new key first, fall back to legacy key on first load (migration)
-        const raw = localStorage.getItem(CHAT_STORAGE_KEY)
-            ?? localStorage.getItem(CHAT_STORAGE_KEY_LEGACY);
-        if (!raw) return [];
-        const msgs: ChatMessage[] = JSON.parse(raw);
-        return Array.isArray(msgs) ? msgs.slice(-CHAT_MAX_PERSISTED) : [];
-    } catch {
-        return [];
-    }
-}
-
-function persistChat(messages: ChatMessage[]) {
-    if (typeof window === 'undefined') return;
-    try {
-        // Only persist the last N messages to respect localStorage limits
-        const toStore = messages.slice(-CHAT_MAX_PERSISTED);
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
-    } catch { /* quota exceeded — silently drop */ }
-}
-
 // ── Zustand Store ─────────────────────────────────────────────
 
 export const useCortexStore = create<CortexState>((set, get) => ({
@@ -1077,6 +914,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     missionChat: loadPersistedChat(),
     isMissionChatting: false,
     missionChatError: null,
+    missionChatFailure: null,
+    assistantName: 'Soma',
     councilTarget: 'admin',
     councilMembers: [],
 
@@ -1134,7 +973,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     // Signal Detail Drawer
     selectedSignalDetail: null,
 
-    // Phase 19: Agent & Provider Orchestration
+    // Agent/provider orchestration
     activeBrain: null,
     activeMode: 'answer' as ExecutionMode,
     activeRole: '',
@@ -1255,7 +1094,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
         es.onmessage = (event) => {
             try {
-                const signal: StreamSignal = JSON.parse(event.data);
+                const signal = normalizeIncomingSignal(JSON.parse(event.data));
                 const { nodes } = get();
 
                 // Push to stream log (capped at 100)
@@ -1343,7 +1182,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         set({ selectedSignalDetail: detail });
     },
 
-    // Phase 19: Agent & Provider Orchestration
+    // Agent/provider orchestration
     setInspectedMessage: (msg: ChatMessage | null) => {
         set({ inspectedMessage: msg, isInspectorOpen: msg !== null });
     },
@@ -1749,6 +1588,44 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     // ── Mission Control Chat + Council API ───────────────────────
 
+    fetchUserSettings: async () => {
+        try {
+            const res = await fetch('/api/v1/user/me', { cache: 'no-store' });
+            if (!res.ok) return;
+            const body = await res.json();
+            const settings = body?.settings;
+            const assistantName = typeof settings?.assistant_name === 'string'
+                ? settings.assistant_name.trim()
+                : '';
+            if (assistantName) {
+                set({ assistantName });
+            }
+        } catch {
+            // degraded mode — leave default name
+        }
+    },
+
+    updateAssistantName: async (name: string) => {
+        const assistantName = name.trim();
+        if (!assistantName) return false;
+        try {
+            const res = await fetch('/api/v1/user/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assistant_name: assistantName }),
+            });
+            if (!res.ok) return false;
+
+            const body = await res.json().catch(() => ({}));
+            const persisted = body?.settings?.assistant_name;
+            set({ assistantName: typeof persisted === 'string' && persisted.trim() ? persisted.trim() : assistantName });
+            return true;
+        } catch (err) {
+            console.error('[SETTINGS] assistant name update failed:', err);
+            return false;
+        }
+    },
+
     setCouncilTarget: (id: string) => {
         set({ councilTarget: id });
     },
@@ -1770,18 +1647,22 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         const trimmed = message.trim();
         if (!trimmed) return;
 
-        const { councilTarget } = get();
+        const { councilTarget, assistantName } = get();
+        const isSomaRoute = councilTarget === 'admin';
+        const chatRoute = isSomaRoute ? '/api/v1/chat' : `/api/v1/council/${councilTarget}/chat`;
+        const routeLabel = isSomaRoute ? 'Soma chat' : 'Council agent';
 
         // Append user message and set loading
         set((s) => ({
             missionChat: [...s.missionChat, { role: 'user', content: trimmed }],
             isMissionChatting: true,
             missionChatError: null,
+            missionChatFailure: null,
         }));
 
         try {
             // Smart windowing: send only the last 20 messages to the LLM.
-            // Older context is auto-recalled from pgvector by the backend (Phase 19).
+            // Older context is auto-recalled from pgvector by the backend.
             const messages = [...get().missionChat]
                 .slice(-20)
                 .map((m) => ({
@@ -1789,7 +1670,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                     content: m.content,
                 }));
 
-            const res = await fetch(`/api/v1/council/${councilTarget}/chat`, {
+            const res = await fetch(chatRoute, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ messages }),
@@ -1800,14 +1681,22 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 let errMsg: string;
                 try {
                     const parsed = JSON.parse(text);
-                    errMsg = parsed.error || `Council agent error (${res.status})`;
+                    errMsg = parsed.error || `${routeLabel} blocked (${res.status})`;
                 } catch {
-                    errMsg = `Council agent unreachable (${res.status})`;
+                    errMsg = `${routeLabel} unreachable (${res.status})`;
                 }
                 set((s) => ({
                     isMissionChatting: false,
                     missionChatError: errMsg,
-                    missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget }],
+                    missionChatFailure: buildMissionChatFailure({
+                        assistantName,
+                        targetId: councilTarget,
+                        message: errMsg,
+                        statusCode: res.status,
+                    }),
+                    missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget, mode: 'blocker' }],
+                    activeMode: 'blocker',
+                    activeRole: councilTarget,
                 }));
                 return;
             }
@@ -1815,11 +1704,19 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             const body: APIResponse<CTSChatEnvelope> = await res.json();
 
             if (!body.ok || !body.data) {
-                const errText = body.error || `Chat request failed (${res.status})`;
+                const errText = body.error || `${routeLabel} failed (${res.status})`;
                 set((s) => ({
                     isMissionChatting: false,
                     missionChatError: errText,
-                    missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget }],
+                    missionChatFailure: buildMissionChatFailure({
+                        assistantName,
+                        targetId: councilTarget,
+                        message: errText,
+                        statusCode: res.status,
+                    }),
+                    missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget, mode: 'blocker' }],
+                    activeMode: 'blocker',
+                    activeRole: councilTarget,
                 }));
                 return;
             }
@@ -1838,50 +1735,50 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 template_id: envelope.template_id || 'chat-to-answer',
                 mode: envelope.mode || 'answer',
                 provenance: envelope.payload?.provenance,
-                // Phase 19: Brain provenance
+                // Brain provenance
                 brain: envelope.payload?.brain,
-                // Phase 19-B: Extract proposal from chat response
-                proposal: envelope.payload?.proposal ? {
-                    intent: envelope.payload.proposal.intent,
-                    teams: 0,
-                    agents: 0,
-                    tools: envelope.payload.proposal.tools || [],
-                    risk_level: envelope.payload.proposal.risk_level || 'medium',
-                    confirm_token: envelope.payload.proposal.confirm_token,
-                    intent_proof_id: envelope.payload.proposal.intent_proof_id,
-                } : undefined,
+                // Extract proposal from chat response
+                proposal: normalizeProposalData(envelope.payload?.proposal),
             };
 
-            // Phase 19: Derive governance mode from trust threshold
+            // Derive governance mode from trust threshold
             const trust = get().trustThreshold;
             const govMode = trust >= 0.8 ? 'strict' as const : trust >= 0.5 ? 'active' as const : 'passive' as const;
 
             set((s) => ({
                 isMissionChatting: false,
                 missionChat: [...s.missionChat, chatMsg],
-                // Phase 19: Update active orchestration state
+                missionChatFailure: null,
+                // Update active orchestration state
                 activeBrain: chatMsg.brain ?? null,
                 activeMode: chatMsg.mode || 'answer',
                 activeRole: chatMsg.source_node || '',
                 governanceMode: govMode,
-                // Phase 19-B: Set pending proposal if present
+                // Set pending proposal when present
                 ...(chatMsg.proposal ? {
                     pendingProposal: chatMsg.proposal,
                     activeConfirmToken: chatMsg.proposal.confirm_token,
                 } : {}),
             }));
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Chat failed';
+            const msg = err instanceof Error ? err.message : `${routeLabel} failed`;
             set((s) => ({
                 isMissionChatting: false,
                 missionChatError: msg,
-                missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget }],
+                missionChatFailure: buildMissionChatFailure({
+                    assistantName,
+                    targetId: councilTarget,
+                    message: msg,
+                }),
+                missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget, mode: 'blocker' }],
+                activeMode: 'blocker',
+                activeRole: councilTarget,
             }));
         }
     },
 
     clearMissionChat: () => {
-        set({ missionChat: [], missionChatError: null });
+        set({ missionChat: [], missionChatError: null, missionChatFailure: null });
         if (typeof window !== 'undefined') {
             localStorage.removeItem(CHAT_STORAGE_KEY);
         }
@@ -1897,6 +1794,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             missionChat: [...s.missionChat, { role: 'user', content: `[BROADCAST] ${trimmed}` }],
             isBroadcasting: true,
             missionChatError: null,
+            missionChatFailure: null,
         }));
 
         try {
@@ -1911,6 +1809,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 set((s) => ({
                     isBroadcasting: false,
                     missionChatError: errText,
+                    missionChatFailure: null,
                     missionChat: [...s.missionChat, { role: 'architect', content: errText }],
                 }));
                 return;
@@ -1953,6 +1852,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             set((s) => ({
                 isBroadcasting: false,
                 missionChatError: msg,
+                missionChatFailure: null,
                 missionChat: [...s.missionChat, { role: 'architect', content: `Error: ${msg}` }],
             }));
         }
@@ -2178,30 +2078,18 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     },
 
     deleteAgentFromDraft: (teamIdx: number, agentIdx: number) => {
-        console.log('[DEBUG] deleteAgentFromDraft called', { teamIdx, agentIdx });
         const bp = get().blueprint;
-        if (!bp) {
-            console.error('[DEBUG] No blueprint found');
-            return;
-        }
+        if (!bp) return;
         const newBp: MissionBlueprint = structuredClone(bp);
-        console.log('[DEBUG] Blueprint cloned', newBp);
         const team = newBp.teams[teamIdx];
-        if (!team) {
-            console.error('[DEBUG] Team not found', teamIdx);
-            return;
-        }
+        if (!team) return;
         team.agents.splice(agentIdx, 1);
-        console.log('[DEBUG] Agent spliced. Remaining in team:', team.agents.length);
         // Remove team if empty
         if (team.agents.length === 0) {
             newBp.teams.splice(teamIdx, 1);
-            console.log('[DEBUG] Team removed (empty). Remaining teams:', newBp.teams.length);
         }
         const { nodes, edges } = blueprintToGraph(newBp);
-        console.log('[DEBUG] Graph regenerated', { nodes: nodes.length, edges: edges.length });
         set({ blueprint: newBp, nodes, edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
-        console.log('[DEBUG] State updated');
     },
 
     discardDraft: () => {
@@ -2252,32 +2140,17 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     deleteAgentFromMission: async (agentName: string) => {
         const { activeMissionId, blueprint } = get();
-        console.log('[DEBUG] deleteAgentFromMission called', { agentName, activeMissionId });
         if (!activeMissionId) return;
 
         try {
             const res = await fetch(`/api/v1/missions/${activeMissionId}/agents/${agentName}`, {
                 method: 'DELETE',
             });
-            console.log('[DEBUG] DELETE API response:', res.status);
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                const errMsg = data.error ?? res.statusText;
-                console.error('deleteAgentFromMission error:', errMsg);
-
-                const div = document.createElement('div');
-                div.id = 'debug-result-error';
-                div.innerText = 'DELETE ERROR: ' + errMsg;
-                div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:red;color:white;font-size:32px;padding:20px;border:4px solid black;';
-                document.body.appendChild(div);
+                console.error('deleteAgentFromMission error:', data.error ?? res.statusText);
                 return;
             }
-
-            const div = document.createElement('div');
-            div.id = 'debug-result-success';
-            div.innerText = 'DELETE SUCCESS: ' + agentName;
-            div.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:green;color:white;font-size:32px;padding:20px;border:4px solid black;';
-            document.body.appendChild(div);
 
             // Update local blueprint
             if (blueprint) {
@@ -2286,7 +2159,6 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 for (let tIdx = 0; tIdx < newBp.teams.length; tIdx++) {
                     const aIdx = newBp.teams[tIdx].agents.findIndex((a) => a.id === agentName);
                     if (aIdx !== -1) {
-                        console.log('[DEBUG] Splicing active agent at', { tIdx, aIdx });
                         newBp.teams[tIdx].agents.splice(aIdx, 1);
                         spliced = true;
                         if (newBp.teams[tIdx].agents.length === 0) {
@@ -2295,11 +2167,12 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                         break;
                     }
                 }
-                if (!spliced) console.warn('[DEBUG] Active agent NOT found in blueprint:', agentName);
+                if (!spliced) {
+                    console.warn('deleteAgentFromMission: active agent not found in local blueprint:', agentName);
+                }
 
                 const { nodes, edges } = blueprintToGraph(newBp);
                 set({ blueprint: newBp, nodes: solidifyNodes(nodes), edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
-                console.log('[DEBUG] Active state updated');
             }
         } catch (err) {
             console.error('deleteAgentFromMission:', err);
@@ -2335,7 +2208,13 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     // CE-1: Proposal confirmation — calls backend confirm-action endpoint
     confirmProposal: async () => {
         const { activeConfirmToken, pendingProposal } = get();
-        if (!activeConfirmToken || !pendingProposal) return;
+        if (!activeConfirmToken || !pendingProposal) {
+            return {
+                ok: false,
+                runId: null,
+                error: 'No pending proposal to confirm',
+            };
+        }
         try {
             const res = await fetch('/api/v1/intent/confirm-action', {
                 method: 'POST',
@@ -2348,21 +2227,59 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 const systemMsg: ChatMessage = {
                     role: 'system',
                     content: 'Mission activated',
+                    mode: 'execution_result',
                     run_id: runId ?? undefined,
                     timestamp: new Date().toISOString(),
                 };
                 set((s) => ({
                     activeRunId: runId,
+                    activeMode: 'execution_result',
+                    missionChatError: null,
+                    missionChatFailure: null,
                     missionChat: [...s.missionChat, systemMsg],
+                    pendingProposal: null,
+                    activeConfirmToken: null,
                 }));
+                return { ok: true, runId };
             } else {
                 const text = await res.text();
-                console.error('[CE-1] Confirm action failed:', text);
+                let errMsg = 'Confirm action failed';
+                try {
+                    const parsed = JSON.parse(text);
+                    errMsg = parsed.error || errMsg;
+                } catch {
+                    errMsg = text || errMsg;
+                }
+                console.error('[CE-1] Confirm action failed:', errMsg);
+                set((s) => ({
+                    missionChatError: errMsg,
+                    missionChatFailure: null,
+                    activeMode: 'blocker',
+                    missionChat: [
+                        ...s.missionChat,
+                        { role: 'council', content: errMsg, source_node: 'admin', mode: 'blocker' },
+                    ],
+                    pendingProposal: null,
+                    activeConfirmToken: null,
+                }));
+                return { ok: false, runId: null, error: errMsg };
             }
         } catch (err) {
+            const errMsg = err instanceof Error ? err.message : 'Confirm action failed';
             console.error('[CE-1] confirmProposal error:', err);
+            set((s) => ({
+                missionChatError: errMsg,
+                missionChatFailure: null,
+                activeMode: 'blocker',
+                missionChat: [
+                    ...s.missionChat,
+                    { role: 'council', content: errMsg, source_node: 'admin', mode: 'blocker' },
+                ],
+                pendingProposal: null,
+                activeConfirmToken: null,
+            }));
+            return { ok: false, runId: null, error: errMsg };
         }
-        set({ pendingProposal: null, activeConfirmToken: null });
     },
 
     cancelProposal: () => {

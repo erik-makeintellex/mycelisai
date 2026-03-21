@@ -13,8 +13,11 @@ Soma can:
 - consult council specialists
 - call internal and MCP tools
 - return an answer or a governed proposal
+- generate images inline and persist them on request
+- execute root-admin configuration work across the full platform (providers, policies, MCP, profiles, groups, and runtime settings), not only team creation
 
 You do not need to manually pick Soma. It is the default route in Workspace chat.
+You can rename Soma from `Settings -> Profile -> Assistant Name`; the updated name appears across chat and operational UI labels.
 
 ---
 
@@ -67,13 +70,13 @@ No mutation executes until confirmation.
 
 ---
 
-## Brain / Provider
+## AI Engine / Provider
 
-A brain is a configured model provider endpoint (local or remote).
-Role routing is managed through brains and mission profiles.
+An AI engine is a curated model-provider posture used by the product.
+Role routing is managed through AI engines and mission profiles.
 
 Primary management surfaces:
-- `Resources -> Brains`
+- `Resources -> AI Engines` (Advanced mode)
 - `Settings -> Profiles`
 
 ---
@@ -105,6 +108,11 @@ V7 includes global operator-recovery UX:
 
 These are designed to keep workflows recoverable without page switching.
 
+Expected user-visible controls:
+- global **Degraded Mode** banner actions (`Retry`, `Switch to Soma`, `Open Status`)
+- right-side **Status Drawer** with council reachability + service health
+- `/system` **Quick Checks** with run + copy diagnostics actions
+
 ---
 
 ## Advanced Mode
@@ -114,7 +122,18 @@ Toggle from the rail footer (`Advanced: On/Off`).
 
 Typical unlocks:
 - System diagnostics depth
-- Neural Wiring tab in Automations
+- Workflow Builder tab in Automations
+- Workspace telemetry row (hidden in standard mode to keep chat-first layout)
+
+---
+
+## Users and Groups
+
+`Settings -> People & Access` provides:
+- user management elements (role, remote-provider allowance, active/disabled state)
+- collaboration group management (goal/work-mode/team membership + group broadcast)
+
+Group management is also available in `Automations -> Shared Teams`.
 
 ---
 
@@ -138,12 +157,12 @@ If NATS degrades, UI enters degraded mode and offers recovery actions.
 
 ---
 
-## MCP Tools
+## Connected Tools
 
-MCP extends agent capabilities (filesystem, fetch, memory, etc.).
+Connected tools extend agent capabilities (filesystem, fetch, memory, etc.).
 
 Primary surfaces:
-- `Resources -> MCP Tools` for server/tool visibility and install flows
+- `Resources -> Connected Tools` for server/tool visibility and install flows
 - `Workspace` for actual tool usage via agent execution
 
 Baseline profile (V7):
@@ -163,3 +182,13 @@ Mycelis resource surfaces are converging on one API envelope pattern:
 Why this matters:
 - adding new AI resource channels (tools, services, hardware, future RAG paths) does not require bespoke parsing logic per screen
 - degraded/error behavior stays consistent across Workspace, Resources, and System surfaces
+
+---
+
+## Current UI Reliability Baseline
+
+The in-app docs and UI now assume these interaction guarantees:
+1. no dead-end empty states on Automations
+2. structured council error recovery in chat
+3. global degraded visibility from any page
+4. quick diagnostic checks directly from `/system`

@@ -9,6 +9,15 @@
 > - [Backend Specification](BACKEND.md) — Go packages, APIs, DB schema, NATS, execution pipelines
 > - [Frontend Specification](FRONTEND.md) — Routes, components, Zustand, visual design
 > - [Operations Manual](OPERATIONS.md) — Deployment, config, testing, CI/CD, invoke tasks
+> - [Soma Team + Channel Architecture](SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md) — Inter-team/process channels, MCP execution I/O, and shared memory boundaries
+> - [MCP Service Config (Local-First)](MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md) — Standard onboarding/configuration for adding MCP services with local-default policy
+> - [Universal Action Interface V7](UNIVERSAL_ACTION_INTERFACE_V7.md) — Unified action contracts across MCP/OpenAPI/Python with dynamic service onboarding APIs
+> - [Agentry Template Marketplace + Custom Templating](AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md) — API and governance model for ClawHub-style template acquisition plus tenant-owned custom template publishing
+> - [Actualization Beyond MCP V7](ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md) — Multi-protocol architecture guidance inspired by OpenClaw/A2A/ACP patterns
+> - [Secure Gateway + Remote Actuation](SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md) — Security baseline for self-hosted control planes and remote actuator services
+> - [Hardware Interface API + Channels](HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md) — Standard API + direct channel model for hardware interfaces and low-level IoT pathways
+> - [Soma Symbiote + Host Actuation](SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md) — Thought-profile backend contracts, learning growth loop, and localhost actuation model
+> - [Target Deliverable V7](../architecture-library/TARGET_DELIVERABLE_V7.md) — Canonical product target, phase framing, and recurring-plan delivery rules
 > - [README.md](../../README.md) — Operational source of truth (getting started, commands)
 
 ---
@@ -150,15 +159,30 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 | 5.2 | Sovereign UX & Trust | Trust Economy (CTS TrustScore, Governance Valve, SSE governance_halt), Telemetry API, Trust API, AgentNode iconography (4 categories), TrustSlider, BlueprintDrawer, Panopticon layout |
 | 5.3 | RAG & Sensory UI | EmbedProvider interface, pgvector auto-embed, SemanticSearch, SensorLibrary (grouped subscriptions), ManifestationPanel, NatsWaterfall signal classification (input/output/internal), MissionControl 3-column responsive grid |
 | 6.0 | Host Internalization | Activation Bridge (commitAndActivate), SensorAgent (poll-based), Blueprint Converter (mission-scoped IDs), Symbiotic Seed (Gmail+Weather, no LLM), Team.sensorConfigs, Migration 010 |
-| 7.7 | Admin & Council | HandleChat NATS-only (no raw LLM fallback), provider naming (vllm/ollama/lmstudio), dynamic cognitive status, Settings 4-tab page, Cognitive Matrix UI + ProviderConfigModal, 17 internal tools, Council YAML, ToolsPalette drawer |
+| 7.7 | Admin & Council | HandleChat NATS-only (no raw LLM fallback), provider naming (vllm/ollama/lmstudio), dynamic cognitive status, advanced AI Engines settings, 17 internal tools, Council YAML, ToolsPalette drawer |
 | 8.0 | Visualization | Observable Plot (bar/line/area/dot/waffle/tree), Leaflet geo maps, DataTable, ChartRenderer, MycelisChartSpec type system, ArtifactViewer inline chart rendering, SquadRoom ProofCard |
-| 9.0 | Neural Wiring CRUD | WiringAgentEditor drawer, CircuitBoard edit/delete, mission CRUD API (GET/PUT/DELETE), Migration 020 (FK cascade), Zustand wiring actions (7 new), draft mode vs active mode |
+| 9.0 | Workflow Builder CRUD | WiringAgentEditor drawer, CircuitBoard edit/delete, mission CRUD API (GET/PUT/DELETE), Migration 020 (FK cascade), Zustand wiring actions (7 new), draft mode vs active mode |
 | 10.0 | Meta-Agent Research | research_for_blueprint tool, admin-routed negotiate via NATS |
-| 11.0 | Team Management | /teams route, TeamCard, TeamDetailDrawer, GET /api/v1/teams/detail |
+| 11.0 | Shared Teams | `/teams` redirect, TeamCard, TeamDetailDrawer, GET /api/v1/teams/detail |
 
 ---
 
 ## VII. Upcoming Architecture
+
+### V7.x Immediate Program: Soma Extension-of-Self
+
+**Objective:** Operationalize Soma as a governed extension-of-self with explicit decision contracts, local-first cognition visibility, and universal action channels.
+
+- **Decision Runtime:** Add typed decision frames (`direct_action`, `manifest_team`, `propose_only`, `scheduled_repeat`) and run-linked audit emission.
+- **Local Ollama Contract:** Treat local provider readiness (reachability, model availability, latency, throughput, failure ratio) as a first-class operational dependency.
+- **Universal Action Convergence:** Keep MCP as baseline adapter while onboarding one non-MCP adapter through the same invoke contract and governance gates.
+- **Team Lifetime and Repeat:** Enforce `ephemeral|persistent|auto` with scheduler-backed repeat promotion.
+- **Governed Host/Hardware Path:** Add localhost-first host/hardware action scaffolds under allowlist + approval boundaries.
+
+Execution authority:
+- `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
+- `docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
+- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 
 ### Phase 12: Persistent Agent Memory & Long-Term Learning
 
@@ -224,7 +248,7 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 - **Pages to Migrate:** `/telemetry`, `/marketplace`, `/approvals` — three remaining routes using legacy zinc/slate classes.
 - **Remove Legacy Variables:** Delete `--background`, `--surface`, `--border`, `--border-active` from globals.css.
 - **Automated Audit:** Scan all components for `bg-white`, `bg-zinc-*`, `bg-slate-*`, or Vuexy color references.
-- **Smoke Test Coverage:** Ensure `uvx inv interface.check` validates all 15 routes.
+- **Smoke Test Coverage:** Ensure `uv run inv interface.check` validates all 15 routes.
 
 ### Phase 18: Streaming LLM Responses
 
@@ -282,3 +306,4 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 | Vitest tests | ~114 |
 | Playwright specs | 12 |
 | CI workflows | 3 |
+

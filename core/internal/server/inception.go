@@ -10,6 +10,13 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+// GET /api/v1/inception/contracts
+// Returns frozen P0 contract shapes for decision/runtime integration.
+func (s *AdminServer) HandleInceptionContracts(w http.ResponseWriter, r *http.Request) {
+	bundle := protocol.DefaultInceptionContractBundle()
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(bundle))
+}
+
 // GET /api/v1/inception/recipes
 // Lists inception recipes. Optional query params: ?category=X&agent=Y&limit=N
 func (s *AdminServer) HandleListInceptionRecipes(w http.ResponseWriter, r *http.Request) {

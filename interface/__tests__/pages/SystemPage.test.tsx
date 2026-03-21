@@ -15,19 +15,27 @@ vi.mock('next/navigation', () => ({
     useSearchParams: () => mockSearchParams,
 }));
 
-// Mock MatrixGrid (heavy component)
-vi.mock('@/components/matrix/MatrixGrid', () => ({
-    __esModule: true,
-    default: () => <div data-testid="matrix-grid">MatrixGrid</div>,
+const mockAdvancedMode = vi.fn(() => true);
+const mockFetchServicesStatus = vi.fn();
+vi.mock('@/store/useCortexStore', () => ({
+    useCortexStore: (selector: any) =>
+        selector({
+            advancedMode: mockAdvancedMode(),
+            servicesStatus: [],
+            isFetchingServicesStatus: false,
+            servicesStatusUpdatedAt: null,
+            fetchServicesStatus: mockFetchServicesStatus,
+        }),
 }));
 
 import SystemPage from '@/app/(app)/system/page';
 
-describe('System Page (V7 — Advanced)', () => {
+describe('System Page (V8.1 advanced diagnostics)', () => {
     beforeEach(() => {
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
+        mockAdvancedMode.mockReturnValue(true);
         // Mock fetch for health checks
         vi.spyOn(global, 'fetch').mockResolvedValue({
             ok: true,
@@ -47,21 +55,26 @@ describe('System Page (V7 — Advanced)', () => {
 
     it('renders all tabs', async () => {
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText('Event Health')).toBeDefined();
-        expect(screen.getByText('NATS Status')).toBeDefined();
-        expect(screen.getByText('Database')).toBeDefined();
-        expect(screen.getByText('Cognitive Matrix')).toBeDefined();
-        expect(screen.getByText('Debug')).toBeDefined();
+        expect(screen.getByText('Runtime Health')).toBeDefined();
+        expect(screen.getByText('Event Bus')).toBeDefined();
+        expect(screen.getByText('Storage')).toBeDefined();
+        expect(screen.getByText('Services')).toBeDefined();
     });
 
-    it('defaults to Event Health tab', async () => {
+    it('defaults to Runtime Health tab', async () => {
         await act(async () => { render(<SystemPage />); });
         expect(screen.getByText('LIVE')).toBeDefined();
     });
 
-    it('deep-links to matrix tab via search param', async () => {
-        mockSearchParams.set('tab', 'matrix');
+    it('deep-links to services tab via search param', async () => {
+        mockSearchParams.set('tab', 'services');
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByTestId('matrix-grid')).toBeDefined();
+        expect(screen.getByText('Services')).toBeDefined();
+    });
+
+    it('shows the advanced gate when advanced mode is off', async () => {
+        mockAdvancedMode.mockReturnValue(false);
+        await act(async () => { render(<SystemPage />); });
+        expect(screen.getByText(/System diagnostics are hidden until you open Advanced mode/i)).toBeDefined();
     });
 });

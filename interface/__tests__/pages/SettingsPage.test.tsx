@@ -30,11 +30,22 @@ vi.mock('@/components/settings/MCPToolRegistry', () => ({
     default: () => <div data-testid="mcp-tool-registry">MCPToolRegistry</div>,
 }));
 
-// Mock MatrixGrid (fetches cognitive matrix config from API)
-vi.mock('@/components/matrix/MatrixGrid', () => ({
-    __esModule: true,
-    default: () => <div data-testid="matrix-grid">MatrixGrid</div>,
+const mockSearchParams = new URLSearchParams();
+const mockAdvancedMode = vi.fn(() => true);
+vi.mock('next/navigation', () => ({
+    useSearchParams: () => mockSearchParams,
 }));
+vi.mock('@/store/useCortexStore', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@/store/useCortexStore')>();
+    return {
+        ...actual,
+        useCortexStore: (selector: any) => selector({
+            advancedMode: mockAdvancedMode(),
+            assistantName: 'Soma',
+            updateAssistantName: vi.fn(async () => true),
+        }),
+    };
+});
 
 import SettingsPage from '@/app/(app)/settings/page';
 
@@ -44,6 +55,10 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             ok: true,
             json: async () => ({}),
         });
+        for (const key of [...mockSearchParams.keys()]) {
+            mockSearchParams.delete(key);
+        }
+        mockAdvancedMode.mockReturnValue(true);
     });
 
     it('mounts without crashing', async () => {
@@ -60,9 +75,10 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
 
         expect(screen.getByText('Profile')).toBeDefined();
-        expect(screen.getByText('Teams')).toBeDefined();
-        expect(screen.getByText('Cognitive Matrix')).toBeDefined();
-        expect(screen.getByText('MCP Tools')).toBeDefined();
+        expect(screen.getByText('Mission Profiles')).toBeDefined();
+        expect(screen.getByText('People & Access')).toBeDefined();
+        expect(screen.getByText('AI Engines')).toBeDefined();
+        expect(screen.getByText('Connected Tools')).toBeDefined();
     });
 
     it('defaults to profile tab with appearance settings', async () => {
@@ -72,5 +88,15 @@ describe('Settings Page (app/settings/page.tsx)', () => {
 
         expect(screen.getByText('Appearance')).toBeDefined();
         expect(screen.getByText('Midnight Cortex')).toBeDefined();
+    });
+
+    it('hides advanced tabs when advanced mode is off', async () => {
+        mockAdvancedMode.mockReturnValue(false);
+        await act(async () => {
+            render(<SettingsPage />);
+        });
+
+        expect(screen.queryByText('AI Engines')).toBeNull();
+        expect(screen.queryByText('Connected Tools')).toBeNull();
     });
 });

@@ -138,6 +138,30 @@ export default function SignalDetailDrawer() {
                         <MetaRow icon={Hash} label="Topic" value={detail.topic} />
                     )}
 
+                    {detail.payload_kind && (
+                        <MetaRow icon={Radio} label="Kind" value={detail.payload_kind} />
+                    )}
+
+                    {detail.source_kind && (
+                        <MetaRow icon={Radio} label="Origin" value={detail.source_kind} />
+                    )}
+
+                    {detail.source_channel && detail.source_channel !== detail.topic && (
+                        <MetaRow icon={Hash} label="Channel" value={detail.source_channel} />
+                    )}
+
+                    {detail.team_id && (
+                        <MetaRow icon={Radio} label="Team" value={detail.team_id} />
+                    )}
+
+                    {detail.agent_id && (
+                        <MetaRow icon={Radio} label="Agent" value={detail.agent_id} />
+                    )}
+
+                    {detail.run_id && (
+                        <MetaRow icon={Fingerprint} label="Run" value={detail.run_id} />
+                    )}
+
                     {detail.trace_id && (
                         <MetaRow icon={Fingerprint} label="Trace" value={detail.trace_id} />
                     )}

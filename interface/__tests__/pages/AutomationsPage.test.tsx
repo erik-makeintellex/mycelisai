@@ -19,16 +19,29 @@ vi.mock('next/navigation', () => ({
 // then the resolved component. Since vi.mock is hoisted, child mocks are ready.
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: any, opts?: any) => {
-        // Store for lazy resolution
-        let Comp: any = null;
-        const p = loader().then((mod: any) => { Comp = mod.default || mod; }).catch(() => {});
-        const Dynamic = (props: any) => {
-            if (Comp) return <Comp {...props} />;
+    default: (loader: () => Promise<any>, opts?: any) => {
+        const Dynamic = (props: Record<string, unknown>) => {
+            const React = require('react') as typeof import('react');
+            const [Comp, setComp] = React.useState<import('react').ComponentType<any> | null>(null);
+            React.useEffect(() => {
+                let mounted = true;
+                loader()
+                    .then((mod: any) => {
+                        if (!mounted) {
+                            return;
+                        }
+                        setComp(() => (mod.default || mod) as import('react').ComponentType<any>);
+                    })
+                    .catch(() => {});
+                return () => {
+                    mounted = false;
+                };
+            }, []);
+            if (Comp) {
+                return React.createElement(Comp, props);
+            }
             return opts?.loading ? opts.loading() : null;
         };
-        // Attach the resolution promise so tests can await it
-        (Dynamic as any).__resolvePromise = p;
         return Dynamic;
     },
 }));
@@ -83,22 +96,22 @@ describe('Automations Page (V7)', () => {
     it('renders all standard tabs', async () => {
         await act(async () => { render(<AutomationsPage />); });
         expect(screen.getByRole('button', { name: 'Active Automations' })).toBeDefined();
-        expect(screen.getByRole('button', { name: 'Draft Blueprints' })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Trigger Rules' })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Approvals' })).toBeDefined();
-        expect(screen.getByRole('button', { name: 'Teams' })).toBeDefined();
     });
 
-    it('hides Neural Wiring tab when advancedMode is off', async () => {
+    it('hides advanced tabs when advancedMode is off', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<AutomationsPage />); });
-        expect(screen.queryByText('Neural Wiring')).toBeNull();
+        expect(screen.queryByText('Workflow Builder')).toBeNull();
+        expect(screen.queryByText('Shared Teams')).toBeNull();
     });
 
-    it('shows Neural Wiring tab when advancedMode is on', async () => {
+    it('shows advanced tabs when advancedMode is on', async () => {
         mockAdvancedMode.mockReturnValue(true);
         await act(async () => { render(<AutomationsPage />); });
-        expect(screen.getByRole('button', { name: 'Neural Wiring' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Workflow Builder' })).toBeDefined();
+        expect(screen.getByRole('button', { name: 'Shared Teams' })).toBeDefined();
     });
 
     it('defaults to Active Automations tab', async () => {
@@ -109,11 +122,7 @@ describe('Automations Page (V7)', () => {
 
     it('deep-links to approvals tab via search param', async () => {
         mockSearchParams.set('tab', 'approvals');
-        // Allow dynamic import promises to resolve
-        await new Promise((r) => setTimeout(r, 10));
         await act(async () => { render(<AutomationsPage />); });
-        // If dynamic hasn't resolved yet, flush again
-        await act(async () => { await new Promise((r) => setTimeout(r, 10)); });
-        expect(screen.getByTestId('approvals-tab')).toBeDefined();
+        expect(await screen.findByTestId('approvals-tab')).toBeDefined();
     });
 });

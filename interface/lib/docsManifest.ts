@@ -40,6 +40,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Soma, Council, Mission, Run, Brain, Event, Trust — plain-language glossary",
             },
             {
+                slug: "system-status-recovery",
+                label: "System Status & Recovery",
+                path: "docs/user/system-status-recovery.md",
+                description: "Global health signals, degraded recovery actions, and Quick Checks workflow",
+            },
+            {
                 slug: "soma-chat",
                 label: "Using Soma Chat",
                 path: "docs/user/soma-chat.md",
@@ -61,13 +67,13 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "automations-guide",
                 label: "Automations",
                 path: "docs/user/automations.md",
-                description: "Active missions, drafts, trigger rules, approvals, scheduled runs",
+                description: "Active automations, trigger rules, approvals, and advanced workflow tools",
             },
             {
                 slug: "resources-guide",
                 label: "Resources",
                 path: "docs/user/resources.md",
-                description: "Brains/providers, MCP tools, workspace filesystem, agent catalogue",
+                description: "Advanced tools, workspace files, AI engines, and reusable role definitions",
             },
             {
                 slug: "memory-guide",
@@ -150,6 +156,30 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/archive/MVP_AGENTRY_PLAN.md",
                 description: "Historical agentry chain map retained for context",
             },
+            {
+                slug: "v7-ui-verification",
+                label: "V7 UI Verification (Archive)",
+                path: "docs/archive/v7-step-01-ui.md",
+                description: "Historical manual UI verification checklist for V7 Step 01 navigation",
+            },
+            {
+                slug: "v7-ia-step01",
+                label: "IA Step 01 (Archive)",
+                path: "docs/archive/ia-v7-step-01.md",
+                description: "Historical workflow-first navigation PRD for Step 01 implementation",
+            },
+            {
+                slug: "v7-ui-optimal-workflow-prds",
+                label: "UI Optimal Workflow PRDs (Archive)",
+                path: "docs/archive/UI_OPTIMAL_WORKFLOW_PRDS_V7.md",
+                description: "Historical planning PRDs superseded by current execution authority docs",
+            },
+            {
+                slug: "v7-ui-engagement-actuation-review",
+                label: "UI Engagement & Actuation Review (Archive)",
+                path: "docs/archive/UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md",
+                description: "Historical UI engagement/actuation review retained for context",
+            },
         ],
     },
 
@@ -171,9 +201,9 @@ export const DOC_MANIFEST: DocSection[] = [
             },
             {
                 slug: "logging-schema",
-                label: "Signal Log Schema",
+                label: "Logging Standard (V7)",
                 path: "docs/logging.md",
-                description: "LogEntry format, NATS cortex.logs subject, field reference",
+                description: "Authoritative mission-events and memory-stream logging contract, taxonomy, and onboarding checklist",
             },
         ],
     },
@@ -182,6 +212,108 @@ export const DOC_MANIFEST: DocSection[] = [
     {
         section: "Architecture",
         docs: [
+            {
+                slug: "architecture-library-index",
+                label: "Architecture Library Index",
+                path: "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+                description: "Canonical modular index for target delivery, architecture, execution, UI, and testing guidance",
+            },
+            {
+                slug: "target-deliverable-v7",
+                label: "Target Deliverable V7",
+                path: "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
+                description: "Full product end state, recurring-plan modes, phase framing, and success criteria",
+            },
+            {
+                slug: "system-architecture-v7",
+                label: "System Architecture V7",
+                path: "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
+                description: "Canonical runtime layers, persistence model, deployment posture, and bus/storage rules",
+            },
+            {
+                slug: "execution-manifest-library-v7",
+                label: "Execution And Manifest Library V7",
+                path: "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
+                description: "Run lifecycle, manifest lifecycle, recurring-plan semantics, and activation rules",
+            },
+            {
+                slug: "intent-manifestation-team-interaction-v7",
+                label: "Intent To Manifestation + Team Interaction V7",
+                path: "docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md",
+                description: "Canonical intent-to-manifestation flow, module abstraction, and created-team interaction model",
+            },
+            {
+                slug: "ui-operator-experience-v7",
+                label: "UI And Operator Experience V7",
+                path: "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
+                description: "Operator journeys, anti-information-swarm design rules, and intuitive UI targets",
+            },
+            {
+                slug: "delivery-governance-testing-v7",
+                label: "Delivery Governance And Testing V7",
+                path: "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
+                description: "Delivery proof model, evidence requirements, and product-aligned testing expectations",
+            },
+            {
+                slug: "next-execution-slices-v7",
+                label: "Next Execution Slices V7",
+                path: "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
+                description: "Current working queue with scoped next slices and linked development/testing references",
+            },
+            {
+                slug: "team-execution-global-state-protocol-v7",
+                label: "Team Execution + Global State Protocol V7",
+                path: "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
+                description: "Multi-lane execution architecture, global-state maintenance rules, and deep-testing obligations",
+            },
+            {
+                slug: "mvp-release-strike-team-plan-v7",
+                label: "MVP Release Strike Team Plan V7",
+                path: "docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md",
+                description: "Active MVP lane ownership, communication cadence, and state-file update discipline",
+            },
+            {
+                slug: "mvp-integration-toolship-execution-plan-v7",
+                label: "MVP Integration + Toolship Plan V7",
+                path: "docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md",
+                description: "Canonical plan for AI interaction, internal toolship, and service-connection hardening to reach non-test-team MVP",
+            },
+            {
+                slug: "ui-generation-testing-execution-plan-v7",
+                label: "UI Generation + Testing Plan V7",
+                path: "docs/architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md",
+                description: "Deterministic UI generation contract, route-priority testing depth, and MVP UX gate criteria",
+            },
+            {
+                slug: "v8-runtime-contracts",
+                label: "V8 Runtime Contracts",
+                path: "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
+                description: "Canonical V8 contract shell for inception, kernel, council, provider policy, and continuity state",
+            },
+            {
+                slug: "v8-config-bootstrap-model",
+                label: "V8 Config and Bootstrap Model",
+                path: "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
+                description: "Canonical V8 bootstrap + V7->V8 migration contract covering templates vs instantiated orgs, entry points, inheritance, and precedence",
+            },
+            {
+                slug: "v8-ui-api-operator-experience-contract",
+                label: "V8 UI/API/Operator Contract",
+                path: "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
+                description: "Canonical V8 PRD for first-run, AI Organization creation, Team Lead-first workspace behavior, visibility rules, and screen-to-API mapping",
+            },
+            {
+                slug: "v8-1-living-organization-architecture",
+                label: "Current Release Architecture (V8.1)",
+                path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
+                description: "Current bounded release architecture for Loop Profiles, Learning Loops, semantic continuity, Procedure / Skill Sets, promoted Agent Type/Response Contract inheritance, and bounded Automations visibility",
+            },
+            {
+                slug: "v8-2-full-production-architecture",
+                label: "Full Architecture (V8.2)",
+                path: "v8-2.md",
+                description: "Canonical full production architecture for distributed execution, governed learning, capability-backed execution, and full actuation scope",
+            },
             {
                 slug: "arch-overview",
                 label: "Overview",
@@ -207,6 +339,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Deployment, config, testing, CI/CD",
             },
             {
+                slug: "arch-ui-target-transaction-contract-v7",
+                label: "UI Target + Transaction Contract",
+                path: "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
+                description: "Required UI terminal states, backend effects, and product-flow proof expectations",
+            },
+            {
                 slug: "arch-memory-service",
                 label: "Memory Service",
                 path: "docs/architecture/DIRECTIVE_MEMORY_SERVICE.md",
@@ -214,15 +352,87 @@ export const DOC_MANIFEST: DocSection[] = [
             },
             {
                 slug: "v7-architecture-prd",
-                label: "V7 Architecture PRD",
+                label: "V7 Architecture PRD Index",
                 path: "mycelis-architecture-v7.md",
-                description: "V7 product requirements — event spine, mission graph, observability mandate",
+                description: "Stable compatibility entrypoint pointing to the modular architecture library",
             },
             {
                 slug: "v7-mcp-baseline",
                 label: "V7 MCP Baseline",
                 path: "docs/V7_MCP_BASELINE.md",
                 description: "MVOS: filesystem, memory, artifact-renderer, fetch servers",
+            },
+            {
+                slug: "arch-mcp-service-config-local-first",
+                label: "MCP Service Config (Local-First)",
+                path: "docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md",
+                description: "Canonical process and configuration standard for adding MCP services with local-default posture",
+            },
+            {
+                slug: "arch-universal-action-interface-v7",
+                label: "Universal Action Interface V7",
+                path: "docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md",
+                description: "Canonical universal action contracts, dynamic service API, and Python management interface",
+            },
+            {
+                slug: "arch-agentry-template-marketplace-v7",
+                label: "Template Marketplace + Custom",
+                path: "docs/architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md",
+                description: "API and governance model for marketplace template acquisition (ClawHub-style) and tenant custom template publishing",
+            },
+            {
+                slug: "arch-actualization-beyond-mcp-v7",
+                label: "Actualization Beyond MCP V7",
+                path: "docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md",
+                description: "Multi-protocol actualization strategy across MCP, OpenAPI, A2A, ACP, and Python action management",
+            },
+            {
+                slug: "arch-secure-gateway-remote-actuation-v7",
+                label: "Secure Gateway + Remote Actuation",
+                path: "docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md",
+                description: "Security baseline for self-hosted gateway patterns and remote actuation services",
+            },
+            {
+                slug: "arch-hardware-interface-api-v7",
+                label: "Hardware Interface API + Channels",
+                path: "docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md",
+                description: "Hardware interface control-plane APIs and direct channel support standards",
+            },
+            {
+                slug: "arch-soma-symbiote-growth-host-actuation-v7",
+                label: "Soma Symbiote + Host Actuation",
+                path: "docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md",
+                description: "Soma thought-profile contracts, learning-growth loop, and localhost host actuation model",
+            },
+            {
+                slug: "arch-soma-team-channels",
+                label: "Soma Team + Channel Architecture",
+                path: "docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md",
+                description: "Canonical inter-team/process/MCP channel contracts and shared memory boundaries",
+            },
+            {
+                slug: "arch-nats-signal-standard-v7",
+                label: "NATS Signal Standard V7",
+                path: "docs/architecture/NATS_SIGNAL_STANDARD_V7.md",
+                description: "Canonical NATS subject families, source normalization, and product-vs-dev channel boundaries",
+            },
+            {
+                slug: "arch-workflow-composer-delivery-v7",
+                label: "Workflow Composer Delivery Plan V7",
+                path: "docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md",
+                description: "Airflow-style DAG workflow composer plan with team lanes, release gates, git discipline, and invoke task strategy",
+            },
+            {
+                slug: "arch-soma-council-engagement-protocol-v7",
+                label: "Soma-Council Engagement Protocol V7",
+                path: "docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md",
+                description: "Deterministic path-selection contract for internal tools, MCP, external APIs, and code-to-execution loops",
+            },
+            {
+                slug: "arch-agent-source-instantiation-template-v7",
+                label: "Agent Source Template V7",
+                path: "docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md",
+                description: "Standardized provider instantiation template with Ollama as default and governed overrides for OpenAI, Claude, Gemini, vLLM, and LM Studio",
             },
         ],
     },
@@ -243,69 +453,9 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/TESTING.md",
                 description: "Unit, integration, smoke test protocols",
             },
-            {
-                slug: "v7-ui-verification",
-                label: "V7 UI Verification",
-                path: "docs/verification/v7-step-01-ui.md",
-                description: "Manual UI verification checklist for V7 Step 01 navigation",
-            },
         ],
     },
 
-    // ── V7 Development ────────────────────────────────────────────────────────
-    {
-        section: "V7 Development",
-        docs: [
-            {
-                slug: "v7-implementation-plan",
-                label: "Implementation Plan",
-                path: "docs/V7_IMPLEMENTATION_PLAN.md",
-                description: "V7 technical implementation plan — Teams A/B/C/D/E",
-            },
-            {
-                slug: "v7-ia-step01",
-                label: "IA Step 01 (Nav)",
-                path: "docs/product/ia-v7-step-01.md",
-                description: "Workflow-first navigation PRD and decisions",
-            },
-            {
-                slug: "v7-ui-framework",
-                label: "UI Framework V7",
-                path: "docs/UI_FRAMEWORK_V7.md",
-                description: "Trusted continuous UI framework: state model, failure templates, testing matrix, PR gate",
-            },
-            {
-                slug: "v7-ui-elements-planning",
-                label: "UI Elements Planning V7",
-                path: "docs/UI_ELEMENTS_PLANNING_V7.md",
-                description: "Research-backed UI element planning, Soma interface patterns, and standard management workflow",
-            },
-            {
-                slug: "v7-ui-parallel-delivery",
-                label: "UI Parallel Delivery Board",
-                path: "docs/ui-delivery/PARALLEL_DELIVERY_BOARD.md",
-                description: "Active lanes (A/B/C/D/Q), gate sequencing, dependencies, and evidence tracking",
-            },
-            {
-                slug: "v7-ui-optimal-workflow-prds",
-                label: "UI Optimal Workflow PRDs",
-                path: "docs/product/UI_OPTIMAL_WORKFLOW_PRDS_V7.md",
-                description: "Planning PRDs for optimal user workflows across Workspace, Automations, Resources, System, Teams, and Runs",
-            },
-            {
-                slug: "v7-ui-engagement-actuation-review",
-                label: "UI Engagement & Actuation Review",
-                path: "docs/product/UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md",
-                description: "Planning review of existing UI with directed engagement and actuation improvements",
-            },
-            {
-                slug: "v7-ui-instantiation-bus-plan",
-                label: "UI Instantiation + Bus Plan",
-                path: "docs/product/UI_WORKFLOW_INSTANTIATION_AND_BUS_PLAN_V7.md",
-                description: "Execution plan for team instantiation, I/O contracts, and user-safe NATS exposure",
-            },
-        ],
-    },
 ];
 
 /** Flat lookup map: slug → DocEntry. Used by the API route for validation. */

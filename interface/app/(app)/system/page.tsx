@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Activity, Server, Database, BrainCircuit, Bug, Loader2, LayoutGrid, CheckCircle, XCircle, AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
-import MatrixGrid from "@/components/matrix/MatrixGrid";
+import { Activity, Server, Database, Loader2, LayoutGrid, CheckCircle, XCircle, AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
 import SystemQuickChecks from "@/components/system/SystemQuickChecks";
+import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
 import { useCortexStore } from "@/store/useCortexStore";
 
-type TabId = "health" | "nats" | "database" | "services" | "matrix" | "debug";
-const VALID_TABS: TabId[] = ["health", "nats", "database", "services", "matrix", "debug"];
+type TabId = "health" | "nats" | "database" | "services";
+const VALID_TABS: TabId[] = ["health", "nats", "database", "services"];
 
 interface HealthStatus {
     goroutines: number;
@@ -28,10 +28,20 @@ export default function SystemPage() {
 
 function SystemContent() {
     const searchParams = useSearchParams();
+    const advancedMode = useCortexStore((s) => s.advancedMode);
     const tabParam = searchParams.get("tab") as TabId | null;
     const [activeTab, setActiveTab] = useState<TabId>(
         tabParam && VALID_TABS.includes(tabParam) ? tabParam : "health"
     );
+
+    if (!advancedMode) {
+        return (
+            <AdvancedModeGate
+                title="System diagnostics are hidden until you open Advanced mode"
+                summary="System health, service recovery, storage checks, and event-bus diagnostics stay behind Advanced mode so the default workflow remains centered on your AI Organization."
+            />
+        );
+    }
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg">
@@ -42,7 +52,7 @@ function SystemContent() {
                             System
                         </h1>
                         <p className="text-cortex-text-muted text-sm mt-1">
-                            Infrastructure health, diagnostics, and advanced configuration
+                            Service health, event flow, storage checks, and recovery guidance
                         </p>
                     </div>
                     <span className="text-[10px] font-mono uppercase text-cortex-warning bg-cortex-warning/10 border border-cortex-warning/20 px-2 py-1 rounded">
@@ -51,12 +61,10 @@ function SystemContent() {
                 </div>
 
                 <div className="flex gap-1 border-b border-cortex-border">
-                    <TabButton active={activeTab === "health"} onClick={() => setActiveTab("health")} icon={<Activity size={14} />} label="Event Health" />
-                    <TabButton active={activeTab === "nats"} onClick={() => setActiveTab("nats")} icon={<Server size={14} />} label="NATS Status" />
-                    <TabButton active={activeTab === "database"} onClick={() => setActiveTab("database")} icon={<Database size={14} />} label="Database" />
+                    <TabButton active={activeTab === "health"} onClick={() => setActiveTab("health")} icon={<Activity size={14} />} label="Runtime Health" />
+                    <TabButton active={activeTab === "nats"} onClick={() => setActiveTab("nats")} icon={<Server size={14} />} label="Event Bus" />
+                    <TabButton active={activeTab === "database"} onClick={() => setActiveTab("database")} icon={<Database size={14} />} label="Storage" />
                     <TabButton active={activeTab === "services"} onClick={() => setActiveTab("services")} icon={<LayoutGrid size={14} />} label="Services" />
-                    <TabButton active={activeTab === "matrix"} onClick={() => setActiveTab("matrix")} icon={<BrainCircuit size={14} />} label="Cognitive Matrix" />
-                    <TabButton active={activeTab === "debug"} onClick={() => setActiveTab("debug")} icon={<Bug size={14} />} label="Debug" />
                 </div>
             </header>
 
@@ -64,13 +72,7 @@ function SystemContent() {
                 {activeTab === "health" && <EventHealthTab />}
                 {activeTab === "nats" && <NatsStatusTab />}
                 {activeTab === "database" && <DatabaseTab />}
-                {activeTab === "matrix" && (
-                    <div className="p-6">
-                        <MatrixGrid />
-                    </div>
-                )}
                 {activeTab === "services" && <ServicesTab />}
-                {activeTab === "debug" && <DebugTab />}
             </div>
         </div>
     );
@@ -115,10 +117,10 @@ function EventHealthTab() {
             </div>
 
             <div className="rounded-xl border border-cortex-border bg-cortex-surface p-4">
-                <h3 className="text-sm font-semibold text-cortex-text-main mb-1">What This Means</h3>
+                <h3 className="text-sm font-semibold text-cortex-text-main mb-1">What this means</h3>
                 <p className="text-xs text-cortex-text-muted">
-                    Event Health indicates runtime stability and signal propagation across the orchestration spine.
-                    If checks degrade, automations may pause while Workspace chat remains available.
+                    Runtime health tracks whether the main backend is responsive enough for organization activity, approvals, and recent history to stay dependable.
+                    If checks degrade, automations may pause while the rest of the workspace falls back to recovery guidance.
                 </p>
             </div>
 
@@ -127,7 +129,7 @@ function EventHealthTab() {
             {error && (
                 <div className="bg-cortex-surface border border-cortex-border rounded-xl p-6 text-center">
                     <p className="text-sm text-cortex-text-muted">Core API is not responding.</p>
-                    <p className="text-xs text-cortex-text-muted mt-1">Check that the Core server is running: <code className="text-cortex-primary">uvx inv lifecycle.status</code></p>
+                    <p className="text-xs text-cortex-text-muted mt-1">Check the current stack status with <code className="text-cortex-primary">uv run inv lifecycle.status</code>.</p>
                 </div>
             )}
         </div>
@@ -162,7 +164,7 @@ function NatsStatusTab() {
             <div className="bg-cortex-surface border border-cortex-border rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                     <Server className="w-5 h-5 text-cortex-text-muted" />
-                    <h3 className="text-sm font-semibold text-cortex-text-main">NATS JetStream</h3>
+                    <h3 className="text-sm font-semibold text-cortex-text-main">Event Bus</h3>
                 </div>
                 <div className="flex items-center gap-2">
                     {status === 'checking' && <Loader2 size={14} className="text-cortex-text-muted animate-spin" />}
@@ -183,9 +185,9 @@ function NatsStatusTab() {
                 </div>
                 {status === 'disconnected' && (
                     <div className="mt-4 text-xs text-cortex-text-muted space-y-1">
-                        <p>NATS is required for: team communication, trigger firing, scheduled execution, signal streaming.</p>
-                        <p>Still available: chat (if inference online), file operations, memory search.</p>
-                        <p className="text-cortex-primary">Run <code>uvx inv k8s.bridge</code> to restore port forwarding.</p>
+                        <p>The event bus powers team coordination, trigger processing, approvals, and live activity updates.</p>
+                        <p>Some workspace views may still load, but automations and live orchestration will degrade until this path is restored.</p>
+                        <p className="text-cortex-primary">Run <code>uv run inv k8s.bridge</code> to restore the local bridge.</p>
                     </div>
                 )}
             </div>
@@ -216,7 +218,7 @@ function DatabaseTab() {
             <div className="bg-cortex-surface border border-cortex-border rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                     <Database className="w-5 h-5 text-cortex-text-muted" />
-                    <h3 className="text-sm font-semibold text-cortex-text-main">PostgreSQL + pgvector</h3>
+                    <h3 className="text-sm font-semibold text-cortex-text-main">Storage</h3>
                 </div>
                 {error ? (
                     <div className="space-y-2">
@@ -225,35 +227,16 @@ function DatabaseTab() {
                             <span className="text-sm font-mono text-cortex-danger">{error}</span>
                         </div>
                         <p className="text-xs text-cortex-text-muted">
-                            Ensure PostgreSQL is running and port-forwarded: <code className="text-cortex-primary">uvx inv k8s.bridge</code>
+                            Ensure the storage services are running and bridged with <code className="text-cortex-primary">uv run inv k8s.bridge</code>.
                         </p>
                     </div>
                 ) : (
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-cortex-success" />
                         <span className="text-sm font-mono text-cortex-success">Connected</span>
-                        <span className="text-xs text-cortex-text-muted ml-2">22 migrations applied</span>
+                        <span className="text-xs text-cortex-text-muted ml-2">Core storage is responding to health checks.</span>
                     </div>
                 )}
-            </div>
-        </div>
-    );
-}
-
-function DebugTab() {
-    return (
-        <div className="p-6 max-w-4xl mx-auto">
-            <div className="bg-cortex-surface border border-cortex-border rounded-xl p-6">
-                <h3 className="text-sm font-semibold text-cortex-text-main mb-4">Debug Console</h3>
-                <p className="text-xs text-cortex-text-muted">
-                    Runtime debug information and diagnostic tools will be available here.
-                </p>
-                <div className="mt-4 p-4 bg-cortex-bg rounded-lg border border-cortex-border font-mono text-xs text-cortex-text-muted">
-                    <p>Build: V7.0 (Initiation)</p>
-                    <p>Runtime: Next.js 16.1.6 + Go 1.26</p>
-                    <p>Store: Zustand 5.0.11</p>
-                    <p>Graph: ReactFlow 11.11.4</p>
-                </div>
             </div>
         </div>
     );
@@ -273,28 +256,34 @@ const SERVICE_LABELS: Record<string, string> = {
     postgres: "PostgreSQL + pgvector",
     cognitive: "Cognitive Engine",
     reactive: "Reactive Engine",
+    groups_bus: "Group Collaboration Bus",
 };
 
 const SERVICE_COMMANDS: Record<string, { up: string; down: string; restart: string }> = {
     nats: {
-        up: "uvx inv k8s.bridge",
-        down: "uvx inv lifecycle.down",
-        restart: "uvx inv k8s.bridge",
+        up: "uv run inv k8s.bridge",
+        down: "uv run inv lifecycle.down",
+        restart: "uv run inv k8s.bridge",
     },
     postgres: {
-        up: "uvx inv k8s.bridge",
-        down: "uvx inv lifecycle.down",
-        restart: "uvx inv k8s.bridge",
+        up: "uv run inv k8s.bridge",
+        down: "uv run inv lifecycle.down",
+        restart: "uv run inv k8s.bridge",
     },
     cognitive: {
-        up: "uvx inv lifecycle.up",
-        down: "uvx inv lifecycle.down",
-        restart: "uvx inv core.restart",
+        up: "uv run inv lifecycle.up",
+        down: "uv run inv lifecycle.down",
+        restart: "uv run inv core.restart",
     },
     reactive: {
-        up: "uvx inv lifecycle.up",
-        down: "uvx inv lifecycle.down",
-        restart: "uvx inv core.restart",
+        up: "uv run inv lifecycle.up",
+        down: "uv run inv lifecycle.down",
+        restart: "uv run inv core.restart",
+    },
+    groups_bus: {
+        up: "uv run inv lifecycle.up --frontend",
+        down: "uv run inv lifecycle.down",
+        restart: "uv run inv core.restart",
     },
 };
 
