@@ -167,13 +167,13 @@ Task 008  Planning-integration validation pass                      [COMPLETE]
 Task 009  Next-execution/governance guidance migration              [NEXT]
 ```
 
-## Current Checkpoint (2026-03-20)
+## Current Checkpoint (2026-03-21)
 
 Restart handoff:
 - latest local checkpoint: `12bda0d` `V8.1 architecture: add learning loops and semantic continuity model`
 - restart focus: bundle-defined Loop Profile truth, semantic continuity and memory-promotion implementation planning, and the first bounded Learning Loop slice
 - preserved V8.1 truth at restart: read-only Automations visibility is complete; Learning Loops, semantic continuity, and Procedure / Skill Sets are now canonical architecture contract layers
-- keep unrelated dirty work out of the next slice unless explicitly pulled in (`README.md`, `docs/**`, `ops/misc.py`, `tests/test_misc_tasks.py`, `v8-1.md`)
+- keep unrelated dirty work out of the next slice unless explicitly pulled in (`README.md`, `docs/**`, `ops/misc.py`, `tests/test_misc_tasks.py`)
 
 Delivery updates in this checkpoint:
 1. `COMPLETE` reviewed the new root `README.md` and adopted V8 as the active development/grading target.
@@ -225,6 +225,8 @@ Delivery updates in this checkpoint:
 47. `COMPLETE` hardened the V8.1 Team Lead-first UX for release readiness so first-run guidance is always visible, default workspace panels now have intentional empty/loading/error states with retry paths, and the operator-facing vocabulary now stays aligned around Automations, Learning & Context, AI Engine, Response Style, Advisors, and Departments.
 48. `COMPLETE` defined the advanced architecture/runtime surface contract before further UI work so default operator behavior, advanced inheritance/config inspection, source-of-truth layering, deployment/env influence, and file/env-only boundaries now have one explicit doc-backed contract.
 49. `NEXT` implement the advanced architecture/runtime UI only through a separate non-default surface that makes inheritance and config origin legible without undermining the Team Lead-first MVP release posture.
+50. `COMPLETE` converged canonical documentation ownership so README, V8.1, V8.2, V8 UI/API, and `V8_DEV_STATE.md` now carry distinct non-overlapping truth roles without leaving loose root-level draft architecture files active.
+51. `COMPLETE` repo hygiene is now release-readiness oriented for the canonical doc surface: the superseded root `v8-1.md` draft was archived under `docs/archive/drafts/`, stale root-level draft truth was removed, and doc tests now guard against canonical-surface drift and loose duplicate ownership.
 
 Evidence:
 1. README directive review completed against `README.md`

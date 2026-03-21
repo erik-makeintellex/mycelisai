@@ -75,6 +75,23 @@ def test_docs_manifest_exposes_required_canonical_docs():
     assert not missing, f"docsManifest is missing required canonical docs: {missing}"
 
 
+def test_superseded_root_v8_1_draft_is_archived_not_loose():
+    root_draft = ROOT / "v8-1.md"
+    archived_draft = ROOT / "docs" / "archive" / "drafts" / "v8-1.md"
+
+    assert not root_draft.exists(), "Superseded v8-1.md must not remain loose at repo root"
+    assert archived_draft.exists(), "Superseded v8-1.md must be archived under docs/archive/drafts/"
+
+    archived_text = archived_draft.read_text(encoding="utf-8")
+    required_snippets = [
+        "# Superseded Draft: V8.1 PRD",
+        "Superseded By: `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`",
+        "This file is preserved only as historical drafting context. It is not active implementation authority.",
+    ]
+    missing = [snippet for snippet in required_snippets if snippet not in archived_text]
+    assert not missing, f"Archived v8-1 draft is missing superseded markers: {missing}"
+
+
 def _slugify_heading(heading: str) -> str:
     slug = heading.strip().lower()
     slug = re.sub(r"[^\w\s-]", "", slug)
