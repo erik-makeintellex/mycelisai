@@ -121,7 +121,7 @@ def test_down_uses_best_effort_cleanup_without_hanging(monkeypatch):
 
     assert any(cmd and cmd[:3] == ["powershell", "-NoProfile", "-Command"] for cmd in commands)
     assert any("Get-Process server" in " ".join(cmd) for cmd in commands)
-    assert any(f"next dev --port {port}" in " ".join(cmd) for cmd in commands if isinstance(cmd, list))
+    assert any(f"next (dev|start).*--port {port}" in " ".join(cmd) for cmd in commands if isinstance(cmd, list))
     assert ["bridges"] in commands
 
 
@@ -151,6 +151,12 @@ def test_matches_compiled_go_service_recognizes_known_binaries_and_go_run():
     assert lifecycle._matches_compiled_go_service("go", "go run ./cmd/signal_gen")
     assert not lifecycle._matches_compiled_go_service("server.exe", "")
     assert not lifecycle._matches_compiled_go_service("python.exe", "python -m pytest")
+
+
+def test_matches_compiled_go_binary_path_recognizes_repo_local_binaries():
+    assert lifecycle._matches_compiled_go_binary_path("server.exe", str(Path("core/bin/server.exe").resolve()))
+    assert lifecycle._matches_compiled_go_binary_path("probe.exe", "")
+    assert not lifecycle._matches_compiled_go_binary_path("python.exe", str(Path("core/bin/server.exe").resolve()))
 
 
 def test_down_kills_detected_compiled_go_services(monkeypatch):
@@ -199,6 +205,38 @@ def test_down_fails_when_compiled_go_inspection_fails(monkeypatch):
 
     with pytest.raises(SystemExit, match="unable to inspect compiled Go services"):
         lifecycle.down.body(Context())
+
+
+def test_list_compiled_go_service_processes_falls_back_when_cim_times_out(monkeypatch):
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, capture_output=True, text=True, timeout=0):
+        calls.append(cmd)
+
+        class Result:
+            def __init__(self, stdout="", returncode=0, stderr=""):
+                self.stdout = stdout
+                self.returncode = returncode
+                self.stderr = stderr
+
+        if cmd[:4] == ["tasklist", "/FO", "CSV", "/NH"]:
+            return Result(stdout='"server.exe","111","Console","1","12,000 K"')
+        raise subprocess.TimeoutExpired(cmd="Get-CimInstance", timeout=timeout)
+
+    monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
+    monkeypatch.setattr(lifecycle.subprocess, "run", fake_run)
+
+    processes = lifecycle._list_compiled_go_service_processes()
+
+    assert processes == [
+        {
+            "pid": 111,
+            "name": "server",
+            "command": "server.exe",
+        }
+    ]
+    assert calls[0][:4] == ["tasklist", "/FO", "CSV", "/NH"]
+    assert "/FI" in calls[0]
 
 
 def test_status_reports_unknown_when_compiled_go_inspection_fails(monkeypatch, capsys):

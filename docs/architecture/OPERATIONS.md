@@ -62,7 +62,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | `uv run inv interface.test` | `npm run test` (Vitest) |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
 | `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle plus repo-managed Playwright browsers, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`; Playwright owns Next.js server lifecycle for the default gate) |
-| `uv run inv interface.stop` | Kill process on port 3000 |
+| `uv run inv interface.stop` | Kill the repo-local Interface server on port 3000 |
 | `uv run inv interface.clean` | rm -rf .next cache |
 | `uv run inv interface.restart` | stop → clean → build → dev → check |
 | `uv run inv interface.check` | Smoke-test: 9 pages for 200 status, no SSR errors, no hydration issues, no `bg-white`/`bg-zinc`/`bg-slate` leaks |
@@ -268,7 +268,7 @@ uv run inv k8s.up       # Kind/namespace -> Helm deploy -> PostgreSQL -> NATS ->
 uv run inv k8s.bridge    # Port-forward NATS, API, Postgres
 
 # Terminal 2: Backend
-uv run inv core.run      # Go backend (foreground, port 8080 → bridged to 8081)
+uv run inv core.run      # Go backend (foreground, local port 8081 by default)
 
 # Terminal 3: Frontend
 uv run inv interface.dev # Next.js dev (Turbopack, port 3000)

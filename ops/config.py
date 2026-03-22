@@ -22,8 +22,10 @@ PROJECT_CACHE_ROOT = Path(
 
 # -- Host Defaults (env-var overridable) --
 # Core API server
+# Local tasking talks to the bridged/local port by default, which is 8081 in
+# this repo even though the in-cluster service still listens on 8080.
 API_HOST = os.environ.get("MYCELIS_API_HOST", "localhost")
-API_PORT = int(os.environ.get("MYCELIS_API_PORT", "8080"))
+API_PORT = int(os.environ.get("MYCELIS_API_PORT", os.environ.get("PORT", "8081")))
 
 # Interface (Next.js) dev server
 INTERFACE_HOST = os.environ.get("MYCELIS_INTERFACE_HOST", "localhost")
