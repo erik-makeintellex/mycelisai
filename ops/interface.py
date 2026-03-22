@@ -8,6 +8,7 @@ from contextlib import suppress
 
 from invoke import task, Collection
 from .config import (
+    INTERFACE_BIND_HOST,
     INTERFACE_HOST,
     INTERFACE_PORT,
     ROOT_DIR,
@@ -205,14 +206,14 @@ def _playwright_server_log_path() -> str:
     return str(log_dir / "interface-playwright-webserver.log")
 
 
-def _next_dev_command(host: str, port: int) -> list[str]:
+def _next_dev_command(bind_host: str, port: int) -> list[str]:
     return [
         "node",
         "./node_modules/next/dist/bin/next",
         "dev",
         "--webpack",
         "--hostname",
-        host,
+        bind_host,
         "--port",
         str(port),
     ]
@@ -251,8 +252,8 @@ def _spawn_interface_process(
 def _start_playwright_server(env: dict[str, str], port: int = INTERFACE_PORT) -> subprocess.Popen[str]:
     log_path = _playwright_server_log_path()
     log_handle = open(log_path, "w", encoding="utf-8")
-    host = env.get("INTERFACE_HOST", INTERFACE_HOST)
-    command = _next_dev_command(host, port)
+    bind_host = env.get("INTERFACE_BIND_HOST", INTERFACE_BIND_HOST)
+    command = _next_dev_command(bind_host, port)
     try:
         process = _spawn_interface_process(
             command,
@@ -271,14 +272,15 @@ def _start_playwright_server(env: dict[str, str], port: int = INTERFACE_PORT) ->
 def start_dev_server_detached(
     env: dict[str, str] | None = None,
     *,
-    host: str = INTERFACE_HOST,
+    host: str = INTERFACE_BIND_HOST,
     port: int = INTERFACE_PORT,
 ) -> subprocess.Popen[str]:
     process_env = _task_env()
     if env:
         process_env.update(env)
-    process_env.setdefault("INTERFACE_HOST", host)
-    command = _next_dev_command(process_env["INTERFACE_HOST"], port)
+    process_env.setdefault("INTERFACE_HOST", INTERFACE_HOST)
+    process_env.setdefault("INTERFACE_BIND_HOST", host)
+    command = _next_dev_command(process_env["INTERFACE_BIND_HOST"], port)
     return _spawn_interface_process(
         command,
         process_env,
@@ -289,26 +291,45 @@ def start_dev_server_detached(
     )
 
 
+def _interface_ready_urls(host: str, port: int) -> list[str]:
+    candidates = [host, "127.0.0.1", "localhost", "::1"]
+    urls: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        url_host = candidate
+        if ":" in candidate and not candidate.startswith("["):
+            url_host = f"[{candidate}]"
+        url = f"http://{url_host}:{port}"
+        if url in seen:
+            continue
+        seen.add(url)
+        urls.append(url)
+    return urls
+
+
 def _wait_for_interface_ready(host: str = INTERFACE_HOST, port: int = INTERFACE_PORT, timeout_seconds: int = 120):
-    url = f"http://{host}:{port}"
+    urls = _interface_ready_urls(host, port)
     deadline = time.time() + timeout_seconds
     last_error = "server did not respond"
     while time.time() < deadline:
-        try:
-            with urllib.request.urlopen(url, timeout=5) as response:
-                if response.status < 500:
+        for url in urls:
+            try:
+                with urllib.request.urlopen(url, timeout=5) as response:
+                    if response.status < 500:
+                        return
+                    last_error = f"{url}: unexpected status {response.status}"
+            except urllib.error.HTTPError as exc:
+                if exc.code < 500:
                     return
-                last_error = f"unexpected status {response.status}"
-        except urllib.error.HTTPError as exc:
-            if exc.code < 500:
-                return
-            last_error = f"http {exc.code}"
-        except Exception as exc:  # pragma: no cover - exercised via timeout path in task flow
-            last_error = str(exc)
+                last_error = f"{url}: http {exc.code}"
+            except Exception as exc:  # pragma: no cover - exercised via timeout path in task flow
+                last_error = f"{url}: {exc}"
         time.sleep(1)
 
     raise RuntimeError(
-        f"Interface did not become ready at {url} within {timeout_seconds}s. "
+        f"Interface did not become ready at any of {', '.join(urls)} within {timeout_seconds}s. "
         f"See {_playwright_server_log_path()} for server output. Last error: {last_error}"
     )
 
@@ -384,6 +405,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False):
     extra_env = {
         "PLAYWRIGHT_SKIP_WEBSERVER": "1",
         "INTERFACE_HOST": "127.0.0.1",
+        "INTERFACE_BIND_HOST": INTERFACE_BIND_HOST,
     }
     if live_backend:
         extra_env["PLAYWRIGHT_LIVE_BACKEND"] = "1"

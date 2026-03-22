@@ -334,7 +334,8 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 ### Configuration
 
 - **Config:** `interface/playwright.config.ts`
-- **Base URL:** `http://127.0.0.1:3000` by default (`INTERFACE_HOST` / `INTERFACE_PORT` override supported)
+- **Base URL:** `http://127.0.0.1:3000` by default for local browser traffic (`INTERFACE_HOST` / `INTERFACE_PORT` override supported)
+- **Bind Host:** the managed Next.js server binds to `[::]:3000` by default so IPv4 localhost, IPv6 localhost, and LAN clients can all reach the UI (`INTERFACE_BIND_HOST` / `MYCELIS_INTERFACE_BIND_HOST` override supported)
 - **Browser Projects:** `chromium`, `firefox`, `webkit`, `mobile-chromium`
 - **Server Lifecycle:** Playwright `webServer` starts/stops the Next.js app for local and CI E2E runs
 - **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run, launches a managed local Next.js server, and sweeps repo-local Next/Vitest/Playwright worker residue

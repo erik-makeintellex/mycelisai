@@ -109,6 +109,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
         lambda extra=None: {
             "PLAYWRIGHT_SKIP_WEBSERVER": extra["PLAYWRIGHT_SKIP_WEBSERVER"],
             "INTERFACE_HOST": extra["INTERFACE_HOST"],
+            "INTERFACE_BIND_HOST": extra["INTERFACE_BIND_HOST"],
         },
     )
     monkeypatch.setattr(interface, "INTERFACE_PORT", port)
@@ -135,6 +136,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     assert ctx.commands == ["npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts"]
     assert ctx.cd_paths == [str(interface.INTERFACE_DIR)]
     assert env_seen["INTERFACE_HOST"] == "127.0.0.1"
+    assert env_seen["INTERFACE_BIND_HOST"] == interface.INTERFACE_BIND_HOST
     assert events == [
         f"stop:{port}",
         f"start:{port}",
@@ -142,4 +144,14 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
         "kill:4242",
         f"stop:{port}",
         "cleanup",
+    ]
+
+
+def test_interface_ready_urls_prioritize_requested_host_then_loopback_fallbacks():
+    urls = interface._interface_ready_urls("127.0.0.1", 3000)
+
+    assert urls == [
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://[::1]:3000",
     ]

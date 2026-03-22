@@ -67,6 +67,9 @@ cp .env.example .env
 | **Next.js Proxy** | | |
 | `MYCELIS_API_HOST` | `localhost` | Backend host for Next.js rewrite proxy |
 | `MYCELIS_API_PORT` | `8081` | Backend port for Next.js rewrite proxy |
+| `MYCELIS_INTERFACE_HOST` | `127.0.0.1` | Local UI probe/base host used by browser automation and lifecycle checks |
+| `MYCELIS_INTERFACE_BIND_HOST` | `::` | UI bind host; defaults to dual-stack listening so IPv4 localhost, IPv6 localhost, and LAN clients can reach the UI |
+| `MYCELIS_INTERFACE_PORT` | `3000` | UI port |
 | **Commercial LLM (Optional)** | | |
 | `OPENAI_API_KEY` | — | OpenAI API key |
 | `ANTHROPIC_API_KEY` | — | Anthropic API key |

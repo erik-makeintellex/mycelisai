@@ -243,7 +243,8 @@ CORE_DIR, SDK_DIR = relative paths
 WORKSPACE_DIR = project workspace root
 PROJECT_CACHE_ROOT = workspace-managed cache root
 API_HOST/PORT = localhost:8081 (env-overridable)
-INTERFACE_HOST/PORT = localhost:3000 (env-overridable)
+INTERFACE_HOST/PORT = 127.0.0.1:3000 local probe/base URL (env-overridable)
+INTERFACE_BIND_HOST = :: default dual-stack UI bind host for localhost + LAN reachability (env-overridable)
 ```
 
 **Helpers:**
@@ -385,7 +386,8 @@ defaults:
 |----------|---------|-------------|
 | `MYCELIS_API_HOST` | `localhost` | Core API host |
 | `MYCELIS_API_PORT` | `8081` | Core API port (bridge forward) |
-| `MYCELIS_INTERFACE_HOST` | `localhost` | Next.js dev server host |
+| `MYCELIS_INTERFACE_HOST` | `127.0.0.1` | Local UI probe/base host used by lifecycle checks and browser tooling |
+| `MYCELIS_INTERFACE_BIND_HOST` | `::` | Next.js bind host; defaults to dual-stack listening so IPv4 localhost, IPv6 localhost, and LAN clients can all reach the UI |
 | `MYCELIS_INTERFACE_PORT` | `3000` | Next.js dev server port |
 | `DB_HOST` | `mycelis-core-postgresql` | PostgreSQL host |
 | `DB_PORT` | `5432` | PostgreSQL port |
