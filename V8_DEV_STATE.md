@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-21
+> Updated: 2026-03-22
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -33,6 +33,8 @@ Release posture:
 - `COMPLETE` Soma is now the primary default interface and organization orchestrator for the AI Organization workspace.
 - `COMPLETE` Team Leads remain the operational layer Soma works through, while Routing / Council remains advisory and planning-oriented rather than default visible UX jargon.
 - `COMPLETE` the default workspace remains simple, guided, and non-technical, and the advanced/runtime surface remains separate from the default operator flow.
+- `COMPLETE` the broader interface suite is now green again, and the RC gate is based on full unit coverage, typecheck, the managed browser suite, and docs-link enforcement rather than only the targeted Soma path.
+- `COMPLETE` accepted non-blockers for the RC gate are currently warning-only test noise (`--localstorage-file` path warnings during Vitest worker startup, one `SensorLibrary` `act(...)` warning, and ReactFlow mock-prop warnings in `CircuitBoard.test.tsx`); they do not block entry flow, workspace re-entry, Soma interaction, navigation, or core support panels.
 - the default Soma-primary workspace now expects guided first-run actions, intentional empty states, and partial-failure-safe support panels before release lock.
 - `NEXT` advanced architecture/runtime configuration remains a separate contract and implementation lane; it must stay non-default until the dedicated advanced surface ships without polluting the MVP operator flow.
 
@@ -231,6 +233,8 @@ Delivery updates in this checkpoint:
 50. `COMPLETE` restored Soma as the primary interface and orchestrator for the default workspace while keeping Team Leads visible as subordinate operational leaders, with UI and docs now aligned on `User -> Soma -> Routing / Council -> Team Leads -> Departments / Specialist Roles / Automations -> Reviews / Learning / Activity -> Soma`.
 51. `COMPLETE` converged canonical documentation ownership so README, V8.1, V8.2, V8 UI/API, and `V8_DEV_STATE.md` now carry distinct non-overlapping truth roles without leaving loose root-level draft architecture files active.
 52. `COMPLETE` repo hygiene is now release-readiness oriented for the canonical doc surface: the superseded root `v8-1.md` draft was archived under `docs/archive/drafts/`, stale root-level draft truth was removed, and doc tests now guard against canonical-surface drift and loose duplicate ownership.
+53. `COMPLETE` fixed the last MVP-blocking UX gaps in the default organization flow: recent AI Organizations are now reopenable, persistent org navigation is available after an organization is opened, post-create routing lands directly in the workspace, Soma has an unmistakable primary prompt entry, action feedback always surfaces visible loading/result/error state, and the degraded-mode banner now makes it clear that core functionality remains available.
+54. `COMPLETE` stabilized the MVP release-candidate test posture: the broader interface suite is green again, the stale browser navigation expectation was updated so route-highlighting validation resets cleanly between navigations, and the managed E2E gate now passes without relying on a previously reused stale frontend server.
 
 Evidence:
 1. README directive review completed against `README.md`
@@ -258,6 +262,9 @@ Evidence:
 23. the entry flow now keeps recent-organization resume and starter-template setup resilient under partial API failure, exposes retry/recovery actions in-place, removes operator-visible dev/architecture copy leaks, and strengthens Team Lead status in the AI Organization home (`interface/components/organizations/CreateOrganizationEntry.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/DashboardPage.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`)
 24. bounded browser automation for the entry flow now lives in `interface/e2e/specs/v8-organization-entry.spec.ts` and covers dominant AI Organization entry framing, template selection, empty start, organization-home landing, retry/recovery under partial failure, and visible forbidden-copy enforcement
 25. the organization page now functions as a Team Lead-first workspace shell rather than a static landing state: `interface/components/organizations/OrganizationContextShell.tsx` keeps the AI Organization header visible, adds a concrete Team Lead identity block plus next-action controls, and switches the active workspace focus between planning, advisor review, department review, AI Engine Settings summary, and Learning & Context summary with focused page and browser coverage
+26. the default workspace now includes a direct Soma prompt entry, post-create autofocus, current-organization resume path, and clearer degraded-mode reassurance through `interface/components/organizations/CreateOrganizationEntry.tsx`, `interface/components/organizations/TeamLeadInteractionPanel.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/components/shell/ZoneA_Rail.tsx`, and `interface/components/dashboard/DegradedModeBanner.tsx`
+27. release-candidate validation on 2026-03-22: `cd interface && npm test` -> pass (`65` files, `404` tests), `cd interface && npx tsc --noEmit` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `66` skipped), `uv run pytest tests/test_docs_links.py -q` -> pass (`37` passed)
+28. accepted non-blockers at the RC gate are warning-only test noise rather than product regressions: `--localstorage-file` worker warnings, one `SensorLibrary` `act(...)` warning, and ReactFlow mock-prop warnings in `CircuitBoard.test.tsx`
 26. the first Team Lead interaction workflow now lives in `core/internal/server/organizations.go`, `interface/components/organizations/TeamLeadInteractionPanel.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/organizations/TeamLeadInteractionPanel.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; it intentionally stops at guided Team Lead responses and does not yet implement advisor orchestration, raw agent selection, advanced configuration panels, or a full chat system
 27. guided Team Lead resilience now adds readable fallback shaping in `core/internal/server/organizations.go`, failure/retry and malformed-response rendering in `interface/components/organizations/TeamLeadInteractionPanel.tsx`, focused backend/frontend tests in `core/internal/server/organizations_test.go`, `interface/__tests__/organizations/TeamLeadInteractionPanel.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and bounded browser retry coverage in `interface/e2e/specs/v8-organization-entry.spec.ts`; advisor orchestration, raw agent selection, advanced configuration panels, and a full chat system remain intentionally out of scope
 28. inspect-only Advisor and Department visibility now lives in `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; the Team Lead remains the primary workspace counterpart while Advisors and Departments are visible as supporting structure, and full advisor orchestration, raw agent selection, and department management remain intentionally out of scope
@@ -466,6 +473,24 @@ Evidence:
 2. `docs/architecture/FRONTEND.md`, `docs/TESTING.md`, `README.md`, and `docs/architecture/OPERATIONS.md` now document the Team Lead-first route inventory, advanced-route boundary, and managed Playwright runtime/testing contract.
 3. `interface/e2e/specs/navigation.spec.ts`, `interface/e2e/specs/missions.spec.ts`, `interface/e2e/specs/mobile.spec.ts`, `interface/e2e/specs/v8-organization-entry.spec.ts`, and the skipped legacy/raw coverage specs now align the default browser gate with the surviving MVP workflow.
 4. Validation on 2026-03-20: `uv run pytest tests/test_docs_links.py -q` -> pass (`25` passed), `cd interface && npm test` -> pass (`65` files, `401` tests), `cd interface && npx tsc --noEmit` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `63` skipped).
+
+### 25. V8.2 MVP release-candidate stabilization and suite classification
+
+Status:
+1. `COMPLETE` re-ran the broader interface suite from the current Soma-primary RC state and confirmed that the earlier failures were not live product regressions in the entry flow, workspace re-entry, Soma interaction, navigation, or core support panels.
+2. `COMPLETE` classified the remaining browser failure as a stale test assumption in the general navigation spec rather than an MVP blocker: the spec was reusing one page instance across primary-route navigations and colliding with the docs page's own client-side navigation.
+3. `COMPLETE` updated that stale browser expectation so route-highlighting validation now resets to a stable dashboard starting point before each primary-route navigation.
+4. `COMPLETE` revalidated the full RC gate after the classification pass: full interface tests, typecheck, managed E2E, and doc-link checks are green.
+5. `COMPLETE` accepted the remaining warning-only suite noise as non-blocking for the RC gate because it does not affect real operator behavior on the default Soma-first MVP path.
+
+Accepted non-blockers:
+1. Vitest worker startup still emits repeated `--localstorage-file` warnings.
+2. `interface/__tests__/dashboard/SensorLibrary.test.tsx` still emits a React `act(...)` warning.
+3. `interface/__tests__/workspace/CircuitBoard.test.tsx` still emits ReactFlow mock-prop warnings.
+
+Evidence:
+1. `interface/e2e/specs/navigation.spec.ts` now resets to `/dashboard` before each primary-route navigation, which removes the stale page-reuse assumption without widening the MVP route surface.
+2. Validation on 2026-03-22: `cd interface && npm test` -> pass (`65` files, `404` tests), `cd interface && npx tsc --noEmit` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `66` skipped), `uv run pytest tests/test_docs_links.py -q` -> pass (`37` passed).
 
 ## Immediate Next Actions
 

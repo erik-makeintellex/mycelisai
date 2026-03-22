@@ -46,6 +46,8 @@ test.describe('V8.1 Soma-primary Navigation', () => {
         ];
 
         for (const route of routes) {
+            await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+            await expect(page.locator('a[href="/dashboard"]').first()).toBeVisible();
             await page.goto(route.href, { waitUntil: 'domcontentloaded' });
             const link = page.locator(`a[href="${route.href}"]`).first();
             await expect(page).toHaveURL(route.url);
