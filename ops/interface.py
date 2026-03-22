@@ -40,8 +40,9 @@ def _load_env():
     """Load root .env into the process environment so Next.js proxy
     can read MYCELIS_API_KEY (used to inject Authorization headers into
     proxied /api/* requests). Uses override=True so .env wins over system env.
-    Removes PORT afterwards — the root .env sets PORT=8080 for Go Core,
-    but Next.js would read it and try to listen on 8080 instead of 3000."""
+    Removes PORT afterwards — the root .env sets PORT for the Go Core HTTP
+    listener, but Next.js would otherwise try to reuse that port instead of
+    the configured interface port."""
     import os
     try:
         from dotenv import load_dotenv
@@ -154,12 +155,17 @@ def _kill_pid_tree(pid: int):
             subprocess.run(
                 ["taskkill", "/F", "/T", "/PID", str(pid)],
                 capture_output=True,
-                timeout=8,
+                timeout=12,
             )
         else:
             subprocess.run(["kill", "-9", str(pid)], capture_output=True, timeout=5)
     except subprocess.TimeoutExpired:
-        pass
+        if is_windows():
+            subprocess.run(
+                ["powershell", "-NoProfile", "-Command", f"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue"],
+                capture_output=True,
+                timeout=5,
+            )
 
 
 def _cleanup_repo_local_interface_processes() -> list[dict[str, str | int]]:
@@ -406,8 +412,8 @@ def e2e(c, headed=False, project="", spec="", live_backend=False):
 @task
 def stop(c, port=INTERFACE_PORT):
     """
-    Stop the Interface dev server.
-    Kills any node process listening on --port (default 3000).
+    Stop the Interface server.
+    Kills any repo-local Next.js process listening on --port (default 3000).
     """
     print(f"Stopping Interface (port {port})...")
     if is_windows():

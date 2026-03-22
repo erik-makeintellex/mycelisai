@@ -296,6 +296,7 @@ Provider/runtime workflow reminders:
 - keep repo-managed caches under `workspace/tool-cache` and use `cache.apply-user-policy` when a Windows user profile needs heavy tool caches moved off `C:`
 - check `uv run inv cache.status` before large build/test/browser runs when disk headroom is tight; the main repo-local growth surfaces are `workspace/tool-cache`, `interface/.next`, Playwright browser binaries, and other generated test artifacts
 - use `uv run inv cache.clean` as the first repo-safe reclaim path when builds or tests start failing under disk pressure instead of manually deleting random working files
+- local lifecycle tasks target the bridged Core API on `localhost:8081` by default unless `MYCELIS_API_PORT` overrides it
 - expect Invoke-managed Interface build/test/browser tasks to sweep repo-local Next/Vitest/Playwright worker residue after each run so old `node.exe` workers do not accumulate between sessions
 - expect Invoke-managed Interface and CI tasks to execute from the `interface/` working directory through the same `npm`/`node` entrypoints on Windows and Linux rather than relying on shell-specific `cd ... &&` wrappers
 - project-owned config backstops now keep direct local commands aligned too: root `.npmrc` anchors npm/npx cache in `workspace/tool-cache`, pytest stores cache metadata in `workspace/tool-cache/pytest`, and task-managed Interface runs disable Next telemetry while routing Playwright browser binaries through the managed cache root

@@ -125,7 +125,7 @@ uv run inv interface.e2e         # Playwright E2E tests (Invoke manages the Next
 uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real Core-backed Workspace UI contract
 uv run inv core.smoke            # Governance smoke tests
 uv run inv ci.test               # Blocking Go + Vitest validation
-uv run inv interface.check       # HTTP smoke test against running dev server
+uv run inv interface.check       # HTTP smoke test against the running Interface server
 uv run inv cache.status          # Inspect managed repo/user cache roots before large local validation runs
 uv run inv cache.clean           # Prune repo-managed caches and build artifacts when disk pressure returns
 uv run inv logging.check-schema  # Event schema + docs coverage gate

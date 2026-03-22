@@ -12,6 +12,7 @@ import socket
 import subprocess
 import time
 import json
+import csv
 from pathlib import Path
 
 from invoke import task, Collection
@@ -199,15 +200,22 @@ def _kill_pid(pid: int):
             subprocess.run(
                 ["taskkill", "/F", "/T", "/PID", str(pid)],
                 capture_output=True,
-                timeout=5,
+                timeout=10,
             )
         else:
             subprocess.run(["kill", "-9", str(pid)],
                            capture_output=True, timeout=5)
     except subprocess.TimeoutExpired:
-        # Windows taskkill can hang after the target is already terminating.
-        # Treat this as best-effort and let the caller re-check the port.
-        pass
+        if is_windows():
+            _run_best_effort(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    f"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue",
+                ],
+                timeout=5,
+            )
 
 
 def _run_best_effort(cmd: list[str], timeout: int = 5):
@@ -236,66 +244,85 @@ def _matches_compiled_go_service(name: str, command_line: str) -> bool:
     return any(hint.replace("\\", "/") in normalized_cmd for hint in COMPILED_GO_PROCESS_HINTS)
 
 
+def _matches_compiled_go_binary_path(name: str, path: str) -> bool:
+    """Return True when a process path looks like a repo-local compiled Go binary."""
+    normalized_name = (name or "").lower()
+    normalized_path = (path or "").lower().replace("\\", "/")
+    if normalized_name not in WINDOWS_COMPILED_GO_PROCESS_NAMES and normalized_name not in WINDOWS_COMPILED_GO_PROCESS_BASENAMES:
+        return False
+    if normalized_name in WINDOWS_COMPILED_GO_PROCESS_NAMES:
+        return True
+    return any(
+        hint.replace("\\", "/") == normalized_path
+        for hint in COMPILED_GO_PROCESS_HINTS
+        if "/bin/" in hint.replace("\\", "/")
+    )
+
+
 def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:
     """Find repo-local Go service processes that may outlive prior test runs."""
     processes: list[dict[str, str | int]] = []
     try:
         if is_windows():
-            candidate_cmd = (
-                "@(Get-Process -Name "
-                + ",".join(WINDOWS_COMPILED_GO_PROCESS_BASENAMES)
-                + " -ErrorAction SilentlyContinue) | "
-                "Select-Object Id,ProcessName | "
-                "ConvertTo-Json -Compress; exit 0"
-            )
-            result = subprocess.run(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    candidate_cmd,
-                ],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(result.stderr.strip() or "process query failed")
-            raw = result.stdout.strip()
-            if not raw:
-                return []
-            candidate_payload = json.loads(raw)
-            candidate_rows = candidate_payload if isinstance(candidate_payload, list) else [candidate_payload]
-            candidate_pids = [row.get("Id") for row in candidate_rows if isinstance(row.get("Id"), int)]
-            if not candidate_pids:
-                return []
-            filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in candidate_pids)
-            result = subprocess.run(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
-                    "Select-Object ProcessId,Name,CommandLine | "
-                    "ConvertTo-Json -Compress",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=8,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(result.stderr.strip() or "process query failed")
-            raw = result.stdout.strip()
-            if not raw:
-                return []
-            payload = json.loads(raw)
-            rows = payload if isinstance(payload, list) else [payload]
-            for row in rows:
-                pid = row.get("ProcessId")
-                name = row.get("Name") or ""
-                command_line = row.get("CommandLine") or ""
-                if isinstance(pid, int) and _matches_compiled_go_service(name, command_line):
-                    processes.append({"pid": pid, "name": name, "command": command_line})
+            go_candidate_pids: list[int] = []
+            for image_name in WINDOWS_COMPILED_GO_PROCESS_NAMES:
+                try:
+                    result = subprocess.run(
+                        ["tasklist", "/FO", "CSV", "/NH", "/FI", f"IMAGENAME eq {image_name}"],
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                    )
+                except subprocess.TimeoutExpired:
+                    continue
+                if result.returncode != 0:
+                    raise RuntimeError(result.stderr.strip() or "process query failed")
+                rows = [row for row in csv.reader(result.stdout.splitlines()) if len(row) >= 2]
+                for row in rows:
+                    listed_name = (row[0] or "").strip().lower()
+                    pid_str = (row[1] or "").strip()
+                    if listed_name != image_name or not pid_str.isdigit():
+                        continue
+                    pid = int(pid_str)
+                    process_name = listed_name.removesuffix(".exe")
+                    if listed_name == "go.exe":
+                        go_candidate_pids.append(pid)
+                        continue
+                    processes.append({"pid": pid, "name": process_name, "command": listed_name})
+
+            if not go_candidate_pids:
+                return processes
+
+            filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in go_candidate_pids)
+            try:
+                result = subprocess.run(
+                    [
+                        "powershell",
+                        "-NoProfile",
+                        "-Command",
+                        f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
+                        "Select-Object ProcessId,Name,CommandLine | "
+                        "ConvertTo-Json -Compress",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=8,
+                )
+                if result.returncode != 0:
+                    raise RuntimeError(result.stderr.strip() or "process query failed")
+                raw = result.stdout.strip()
+                if not raw:
+                    return []
+                payload = json.loads(raw)
+                rows = payload if isinstance(payload, list) else [payload]
+                for row in rows:
+                    pid = row.get("ProcessId")
+                    name = row.get("Name") or ""
+                    command_line = row.get("CommandLine") or ""
+                    if isinstance(pid, int) and _matches_compiled_go_service(name, command_line):
+                        processes.append({"pid": pid, "name": name, "command": command_line})
+            except (subprocess.SubprocessError, json.JSONDecodeError, OSError, ValueError, RuntimeError):
+                pass
             return processes
 
         result = subprocess.run(
@@ -688,12 +715,12 @@ def down(c):
                     "-NoProfile",
                     "-Command",
                     "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\" | "
-                    f"Where-Object {{ $_.CommandLine -match 'next dev --port {INTERFACE_PORT}' }} | "
+                    f"Where-Object {{ $_.CommandLine -match 'next (dev|start).*--port {INTERFACE_PORT}' }} | "
                     "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }",
                 ],
             )
         else:
-            _run_best_effort(["pkill", "-f", f"next dev --port {INTERFACE_PORT}"])
+            _run_best_effort(["pkill", "-f", f"next (dev|start).*--port {INTERFACE_PORT}"])
 
         if _wait_for_port_closed(INTERFACE_PORT, "Frontend"):
             print("  Frontend stopped (by command line)")
@@ -721,9 +748,7 @@ def down(c):
     if is_windows():
         _run_best_effort(
             ["powershell", "-NoProfile", "-Command",
-             "Get-Process kubectl -ErrorAction SilentlyContinue | "
-             "Where-Object { $_.CommandLine -match 'port-forward' } | "
-             "Stop-Process -Force"],
+             "Get-Process kubectl -ErrorAction SilentlyContinue | Stop-Process -Force"],
         )
     else:
         _run_best_effort(["pkill", "-f", "kubectl port-forward"])
