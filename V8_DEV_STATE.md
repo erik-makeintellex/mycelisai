@@ -29,8 +29,11 @@ Development is progressing toward the V8.2 full production target.
 
 Release posture:
 - `ACTIVE` current posture is `V1 MVP Release Candidate`.
-- `COMPLETE` the default Team Lead-first operator flow is now release-candidate ready with guided first-run actions, resilient support panels, and user-facing vocabulary aligned around Automations, Learning & Context, AI Engine, Response Style, Advisors, and Departments.
-- the default Team Lead-first workspace now expects guided first-run actions, intentional empty states, and partial-failure-safe support panels before release lock.
+- `COMPLETE` the default Soma-primary operator flow is now release-candidate ready with guided first-run actions, resilient support panels, and user-facing vocabulary aligned around Automations, Learning & Context, AI Engine, Response Style, Advisors, and Departments.
+- `COMPLETE` Soma is now the primary default interface and organization orchestrator for the AI Organization workspace.
+- `COMPLETE` Team Leads remain the operational layer Soma works through, while Routing / Council remains advisory and planning-oriented rather than default visible UX jargon.
+- `COMPLETE` the default workspace remains simple, guided, and non-technical, and the advanced/runtime surface remains separate from the default operator flow.
+- the default Soma-primary workspace now expects guided first-run actions, intentional empty states, and partial-failure-safe support panels before release lock.
 - `NEXT` advanced architecture/runtime configuration remains a separate contract and implementation lane; it must stay non-default until the dedicated advanced surface ships without polluting the MVP operator flow.
 
 ## Architecture Synchronization Rule
@@ -222,11 +225,12 @@ Delivery updates in this checkpoint:
 44. `COMPLETE` added deployment-friendly env override support for cognitive config so provider endpoints, model ids, provider enablement, profile routing, and media config can now be stamped by automation tools without reviving the retired team/agent provider env-map path.
 45. `COMPLETE` hardened the env override architecture boundary in README, operations docs, local workflow docs, and doc tests so deployment-time env configuration stays separate from runtime organizational truth and routing remains `Bundle -> Instantiated Organization -> Inheritance -> Routing`.
 46. `COMPLETE` added explicit deployment guidance for Windows x86_64, Linux x86_64, Linux arm64, and mixed-architecture host layouts so operators have one documented contract for how deployment-time configuration should vary without forking runtime organizational truth.
-47. `COMPLETE` hardened the V8.1 Team Lead-first UX for release readiness so first-run guidance is always visible, default workspace panels now have intentional empty/loading/error states with retry paths, and the operator-facing vocabulary now stays aligned around Automations, Learning & Context, AI Engine, Response Style, Advisors, and Departments.
+47. `COMPLETE` hardened the V8.1 Soma-primary UX for release readiness so first-run guidance is always visible, default workspace panels now have intentional empty/loading/error states with retry paths, and the operator-facing vocabulary now stays aligned around Automations, Learning & Context, AI Engine, Response Style, Advisors, and Departments.
 48. `COMPLETE` defined the advanced architecture/runtime surface contract before further UI work so default operator behavior, advanced inheritance/config inspection, source-of-truth layering, deployment/env influence, and file/env-only boundaries now have one explicit doc-backed contract.
-49. `NEXT` implement the advanced architecture/runtime UI only through a separate non-default surface that makes inheritance and config origin legible without undermining the Team Lead-first MVP release posture.
-50. `COMPLETE` converged canonical documentation ownership so README, V8.1, V8.2, V8 UI/API, and `V8_DEV_STATE.md` now carry distinct non-overlapping truth roles without leaving loose root-level draft architecture files active.
-51. `COMPLETE` repo hygiene is now release-readiness oriented for the canonical doc surface: the superseded root `v8-1.md` draft was archived under `docs/archive/drafts/`, stale root-level draft truth was removed, and doc tests now guard against canonical-surface drift and loose duplicate ownership.
+49. `NEXT` implement the advanced architecture/runtime UI only through a separate non-default surface that makes inheritance and config origin legible without undermining the Soma-primary MVP release posture.
+50. `COMPLETE` restored Soma as the primary interface and orchestrator for the default workspace while keeping Team Leads visible as subordinate operational leaders, with UI and docs now aligned on `User -> Soma -> Routing / Council -> Team Leads -> Departments / Specialist Roles / Automations -> Reviews / Learning / Activity -> Soma`.
+51. `COMPLETE` converged canonical documentation ownership so README, V8.1, V8.2, V8 UI/API, and `V8_DEV_STATE.md` now carry distinct non-overlapping truth roles without leaving loose root-level draft architecture files active.
+52. `COMPLETE` repo hygiene is now release-readiness oriented for the canonical doc surface: the superseded root `v8-1.md` draft was archived under `docs/archive/drafts/`, stale root-level draft truth was removed, and doc tests now guard against canonical-surface drift and loose duplicate ownership.
 
 Evidence:
 1. README directive review completed against `README.md`
