@@ -1,6 +1,7 @@
 package signal
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -102,7 +103,8 @@ func (s *StreamHandler) Broadcast(msg string) {
 
 // BroadcastLogEntry formats a LogEntry for the stream
 func (s *StreamHandler) BroadcastLogEntry(entry *memory.LogEntry) {
-	jsonMsg := fmt.Sprintf(`{"type": "log", "source": "%s", "level": "%s", "message": "%s", "timestamp": "%s"}`,
-		entry.Source, entry.Level, entry.Message, entry.Timestamp.Format(time.RFC3339))
+	ctxJSON, _ := json.Marshal(entry.Context)
+	jsonMsg := fmt.Sprintf(`{"type": "log", "source": "%s", "level": "%s", "message": "%s", "timestamp": "%s", "context": %s}`,
+		entry.Source, entry.Level, entry.Message, entry.Timestamp.Format(time.RFC3339), string(ctxJSON))
 	s.Broadcast(jsonMsg)
 }

@@ -1,41 +1,192 @@
-# Logging Standard (V7)
+# Logging Standard (V8.2)
 
 > Status: Authoritative
-> Last Updated: 2026-03-05
-> Scope: Required logging contract for all agents, services, and delivery teams
+> Last Updated: 2026-03-22
+> Scope: Required logging and centralized review contract for all Mycelis services, Soma, and team-led execution
 
-## 1. Why This Exists
+## 1. Purpose
 
-Mycelis currently has two active telemetry surfaces:
+Mycelis has to support two different consumers of runtime output:
 
-1. V7 mission event spine (`mission_events` + run timelines).
-2. Memory stream logs (`log_entries` via `/api/v1/memory/stream`).
+1. Service operators reading raw process logs.
+2. Agents and operators reading centralized, structured execution evidence.
 
-This document standardizes how work must be logged so incoming agents can reason over logs without guessing format or source.
+This document governs the second surface. Raw `stdout` or `stderr` logs may stay service-local, but anything that Soma, meta-agentry, team leads, or later review automation should reason over must land in the centralized review model below.
 
-## 2. Canonical Sources
+## 2. Centralized Review Surfaces
 
-### 2.1 Persistent Execution Events (Primary for agent reasoning)
+### 2.1 Mission Events
 
-- Storage: `mission_events` table.
-- Producer path: `core/internal/events/store.go` (`Emit` = DB-first, CTS publish best effort).
-- Transport topic: `swarm.mission.events.{run_id}` (`TopicMissionEventsFmt`).
-- Primary query surfaces:
-  - `GET /api/v1/runs/{id}/events`
-  - `GET /api/v1/runs/{id}/chain`
+- Storage: `mission_events`
+- Transport: `swarm.mission.events.{run_id}`
+- Purpose: persistent audit spine for run-linked execution, mutation, approvals, and lifecycle
 
-Use this source for execution lineage, causality, and run-level diagnostics.
+Use mission events when the system needs durable causality, replay, audit, or governance review.
 
-### 2.2 Memory Stream Logs (Operational stream)
+### 2.2 Operational Review Logs
 
-- Storage: `log_entries` table.
-- Producer path: `core/internal/memory/service.go` (`Push` -> async `persist`).
-- Primary query surface:
-  - `GET /api/v1/memory/stream`
+- Storage: `log_entries`
+- API: `GET /api/v1/memory/stream`
+- Stream: SSE log broadcasts from the memory stream
+- Purpose: centralized, review-oriented operational feed for Soma, meta-agentry, and team leads
 
-Use this source for lightweight operational signal feeds and UI stream rendering.
+This is the central review surface for:
 
-## 3. Required Event Taxonomy (Mission Events)
+- team status and result signals
+- mirrored team telemetry summaries
+- audit-oriented service actions
+- bridged legacy runtime envelopes that still need centralized visibility
+
+### 2.3 Team-Native Channels
+
+- `swarm.team.{team_id}.signal.status`
+- `swarm.team.{team_id}.signal.result`
+- `swarm.team.{team_id}.telemetry`
+
+Teams still own their local output channels. The rule is not "replace team channels." The rule is:
+
+- teams publish on their own canonical subjects first
+- centralized review mirrors the relevant output into `log_entries`
+- Soma and central services inspect the centralized stream without stealing team ownership of local lanes
+
+## 3. Required Separation of Concerns
+
+### 3.1 Raw service logs
+
+Allowed uses:
+
+- startup diagnostics
+- local failure detail
+- process-level troubleshooting
+
+These logs are useful for operators, but they are not the canonical agent-review surface.
+
+### 3.2 Agent-reviewable logs
+
+Required uses:
+
+- cross-team review
+- Soma orchestration review
+- team lead supervision
+- central meta-agentry analysis
+- replayable operational summaries
+
+These logs must use the centralized schema stored in `log_entries.context`.
+
+## 4. Canonical Review Schema
+
+The required schema is `protocol.OperationalLogContext` stored in `log_entries.context`.
+
+Minimum required fields for centralized review:
+
+- `schema_version`
+- `review_scope`
+- `audiences`
+- `summary`
+- `source_channel` when the log came from a bus subject
+- `review_channels`
+- `centralized_review`
+
+Strongly recommended fields:
+
+- `service`
+- `component`
+- `detail`
+- `why_it_matters`
+- `suggested_action`
+- `source_kind`
+- `payload_kind`
+- `run_id`
+- `team_id`
+- `agent_id`
+- `trace_id`
+- `mission_event_id`
+- `status`
+- `tags`
+
+## 5. Review Scope Rules
+
+### 5.1 `service_local`
+
+Use when the record is useful inside one service but not important for central orchestration.
+
+### 5.2 `team_local`
+
+Use when the record is primarily for a team and its lead, but may still be mirrored into the central review feed.
+
+### 5.3 `central_review`
+
+Default for operator-facing team output, cross-team execution updates, and anything Soma or meta-agentry should be able to inspect without polling each team directly.
+
+### 5.4 `audit`
+
+Use for governed or durable records that should align with mission-event review and governance reasoning.
+
+## 6. Audience Rules
+
+Canonical audiences:
+
+- `soma`
+- `meta_agentry`
+- `team_lead`
+- `team`
+- `governance`
+
+Default expectations:
+
+- team-local execution output should normally target `team_lead` and also remain visible to `soma` through centralized review
+- central orchestration and cross-team coordination should target `soma`, `meta_agentry`, and relevant `team_lead`
+- governed mutation and approval evidence should include `governance`
+
+## 7. Template for Agentry Review
+
+Every centralized review log should be understandable when read without surrounding implementation context.
+
+Preferred shape:
+
+- `summary`: what happened in one sentence
+- `detail`: compact supporting detail, status text, or payload summary
+- `why_it_matters`: why Soma, meta-agentry, or a team lead should care
+- `suggested_action`: what to inspect or do next if follow-up is needed
+- `review_channels`: exact lanes where more detail can be found
+
+Good example:
+
+```json
+{
+  "schema_version": "v1",
+  "review_scope": "central_review",
+  "audiences": ["soma", "meta_agentry", "team_lead"],
+  "service": "core",
+  "component": "signal-bridge",
+  "summary": "Creative Team Lead completed a review.",
+  "detail": "Result payload captured from the team result lane.",
+  "why_it_matters": "This team output is mirrored into centralized review so Soma and operational leads can inspect progress without leaving the shared channel model.",
+  "source_kind": "system",
+  "source_channel": "swarm.team.creative.signal.result",
+  "payload_kind": "result",
+  "run_id": "run-42",
+  "team_id": "creative",
+  "agent_id": "creative-lead",
+  "centralized_review": true,
+  "review_channels": [
+    "memory.stream",
+    "swarm.team.creative.signal.result",
+    "swarm.mission.events.run-42"
+  ],
+  "tags": ["team-output", "result"]
+}
+```
+
+## 8. Required Runtime Rules
+
+1. Team outputs stay on canonical team subjects.
+2. Team outputs intended for operator or orchestrator review must also be visible in centralized review.
+3. Telemetry may remain high-volume on team telemetry subjects, but the summarized operational view must still be readable from centralized review when Soma or team leads need it.
+4. Mission-critical or mutating execution must emit persistent mission events even when also mirrored into `log_entries`.
+5. New centralized review producers must normalize through `protocol.OperationalLogContext`; do not invent ad-hoc JSON blobs in `log_entries.context`.
+
+## 9. Event Taxonomy for Mission Events
 
 Use `core/pkg/protocol/events.go` constants only. Do not invent ad-hoc event names.
 
@@ -49,77 +200,28 @@ Core families:
 - Memory: `memory.stored`, `memory.recalled`
 - Orchestration: `trigger.fired`, `trigger.skipped`, `scheduler.tick`
 
-## 4. Required Field Contract
+## 10. Anti-Patterns
 
-### 4.1 Mission event minimums
+Disallowed:
 
-Every emission must include:
+- treating raw process logs as the primary agent-review surface
+- inventing a second centralized logging schema outside `protocol.OperationalLogContext`
+- publishing team-local output without any central review visibility when Soma or team leads need to inspect it later
+- using telemetry subjects as the only source of operator review truth
+- inventing event names outside `core/pkg/protocol/events.go`
+- hardcoding `swarm.*` subjects outside canonical topic definitions
 
-- `run_id` (non-empty)
-- `event_type` (from constants)
-- `severity` (`info|warn|error`)
-- `source_agent` and/or `source_team` where available
-- `payload` (map; use empty object when no details)
+## 11. Agent Checklist Before Changing Logging
 
-### 4.2 Payload keys by type
+1. Read this file.
+2. Read `core/pkg/protocol/events.go`.
+3. Read `core/pkg/protocol/topics.go`.
+4. Read `core/pkg/protocol/logging.go`.
+5. Confirm how `mission_events` and `log_entries` are both affected.
+6. Update focused tests for any new review-path behavior.
 
-Use stable keys to keep agent parsing deterministic.
+If operator-visible logging behavior changes, also update:
 
-- `tool.*`: `tool_name`, `call_id`, `status`, `duration_ms`, `error` (if failed)
-- `mission.*`: `mission_id`, `status`, `reason` (if non-success)
-- `team.*`: `team_id`, `action`, `lifetime`
-- `trigger.*`: `rule_id`, `matched`, `mode`, `decision`
-- `scheduler.tick`: `schedule_id`, `due_count`, `dispatch_count`
-
-## 5. Agent Onboarding Checklist (Mandatory Before Coding)
-
-Any agent starting delivery work must do this first:
-
-1. Read this file and `core/pkg/protocol/events.go`.
-2. Verify topic constants in `core/pkg/protocol/topics.go`.
-3. Confirm event persistence behavior in `core/internal/events/store.go`.
-4. Confirm stream log behavior in `core/internal/memory/service.go`.
-5. Run current test baseline before changing logging behavior.
-
-If any logging change is made, agent must update:
-
-1. `docs/logging.md`
-2. relevant tests in `core/internal/events/*` or `core/internal/memory/*`
-3. `README.md` and `V7_DEV_STATE.md` when behavior changes operator-facing outputs
-
-## 6. Operator Failure Contract
-
-Operator-facing execution paths must not classify failures independently in each component.
-
-Current required rule for Workspace and council chat:
-
-- store raw diagnostics separately from the operator-facing failure model
-- classify Workspace/council chat failures once in shared UI/store logic
-- render the same failure type, banner label, summary, and recovery action across:
-  - Workspace blocker cards
-  - degraded-mode banner
-  - system status drawer
-
-This prevents drift where one surface says "unreachable", another says "server error", and the store only holds an opaque string.
-
-## 7. Anti-Patterns (Disallowed)
-
-- Hardcoded topic strings in handlers/services (must use constants).
-- New event names not declared in `protocol/events.go`.
-- Missing `run_id` on mission event emissions.
-- Emitting CTS-only event signals without DB persistence.
-- Unbounded free-form payload blobs for common event classes.
-
-## 8. Near-Term Hardening Tasks
-
-Add/standardize invoke tasks for logging quality gates:
-
-- `uv run inv logging.check-schema`
-  - validate event types and required keys across targeted tests/fixtures.
-- `uv run inv logging.check-topics`
-  - detect hardcoded `swarm.` topic strings outside `protocol/topics.go`.
-
-Current note:
-- `logging.check-coverage` is not a live invoke task yet. Coverage for new logging/event paths is enforced through focused tests plus `uv run inv ci.baseline` until a dedicated task is added.
-
-These tasks are required before enabling broader autonomous agent execution.
+1. `README.md`
+2. relevant tests
+3. any architecture or ops docs that describe the affected surface

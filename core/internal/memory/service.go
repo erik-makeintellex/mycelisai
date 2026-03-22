@@ -69,6 +69,7 @@ func NewService(dbUrl string) (*Service, error) {
 
 // Push adds an event to the processing queue non-blocking.
 func (s *Service) Push(entry *LogEntry) {
+	entry = NormalizeLogEntryForReview(entry)
 	select {
 	case s.events <- entry:
 		// Queued
