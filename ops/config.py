@@ -28,7 +28,15 @@ API_HOST = os.environ.get("MYCELIS_API_HOST", "localhost")
 API_PORT = int(os.environ.get("MYCELIS_API_PORT", os.environ.get("PORT", "8081")))
 
 # Interface (Next.js) dev server
-INTERFACE_HOST = os.environ.get("MYCELIS_INTERFACE_HOST", "localhost")
+# Split the bind host from the local probe/base host so the UI can stay LAN-
+# reachable by default without forcing local tooling to guess which loopback
+# family (IPv4 vs IPv6) the OS picked.
+_interface_host_env = os.environ.get("MYCELIS_INTERFACE_HOST")
+INTERFACE_HOST = _interface_host_env or "127.0.0.1"
+INTERFACE_BIND_HOST = os.environ.get(
+    "MYCELIS_INTERFACE_BIND_HOST",
+    _interface_host_env or "::",
+)
 INTERFACE_PORT = int(os.environ.get("MYCELIS_INTERFACE_PORT", "3000"))
 
 def is_windows():

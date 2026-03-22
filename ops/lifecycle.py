@@ -22,6 +22,7 @@ from .config import (
     NAMESPACE,
     API_HOST,
     API_PORT,
+    INTERFACE_BIND_HOST,
     INTERFACE_HOST,
     INTERFACE_PORT,
     is_windows,
@@ -112,6 +113,24 @@ def _http_get(url: str, timeout: float = 3.0, headers: dict[str, str] | None = N
         return e.code, str(e)
     except Exception as e:
         return 0, str(e)
+
+
+def _interface_probe_urls(host: str = INTERFACE_HOST, port: int = INTERFACE_PORT) -> list[str]:
+    candidates = [host, "127.0.0.1", "localhost", "::1"]
+    urls: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        url_host = candidate
+        if ":" in candidate and not candidate.startswith("["):
+            url_host = f"[{candidate}]"
+        url = f"http://{url_host}:{port}/"
+        if url in seen:
+            continue
+        seen.add(url)
+        urls.append(url)
+    return urls
 
 
 def _wait_for_port(port: int, label: str, timeout: int = 30, interval: float = 1.0) -> bool:
@@ -664,7 +683,7 @@ def up(c, frontend=False, build=False):
 
             interface_tasks.start_dev_server_detached(
                 interface_tasks.interface_task_env(),
-                host=INTERFACE_HOST,
+                host=INTERFACE_BIND_HOST,
                 port=INTERFACE_PORT,
             )
             if _wait_for_port(INTERFACE_PORT, "Frontend", timeout=30):
@@ -829,9 +848,12 @@ def health(c):
     # Frontend check
     print()
     if _port_open(INTERFACE_PORT):
-        code, body = _http_get(f"http://{INTERFACE_HOST}:{INTERFACE_PORT}/")
-        if code == 200:
-            print(f"  [OK] Frontend              / [200]")
+        code = 0
+        for url in _interface_probe_urls():
+            code, body = _http_get(url)
+            if code == 200:
+                print(f"  [OK] Frontend              {url} [200]")
+                break
         else:
             print(f"  [WARN] Frontend            / [{code}]")
     else:

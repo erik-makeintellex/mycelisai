@@ -1,11 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const configDir = typeof __dirname === 'string' ? __dirname : process.cwd();
-const interfaceHost = process.env.INTERFACE_HOST ?? '127.0.0.1';
+const interfaceHost = process.env.INTERFACE_HOST ?? process.env.MYCELIS_INTERFACE_HOST ?? '127.0.0.1';
+const interfaceBindHost =
+    process.env.INTERFACE_BIND_HOST ??
+    process.env.MYCELIS_INTERFACE_BIND_HOST ??
+    process.env.MYCELIS_INTERFACE_HOST ??
+    '::';
 const interfacePort = process.env.INTERFACE_PORT ?? '3000';
 const baseURL = `http://${interfaceHost}:${interfacePort}`;
 const shouldManageWebServer = !process.env.PLAYWRIGHT_SKIP_WEBSERVER;
-const defaultDevCommand = `node ./node_modules/next/dist/bin/next dev --webpack --hostname ${interfaceHost} --port ${interfacePort}`;
+const defaultDevCommand = `node ./node_modules/next/dist/bin/next dev --webpack --hostname ${interfaceBindHost} --port ${interfacePort}`;
 const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultDevCommand;
 
 /**

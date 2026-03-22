@@ -290,6 +290,16 @@ def test_wait_for_http_ok_returns_true_on_200(monkeypatch):
     assert calls == ["http://localhost:8081/healthz"]
 
 
+def test_interface_probe_urls_prioritize_probe_host_then_loopback_fallbacks():
+    urls = lifecycle._interface_probe_urls("127.0.0.1", 3000)
+
+    assert urls == [
+        "http://127.0.0.1:3000/",
+        "http://localhost:3000/",
+        "http://[::1]:3000/",
+    ]
+
+
 def test_core_startup_log_path_points_to_workspace_logs():
     path = lifecycle._core_startup_log_path()
 
@@ -413,12 +423,12 @@ def test_up_frontend_uses_shared_interface_launcher(monkeypatch):
     monkeypatch.setattr(
         interface_tasks,
         "start_dev_server_detached",
-        lambda env=None, host=lifecycle.INTERFACE_HOST, port=lifecycle.INTERFACE_PORT: events.append(
+        lambda env=None, host=lifecycle.INTERFACE_BIND_HOST, port=lifecycle.INTERFACE_PORT: events.append(
             f"frontend:{host}:{port}:{env.get('TEST_ENV') if env else ''}"
         ),
     )
 
     lifecycle.up.body(Context(), frontend=True, build=False)
 
-    assert f"frontend:{lifecycle.INTERFACE_HOST}:{lifecycle.INTERFACE_PORT}:1" in events
+    assert f"frontend:{lifecycle.INTERFACE_BIND_HOST}:{lifecycle.INTERFACE_PORT}:1" in events
     assert f"wait:{lifecycle.INTERFACE_PORT}:Frontend" in events
