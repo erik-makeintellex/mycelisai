@@ -520,6 +520,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
         expect(screen.getByText("What I can help with")).toBeDefined();
         expect(screen.getByText("Work with Soma")).toBeDefined();
+        expect(screen.getAllByText("Start with Soma").length).toBeGreaterThan(0);
+        expect(screen.getByLabelText("Tell Soma what you want to create or accomplish")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();

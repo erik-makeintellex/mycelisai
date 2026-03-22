@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 // Mock next/navigation with a configurable pathname
 const mockPathname = vi.fn(() => '/dashboard');
@@ -38,6 +38,7 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     beforeEach(() => {
         mockPathname.mockReturnValue('/dashboard');
         mockAdvancedMode.mockReturnValue(false);
+        localStorage.clear();
     });
 
     it('renders the Mycelis brand name', () => {
@@ -55,6 +56,18 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     it('renders Settings in footer', () => {
         render(<ZoneA />);
         expect(screen.getByText('Settings')).toBeDefined();
+    });
+
+    it('shows a persistent current organization link when one was opened previously', async () => {
+        localStorage.setItem('mycelis-last-organization-id', 'org-123');
+        localStorage.setItem('mycelis-last-organization-name', 'Northstar Labs');
+
+        const { container } = render(<ZoneA />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Current Organization')).toBeDefined();
+        });
+        expect(container.querySelector('a[href="/organizations/org-123"]')).not.toBeNull();
     });
 
     it('highlights active route with cortex-primary', () => {

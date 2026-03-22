@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, RefreshCcw } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type { TeamLeadGuidanceRequest, TeamLeadGuidanceResponse, TeamLeadGuidedAction } from "@/lib/organizations";
@@ -38,25 +38,42 @@ export default function TeamLeadInteractionPanel({
     organizationName,
     somaName,
     teamLeadName,
+    autoFocusOnLoad = false,
 }: {
     organizationId: string;
     organizationName: string;
     somaName: string;
     teamLeadName: string;
+    autoFocusOnLoad?: boolean;
 }) {
+    const panelRef = useRef<HTMLElement | null>(null);
+    const promptRef = useRef<HTMLTextAreaElement | null>(null);
     const [selectedAction, setSelectedAction] = useState<TeamLeadGuidedAction | null>(null);
     const [requestState, setRequestState] = useState<RequestState>("idle");
     const [error, setError] = useState<string | null>(null);
     const [guidance, setGuidance] = useState<TeamLeadGuidanceResponse | null>(null);
+    const [draftPrompt, setDraftPrompt] = useState("");
+    const [requestContext, setRequestContext] = useState<string | null>(null);
     const isLoading = requestState === "loading";
 
-    const triggerAction = async (action: TeamLeadGuidedAction) => {
+    useEffect(() => {
+        if (!autoFocusOnLoad) {
+            return;
+        }
+        panelRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+        window.setTimeout(() => {
+            promptRef.current?.focus();
+        }, 80);
+    }, [autoFocusOnLoad]);
+
+    const triggerAction = async (action: TeamLeadGuidedAction, contextLabel?: string) => {
         if (isLoading) {
             return;
         }
         setSelectedAction(action);
         setRequestState("loading");
         setError(null);
+        setRequestContext(contextLabel ?? null);
 
         const payload: TeamLeadGuidanceRequest = { action };
         try {
@@ -79,8 +96,16 @@ export default function TeamLeadInteractionPanel({
         }
     };
 
+    const handlePromptSubmit = async () => {
+        const normalizedPrompt = draftPrompt.trim();
+        if (!normalizedPrompt || isLoading) {
+            return;
+        }
+        await triggerAction(resolvePromptAction(normalizedPrompt), normalizedPrompt);
+    };
+
     return (
-        <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
+        <section id="soma-panel" ref={panelRef} className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <h2 className="text-xl font-semibold text-cortex-text-main">Work with Soma</h2>
@@ -93,6 +118,48 @@ export default function TeamLeadInteractionPanel({
                     <p className="mt-1">{somaName}</p>
                     <p className="mt-3 font-medium text-cortex-text-main">Operational lead</p>
                     <p className="mt-1">{teamLeadName}</p>
+                </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-cortex-primary/30 bg-cortex-primary/10 p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="space-y-2">
+                        <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">Start with Soma</p>
+                        <p className="text-sm leading-6 text-cortex-text-main">
+                            Tell Soma what you want to create or accomplish. Soma will turn that into the clearest first move for this organization.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handlePromptSubmit}
+                        disabled={isLoading || draftPrompt.trim().length === 0}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        Start with Soma
+                    </button>
+                </div>
+                <div className="mt-4 space-y-2">
+                    <label htmlFor="soma-guided-prompt" className="text-sm font-medium text-cortex-text-main">
+                        Tell Soma what you want to create or accomplish
+                    </label>
+                    <textarea
+                        id="soma-guided-prompt"
+                        ref={promptRef}
+                        value={draftPrompt}
+                        onChange={(event) => setDraftPrompt(event.target.value)}
+                        onKeyDown={(event) => {
+                            if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                                event.preventDefault();
+                                void handlePromptSubmit();
+                            }
+                        }}
+                        placeholder="Tell Soma what you want to create or accomplish"
+                        className="min-h-[104px] w-full rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-main outline-none transition-colors placeholder:text-cortex-text-muted focus:border-cortex-primary/40"
+                    />
+                    <p className="text-xs leading-6 text-cortex-text-muted">
+                        Soma will use this request to choose the right first guided move, then show the next steps here right away.
+                    </p>
                 </div>
             </div>
 
@@ -162,6 +229,13 @@ export default function TeamLeadInteractionPanel({
 
                 {requestState === "ready" && guidance && (
                     <div className="space-y-5">
+                        {requestContext && (
+                            <div>
+                                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">You asked Soma to help with</p>
+                                <p className="mt-2 text-sm leading-6 text-cortex-text-main">{requestContext}</p>
+                            </div>
+                        )}
+
                         <div>
                             <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Current request</p>
                             <p className="mt-2 text-base font-semibold text-cortex-text-main">{guidance.request_label}</p>
@@ -235,6 +309,17 @@ function normalizeGuidanceResponse(
 
 function defaultRequestLabel(action: TeamLeadGuidedAction) {
     return GUIDED_ACTIONS.find((item) => item.action === action)?.label ?? "Work with Soma";
+}
+
+function resolvePromptAction(prompt: string): TeamLeadGuidedAction {
+    const normalized = prompt.trim().toLowerCase();
+    if (/(review|check|audit|inspect|understand|setup|structure|team)/i.test(normalized)) {
+        return "review_setup";
+    }
+    if (/(first|priority|focus|start with|begin with|most important)/i.test(normalized)) {
+        return "focus_first";
+    }
+    return "plan_next_steps";
 }
 
 function defaultPrioritySteps(action: TeamLeadGuidedAction, organizationName: string) {

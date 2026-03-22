@@ -649,6 +649,22 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         }
     };
 
+    useEffect(() => {
+        if (typeof window === "undefined" || !organization) {
+            return;
+        }
+        window.localStorage.setItem("mycelis-last-organization-id", organization.id);
+        window.localStorage.setItem("mycelis-last-organization-name", organization.name);
+        window.dispatchEvent(
+            new CustomEvent("mycelis:last-organization-changed", {
+                detail: {
+                    id: organization.id,
+                    name: organization.name,
+                },
+            }),
+        );
+    }, [organization]);
+
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center bg-cortex-bg">
@@ -717,6 +733,13 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             <p className="mt-1 leading-6">
                                 {somaName} is ready to guide planning, structure review, and organization setup decisions while working through the right Team Lead support when needed.
                             </p>
+                            <a
+                                href="#soma-panel"
+                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-2 font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/15"
+                            >
+                                Start with Soma
+                                <Sparkles className="h-4 w-4" />
+                            </a>
                         </div>
                     </div>
                 </section>
@@ -852,6 +875,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             organizationName={organization.name}
                             somaName={somaName}
                             teamLeadName={teamLeadName}
+                            autoFocusOnLoad
                         />
                     </div>
 
