@@ -166,6 +166,21 @@ describe("Dashboard Page (V8 AI Organization entry flow)", () => {
         expect(await screen.findByText("Atlas")).toBeDefined();
     });
 
+    it("opens a recent AI Organization from the entry screen", async () => {
+        setupEntryFlowFetch({
+            organizationsHandler: () => jsonResponse({ ok: true, data: [organizationSummary] }),
+        });
+
+        render(<DashboardPage />);
+
+        expect(await screen.findByText("Atlas")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: /Open AI Organization/i }));
+
+        await waitFor(() => {
+            expect(push).toHaveBeenCalledWith("/organizations/org-42");
+        });
+    });
+
     it("submits an empty-start organization and routes into the landing screen", async () => {
         setupEntryFlowFetch();
 

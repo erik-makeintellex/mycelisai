@@ -48,7 +48,7 @@ export default function DegradedModeBanner() {
             <div className="flex items-center gap-2 min-w-0">
                 <AlertTriangle className="w-3.5 h-3.5 text-cortex-warning flex-shrink-0" />
                 <p className="text-[11px] font-mono text-cortex-warning truncate">
-                    System in Degraded Mode — {reasons[0]}.
+                    System in Degraded Mode — {reasons[0]}. Core functionality is still available.
                 </p>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">

@@ -38,7 +38,27 @@ export default function CreateOrganizationEntry() {
     const [purpose, setPurpose] = useState("");
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [openingOrganizationId, setOpeningOrganizationId] = useState<string | null>(null);
     const [, startTransition] = useTransition();
+
+    const rememberOrganization = (organization: Pick<OrganizationSummary, "id" | "name">) => {
+        if (typeof window === "undefined") {
+            return;
+        }
+        window.localStorage.setItem("mycelis-last-organization-id", organization.id);
+        window.localStorage.setItem("mycelis-last-organization-name", organization.name);
+    };
+
+    const openOrganization = (organization: Pick<OrganizationSummary, "id" | "name">) => {
+        if (openingOrganizationId === organization.id || isSubmitting) {
+            return;
+        }
+        setOpeningOrganizationId(organization.id);
+        rememberOrganization(organization);
+        startTransition(() => {
+            router.push(`/organizations/${organization.id}`);
+        });
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -146,6 +166,10 @@ export default function CreateOrganizationEntry() {
                 throw new Error(extractApiError(responsePayload) || "Unable to create AI Organization.");
             }
             const created = extractApiData<OrganizationSummary>(responsePayload);
+            if (!created?.id) {
+                throw new Error("AI Organization created, but the workspace route is unavailable right now.");
+            }
+            rememberOrganization(created);
             startTransition(() => {
                 router.push(`/organizations/${created.id}`);
             });
@@ -221,7 +245,14 @@ export default function CreateOrganizationEntry() {
                         {organizationsState === "ready" && organizations.length > 0 && (
                             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                                 {organizations.map((organization) => (
-                                    <div key={organization.id} className="rounded-2xl border border-cortex-border bg-cortex-surface p-4">
+                                    <button
+                                        key={organization.id}
+                                        type="button"
+                                        onClick={() => openOrganization(organization)}
+                                        disabled={openingOrganizationId === organization.id || isSubmitting}
+                                        className="rounded-2xl border border-cortex-border bg-cortex-surface p-4 text-left transition-colors hover:border-cortex-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
+                                        aria-busy={openingOrganizationId === organization.id}
+                                    >
                                         <div className="flex items-start justify-between gap-3">
                                             <div>
                                                 <p className="text-base font-semibold text-cortex-text-main">{organization.name}</p>
@@ -234,17 +265,17 @@ export default function CreateOrganizationEntry() {
                                         <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-cortex-text-muted">
                                             <Metric label="Team Lead" value={organization.team_lead_label} />
                                             <Metric label="Departments" value={String(organization.department_count)} />
-                                            <Metric label="Specialists" value={String(organization.specialist_count)} />
-                                            <Metric label="AI Organization" value={organization.status} />
-                                        </div>
-                                        <button
-                                            onClick={() => router.push(`/organizations/${organization.id}`)}
-                                            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10"
-                                        >
+                                                <Metric label="Specialists" value={String(organization.specialist_count)} />
+                                                <Metric label="AI Organization" value={organization.status} />
+                                            </div>
+                                        <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10">
+                                            {openingOrganizationId === organization.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : null}
                                             Open AI Organization
                                             <ArrowRight className="h-4 w-4" />
-                                        </button>
-                                    </div>
+                                        </div>
+                                    </button>
                                 ))}
                             </div>
                         )}
@@ -419,6 +450,11 @@ export default function CreateOrganizationEntry() {
                             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Blocks className="h-4 w-4" />}
                             Create AI Organization
                         </button>
+                        {isSubmitting && (
+                            <p className="text-sm text-cortex-text-muted">
+                                Opening your Soma workspace as soon as the organization is ready.
+                            </p>
+                        )}
 
                         <div className="rounded-2xl border border-cortex-border bg-cortex-bg p-4 text-sm text-cortex-text-muted">
                             <p className="font-medium text-cortex-text-main">What stays hidden for now</p>

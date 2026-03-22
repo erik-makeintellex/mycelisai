@@ -1097,9 +1097,13 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Using Organization or Team Default: Warm & Supportive")).toBeVisible();
         await page.getByRole("button", { name: "Back to Soma" }).click();
 
-        await page.getByRole("button", { name: /Run a quick strategy check/i }).click();
-        expect(capturedActionBody).toEqual({ action: "plan_next_steps" });
+        await expect(page.getByRole("button", { name: "Start with Soma" })).toBeVisible();
+        await expect(page.getByLabel("Tell Soma what you want to create or accomplish")).toBeVisible();
+        await page.getByLabel("Tell Soma what you want to create or accomplish").fill("Help me choose the first priority for this launch.");
+        await page.getByRole("button", { name: "Start with Soma" }).click();
+        expect(capturedActionBody).toEqual({ action: "focus_first" });
         await expect(page.getByText("Soma plan for Northstar Labs")).toBeVisible();
+        await expect(page.getByText("Help me choose the first priority for this launch.").last()).toBeVisible();
         await expect(page.getByText("Priority steps")).toBeVisible();
         await expect(page.getByText("Keep moving with")).toBeVisible();
         await expect(page.getByText("Mission Control")).toHaveCount(0);
@@ -1142,6 +1146,8 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: createdEmptyOrganization.name, exact: true })).toBeVisible();
         await expect(page.getByText("Soma ready")).toBeVisible();
         await expect(page.getByText("Work with Soma")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Start with Soma" })).toBeVisible();
+        await expect(page.getByLabel("Tell Soma what you want to create or accomplish")).toBeFocused();
         await expect(page.getByText("Started from", { exact: true })).toBeVisible();
         await expect(page.getByText("Empty", { exact: true })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
@@ -1163,6 +1169,22 @@ test.describe("V8 AI Organization entry flow", () => {
         await expectNoForbiddenCopy(page);
 
         await saveScreenshot(page, testInfo, "empty-success-home.png");
+    });
+
+    test("reopens a recent AI Organization and lands back in the Soma workspace", async ({ page }) => {
+        await mockOrganizationEntryApis(page, {
+            organizations: [createdTemplateOrganization],
+        });
+
+        await page.goto("/dashboard");
+        await page.waitForLoadState("domcontentloaded");
+        await expect(page.getByText("Northstar Labs")).toBeVisible();
+        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await openCreatedOrganization(page, createdTemplateOrganization.id);
+
+        await expect(page.getByText("AI Organization Home")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Start with Soma" })).toBeVisible();
     });
 
     test.skip("preserves organization context when a guided Soma action fails and then succeeds on retry", async ({ page }, testInfo) => {

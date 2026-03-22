@@ -3,21 +3,47 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Network, Settings, Home, Workflow, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen } from 'lucide-react';
+import { Network, Settings, Home, Workflow, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2 } from 'lucide-react';
 import { useCortexStore } from '@/store/useCortexStore';
 
 export function ZoneA() {
+    const pathname = usePathname();
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
     const [isHydrated, setIsHydrated] = useState(false);
+    const [lastOrganization, setLastOrganization] = useState<{ id: string; name: string } | null>(null);
 
     useEffect(() => {
+        const syncLastOrganization = () => {
+            if (typeof window === 'undefined') {
+                return;
+            }
+            const id = window.localStorage.getItem('mycelis-last-organization-id');
+            const name = window.localStorage.getItem('mycelis-last-organization-name');
+            setLastOrganization(id ? { id, name: name || 'Current Organization' } : null);
+        };
+
+        const handleLastOrganizationChanged = (event: Event) => {
+            const detail = (event as CustomEvent<{ id: string; name: string }>).detail;
+            if (!detail?.id) {
+                syncLastOrganization();
+                return;
+            }
+            setLastOrganization({ id: detail.id, name: detail.name || 'Current Organization' });
+        };
+
         setIsHydrated(true);
-    }, []);
+        syncLastOrganization();
+        window.addEventListener('mycelis:last-organization-changed', handleLastOrganizationChanged as EventListener);
+        return () => {
+            window.removeEventListener('mycelis:last-organization-changed', handleLastOrganizationChanged as EventListener);
+        };
+    }, [pathname]);
 
     const effectiveAdvancedMode = isHydrated ? advancedMode : false;
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'AI Organization' },
+        ...(lastOrganization ? [{ href: `/organizations/${lastOrganization.id}`, icon: Building2, label: 'Current Organization', title: lastOrganization.name }] : []),
         { href: '/automations', icon: Workflow, label: 'Automations' },
         { href: '/docs', icon: BookOpen, label: 'Docs' },
     ];
@@ -42,7 +68,7 @@ export function ZoneA() {
             {/* 2. Soma-primary Navigation */}
             <div className="flex-1 flex flex-col py-4 gap-1 px-2">
                 {primaryNav.map((item) => (
-                    <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} />
+                    <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} title={item.title} />
                 ))}
                 {effectiveAdvancedMode && (
                     <div className="mt-3 space-y-1">
@@ -78,13 +104,14 @@ export function ZoneA() {
     );
 }
 
-function NavItem({ icon: Icon, label, href }: { icon: any; label: string; href: string }) {
+function NavItem({ icon: Icon, label, href, title }: { icon: any; label: string; href: string; title?: string }) {
     const pathname = usePathname();
     const isActive = pathname === href || pathname.startsWith(href + '/');
 
     return (
         <Link
             href={href}
+            title={title ?? label}
             className={`
                 flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200
                 ${isActive

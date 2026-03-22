@@ -77,6 +77,7 @@ describe("DegradedModeBanner", () => {
         await waitFor(() => {
             expect(screen.getByText(/System in Degraded Mode/i)).toBeDefined();
         });
+        expect(screen.getByText(/Core functionality is still available/i)).toBeDefined();
 
         fireEvent.click(screen.getByText("Open Status"));
         expect(useCortexStore.getState().isStatusDrawerOpen).toBe(true);
