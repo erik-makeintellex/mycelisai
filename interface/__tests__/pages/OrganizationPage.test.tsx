@@ -515,6 +515,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByText("AI Organization Home")).toBeDefined();
+        expect(screen.getByLabelText("Organization breadcrumb")).toBeDefined();
+        expect(screen.getByRole("link", { name: "AI Organizations" }).getAttribute("href")).toBe("/dashboard");
         expect(screen.getByText("Soma ready")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
@@ -602,7 +604,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         fireEvent.click(screen.getByRole("button", { name: /Review your organization setup/i }));
         expect(await screen.findByText("Organization setup review for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
-        expect(screen.getByText("Northstar Labs")).toBeDefined();
+        expect(screen.getByRole("heading", { name: /^Northstar Labs$/ })).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();

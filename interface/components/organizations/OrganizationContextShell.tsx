@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Activity, ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
+import { rememberLastOrganization } from "@/lib/lastOrganization";
 import type {
     AgentTypeAIEngineUpdateRequest,
     AgentTypeResponseContractUpdateRequest,
@@ -653,16 +654,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         if (typeof window === "undefined" || !organization) {
             return;
         }
-        window.localStorage.setItem("mycelis-last-organization-id", organization.id);
-        window.localStorage.setItem("mycelis-last-organization-name", organization.name);
-        window.dispatchEvent(
-            new CustomEvent("mycelis:last-organization-changed", {
-                detail: {
-                    id: organization.id,
-                    name: organization.name,
-                },
-            }),
-        );
+        rememberLastOrganization({ id: organization.id, name: organization.name });
     }, [organization]);
 
     if (loading) {
@@ -716,6 +708,25 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     return (
         <div className="h-full overflow-auto bg-cortex-bg px-6 py-8">
             <div className="mx-auto max-w-6xl space-y-8">
+                <section className="rounded-2xl border border-cortex-border bg-cortex-surface px-5 py-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <nav aria-label="Organization breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-cortex-text-muted">
+                            <Link href="/dashboard" className="font-medium text-cortex-primary transition-colors hover:text-cortex-primary/80">
+                                AI Organizations
+                            </Link>
+                            <span>/</span>
+                            <span className="font-medium text-cortex-text-main">{organization.name}</span>
+                        </nav>
+                        <Link
+                            href="/dashboard"
+                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Return to Organization list
+                        </Link>
+                    </div>
+                </section>
+
                 <section className="rounded-3xl border border-cortex-border bg-cortex-surface px-6 py-8 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                         <div className="space-y-3">

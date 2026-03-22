@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Network, Settings, Home, Workflow, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2 } from 'lucide-react';
+import { readLastOrganization, subscribeLastOrganizationChange } from '@/lib/lastOrganization';
 import { useCortexStore } from '@/store/useCortexStore';
 
 export function ZoneA() {
     const pathname = usePathname();
+    const router = useRouter();
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
     const [isHydrated, setIsHydrated] = useState(false);
@@ -15,35 +17,29 @@ export function ZoneA() {
 
     useEffect(() => {
         const syncLastOrganization = () => {
-            if (typeof window === 'undefined') {
-                return;
-            }
-            const id = window.localStorage.getItem('mycelis-last-organization-id');
-            const name = window.localStorage.getItem('mycelis-last-organization-name');
-            setLastOrganization(id ? { id, name: name || 'Current Organization' } : null);
-        };
-
-        const handleLastOrganizationChanged = (event: Event) => {
-            const detail = (event as CustomEvent<{ id: string; name: string }>).detail;
-            if (!detail?.id) {
-                syncLastOrganization();
-                return;
-            }
-            setLastOrganization({ id: detail.id, name: detail.name || 'Current Organization' });
+            setLastOrganization(readLastOrganization());
         };
 
         setIsHydrated(true);
         syncLastOrganization();
-        window.addEventListener('mycelis:last-organization-changed', handleLastOrganizationChanged as EventListener);
-        return () => {
-            window.removeEventListener('mycelis:last-organization-changed', handleLastOrganizationChanged as EventListener);
-        };
+        return subscribeLastOrganizationChange((organization) => {
+            setLastOrganization(organization);
+        });
     }, [pathname]);
 
     const effectiveAdvancedMode = isHydrated ? advancedMode : false;
+    const currentOrganizationHref = lastOrganization ? `/organizations/${lastOrganization.id}` : null;
+    const isCurrentOrganizationRoute = !!currentOrganizationHref && (pathname === currentOrganizationHref || pathname.startsWith(currentOrganizationHref + '/'));
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'AI Organization' },
-        ...(lastOrganization ? [{ href: `/organizations/${lastOrganization.id}`, icon: Building2, label: 'Current Organization', title: lastOrganization.name }] : []),
+        ...(lastOrganization ? [{
+            href: currentOrganizationHref!,
+            icon: Building2,
+            label: isCurrentOrganizationRoute ? 'Current Organization' : 'Return to Organization',
+            title: lastOrganization.name,
+            description: lastOrganization.name,
+            testId: 'current-organization-nav',
+        }] : []),
         { href: '/automations', icon: Workflow, label: 'Automations' },
         { href: '/docs', icon: BookOpen, label: 'Docs' },
     ];
@@ -68,7 +64,16 @@ export function ZoneA() {
             {/* 2. Soma-primary Navigation */}
             <div className="flex-1 flex flex-col py-4 gap-1 px-2">
                 {primaryNav.map((item) => (
-                    <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} title={item.title} />
+                    <NavItem
+                        key={item.href}
+                        href={item.href}
+                        icon={item.icon}
+                        label={item.label}
+                        title={item.title}
+                        description={item.description}
+                        testId={item.testId}
+                        onClick={item.href === currentOrganizationHref ? () => router.push(item.href) : undefined}
+                    />
                 ))}
                 {effectiveAdvancedMode && (
                     <div className="mt-3 space-y-1">
@@ -104,24 +109,40 @@ export function ZoneA() {
     );
 }
 
-function NavItem({ icon: Icon, label, href, title }: { icon: any; label: string; href: string; title?: string }) {
+function NavItem({ icon: Icon, label, href, title, description, onClick, testId }: { icon: any; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string }) {
     const pathname = usePathname();
     const isActive = pathname === href || pathname.startsWith(href + '/');
+    const classes = `
+        flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200
+        ${isActive
+            ? 'bg-cortex-primary text-cortex-bg shadow-[0_4px_14px_0_rgba(6,182,212,0.39)]'
+            : 'text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg'
+        }
+    `;
+
+    const content = (
+        <>
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            <span className="hidden md:block ml-3 min-w-0">
+                <span className="block truncate text-sm font-medium">{label}</span>
+                {description ? (
+                    <span className={`block truncate text-xs ${isActive ? 'text-cortex-bg/80' : 'text-cortex-text-muted/80'}`}>{description}</span>
+                ) : null}
+            </span>
+        </>
+    );
+
+    if (onClick) {
+        return (
+            <button type="button" title={title ?? label} className={classes} onClick={onClick} data-testid={testId}>
+                {content}
+            </button>
+        );
+    }
 
     return (
-        <Link
-            href={href}
-            title={title ?? label}
-            className={`
-                flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200
-                ${isActive
-                    ? 'bg-cortex-primary text-cortex-bg shadow-[0_4px_14px_0_rgba(6,182,212,0.39)]'
-                    : 'text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg'
-                }
-            `}
-        >
-            <Icon className="w-5 h-5 flex-shrink-0" />
-            <span className="hidden md:block ml-3 text-sm font-medium">{label}</span>
+        <Link href={href} title={title ?? label} className={classes} data-testid={testId}>
+            {content}
         </Link>
     );
 }

@@ -62,12 +62,26 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
         localStorage.setItem('mycelis-last-organization-id', 'org-123');
         localStorage.setItem('mycelis-last-organization-name', 'Northstar Labs');
 
-        const { container } = render(<ZoneA />);
+        render(<ZoneA />);
+
+        await waitFor(() => {
+            expect(screen.getByText('Return to Organization')).toBeDefined();
+        });
+        expect(screen.getByText('Northstar Labs')).toBeDefined();
+        expect(screen.getByRole('button', { name: /Return to Organization/i })).toBeDefined();
+    });
+
+    it('labels the current organization entry as current while inside the workspace', async () => {
+        mockPathname.mockReturnValue('/organizations/org-123');
+        localStorage.setItem('mycelis-last-organization-id', 'org-123');
+        localStorage.setItem('mycelis-last-organization-name', 'Northstar Labs');
+
+        render(<ZoneA />);
 
         await waitFor(() => {
             expect(screen.getByText('Current Organization')).toBeDefined();
         });
-        expect(container.querySelector('a[href="/organizations/org-123"]')).not.toBeNull();
+        expect(screen.getByText('Northstar Labs')).toBeDefined();
     });
 
     it('highlights active route with cortex-primary', () => {

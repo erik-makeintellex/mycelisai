@@ -90,6 +90,7 @@ describe("Dashboard Page (V8 AI Organization entry flow)", () => {
     beforeEach(() => {
         push.mockReset();
         mockFetch.mockReset();
+        localStorage.clear();
     });
 
     it("renders the Create AI Organization entry flow without architecture copy leaks", async () => {
@@ -179,6 +180,18 @@ describe("Dashboard Page (V8 AI Organization entry flow)", () => {
         await waitFor(() => {
             expect(push).toHaveBeenCalledWith("/organizations/org-42");
         });
+    });
+
+    it("shows a direct return path for the last opened AI Organization", async () => {
+        localStorage.setItem("mycelis-last-organization-id", "org-42");
+        localStorage.setItem("mycelis-last-organization-name", "Atlas");
+        setupEntryFlowFetch();
+
+        render(<DashboardPage />);
+
+        expect(await screen.findByRole("link", { name: /Return to Organization/i })).toBeDefined();
+        expect(screen.getByText("Atlas")).toBeDefined();
+        expect(screen.getByRole("link", { name: /Return to Organization/i }).getAttribute("href")).toBe("/organizations/org-42");
     });
 
     it("submits an empty-start organization and routes into the landing screen", async () => {

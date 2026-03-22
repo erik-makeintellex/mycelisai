@@ -1187,6 +1187,29 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("button", { name: "Start with Soma" })).toBeVisible();
     });
 
+    test("returns to the current AI Organization after leaving the workspace", async ({ page }) => {
+        await mockOrganizationEntryApis(page, {
+            organizations: [createdTemplateOrganization],
+        });
+
+        await page.goto("/dashboard");
+        await page.waitForLoadState("domcontentloaded");
+        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await openCreatedOrganization(page, createdTemplateOrganization.id);
+
+        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
+        await page.goto("/dashboard");
+        await expect(page).toHaveURL(/\/dashboard$/);
+        const returnToOrganizationLink = page.getByRole("link", { name: "Return to Organization" });
+        await expect(returnToOrganizationLink).toBeVisible();
+        await expect(page.getByRole("link", { name: "Return to Organization" })).toHaveAttribute("href", "/organizations/org-123");
+
+        await returnToOrganizationLink.click();
+        await expect(page).toHaveURL(/\/organizations\/org-123$/);
+        await expect(page.getByText("AI Organization Home")).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
+    });
+
     test.skip("preserves organization context when a guided Soma action fails and then succeeds on retry", async ({ page }, testInfo) => {
         let actionAttempts = 0;
 

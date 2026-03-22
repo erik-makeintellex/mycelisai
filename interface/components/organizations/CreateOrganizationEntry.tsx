@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { ArrowRight, Blocks, Bot, BrainCircuit, Building2, Layers3, Loader2, RefreshCcw, Sparkles } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
+import { readLastOrganization, rememberLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
 import type {
     OrganizationCreateRequest,
     OrganizationStartMode,
@@ -26,6 +27,7 @@ export default function CreateOrganizationEntry() {
     const router = useRouter();
     const [templates, setTemplates] = useState<OrganizationTemplateSummary[]>([]);
     const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
+    const [lastOrganization, setLastOrganization] = useState<{ id: string; name: string } | null>(null);
     const [templatesState, setTemplatesState] = useState<ResourceState>("loading");
     const [organizationsState, setOrganizationsState] = useState<ResourceState>("loading");
     const [templatesError, setTemplatesError] = useState<string | null>(null);
@@ -42,11 +44,7 @@ export default function CreateOrganizationEntry() {
     const [, startTransition] = useTransition();
 
     const rememberOrganization = (organization: Pick<OrganizationSummary, "id" | "name">) => {
-        if (typeof window === "undefined") {
-            return;
-        }
-        window.localStorage.setItem("mycelis-last-organization-id", organization.id);
-        window.localStorage.setItem("mycelis-last-organization-name", organization.name);
+        rememberLastOrganization({ id: organization.id, name: organization.name });
     };
 
     const openOrganization = (organization: Pick<OrganizationSummary, "id" | "name">) => {
@@ -59,6 +57,13 @@ export default function CreateOrganizationEntry() {
             router.push(`/organizations/${organization.id}`);
         });
     };
+
+    useEffect(() => {
+        setLastOrganization(readLastOrganization());
+        return subscribeLastOrganizationChange((organization) => {
+            setLastOrganization(organization);
+        });
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -217,6 +222,28 @@ export default function CreateOrganizationEntry() {
                             </div>
                     </div>
                 </section>
+
+                {lastOrganization && (
+                    <section className="rounded-3xl border border-cortex-primary/25 bg-cortex-surface px-6 py-5">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">Return to Organization</p>
+                                <p className="mt-2 text-lg font-semibold text-cortex-text-main">{lastOrganization.name}</p>
+                                <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
+                                    Re-enter the current AI Organization in one click, even if it does not appear in the recent list below yet.
+                                </p>
+                            </div>
+                            <Link
+                                href={`/organizations/${lastOrganization.id}`}
+                                onClick={() => rememberLastOrganization(lastOrganization)}
+                                className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90"
+                            >
+                                Return to Organization
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+                    </section>
+                )}
 
                 {showRecentOrganizations && (
                     <section className="space-y-3">
