@@ -68,6 +68,90 @@ func ensureStorageLayout(workspaceRoot, dataDir string) error {
 	return nil
 }
 
+func buildLegacyMemoryLogEntry(subject string, envelope *pb.MsgEnvelope) *memory.LogEntry {
+	if envelope == nil {
+		return nil
+	}
+
+	ts := time.Now().UTC()
+	if envelope.Timestamp != nil {
+		ts = envelope.Timestamp.AsTime()
+	}
+
+	msgBody := ""
+	intent := "event"
+	level := "INFO"
+
+	switch p := envelope.Payload.(type) {
+	case *pb.MsgEnvelope_Text:
+		msgBody = p.Text.Content
+		intent = p.Text.Intent
+		if intent == "" {
+			intent = "text"
+		}
+	case *pb.MsgEnvelope_Event:
+		msgBody = fmt.Sprintf("Event: %s", p.Event.EventType)
+		intent = p.Event.EventType
+	case *pb.MsgEnvelope_ToolCall:
+		msgBody = fmt.Sprintf("Tool Call: %s", p.ToolCall.ToolName)
+		intent = "tool_call"
+	case *pb.MsgEnvelope_ToolResult:
+		msgBody = fmt.Sprintf("Tool Result: %s", p.ToolResult.CallId)
+		intent = "tool_result"
+		if p.ToolResult.IsError {
+			level = "ERROR"
+			msgBody = fmt.Sprintf("Error: %s", p.ToolResult.ErrorMessage)
+		}
+	}
+
+	entry := &memory.LogEntry{
+		TraceId:   envelope.TraceId,
+		Timestamp: ts,
+		Source:    envelope.SourceAgentId,
+		Intent:    intent,
+		Message:   msgBody,
+		Level:     level,
+		Context: protocol.OperationalLogContext{
+			ReviewScope:   protocol.LogReviewScopeCentralReview,
+			Service:       "core",
+			Component:     "legacy-bus-bridge",
+			Summary:       strings.TrimSpace(msgBody),
+			WhyItMatters:  "Legacy bus output is mirrored into centralized review so Soma and operational leads can still inspect older agent/runtime paths alongside modern signal channels.",
+			SourceChannel: subject,
+			Status:        strings.ToLower(level),
+			TraceID:       envelope.TraceId,
+			ReviewChannels: []string{
+				subject,
+			},
+			Tags: []string{"legacy-envelope", intent},
+		}.ToMap(),
+	}
+	return memory.NormalizeLogEntryForReview(entry)
+}
+
+func buildMemoryLogEntryFromMessage(subject string, data []byte) *memory.LogEntry {
+	var signalEnv protocol.SignalEnvelope
+	if err := json.Unmarshal(data, &signalEnv); err == nil {
+		if signalEnv.Meta.SourceKind != "" || signalEnv.Meta.SourceChannel != "" || signalEnv.Meta.PayloadKind != "" || signalEnv.Text != "" {
+			if signalEnv.Meta.SourceChannel == "" {
+				signalEnv.Meta.SourceChannel = subject
+			}
+			return memory.NewSignalReviewLogEntry(subject, signalEnv)
+		}
+	}
+
+	if telemetryEnv, err := protocol.ValidateTelemetryMessage(data); err == nil {
+		return memory.NewTelemetryReviewLogEntry(subject, telemetryEnv)
+	}
+
+	var envelope pb.MsgEnvelope
+	if err := proto.Unmarshal(data, &envelope); err == nil {
+		return buildLegacyMemoryLogEntry(subject, &envelope)
+	}
+
+	return nil
+}
+
 func main() {
 	// Action CLI mode: use the same binary to call Mycelis API endpoints.
 	// Example: server action GET /api/v1/services/status
@@ -212,58 +296,9 @@ func main() {
 	// 4. Start Memory Subscriber (The Memory Service — requires NATS)
 	if memService != nil && nc != nil {
 		_, err := nc.Subscribe(protocol.TopicSwarmWild, func(msg *nats.Msg) {
-			var envelope pb.MsgEnvelope
-			if err := proto.Unmarshal(msg.Data, &envelope); err != nil {
-				// Ignore malformed for now
-				return
+			if logEntry := buildMemoryLogEntryFromMessage(msg.Subject, msg.Data); logEntry != nil {
+				memService.Push(logEntry)
 			}
-
-			// Map Envelope to LogEntry
-			ts := time.Now()
-			if envelope.Timestamp != nil {
-				ts = envelope.Timestamp.AsTime()
-			}
-
-			// Extract Message Content
-			msgBody := ""
-			intent := "event"
-			level := "INFO"
-			ctxMap := make(map[string]any) // Should be generic map
-
-			switch p := envelope.Payload.(type) {
-			case *pb.MsgEnvelope_Text:
-				msgBody = p.Text.Content
-				intent = p.Text.Intent
-				if intent == "" {
-					intent = "text"
-				}
-			case *pb.MsgEnvelope_Event:
-				msgBody = fmt.Sprintf("Event: %s", p.Event.EventType)
-				intent = p.Event.EventType
-			case *pb.MsgEnvelope_ToolCall:
-				msgBody = fmt.Sprintf("Tool Call: %s", p.ToolCall.ToolName)
-				intent = "tool_call"
-			case *pb.MsgEnvelope_ToolResult:
-				msgBody = fmt.Sprintf("Tool Result: %s", p.ToolResult.CallId)
-				if p.ToolResult.IsError {
-					level = "ERROR"
-					msgBody = fmt.Sprintf("Error: %s", p.ToolResult.ErrorMessage)
-				}
-				intent = "tool_result"
-			}
-
-			logEntry := &memory.LogEntry{
-				TraceId:   envelope.TraceId,
-				Timestamp: ts,
-				Source:    envelope.SourceAgentId,
-				Intent:    intent,
-				Message:   msgBody,
-				Level:     level,
-				Context:   ctxMap,
-			}
-
-			memService.Push(logEntry)
-
 		})
 		if err != nil {
 			log.Printf("Failed to subscribe Memory Service: %v", err)

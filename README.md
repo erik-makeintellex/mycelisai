@@ -268,6 +268,7 @@ Particular attention belongs on:
 - execution slices
 - team execution protocol
 - delivery governance rules
+- centralized review logging: team-local output stays on canonical team lanes, but Soma, meta-agentry, and team leads reason over the mirrored `log_entries` review stream plus mission events
 - UI operator experience contracts
 - runtime orchestration assumptions
 - provider routing and hybrid deployment posture

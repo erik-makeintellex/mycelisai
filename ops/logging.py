@@ -9,6 +9,13 @@ from .config import ROOT_DIR
 
 EVENTS_FILE = ROOT_DIR / "core" / "pkg" / "protocol" / "events.go"
 LOGGING_DOC = ROOT_DIR / "docs" / "logging.md"
+REQUIRED_LOGGING_DOC_TERMS = {
+    "OperationalLogContext",
+    "memory.stream",
+    "central_review",
+    "review_channels",
+    "schema_version",
+}
 
 DEFAULT_SCHEMA_PATHS = "core/internal"
 DEFAULT_TOPIC_PATHS = "core/internal/swarm,core/internal/server,interface/store"
@@ -69,6 +76,13 @@ def _check_doc_event_coverage(event_types: set[str], doc_path: Path = LOGGING_DO
     body = doc_path.read_text(encoding="utf-8")
     missing = [event for event in sorted(event_types) if event not in body]
     return missing
+
+
+def _check_doc_contract_terms(doc_path: Path = LOGGING_DOC) -> list[str]:
+    if not doc_path.exists():
+        return sorted(REQUIRED_LOGGING_DOC_TERMS)
+    body = doc_path.read_text(encoding="utf-8")
+    return sorted(term for term in REQUIRED_LOGGING_DOC_TERMS if term not in body)
 
 
 def _collect_schema_violations(files: list[Path], allowed_events: set[str]) -> list[str]:
@@ -140,6 +154,7 @@ def check_schema(_c, paths=DEFAULT_SCHEMA_PATHS):
     files = _iter_code_files(roots)
     code_violations = _collect_schema_violations(files, event_types)
     doc_missing = _check_doc_event_coverage(event_types)
+    contract_missing = _check_doc_contract_terms()
 
     if code_violations:
         print("Unknown event literals:")
@@ -153,7 +168,12 @@ def check_schema(_c, paths=DEFAULT_SCHEMA_PATHS):
         for item in doc_missing:
             print(f"  {item}")
 
-    if code_violations or doc_missing:
+    if contract_missing:
+        print("Logging contract terms missing from docs/logging.md:")
+        for item in contract_missing:
+            print(f"  {item}")
+
+    if code_violations or doc_missing or contract_missing:
         raise SystemExit("LOGGING CHECK FAILED: schema validation errors found.")
 
     print(f"LOGGING CHECK PASSED: validated {len(files)} files and {len(event_types)} event types.")

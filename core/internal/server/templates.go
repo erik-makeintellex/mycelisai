@@ -25,7 +25,21 @@ func (s *AdminServer) createAuditEvent(templateID protocol.TemplateID, source, m
 
 	id := uuid.New()
 	traceID := uuid.New().String()
-	contextJSON, _ := json.Marshal(ctx)
+	reviewCtx := protocol.ParseOperationalLogContext(ctx)
+	reviewCtx.ReviewScope = protocol.LogReviewScopeAudit
+	reviewCtx.Service = "core"
+	reviewCtx.Component = "template-engine"
+	if reviewCtx.Summary == "" {
+		reviewCtx.Summary = strings.TrimSpace(message)
+	}
+	if reviewCtx.WhyItMatters == "" {
+		reviewCtx.WhyItMatters = "Audit records preserve governed template actions for Soma, meta-agentry, and governance review."
+	}
+	reviewCtx.SourceChannel = "audit.log_entries"
+	reviewCtx.PayloadKind = protocol.PayloadKindEvent
+	reviewCtx.Status = "info"
+	reviewCtx.Tags = append(reviewCtx.Tags, "audit", string(templateID))
+	contextJSON, _ := json.Marshal(reviewCtx.ToMap())
 
 	_, err := db.Exec(
 		`INSERT INTO log_entries (id, trace_id, timestamp, level, source, intent, message, context)

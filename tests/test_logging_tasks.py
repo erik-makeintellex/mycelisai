@@ -59,6 +59,15 @@ def test_check_doc_event_coverage_reports_missing_entries(tmp_path: Path):
     assert missing == ["tool.invoked"]
 
 
+def test_check_doc_contract_terms_reports_missing_terms(tmp_path: Path):
+    doc = tmp_path / "logging.md"
+    doc.write_text("OperationalLogContext\nmemory.stream\n", encoding="utf-8")
+
+    missing = logging_tasks._check_doc_contract_terms(doc)
+
+    assert missing == ["central_review", "review_channels", "schema_version"]
+
+
 def test_collect_topic_literal_violations_respects_allowed_file(tmp_path: Path):
     src = tmp_path / "runtime.go"
     src.write_text('subject := "swarm.global.broadcast"\n', encoding="utf-8")
