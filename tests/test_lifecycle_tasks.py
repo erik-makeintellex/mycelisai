@@ -100,6 +100,29 @@ def test_wait_for_port_closed_returns_true_when_port_drops(monkeypatch):
     assert lifecycle._wait_for_port_closed(8081, "Core", timeout=1, interval=0.01)
 
 
+def test_health_raises_when_any_probe_fails(monkeypatch):
+    monkeypatch.setattr(lifecycle, "_load_env", lambda: None)
+    monkeypatch.setattr(lifecycle, "_port_open", lambda port, host="127.0.0.1", timeout=1.0: port == 11434)
+
+    def fake_http_get(url: str, timeout: float = 3.0, headers: dict[str, str] | None = None):
+        if "11434" in url:
+            return 200, "ok"
+        return 503, "down"
+
+    monkeypatch.setattr(lifecycle, "_http_get", fake_http_get)
+
+    with pytest.raises(SystemExit):
+        lifecycle.health.body(Context())
+
+
+def test_health_passes_when_all_probes_are_healthy(monkeypatch):
+    monkeypatch.setattr(lifecycle, "_load_env", lambda: None)
+    monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_http_get", lambda url, timeout=3.0, headers=None: (200, "ok"))
+
+    lifecycle.health.body(Context())
+
+
 def test_down_uses_best_effort_cleanup_without_hanging(monkeypatch):
     commands: list[list[str]] = []
     port = 4312
@@ -310,6 +333,7 @@ def test_core_startup_log_path_points_to_workspace_logs():
 
 def test_up_restarts_running_core_when_dependencies_were_down_before_up(monkeypatch):
     events: list[str] = []
+    db_calls: list[str] = []
 
     monkeypatch.setattr(Path, "exists", lambda self: True)
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: events.append("bridge"))
@@ -319,6 +343,8 @@ def test_up_restarts_running_core_when_dependencies_were_down_before_up(monkeypa
         lambda port, label, timeout=30, interval=1.0: events.append(f"wait:{port}:{label}") or True,
     )
     monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: True)
+    monkeypatch.setattr(db_tasks.create, "body", lambda _c: db_calls.append("db.create"))
     monkeypatch.setattr(
         lifecycle,
         "_kill_port",
@@ -343,13 +369,15 @@ def test_up_restarts_running_core_when_dependencies_were_down_before_up(monkeypa
 
     lifecycle.up.body(Context(), frontend=False, build=False)
 
+    assert db_calls == ["db.create"]
     assert f"kill:{lifecycle.API_PORT}:Core" in events
     assert "start_core" in events
     assert any(item == f"wait:{lifecycle.API_PORT}:Core API" for item in events)
 
 
-def test_up_keeps_running_core_when_dependencies_were_healthy_before_up(monkeypatch):
+def test_up_restarts_running_core_when_council_routes_are_still_offline(monkeypatch):
     events: list[str] = []
+    db_calls: list[str] = []
 
     monkeypatch.setattr(Path, "exists", lambda self: True)
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: events.append("bridge"))
@@ -359,6 +387,8 @@ def test_up_keeps_running_core_when_dependencies_were_healthy_before_up(monkeypa
         lambda port, label, timeout=30, interval=1.0: events.append(f"wait:{port}:{label}") or True,
     )
     monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    council_states = iter([False, True])
+    monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: next(council_states))
     monkeypatch.setattr(
         lifecycle,
         "_kill_port",
@@ -369,6 +399,44 @@ def test_up_keeps_running_core_when_dependencies_were_healthy_before_up(monkeypa
         "_start_core_background",
         lambda: events.append("start_core") or True,
     )
+    monkeypatch.setattr(db_tasks.create, "body", lambda _c: db_calls.append("db.create"))
+    monkeypatch.setattr(
+        lifecycle,
+        "_port_open",
+        lambda port, host="127.0.0.1", timeout=1.0: port in (5432, 4222, lifecycle.API_PORT),
+    )
+
+    lifecycle.up.body(Context(), frontend=False, build=False)
+
+    assert db_calls == ["db.create"]
+    assert f"kill:{lifecycle.API_PORT}:Core" in events
+    assert "start_core" in events
+
+
+def test_up_keeps_running_core_when_dependencies_were_healthy_before_up(monkeypatch):
+    events: list[str] = []
+    db_calls: list[str] = []
+
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: events.append("bridge"))
+    monkeypatch.setattr(
+        lifecycle,
+        "_wait_for_port",
+        lambda port, label, timeout=30, interval=1.0: events.append(f"wait:{port}:{label}") or True,
+    )
+    monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: True)
+    monkeypatch.setattr(
+        lifecycle,
+        "_kill_port",
+        lambda port, label: events.append(f"kill:{port}:{label}") or True,
+    )
+    monkeypatch.setattr(
+        lifecycle,
+        "_start_core_background",
+        lambda: events.append("start_core") or True,
+    )
+    monkeypatch.setattr(db_tasks.create, "body", lambda _c: db_calls.append("db.create"))
 
     def fake_port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
         if port in (5432, 4222, lifecycle.API_PORT):
@@ -379,14 +447,30 @@ def test_up_keeps_running_core_when_dependencies_were_healthy_before_up(monkeypa
 
     lifecycle.up.body(Context(), frontend=False, build=False)
 
+    assert db_calls == ["db.create"]
     assert f"kill:{lifecycle.API_PORT}:Core" not in events
     assert "start_core" not in events
+
+
+def test_up_fails_when_core_health_recovers_but_council_routes_stay_offline(monkeypatch):
+    monkeypatch.setattr(Path, "exists", lambda self: True)
+    monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: None)
+    monkeypatch.setattr(lifecycle, "_wait_for_port", lambda *args, **kwargs: True)
+    monkeypatch.setattr(db_tasks.create, "body", lambda _c: None)
+    monkeypatch.setattr(lifecycle, "_start_core_background", lambda: True)
+    monkeypatch.setattr(lifecycle, "_port_open", lambda port, host="127.0.0.1", timeout=1.0: False if port == lifecycle.API_PORT else True)
+    monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: False)
+
+    with pytest.raises(SystemExit, match="council routes are still offline"):
+        lifecycle.up.body(Context(), frontend=False, build=False)
 
 
 def test_up_fails_when_core_health_never_becomes_ready(monkeypatch):
     monkeypatch.setattr(Path, "exists", lambda self: True)
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: None)
     monkeypatch.setattr(lifecycle, "_wait_for_port", lambda *args, **kwargs: True)
+    monkeypatch.setattr(db_tasks.create, "body", lambda _c: None)
     monkeypatch.setattr(lifecycle, "_start_core_background", lambda: True)
     monkeypatch.setattr(lifecycle, "_port_open", lambda port, host="127.0.0.1", timeout=1.0: False if port == lifecycle.API_PORT else True)
     monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: False)
@@ -395,12 +479,32 @@ def test_up_fails_when_core_health_never_becomes_ready(monkeypatch):
         lifecycle.up.body(Context(), frontend=False, build=False)
 
 
+def test_core_council_ready_requires_success_response(monkeypatch):
+    calls: list[tuple[str, dict[str, str] | None]] = []
+    monkeypatch.setenv("MYCELIS_API_KEY", "test-key")
+    monkeypatch.setattr(
+        lifecycle,
+        "_http_get",
+        lambda url, timeout=5.0, headers=None: calls.append((url, headers)) or (200, '{"ok":true}'),
+    )
+
+    assert lifecycle._core_council_ready(timeout=1, interval=0.01)
+    assert calls == [
+        (
+            f"http://{lifecycle.API_HOST}:{lifecycle.API_PORT}/api/v1/council/members",
+            {"Authorization": "Bearer test-key"},
+        )
+    ]
+
+
 def test_up_frontend_uses_shared_interface_launcher(monkeypatch):
     events: list[str] = []
 
     monkeypatch.setattr(Path, "exists", lambda self: True)
     monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: None)
     monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: True)
+    monkeypatch.setattr(db_tasks.create, "body", lambda _c: None)
     monkeypatch.setattr(lifecycle, "_start_core_background", lambda: True)
 
     def fake_wait_for_port(port, label, timeout=30, interval=1.0):

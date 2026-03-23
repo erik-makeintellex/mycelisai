@@ -65,15 +65,24 @@ def test_cleanup_repo_local_interface_processes_kills_detected_workers(monkeypat
 
 def test_build_cleans_residual_interface_workers(monkeypatch):
     cleaned: list[str] = []
-    ctx = FakeContext({"npm run build": FakeResult()})
+    stopped: list[str] = []
+    shell_calls: list[list[str]] = []
+    ctx = FakeContext()
 
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: stopped.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "clean", lambda _c: cleaned.append("clean") or None)
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: shell_calls.append(command) or interface.CommandResult(exited=0, stdout="", stderr=""),
+    )
 
     interface.build.body(ctx)
 
-    assert ctx.commands == ["npm run build"]
-    assert ctx.cd_paths == [str(interface.INTERFACE_DIR)]
-    assert cleaned == ["cleanup"]
+    assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
+    assert cleaned == ["clean", "cleanup", "cleanup"]
+    assert shell_calls == [["npm", "run", "build"]]
 
 
 def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
@@ -117,8 +126,9 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     monkeypatch.setattr(
         interface,
         "_wait_for_interface_ready",
-        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120: events.append(f"ready:{host}:{port}"),
+        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120: events.append(f"ready:{host}:{port}") or "127.0.0.1",
     )
+    monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
@@ -147,6 +157,36 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     ]
 
 
+def test_test_uses_direct_shell_command(monkeypatch):
+    shell_calls: list[list[str]] = []
+    ctx = FakeContext()
+
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: shell_calls.append(command) or interface.CommandResult(exited=0, stdout="", stderr=""),
+    )
+
+    interface.test.body(ctx)
+
+    assert shell_calls == [["npm", "run", "test"]]
+
+
+def test_test_coverage_uses_direct_shell_command(monkeypatch):
+    shell_calls: list[list[str]] = []
+    ctx = FakeContext()
+
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: shell_calls.append(command) or interface.CommandResult(exited=0, stdout="", stderr=""),
+    )
+
+    interface.test_coverage.body(ctx)
+
+    assert shell_calls == [["npx", "vitest", "run", "--coverage"]]
+
+
 def test_interface_ready_urls_prioritize_requested_host_then_loopback_fallbacks():
     urls = interface._interface_ready_urls("127.0.0.1", 3000)
 
@@ -155,3 +195,36 @@ def test_interface_ready_urls_prioritize_requested_host_then_loopback_fallbacks(
         "http://localhost:3000",
         "http://[::1]:3000",
     ]
+
+
+def test_pick_interface_port_falls_back_when_preferred_port_is_busy(monkeypatch):
+    class FakeSocket:
+        def __init__(self, family, *args, **kwargs):
+            self.family = family
+            self.bind_calls: list[tuple[str, int]] = []
+            self.closed = False
+
+        def setsockopt(self, *args, **kwargs):
+            return None
+
+        def bind(self, address):
+            self.bind_calls.append(address)
+            if address[1] == 3000 and self.family == interface.socket.AF_INET6:
+                raise OSError("address in use")
+            self.port = 43210 if address[1] == 3000 else 43211
+
+        def getsockname(self):
+            return ("127.0.0.1", getattr(self, "port", 43210))
+
+        def close(self):
+            self.closed = True
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            self.close()
+
+    monkeypatch.setattr(interface.socket, "socket", lambda family, *args, **kwargs: FakeSocket(family))
+
+    assert interface._pick_interface_port(3000) == 43211

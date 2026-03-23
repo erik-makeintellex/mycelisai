@@ -67,6 +67,7 @@ Bootstrap reminder:
 - always translate V7 YAML, runtime config, DB seeding, and operator wizard flows through that model before they touch a live organization
 - `Template ≠ instantiated organization`, so only instantiated orgs enter bootstrap resolution while templates stay reusable blueprints
 - startup truth is bundle-driven and fail-closed: normal startup fails closed unless a valid bootstrap bundle is present, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must select a bundle whenever more than one is mounted
+- the deployed Core image resolves runtime config from `/core/config`, and the Helm chart mounts the config volume there so bootstrap bundles, cognitive defaults, and policy files line up with the container workdir
 
 ## What Mycelis Is
 
@@ -362,7 +363,7 @@ Completion rule:
 
 `uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. Ad hoc browser runs default to a managed Next dev server, while the strict branch-readiness gate uses the already-built Next start server for better stability on local hosts.
 
-`uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=2`) and the built `next start` server so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves a single live browser contract.
+`uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=1`) and the built `next start` server so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves a single live browser contract, restores the local bridge/core stack before the browser proof when needed, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run.
 
 Browser matrix baseline:
 - `chromium firefox webkit`

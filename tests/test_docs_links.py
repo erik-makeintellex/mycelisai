@@ -317,6 +317,57 @@ def test_docs_cover_deployment_guidance_across_host_architectures():
     assert not missing, "Docs are missing deployment guidance across host architectures:\n" + "\n".join(missing)
 
 
+def test_docs_cover_core_runtime_config_mount_alignment():
+    expectations = {
+        README: [
+            "deployed Core image resolves runtime config from `/core/config`",
+        ],
+        ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md": [
+            "deployed Core image resolves those files from `/core/config`",
+            "Helm chart mounts the runtime config volume there",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "mounts this runtime config tree at `/core/config`",
+        ],
+        ROOT / "ops" / "README.md": [
+            "startup config from `/core/config`",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in expectations.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Docs are missing the Core runtime config mount alignment:\n" + "\n".join(missing)
+
+
+def test_docs_cover_lifecycle_up_database_bootstrap_alignment():
+    expectations = {
+        ROOT / "docs" / "TESTING.md": [
+            "ensures the `cortex` database exists",
+            "managed built server",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "ensures the `cortex` database exists before Core starts",
+        ],
+        ROOT / "ops" / "README.md": [
+            "ensures the `cortex` database exists before Core starts",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in expectations.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Docs are missing lifecycle/database bootstrap alignment:\n" + "\n".join(missing)
+
+
 def test_canonical_docs_do_not_ship_executable_bare_uvx_inv_examples():
     offenders: list[str] = []
 

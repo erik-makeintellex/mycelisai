@@ -1,10 +1,15 @@
 import json
 import os
+import re
+import shutil
 import subprocess
 import time
+from dataclasses import dataclass
 import urllib.error
 import urllib.request
+import socket
 from contextlib import suppress
+from pathlib import Path
 
 from invoke import task, Collection
 from .config import (
@@ -32,8 +37,11 @@ _INTERFACE_PROCESS_PATH_HINTS = tuple(
 _INTERFACE_PROCESS_COMMAND_HINTS = (
     "/.next/dev/build/postcss.js",
     "/next/dist/bin/next",
+    "./node_modules/next/dist/bin/next",
     "/node_modules/.bin/vitest",
+    "./node_modules/.bin/vitest",
     "/node_modules/vitest/",
+    "/vitest/vitest.mjs",
     "/playwright/",
 )
 
@@ -60,9 +68,48 @@ def _task_env(extra=None):
     return managed_cache_env(extra=extra)
 
 
+@dataclass
+class CommandResult:
+    exited: int
+    stdout: str = ""
+    stderr: str = ""
+
+
 def interface_task_env(extra=None):
     """Public wrapper for callers that need the managed Interface task env."""
     return _task_env(extra=extra)
+
+
+def _run_interface_shell_command(command: list[str], extra_env: dict[str, str] | None = None) -> CommandResult:
+    """Run a one-shot Interface command directly and return its exit data.
+
+    Invoke's runner is useful for long-lived dev/e2e flows, but the one-shot
+    build/test commands have been observed to return false negatives under the
+    wrapper on Windows. Running them directly keeps the exit code aligned with
+    the real tool result.
+    """
+    process_env = os.environ.copy()
+    process_env.update(_task_env(extra_env))
+    runner = list(command)
+    executable = runner[0]
+    if is_windows():
+        resolved = shutil.which(executable) or shutil.which(f"{executable}.cmd") or shutil.which(f"{executable}.exe")
+        if resolved:
+            runner[0] = resolved
+    else:
+        resolved = shutil.which(executable)
+        if resolved:
+            runner[0] = resolved
+    result = subprocess.run(
+        runner,
+        cwd=str(INTERFACE_DIR),
+        env=process_env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return CommandResult(exited=result.returncode, stdout=result.stdout or "", stderr=result.stderr or "")
 
 
 def run_interface_command(c, command: str, cleanup=False, extra_env=None, **run_kwargs):
@@ -75,6 +122,8 @@ def run_interface_command(c, command: str, cleanup=False, extra_env=None, **run_
         if command_env:
             env.update(command_env)
     try:
+        if cleanup:
+            _cleanup_repo_local_interface_processes()
         with c.cd(str(INTERFACE_DIR)):
             return c.run(command, env=env, **run_kwargs)
     finally:
@@ -207,10 +256,85 @@ def _playwright_server_log_path() -> str:
     return str(log_dir / "interface-playwright-webserver.log")
 
 
+def _detect_playwright_server_port(expected_port: int, timeout_seconds: int = 30) -> int:
+    """Read the managed server log until Next reports its actual local port.
+
+    Next should honor the requested port, but on Windows or after a stale
+    listener collision it can surface a different bound port in the startup log.
+    The e2e runner uses the log-discovered value so Playwright and the managed
+    server always agree on the real base URL.
+    """
+    log_path = Path(_playwright_server_log_path())
+    deadline = time.time() + timeout_seconds
+    patterns = (
+        re.compile(r"Local:\s+http://\[(?:::1|::)\]:(\d+)"),
+        re.compile(r"Local:\s+http://127\.0\.0\.1:(\d+)"),
+        re.compile(r"Local:\s+http://localhost:(\d+)"),
+    )
+    while time.time() < deadline:
+        if log_path.exists():
+            try:
+                text = log_path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                text = ""
+            for line in reversed(text.splitlines()):
+                for pattern in patterns:
+                    match = pattern.search(line)
+                    if match:
+                        return int(match.group(1))
+        time.sleep(0.2)
+    return expected_port
+
+
+def _pick_interface_port(preferred: int = INTERFACE_PORT) -> int:
+    """Return a free port for the managed Playwright server.
+
+    Managed browser runs should avoid colliding with the user's normal local UI
+    port, so the task prefers an ephemeral port unless a non-default port was
+    explicitly requested.
+    """
+    def _port_is_available(port: int) -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ipv4_sock:
+            ipv4_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            ipv4_sock.bind(("127.0.0.1", port))
+            with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_loopback_sock:
+                ipv6_loopback_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                ipv6_loopback_sock.bind(("::1", port))
+                with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_wildcard_sock:
+                    ipv6_wildcard_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    ipv6_wildcard_sock.bind(("::", port))
+                    return True
+
+    if preferred not in (0, 3000):
+        try:
+            if _port_is_available(preferred):
+                return preferred
+        except OSError:
+            pass
+
+    for _ in range(32):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ipv4_sock:
+            ipv4_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            ipv4_sock.bind(("127.0.0.1", 0))
+            candidate = ipv4_sock.getsockname()[1]
+            try:
+                with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_loopback_sock:
+                    ipv6_loopback_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    ipv6_loopback_sock.bind(("::1", candidate))
+                    with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_wildcard_sock:
+                        ipv6_wildcard_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        ipv6_wildcard_sock.bind(("::", candidate))
+                        return candidate
+            except OSError:
+                continue
+
+    raise RuntimeError("Unable to find a free Interface port for the managed Playwright server.")
+
+
 def _next_dev_command(bind_host: str, port: int) -> list[str]:
     return [
         "node",
-        "./node_modules/next/dist/bin/next",
+        str((INTERFACE_DIR / "node_modules" / "next" / "dist" / "bin" / "next").resolve()),
         "dev",
         "--webpack",
         "--hostname",
@@ -223,7 +347,7 @@ def _next_dev_command(bind_host: str, port: int) -> list[str]:
 def _next_start_command(bind_host: str, port: int) -> list[str]:
     return [
         "node",
-        "./node_modules/next/dist/bin/next",
+        str((INTERFACE_DIR / "node_modules" / "next" / "dist" / "bin" / "next").resolve()),
         "start",
         "--hostname",
         bind_host,
@@ -281,7 +405,7 @@ def _start_playwright_server(
             env,
             stdout=log_handle,
             stderr=subprocess.STDOUT,
-            detached=False,
+            detached=True,
         )
         log_handle.close()
         return process
@@ -330,7 +454,7 @@ def _interface_ready_urls(host: str, port: int) -> list[str]:
     return urls
 
 
-def _wait_for_interface_ready(host: str = INTERFACE_HOST, port: int = INTERFACE_PORT, timeout_seconds: int = 120):
+def _wait_for_interface_ready(host: str = INTERFACE_HOST, port: int = INTERFACE_PORT, timeout_seconds: int = 120) -> str:
     urls = _interface_ready_urls(host, port)
     deadline = time.time() + timeout_seconds
     last_error = "server did not respond"
@@ -339,11 +463,11 @@ def _wait_for_interface_ready(host: str = INTERFACE_HOST, port: int = INTERFACE_
             try:
                 with urllib.request.urlopen(url, timeout=5) as response:
                     if response.status < 500:
-                        return
+                        return url.split("://", 1)[1].rsplit(":", 1)[0].strip("[]")
                     last_error = f"{url}: unexpected status {response.status}"
             except urllib.error.HTTPError as exc:
                 if exc.code < 500:
-                    return
+                    return url.split("://", 1)[1].rsplit(":", 1)[0].strip("[]")
                 last_error = f"{url}: http {exc.code}"
             except Exception as exc:  # pragma: no cover - exercised via timeout path in task flow
                 last_error = f"{url}: {exc}"
@@ -378,7 +502,17 @@ def install(c):
 def build(c):
     """Build the Interface for production."""
     print("Building Interface...")
-    run_interface_command(c, "npm run build", cleanup=True)
+    stop(c)
+    clean(c)
+    _cleanup_repo_local_interface_processes()
+    try:
+        result = _run_interface_shell_command(["npm", "run", "build"])
+        _print_ascii_safe(result.stdout)
+        _print_ascii_safe(result.stderr)
+        if result.exited != 0:
+            raise SystemExit(result.exited)
+    finally:
+        _cleanup_repo_local_interface_processes()
 
 @task
 def lint(c):
@@ -390,13 +524,25 @@ def lint(c):
 def test(c):
     """Run Interface Unit Tests (Vitest)."""
     print("Running Interface Tests...")
-    run_interface_command(c, "npm run test", cleanup=True)
+    _cleanup_repo_local_interface_processes()
+    try:
+        result = _run_interface_shell_command(["npm", "run", "test"])
+        _print_ascii_safe(result.stdout)
+        _print_ascii_safe(result.stderr)
+        if result.exited != 0:
+            raise SystemExit(result.exited)
+    finally:
+        _cleanup_repo_local_interface_processes()
 
 @task
 def test_coverage(c):
     """Run Interface unit tests with V8 coverage report."""
     print("Running Interface Tests with Coverage...")
-    run_interface_command(c, "npx vitest run --coverage", cleanup=True, pty=not is_windows())
+    result = _run_interface_shell_command(["npx", "vitest", "run", "--coverage"])
+    _print_ascii_safe(result.stdout)
+    _print_ascii_safe(result.stderr)
+    if result.exited != 0:
+        raise SystemExit(result.exited)
 
 @task(
     help={
@@ -432,14 +578,25 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
         "INTERFACE_HOST": "127.0.0.1",
         "INTERFACE_BIND_HOST": INTERFACE_BIND_HOST,
     }
+    chosen_port = _pick_interface_port(INTERFACE_PORT)
+    extra_env["INTERFACE_PORT"] = str(chosen_port)
     if live_backend:
         extra_env["PLAYWRIGHT_LIVE_BACKEND"] = "1"
     env = _task_env(extra_env)
     stop(c)
+    print(f"Using managed Interface port {chosen_port}")
     server: subprocess.Popen[str] | None = None
     try:
-        server = _start_playwright_server(env, server_mode=server_mode)
-        _wait_for_interface_ready(host=env["INTERFACE_HOST"])
+        server = _start_playwright_server(env, port=chosen_port, server_mode=server_mode)
+        actual_port = _detect_playwright_server_port(chosen_port)
+        if actual_port != chosen_port:
+            print(f"  Managed server bound to port {actual_port} instead of requested {chosen_port}")
+            chosen_port = actual_port
+            env["INTERFACE_PORT"] = str(actual_port)
+        ready_host = _wait_for_interface_ready(host=env["INTERFACE_HOST"], port=chosen_port)
+        if ready_host != env["INTERFACE_HOST"]:
+            print(f"  Managed server reachable via {ready_host}")
+            env["INTERFACE_HOST"] = ready_host
         result = run_interface_command(c, cmd, pty=not is_windows(), env=env, hide=True, warn=True)
         _print_ascii_safe(result.stdout)
         _print_ascii_safe(result.stderr)

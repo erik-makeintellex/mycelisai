@@ -27,6 +27,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
 # Run Stage
 FROM gcr.io/distroless/base-debian12
 
+WORKDIR /core
+
 COPY --from=builder /server /server
 COPY --from=builder /app/core/config /core/config
 

@@ -6,18 +6,19 @@ const interfaceBindHost =
     process.env.INTERFACE_BIND_HOST ??
     process.env.MYCELIS_INTERFACE_BIND_HOST ??
     process.env.MYCELIS_INTERFACE_HOST ??
-    '::';
-const interfacePort = process.env.INTERFACE_PORT ?? '3000';
-const baseURL = `http://${interfaceHost}:${interfacePort}`;
+    '127.0.0.1';
+const interfacePort = process.env.PLAYWRIGHT_PORT ?? process.env.INTERFACE_PORT ?? '3100';
+const baseUrlHost = interfaceHost.includes(':') && !interfaceHost.startsWith('[') ? `[${interfaceHost}]` : interfaceHost;
+const baseURL = `http://${baseUrlHost}:${interfacePort}`;
 const shouldManageWebServer = !process.env.PLAYWRIGHT_SKIP_WEBSERVER;
-const defaultDevCommand = `node ./node_modules/next/dist/bin/next dev --webpack --hostname ${interfaceBindHost} --port ${interfacePort}`;
-const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultDevCommand;
+const defaultWebServerCommand = `node ./node_modules/next/dist/bin/next start --hostname ${interfaceBindHost} --port ${interfacePort}`;
+const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultWebServerCommand;
 
 /**
  * Playwright E2E configuration for Mycelis Interface.
  *
- * Direct Playwright runs can own the Next.js dev server lifecycle, while
- * `uv run inv interface.e2e` may pre-start a known-good local server and
+ * Direct Playwright runs own a built Next.js server lifecycle by default,
+ * while `uv run inv interface.e2e` may pre-start a known-good local server and
  * opt out via PLAYWRIGHT_SKIP_WEBSERVER when Windows shell startup is flaky.
  */
 export default defineConfig({

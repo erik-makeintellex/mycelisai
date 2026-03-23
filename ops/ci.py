@@ -21,6 +21,7 @@ from .config import (
     is_windows,
     managed_cache_env,
 )
+from . import db as db_tasks
 from . import logging as logging_tasks
 from . import interface as interface_tasks
 from . import lifecycle
@@ -87,7 +88,7 @@ def test(c):
 
     # 2. Interface tests
     print("[2/2] interface vitest run")
-    result = _run_interface_command(c, "npx vitest run --reporter=dot", warn=True)
+    result = _run_interface_command(c, "npx vitest run --reporter=dot", warn=True, hide=True)
     if result.exited != 0:
         errors.append("interface tests failed")
     else:
@@ -212,8 +213,9 @@ def baseline(c, e2e=True):
             print("  OK")
 
     print("[5/7] interface npm run build")
-    result = _run_interface_command(c, "npm run build", warn=True, hide=True)
-    if result.exited != 0:
+    try:
+        interface_tasks.build.body(c)
+    except SystemExit:
         errors.append("interface build failed")
     else:
         print("  OK")
@@ -226,8 +228,11 @@ def baseline(c, e2e=True):
         print("  OK")
 
     print("[7/7] interface vitest run")
-    result = _run_interface_command(c, "npx vitest run --reporter=dot", warn=True, hide=True)
-    if result.exited != 0:
+    try:
+        interface_tasks.stop.body(c)
+        interface_tasks.clean.body(c)
+        interface_tasks.test.body(c)
+    except SystemExit:
         errors.append("interface vitest failed")
     else:
         print("  OK")
@@ -235,7 +240,8 @@ def baseline(c, e2e=True):
     if e2e:
         print("[E2E] interface playwright run")
         try:
-            interface_tasks.e2e.body(c, workers="2", server_mode="start")
+            interface_tasks.build.body(c)
+            interface_tasks.e2e.body(c, workers="1", server_mode="start")
         except SystemExit:
             errors.append("interface playwright failed")
         else:
@@ -262,28 +268,54 @@ def service_check(c, live_backend=False):
     print("=== SERVICE CHECK ===")
     print()
 
-    print("[1/2] lifecycle.health")
-    try:
-        lifecycle.health.body(c)
-        print("  OK")
-    except SystemExit:
-        errors.append("lifecycle health failed")
-
     if live_backend:
-        print("[2/2] interface live-backend playwright")
+        print("[1/3] lifecycle.up --frontend=false --build=false")
         try:
+            lifecycle.up.body(c, frontend=False, build=False)
+            print("  OK")
+        except SystemExit:
+            errors.append("lifecycle up failed")
+        print("[1.5/3] db.migrate")
+        if db_tasks.schema_bootstrapped():
+            print("  SKIP (cortex schema already initialized)")
+        else:
+            try:
+                db_tasks.migrate.body(c)
+                print("  OK")
+            except SystemExit:
+                errors.append("database migrate failed")
+
+        print("[2/3] lifecycle.health")
+        try:
+            lifecycle.health.body(c)
+            print("  OK")
+        except SystemExit:
+            errors.append("lifecycle health failed")
+
+        print("[3/3] interface live-backend playwright")
+        try:
+            interface_tasks.build.body(c)
+            time.sleep(3)
             interface_tasks.e2e.body(
                 c,
                 project="chromium",
                 spec="e2e/specs/workspace-live-backend.spec.ts",
                 live_backend=True,
                 workers="1",
+                server_mode="start",
             )
         except SystemExit:
             errors.append("interface live-backend playwright failed")
         else:
             print("  OK")
     else:
+        print("[1/2] lifecycle.health")
+        try:
+            lifecycle.health.body(c)
+            print("  OK")
+        except SystemExit:
+            errors.append("lifecycle health failed")
+
         print("[2/2] interface live-backend playwright")
         print("  SKIP (--live-backend not set)")
 
