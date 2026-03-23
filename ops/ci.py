@@ -23,6 +23,7 @@ from .config import (
 )
 from . import logging as logging_tasks
 from . import interface as interface_tasks
+from . import lifecycle
 from . import quality
 
 
@@ -170,11 +171,11 @@ def check(c):
     print("=" * 60)
 
 
-@task(help={"e2e": "Include Playwright E2E run (default: False)."})
-def baseline(c, e2e=False):
+@task(help={"e2e": "Include Playwright E2E run (default: True)."})
+def baseline(c, e2e=True):
     """
     Strict baseline validation for delivery readiness.
-    Runs: core tests, interface build, interface typecheck, vitest, and optional playwright.
+    Runs: core tests, interface build, interface typecheck, vitest, and Playwright by default.
     """
     errors = []
 
@@ -241,13 +242,55 @@ def baseline(c, e2e=False):
             print("  OK")
     else:
         print("[E2E] interface playwright run")
-        print("  SKIP (--e2e not set)")
+        print("  SKIP (--no-e2e)")
 
     print()
     if errors:
         print(f"BASELINE FAILED: {', '.join(errors)}")
         raise SystemExit(1)
     print("BASELINE PASSED")
+
+
+@task(help={"live_backend": "Also run the live-backend workspace Playwright contract after health checks."})
+def service_check(c, live_backend=False):
+    """
+    Validate the currently running local stack and optionally prove the live
+    backend workspace contract through the browser.
+    """
+    errors = []
+
+    print("=== SERVICE CHECK ===")
+    print()
+
+    print("[1/2] lifecycle.health")
+    try:
+        lifecycle.health.body(c)
+        print("  OK")
+    except SystemExit:
+        errors.append("lifecycle health failed")
+
+    if live_backend:
+        print("[2/2] interface live-backend playwright")
+        try:
+            interface_tasks.e2e.body(
+                c,
+                project="chromium",
+                spec="e2e/specs/workspace-live-backend.spec.ts",
+                live_backend=True,
+            )
+        except SystemExit:
+            errors.append("interface live-backend playwright failed")
+        else:
+            print("  OK")
+    else:
+        print("[2/2] interface live-backend playwright")
+        print("  SKIP (--live-backend not set)")
+
+    print()
+    if errors:
+        print(f"SERVICE CHECK FAILED: {', '.join(errors)}")
+        raise SystemExit(1)
+    print("SERVICE CHECK PASSED")
 
 
 @task(help={"strict": "Fail if Go version does not match the locked policy (default: False)."})
@@ -318,16 +361,19 @@ def entrypoint_check(c):
 
 @task(
     help={
-        "e2e": "Include Playwright in baseline gate (default: False).",
+        "e2e": "Include Playwright in baseline gate (default: True).",
         "strict_toolchain": "Fail on Go lock mismatch (default: False).",
+        "service_health": "Require lifecycle.health against the running local stack (default: False).",
+        "live_backend": "Also run the live-backend workspace Playwright contract when service-health is enabled (default: False).",
     }
 )
-def release_preflight(c, e2e=False, strict_toolchain=False):
+def release_preflight(c, e2e=True, strict_toolchain=False, service_health=False, live_backend=False):
     """
     Enforce release preflight gate:
     - clean working tree
     - toolchain check
     - strict baseline validation
+    - optional live service-health / live-backend proof
     """
     print("=== RELEASE PREFLIGHT ===")
     status = c.run("git status --porcelain", hide=True, warn=True)
@@ -343,6 +389,8 @@ def release_preflight(c, e2e=False, strict_toolchain=False):
 
     toolchain_check(c, strict=strict_toolchain)
     baseline(c, e2e=e2e)
+    if service_health:
+        service_check(c, live_backend=live_backend)
     print("RELEASE PREFLIGHT PASSED")
 
 
@@ -375,6 +423,7 @@ ns.add_task(test)
 ns.add_task(build)
 ns.add_task(check)
 ns.add_task(baseline)
+ns.add_task(service_check, name="service-check")
 ns.add_task(toolchain_check, name="toolchain-check")
 ns.add_task(entrypoint_check, name="entrypoint-check")
 ns.add_task(release_preflight, name="release-preflight")

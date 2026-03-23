@@ -93,8 +93,9 @@ Stopping containers alone is not enough. The cleanup pass must also inspect and 
 Delivery-focused validation, runner checks, and release preflight.
 - **Test**: `uv run inv ci.test` (Go tests + blocking Vitest run)
 - **Entrypoint Check**: `uv run inv ci.entrypoint-check`
-- **Baseline**: `uv run inv ci.baseline`
-- **Release Preflight**: `uv run inv ci.release-preflight --strict-toolchain`
+- **Baseline**: `uv run inv ci.baseline` (includes Playwright by default; use `--no-e2e` only for intentionally narrower local debugging)
+- **Service Check**: `uv run inv ci.service-check --live-backend`
+- **Release Preflight**: `uv run inv ci.release-preflight --strict-toolchain --service-health --live-backend`
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
 
 ### `misc.py` (Team Coordination)

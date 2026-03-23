@@ -290,6 +290,7 @@ Particular attention belongs on:
 
 Required command references for active V8 work:
 - `uv run inv ci.entrypoint-check`
+- `uv run inv ci.service-check`
 - `uv run inv cache.status`
 - `uv run inv cache.clean`
 - `uv run inv lifecycle.memory-restart`
@@ -355,6 +356,7 @@ Completion rule:
 - if implementation changes meaning, the slice must also update the owning docs, verify architecture alignment, and record the resulting state
 - no slice should complete with silent divergence between implementation, V8.1 release scope, V8.2 target scope, and `V8_DEV_STATE.md`
 - end-of-slice reporting must explicitly state which tests ran, which docs changed, and which scoped docs were reviewed but left unchanged
+- branches are not ready to merge until the relevant validation is rerun against the final code state for that branch
 
 ## Playwright Contract
 
@@ -366,8 +368,10 @@ Browser matrix baseline:
 
 Documentation rule:
 - root and testing docs must not imply that default browser validation depends on a manually pre-started server
+- `uv run inv ci.baseline` now includes Playwright by default; use `--no-e2e` only for intentionally narrower local debugging
 - default release-candidate browser coverage is MVP-aligned; legacy V7 or raw-endpoint-only specs should stay outside the default gate unless a slice explicitly revives them
 - live-backend browser checks are still required when proxy/runtime contracts change
+- live service issues belong in the release story too: use `uv run inv ci.service-check` for running-stack verification and `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes service/runtime contracts
 
 ## Development Workflow
 

@@ -332,6 +332,7 @@ def test_canonical_task_docs_cover_required_invoke_commands():
     expected = {
         README: [
             "uv run inv ci.entrypoint-check",
+            "uv run inv ci.service-check",
             "uv run inv lifecycle.memory-restart",
             "uv run inv team.architecture-sync",
         ],
@@ -340,6 +341,7 @@ def test_canonical_task_docs_cover_required_invoke_commands():
             "uv run inv lifecycle.memory-restart",
             "uv run inv logging.check-schema",
             "uv run inv quality.max-lines --limit 350",
+            "uv run inv ci.service-check",
             "uv run inv ci.entrypoint-check",
             "uv run inv team.architecture-sync",
             "--live-backend",
@@ -348,6 +350,7 @@ def test_canonical_task_docs_cover_required_invoke_commands():
             "uv run inv core.build",
             "uv run inv auth.dev-key",
             "uv run inv lifecycle.health",
+            "uv run inv ci.service-check",
             "uv run inv ci.entrypoint-check",
             "uv run inv team.architecture-sync",
         ],
@@ -368,6 +371,8 @@ def test_playwright_docs_reflect_owned_server_and_browser_matrix():
         README: [
             "Playwright owns the Next.js server lifecycle",
             "chromium firefox webkit",
+            "uv run inv ci.baseline` now includes Playwright by default",
+            "uv run inv ci.service-check",
         ],
         ROOT / "docs" / "TESTING.md": [
             "Playwright starts/stops the Next.js server",
@@ -375,10 +380,13 @@ def test_playwright_docs_reflect_owned_server_and_browser_matrix():
             "@axe-core/playwright",
             "workspace-live-backend.spec.ts",
             "--live-backend",
+            "uv run inv ci.baseline --no-e2e",
+            "uv run inv ci.service-check",
         ],
         ROOT / "docs" / "architecture" / "OPERATIONS.md": [
             "Playwright owns Next.js server lifecycle",
             "Chromium/Firefox/WebKit + mobile smoke",
+            "uv run inv ci.service-check",
         ],
     }
 
