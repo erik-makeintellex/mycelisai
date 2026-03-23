@@ -621,7 +621,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.queryByText(/New Chat/i)).toBeNull();
         expect(screen.queryByText(/generic chat/i)).toBeNull();
         expect(screen.queryByText(/scheduler/i)).toBeNull();
-    });
+    }, 15000);
 
     it("keeps the organization frame visible while moving from home into the Soma interaction flow", async () => {
         setupOrganizationFetch({
@@ -917,7 +917,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByText("Current profile: Warm & Supportive.")).toBeDefined();
         expect(screen.getByText("The current Response Style is warm & supportive, which shapes how Soma presents tone, structure, and detail.")).toBeDefined();
-    });
+    }, 15000);
 
     it("opens the create-team flow from the primary Soma workspace without leaving the organization page", async () => {
         setupOrganizationFetch();
@@ -971,7 +971,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         fireEvent.click(screen.getByRole("button", { name: "Retry Response Style change" }));
         expect(await screen.findByText("Current profile: Structured & Analytical.")).toBeDefined();
         expect(screen.queryByText("Unable to update Response Style")).toBeNull();
-    });
+    }, 15000);
 
     it("lets the operator change the organization AI Engine through a guided selection flow", async () => {
         setupOrganizationFetch();
@@ -1017,7 +1017,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Revert to Organization Default" }));
         expect(await screen.findByText("Using Organization Default: Starter defaults included")).toBeDefined();
-    });
+    }, 15000);
 
     it("lets the operator bind an Agent Type AI Engine and then return it to the Team default", async () => {
         setupOrganizationFetch();

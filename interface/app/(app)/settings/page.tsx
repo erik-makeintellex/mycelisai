@@ -154,8 +154,11 @@ function ProfileSettings() {
             <div className="p-6 rounded-lg border border-cortex-border bg-cortex-surface shadow-sm space-y-4">
                 <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Appearance</h3>
                 <div className="flex items-center justify-between">
-                    <span className="text-cortex-text-main text-sm">Theme</span>
-                    <select className="bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-sm text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary">
+                    <label className="text-cortex-text-main text-sm" htmlFor="theme-select">Theme</label>
+                    <select
+                        id="theme-select"
+                        className="bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-sm text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary"
+                    >
                         <option>Midnight Cortex</option>
                         <option>Cyber Dark</option>
                         <option>System</option>

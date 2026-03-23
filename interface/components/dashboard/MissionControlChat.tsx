@@ -776,7 +776,7 @@ function SomaOfflineGuide({ onRetry, assistantName }: { onRetry: () => void; ass
                 </div>
 
                 <p className="text-sm font-mono text-cortex-text-main leading-relaxed">
-                    Your neural organism isn&apos;t running yet. Start it to talk with {assistantName}, the Council, and your crews.
+                    Your neural organism isn&apos;t running yet. Start it to talk with {assistantName}, advisor support, and your crews.
                 </p>
 
                 <div>
@@ -797,7 +797,7 @@ function SomaOfflineGuide({ onRetry, assistantName }: { onRetry: () => void; ass
                     </p>
                     {[
                         `${assistantName} — your orchestrator`,
-                        "Council — Architect, Coder, Creative, Sentry",
+                        "Advisor support — Architect, Coder, Creative, Sentry",
                         "Cognitive provider — Ollama (local) or remote",
                     ].map((item) => (
                         <div key={item} className="flex items-center gap-2">

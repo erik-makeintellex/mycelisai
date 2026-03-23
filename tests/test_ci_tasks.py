@@ -65,8 +65,8 @@ def test_baseline_runs_playwright_when_e2e_enabled(monkeypatch):
     monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
     cleanup_calls: list[str] = []
     monkeypatch.setattr(ci.interface_tasks, "_cleanup_repo_local_interface_processes", lambda: cleanup_calls.append("cleanup") or [])
-    e2e_calls: list[str] = []
-    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **_kwargs: e2e_calls.append("e2e"))
+    e2e_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **kwargs: e2e_calls.append(kwargs))
 
     ctx = FakeContext(
         {
@@ -79,7 +79,7 @@ def test_baseline_runs_playwright_when_e2e_enabled(monkeypatch):
 
     ci.baseline.body(ctx, e2e=True)
 
-    assert e2e_calls == ["e2e"]
+    assert e2e_calls == [{"workers": "2", "server_mode": "start"}]
     assert cleanup_calls == ["cleanup", "cleanup", "cleanup"]
 
 
@@ -89,8 +89,8 @@ def test_baseline_runs_playwright_by_default(monkeypatch):
     monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
     cleanup_calls: list[str] = []
     monkeypatch.setattr(ci.interface_tasks, "_cleanup_repo_local_interface_processes", lambda: cleanup_calls.append("cleanup") or [])
-    e2e_calls: list[str] = []
-    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **_kwargs: e2e_calls.append("e2e"))
+    e2e_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **kwargs: e2e_calls.append(kwargs))
 
     ctx = FakeContext(
         {
@@ -103,7 +103,7 @@ def test_baseline_runs_playwright_by_default(monkeypatch):
 
     ci.baseline.body(ctx)
 
-    assert e2e_calls == ["e2e"]
+    assert e2e_calls == [{"workers": "2", "server_mode": "start"}]
     assert cleanup_calls == ["cleanup", "cleanup", "cleanup"]
 
 
@@ -139,6 +139,7 @@ def test_service_check_runs_live_backend_browser_proof_when_requested(monkeypatc
             "project": "chromium",
             "spec": "e2e/specs/workspace-live-backend.spec.ts",
             "live_backend": True,
+            "workers": "1",
         }
     ]
 

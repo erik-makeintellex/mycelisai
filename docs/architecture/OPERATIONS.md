@@ -61,7 +61,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
 | `uv run inv interface.test` | `npm run test` (Vitest) |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
-| `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle plus repo-managed Playwright browsers, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`; Playwright owns Next.js server lifecycle for the default gate) |
+| `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle plus repo-managed Playwright browsers, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
 | `uv run inv interface.stop` | Kill the repo-local Interface server on port 3000 |
 | `uv run inv interface.clean` | rm -rf .next cache |
 | `uv run inv interface.restart` | stop → clean → build → dev → check |
@@ -140,6 +140,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect compiled Go binaries before starting the check. Inspect for repo-local command lines or binary paths plus listeners on declared dev/test ports, terminate them through lifecycle/task helpers when found, and never assume they belong to the current slice.
 - Treat repo-local Interface workers as the same cleanup surface. Build/test/browser runs must not leave `node.exe` helpers from `.next`, Vitest, or Playwright behind after the command exits.
+- Merge-readiness browser gates should bias toward repeatability. The managed readiness tasks now run Playwright with reduced worker counts on the local host path: `uv run inv ci.baseline` uses `--workers=2` against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays at `--workers=1`.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.

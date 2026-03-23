@@ -162,11 +162,12 @@ def _kill_pid_tree(pid: int):
             subprocess.run(["kill", "-9", str(pid)], capture_output=True, timeout=5)
     except subprocess.TimeoutExpired:
         if is_windows():
-            subprocess.run(
-                ["powershell", "-NoProfile", "-Command", f"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue"],
-                capture_output=True,
-                timeout=5,
-            )
+            with suppress(subprocess.TimeoutExpired, OSError):
+                subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", f"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue"],
+                    capture_output=True,
+                    timeout=5,
+                )
 
 
 def _cleanup_repo_local_interface_processes() -> list[dict[str, str | int]]:
@@ -219,6 +220,18 @@ def _next_dev_command(bind_host: str, port: int) -> list[str]:
     ]
 
 
+def _next_start_command(bind_host: str, port: int) -> list[str]:
+    return [
+        "node",
+        "./node_modules/next/dist/bin/next",
+        "start",
+        "--hostname",
+        bind_host,
+        "--port",
+        str(port),
+    ]
+
+
 def _spawn_interface_process(
     command: list[str],
     env: dict[str, str],
@@ -249,11 +262,19 @@ def _spawn_interface_process(
     return subprocess.Popen(command, **popen_kwargs)
 
 
-def _start_playwright_server(env: dict[str, str], port: int = INTERFACE_PORT) -> subprocess.Popen[str]:
+def _start_playwright_server(
+    env: dict[str, str],
+    port: int = INTERFACE_PORT,
+    server_mode: str = "dev",
+) -> subprocess.Popen[str]:
     log_path = _playwright_server_log_path()
     log_handle = open(log_path, "w", encoding="utf-8")
     bind_host = env.get("INTERFACE_BIND_HOST", INTERFACE_BIND_HOST)
-    command = _next_dev_command(bind_host, port)
+    command = (
+        _next_start_command(bind_host, port)
+        if server_mode == "start"
+        else _next_dev_command(bind_host, port)
+    )
     try:
         process = _spawn_interface_process(
             command,
@@ -383,9 +404,11 @@ def test_coverage(c):
         "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
         "spec": "Optional Playwright spec path or glob.",
         "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
+        "workers": "Optional Playwright worker count override for stability-sensitive runs.",
+        "server_mode": "Server mode for the managed UI server (dev or start).",
     }
 )
-def e2e(c, headed=False, project="", spec="", live_backend=False):
+def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev"):
     """
     Run Playwright E2E tests.
     The Invoke wrapper starts a managed local Next.js server and clears any stale
@@ -400,6 +423,8 @@ def e2e(c, headed=False, project="", spec="", live_backend=False):
         cmd += f" --project={project}"
     if spec:
         cmd += f" {spec}"
+    if workers:
+        cmd += f" --workers={workers}"
     if headed:
         cmd += " --headed"
     extra_env = {
@@ -413,7 +438,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False):
     stop(c)
     server: subprocess.Popen[str] | None = None
     try:
-        server = _start_playwright_server(env)
+        server = _start_playwright_server(env, server_mode=server_mode)
         _wait_for_interface_ready(host=env["INTERFACE_HOST"])
         result = run_interface_command(c, cmd, pty=not is_windows(), env=env, hide=True, warn=True)
         _print_ascii_safe(result.stdout)

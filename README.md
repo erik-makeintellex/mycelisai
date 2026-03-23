@@ -360,7 +360,9 @@ Completion rule:
 
 ## Playwright Contract
 
-`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. Playwright owns the Next.js server lifecycle for the default browser gate.
+`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. Ad hoc browser runs default to a managed Next dev server, while the strict branch-readiness gate uses the already-built Next start server for better stability on local hosts.
+
+`uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=2`) and the built `next start` server so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves a single live browser contract.
 
 Browser matrix baseline:
 - `chromium firefox webkit`

@@ -31,7 +31,7 @@ export function ZoneA() {
     const currentOrganizationHref = lastOrganization ? `/organizations/${lastOrganization.id}` : null;
     const isCurrentOrganizationRoute = !!currentOrganizationHref && (pathname === currentOrganizationHref || pathname.startsWith(currentOrganizationHref + '/'));
     const primaryNav = [
-        { href: '/dashboard', icon: Home, label: 'AI Organization' },
+        { href: '/dashboard', icon: Home, label: 'AI Organization', testId: 'nav-dashboard' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,
@@ -40,13 +40,13 @@ export function ZoneA() {
             description: lastOrganization.name,
             testId: 'current-organization-nav',
         }] : []),
-        { href: '/automations', icon: Workflow, label: 'Automations' },
-        { href: '/docs', icon: BookOpen, label: 'Docs' },
+        { href: '/automations', icon: Workflow, label: 'Automations', testId: 'nav-automations' },
+        { href: '/docs', icon: BookOpen, label: 'Docs', testId: 'nav-docs' },
     ];
     const advancedNav = [
-        { href: '/resources', icon: FolderCog, label: 'Resources' },
-        { href: '/memory', icon: Brain, label: 'Memory' },
-        { href: '/system', icon: Activity, label: 'System' },
+        { href: '/resources', icon: FolderCog, label: 'Resources', testId: 'nav-resources' },
+        { href: '/memory', icon: Brain, label: 'Memory', testId: 'nav-memory' },
+        { href: '/system', icon: Activity, label: 'System', testId: 'nav-system' },
     ];
 
     return (
@@ -81,7 +81,7 @@ export function ZoneA() {
                             Advanced
                         </div>
                         {advancedNav.map((item) => (
-                            <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} />
+                            <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} testId={item.testId} />
                         ))}
                     </div>
                 )}
@@ -103,7 +103,7 @@ export function ZoneA() {
                         {effectiveAdvancedMode ? 'Advanced: On' : 'Advanced: Off'}
                     </span>
                 </button>
-                <NavItem href="/settings" icon={Settings} label="Settings" />
+                <NavItem href="/settings" icon={Settings} label="Settings" testId="nav-settings" />
             </div>
         </div>
     );

@@ -123,9 +123,9 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
 
-    def fake_start(env, port=interface.INTERFACE_PORT):
+    def fake_start(env, port=interface.INTERFACE_PORT, server_mode="dev"):
         env_seen.update(env)
-        events.append(f"start:{port}")
+        events.append(f"start:{port}:{server_mode}")
         return FakeServer()
 
     monkeypatch.setattr(interface, "_start_playwright_server", fake_start)
@@ -139,7 +139,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     assert env_seen["INTERFACE_BIND_HOST"] == interface.INTERFACE_BIND_HOST
     assert events == [
         f"stop:{port}",
-        f"start:{port}",
+        f"start:{port}:dev",
         f"ready:127.0.0.1:{port}",
         "kill:4242",
         f"stop:{port}",

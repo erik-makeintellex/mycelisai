@@ -235,7 +235,7 @@ def baseline(c, e2e=True):
     if e2e:
         print("[E2E] interface playwright run")
         try:
-            interface_tasks.e2e.body(c)
+            interface_tasks.e2e.body(c, workers="2", server_mode="start")
         except SystemExit:
             errors.append("interface playwright failed")
         else:
@@ -277,6 +277,7 @@ def service_check(c, live_backend=False):
                 project="chromium",
                 spec="e2e/specs/workspace-live-backend.spec.ts",
                 live_backend=True,
+                workers="1",
             )
         except SystemExit:
             errors.append("interface live-backend playwright failed")
