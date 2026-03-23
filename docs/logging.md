@@ -13,6 +13,24 @@ Mycelis has to support two different consumers of runtime output:
 
 This document governs the second surface. Raw `stdout` or `stderr` logs may stay service-local, but anything that Soma, meta-agentry, team leads, or later review automation should reason over must land in the centralized review model below.
 
+## 1.1 Standard Across The Stack
+
+Mycelis uses one logging contract across all execution layers:
+
+- Go runtime and services own structured service-local logs and centralized review mirroring
+- Python task runners own operator-readable execution logs and failure summaries
+- TypeScript/UI owns normalized operator-facing error and status presentation, not raw backend dumps
+- team-native channels remain canonical for team-local output
+- `mission_events` remains the durable audit spine for mutating or mission-linked execution
+- `log_entries` remains the centralized review surface for Soma, meta-agentry, team leads, and later review automation
+
+Rule:
+
+- do not create a second operator-review logging model per service, UI panel, or integration
+- use service-local logs for local troubleshooting
+- use `protocol.OperationalLogContext` for centralized review
+- use mission events when durable causality, replay, or governance review matters
+
 ## 2. Centralized Review Surfaces
 
 ### 2.1 Mission Events
@@ -72,6 +90,18 @@ Required uses:
 - replayable operational summaries
 
 These logs must use the centralized schema stored in `log_entries.context`.
+
+### 3.3 UI-facing status and error presentation
+
+Operator UI surfaces must not invent their own hidden logging contract.
+
+Required behavior:
+
+- UI shows normalized status, retry, and degraded-state messaging
+- UI may consume centralized review, mission events, service-status APIs, and governed chat responses
+- UI must not present raw stack traces, raw NATS envelopes, or ad-hoc payload dumps as the primary operator log surface
+
+The UI is a presentation layer over the same centralized review contract. It is not a separate logging system.
 
 ## 4. Canonical Review Schema
 
@@ -138,6 +168,65 @@ Default expectations:
 - central orchestration and cross-team coordination should target `soma`, `meta_agentry`, and relevant `team_lead`
 - governed mutation and approval evidence should include `governance`
 
+## 6.1 Standard By Producer Type
+
+### Go runtime and backend services
+
+Required:
+
+- structured service-local logs with clear service/component identity
+- centralized review mirroring for operator-relevant status, result, error, audit, MCP, and service-state changes
+- mission events for mutating or mission-linked actions
+
+Expected review context:
+
+- `service`
+- `component`
+- `summary`
+- `detail`
+- `why_it_matters`
+- `source_channel`
+- `review_channels`
+
+### Python task runners and operator automation
+
+Required:
+
+- operator-readable logs that state what is being checked, changed, or blocked
+- fail-fast summaries instead of false-success output
+- centralized review mirroring when task output becomes organization-relevant operational evidence
+
+Python tasks do not need to emit every console line into centralized review. They do need to normalize any operator-relevant durable outcome that Soma, meta-agentry, or team leads may need later.
+
+### TypeScript/UI surfaces
+
+Required:
+
+- normalized operator-facing status and failure states
+- readable retry and recovery language
+- no raw backend-noise presentation as the primary UX
+
+If UI surfaces emit reviewable operational records, they must map back to the same centralized contract instead of inventing a browser-only schema.
+
+### Team-native signals
+
+Required:
+
+- publish team-local output on canonical team subjects first
+- mirror operator-relevant summaries into centralized review
+- preserve `team_id`, `agent_id`, `payload_kind`, and `source_channel`
+
+### MCP and service integrations
+
+Required:
+
+- keep tool/service-local diagnostics readable at the integration boundary
+- mirror invocation, completion, failure, and meaningful status summaries into centralized review when Soma or team leads may need to inspect them
+- tag MCP and service-origin records clearly so the central review stream is understandable without opening the raw integration surface
+
+Use `source_kind: mcp` for MCP-origin activity.
+Use `source_kind: system` or the governed product source kind when the record is a bridged service-state summary rather than a direct MCP tool event.
+
 ## 7. Template for Agentry Review
 
 Every centralized review log should be understandable when read without surrounding implementation context.
@@ -149,6 +238,13 @@ Preferred shape:
 - `why_it_matters`: why Soma, meta-agentry, or a team lead should care
 - `suggested_action`: what to inspect or do next if follow-up is needed
 - `review_channels`: exact lanes where more detail can be found
+
+For service or MCP review, the same template applies. The reader should be able to answer:
+
+- what happened
+- where it happened
+- whether it affected execution
+- which channel or surface to inspect next
 
 Good example:
 
@@ -185,6 +281,24 @@ Good example:
 3. Telemetry may remain high-volume on team telemetry subjects, but the summarized operational view must still be readable from centralized review when Soma or team leads need it.
 4. Mission-critical or mutating execution must emit persistent mission events even when also mirrored into `log_entries`.
 5. New centralized review producers must normalize through `protocol.OperationalLogContext`; do not invent ad-hoc JSON blobs in `log_entries.context`.
+6. Service-state review, MCP activity, and cross-team channel review must remain understandable from centralized review without requiring raw per-service console access.
+7. When Soma reviews team, service, or MCP channels, the underlying records must still preserve their original source channel in `review_channels`.
+
+## 8.1 Service, MCP, and channel-review expectations
+
+When Soma or central services review the system, the standard expected surfaces are:
+
+- team status and result lanes
+- summarized telemetry lanes
+- service-state summaries
+- MCP invocation/completion/failure summaries
+- mission events when the action is mutating or execution-linked
+
+That means:
+
+- teams focus on their own output logging first
+- centralized review mirrors the same operational truth for cross-team inspection
+- Soma can review all relevant lanes without replacing local team ownership of those lanes
 
 ## 9. Event Taxonomy for Mission Events
 
@@ -210,6 +324,8 @@ Disallowed:
 - using telemetry subjects as the only source of operator review truth
 - inventing event names outside `core/pkg/protocol/events.go`
 - hardcoding `swarm.*` subjects outside canonical topic definitions
+- treating MCP or service integrations as exceptions to the centralized review contract
+- using UI-only copy or console-only detail as the only explanation for an operator-relevant failure
 
 ## 11. Agent Checklist Before Changing Logging
 

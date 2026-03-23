@@ -15,6 +15,13 @@ REQUIRED_LOGGING_DOC_TERMS = {
     "central_review",
     "review_channels",
     "schema_version",
+    "mission_events",
+    "service_local",
+    "team_local",
+    "suggested_action",
+    "source_channel",
+    "team_lead",
+    "mcp",
 }
 
 DEFAULT_SCHEMA_PATHS = "core/internal"

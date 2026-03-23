@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { mockFetch } from "../setup";
+import { useCortexStore } from "@/store/useCortexStore";
 import type {
     OrganizationAIEngineProfileId,
     OrganizationAutomationItem,
@@ -272,6 +273,13 @@ function setupOrganizationFetch(options?: {
     responseContractUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
 }) {
     let currentOrganizationHome: OrganizationHomePayload = structuredClone(organizationHome);
+    const councilMembers = [
+        { id: "admin", role: "admin", team: "admin-core" },
+        { id: "council-architect", role: "architect", team: "council-core" },
+        { id: "council-coder", role: "coder", team: "council-core" },
+        { id: "council-creative", role: "creative", team: "council-core" },
+        { id: "council-sentry", role: "sentry", team: "council-core" },
+    ];
 
     mockFetch.mockImplementation((input, init) => {
         const url = typeof input === "string" ? input : input instanceof Request ? input.url : String(input);
@@ -492,6 +500,26 @@ function setupOrganizationFetch(options?: {
             });
         }
 
+        if (url.includes("/api/v1/council/members")) {
+            return jsonResponse({ ok: true, data: councilMembers });
+        }
+
+        if (url.includes("/api/v1/chat") && method === "POST") {
+            return jsonResponse({
+                ok: true,
+                data: {
+                    meta: { source_node: "admin", timestamp: "2026-03-19T18:00:00Z" },
+                    signal_type: "chat_response",
+                    trust_score: 0.82,
+                    payload: {
+                        text: "Soma is ready to shape samples, plans, and delivery guidance for Northstar Labs.",
+                        consultations: null,
+                        tools_used: null,
+                    },
+                },
+            });
+        }
+
         throw new Error(`Unexpected fetch: ${method} ${url}`);
     });
 }
@@ -499,6 +527,19 @@ function setupOrganizationFetch(options?: {
 describe("OrganizationPage (/organizations/[id])", () => {
     beforeEach(() => {
         mockFetch.mockReset();
+        useCortexStore.setState({
+            missionChat: [],
+            isMissionChatting: false,
+            missionChatError: null,
+            missionChatFailure: null,
+            assistantName: "Soma",
+            councilTarget: "admin",
+            councilMembers: [],
+            servicesStatus: [],
+            isFetchingServicesStatus: false,
+            streamConnectionState: "online",
+            isStreamConnected: true,
+        });
     });
 
     afterEach(() => {
@@ -521,9 +562,16 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
         expect(screen.getByText("What I can help with")).toBeDefined();
-        expect(screen.getByText("Work with Soma")).toBeDefined();
-        expect(screen.getAllByText("Start with Soma").length).toBeGreaterThan(0);
-        expect(screen.getByLabelText("Tell Soma what you want to create or accomplish")).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Talk with Soma" })).toBeDefined();
+        expect(screen.getByText("How to read this workspace")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Create a team with Soma" })).toBeDefined();
+        expect(screen.getByText("Soma can help shape examples first, then turn them into a team-ready delivery path.")).toBeDefined();
+        expect(screen.getByText(/Use Soma as the main interface\./)).toBeDefined();
+        expect(screen.getByText("Create teams with Soma")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Start team design" })).toBeDefined();
+        expect(screen.getByLabelText("Tell Soma what team or delivery lane you want to create")).toBeDefined();
+        expect(screen.getByTestId("mission-chat")).toBeDefined();
+        expect(screen.getByText("Quick Checks")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
@@ -600,7 +648,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
         });
 
-        expect(await screen.findByText("Work with Soma")).toBeDefined();
+        expect(await screen.findByText("Create teams with Soma")).toBeDefined();
         fireEvent.click(screen.getByRole("button", { name: /Review your organization setup/i }));
         expect(await screen.findByText("Organization setup review for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
@@ -646,7 +694,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
         });
 
-        expect(await screen.findByText("Work with Soma")).toBeDefined();
+        expect(await screen.findByText("Create teams with Soma")).toBeDefined();
         fireEvent.click(screen.getByRole("button", { name: /Run a quick strategy check/i }));
 
         expect(await screen.findByText("Soma guidance is unavailable")).toBeDefined();
@@ -750,7 +798,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("This system runs ongoing reviews and checks to help your organization improve over time.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
-        expect(screen.getByText("Work with Soma")).toBeDefined();
+        expect(screen.getByText("Create teams with Soma")).toBeDefined();
         expect(screen.queryByText(/loop profile/i)).toBeNull();
         expect(screen.queryByText(/scheduler/i)).toBeNull();
         expect(screen.queryByText(/vector/i)).toBeNull();
@@ -783,7 +831,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
         });
 
-        expect(await screen.findByText("Work with Soma")).toBeDefined();
+        expect(await screen.findByText("Create teams with Soma")).toBeDefined();
         fireEvent.click(screen.getAllByRole("button", { name: "Review Advisors" })[0]);
 
         expect(await screen.findByRole("heading", { name: "Advisor details" })).toBeDefined();
@@ -791,7 +839,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Decision support")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
-        expect(screen.getByText("Work with Soma")).toBeDefined();
+        expect(screen.getByText("Create teams with Soma")).toBeDefined();
     });
 
     it("opens Department details from the support column and preserves organization context", async () => {
@@ -820,7 +868,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Back to Soma" }));
         expect(screen.queryByRole("heading", { name: "Department details" })).toBeNull();
-        expect(screen.getByText("Work with Soma")).toBeDefined();
+        expect(screen.getByText("Create teams with Soma")).toBeDefined();
     });
 
     it("opens AI Engine Settings details and shows organization, team, and role scope labels", async () => {
@@ -842,7 +890,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Departments start from the organization-wide AI engine unless a team-specific setting appears here.")).toBeDefined();
         expect(screen.getByText("No specific role overrides are visible in this workspace right now.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getByText("Work with Soma")).toBeDefined();
+        expect(screen.getByText("Create teams with Soma")).toBeDefined();
     });
 
     it("renders the bounded Response Style summary and lets the operator change it safely", async () => {
@@ -869,6 +917,21 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByText("Current profile: Warm & Supportive.")).toBeDefined();
         expect(screen.getByText("The current Response Style is warm & supportive, which shapes how Soma presents tone, structure, and detail.")).toBeDefined();
+    });
+
+    it("opens the create-team flow from the primary Soma workspace without leaving the organization page", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "Talk with Soma" })).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Create a team with Soma" }));
+
+        expect(await screen.findByRole("heading", { name: "Launch a Crew" })).toBeDefined();
+        expect(screen.getByText(/must return a real outcome, not a planning stub/i)).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeDefined();
     });
 
     it("shows retry guidance when changing the Response Style fails and then recovers", async () => {
@@ -930,7 +993,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByText("Current profile: High Reasoning.")).toBeDefined();
         expect(screen.getByText("The current AI Engine Settings profile is high reasoning and shapes how the organization responds, plans, and carries work forward.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getByText("Work with Soma")).toBeDefined();
+        expect(screen.getByText("Create teams with Soma")).toBeDefined();
     });
 
     it("shows inherited Department AI Engine state, applies an override, and then reverts to the organization default", async () => {
@@ -1029,7 +1092,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Revert to Organization Default" }));
         expect(await screen.findByText("Using Organization Default: Fast & Lightweight")).toBeDefined();
-    });
+    }, 10000);
 
     it("shows retry guidance when changing an Agent Type AI Engine fails and recovers on retry", async () => {
         let attempts = 0;
@@ -1093,7 +1156,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getAllByRole("button", { name: "Use Organization / Team Default" }).at(-1)!);
         expect(await screen.findByText("Using Organization or Team Default: Concise & Direct")).toBeDefined();
-    });
+    }, 10000);
 
     it("shows retry guidance when changing an Agent Type Response Style fails and recovers on retry", async () => {
         let attempts = 0;

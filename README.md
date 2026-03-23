@@ -113,6 +113,8 @@ V8.1 defines the MVP release we are aligning implementation to now: a Soma-prima
 
 Included in the V8.1 release target:
 - AI Organization creation and Soma-primary workspace flow
+- a primary Soma conversation surface for discussing plans, samples, and delivery intent
+- conversation outputs from Soma may include media and rich artifacts generated directly by Soma or returned from consulted specialists
 - guided first-run Soma actions that help a new operator choose a visible next step quickly
 - organization, department, advisor, and role-type visibility in operator language
 - bundle-driven startup truth with policy-bounded inheritance
@@ -147,8 +149,18 @@ Do not duplicate the full live checklist in this README. Keep the implementation
 
 Current operator experience summary:
 - a new operator lands in AI Organization setup, not a blank assistant thread
+- Soma is the default workspace route on first load and after AI Organization creation
+- the default AI Organization workspace now includes a primary Soma conversation surface for planning, sample discussion, and delivery shaping
+- that same Soma conversation surface is also the canonical operator output lane for imagery, briefs, charts, code, and other rich artifacts, even when specialist or council paths generated them on Soma's behalf
+- the same workspace also gives the operator a direct `Create a team with Soma` path so team formation can begin from conversation or from a guided flow without leaving the AI Organization page
 - Soma always presents guided starting actions instead of a dead-end blank state
+- `Start with Soma` works immediately, even before the operator types a custom request
+- live workspace streaming starts automatically; degraded mode is reserved for an actual connection failure, not normal startup warm-up
 - Team Leads remain visible as the operational leaders Soma works through
+- basic system confidence checks remain visible in the default workspace; operators do not need Advanced mode just to verify core service state
+- the Soma workspace keeps the in-progress request draft and the last guided outcome visible when the operator leaves and returns to the same AI Organization
+- the organization-wide AI Engine and Response Style chosen during setup shape Soma's initial working posture, while the assistant name remains operator-configurable
+- AI Engine providers now carry a safe default token budget profile and max output budget so local and hosted agentry usage stays bounded by configuration instead of hidden hardcoded limits
 - Recent Activity, Automations, Learning, Advisors, and Departments keep readable empty, loading, and failure states without collapsing the workspace
 
 ## Default And Advanced Surfaces
@@ -294,6 +306,8 @@ Provider/runtime workflow reminders:
 - deployment automation may override provider/model/profile/media config through env vars using `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*`; use that path instead of the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps
 - env overrides are deployment-time infrastructure wiring, not runtime organization behavior: they define provider instances, profile defaults, and environment-specific endpoints or model ids
 - env overrides must not become a shadow runtime architecture: team, role, and agent routing truth still comes from `Bundle -> Instantiated Organization -> Inheritance -> Routing`
+- token budgets are configuration-owned rather than hardcoded: use `token_budget_profile` and `max_output_tokens` in `core/config/cognitive.yaml`, override them at deploy time with `MYCELIS_PROVIDER_<PROVIDER_ID>_TOKEN_BUDGET_PROFILE` and `MYCELIS_PROVIDER_<PROVIDER_ID>_MAX_OUTPUT_TOKENS`, or manage them from `/settings` -> `AI Engines` in Advanced mode
+- safe output-budget presets follow common operational ranges: `conservative=512`, `standard=1024`, `extended=2048`, `deep=4096`; default local providers should stay on `standard` unless the role really needs longer output, while remote or heavier reasoning providers can opt into `extended`
 - keep repo-managed caches under `workspace/tool-cache` and use `cache.apply-user-policy` when a Windows user profile needs heavy tool caches moved off `C:`
 - check `uv run inv cache.status` before large build/test/browser runs when disk headroom is tight; the main repo-local growth surfaces are `workspace/tool-cache`, `interface/.next`, Playwright browser binaries, and other generated test artifacts
 - use `uv run inv cache.clean` as the first repo-safe reclaim path when builds or tests start failing under disk pressure instead of manually deleting random working files

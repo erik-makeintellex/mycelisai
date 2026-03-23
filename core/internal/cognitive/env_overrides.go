@@ -11,6 +11,8 @@ import (
 var providerOverrideFields = []string{
 	"API_KEY_ENV",
 	"DATA_BOUNDARY",
+	"TOKEN_BUDGET_PROFILE",
+	"MAX_OUTPUT_TOKENS",
 	"USAGE_POLICY",
 	"MODEL_ID",
 	"ENDPOINT",
@@ -99,6 +101,15 @@ func applyProviderEnvOverride(config *BrainConfig, rawField string, value string
 			provider.Location = value
 		case "DATA_BOUNDARY":
 			provider.DataBoundary = value
+		case "TOKEN_BUDGET_PROFILE":
+			provider.TokenBudgetProfile = strings.ToLower(value)
+		case "MAX_OUTPUT_TOKENS":
+			maxTokens, err := strconv.Atoi(value)
+			if err != nil || maxTokens <= 0 {
+				log.Printf("WARN: ignoring invalid int for %s: %q", "MYCELIS_PROVIDER_"+rawField, value)
+				return
+			}
+			provider.MaxOutputTokens = maxTokens
 		case "USAGE_POLICY":
 			provider.UsagePolicy = value
 		case "ENABLED":
@@ -110,7 +121,7 @@ func applyProviderEnvOverride(config *BrainConfig, rawField string, value string
 			provider.Enabled = enabled
 		}
 
-		config.Providers[providerID] = provider
+		config.Providers[providerID] = NormalizeProviderTokenDefaults(provider)
 		log.Printf("DEBUG: Applied provider env override MYCELIS_PROVIDER_%s for provider %s", rawField, providerID)
 		return
 	}

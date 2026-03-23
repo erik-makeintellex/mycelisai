@@ -21,6 +21,9 @@ import type {
     ResponseContractUpdateRequest,
 } from "@/lib/organizations";
 import TeamLeadInteractionPanel from "@/components/organizations/TeamLeadInteractionPanel";
+import MissionControlChat from "@/components/dashboard/MissionControlChat";
+import SystemQuickChecks from "@/components/system/SystemQuickChecks";
+import LaunchCrewModal from "@/components/workspace/LaunchCrewModal";
 
 async function readJson(response: Response) {
     try {
@@ -148,6 +151,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [learningInsightsLoading, setLearningInsightsLoading] = useState(true);
     const [learningInsightsError, setLearningInsightsError] = useState<string | null>(null);
     const [learningInsightsReloadToken, setLearningInsightsReloadToken] = useState(0);
+    const [isLaunchCrewOpen, setIsLaunchCrewOpen] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -755,7 +759,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                     </div>
                 </section>
 
-                <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <section className="space-y-4">
                     <div className="space-y-4">
                         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -881,6 +885,52 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             />
                         )}
 
+                        <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                <div className="space-y-3">
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/20 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
+                                        <Bot className="h-3.5 w-3.5" />
+                                        Soma conversation
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-semibold text-cortex-text-main">Talk with Soma</h2>
+                                        <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
+                                            Use Soma as the primary conversation surface for plans, concepts, imagery, drafts, and delivery shaping. Soma can bring in the right advisor support before guidance is handed to Team Leads, Departments, and Specialists.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+                                    <p className="font-medium text-cortex-text-main">How to read this workspace</p>
+                                    <p className="mt-1 leading-6">
+                                        Use Soma as the main interface. The overview and quick checks alongside it explain the current organization state so you can understand what is healthy, what is active, and what may need attention while you refine work with Soma.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="mt-5 grid gap-3 md:grid-cols-4">
+                                {overviewItems.map((item) => (
+                                    <Metric key={item.label} label={item.label} value={item.value} />
+                                ))}
+                            </div>
+                            <div className="mt-5 flex flex-wrap gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsLaunchCrewOpen(true)}
+                                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90"
+                                >
+                                    Create a team with Soma
+                                    <Sparkles className="h-4 w-4" />
+                                </button>
+                                <span className="inline-flex items-center rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm text-cortex-text-muted">
+                                    Soma can help shape examples first, then turn them into a team-ready delivery path.
+                                </span>
+                            </div>
+                            <div className="mt-6 h-[42rem] lg:h-[48rem] overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg">
+                                <MissionControlChat />
+                            </div>
+                        </section>
+                    </div>
+
+                    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
                         <TeamLeadInteractionPanel
                             organizationId={organization.id}
                             organizationName={organization.name}
@@ -888,112 +938,103 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             teamLeadName={teamLeadName}
                             autoFocusOnLoad
                         />
-                    </div>
 
-                    <div className="space-y-4">
-                        <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
-                            <div>
-                                <h2 className="text-xl font-semibold text-cortex-text-main">Organization overview</h2>
-                                <p className="mt-1 text-sm text-cortex-text-muted">See Soma, the operational structure, and the starting point for this AI Organization at a glance.</p>
-                            </div>
-                            <div className="mt-4 grid gap-3 md:grid-cols-2">
-                                {overviewItems.map((item) => (
-                                    <Metric key={item.label} label={item.label} value={item.value} />
-                                ))}
-                            </div>
-                        </div>
+                        <div className="space-y-4">
+                            <SystemQuickChecks />
 
-                        <InspectOnlySummary
-                            icon={<Users className="h-4 w-4" />}
-                            title="Advisors"
-                            countLabel={formatConfiguredCount(organization.advisor_count, "Advisor")}
-                            summary={advisorSummary(organization.advisor_count, teamLeadName)}
-                            supportLabel="Advisor support"
-                            items={advisorSupportItems(organization.advisor_count)}
-                            inspectActionLabel="Review Advisors"
-                            onInspect={() => setActiveDetailView("advisors")}
-                        />
+                            <InspectOnlySummary
+                                icon={<Users className="h-4 w-4" />}
+                                title="Advisors"
+                                countLabel={formatConfiguredCount(organization.advisor_count, "Advisor")}
+                                summary={advisorSummary(organization.advisor_count, teamLeadName)}
+                                supportLabel="Advisor support"
+                                items={advisorSupportItems(organization.advisor_count)}
+                                inspectActionLabel="Review Advisors"
+                                onInspect={() => setActiveDetailView("advisors")}
+                            />
 
-                        <InspectOnlySummary
-                            icon={<Building2 className="h-4 w-4" />}
-                            title="Departments"
-                            countLabel={formatConfiguredCount(organization.department_count, "Department")}
-                            summary={departmentSummary(organization.department_count, organization.specialist_count, teamLeadName)}
-                            supportLabel="Department view"
-                            items={departmentSupportItems(organization)}
-                            inspectActionLabel="Open Departments"
-                            onInspect={() => setActiveDetailView("departments")}
-                        />
+                            <InspectOnlySummary
+                                icon={<Building2 className="h-4 w-4" />}
+                                title="Departments"
+                                countLabel={formatConfiguredCount(organization.department_count, "Department")}
+                                summary={departmentSummary(organization.department_count, organization.specialist_count, teamLeadName)}
+                                supportLabel="Department view"
+                                items={departmentSupportItems(organization)}
+                                inspectActionLabel="Open Departments"
+                                onInspect={() => setActiveDetailView("departments")}
+                            />
 
-                        <InspectOnlySummary
-                            icon={<Blocks className="h-4 w-4" />}
-                            title="Automations"
-                            countLabel={formatAutomationCount(automations.length, automationsLoading, automationsError)}
-                            statusLabel={automationStatusLabel(automationsLoading, automationsError)}
-                            summary={automationSummary(automations.length, teamLeadName)}
-                            supportLabel="What these cover"
-                            items={automationSupportItems(automations, automationsLoading, automationsError)}
-                            inspectActionLabel="Review Automations"
-                            onInspect={() => setActiveDetailView("automations")}
-                        />
+                            <InspectOnlySummary
+                                icon={<Blocks className="h-4 w-4" />}
+                                title="Automations"
+                                countLabel={formatAutomationCount(automations.length, automationsLoading, automationsError)}
+                                statusLabel={automationStatusLabel(automationsLoading, automationsError)}
+                                summary={automationSummary(automations.length, teamLeadName)}
+                                supportLabel="What these cover"
+                                items={automationSupportItems(automations, automationsLoading, automationsError)}
+                                inspectActionLabel="Review Automations"
+                                onInspect={() => setActiveDetailView("automations")}
+                            />
 
-                        <RecentActivityPanel
-                            items={recentActivity}
-                            loading={activityLoading}
-                            error={activityError}
-                            onRetry={() => setActivityReloadToken((value) => value + 1)}
-                        />
+                            <RecentActivityPanel
+                                items={recentActivity}
+                                loading={activityLoading}
+                                error={activityError}
+                                onRetry={() => setActivityReloadToken((value) => value + 1)}
+                            />
 
-                        <LearningVisibilityPanel
-                            items={learningInsights}
-                            loading={learningInsightsLoading}
-                            error={learningInsightsError}
-                            onRetry={() => setLearningInsightsReloadToken((value) => value + 1)}
-                        />
+                            <LearningVisibilityPanel
+                                items={learningInsights}
+                                loading={learningInsightsLoading}
+                                error={learningInsightsError}
+                                onRetry={() => setLearningInsightsReloadToken((value) => value + 1)}
+                            />
 
-                        <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
-                            <div className="grid gap-4">
-                                <InspectOnlySummary
-                                    icon={<Bot className="h-4 w-4" />}
-                                    title="AI Engine Settings"
-                                    countLabel="Guided tuning"
-                                    statusLabel="Organization level"
-                                    summary={aiEngineSummary(organization.ai_engine_settings_summary)}
-                                    supportLabel="What this affects"
-                                    items={aiEngineSupportItems(organization.ai_engine_settings_summary)}
-                                    inspectActionLabel="Review AI Engine Settings"
-                                    onInspect={() => setActiveDetailView("aiEngine")}
-                                />
-                                <InspectOnlySummary
-                                    icon={<BrainCircuit className="h-4 w-4" />}
-                                    title="Response Style"
-                                    countLabel="Guided tuning"
-                                    statusLabel="Organization level"
-                                    summary={responseContractSummary(organization.response_contract_summary)}
-                                    supportLabel="What this shapes"
-                                    items={responseContractSupportItems(organization.response_contract_summary)}
-                                    inspectActionLabel="Review Response Style"
-                                    onInspect={() => setActiveDetailView("responseContract")}
-                                />
-                                <InspectOnlySummary
-                                    icon={<BrainCircuit className="h-4 w-4" />}
-                                    title="Learning & Context"
-                                    countLabel="Inspect only"
-                                    summary={learningContextSummary(organization.memory_personality_summary)}
-                                    supportLabel="What this affects"
-                                    items={learningContextSupportItems(organization.memory_personality_summary)}
-                                />
-                            </div>
-                            <div className="mt-5">
-                                <Link href="/dashboard" className="inline-flex items-center gap-2 text-cortex-primary hover:underline">
-                                    <ArrowLeft className="h-4 w-4" />
-                                    Create another AI Organization
-                                </Link>
+                            <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
+                                <div className="grid gap-4">
+                                    <InspectOnlySummary
+                                        icon={<Bot className="h-4 w-4" />}
+                                        title="AI Engine Settings"
+                                        countLabel="Guided tuning"
+                                        statusLabel="Organization level"
+                                        summary={aiEngineSummary(organization.ai_engine_settings_summary)}
+                                        supportLabel="What this affects"
+                                        items={aiEngineSupportItems(organization.ai_engine_settings_summary)}
+                                        inspectActionLabel="Review AI Engine Settings"
+                                        onInspect={() => setActiveDetailView("aiEngine")}
+                                    />
+                                    <InspectOnlySummary
+                                        icon={<BrainCircuit className="h-4 w-4" />}
+                                        title="Response Style"
+                                        countLabel="Guided tuning"
+                                        statusLabel="Organization level"
+                                        summary={responseContractSummary(organization.response_contract_summary)}
+                                        supportLabel="What this shapes"
+                                        items={responseContractSupportItems(organization.response_contract_summary)}
+                                        inspectActionLabel="Review Response Style"
+                                        onInspect={() => setActiveDetailView("responseContract")}
+                                    />
+                                    <InspectOnlySummary
+                                        icon={<BrainCircuit className="h-4 w-4" />}
+                                        title="Learning & Context"
+                                        countLabel="Inspect only"
+                                        summary={learningContextSummary(organization.memory_personality_summary)}
+                                        supportLabel="What this affects"
+                                        items={learningContextSupportItems(organization.memory_personality_summary)}
+                                    />
+                                </div>
+                                <div className="mt-5">
+                                    <Link href="/dashboard" className="inline-flex items-center gap-2 text-cortex-primary hover:underline">
+                                        <ArrowLeft className="h-4 w-4" />
+                                        Create another AI Organization
+                                    </Link>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </section>
             </div>
+            {isLaunchCrewOpen && <LaunchCrewModal onClose={() => setIsLaunchCrewOpen(false)} />}
         </div>
     );
 }

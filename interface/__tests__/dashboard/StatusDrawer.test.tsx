@@ -19,6 +19,7 @@ function resetStore() {
         councilTarget: "admin",
         councilMembers: [],
         isStreamConnected: true,
+        streamConnectionState: "online",
         activeBrain: null,
         governanceMode: "passive",
         missions: [],
@@ -49,6 +50,7 @@ describe("StatusDrawer", () => {
             councilTarget: "council-sentry",
             councilMembers: [{ id: "council-sentry", role: "sentry", team: "council" }],
             isStreamConnected: false,
+            streamConnectionState: "connecting",
             activeBrain: {
                 provider_id: "ollama",
                 provider_name: "Ollama",
@@ -77,6 +79,7 @@ describe("StatusDrawer", () => {
             expect(screen.getByText("System Status")).toBeDefined();
             expect(screen.getByText("Last workspace failure: council-sentry (timeout)")).toBeDefined();
             expect(screen.getByText("SSE Stream")).toBeDefined();
+            expect(screen.getByText("connecting")).toBeDefined();
             expect(screen.getByText("Active Missions")).toBeDefined();
         });
     });

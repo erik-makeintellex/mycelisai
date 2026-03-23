@@ -15,6 +15,7 @@ function resetStore() {
     useCortexStore.setState({
         missionChatError: null,
         isStreamConnected: true,
+        streamConnectionState: "online",
         assistantName: "Soma",
         councilTarget: "council-sentry",
         isStatusDrawerOpen: false,
@@ -44,6 +45,20 @@ describe("DegradedModeBanner", () => {
         });
     });
 
+    it("does not treat a connecting stream as degraded on startup", async () => {
+        useCortexStore.setState({
+            isStreamConnected: false,
+            streamConnectionState: "connecting",
+            councilTarget: "admin",
+        });
+
+        render(<DegradedModeBanner />);
+
+        await waitFor(() => {
+            expect(screen.queryByText(/System in Degraded Mode/i)).toBeNull();
+        });
+    });
+
     it("renders in degraded mode and supports actions", async () => {
         useCortexStore.setState({
             missionChatError: "Council timeout",
@@ -53,6 +68,7 @@ describe("DegradedModeBanner", () => {
                 message: "Council timeout",
             }),
             isStreamConnected: false,
+            streamConnectionState: "offline",
             councilTarget: "council-architect",
             disconnectStream: vi.fn(),
             initializeStream: vi.fn(),
@@ -94,6 +110,21 @@ describe("DegradedModeBanner", () => {
         expect(useCortexStore.getState().initializeStream).toHaveBeenCalledWith(true);
     });
 
+    it("does not offer a redundant Soma switch when Soma is already the active route", async () => {
+        useCortexStore.setState({
+            isStreamConnected: false,
+            streamConnectionState: "offline",
+            councilTarget: "admin",
+        });
+
+        render(<DegradedModeBanner />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/System in Degraded Mode/i)).toBeDefined();
+        });
+        expect(screen.queryByText("Switch to Soma")).toBeNull();
+    });
+
     it("shows a specific workspace chat server-error reason", async () => {
         useCortexStore.setState({
             missionChatError: "Council agent unreachable (500)",
@@ -104,6 +135,7 @@ describe("DegradedModeBanner", () => {
                 statusCode: 500,
             }),
             isStreamConnected: true,
+            streamConnectionState: "online",
         });
 
         mockFetch.mockResolvedValue({

@@ -17,6 +17,8 @@ interface BrainEntry {
     location: string;
     data_boundary: string;
     usage_policy: string;
+    token_budget_profile: string;
+    max_output_tokens: number;
     roles_allowed: string[];
     enabled: boolean;
     status: string;
@@ -31,6 +33,8 @@ interface ProviderFormData {
     location: string;
     data_boundary: string;
     usage_policy: string;
+    token_budget_profile: string;
+    max_output_tokens: number;
     roles_allowed: string[];
     enabled: boolean;
 }
@@ -68,6 +72,8 @@ const PROVIDER_PRESETS: Record<string, Partial<ProviderFormData>> = {
         location: "remote",
         data_boundary: "leaves_org",
         usage_policy: "require_approval",
+        token_budget_profile: "extended",
+        max_output_tokens: 2048,
         roles_allowed: ["all"],
     },
     anthropic: {
@@ -76,6 +82,8 @@ const PROVIDER_PRESETS: Record<string, Partial<ProviderFormData>> = {
         location: "remote",
         data_boundary: "leaves_org",
         usage_policy: "require_approval",
+        token_budget_profile: "extended",
+        max_output_tokens: 2048,
         roles_allowed: ["all"],
     },
     google: {
@@ -84,6 +92,8 @@ const PROVIDER_PRESETS: Record<string, Partial<ProviderFormData>> = {
         location: "remote",
         data_boundary: "leaves_org",
         usage_policy: "require_approval",
+        token_budget_profile: "extended",
+        max_output_tokens: 2048,
         roles_allowed: ["all"],
     },
     custom: {
@@ -107,6 +117,12 @@ const PRESET_LABELS: Record<string, string> = {
 };
 
 const COUNCIL_ROLES = ["all", "architect", "coder", "creative", "sentry", "admin"];
+const TOKEN_BUDGET_PRESETS: Record<string, { label: string; tokens: number; description: string }> = {
+    conservative: { label: "Conservative", tokens: 512, description: "Short, low-cost responses." },
+    standard: { label: "Standard", tokens: 1024, description: "Balanced default for everyday agentry." },
+    extended: { label: "Extended", tokens: 2048, description: "Longer reasoning or coding responses." },
+    deep: { label: "Deep", tokens: 4096, description: "Heavy output budget for complex work." },
+};
 
 const blankForm = (): ProviderFormData => ({
     id: "",
@@ -117,6 +133,8 @@ const blankForm = (): ProviderFormData => ({
     location: "local",
     data_boundary: "local_only",
     usage_policy: "local_first",
+    token_budget_profile: "standard",
+    max_output_tokens: 1024,
     roles_allowed: ["all"],
     enabled: true,
 });
@@ -246,6 +264,35 @@ function ProviderForm({
                         <option value="disallowed">Disallowed</option>
                     </select>
                 ))}
+                {field("token_budget_profile", "Token Budget", (
+                    <select
+                        value={form.token_budget_profile}
+                        onChange={(e) => {
+                            const profile = e.target.value;
+                            const preset = TOKEN_BUDGET_PRESETS[profile];
+                            onChange({
+                                ...form,
+                                token_budget_profile: profile,
+                                max_output_tokens: preset ? preset.tokens : form.max_output_tokens,
+                            });
+                        }}
+                        className={inputCls}
+                    >
+                        {Object.entries(TOKEN_BUDGET_PRESETS).map(([value, preset]) => (
+                            <option key={value} value={value}>{preset.label}</option>
+                        ))}
+                    </select>
+                ))}
+                {field("max_output_tokens", "Max Output Tokens", (
+                    <input
+                        type="number"
+                        min={128}
+                        step={128}
+                        value={form.max_output_tokens}
+                        onChange={(e) => onChange({ ...form, max_output_tokens: Number(e.target.value) || 0 })}
+                        className={inputCls}
+                    />
+                ))}
                 {/* Location */}
                 {field("location", "Location", (
                     <select
@@ -276,6 +323,10 @@ function ProviderForm({
                     </select>
                 ))}
             </div>
+
+            <p className="text-[11px] leading-5 text-cortex-text-muted">
+                Safe defaults follow common operational ranges: 512 for conservative, 1024 for standard, 2048 for extended, and 4096 for deep output budgets.
+            </p>
 
             {/* Roles */}
             <div className="space-y-1">
@@ -481,6 +532,8 @@ export default function BrainsPage() {
             location: b.location,
             data_boundary: b.data_boundary,
             usage_policy: b.usage_policy,
+            token_budget_profile: b.token_budget_profile || "standard",
+            max_output_tokens: b.max_output_tokens || 1024,
             roles_allowed: b.roles_allowed?.length ? b.roles_allowed : ["all"],
             enabled: b.enabled,
         });
@@ -615,6 +668,7 @@ export default function BrainsPage() {
                             <th className="text-left px-4 py-2">Model</th>
                             <th className="text-left px-4 py-2">Status</th>
                             <th className="text-left px-4 py-2">Policy</th>
+                            <th className="text-left px-4 py-2">Token Budget</th>
                             <th className="text-left px-4 py-2">Data Boundary</th>
                             <th className="text-center px-4 py-2">Enabled</th>
                             <th className="text-center px-4 py-2">Actions</th>
@@ -655,6 +709,12 @@ export default function BrainsPage() {
                                             <option value="require_approval">Require Approval</option>
                                             <option value="disallowed">Disallowed</option>
                                         </select>
+                                    </td>
+                                    <td className="px-4 py-2.5 text-cortex-text-main">
+                                        <div className="flex flex-col">
+                                            <span>{TOKEN_BUDGET_PRESETS[b.token_budget_profile || "standard"]?.label ?? "Standard"}</span>
+                                            <span className="text-[10px] text-cortex-text-muted">{b.max_output_tokens || 1024} max</span>
+                                        </div>
                                     </td>
                                     <td className="px-4 py-2.5">
                                         <span className={`text-[10px] px-2 py-0.5 rounded border ${
@@ -717,7 +777,7 @@ export default function BrainsPage() {
                                 {/* Delete confirmation row */}
                                 {deleteTarget === b.id && (
                                     <tr className="bg-red-400/5 border-t border-red-400/20">
-                                        <td colSpan={8} className="px-4 py-2.5">
+                                        <td colSpan={9} className="px-4 py-2.5">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-xs text-red-400">
                                                     Delete <strong>{b.id}</strong>? This cannot be undone.

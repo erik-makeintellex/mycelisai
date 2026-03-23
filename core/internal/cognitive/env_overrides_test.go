@@ -6,6 +6,8 @@ func TestApplyEnvOverrides_ExistingProviderAndProfile(t *testing.T) {
 	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_MODEL_ID", "qwen3:8b")
 	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT", "http://192.168.50.156:11434/v1")
 	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED", "true")
+	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_TOKEN_BUDGET_PROFILE", "extended")
+	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_MAX_OUTPUT_TOKENS", "2048")
 	t.Setenv("MYCELIS_PROFILE_CHAT_PROVIDER", "local_ollama_dev")
 
 	cfg := &BrainConfig{
@@ -33,6 +35,12 @@ func TestApplyEnvOverrides_ExistingProviderAndProfile(t *testing.T) {
 	}
 	if !provider.Enabled {
 		t.Fatal("expected provider enabled override to be true")
+	}
+	if provider.TokenBudgetProfile != TokenBudgetExtended {
+		t.Fatalf("expected token budget profile override, got %q", provider.TokenBudgetProfile)
+	}
+	if provider.MaxOutputTokens != 2048 {
+		t.Fatalf("expected max output tokens override, got %d", provider.MaxOutputTokens)
 	}
 	if cfg.Profiles["chat"] != "local-ollama-dev" {
 		t.Fatalf("expected chat profile override to local-ollama-dev, got %q", cfg.Profiles["chat"])

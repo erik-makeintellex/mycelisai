@@ -405,11 +405,13 @@ Make Soma the default operating surface for the AI Organization while keeping Te
 - Soma identity, Team Lead visibility, and organization purpose
 - recent organization context
 - a conversation or command surface framed as working with Soma for this AI Organization
+- rich conversation outputs in that same surface, including imagery, documents, charts, code, audio, and other artifacts when Soma or a consulted specialist produces them
 - optional roster sidebar or drawer for Advisors, Departments, and Specialists
 
 **User actions**
 
 - send a message or instruction to Soma
+- review samples, generated media, and other artifacts directly in the Soma conversation without leaving the workspace
 - inspect whether Team Leads, Advisors, or Specialists were engaged
 - open organization context panels
 - navigate back to organization home
@@ -432,6 +434,7 @@ Make Soma the default operating surface for the AI Organization while keeping Te
 **Success state**
 
 - operator receives an answer, proposal, execution result, or blocker in the Soma workspace while remaining inside the AI Organization frame
+- if Soma consults a specialist path for output generation, the resulting artifacts still return through Soma's conversation turn rather than only appearing as team-delivery side effects
 
 **Empty state**
 

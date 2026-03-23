@@ -280,6 +280,32 @@ type ProcessResult struct {
 	Consultations []protocol.ConsultationEntry `json:"consultations,omitempty"`
 }
 
+type toolOutputEnvelope struct {
+	Message   string                     `json:"message"`
+	Artifact  *protocol.ChatArtifactRef  `json:"artifact,omitempty"`
+	Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
+}
+
+func extractToolOutputArtifacts(toolResult string) (string, []protocol.ChatArtifactRef, bool) {
+	var toolOutput toolOutputEnvelope
+	if err := json.Unmarshal([]byte(toolResult), &toolOutput); err != nil {
+		return toolResult, nil, false
+	}
+
+	artifacts := make([]protocol.ChatArtifactRef, 0, len(toolOutput.Artifacts)+1)
+	if toolOutput.Artifact != nil {
+		artifacts = append(artifacts, *toolOutput.Artifact)
+	}
+	if len(toolOutput.Artifacts) > 0 {
+		artifacts = append(artifacts, toolOutput.Artifacts...)
+	}
+	if len(artifacts) == 0 {
+		return toolResult, nil, false
+	}
+
+	return toolOutput.Message, artifacts, true
+}
+
 // processMessage handles LLM inference + ReAct tool loop, returning the response text.
 // Shared by handleTrigger and handleDirectRequest.
 // priorHistory is optional — if non-nil, earlier conversation turns are prepended
@@ -578,13 +604,9 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 			// Extract artifact from structured tool result (side-channel).
 			// Only the text message goes back to the LLM — large payloads
 			// like base64 images are captured here for the HTTP response.
-			var toolOutput struct {
-				Message  string                    `json:"message"`
-				Artifact *protocol.ChatArtifactRef `json:"artifact"`
-			}
-			if json.Unmarshal([]byte(toolResult), &toolOutput) == nil && toolOutput.Artifact != nil {
-				artifacts = append(artifacts, *toolOutput.Artifact)
-				toolResult = toolOutput.Message
+			if toolMessage, toolArtifacts, ok := extractToolOutputArtifacts(toolResult); ok {
+				artifacts = append(artifacts, toolArtifacts...)
+				toolResult = toolMessage
 				if toolResult == "" {
 					toolResult = fmt.Sprintf("Tool %s completed successfully.", toolCall.Name)
 				}

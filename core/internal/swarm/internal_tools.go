@@ -600,11 +600,22 @@ func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args ma
 		return "", fmt.Errorf("council member %s did not respond: %w", member, err)
 	}
 
-	// Agent returns structured JSON (ProcessResult). Extract just the text.
+	// Agent returns structured JSON (ProcessResult). Preserve artifacts so
+	// Soma can return rich outputs from consulted specialists through the
+	// primary conversation channel instead of dropping them to plain text.
 	var result struct {
-		Text string `json:"text"`
+		Text      string                     `json:"text"`
+		Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
 	}
 	if err := json.Unmarshal(msg.Data, &result); err == nil && result.Text != "" {
+		if len(result.Artifacts) > 0 {
+			payload := map[string]any{
+				"message":   result.Text,
+				"artifacts": result.Artifacts,
+			}
+			data, _ := json.Marshal(payload)
+			return string(data), nil
+		}
 		return result.Text, nil
 	}
 	return string(msg.Data), nil

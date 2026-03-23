@@ -45,6 +45,8 @@ cp .env.example .env
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_TYPE` | — | Define a provider type from env for deployment-created providers (`ollama`, `openai_compatible`, `anthropic`, `google`) |
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_API_KEY` | — | Override a provider API key directly when automation tooling must inject it |
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_API_KEY_ENV` | — | Point a provider at another env var containing the API key |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_TOKEN_BUDGET_PROFILE` | — | Override the provider output-budget preset (`conservative`, `standard`, `extended`, `deep`) |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_MAX_OUTPUT_TOKENS` | — | Override the provider max output budget directly |
 | `MYCELIS_PROFILE_<PROFILE>_PROVIDER` | — | Route a profile to a provider from env. Example: `MYCELIS_PROFILE_CHAT_PROVIDER=local_ollama_dev` |
 | `MYCELIS_MEDIA_ENDPOINT` | — | Override the image/media engine endpoint |
 | `MYCELIS_MEDIA_MODEL_ID` | — | Override the image/media model id |
@@ -113,11 +115,24 @@ profiles:
 **Change provider routing:** Edit the `profiles` section or use the UI at `/settings` → **AI Engines** (Advanced mode).
 By default, startup probes focus on `ollama`. Additional backends should be explicitly enabled and profile-routed before Mycelis attempts startup connectivity checks.
 
+Token budget guidance:
+- `conservative`: 512 max output tokens for terse, low-cost work
+- `standard`: 1024 max output tokens for everyday local agentry and UI-facing interaction
+- `extended`: 2048 max output tokens for longer coding, planning, or hosted-provider usage
+- `deep`: 4096 max output tokens for complex reasoning where the host and provider budget support it
+
+Management rule:
+- keep token budgets in `cognitive.yaml`, env overrides, or `/settings` -> **AI Engines** (Advanced mode)
+- prefer the preset profile first, then override `max_output_tokens` only when a provider needs a specific cap
+- safe defaults should stay bounded; do not assume every provider should default to deep output
+
 Automation override examples:
 
 ```bash
 MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_MODEL_ID=qwen3:8b
 MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED=true
+MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_TOKEN_BUDGET_PROFILE=standard
+MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_MAX_OUTPUT_TOKENS=1024
 MYCELIS_PROFILE_CHAT_PROVIDER=local_ollama_dev
 MYCELIS_PROFILE_CODER_PROVIDER=local_ollama_dev
 ```

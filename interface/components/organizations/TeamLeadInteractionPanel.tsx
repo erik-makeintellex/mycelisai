@@ -6,6 +6,44 @@ import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type { TeamLeadGuidanceRequest, TeamLeadGuidanceResponse, TeamLeadGuidedAction } from "@/lib/organizations";
 
 type RequestState = "idle" | "loading" | "ready" | "error";
+type PersistedWorkspaceState = {
+    draftPrompt?: string;
+    selectedAction?: TeamLeadGuidedAction | null;
+    requestState?: Extract<RequestState, "idle" | "ready">;
+    requestContext?: string | null;
+    guidance?: TeamLeadGuidanceResponse | null;
+};
+
+function storageKeyForOrganization(organizationId: string) {
+    return `mycelis-soma-workspace:${organizationId}`;
+}
+
+function readPersistedWorkspaceState(organizationId: string): PersistedWorkspaceState | null {
+    if (typeof window === "undefined") {
+        return null;
+    }
+    try {
+        const raw = window.localStorage.getItem(storageKeyForOrganization(organizationId));
+        if (!raw) {
+            return null;
+        }
+        const parsed = JSON.parse(raw) as PersistedWorkspaceState;
+        return typeof parsed === "object" && parsed !== null ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function persistWorkspaceState(organizationId: string, state: PersistedWorkspaceState) {
+    if (typeof window === "undefined") {
+        return;
+    }
+    try {
+        window.localStorage.setItem(storageKeyForOrganization(organizationId), JSON.stringify(state));
+    } catch {
+        // best-effort continuity only
+    }
+}
 
 const GUIDED_ACTIONS: Array<{ action: TeamLeadGuidedAction; label: string; detail: string }> = [
     {
@@ -54,7 +92,33 @@ export default function TeamLeadInteractionPanel({
     const [guidance, setGuidance] = useState<TeamLeadGuidanceResponse | null>(null);
     const [draftPrompt, setDraftPrompt] = useState("");
     const [requestContext, setRequestContext] = useState<string | null>(null);
+    const [hasHydratedState, setHasHydratedState] = useState(false);
     const isLoading = requestState === "loading";
+
+    useEffect(() => {
+        const persisted = readPersistedWorkspaceState(organizationId);
+        if (persisted) {
+            setDraftPrompt(typeof persisted.draftPrompt === "string" ? persisted.draftPrompt : "");
+            setSelectedAction(persisted.selectedAction ?? null);
+            setRequestState(persisted.requestState === "ready" ? "ready" : "idle");
+            setRequestContext(typeof persisted.requestContext === "string" ? persisted.requestContext : null);
+            setGuidance(persisted.guidance ?? null);
+        }
+        setHasHydratedState(true);
+    }, [organizationId]);
+
+    useEffect(() => {
+        if (!hasHydratedState) {
+            return;
+        }
+        persistWorkspaceState(organizationId, {
+            draftPrompt,
+            selectedAction,
+            requestState: requestState === "ready" ? "ready" : "idle",
+            requestContext,
+            guidance: requestState === "ready" ? guidance : null,
+        });
+    }, [organizationId, draftPrompt, selectedAction, requestState, requestContext, guidance, hasHydratedState]);
 
     useEffect(() => {
         if (!autoFocusOnLoad) {
@@ -66,7 +130,7 @@ export default function TeamLeadInteractionPanel({
         }, 80);
     }, [autoFocusOnLoad]);
 
-    const triggerAction = async (action: TeamLeadGuidedAction, contextLabel?: string) => {
+    const triggerAction = async (action: TeamLeadGuidedAction, contextLabel?: string | null) => {
         if (isLoading) {
             return;
         }
@@ -98,19 +162,22 @@ export default function TeamLeadInteractionPanel({
 
     const handlePromptSubmit = async () => {
         const normalizedPrompt = draftPrompt.trim();
-        if (!normalizedPrompt || isLoading) {
+        if (isLoading) {
             return;
         }
-        await triggerAction(resolvePromptAction(normalizedPrompt), normalizedPrompt);
+        await triggerAction(
+            resolvePromptAction(normalizedPrompt),
+            normalizedPrompt.length > 0 ? normalizedPrompt : null,
+        );
     };
 
     return (
         <section id="soma-panel" ref={panelRef} className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold text-cortex-text-main">Work with Soma</h2>
+                    <h2 className="text-xl font-semibold text-cortex-text-main">Create teams with Soma</h2>
                     <p className="mt-1 text-sm text-cortex-text-muted">
-                        Start inside {organizationName} with a guided Soma action instead of a blank assistant thread.
+                        Use this lane when you want Soma to shape a team, delivery lane, or first execution structure for {organizationName}.
                     </p>
                 </div>
                 <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
@@ -124,24 +191,24 @@ export default function TeamLeadInteractionPanel({
             <div className="mt-5 rounded-2xl border border-cortex-primary/30 bg-cortex-primary/10 p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div className="space-y-2">
-                        <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">Start with Soma</p>
+                        <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">Team creation lane</p>
                         <p className="text-sm leading-6 text-cortex-text-main">
-                            Tell Soma what you want to create or accomplish. Soma will turn that into the clearest first move for this organization.
+                            Tell Soma what kind of team, delivery lane, or execution structure you want to create. This panel keeps that request focused on team design instead of general organization conversation.
                         </p>
                     </div>
                     <button
                         type="button"
                         onClick={handlePromptSubmit}
-                        disabled={isLoading || draftPrompt.trim().length === 0}
+                        disabled={isLoading}
                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                        Start with Soma
+                        Start team design
                     </button>
                 </div>
                 <div className="mt-4 space-y-2">
                     <label htmlFor="soma-guided-prompt" className="text-sm font-medium text-cortex-text-main">
-                        Tell Soma what you want to create or accomplish
+                        Tell Soma what team or delivery lane you want to create
                     </label>
                     <textarea
                         id="soma-guided-prompt"
@@ -154,11 +221,11 @@ export default function TeamLeadInteractionPanel({
                                 void handlePromptSubmit();
                             }
                         }}
-                        placeholder="Tell Soma what you want to create or accomplish"
+                        placeholder="Tell Soma what team or delivery lane you want to create"
                         className="min-h-[104px] w-full rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-main outline-none transition-colors placeholder:text-cortex-text-muted focus:border-cortex-primary/40"
                     />
                     <p className="text-xs leading-6 text-cortex-text-muted">
-                        Soma will use this request to choose the right first guided move, then show the next steps here right away.
+                        Soma will use this request to choose the right first team-design move. Leave it blank to start with a quick strategy check right away.
                     </p>
                 </div>
             </div>
@@ -190,9 +257,9 @@ export default function TeamLeadInteractionPanel({
             <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
                 {requestState === "idle" && (
                     <div>
-                        <p className="text-sm font-semibold text-cortex-text-main">Choose a guided Soma action</p>
+                        <p className="text-sm font-semibold text-cortex-text-main">Choose a guided team-design action</p>
                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                            These starting options are here to help you get oriented quickly. Each one updates this workspace immediately with clear guidance and helps the rest of the organization start showing activity, structure, or learning over time.
+                            These starting options help Soma move from conversation into organization design. Each one should produce a clearer team-creation direction, delivery focus, or setup review without leaving the workspace.
                         </p>
                     </div>
                 )}

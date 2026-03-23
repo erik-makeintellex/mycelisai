@@ -25,13 +25,21 @@ vi.mock('@/components/dashboard/StatusDrawer', () => ({
 const setStatusDrawerOpen = vi.fn();
 const fetchServicesStatus = vi.fn();
 const fetchUserSettings = vi.fn();
+const initializeStream = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
-    useCortexStore: (selector: any) => selector({ setStatusDrawerOpen, fetchServicesStatus, fetchUserSettings }),
+    useCortexStore: (selector: any) => selector({ setStatusDrawerOpen, fetchServicesStatus, fetchUserSettings, initializeStream }),
 }));
 
 import { ShellLayout } from '@/components/shell/ShellLayout';
 
 describe('ShellLayout', () => {
+    it('loads Soma workspace startup dependencies on mount', () => {
+        render(<ShellLayout />);
+        expect(fetchUserSettings).toHaveBeenCalled();
+        expect(fetchServicesStatus).toHaveBeenCalled();
+        expect(initializeStream).toHaveBeenCalled();
+    });
+
     it('renders all three zones', () => {
         render(<ShellLayout />);
         expect(screen.getByTestId('zone-a')).toBeDefined();

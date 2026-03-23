@@ -32,6 +32,7 @@ export default function SystemQuickChecks() {
     const isFetchingServicesStatus = useCortexStore((s) => s.isFetchingServicesStatus ?? false);
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus ?? (async () => {}));
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected ?? false);
+    const streamConnectionState = useCortexStore((s) => s.streamConnectionState ?? "idle");
 
     const [checkedAt, setCheckedAt] = useState<Record<string, Date | undefined>>({});
     const [manualStatus, setManualStatus] = useState<Record<string, CheckStatus | undefined>>({});
@@ -53,11 +54,16 @@ export default function SystemQuickChecks() {
         return [
             { id: "nats", label: "NATS connected", status: manualStatus.nats ?? mapStatus("nats"), checkedAt: checkedAt.nats },
             { id: "postgres", label: "Database reachable", status: manualStatus.postgres ?? mapStatus("postgres"), checkedAt: checkedAt.postgres },
-            { id: "sse", label: "SSE stream live", status: manualStatus.sse ?? (isStreamConnected ? "healthy" : "failure"), checkedAt: checkedAt.sse },
+            {
+                id: "sse",
+                label: "SSE stream live",
+                status: manualStatus.sse ?? (isStreamConnected ? "healthy" : streamConnectionState === "connecting" ? "degraded" : "failure"),
+                checkedAt: checkedAt.sse,
+            },
             { id: "triggers", label: "Trigger engine active", status: manualStatus.triggers ?? mapStatus("reactive"), checkedAt: checkedAt.triggers },
-            { id: "scheduler", label: "Scheduler state", status: manualStatus.scheduler ?? "degraded", checkedAt: checkedAt.scheduler },
+            { id: "scheduler", label: "Automation timing", status: manualStatus.scheduler ?? "degraded", checkedAt: checkedAt.scheduler },
         ];
-    }, [statusByService, checkedAt, manualStatus, isStreamConnected]);
+    }, [statusByService, checkedAt, manualStatus, isStreamConnected, streamConnectionState]);
 
     const runCheck = useCallback(async (id: string) => {
         setBusy(id);

@@ -81,6 +81,7 @@ func buildLegacyMemoryLogEntry(subject string, envelope *pb.MsgEnvelope) *memory
 	msgBody := ""
 	intent := "event"
 	level := "INFO"
+	payloadKind := protocol.PayloadKindStatus
 
 	switch p := envelope.Payload.(type) {
 	case *pb.MsgEnvelope_Text:
@@ -89,18 +90,23 @@ func buildLegacyMemoryLogEntry(subject string, envelope *pb.MsgEnvelope) *memory
 		if intent == "" {
 			intent = "text"
 		}
+		payloadKind = protocol.PayloadKindStatus
 	case *pb.MsgEnvelope_Event:
 		msgBody = fmt.Sprintf("Event: %s", p.Event.EventType)
 		intent = p.Event.EventType
+		payloadKind = protocol.PayloadKindStatus
 	case *pb.MsgEnvelope_ToolCall:
 		msgBody = fmt.Sprintf("Tool Call: %s", p.ToolCall.ToolName)
 		intent = "tool_call"
+		payloadKind = protocol.PayloadKindStatus
 	case *pb.MsgEnvelope_ToolResult:
 		msgBody = fmt.Sprintf("Tool Result: %s", p.ToolResult.CallId)
 		intent = "tool_result"
+		payloadKind = protocol.PayloadKindResult
 		if p.ToolResult.IsError {
 			level = "ERROR"
 			msgBody = fmt.Sprintf("Error: %s", p.ToolResult.ErrorMessage)
+			payloadKind = protocol.PayloadKindError
 		}
 	}
 
@@ -117,7 +123,11 @@ func buildLegacyMemoryLogEntry(subject string, envelope *pb.MsgEnvelope) *memory
 			Component:     "legacy-bus-bridge",
 			Summary:       strings.TrimSpace(msgBody),
 			WhyItMatters:  "Legacy bus output is mirrored into centralized review so Soma and operational leads can still inspect older agent/runtime paths alongside modern signal channels.",
+			SourceKind:    protocol.SourceKindSystem,
 			SourceChannel: subject,
+			PayloadKind:   payloadKind,
+			TeamID:        envelope.TeamId,
+			AgentID:       envelope.SourceAgentId,
 			Status:        strings.ToLower(level),
 			TraceID:       envelope.TraceId,
 			ReviewChannels: []string{

@@ -97,4 +97,13 @@ func TestNewTelemetryReviewLogEntryUsesCentralizedTelemetryContract(t *testing.T
 	if entry.Context["review_scope"] != string(protocol.LogReviewScopeCentralReview) {
 		t.Fatalf("review_scope = %v", entry.Context["review_scope"])
 	}
+	if entry.Context["team_id"] != "alpha" {
+		t.Fatalf("team_id = %v, want alpha", entry.Context["team_id"])
+	}
+	if entry.Context["agent_id"] != "alpha-sensor" {
+		t.Fatalf("agent_id = %v, want alpha-sensor", entry.Context["agent_id"])
+	}
+	if entry.Context["source_kind"] != string(protocol.SourceKindSystem) {
+		t.Fatalf("source_kind = %v, want system", entry.Context["source_kind"])
+	}
 }

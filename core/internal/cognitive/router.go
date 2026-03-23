@@ -125,6 +125,9 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 	// team/agent env-map routing path. Overrides apply at provider/profile/media
 	// config surfaces and win over YAML/DB defaults.
 	applyEnvOverrides(&config)
+	for id, provider := range config.Providers {
+		config.Providers[id] = NormalizeProviderTokenDefaults(provider)
+	}
 
 	r := &Router{
 		Config:     &config,
@@ -438,9 +441,10 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 
 	// 3. Execute
 	// Defaults for options
+	providerCfg := NormalizeProviderTokenDefaults(r.Config.Providers[providerID])
 	opts := InferOptions{
 		Temperature: 0.7, // TODO: Load from Profile config
-		MaxTokens:   2048,
+		MaxTokens:   providerCfg.MaxOutputTokens,
 		Messages:    req.Messages,
 	}
 
@@ -556,6 +560,7 @@ func (r *Router) buildAdapter(id string, cfg ProviderConfig) (LLMProvider, error
 // AddProvider hot-injects a new provider without requiring a restart.
 // Builds and probes the adapter, then persists the updated config.
 func (r *Router) AddProvider(id string, cfg ProviderConfig) error {
+	cfg = NormalizeProviderTokenDefaults(cfg)
 	adapter, err := r.buildAdapter(id, cfg)
 	if err != nil {
 		return fmt.Errorf("build adapter: %w", err)
@@ -586,6 +591,7 @@ func (r *Router) UpdateProvider(id string, cfg ProviderConfig) error {
 	if cfg.AuthKeyEnv == "" {
 		cfg.AuthKeyEnv = existing.AuthKeyEnv
 	}
+	cfg = NormalizeProviderTokenDefaults(cfg)
 	adapter, err := r.buildAdapter(id, cfg)
 	if err != nil {
 		return fmt.Errorf("build adapter: %w", err)

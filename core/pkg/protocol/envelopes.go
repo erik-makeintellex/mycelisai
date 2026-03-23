@@ -128,9 +128,10 @@ type ConsultationEntry struct {
 	Summary string `json:"summary"`
 }
 
-// ChatResponsePayload is the CTS Payload for council chat responses.
-// Any endpoint returning LLM-generated content wraps it in this struct
-// inside a CTSEnvelope.
+// ChatResponsePayload is the CTS payload for Soma or council chat responses.
+// Any endpoint returning operator-facing generated content wraps it in this
+// struct inside a CTSEnvelope so the main conversation surface can carry text,
+// proposals, consultations, and rich artifacts together.
 type ChatResponsePayload struct {
 	Text          string              `json:"text"`
 	Consultations []ConsultationEntry `json:"consultations,omitempty"`
@@ -145,9 +146,11 @@ type ChatResponsePayload struct {
 }
 
 // ChatArtifactRef is an inline artifact reference embedded in a chat response.
-// For small content (code snippets, chart specs, short documents) the Content
-// field carries the data directly. For large/binary content, ID references an
-// artifact in the artifacts table that can be fetched separately.
+// It is the canonical operator-facing output contract for rich results produced
+// directly by Soma or by specialist/council paths Soma consulted on the user's
+// behalf. For small content (code snippets, chart specs, short documents) the
+// Content field carries the data directly. For large/binary content, ID
+// references an artifact in the artifacts table that can be fetched separately.
 type ChatArtifactRef struct {
 	ID          string `json:"id,omitempty"` // artifact table ID (for stored artifacts)
 	Type        string `json:"type"`         // code | document | image | audio | data | chart | file

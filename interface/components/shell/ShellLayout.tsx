@@ -17,15 +17,17 @@ export function ShellLayout({ children }: ShellLayoutProps) {
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
     const fetchUserSettings = useCortexStore((s) => s.fetchUserSettings);
+    const initializeStream = useCortexStore((s) => s.initializeStream);
 
     useEffect(() => {
         fetchUserSettings();
         fetchServicesStatus();
+        initializeStream();
         const interval = setInterval(() => {
             fetchServicesStatus();
         }, 6000);
         return () => clearInterval(interval);
-    }, [fetchServicesStatus, fetchUserSettings]);
+    }, [fetchServicesStatus, fetchUserSettings, initializeStream]);
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-cortex-bg text-cortex-text-main font-sans selection:bg-cortex-primary/30 selection:text-white">

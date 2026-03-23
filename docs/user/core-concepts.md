@@ -17,6 +17,8 @@ Soma can:
 - execute root-admin configuration work across the full platform (providers, policies, MCP, profiles, groups, and runtime settings), not only team creation
 
 You do not need to manually pick Soma. It is the default route in Workspace chat.
+On normal startup, Workspace opens with Soma already selected and starts the live stream automatically, so you should not need a recovery click just to begin.
+For AI Organizations, the organization-wide AI Engine and Response Style chosen during setup become Soma's starting posture until you intentionally change them.
 You can rename Soma from `Settings -> Profile -> Assistant Name`; the updated name appears across chat and operational UI labels.
 
 ---
@@ -109,7 +111,7 @@ V7 includes global operator-recovery UX:
 These are designed to keep workflows recoverable without page switching.
 
 Expected user-visible controls:
-- global **Degraded Mode** banner actions (`Retry`, `Switch to Soma`, `Open Status`)
+- global **Degraded Mode** banner actions (`Retry`, `Open Status`, and `Switch to Soma` only when you are not already on the Soma route)
 - right-side **Status Drawer** with council reachability + service health
 - `/system` **Quick Checks** with run + copy diagnostics actions
 
