@@ -11,6 +11,7 @@ export default function ModeRibbon() {
     const activeRole = useCortexStore((s) => s.activeRole);
     const governanceMode = useCortexStore((s) => s.governanceMode);
     const isConnected = useCortexStore((s) => s.isStreamConnected);
+    const streamConnectionState = useCortexStore((s) => s.streamConnectionState);
     const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
 
     const modeInfo = MODE_LABELS[activeMode] || MODE_LABELS.answer;
@@ -25,6 +26,17 @@ export default function ModeRibbon() {
     const brainName = activeBrain ? brainDisplayName(activeBrain.provider_id) : "—";
     const brainLoc = activeBrain ? brainLocationLabel(activeBrain.location) : "";
     const isRemote = activeBrain?.location === "remote";
+
+    const streamIndicatorClass = isConnected
+        ? "bg-cortex-success"
+        : streamConnectionState === "connecting"
+          ? "bg-cortex-warning"
+          : "bg-cortex-danger";
+    const streamLabel = isConnected
+        ? "LIVE"
+        : streamConnectionState === "connecting"
+          ? "CONNECTING"
+          : "OFFLINE";
 
     return (
         <button
@@ -81,9 +93,9 @@ export default function ModeRibbon() {
 
             {/* Connection indicator (compact) */}
             <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-cortex-success" : "bg-cortex-danger"}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${streamIndicatorClass}`} />
                 <span className="text-cortex-text-muted text-[10px]">
-                    {isConnected ? "LIVE" : "OFFLINE"}
+                    {streamLabel}
                 </span>
             </div>
         </button>

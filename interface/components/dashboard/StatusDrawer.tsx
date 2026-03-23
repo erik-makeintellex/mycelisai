@@ -29,6 +29,7 @@ export default function StatusDrawer() {
     const missionChat = useCortexStore((s) => s.missionChat);
     const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
+    const streamConnectionState = useCortexStore((s) => s.streamConnectionState);
     const activeBrain = useCortexStore((s) => s.activeBrain);
     const governanceMode = useCortexStore((s) => s.governanceMode);
     const missions = useCortexStore((s) => s.missions);
@@ -52,7 +53,16 @@ export default function StatusDrawer() {
     const natsHealth = statusFromService(serviceMap.get("nats")?.status);
     const dbHealth = statusFromService(serviceMap.get("postgres")?.status);
     const groupBusHealth = statusFromService(serviceMap.get("groups_bus")?.status);
-    const sseHealth: Health = isStreamConnected ? "healthy" : "failure";
+    const sseHealth: Health = isStreamConnected
+        ? "healthy"
+        : streamConnectionState === "connecting"
+          ? "info"
+          : "failure";
+    const sseLabel = isStreamConnected
+        ? "live"
+        : streamConnectionState === "connecting"
+          ? "connecting"
+          : "offline";
     const govHealth: Health = governanceMode === "strict" ? "failure" : governanceMode === "active" ? "degraded" : "healthy";
 
     const activeMissions = missions.filter((m) => m.status === "active").length;
@@ -115,7 +125,7 @@ export default function StatusDrawer() {
                         value={serviceMap.get("groups_bus")?.detail ?? serviceMap.get("groups_bus")?.status ?? "unknown"}
                         health={groupBusHealth}
                     />
-                    <StatusRow icon={Radio} label="SSE Stream" value={isStreamConnected ? "live" : "offline"} health={sseHealth} />
+                    <StatusRow icon={Radio} label="SSE Stream" value={sseLabel} health={sseHealth} />
                     <StatusRow icon={Database} label="Database" value={serviceMap.get("postgres")?.status ?? "unknown"} health={dbHealth} />
                     <StatusRow
                         icon={Brain}

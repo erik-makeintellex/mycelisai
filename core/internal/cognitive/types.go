@@ -27,11 +27,52 @@ type ProviderConfig struct {
 	AuthKeyEnv string `yaml:"api_key_env" json:"-"`               // NEVER expose in API responses
 
 	// Provider orchestration metadata
-	Location     string   `yaml:"location" json:"location"`           // "local" | "remote"
-	DataBoundary string   `yaml:"data_boundary" json:"data_boundary"` // "local_only" | "leaves_org"
-	UsagePolicy  string   `yaml:"usage_policy" json:"usage_policy"`   // "local_first" | "allow_escalation" | "require_approval" | "disallowed"
-	RolesAllowed []string `yaml:"roles_allowed" json:"roles_allowed"` // ["architect","coder"] or ["all"]
-	Enabled      bool     `yaml:"enabled" json:"enabled"`
+	Location           string   `yaml:"location" json:"location"`                                             // "local" | "remote"
+	DataBoundary       string   `yaml:"data_boundary" json:"data_boundary"`                                   // "local_only" | "leaves_org"
+	UsagePolicy        string   `yaml:"usage_policy" json:"usage_policy"`                                     // "local_first" | "allow_escalation" | "require_approval" | "disallowed"
+	TokenBudgetProfile string   `yaml:"token_budget_profile,omitempty" json:"token_budget_profile,omitempty"` // conservative | standard | extended | deep
+	MaxOutputTokens    int      `yaml:"max_output_tokens,omitempty" json:"max_output_tokens,omitempty"`       // bounded default output budget per provider
+	RolesAllowed       []string `yaml:"roles_allowed" json:"roles_allowed"`                                   // ["architect","coder"] or ["all"]
+	Enabled            bool     `yaml:"enabled" json:"enabled"`
+}
+
+const (
+	TokenBudgetConservative = "conservative"
+	TokenBudgetStandard     = "standard"
+	TokenBudgetExtended     = "extended"
+	TokenBudgetDeep         = "deep"
+	DefaultTokenBudget      = TokenBudgetStandard
+	DefaultMaxOutputTokens  = 1024
+)
+
+func NormalizeTokenBudgetProfile(profile string) string {
+	switch profile {
+	case TokenBudgetConservative, TokenBudgetStandard, TokenBudgetExtended, TokenBudgetDeep:
+		return profile
+	default:
+		return DefaultTokenBudget
+	}
+}
+
+func DefaultMaxTokensForBudget(profile string) int {
+	switch NormalizeTokenBudgetProfile(profile) {
+	case TokenBudgetConservative:
+		return 512
+	case TokenBudgetExtended:
+		return 2048
+	case TokenBudgetDeep:
+		return 4096
+	default:
+		return DefaultMaxOutputTokens
+	}
+}
+
+func NormalizeProviderTokenDefaults(cfg ProviderConfig) ProviderConfig {
+	cfg.TokenBudgetProfile = NormalizeTokenBudgetProfile(cfg.TokenBudgetProfile)
+	if cfg.MaxOutputTokens <= 0 {
+		cfg.MaxOutputTokens = DefaultMaxTokensForBudget(cfg.TokenBudgetProfile)
+	}
+	return cfg
 }
 
 // --- Interfaces ---

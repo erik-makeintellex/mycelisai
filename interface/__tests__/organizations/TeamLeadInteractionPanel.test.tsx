@@ -10,6 +10,7 @@ function jsonResponse(body: unknown, status = 200) {
 describe("TeamLeadInteractionPanel", () => {
     beforeEach(() => {
         mockFetch.mockReset();
+        localStorage.clear();
     });
 
     it("renders guided Soma actions without generic chat wording", () => {
@@ -22,13 +23,14 @@ describe("TeamLeadInteractionPanel", () => {
             />,
         );
 
-        expect(screen.getByText("Work with Soma")).toBeDefined();
-        expect(screen.getAllByText("Start with Soma").length).toBeGreaterThan(0);
-        expect(screen.getByLabelText("Tell Soma what you want to create or accomplish")).toBeDefined();
+        expect(screen.getByText("Create teams with Soma")).toBeDefined();
+        expect(screen.getByText("Team creation lane")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Start team design" })).toBeDefined();
+        expect(screen.getByLabelText("Tell Soma what team or delivery lane you want to create")).toBeDefined();
         expect(screen.getByRole("button", { name: /Run a quick strategy check/i })).toBeDefined();
         expect(screen.getByRole("button", { name: /Choose the first priority/i })).toBeDefined();
         expect(screen.getByRole("button", { name: /Review your organization setup/i })).toBeDefined();
-        expect(screen.getByText(/Each one updates this workspace immediately/i)).toBeDefined();
+        expect(screen.getByText(/Each one should produce a clearer team-creation direction/i)).toBeDefined();
         expect(screen.queryByText(/chat/i)).toBeNull();
         expect(screen.queryByText(/context shell/i)).toBeNull();
         expect(screen.queryByText(/bounded slice/i)).toBeNull();
@@ -107,10 +109,10 @@ describe("TeamLeadInteractionPanel", () => {
             />,
         );
 
-        fireEvent.change(screen.getByLabelText("Tell Soma what you want to create or accomplish"), {
+        fireEvent.change(screen.getByLabelText("Tell Soma what team or delivery lane you want to create"), {
             target: { value: "Help me choose the first priority for this launch." },
         });
-        fireEvent.click(screen.getByRole("button", { name: "Start with Soma" }));
+        fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
 
         await waitFor(() => {
             expect(mockFetch).toHaveBeenCalledWith(
@@ -125,6 +127,47 @@ describe("TeamLeadInteractionPanel", () => {
         expect(await screen.findByText("You asked Soma to help with")).toBeDefined();
         expect(screen.getAllByText("Help me choose the first priority for this launch.")).toHaveLength(2);
         expect(screen.getByText("First focus for Northstar Labs")).toBeDefined();
+    });
+
+    it("lets Start with Soma run a quick strategy check even when the prompt is blank", async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            ok: true,
+            data: {
+                action: "plan_next_steps",
+                request_label: "Run a quick strategy check",
+                headline: "Soma plan for Northstar Labs",
+                summary: "Soma recommends the clearest next move for Northstar Labs.",
+                priority_steps: [
+                    "Align the first outcome with the AI Organization purpose.",
+                ],
+                suggested_follow_ups: [
+                    "Choose the first priority",
+                ],
+            },
+        }));
+
+        render(
+            <TeamLeadInteractionPanel
+                organizationId="org-123"
+                organizationName="Northstar Labs"
+                somaName="Soma for Northstar Labs"
+                teamLeadName="Team Lead for Northstar Labs"
+            />,
+        );
+
+        fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
+
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/v1/organizations/org-123/workspace/actions",
+                expect.objectContaining({
+                    method: "POST",
+                    body: JSON.stringify({ action: "plan_next_steps" }),
+                }),
+            );
+        });
+
+        expect(await screen.findByText("Soma plan for Northstar Labs")).toBeDefined();
     });
 
     it("shows a loading state and prevents duplicate action submission while guidance is loading", async () => {
@@ -171,6 +214,54 @@ describe("TeamLeadInteractionPanel", () => {
         );
 
         expect(await screen.findByText("Soma plan for Northstar Labs")).toBeDefined();
+    });
+
+    it("persists the Soma draft and last guidance across remount for the same organization", async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            ok: true,
+            data: {
+                action: "focus_first",
+                request_label: "Choose the first priority",
+                headline: "First focus for Northstar Labs",
+                summary: "Start by confirming the first outcome this AI Organization should deliver.",
+                priority_steps: [
+                    "Confirm the first priority for Northstar Labs.",
+                ],
+                suggested_follow_ups: [
+                    "Review your organization setup",
+                ],
+            },
+        }));
+
+        const { unmount } = render(
+            <TeamLeadInteractionPanel
+                organizationId="org-123"
+                organizationName="Northstar Labs"
+                somaName="Soma for Northstar Labs"
+                teamLeadName="Team Lead for Northstar Labs"
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText("Tell Soma what team or delivery lane you want to create"), {
+            target: { value: "Help me choose the first priority for this launch." },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
+
+        expect(await screen.findByText("First focus for Northstar Labs")).toBeDefined();
+        unmount();
+
+        render(
+            <TeamLeadInteractionPanel
+                organizationId="org-123"
+                organizationName="Northstar Labs"
+                somaName="Soma for Northstar Labs"
+                teamLeadName="Team Lead for Northstar Labs"
+            />,
+        );
+
+        expect(screen.getByDisplayValue("Help me choose the first priority for this launch.")).toBeDefined();
+        expect(screen.getByText("First focus for Northstar Labs")).toBeDefined();
+        expect(screen.getByText("You asked Soma to help with")).toBeDefined();
     });
 
     it("renders readable fallback guidance when the backend returns a partial malformed payload", async () => {

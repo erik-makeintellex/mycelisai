@@ -65,7 +65,18 @@ def test_check_doc_contract_terms_reports_missing_terms(tmp_path: Path):
 
     missing = logging_tasks._check_doc_contract_terms(doc)
 
-    assert missing == ["central_review", "review_channels", "schema_version"]
+    assert missing == [
+        "central_review",
+        "mcp",
+        "mission_events",
+        "review_channels",
+        "schema_version",
+        "service_local",
+        "source_channel",
+        "suggested_action",
+        "team_lead",
+        "team_local",
+    ]
 
 
 def test_collect_topic_literal_violations_respects_allowed_file(tmp_path: Path):

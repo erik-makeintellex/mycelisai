@@ -137,6 +137,7 @@ func NewTelemetryReviewLogEntry(subject string, env *protocol.CTSEnvelope) *LogE
 	if env == nil {
 		return nil
 	}
+	teamID := teamIDFromSubject(subject)
 	summary := summarizePayload(env.Payload)
 	if summary == "" {
 		summary = fmt.Sprintf("Telemetry received from %s", env.Meta.SourceNode)
@@ -155,15 +156,29 @@ func NewTelemetryReviewLogEntry(subject string, env *protocol.CTSEnvelope) *LogE
 			Summary:        summary,
 			Detail:         summarizePayload(env.Payload),
 			WhyItMatters:   "Telemetry remains team-owned, but it is mirrored into centralized review so Soma, meta-agentry, and team leads can reconstruct state without polling each team separately.",
+			SourceKind:     protocol.SourceKindSystem,
 			SourceChannel:  subject,
 			PayloadKind:    protocol.PayloadKindTelemetry,
+			TeamID:         teamID,
+			AgentID:        strings.TrimSpace(env.Meta.SourceNode),
 			TraceID:        env.Meta.TraceID,
 			Status:         "info",
 			ReviewChannels: []string{subject},
-			Tags:           []string{"telemetry", string(env.SignalType)},
+			Tags:           []string{"telemetry", string(env.SignalType), teamID},
 		}.ToMap(),
 	}
 	return NormalizeLogEntryForReview(entry)
+}
+
+func teamIDFromSubject(subject string) string {
+	parts := strings.Split(strings.TrimSpace(subject), ".")
+	if len(parts) < 3 {
+		return ""
+	}
+	if parts[0] != "swarm" || parts[1] != "team" {
+		return ""
+	}
+	return strings.TrimSpace(parts[2])
 }
 
 func firstNonEmpty(values ...string) string {

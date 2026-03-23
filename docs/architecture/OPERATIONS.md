@@ -414,6 +414,8 @@ defaults:
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_TYPE` | — | Define provider type for env-defined providers |
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_API_KEY` | — | Direct provider API key override |
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_API_KEY_ENV` | — | Provider API key env indirection |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_TOKEN_BUDGET_PROFILE` | — | Override the provider output-budget preset (`conservative`, `standard`, `extended`, `deep`) |
+| `MYCELIS_PROVIDER_<PROVIDER_ID>_MAX_OUTPUT_TOKENS` | — | Override the provider max output budget directly |
 | `MYCELIS_PROFILE_<PROFILE>_PROVIDER` | — | Route a profile to a provider via env |
 | `MYCELIS_MEDIA_ENDPOINT` | — | Override media/image endpoint |
 | `MYCELIS_MEDIA_MODEL_ID` | — | Override media/image model id |
@@ -425,6 +427,8 @@ Deployment automation rule:
 - use `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` when automation tools need to stamp environment-specific cognitive config
 - do not use the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps; provider routing now comes from provider config plus instantiated organization policy
 - treat env overrides as deployment-time infrastructure configuration only: provider definitions, profile defaults, and environment-specific endpoint/model wiring
+- token consumption must stay configuration-owned: set `token_budget_profile` and `max_output_tokens` in `core/config/cognitive.yaml`, override them with `MYCELIS_PROVIDER_<PROVIDER_ID>_TOKEN_BUDGET_PROFILE` / `MYCELIS_PROVIDER_<PROVIDER_ID>_MAX_OUTPUT_TOKENS` during deployment automation, or manage them in `/settings` -> `AI Engines` (Advanced mode)
+- safe preset ranges are `conservative=512`, `standard=1024`, `extended=2048`, and `deep=4096`; treat `standard` as the normal local default and opt into larger budgets intentionally
 - do not treat env overrides as runtime organization behavior or team/role routing control
 - runtime truth remains `Bundle -> Instantiated Organization -> Inheritance -> Routing`
 

@@ -20,6 +20,7 @@ function resetStore() {
         isFetchingServicesStatus: false,
         fetchServicesStatus: vi.fn().mockResolvedValue(undefined),
         isStreamConnected: false,
+        streamConnectionState: "offline",
     });
 }
 
@@ -67,6 +68,18 @@ describe("SystemQuickChecks", () => {
         });
     });
 
+    it("shows the SSE row as connecting while startup is still establishing the stream", () => {
+        useCortexStore.setState({
+            isStreamConnected: false,
+            streamConnectionState: "connecting",
+        });
+
+        render(<SystemQuickChecks />);
+
+        const sseRow = screen.getByTestId("quick-check-sse");
+        expect(sseRow.className).toContain("text-cortex-warning");
+    });
+
     it("copies diagnostic snippet for a check", () => {
         render(<SystemQuickChecks />);
 
@@ -77,7 +90,7 @@ describe("SystemQuickChecks", () => {
         const snippet = writeText.mock.calls[0][0] as string;
         const payload = JSON.parse(snippet);
         expect(payload.check).toBe("scheduler");
-        expect(payload.label).toBe("Scheduler state");
+        expect(payload.label).toBe("Automation timing");
         expect(payload.status).toBe("degraded");
     });
 });

@@ -36,11 +36,12 @@ Use it to answer:
 
 ## Degraded Mode Banner
 
-The banner appears when critical dependencies degrade (for example SSE/NATS/council connectivity).
+The banner appears when critical dependencies actually degrade (for example SSE/NATS/council connectivity after startup has had a chance to connect).
+Normal startup while the live stream is still connecting should not be shown as degraded mode.
 
 Available recovery actions:
 - `Retry`
-- `Switch to Soma`
+- `Switch to Soma` when direct specialist routing was active
 - `Open Status`
 
 The banner auto-clears once health recovers.
@@ -70,7 +71,7 @@ Use copied snippets in support/debug threads to share precise status context.
 1. Open Status Drawer and identify first failing subsystem.
 2. Run relevant Quick Checks in `/system`.
 3. Use `Retry` from banner or affected surface.
-4. If council-specific, switch route to Soma and continue.
+4. If the issue is tied to a direct specialist route, switch back to Soma and continue.
 5. Confirm banner clears and checks return healthy/degraded as expected.
 
 ---

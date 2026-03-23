@@ -217,6 +217,134 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Architect')).toBeDefined();
         });
 
+        it('renders specialist-generated artifacts returned through Soma chat', async () => {
+            useCortexStore.setState({
+                councilMembers: COUNCIL_MEMBERS,
+                councilTarget: 'admin',
+            });
+
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        data: {
+                            ...CTS_CHAT_RESPONSE.data,
+                            payload: {
+                                text: 'I prepared two sample outputs for review.',
+                                artifacts: [
+                                    {
+                                        id: 'img-1',
+                                        type: 'image',
+                                        title: 'Homepage Moodboard',
+                                        content_type: 'image/png',
+                                        content: 'cG5n',
+                                        cached: true,
+                                    },
+                                    {
+                                        id: 'doc-1',
+                                        type: 'document',
+                                        title: 'Creative Brief',
+                                        content_type: 'text/markdown',
+                                        content: '# Brief',
+                                    },
+                                ],
+                            },
+                        },
+                    }),
+                });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const input = screen.getByPlaceholderText(/Ask Soma/i);
+            fireEvent.change(input, { target: { value: 'Create two sample outputs for the homepage' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(screen.getByText('Homepage Moodboard')).toBeDefined();
+                expect(screen.getByText('Creative Brief')).toBeDefined();
+                expect(screen.getByTitle('Save image to workspace/saved-media')).toBeDefined();
+            });
+        });
+
+        it('uses a readable fallback when Soma returns no text but includes artifacts', async () => {
+            useCortexStore.setState({
+                councilMembers: COUNCIL_MEMBERS,
+                councilTarget: 'admin',
+            });
+
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        data: {
+                            ...CTS_CHAT_RESPONSE.data,
+                            payload: {
+                                text: '',
+                                artifacts: [
+                                    {
+                                        id: 'img-2',
+                                        type: 'image',
+                                        title: 'System Snapshot',
+                                        content_type: 'image/png',
+                                        content: 'cG5n',
+                                    },
+                                ],
+                            },
+                        },
+                    }),
+                });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const input = screen.getByPlaceholderText(/Ask Soma/i);
+            fireEvent.change(input, { target: { value: 'Show me the current system state visually' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(screen.getByText('Soma prepared output for review below.')).toBeDefined();
+                expect(screen.getByText('System Snapshot')).toBeDefined();
+            });
+        });
+
+        it('uses a readable fallback when Soma returns an empty answer without artifacts', async () => {
+            useCortexStore.setState({
+                councilMembers: COUNCIL_MEMBERS,
+                councilTarget: 'admin',
+            });
+
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        data: {
+                            ...CTS_CHAT_RESPONSE.data,
+                            payload: {
+                                text: '',
+                            },
+                        },
+                    }),
+                });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const input = screen.getByPlaceholderText(/Ask Soma/i);
+            fireEvent.change(input, { target: { value: 'Any organizations launched?' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(screen.getByText(/could not produce a readable reply/i)).toBeDefined();
+            });
+        });
+
         it('renders trust badge with correct score', async () => {
             useCortexStore.setState({
                 missionChat: [

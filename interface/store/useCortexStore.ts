@@ -147,6 +147,23 @@ export interface ChatMessage {
     run_id?: string;
 }
 
+function fallbackChatContent(payload: CTSChatEnvelope["payload"], assistantName: string): string {
+    const text = payload?.text?.trim();
+    if (text) {
+        return text;
+    }
+
+    if (payload?.artifacts && payload.artifacts.length > 0) {
+        return `${assistantName} prepared output for review below.`;
+    }
+
+    if (payload?.proposal) {
+        return `${assistantName} prepared a proposal for review.`;
+    }
+
+    return `${assistantName} could not produce a readable reply for that request. Retry or ask ${assistantName} to summarize the result directly.`;
+}
+
 export interface StreamSignal {
     type: string;
     source?: string;
@@ -427,6 +444,7 @@ export interface TeamDetailEntry {
 }
 
 export type TeamsFilter = 'all' | 'standing' | 'mission';
+export type StreamConnectionState = 'idle' | 'connecting' | 'online' | 'offline';
 
 // ── MCP Servers (Phase 7.5) ──────────────────────────────────
 
@@ -607,6 +625,7 @@ export interface CortexState {
     // SSE stream state
     streamLogs: StreamSignal[];
     isStreamConnected: boolean;
+    streamConnectionState: StreamConnectionState;
 
     // Fractal navigation (Squad Room drill-down)
     activeSquadRoomId: string | null;
@@ -876,6 +895,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     activeMissionId: null,
     streamLogs: [],
     isStreamConnected: false,
+    streamConnectionState: 'idle',
     activeSquadRoomId: null,
     pendingArtifacts: [],
     selectedArtifact: null,
@@ -1086,10 +1106,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             _eventSource = null;
         }
 
+        set({ isStreamConnected: false, streamConnectionState: 'connecting' });
         const es = new EventSource('/api/v1/stream');
 
         es.onopen = () => {
-            set({ isStreamConnected: true });
+            set({ isStreamConnected: true, streamConnectionState: 'online' });
         };
 
         es.onmessage = (event) => {
@@ -1150,7 +1171,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         };
 
         es.onerror = () => {
-            set({ isStreamConnected: false });
+            set({ isStreamConnected: false, streamConnectionState: 'offline' });
             _eventSource = null;
             es.close();
         };
@@ -1162,8 +1183,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         if (_eventSource) {
             _eventSource.close();
             _eventSource = null;
-            set({ isStreamConnected: false });
         }
+        set({ isStreamConnected: false, streamConnectionState: 'idle' });
     },
 
     enterSquadRoom: (teamId: string) => {
@@ -1724,7 +1745,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             const envelope = body.data;
             const chatMsg: ChatMessage = {
                 role: 'council',
-                content: envelope.payload.text,
+                content: fallbackChatContent(envelope.payload, assistantName),
                 consultations: envelope.payload.consultations,
                 tools_used: envelope.payload.tools_used,
                 source_node: envelope.meta.source_node,

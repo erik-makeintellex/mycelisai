@@ -107,6 +107,8 @@ func TestHandleAddBrain_HappyPath(t *testing.T) {
 		"type": "openai_compatible",
 		"endpoint": "http://localhost:8000/v1",
 		"model_id": "mixtral",
+		"token_budget_profile": "extended",
+		"max_output_tokens": 2048,
 		"enabled": true
 	}`
 
@@ -136,6 +138,12 @@ func TestHandleAddBrain_HappyPath(t *testing.T) {
 	}
 	if data["data_boundary"] != "local_only" {
 		t.Errorf("expected data_boundary=local_only, got %v", data["data_boundary"])
+	}
+	if data["token_budget_profile"] != "extended" {
+		t.Errorf("expected token_budget_profile=extended, got %v", data["token_budget_profile"])
+	}
+	if data["max_output_tokens"] != float64(2048) {
+		t.Errorf("expected max_output_tokens=2048, got %v", data["max_output_tokens"])
 	}
 }
 
@@ -236,6 +244,8 @@ func TestHandleUpdateBrain_HappyPath(t *testing.T) {
 		"type": "openai_compatible",
 		"endpoint": "http://localhost:11434/v1",
 		"model_id": "qwen2.5:14b",
+		"token_budget_profile": "deep",
+		"max_output_tokens": 4096,
 		"enabled": true
 	}`
 	mux := setupMux(t, "PUT /api/v1/brains/{id}", s.HandleUpdateBrain)
@@ -254,6 +264,12 @@ func TestHandleUpdateBrain_HappyPath(t *testing.T) {
 	}
 	if data["updated"] != true {
 		t.Errorf("expected updated=true, got %v", data["updated"])
+	}
+	if got := s.Cognitive.Config.Providers["ollama"].MaxOutputTokens; got != 4096 {
+		t.Errorf("expected updated max_output_tokens=4096, got %d", got)
+	}
+	if got := s.Cognitive.Config.Providers["ollama"].TokenBudgetProfile; got != "deep" {
+		t.Errorf("expected updated token_budget_profile=deep, got %q", got)
 	}
 }
 
@@ -549,6 +565,12 @@ func TestHandleListBrains_DefaultsForEmptyFields(t *testing.T) {
 	}
 	if brain["usage_policy"] != "local_first" {
 		t.Errorf("expected default usage_policy=local_first, got %v", brain["usage_policy"])
+	}
+	if brain["token_budget_profile"] != "standard" {
+		t.Errorf("expected default token_budget_profile=standard, got %v", brain["token_budget_profile"])
+	}
+	if brain["max_output_tokens"] != float64(1024) {
+		t.Errorf("expected default max_output_tokens=1024, got %v", brain["max_output_tokens"])
 	}
 }
 
