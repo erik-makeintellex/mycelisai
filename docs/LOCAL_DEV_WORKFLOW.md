@@ -170,6 +170,7 @@ Bundle -> Instantiated Organization -> Inheritance -> Routing
 
 These bundles are the first implementation bridge from the V8 bootstrap model into runtime-readable config.
 Startup now instantiates the runtime organization only through a selected bundle.
+The deployed Core image resolves those files from `/core/config`, so the Helm chart mounts the runtime config volume there and the container workdir must match that contract for bootstrap startup to succeed.
 Core fails closed when no valid bundle exists in `core/config/templates/`, and operators must set `MYCELIS_BOOTSTRAP_TEMPLATE_ID` whenever more than one bundle is present. `core/config/teams/*.yaml` remains migration/reference input, not a normal startup path.
 
 ### `core/config/teams/*.yaml` — Standing Teams
@@ -464,7 +465,7 @@ Then change profiles in `cognitive.yaml` to `"vllm"`.
 | `uv run inv interface.clean` | Clear `.next` cache |
 | `uv run inv interface.restart` | Full restart cycle |
 | **Database** | |
-| `uv run inv db.migrate` | Apply canonical forward migrations (`001_init_memory.sql` + `*.up.sql`) |
+| `uv run inv db.migrate` | Apply canonical forward migrations (`001_init_memory.sql` + `*.up.sql`) to a schema that is not already initialized |
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | Show tables |
 | **Infrastructure** | |

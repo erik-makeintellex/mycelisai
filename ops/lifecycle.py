@@ -28,6 +28,7 @@ from .config import (
     is_windows,
     powershell,
 )
+from . import db as db_tasks
 
 
 # ── Port / Service Definitions ───────────────────────────────────────
@@ -170,6 +171,23 @@ def _wait_for_http_ok(
             return True
         time.sleep(interval)
     print(f"  TIMEOUT waiting for {label} at {url} ({timeout}s)")
+    return False
+
+
+def _core_council_ready(timeout: int = 10, interval: float = 1.0) -> bool:
+    """Return True when council membership is reachable through the Core API."""
+    api_key = os.environ.get("MYCELIS_API_KEY", "")
+    if not api_key:
+        _load_env()
+        api_key = os.environ.get("MYCELIS_API_KEY", "")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    url = f"http://{API_HOST}:{API_PORT}/api/v1/council/members"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        code, _body = _http_get(url, timeout=5.0, headers=headers)
+        if code == 200:
+            return True
+        time.sleep(interval)
     return False
 
 
@@ -639,11 +657,20 @@ def up(c, frontend=False, build=False):
         print("  NATS ready")
     print()
 
+    # 2.5. Ensure the expected application database exists before Core starts.
+    # This keeps bootstrap listeners from crashing when a fresh cluster comes up
+    # without the cortex database already provisioned.
+    print("[2.5/4] Ensuring cortex database exists...")
+    db_tasks.create.body(c)
+    print("  cortex database ready")
+    print()
+
     # 3. Core server — allow up to 120s since Core waits up to 90s for its own deps
     print("[3/4] Starting Core server...")
     if _port_open(API_PORT):
         print(f"  Core already running on :{API_PORT}")
-        if deps_were_down_before_up:
+        council_ready = _core_council_ready(timeout=3, interval=0.5)
+        if deps_were_down_before_up or not council_ready:
             print("  Restarting Core to exit degraded startup mode after dependency recovery...")
             _kill_port(API_PORT, "Core")
             if _start_core_background():
@@ -666,6 +693,11 @@ def up(c, frontend=False, build=False):
 
     if _wait_for_http_ok(f"http://{API_HOST}:{API_PORT}/healthz", "Core health", timeout=45):
         print(f"  Core healthy on :{API_PORT}")
+        if not _core_council_ready(timeout=20, interval=1.0):
+            raise SystemExit(
+                "STACK UP FAILED: Core health recovered but council routes are still offline. "
+                f"Check {_core_startup_log_path()} or rerun 'uv run inv lifecycle.up'."
+            )
     else:
         raise SystemExit(
             "STACK UP FAILED: Core port opened but /healthz never became ready. "
@@ -829,21 +861,14 @@ def health(c):
     ]
 
     for path, label in endpoints:
-        import urllib.request
-        try:
-            req = urllib.request.Request(
-                f"{base}{path}",
-                headers={"Authorization": f"Bearer {api_key}"},
-            )
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                status = resp.status
-                icon = "OK" if status == 200 else "WARN"
-                print(f"  [{icon}] {label:<20} {path} [{status}]")
-                if status != 200:
-                    errors.append(f"{label}: HTTP {status}")
-        except Exception as e:
-            print(f"  [FAIL] {label:<20} {path} — {e}")
-            errors.append(f"{label}: {e}")
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        status, body = _http_get(f"{base}{path}", timeout=5.0, headers=headers)
+        if status == 200:
+            print(f"  [OK] {label:<20} {path} [200]")
+        else:
+            detail = body or f"HTTP {status}"
+            print(f"  [FAIL] {label:<20} {path} — {detail}")
+            errors.append(f"{label}: {detail}")
 
     # Frontend check
     print()
@@ -874,6 +899,7 @@ def health(c):
         print(f"ISSUES: {len(errors)} problem(s)")
         for e in errors:
             print(f"  - {e}")
+        raise SystemExit(1)
     else:
         print("ALL ENDPOINTS HEALTHY.")
 

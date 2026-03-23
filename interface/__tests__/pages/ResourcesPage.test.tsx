@@ -15,26 +15,18 @@ vi.mock('next/navigation', () => ({
     useSearchParams: () => mockSearchParams,
 }));
 
-// Mock next/dynamic — resolve synchronously using React.useState + useEffect
+// Mock next/dynamic to render the component directly
 vi.mock('next/dynamic', () => ({
     __esModule: true,
-    default: (loader: () => Promise<any>, _opts?: any) => {
-        return (props: Record<string, unknown>) => {
-            const React = require('react') as typeof import('react');
-            const [Comp, setComp] = React.useState<import('react').ComponentType<any> | null>(null);
-            React.useEffect(() => {
-                let mounted = true;
-                loader().then((mod: any) => {
-                    if (!mounted) {
-                        return;
-                    }
-                    setComp(() => (mod.default || mod) as import('react').ComponentType<any>);
-                });
-                return () => {
-                    mounted = false;
-                };
-            }, []);
-            return Comp ? React.createElement(Comp, props) : null;
+    default: (loader: any) => {
+        const Component = require('react').lazy(loader);
+        return (props: any) => {
+            const React = require('react');
+            return React.createElement(
+                React.Suspense,
+                { fallback: null },
+                React.createElement(Component, props),
+            );
         };
     },
 }));
@@ -94,7 +86,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
 
     it('defaults to connected tools tab', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(await screen.findByText('MCP Tool Registry', {}, { timeout: 5000 })).toBeDefined();
+        expect(await screen.findByTestId('mcp-tools', {}, { timeout: 5000 })).toBeDefined();
     });
 
     it('deep-links to role library tab via search param', async () => {

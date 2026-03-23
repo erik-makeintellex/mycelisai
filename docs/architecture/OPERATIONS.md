@@ -71,7 +71,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv db.migrate` | Apply canonical forward SQL migrations (`001_init_memory.sql` + `*.up.sql`) |
+| `uv run inv db.migrate` | Apply canonical forward SQL migrations (`001_init_memory.sql` + `*.up.sql`) to a schema that is not already initialized |
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | List tables + row counts |
 | `uv run inv db.create` | Create cortex database (if not exists) |
@@ -133,6 +133,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | `uv run inv lifecycle.health` | Deep health probe against actual API endpoints with auth |
 | `uv run inv lifecycle.restart` | Full local restart: down -> settle -> up (supports `--build` and `--frontend`) |
 | `uv run inv lifecycle.memory-restart` | Destructive recovery path: down -> db.reset -> up -> health -> memory probes |
+| `uv run inv lifecycle.up` | Also ensures the `cortex` database exists before Core starts so bootstrap listeners do not crash after a fresh bridge or cluster reset |
 
 ### Clean Run Discipline for Runtime and Integration Checks
 
@@ -140,7 +141,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect compiled Go binaries before starting the check. Inspect for repo-local command lines or binary paths plus listeners on declared dev/test ports, terminate them through lifecycle/task helpers when found, and never assume they belong to the current slice.
 - Treat repo-local Interface workers as the same cleanup surface. Build/test/browser runs must not leave `node.exe` helpers from `.next`, Vitest, or Playwright behind after the command exits.
-- Merge-readiness browser gates should bias toward repeatability. The managed readiness tasks now run Playwright with reduced worker counts on the local host path: `uv run inv ci.baseline` uses `--workers=2` against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays at `--workers=1`.
+- Merge-readiness browser gates should bias toward repeatability. The managed readiness tasks now run Playwright with reduced worker counts on the local host path: `uv run inv ci.baseline` uses `--workers=1` against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays at `--workers=1`, restores the local bridge/core stack before the live proof when that bridge is absent, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations every run.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -318,7 +319,7 @@ uv run inv interface.dev
 | Config | Location | Managed Via |
 |--------|----------|-------------|
 | Cognitive (Bootstrap) | `core/config/cognitive.yaml` | UI (`/settings` → AI Engines, Advanced mode) or YAML |
-| Bootstrap Templates | `core/config/templates/*.yaml` | YAML (startup-selected transitional V8 migration bundles that instantiate the runtime organization; Task 005 bridge layer) |
+| Bootstrap Templates | `core/config/templates/*.yaml` | YAML (startup-selected transitional V8 migration bundles that instantiate the runtime organization; Task 005 bridge layer). In the deployed Core image, the chart mounts this runtime config tree at `/core/config` so the container workdir and bootstrap bundle lookup stay aligned. |
 | Standing Teams | `core/config/teams/*.yaml` | YAML (transitional migration inputs mirrored for compatibility packaging; normal startup now requires a bootstrap bundle and does not read them directly) |
 | MCP Servers | Database | UI (`/settings` → Connected Tools, Advanced mode) or API |
 | Governance Policy | `core/config/policy.yaml` | UI (`/approvals` → Policy tab) or YAML |

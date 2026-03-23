@@ -307,6 +307,15 @@ async function saveScreenshot(page: Page, testInfo: TestInfo, name: string) {
     });
 }
 
+async function clickStartMode(page: Page, label: RegExp | string) {
+    const button = page.getByRole("button", { name: label });
+    await expect(button).toBeVisible();
+    await button.scrollIntoViewIfNeeded();
+    await button.evaluate((element) => {
+        (element as HTMLButtonElement).click();
+    });
+}
+
 async function openCreatedOrganization(page: Page, organizationId: string) {
     const organizationPath = `/organizations/${organizationId}`;
     const organizationUrl = new RegExp(`${organizationPath}$`);
@@ -362,6 +371,7 @@ async function mockOrganizationEntryApis(
         templateError?: string;
         organizationsStatus?: number;
         organizationsError?: string;
+        organizationsSummaryResponses?: Array<{ status: number; body: unknown }>;
         createHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         actionHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
         aiEngineUpdateHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
@@ -382,6 +392,7 @@ async function mockOrganizationEntryApis(
         templateError = "Starter templates are unavailable right now.",
         organizationsStatus = 200,
         organizationsError = "Recent AI Organizations are unavailable right now.",
+        organizationsSummaryResponses = [],
         createHandler,
         actionHandler,
         aiEngineUpdateHandler,
@@ -402,6 +413,7 @@ async function mockOrganizationEntryApis(
     const mutableAutomationsById = structuredClone(automationsById);
     const mutableLoopActivityById = structuredClone(loopActivityById);
     const mutableLearningInsightsById = structuredClone(learningInsightsById);
+    const mutableOrganizationsSummaryResponses = structuredClone(organizationsSummaryResponses);
 
     await page.route("**/api/v1/user/me", async (route) => {
         await route.fulfill({
@@ -454,6 +466,16 @@ async function mockOrganizationEntryApis(
         const url = new URL(route.request().url());
         if (route.request().method() !== "GET" || url.searchParams.get("view") !== "summary") {
             await route.fallback();
+            return;
+        }
+
+        const summaryResponse = mutableOrganizationsSummaryResponses.shift();
+        if (summaryResponse) {
+            await route.fulfill({
+                status: summaryResponse.status,
+                contentType: "application/json",
+                body: JSON.stringify(summaryResponse.body),
+            });
             return;
         }
 
@@ -883,7 +905,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
-        await page.getByRole("button", { name: /Start from template/i }).click();
+        await clickStartMode(page, /Start from template/i);
 
         const starterCard = page.getByRole("button", { name: /Engineering Starter/i });
         await expect(starterCard).toBeVisible();
@@ -946,7 +968,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
-        await page.getByRole("button", { name: /Start from template/i }).click();
+        await clickStartMode(page, /Start from template/i);
         await page.getByLabel("AI Organization name").fill(createdTemplateOrganization.name);
         await page.getByLabel("Purpose").fill(createdTemplateOrganization.purpose);
         await Promise.all([
@@ -1133,7 +1155,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
-        await page.getByRole("button", { name: /Start Empty$/i }).click();
+        await clickStartMode(page, /Start Empty$/i);
         await page.getByLabel("AI Organization name").fill(createdEmptyOrganization.name);
         await page.getByLabel("Purpose").fill(createdEmptyOrganization.purpose);
         await Promise.all([
@@ -1286,7 +1308,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
-        await page.getByRole("button", { name: /Start from template/i }).click();
+        await clickStartMode(page, /Start from template/i);
         await page.getByLabel("AI Organization name").fill(createdTemplateOrganization.name);
         await page.getByLabel("Purpose").fill(createdTemplateOrganization.purpose);
         await Promise.all([
@@ -1319,41 +1341,32 @@ test.describe("V8 AI Organization entry flow", () => {
     });
 
     test("keeps creation available when recent organizations fail and shows retry guidance", async ({ page }, testInfo) => {
-        let organizationsAttempt = 0;
-
         await mockOrganizationEntryApis(page, {
-            organizationsStatus: 500,
-            organizationsError: "Recent AI Organizations are unavailable right now.",
-        });
-
-        await page.unroute("**/api/v1/organizations?view=summary*");
-        await page.route("**/api/v1/organizations?view=summary*", async (route) => {
-            organizationsAttempt += 1;
-            const isFailure = organizationsAttempt === 1;
-            await route.fulfill({
-                status: isFailure ? 500 : 200,
-                contentType: "application/json",
-                body: JSON.stringify(
-                    isFailure
-                        ? { ok: false, error: "Recent AI Organizations are unavailable right now." }
-                        : {
-                              ok: true,
-                              data: [
-                                  {
-                                      id: "org-999",
-                                      name: "Atlas",
-                                      purpose: "Resume me later",
-                                      start_mode: "empty",
-                                      team_lead_label: "Team Lead",
-                                      advisor_count: 0,
-                                      department_count: 0,
-                                      specialist_count: 0,
-                                      status: "ready",
-                                  },
-                              ],
-                          },
-                ),
-            });
+            organizationsSummaryResponses: [
+                {
+                    status: 500,
+                    body: { ok: false, error: "Recent AI Organizations are unavailable right now." },
+                },
+                {
+                    status: 200,
+                    body: {
+                        ok: true,
+                        data: [
+                            {
+                                id: "org-999",
+                                name: "Atlas",
+                                purpose: "Resume me later",
+                                start_mode: "empty",
+                                team_lead_label: "Team Lead",
+                                advisor_count: 0,
+                                department_count: 0,
+                                specialist_count: 0,
+                                status: "ready",
+                            },
+                        ],
+                    },
+                },
+            ],
         });
 
         await page.goto("/dashboard");
@@ -1362,7 +1375,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Recent AI Organizations are unavailable", { exact: true })).toBeVisible();
         await expect(page.getByText("You can still create a new AI Organization below while we retry your recent organizations.")).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry recent AI Organizations" })).toBeVisible();
-        await page.getByRole("button", { name: /Start from template/i }).click();
+        await clickStartMode(page, /Start from template/i);
         await expect(page.getByRole("button", { name: /Engineering Starter/i })).toBeVisible();
 
         await page.getByRole("button", { name: "Retry recent AI Organizations" }).click();

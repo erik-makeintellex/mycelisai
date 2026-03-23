@@ -89,6 +89,8 @@ def managed_cache_env(
         "PLAYWRIGHT_BROWSERS_PATH": str(paths["playwright"]),
         "NEXT_TELEMETRY_DISABLED": "1",
         "PYTHONPYCACHEPREFIX": str(paths["pycache"]),
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUTF8": "1",
     }
     if extra:
         env.update(extra)

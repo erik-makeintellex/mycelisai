@@ -6,7 +6,7 @@ Current validation contract:
 - feature work is not done until the relevant tests are rerun against the final branch state
 - `uv run inv ci.baseline` is the default branch-readiness gate and now includes Playwright by default
 - use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
-- use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health
+- use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses an already-initialized `cortex` schema when present, and otherwise bootstraps the database before proving the browser contract against the managed built server
 - use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
 
@@ -81,7 +81,7 @@ Minimum policy:
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect running compiled binaries with process inspection before the test begins. Look for repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Treat repo-local Interface worker residue as part of the same cleanup surface. On Windows in particular, `next`, `vitest`, `playwright`, and generated `.next/dev/build/postcss.js` workers can survive after the owning command exits unless the task wrapper sweeps them.
-- Merge-readiness browser gates use the managed low-parallelism path: `uv run inv ci.baseline` forces Playwright to `--workers=2` and runs against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays serial at `--workers=1`, so full-stack proof stays repeatable under local host load without turning the baseline into an impractical wall-clock run.
+- Merge-readiness browser gates use the managed low-parallelism path: `uv run inv ci.baseline` forces Playwright to `--workers=1` and runs against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays serial at `--workers=1`, restores the local bridge/core stack, and only bootstraps the `cortex` schema when it is missing, so full-stack proof stays repeatable under local host load without turning the baseline into an impractical wall-clock run.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.

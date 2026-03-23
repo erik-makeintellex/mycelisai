@@ -128,6 +128,24 @@ def _ensure_database_exists():
     print(f"Database '{db}' ready.")
 
 
+def schema_bootstrapped() -> bool:
+    """
+    Return True when the target application schema already looks initialized.
+    Uses a late-schema sentinel table so repeat service checks do not replay
+    the full forward migration stack against a populated database.
+    """
+    _load_env()
+    result = _run_psql(
+        sql=(
+            "SELECT 1 FROM information_schema.tables "
+            "WHERE table_schema = 'public' AND table_name = 'collaboration_groups';"
+        )
+    )
+    if result.returncode != 0:
+        return False
+    return "1" in result.stdout.split()
+
+
 def _apply_migrations(strict=False):
     _load_env()
     db = os.getenv("DB_NAME", "cortex")
