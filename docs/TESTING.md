@@ -2,24 +2,13 @@
 
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 
-Latest verification baseline (2026-03-20):
-- `cd core && go test ./... -count=1` -> pass
-- `uv run inv interface.test` -> pass (`65` files, `401` tests)
-- `cd interface && npx vitest run --reporter=dot` -> pass (`65` files, `401` tests)
-- `cd interface && npm run build` -> pass
-- `cd interface && npx tsc --noEmit` -> pass
-- `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q` -> pass (`25` passed)
-- focused UI browser proof:
-  - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/navigation.spec.ts` -> pass (`6` passed)
-  - `uv run inv interface.e2e` -> pass (`129` passed, `63` skipped); default gate now covers MVP-aligned routes/tabs and skips legacy V7/raw-endpoint specs
-- coverage/status gates:
-  - `uv run inv ci.baseline` -> pass
-  - `uv run inv test.coverage` -> fail in this environment (Go toolchain drift: lock expects `go1.26`, local `go1.25.6`)
-  - `uv run inv interface.test-coverage` -> pass (`Coverage enabled with v8`; `60` files, `356` tests)
-- Slice 6 focused evidence:
-  - `cd core && go test ./internal/server -run "TestInferAdapterKindFromTool|TestBuildMutationChatProposal" -count=1` -> pass
-  - `cd interface && npx vitest run __tests__/store/useCortexStore.test.ts __tests__/dashboard/ProposedActionBlock.test.tsx --reporter=dot` -> pass (`2` files, `33` tests)
-  - `cd interface && npx tsc --noEmit` -> pass
+Current validation contract:
+- feature work is not done until the relevant tests are rerun against the final branch state
+- `uv run inv ci.baseline` is the default branch-readiness gate and now includes Playwright by default
+- use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
+- use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health
+- use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
+- docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
 
 ## Target-Action Testing Matrix (Intent -> Manifestation)
 
@@ -37,13 +26,14 @@ Cross-reference:
 - `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 - `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
 
-## Full GUI Coverage Matrix (2026-03-10 Audit)
+## Full GUI Coverage Matrix
 
 This matrix is route-driven and code-verified against `interface/app/**`, `interface/__tests__/pages/**`, and `interface/e2e/specs/**`.
 
 | GUI surface | Unit/component coverage | Playwright coverage | Status |
 | --- | --- | --- | --- |
-| `/dashboard` AI Organization entry | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `navigation.spec.ts`, `workspace-live-backend.spec.ts`, accessibility baseline | `ACTIVE` |
+| `/organizations/[id]` Soma-primary AI Organization workspace | `OrganizationPage.test.tsx`, organization/workspace/store suites | `v8-organization-entry.spec.ts` plus live-backend proof via `workspace-live-backend.spec.ts` when proxy/runtime contracts change | `ACTIVE` |
+| `/dashboard` AI Organization re-entry and status overview | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `navigation.spec.ts`, accessibility baseline | `ACTIVE` |
 | `/automations` | `AutomationsPage.test.tsx`, automations component suites | `layout.spec.ts`, `proposals.spec.ts` | `ACTIVE` |
 | `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial) | `ACTIVE` |
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
@@ -53,10 +43,11 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/docs` in-app browser | `DocsPage.test.tsx` | `docs-and-runs.spec.ts` docs manifest/render smoke | `ACTIVE` |
 | Legacy redirect routes (`/wiring`, `/architect`, `/teams`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
 
-Immediate test additions required for full GUI confidence:
-1. expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches
-2. deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states
-3. expand selective browser depth for non-primary routes only when those routes re-enter the MVP surface
+Immediate test additions required for stronger full-stack confidence:
+1. add live-backend browser proof for the `/organizations/[id]` Soma conversation path through the real `/api/v1/chat` proxy contract
+2. unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven
+3. expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches
+4. deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states
 
 ## Backend/API -> UI Target Plan (Required)
 
@@ -133,7 +124,10 @@ uv run inv logging.check-topics  # Hardcoded swarm topic gate
 uv run inv quality.max-lines --limit 350  # Hot-path max-lines gate with legacy caps
 uv run inv lifecycle.memory-restart --frontend          # Full memory reset + post-restart memory probes
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
-uv run inv ci.baseline           # Canonical strict baseline (docs/logging/topics/line gates + core + interface)
+uv run inv ci.baseline           # Canonical strict baseline (docs/logging/topics/line gates + core + interface + Playwright by default)
+uv run inv ci.baseline --no-e2e  # Narrower local debug path when browser proof is intentionally skipped
+uv run inv ci.service-check      # Running-stack health proof against local services
+uv run inv ci.release-preflight --service-health --live-backend  # Clean-tree + baseline + live service/browser proof
 ```
 
 Runner matrix:

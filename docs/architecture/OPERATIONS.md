@@ -210,10 +210,11 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `uv run inv ci.test` | Go tests + Interface tests |
 | `uv run inv ci.build` | Go binary + Next.js production build (no Docker) |
 | `uv run inv ci.check` | Full pipeline: lint → test → build (with stage timers) |
-| `uv run inv ci.baseline` | Strict delivery baseline covering gates, focused runtime tests, interface build/typecheck, Vitest, and the shared `interface.e2e` path when `--e2e` is enabled |
+| `uv run inv ci.baseline` | Strict delivery baseline covering gates, focused runtime tests, interface build/typecheck, Vitest, and the shared `interface.e2e` path by default (use `--no-e2e` only for intentionally narrower local debugging) |
+| `uv run inv ci.service-check` | Verify the currently running local stack with `lifecycle.health`, plus optional live-backend browser proof |
 | `uv run inv ci.entrypoint-check` | Verify the supported invoke runner matrix and reject unsupported bare aliases |
 | `uv run inv ci.toolchain-check` | Report toolchain versions and optionally enforce Go lock policy |
-| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline |
+| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with optional `--service-health` and `--live-backend` proof for service/runtime changes |
 | `uv run inv ci.deploy` | Build + Docker + K8s deploy |
 
 ### Other Tasks

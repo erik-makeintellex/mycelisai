@@ -83,6 +83,66 @@ def test_baseline_runs_playwright_when_e2e_enabled(monkeypatch):
     assert cleanup_calls == ["cleanup", "cleanup", "cleanup"]
 
 
+def test_baseline_runs_playwright_by_default(monkeypatch):
+    monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
+    cleanup_calls: list[str] = []
+    monkeypatch.setattr(ci.interface_tasks, "_cleanup_repo_local_interface_processes", lambda: cleanup_calls.append("cleanup") or [])
+    e2e_calls: list[str] = []
+    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **_kwargs: e2e_calls.append("e2e"))
+
+    ctx = FakeContext(
+        {
+            "go test ./... -count=1": FakeResult(),
+            "npm run build": FakeResult(),
+            "npx tsc --noEmit": FakeResult(),
+            "npx vitest run --reporter=dot": FakeResult(),
+        }
+    )
+
+    ci.baseline.body(ctx)
+
+    assert e2e_calls == ["e2e"]
+    assert cleanup_calls == ["cleanup", "cleanup", "cleanup"]
+
+
+def test_service_check_runs_health_only_by_default(monkeypatch):
+    health_calls: list[str] = []
+    e2e_calls: list[str] = []
+
+    monkeypatch.setattr(ci.lifecycle.health, "body", lambda _ctx, **_kwargs: health_calls.append("health"))
+    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **_kwargs: e2e_calls.append("e2e"))
+
+    ci.service_check.body(FakeContext({}), live_backend=False)
+
+    assert health_calls == ["health"]
+    assert e2e_calls == []
+
+
+def test_service_check_runs_live_backend_browser_proof_when_requested(monkeypatch):
+    health_calls: list[str] = []
+    e2e_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(ci.lifecycle.health, "body", lambda _ctx, **_kwargs: health_calls.append("health"))
+    monkeypatch.setattr(
+        ci.interface_tasks.e2e,
+        "body",
+        lambda _ctx, **kwargs: e2e_calls.append(kwargs),
+    )
+
+    ci.service_check.body(FakeContext({}), live_backend=True)
+
+    assert health_calls == ["health"]
+    assert e2e_calls == [
+        {
+            "project": "chromium",
+            "spec": "e2e/specs/workspace-live-backend.spec.ts",
+            "live_backend": True,
+        }
+    ]
+
+
 def test_toolchain_check_warns_when_not_strict():
     ctx = FakeContext(
         {
@@ -177,3 +237,36 @@ def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
     assert "go test ./... -count=1" in ctx.commands
     assert "npm run build" in ctx.commands
     assert "npx tsc --noEmit" in ctx.commands
+
+
+def test_release_preflight_runs_service_check_when_requested(monkeypatch):
+    monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
+
+    service_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        ci.service_check,
+        "body",
+        lambda _ctx, **kwargs: service_calls.append(kwargs),
+    )
+
+    ctx = FakeContext(
+        {
+            "git status --porcelain": FakeResult(stdout=""),
+            "go version": FakeResult(stdout="go version go1.26.0 windows/amd64\n"),
+            "node -v": FakeResult(stdout="v25.2.1\n"),
+            "npm -v": FakeResult(stdout="11.6.2\n"),
+            "go test ./... -count=1": FakeResult(),
+            "npm run build": FakeResult(),
+            "npx tsc --noEmit": FakeResult(),
+            "npx vitest run --reporter=dot": FakeResult(),
+        }
+    )
+
+    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.interface_tasks, "_cleanup_repo_local_interface_processes", lambda: [])
+
+    ci.release_preflight.body(ctx, e2e=False, strict_toolchain=True, service_health=True, live_backend=True)
+
+    assert service_calls == [{"live_backend": True}]
