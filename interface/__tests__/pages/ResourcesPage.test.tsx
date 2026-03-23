@@ -94,9 +94,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
 
     it('defaults to connected tools tab', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        await waitFor(() => {
-            expect(screen.getByText('MCP Tool Registry')).toBeDefined();
-        });
+        expect(await screen.findByText('MCP Tool Registry', {}, { timeout: 5000 })).toBeDefined();
     });
 
     it('deep-links to role library tab via search param', async () => {

@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Teams Tab (/automations?tab=teams)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/automations');
+        await page.goto('/automations?tab=teams');
         await page.waitForLoadState('domcontentloaded');
         await page.getByRole('button', { name: 'Advanced: Off' }).click();
-        await page.getByRole('button', { name: 'Shared Teams' }).click();
-        await expect(page.locator('h1:has-text("Shared Teams")')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
+        await expect(page.locator('h1:has-text("Shared Teams")')).toBeVisible({ timeout: 15000 });
     });
 
     test('header and filter controls render', async ({ page }) => {
@@ -55,10 +55,11 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
     });
 
     test('clicking a team card opens and closes the detail drawer', async ({ page }) => {
+        test.slow();
         const cards = page.locator('div[role="button"][tabindex="0"]');
         const count = await cards.count();
         if (count === 0) {
-            await expect(page.locator('text=No teams found')).toBeVisible();
+            await expect(page.locator('text=No teams found')).toBeVisible({ timeout: 15000 });
             return;
         }
 

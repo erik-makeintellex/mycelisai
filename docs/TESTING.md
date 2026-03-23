@@ -81,6 +81,7 @@ Minimum policy:
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect running compiled binaries with process inspection before the test begins. Look for repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Treat repo-local Interface worker residue as part of the same cleanup surface. On Windows in particular, `next`, `vitest`, `playwright`, and generated `.next/dev/build/postcss.js` workers can survive after the owning command exits unless the task wrapper sweeps them.
+- Merge-readiness browser gates use the managed low-parallelism path: `uv run inv ci.baseline` forces Playwright to `--workers=2` and runs against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays serial at `--workers=1`, so full-stack proof stays repeatable under local host load without turning the baseline into an impractical wall-clock run.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -112,7 +113,7 @@ Stopping containers or port-forwards alone is not enough. The pre-test cleanup p
 # Unsupported bare alias: uvx inv ...
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv interface.test        # Vitest unit tests (jsdom)
-uv run inv interface.e2e         # Playwright E2E tests (Invoke manages the Next.js server, managed browser cache, and repo-local UI worker cleanup; Playwright starts/stops the Next.js server for the default gate)
+uv run inv interface.e2e         # Playwright E2E tests (Invoke manages the Next.js server, managed browser cache, and repo-local UI worker cleanup)
 uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real Core-backed Workspace UI contract
 uv run inv core.smoke            # Governance smoke tests
 uv run inv ci.test               # Blocking Go + Vitest validation
@@ -331,7 +332,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 - **Base URL:** `http://127.0.0.1:3000` by default for local browser traffic (`INTERFACE_HOST` / `INTERFACE_PORT` override supported)
 - **Bind Host:** the managed Next.js server binds to `[::]:3000` by default so IPv4 localhost, IPv6 localhost, and LAN clients can all reach the UI (`INTERFACE_BIND_HOST` / `MYCELIS_INTERFACE_BIND_HOST` override supported)
 - **Browser Projects:** `chromium`, `firefox`, `webkit`, `mobile-chromium`
-- **Server Lifecycle:** Playwright `webServer` starts/stops the Next.js app for local and CI E2E runs
+- **Server Lifecycle:** `uv run inv interface.e2e` starts/stops the managed Next.js app for task-based E2E runs; the strict baseline uses the already-built `next start` server instead of the dev server for stability
 - **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run, launches a managed local Next.js server, and sweeps repo-local Next/Vitest/Playwright worker residue
 - **Managed Browsers:** default task runs expect Playwright browser binaries under `workspace/tool-cache/playwright`
 - **Live Backend Mode:** `uv run inv interface.e2e --live-backend ...` loads proxy auth env and enables specs that require a real Core backend
