@@ -5,22 +5,13 @@ import (
 	"time"
 
 	"github.com/mycelis/core/internal/governance"
-	server "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
 
 func TestSoma_Integration(t *testing.T) {
 	// 1. Start Embedded NATS
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	// 2. Connect Client
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("NATS connect failed: %v", err)
-	}
 	defer nc.Close()
 
 	// 3. Setup Mocks
@@ -55,7 +46,7 @@ func TestSoma_Integration(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Publish via Global Bus
-	err = nc.Publish("swarm.global.input.cli.command", []byte("hello swarm"))
+	err := nc.Publish("swarm.global.input.cli.command", []byte("hello swarm"))
 	if err != nil {
 		t.Fatalf("Publish failed: %v", err)
 	}

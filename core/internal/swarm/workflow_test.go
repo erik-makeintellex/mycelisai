@@ -9,7 +9,6 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/pkg/protocol"
-	server "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
 
@@ -27,12 +26,8 @@ func (m *MockProvider) Probe(ctx context.Context) (bool, error) { return true, n
 
 func TestWorkflow_FullLoop(t *testing.T) {
 	// 1. Start NATS
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, _ := nats.Connect(s.ClientURL())
 	defer nc.Close()
 
 	// 2. Setup Mock Cognitive Engine

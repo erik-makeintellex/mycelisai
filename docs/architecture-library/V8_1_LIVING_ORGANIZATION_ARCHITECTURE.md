@@ -339,6 +339,9 @@ Required rules:
 - team-local channels may still exist, but operator-reviewable outputs must remain discoverable through the managed exchange layer
 - the managed exchange foundation stays inspectable in V8.1 before broad editing UI ships
 - managed exchange is a runtime coordination substrate, not a replacement for bundle-driven startup or inheritance truth
+- channels, threads, and exchange items carry explicit readers, writers, reviewers, participants, sensitivity classes, and downstream allowed-consumer metadata
+- capability-producing outputs carry a capability id, risk class, trust class, and audit-ready publication metadata
+- normalization into exchange does not imply unrestricted trust; MCP and external outputs remain bounded by trust classification and review requirements
 
 ## 6. Execution model
 
@@ -431,12 +434,16 @@ Even with advanced UI later:
 - audit logs for loops
 - capability enforcement
 - approval gates for actuation loops
+- managed exchange permission checks for read, write, review, and escalation paths
+- capability risk classification for browser, MCP, media, file, and API output paths
+- trust classification for internal tools, MCP services, external providers, and future remote execution nodes
 
 ### 9.2 Forbidden
 
 - implicit execution
 - hidden capabilities
 - unrestricted overrides
+- unrestricted cross-channel consumption just because an artifact exists
 
 ## 10. Testing requirements
 

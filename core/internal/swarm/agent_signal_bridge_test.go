@@ -9,20 +9,12 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/pkg/protocol"
-	server "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
 
 func TestAgentPublishToolBusSignal_StatusChannelForMCP(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	agent := &Agent{
@@ -78,15 +70,8 @@ func TestAgentPublishToolBusSignal_StatusChannelForMCP(t *testing.T) {
 }
 
 func TestAgentPublishToolBusSignal_ResultChannelForMCP(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	agent := &Agent{
@@ -137,15 +122,8 @@ func TestAgentPublishToolBusSignal_ResultChannelForMCP(t *testing.T) {
 }
 
 func TestAgentPublishToolBusSignal_PersistsLatestCheckpoint(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	db, mock, err := sqlmock.New()

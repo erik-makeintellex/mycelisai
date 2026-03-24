@@ -18,23 +18,26 @@ describe('ExchangeInspector', () => {
         fetchMock
             .mockResolvedValueOnce({
                 ok: true,
-                json: async () => [{ id: 'c1', name: 'browser.research.results', type: 'output', schema_id: 'ToolResult', visibility: 'advanced', owner: 'mcp' }],
+                json: async () => [{ id: 'c1', name: 'browser.research.results', type: 'output', schema_id: 'ToolResult', visibility: 'advanced', sensitivity_class: 'team_scoped', owner: 'mcp' }],
             })
             .mockResolvedValueOnce({
                 ok: true,
-                json: async () => [{ id: 't1', title: 'Research pass', thread_type: 'review_thread', status: 'active', channel_name: 'browser.research.results', participants: ['soma', 'team_lead'] }],
+                json: async () => [{ id: 't1', title: 'Research pass', thread_type: 'review_thread', status: 'active', channel_name: 'browser.research.results', participants: ['soma', 'team_lead'], allowed_reviewers: ['review'] }],
             })
             .mockResolvedValueOnce({
                 ok: true,
-                json: async () => [{ id: 'i1', summary: 'Fetch returned market notes.', schema_id: 'ToolResult', channel_name: 'browser.research.results', created_by: 'mcp:fetch', created_at: '2026-03-24T07:00:00Z' }],
+                json: async () => [{ id: 'i1', summary: 'Fetch returned market notes.', schema_id: 'ToolResult', channel_name: 'browser.research.results', created_by: 'mcp:fetch', created_at: '2026-03-24T07:00:00Z', sensitivity_class: 'team_scoped', trust_class: 'bounded_external', capability_id: 'browser_research', review_required: true }],
             });
 
         render(<ExchangeInspector />);
 
         await waitFor(() => {
-            expect(screen.getByText('browser.research.results')).toBeDefined();
+            expect(screen.getAllByText('browser.research.results').length).toBeGreaterThan(0);
             expect(screen.getByText('Research pass')).toBeDefined();
             expect(screen.getByText('Fetch returned market notes.')).toBeDefined();
+            expect(screen.getAllByText(/team_scoped/i).length).toBeGreaterThan(0);
+            expect(screen.getByText(/bounded_external/i)).toBeDefined();
+            expect(screen.getByText(/review required/i)).toBeDefined();
         });
     });
 

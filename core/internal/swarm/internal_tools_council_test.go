@@ -6,20 +6,12 @@ import (
 	"testing"
 	"time"
 
-	server "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
 
 func TestHandleConsultCouncil_PreservesStructuredArtifacts(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	if _, err := nc.Subscribe("swarm.council.council-creative.request", func(msg *nats.Msg) {
@@ -85,15 +77,8 @@ func TestHandleConsultCouncil_PreservesStructuredArtifacts(t *testing.T) {
 }
 
 func TestHandleConsultCouncil_PreservesPlainTextFallback(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	if _, err := nc.Subscribe("swarm.council.council-architect.request", func(msg *nats.Msg) {
@@ -120,15 +105,8 @@ func TestHandleConsultCouncil_PreservesPlainTextFallback(t *testing.T) {
 }
 
 func TestHandleConsultCouncil_RequiresCouncilResponse(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	reg := NewInternalToolRegistry(InternalToolDeps{NC: nc})
@@ -136,7 +114,7 @@ func TestHandleConsultCouncil_RequiresCouncilResponse(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	_, err = reg.handleConsultCouncil(ctx, map[string]any{
+	_, err := reg.handleConsultCouncil(ctx, map[string]any{
 		"member":   "council-sentry",
 		"question": "Review the risk posture",
 	})

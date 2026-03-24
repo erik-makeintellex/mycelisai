@@ -9,6 +9,11 @@ func TestSeedSchemasReferenceKnownFields(t *testing.T) {
 				t.Fatalf("schema %s references unknown field %s", schema.ID, fieldName)
 			}
 		}
+		for _, capabilityID := range schema.RequiredCapabilities {
+			if _, ok := CapabilityByID(capabilityID); !ok {
+				t.Fatalf("schema %s references unknown capability %s", schema.ID, capabilityID)
+			}
+		}
 	}
 }
 
@@ -19,6 +24,7 @@ func TestValidatePayload(t *testing.T) {
 		"source_role": "mcp:fetch",
 		"target_role": "soma",
 		"created_at":  "2026-03-24T07:00:00Z",
+		"review_required": true,
 	}
 	if err := validatePayload("ToolResult", valid); err != nil {
 		t.Fatalf("validatePayload(valid) error = %v", err)

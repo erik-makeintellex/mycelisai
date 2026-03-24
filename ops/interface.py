@@ -290,8 +290,8 @@ def _pick_interface_port(preferred: int = INTERFACE_PORT) -> int:
     """Return a free port for the managed Playwright server.
 
     Managed browser runs should avoid colliding with the user's normal local UI
-    port, so the task prefers an ephemeral port unless a non-default port was
-    explicitly requested.
+    port, so the task prefers a safe managed range outside Windows' typical
+    dynamic client-port band unless a non-default port was explicitly requested.
     """
     def _port_is_available(port: int) -> bool:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ipv4_sock:
@@ -311,6 +311,13 @@ def _pick_interface_port(preferred: int = INTERFACE_PORT) -> int:
                 return preferred
         except OSError:
             pass
+
+    for candidate in range(3100, 3200):
+        try:
+            if _port_is_available(candidate):
+                return candidate
+        except OSError:
+            continue
 
     for _ in range(32):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ipv4_sock:

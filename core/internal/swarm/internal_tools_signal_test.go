@@ -10,20 +10,12 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/pkg/protocol"
-	server "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
 
 func TestHandleDelegateTask_PublishesToInternalCommand(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	reg := NewInternalToolRegistry(InternalToolDeps{NC: nc})
@@ -88,15 +80,8 @@ func TestHandleDelegateTask_PublishesToInternalCommand(t *testing.T) {
 }
 
 func TestHandlePublishSignal_WrapsCanonicalStatusSubject(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	reg := NewInternalToolRegistry(InternalToolDeps{NC: nc})
@@ -147,15 +132,8 @@ func TestHandlePublishSignal_WrapsCanonicalStatusSubject(t *testing.T) {
 }
 
 func TestHandlePublishSignal_PrivateReferenceAndCheckpoint(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, err := nats.Connect(s.ClientURL())
-	if err != nil {
-		t.Fatalf("connect nats: %v", err)
-	}
 	defer nc.Close()
 
 	db, mock, err := sqlmock.New()
