@@ -511,6 +511,7 @@ Protect the default AI Organization experience from collapsing into a config das
   - Specialist role bindings
   - detailed automation definitions
   - inspect-only managed exchange surfaces for Channels, Threads, and Recent Artifacts
+  - inspect-only trust, sensitivity, and review labels for managed exchange items where they matter operationally
   - capability posture
   - Response Style inheritance
   - bundle/config source truth
@@ -541,10 +542,12 @@ Protect the default AI Organization experience from collapsing into a config das
 - low-level provider auth and endpoint wiring where those belong in file/env/config only
 - host-specific runtime plumbing
 - cluster or distributed node plumbing unless intentionally promoted later
+- raw MCP trust internals or unfiltered security metadata in the default operator view
 
 **Success state**
 
 - advanced inspection or editing makes inheritance and config origin easier to understand without breaking the operator's mental model of the AI Organization
+- managed exchange security labels stay inspectable in advanced surfaces without leaking forbidden/internal-only security implementation detail into the default Soma-first UX
 
 **Empty state**
 

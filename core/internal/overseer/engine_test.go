@@ -3,6 +3,7 @@ package overseer
 import (
 	"context"
 	"encoding/json"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -11,10 +12,12 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
+var testNATSPort int32 = 14420
+
 // startTestNATS spins up an embedded NATS server for isolated testing.
 func startTestNATS(t *testing.T) (*natsserver.Server, *nats.Conn) {
 	t.Helper()
-	opts := &natsserver.Options{Port: -1}
+	opts := &natsserver.Options{Host: "127.0.0.1", Port: int(atomic.AddInt32(&testNATSPort, 1))}
 	srv, err := natsserver.NewServer(opts)
 	if err != nil {
 		t.Fatalf("nats server: %v", err)

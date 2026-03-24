@@ -9,6 +9,7 @@ type ExchangeChannel = {
     type: string;
     schema_id: string;
     visibility: string;
+    sensitivity_class?: string;
     owner: string;
 };
 
@@ -19,6 +20,7 @@ type ExchangeThread = {
     title: string;
     status: string;
     participants: string[];
+    allowed_reviewers?: string[];
 };
 
 type ExchangeItem = {
@@ -28,6 +30,10 @@ type ExchangeItem = {
     summary: string;
     created_by: string;
     created_at: string;
+    sensitivity_class?: string;
+    trust_class?: string;
+    capability_id?: string;
+    review_required?: boolean;
 };
 
 export default function ExchangeInspector() {
@@ -117,6 +123,11 @@ export default function ExchangeInspector() {
                                     <p className="text-[11px] text-cortex-text-muted">
                                         {channel.schema_id} · owner {channel.owner} · {channel.visibility}
                                     </p>
+                                    {channel.sensitivity_class ? (
+                                        <p className="text-[10px] text-cortex-text-muted">
+                                            sensitivity {channel.sensitivity_class}
+                                        </p>
+                                    ) : null}
                                 </div>
                             ))}
                         </Section>
@@ -144,6 +155,11 @@ export default function ExchangeInspector() {
                                             {thread.participants.join(", ")}
                                         </p>
                                     )}
+                                    {thread.allowed_reviewers?.length ? (
+                                        <p className="text-[10px] text-cortex-text-muted">
+                                            reviewers {thread.allowed_reviewers.join(", ")}
+                                        </p>
+                                    ) : null}
                                 </div>
                             ))}
                         </Section>
@@ -167,6 +183,11 @@ export default function ExchangeInspector() {
                                     </div>
                                     <p className="text-[11px] text-cortex-text-muted">
                                         {item.channel_name ?? "unbound"} · {item.created_by}
+                                    </p>
+                                    <p className="text-[10px] text-cortex-text-muted">
+                                        {item.sensitivity_class ?? "role_scoped"} · {item.trust_class ?? "trusted_internal"}
+                                        {item.capability_id ? ` · ${item.capability_id}` : ""}
+                                        {item.review_required ? " · review required" : ""}
                                     </p>
                                     <p className="text-[10px] text-cortex-text-muted">
                                         {formatTimestamp(item.created_at)}

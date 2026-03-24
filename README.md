@@ -117,6 +117,7 @@ Included in the V8.1 release target:
 - a primary Soma conversation surface for discussing plans, samples, and delivery intent
 - conversation outputs from Soma may include media and rich artifacts generated directly by Soma or returned from consulted specialists
 - a managed exchange foundation for governed channels, threads, schemas, and normalized outputs beyond single-model request/response
+- foundational managed exchange security for channel visibility, thread participation, artifact sensitivity, capability risk classes, and trust-classified external outputs
 - guided first-run Soma actions that help a new operator choose a visible next step quickly
 - organization, department, advisor, and role-type visibility in operator language
 - bundle-driven startup truth with policy-bounded inheritance
@@ -194,7 +195,15 @@ source-of-truth layers remain separate:
 Managed exchange note:
 - channels, typed schemas, structured fields, threads, and normalized artifacts are now part of runtime truth for advanced orchestration
 - this exchange layer is how Soma, Team Leads, specialist roles, automations, and MCP-backed systems share governed outputs without falling back to raw message blobs
+- managed exchange is permissioned: channels, threads, and artifacts now carry reader/writer/reviewer, visibility, sensitivity, capability, and trust metadata
+- normalization into managed exchange does not imply unrestricted trust; external and MCP-backed outputs remain governed by trust class, capability policy, and review requirements
 - the default operator flow still stays Soma-first; inspect-only exchange visibility belongs to Advanced mode rather than the primary workspace
+
+Managed exchange security note:
+- connected tools and external services are governed rather than implicitly trusted
+- the free-node release now includes foundational security boundaries for exchange visibility, capability risk, audit-ready metadata, and external trust classification
+- env overrides are deployment-time infrastructure wiring, not runtime organization behavior
+- do not replace bundle-defined runtime organization truth
 
 Contract rule:
 - the default UX must stay simple and intent-first

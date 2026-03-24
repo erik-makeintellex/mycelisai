@@ -35,10 +35,15 @@ Release posture:
 - `COMPLETE` the default workspace remains simple, guided, and non-technical, and the advanced/runtime surface remains separate from the default operator flow.
 - `COMPLETE` the broader interface suite is now green again, and the RC gate is based on full unit coverage, typecheck, the managed browser suite, and docs-link enforcement rather than only the targeted Soma path.
 - `COMPLETE` the managed exchange foundation now exists for governed channels, typed schemas, structured fields, threads, normalized MCP/tool outputs, and advanced inspect-only visibility over recent exchange activity.
+- `COMPLETE` the managed exchange security foundation now exists for permissioned channel access, thread participation and review rights, artifact sensitivity classes, capability risk classes, trust-classified external/MCP outputs, and audit-ready metadata on exchange items.
+- `IN_REVIEW` Chunk 8.4 validation is nearly closed: backend security enforcement, docs alignment, UI inspect labels, and Windows-safe test stabilization are implemented; `go test ./... -count=1 -p 1`, `npm test`, `npx tsc --noEmit`, and `pytest tests/test_docs_links.py -q` already passed on the working tree.
+- `BLOCKED` the final `uv run inv interface.e2e` rerun must be completed after a user-interrupted browser pass before Chunk 8.4 can be called fully finished and committed.
 - `COMPLETE` accepted non-blockers for the RC gate are currently warning-only test noise (`--localstorage-file` path warnings during Vitest worker startup, one `SensorLibrary` `act(...)` warning, and ReactFlow mock-prop warnings in `CircuitBoard.test.tsx`); they do not block entry flow, workspace re-entry, Soma interaction, navigation, or core support panels.
 - the default Soma-primary workspace now expects guided first-run actions, intentional empty states, and partial-failure-safe support panels before release lock.
 - `NEXT` advanced architecture/runtime configuration remains a separate contract and implementation lane; it must stay non-default until the dedicated advanced surface ships without polluting the MVP operator flow.
+- `NEXT` rerun `uv run inv interface.e2e`, confirm the managed browser suite is green after the safer managed-port change, and then commit Chunk 8.4 as `V8.2: add managed exchange and capability security foundation`.
 - `NEXT` build on the managed exchange foundation with richer persistent team runs, deeper inter-agent review loops, and broader channel-aware orchestration across MCP-backed services.
+- `NEXT` enterprise identity, approval workflows, and multi-user access management remain deferred; the current free-node posture is a foundational runtime security boundary, not full enterprise IAM.
 
 ## Architecture Synchronization Rule
 

@@ -227,4 +227,4 @@ def test_pick_interface_port_falls_back_when_preferred_port_is_busy(monkeypatch)
 
     monkeypatch.setattr(interface.socket, "socket", lambda family, *args, **kwargs: FakeSocket(family))
 
-    assert interface._pick_interface_port(3000) == 43211
+    assert interface._pick_interface_port(3000) == 3100

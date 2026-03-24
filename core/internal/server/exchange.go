@@ -9,6 +9,17 @@ import (
 	"github.com/mycelis/core/internal/exchange"
 )
 
+func exchangeContext(r *http.Request) *http.Request {
+	if identity := IdentityFromContext(r.Context()); identity != nil {
+		return r.WithContext(exchange.WithActor(r.Context(), exchange.Actor{
+			UserID: identity.UserID,
+			Role:   identity.Role,
+			Scopes: identity.Scopes,
+		}))
+	}
+	return r
+}
+
 func (s *AdminServer) handleListExchangeFields(w http.ResponseWriter, r *http.Request) {
 	if s.Exchange == nil {
 		respondError(w, "exchange service not initialized", http.StatusServiceUnavailable)
@@ -40,6 +51,7 @@ func (s *AdminServer) handleListExchangeChannels(w http.ResponseWriter, r *http.
 		respondError(w, "exchange service not initialized", http.StatusServiceUnavailable)
 		return
 	}
+	r = exchangeContext(r)
 	channels, err := s.Exchange.ListChannels(r.Context())
 	if err != nil {
 		respondError(w, err.Error(), http.StatusInternalServerError)
@@ -54,6 +66,7 @@ func (s *AdminServer) handleListExchangeThreads(w http.ResponseWriter, r *http.R
 		return
 	}
 	limit := parsePositiveInt(r.URL.Query().Get("limit"), 50)
+	r = exchangeContext(r)
 	threads, err := s.Exchange.ListThreads(r.Context(), r.URL.Query().Get("channel"), r.URL.Query().Get("status"), limit)
 	if err != nil {
 		respondError(w, err.Error(), http.StatusInternalServerError)
@@ -72,6 +85,7 @@ func (s *AdminServer) handleCreateExchangeThread(w http.ResponseWriter, r *http.
 		respondError(w, "invalid JSON body", http.StatusBadRequest)
 		return
 	}
+	r = exchangeContext(r)
 	thread, err := s.Exchange.CreateThread(r.Context(), input)
 	if err != nil {
 		respondError(w, err.Error(), http.StatusBadRequest)
@@ -96,6 +110,7 @@ func (s *AdminServer) handleListExchangeItems(w http.ResponseWriter, r *http.Req
 		}
 		threadID = &id
 	}
+	r = exchangeContext(r)
 	items, err := s.Exchange.ListItems(r.Context(), r.URL.Query().Get("channel"), threadID, limit)
 	if err != nil {
 		respondError(w, err.Error(), http.StatusInternalServerError)
@@ -114,6 +129,7 @@ func (s *AdminServer) handleCreateExchangeItem(w http.ResponseWriter, r *http.Re
 		respondError(w, "invalid JSON body", http.StatusBadRequest)
 		return
 	}
+	r = exchangeContext(r)
 	item, err := s.Exchange.Publish(r.Context(), input)
 	if err != nil {
 		respondError(w, err.Error(), http.StatusBadRequest)
@@ -134,6 +150,7 @@ func (s *AdminServer) handleSearchExchangeItems(w http.ResponseWriter, r *http.R
 		return
 	}
 	limit := parsePositiveInt(r.URL.Query().Get("limit"), 5)
+	r = exchangeContext(r)
 	results, err := s.Exchange.Search(r.Context(), query, limit)
 	if err != nil {
 		respondError(w, err.Error(), http.StatusBadGateway)

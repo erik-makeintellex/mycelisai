@@ -201,6 +201,42 @@ def test_v8_docs_cover_managed_exchange_foundation():
     assert not missing, "Managed exchange foundation docs are out of sync:\n" + "\n".join(missing)
 
 
+def test_v8_docs_cover_managed_exchange_security_foundation():
+    expectations = {
+        README: [
+            "managed exchange is permissioned",
+            "normalization into managed exchange does not imply unrestricted trust",
+            "free-node release now includes foundational security boundaries",
+        ],
+        V8_1_LIVING_ARCHITECTURE: [
+            "channels, threads, and exchange items carry explicit readers, writers, reviewers, participants, sensitivity classes, and downstream allowed-consumer metadata",
+            "capability-producing outputs carry a capability id, risk class, trust class, and audit-ready publication metadata",
+            "normalization into exchange does not imply unrestricted trust",
+        ],
+        V8_UI_API_CONTRACT: [
+            "inspect-only trust, sensitivity, and review labels for managed exchange items where they matter operationally",
+            "managed exchange security labels stay inspectable in advanced surfaces without leaking forbidden/internal-only security implementation detail into the default Soma-first UX",
+        ],
+        V8_2_FULL_ARCHITECTURE: [
+            "managed exchange remains permissioned",
+            "normalization into exchange does not imply unrestricted trust",
+        ],
+        V8_DEV_STATE: [
+            "managed exchange security foundation now exists",
+            "enterprise identity, approval workflows, and multi-user access management remain deferred",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in expectations.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Managed exchange security foundation docs are out of sync:\n" + "\n".join(missing)
+
+
 def test_readme_defines_default_and_advanced_surface_contract():
     text = README.read_text(encoding="utf-8")
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
+
+var testNATSPort int32 = 14520
 
 // ── Shared helpers for conversation handler tests ────────────────
 
@@ -32,7 +35,7 @@ func withConversations(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 // withNATS starts an embedded NATS server and wires NC into AdminServer.
 func withNATS(t *testing.T) func(*AdminServer) {
 	t.Helper()
-	opts := &natsserver.Options{Port: -1}
+	opts := &natsserver.Options{Host: "127.0.0.1", Port: int(atomic.AddInt32(&testNATSPort, 1))}
 	srv, err := natsserver.NewServer(opts)
 	if err != nil {
 		t.Fatalf("nats server: %v", err)

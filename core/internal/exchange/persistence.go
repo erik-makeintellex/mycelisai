@@ -28,6 +28,26 @@ func (s *Service) bootstrapFields(ctx context.Context) error {
 	return nil
 }
 
+func (s *Service) bootstrapCapabilities(ctx context.Context) error {
+	for _, capability := range SeedCapabilities {
+		if _, err := s.DB.ExecContext(ctx, `
+			INSERT INTO exchange_capability_registry (id, label, source, risk_class, default_allowed_roles, audit_required, approval_required, description)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			ON CONFLICT (id) DO UPDATE SET
+				label = EXCLUDED.label,
+				source = EXCLUDED.source,
+				risk_class = EXCLUDED.risk_class,
+				default_allowed_roles = EXCLUDED.default_allowed_roles,
+				audit_required = EXCLUDED.audit_required,
+				approval_required = EXCLUDED.approval_required,
+				description = EXCLUDED.description
+		`, capability.ID, capability.Label, capability.Source, capability.RiskClass, marshalSlice(capability.DefaultAllowedRoles), capability.AuditRequired, capability.ApprovalRequired, capability.Description); err != nil {
+			return fmt.Errorf("bootstrap exchange capability %s: %w", capability.ID, err)
+		}
+	}
+	return nil
+}
+
 func (s *Service) bootstrapSchemas(ctx context.Context) error {
 	for _, schema := range SeedSchemas {
 		if _, err := s.DB.ExecContext(ctx, `
@@ -49,18 +69,20 @@ func (s *Service) bootstrapSchemas(ctx context.Context) error {
 func (s *Service) bootstrapChannels(ctx context.Context) error {
 	for _, channel := range SeedChannels {
 		if _, err := s.DB.ExecContext(ctx, `
-			INSERT INTO exchange_channels (name, channel_type, owner, participants, schema_id, retention_policy, visibility, description, metadata)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			INSERT INTO exchange_channels (name, channel_type, owner, participants, reviewers, schema_id, retention_policy, visibility, sensitivity_class, description, metadata)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			ON CONFLICT (name) DO UPDATE SET
 				channel_type = EXCLUDED.channel_type,
 				owner = EXCLUDED.owner,
 				participants = EXCLUDED.participants,
+				reviewers = EXCLUDED.reviewers,
 				schema_id = EXCLUDED.schema_id,
 				retention_policy = EXCLUDED.retention_policy,
 				visibility = EXCLUDED.visibility,
+				sensitivity_class = EXCLUDED.sensitivity_class,
 				description = EXCLUDED.description,
 				metadata = EXCLUDED.metadata
-		`, channel.Name, channel.Type, channel.Owner, marshalParticipants(channel.Participants), channel.SchemaID, channel.RetentionPolicy, channel.Visibility, channel.Description, marshalJSON(channel.Metadata)); err != nil {
+		`, channel.Name, channel.Type, channel.Owner, marshalParticipants(channel.Participants), marshalSlice(channel.Reviewers), channel.SchemaID, channel.RetentionPolicy, channel.Visibility, channel.SensitivityClass, channel.Description, marshalJSON(channel.Metadata)); err != nil {
 			return fmt.Errorf("bootstrap exchange channel %s: %w", channel.Name, err)
 		}
 	}
@@ -83,16 +105,34 @@ func (s *Service) ensureChannel(ctx context.Context, name string) (*Channel, err
 
 func (s *Service) getChannelByName(ctx context.Context, name string) (*Channel, error) {
 	row := s.DB.QueryRowContext(ctx, `
-		SELECT id, name, channel_type, owner, participants, schema_id, retention_policy, visibility, description, metadata, created_at
+		SELECT id, name, channel_type, owner, participants, reviewers, schema_id, retention_policy, visibility, sensitivity_class, description, metadata, created_at
 		FROM exchange_channels
 		WHERE name = $1
 	`, name)
 	return scanChannelRow(row)
 }
 
+func (s *Service) getThread(ctx context.Context, id uuid.UUID) (*Thread, error) {
+	row := s.DB.QueryRowContext(ctx, `
+		SELECT t.id, t.channel_id, c.name, t.thread_type, t.title, t.status, t.participants, t.allowed_reviewers, t.escalation_rights, t.continuity_key, t.created_by, t.metadata, t.created_at, t.updated_at
+		FROM exchange_threads t
+		JOIN exchange_channels c ON c.id = t.channel_id
+		WHERE t.id = $1
+	`, id)
+	var participantsJSON, reviewersJSON, escalationJSON []byte
+	var thread Thread
+	if err := row.Scan(&thread.ID, &thread.ChannelID, &thread.ChannelName, &thread.ThreadType, &thread.Title, &thread.Status, &participantsJSON, &reviewersJSON, &escalationJSON, &thread.ContinuityKey, &thread.CreatedBy, &thread.Metadata, &thread.CreatedAt, &thread.UpdatedAt); err != nil {
+		return nil, err
+	}
+	_ = json.Unmarshal(participantsJSON, &thread.Participants)
+	_ = json.Unmarshal(reviewersJSON, &thread.AllowedReviewers)
+	_ = json.Unmarshal(escalationJSON, &thread.EscalationRights)
+	return &thread, nil
+}
+
 func (s *Service) getItem(ctx context.Context, id uuid.UUID) (*ExchangeItem, error) {
 	row := s.DB.QueryRowContext(ctx, `
-		SELECT i.id, i.channel_id, c.name, i.schema_id, i.payload, i.created_by, COALESCE(i.addressed_to, ''), i.thread_id, i.visibility, i.metadata, i.summary, i.created_at
+		SELECT i.id, i.channel_id, c.name, i.schema_id, i.payload, i.created_by, COALESCE(i.addressed_to, ''), i.thread_id, i.visibility, i.sensitivity_class, i.source_role, COALESCE(i.source_team, ''), COALESCE(i.target_role, ''), COALESCE(i.target_team, ''), i.allowed_consumers, COALESCE(i.capability_id, ''), i.trust_class, i.review_required, i.metadata, i.summary, i.created_at
 		FROM exchange_items i
 		JOIN exchange_channels c ON c.id = i.channel_id
 		WHERE i.id = $1
@@ -134,6 +174,10 @@ func validateFieldType(fieldType string, value any) error {
 	case "string", "enum", "reference":
 		if _, ok := value.(string); !ok {
 			return fmt.Errorf("expected string-compatible value")
+		}
+	case "boolean":
+		if _, ok := value.(bool); !ok {
+			return fmt.Errorf("expected boolean value")
 		}
 	case "number":
 		switch value.(type) {
@@ -194,47 +238,55 @@ func scanItems(rows *sql.Rows) ([]ExchangeItem, error) {
 
 func scanChannelRow(row *sql.Row) (*Channel, error) {
 	var channel Channel
-	var participantsJSON []byte
-	if err := row.Scan(&channel.ID, &channel.Name, &channel.Type, &channel.Owner, &participantsJSON, &channel.SchemaID, &channel.RetentionPolicy, &channel.Visibility, &channel.Description, &channel.Metadata, &channel.CreatedAt); err != nil {
+	var participantsJSON, reviewersJSON []byte
+	if err := row.Scan(&channel.ID, &channel.Name, &channel.Type, &channel.Owner, &participantsJSON, &reviewersJSON, &channel.SchemaID, &channel.RetentionPolicy, &channel.Visibility, &channel.SensitivityClass, &channel.Description, &channel.Metadata, &channel.CreatedAt); err != nil {
 		return nil, err
 	}
 	_ = json.Unmarshal(participantsJSON, &channel.Participants)
+	_ = json.Unmarshal(reviewersJSON, &channel.Reviewers)
 	return &channel, nil
 }
 
 func scanChannelFromRows(rows *sql.Rows) (*Channel, error) {
 	var channel Channel
-	var participantsJSON []byte
-	if err := rows.Scan(&channel.ID, &channel.Name, &channel.Type, &channel.Owner, &participantsJSON, &channel.SchemaID, &channel.RetentionPolicy, &channel.Visibility, &channel.Description, &channel.Metadata, &channel.CreatedAt); err != nil {
+	var participantsJSON, reviewersJSON []byte
+	if err := rows.Scan(&channel.ID, &channel.Name, &channel.Type, &channel.Owner, &participantsJSON, &reviewersJSON, &channel.SchemaID, &channel.RetentionPolicy, &channel.Visibility, &channel.SensitivityClass, &channel.Description, &channel.Metadata, &channel.CreatedAt); err != nil {
 		return nil, fmt.Errorf("scan exchange channel: %w", err)
 	}
 	_ = json.Unmarshal(participantsJSON, &channel.Participants)
+	_ = json.Unmarshal(reviewersJSON, &channel.Reviewers)
 	return &channel, nil
 }
 
 func scanThreadFromRows(rows *sql.Rows) (*Thread, error) {
 	var thread Thread
-	var participantsJSON []byte
-	if err := rows.Scan(&thread.ID, &thread.ChannelID, &thread.ChannelName, &thread.ThreadType, &thread.Title, &thread.Status, &participantsJSON, &thread.ContinuityKey, &thread.CreatedBy, &thread.Metadata, &thread.CreatedAt, &thread.UpdatedAt); err != nil {
+	var participantsJSON, reviewersJSON, escalationJSON []byte
+	if err := rows.Scan(&thread.ID, &thread.ChannelID, &thread.ChannelName, &thread.ThreadType, &thread.Title, &thread.Status, &participantsJSON, &reviewersJSON, &escalationJSON, &thread.ContinuityKey, &thread.CreatedBy, &thread.Metadata, &thread.CreatedAt, &thread.UpdatedAt); err != nil {
 		return nil, fmt.Errorf("scan exchange thread: %w", err)
 	}
 	_ = json.Unmarshal(participantsJSON, &thread.Participants)
+	_ = json.Unmarshal(reviewersJSON, &thread.AllowedReviewers)
+	_ = json.Unmarshal(escalationJSON, &thread.EscalationRights)
 	return &thread, nil
 }
 
 func scanItemRow(row *sql.Row) (*ExchangeItem, error) {
 	var item ExchangeItem
-	if err := row.Scan(&item.ID, &item.ChannelID, &item.ChannelName, &item.SchemaID, &item.Payload, &item.CreatedBy, &item.AddressedTo, &item.ThreadID, &item.Visibility, &item.Metadata, &item.Summary, &item.CreatedAt); err != nil {
+	var consumersJSON []byte
+	if err := row.Scan(&item.ID, &item.ChannelID, &item.ChannelName, &item.SchemaID, &item.Payload, &item.CreatedBy, &item.AddressedTo, &item.ThreadID, &item.Visibility, &item.SensitivityClass, &item.SourceRole, &item.SourceTeam, &item.TargetRole, &item.TargetTeam, &consumersJSON, &item.CapabilityID, &item.TrustClass, &item.ReviewRequired, &item.Metadata, &item.Summary, &item.CreatedAt); err != nil {
 		return nil, err
 	}
+	_ = json.Unmarshal(consumersJSON, &item.AllowedConsumers)
 	return &item, nil
 }
 
 func scanItemFromRows(rows *sql.Rows) (*ExchangeItem, error) {
 	var item ExchangeItem
-	if err := rows.Scan(&item.ID, &item.ChannelID, &item.ChannelName, &item.SchemaID, &item.Payload, &item.CreatedBy, &item.AddressedTo, &item.ThreadID, &item.Visibility, &item.Metadata, &item.Summary, &item.CreatedAt); err != nil {
+	var consumersJSON []byte
+	if err := rows.Scan(&item.ID, &item.ChannelID, &item.ChannelName, &item.SchemaID, &item.Payload, &item.CreatedBy, &item.AddressedTo, &item.ThreadID, &item.Visibility, &item.SensitivityClass, &item.SourceRole, &item.SourceTeam, &item.TargetRole, &item.TargetTeam, &consumersJSON, &item.CapabilityID, &item.TrustClass, &item.ReviewRequired, &item.Metadata, &item.Summary, &item.CreatedAt); err != nil {
 		return nil, fmt.Errorf("scan exchange item: %w", err)
 	}
+	_ = json.Unmarshal(consumersJSON, &item.AllowedConsumers)
 	return &item, nil
 }
 

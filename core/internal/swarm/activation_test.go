@@ -6,8 +6,6 @@ import (
 
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/pkg/protocol"
-	server "github.com/nats-io/nats-server/v2/test"
-	"github.com/nats-io/nats.go"
 )
 
 func testBlueprint() *protocol.MissionBlueprint {
@@ -35,15 +33,8 @@ func testBlueprint() *protocol.MissionBlueprint {
 func newTestSomaForActivation(t *testing.T) *Soma {
 	t.Helper()
 
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	ns := server.RunServer(&opts)
+	ns, nc := startTestNATS(t)
 	t.Cleanup(ns.Shutdown)
-
-	nc, err := nats.Connect(ns.ClientURL())
-	if err != nil {
-		t.Fatalf("nats connect failed: %v", err)
-	}
 	t.Cleanup(nc.Close)
 
 	guard := &governance.Guard{}
@@ -90,4 +81,3 @@ func TestActivateBlueprint_ConcurrentCallsDoNotDuplicateTeams(t *testing.T) {
 		t.Fatalf("expected 2 active teams after concurrent activation, got %d", got)
 	}
 }
-

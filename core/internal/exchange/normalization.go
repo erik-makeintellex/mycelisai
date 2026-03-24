@@ -35,6 +35,9 @@ type MCPNormalizationInput struct {
 }
 
 func (s *Service) PublishArtifact(ctx context.Context, input ArtifactNormalizationInput) (*ExchangeItem, error) {
+	if ActorFromContext(ctx).Role == "" {
+		ctx = WithActor(ctx, Actor{Role: defaultActorRoleForAgent(input.AgentID)})
+	}
 	channelName := strings.TrimSpace(input.ChannelName)
 	if channelName == "" {
 		switch strings.ToLower(input.ArtifactType) {
@@ -76,11 +79,28 @@ func (s *Service) PublishArtifact(ctx context.Context, input ArtifactNormalizati
 		AddressedTo: defaultTarget(input.TargetRole),
 		ThreadID:    input.ThreadID,
 		Visibility:  "advanced",
+		SensitivityClass: "team_scoped",
+		SourceRole:  defaultActorRoleForAgent(input.AgentID),
+		TargetRole:  defaultTarget(input.TargetRole),
+		CapabilityID: map[string]string{
+			"MediaResult": "media_generation",
+			"FileResult":  "file_output",
+			"TextResult":  "file_output",
+		}[schemaID],
+		TrustClass: map[string]string{
+			"MediaResult": "bounded_external",
+			"FileResult":  "trusted_internal",
+			"TextResult":  "trusted_internal",
+		}[schemaID],
+		ReviewRequired: schemaID != "TextResult",
 		Summary:     summary,
 	})
 }
 
 func (s *Service) PublishMCPResult(ctx context.Context, input MCPNormalizationInput) (*ExchangeItem, error) {
+	if ActorFromContext(ctx).Role == "" {
+		ctx = WithActor(ctx, Actor{Role: "mcp"})
+	}
 	channelName, schemaID, tags := classifyMCPOutput(input.ServerName, input.ToolName)
 	summary := strings.TrimSpace(input.Summary)
 	if summary == "" {
@@ -107,6 +127,12 @@ func (s *Service) PublishMCPResult(ctx context.Context, input MCPNormalizationIn
 		AddressedTo: defaultTarget(input.TargetRole),
 		ThreadID:    input.ThreadID,
 		Visibility:  "advanced",
+		SensitivityClass: "team_scoped",
+		SourceRole:  "mcp",
+		TargetRole:  defaultTarget(input.TargetRole),
+		CapabilityID: capabilityForToolChannel(channelName),
+		TrustClass:  "bounded_external",
+		ReviewRequired: true,
 		Summary:     summary,
 	})
 }
@@ -120,6 +146,17 @@ func classifyMCPOutput(serverName, toolName string) (string, string, []string) {
 		return "browser.research.results", "ToolResult", []string{"mcp", "research", strings.TrimSpace(toolName)}
 	default:
 		return "api.data.output", "ToolResult", []string{"mcp", "data", strings.TrimSpace(toolName)}
+	}
+}
+
+func capabilityForToolChannel(channelName string) string {
+	switch channelName {
+	case "browser.research.results":
+		return "browser_research"
+	case "media.image.output":
+		return "media_generation"
+	default:
+		return "api_data_access"
 	}
 }
 

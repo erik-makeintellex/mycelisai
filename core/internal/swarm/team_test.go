@@ -6,18 +6,13 @@ import (
 	"time"
 
 	"github.com/mycelis/core/pkg/protocol"
-	server "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 )
 
 func TestTeam_TriggerLogic(t *testing.T) {
 	// 1. Start NATS
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, _ := nats.Connect(s.ClientURL())
 	defer nc.Close()
 
 	// 2. Create Team
@@ -50,12 +45,8 @@ func TestTeam_TriggerLogic(t *testing.T) {
 }
 
 func TestTeam_ResponseDeliveryWrapsStatusAndResultSignals(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, _ := nats.Connect(s.ClientURL())
 	defer nc.Close()
 
 	manifest := &TeamManifest{
@@ -121,12 +112,8 @@ func TestTeam_ResponseDeliveryWrapsStatusAndResultSignals(t *testing.T) {
 }
 
 func TestTeam_TriggerLogic_UnwrapsCommandEnvelope(t *testing.T) {
-	opts := server.DefaultTestOptions
-	opts.Port = -1
-	s := server.RunServer(&opts)
+	s, nc := startTestNATS(t)
 	defer s.Shutdown()
-
-	nc, _ := nats.Connect(s.ClientURL())
 	defer nc.Close()
 
 	manifest := &TeamManifest{
