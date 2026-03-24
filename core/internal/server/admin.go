@@ -15,6 +15,7 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
+	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/events"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/inception"
@@ -55,6 +56,7 @@ type AdminServer struct {
 	MCPLibrary    *mcp.Library       // Phase 7.7: Curated MCP Library
 	Catalogue     *catalogue.Service // Phase 7.5: Agent Catalogue
 	Artifacts     *artifacts.Service // Phase 7.5: Agent Outputs
+	Exchange      *exchange.Service  // Managed exchange channels, threads, and artifacts
 	Comms         *comms.Gateway     // External communication providers (whatsapp/telegram/slack/etc.)
 	// V7 Event Spine (Team A)
 	Events *events.Store // V7: persistent mission event audit trail
@@ -81,7 +83,7 @@ type AdminServer struct {
 	TemplateBundlesPath string
 }
 
-func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, ex *exchange.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
 	// Reactive engine: routes subscribed NATS messages to Soma for evaluation.
 	// nc may be nil (NATS offline); engine degrades gracefully.
 	reactiveEngine := reactive.New(nc, func(profileID, topic string, msg []byte) {
@@ -110,6 +112,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		MCPLibrary:          mcpLib,
 		Catalogue:           cat,
 		Artifacts:           art,
+		Exchange:            ex,
 		Events:              evStore,
 		Runs:                runsManager,
 		Reactive:            reactiveEngine,
@@ -280,6 +283,16 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/artifacts", s.handleStoreArtifact)
 	mux.HandleFunc("PUT /api/v1/artifacts/{id}/status", s.handleUpdateArtifactStatus)
 	mux.HandleFunc("POST /api/v1/artifacts/{id}/save", s.handleSaveArtifactToFolder)
+
+	// Managed exchange API
+	mux.HandleFunc("GET /api/v1/exchange/fields", s.handleListExchangeFields)
+	mux.HandleFunc("GET /api/v1/exchange/schemas", s.handleListExchangeSchemas)
+	mux.HandleFunc("GET /api/v1/exchange/channels", s.handleListExchangeChannels)
+	mux.HandleFunc("GET /api/v1/exchange/threads", s.handleListExchangeThreads)
+	mux.HandleFunc("POST /api/v1/exchange/threads", s.handleCreateExchangeThread)
+	mux.HandleFunc("GET /api/v1/exchange/items", s.handleListExchangeItems)
+	mux.HandleFunc("POST /api/v1/exchange/items", s.handleCreateExchangeItem)
+	mux.HandleFunc("GET /api/v1/exchange/search", s.handleSearchExchangeItems)
 
 	// Brains API (provider management)
 	mux.HandleFunc("GET /api/v1/brains", s.HandleListBrains)

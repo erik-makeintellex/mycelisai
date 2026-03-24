@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Brain, Wrench, BookOpen, FolderOpen } from "lucide-react";
+import { Brain, Wrench, BookOpen, FolderOpen, GitBranch } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
 import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
 import { useCortexStore } from "@/store/useCortexStore";
@@ -23,8 +23,13 @@ const WorkspaceExplorer = dynamic(() => import("@/components/resources/Workspace
     loading: () => <TabLoading label="workspace" />,
 });
 
-type TabId = "engines" | "tools" | "workspace" | "roles";
-const VALID_TABS: TabId[] = ["engines", "tools", "workspace", "roles"];
+const ExchangeInspector = dynamic(() => import("@/components/resources/ExchangeInspector"), {
+    ssr: false,
+    loading: () => <TabLoading label="exchange" />,
+});
+
+type TabId = "engines" | "tools" | "workspace" | "roles" | "exchange";
+const VALID_TABS: TabId[] = ["engines", "tools", "workspace", "roles", "exchange"];
 
 export default function ResourcesPage() {
     return (
@@ -60,13 +65,14 @@ function ResourcesContent() {
                             Resources
                         </h1>
                         <p className="text-cortex-text-muted text-sm mt-1">
-                            Connected tools, workspace files, and advanced organization resources
+                            Connected tools, exchange lanes, workspace files, and advanced organization resources
                         </p>
                     </div>
                 </div>
 
                 <div className="flex gap-1 border-b border-cortex-border">
                     <TabButton active={activeTab === "tools"} onClick={() => setActiveTab("tools")} icon={<Wrench size={14} />} label="Connected Tools" />
+                    <TabButton active={activeTab === "exchange"} onClick={() => setActiveTab("exchange")} icon={<GitBranch size={14} />} label="Exchange" />
                     <TabButton active={activeTab === "workspace"} onClick={() => setActiveTab("workspace")} icon={<FolderOpen size={14} />} label="Workspace Files" />
                     <TabButton active={activeTab === "engines"} onClick={() => setActiveTab("engines")} icon={<Brain size={14} />} label="AI Engines" />
                     <TabButton active={activeTab === "roles"} onClick={() => setActiveTab("roles")} icon={<BookOpen size={14} />} label="Role Library" />
@@ -82,6 +88,7 @@ function ResourcesContent() {
                     </div>
                 )}
                 {activeTab === "tools" && <MCPToolRegistry />}
+                {activeTab === "exchange" && <ExchangeInspector />}
                 {activeTab === "workspace" && (
                     <WorkspaceExplorer onOpenToolsTab={() => setActiveTab("tools")} />
                 )}

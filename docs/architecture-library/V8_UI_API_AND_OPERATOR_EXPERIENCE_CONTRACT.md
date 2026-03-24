@@ -406,6 +406,7 @@ Make Soma the default operating surface for the AI Organization while keeping Te
 - recent organization context
 - a conversation or command surface framed as working with Soma for this AI Organization
 - rich conversation outputs in that same surface, including imagery, documents, charts, code, audio, and other artifacts when Soma or a consulted specialist produces them
+- those rich outputs are backed by managed exchange items and artifact schemas even when the operator only sees Soma's simplified conversation view
 - optional roster sidebar or drawer for Advisors, Departments, and Specialists
 
 **User actions**
@@ -509,6 +510,7 @@ Protect the default AI Organization experience from collapsing into a config das
   - Department overrides
   - Specialist role bindings
   - detailed automation definitions
+  - inspect-only managed exchange surfaces for Channels, Threads, and Recent Artifacts
   - capability posture
   - Response Style inheritance
   - bundle/config source truth

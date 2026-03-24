@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-22
+> Updated: 2026-03-24
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -34,9 +34,11 @@ Release posture:
 - `COMPLETE` Team Leads remain the operational layer Soma works through, while Routing / Council remains advisory and planning-oriented rather than default visible UX jargon.
 - `COMPLETE` the default workspace remains simple, guided, and non-technical, and the advanced/runtime surface remains separate from the default operator flow.
 - `COMPLETE` the broader interface suite is now green again, and the RC gate is based on full unit coverage, typecheck, the managed browser suite, and docs-link enforcement rather than only the targeted Soma path.
+- `COMPLETE` the managed exchange foundation now exists for governed channels, typed schemas, structured fields, threads, normalized MCP/tool outputs, and advanced inspect-only visibility over recent exchange activity.
 - `COMPLETE` accepted non-blockers for the RC gate are currently warning-only test noise (`--localstorage-file` path warnings during Vitest worker startup, one `SensorLibrary` `act(...)` warning, and ReactFlow mock-prop warnings in `CircuitBoard.test.tsx`); they do not block entry flow, workspace re-entry, Soma interaction, navigation, or core support panels.
 - the default Soma-primary workspace now expects guided first-run actions, intentional empty states, and partial-failure-safe support panels before release lock.
 - `NEXT` advanced architecture/runtime configuration remains a separate contract and implementation lane; it must stay non-default until the dedicated advanced surface ships without polluting the MVP operator flow.
+- `NEXT` build on the managed exchange foundation with richer persistent team runs, deeper inter-agent review loops, and broader channel-aware orchestration across MCP-backed services.
 
 ## Architecture Synchronization Rule
 

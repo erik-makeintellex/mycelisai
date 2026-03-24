@@ -40,6 +40,10 @@ vi.mock('@/components/settings/MCPToolRegistry', () => ({
     __esModule: true,
     default: () => <div data-testid="mcp-tools">MCPToolRegistry</div>,
 }));
+vi.mock('@/components/resources/ExchangeInspector', () => ({
+    __esModule: true,
+    default: () => <div data-testid="exchange-inspector">ExchangeInspector</div>,
+}));
 vi.mock('@/components/catalogue/CataloguePage', () => ({
     __esModule: true,
     default: () => <div data-testid="catalogue-page">CataloguePage</div>,
@@ -79,6 +83,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
     it('renders all tabs', async () => {
         await act(async () => { render(<ResourcesPage />); });
         expect(screen.getByText('Connected Tools')).toBeDefined();
+        expect(screen.getByText('Exchange')).toBeDefined();
         expect(screen.getByText('Workspace Files')).toBeDefined();
         expect(screen.getByText('AI Engines')).toBeDefined();
         expect(screen.getByText('Role Library')).toBeDefined();
@@ -94,6 +99,14 @@ describe('Resources Page (V8.1 advanced support)', () => {
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
             expect(screen.getByTestId('catalogue-page')).toBeDefined();
+        });
+    });
+
+    it('deep-links to exchange tab via search param', async () => {
+        mockSearchParams.set('tab', 'exchange');
+        await act(async () => { render(<ResourcesPage />); });
+        await waitFor(() => {
+            expect(screen.getByTestId('exchange-inspector')).toBeDefined();
         });
     });
 

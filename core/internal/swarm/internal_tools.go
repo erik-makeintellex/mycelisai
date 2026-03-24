@@ -16,9 +16,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
+	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/hostcmd"
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/memory"
@@ -85,6 +87,7 @@ type InternalToolRegistry struct {
 	inception *inception.Store
 	comms     *comms.Gateway
 	db        *sql.DB
+	exchange  *exchange.Service
 	// somaRef is set after Soma is constructed — allows list_teams etc.
 	somaRef *Soma
 }
@@ -99,6 +102,7 @@ type InternalToolDeps struct {
 	Inception *inception.Store
 	Comms     *comms.Gateway
 	DB        *sql.DB
+	Exchange  *exchange.Service
 }
 
 // NewInternalToolRegistry creates and populates the built-in tool set.
@@ -113,6 +117,7 @@ func NewInternalToolRegistry(deps InternalToolDeps) *InternalToolRegistry {
 		inception: deps.Inception,
 		comms:     deps.Comms,
 		db:        deps.DB,
+		exchange:  deps.Exchange,
 	}
 	r.registerAll()
 	return r
@@ -253,6 +258,79 @@ func (r *InternalToolRegistry) registerAll() {
 		Description: "Returns all available tools (internal + MCP) with descriptions.",
 		InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		Handler:     r.handleListAvailableTools,
+	}
+
+	r.tools["list_exchange_channels"] = &InternalTool{
+		Name:        "list_exchange_channels",
+		Description: "List the managed exchange channels available for governed work, review, learning, and tool output.",
+		InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
+		Handler:     r.handleListExchangeChannels,
+	}
+
+	r.tools["list_exchange_threads"] = &InternalTool{
+		Name:        "list_exchange_threads",
+		Description: "List managed exchange threads for a channel, optionally filtering by status.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel": map[string]any{"type": "string", "description": "Optional channel name filter"},
+				"status":  map[string]any{"type": "string", "description": "Optional thread status filter"},
+				"limit":   map[string]any{"type": "integer", "description": "Optional limit"},
+			},
+		},
+		Handler: r.handleListExchangeThreads,
+	}
+
+	r.tools["search_exchange_items"] = &InternalTool{
+		Name:        "search_exchange_items",
+		Description: "Semantic search across managed exchange items to find related prior outputs and continuity context.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"query": map[string]any{"type": "string", "description": "Semantic search query"},
+				"limit": map[string]any{"type": "integer", "description": "Optional result limit"},
+			},
+			"required": []string{"query"},
+		},
+		Handler: r.handleSearchExchangeItems,
+	}
+
+	r.tools["create_exchange_thread"] = &InternalTool{
+		Name:        "create_exchange_thread",
+		Description: "Create a managed exchange thread for planning, work, review, escalation, or learning.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel":        map[string]any{"type": "string", "description": "Registered channel name"},
+				"title":          map[string]any{"type": "string", "description": "Thread title"},
+				"thread_type":    map[string]any{"type": "string", "description": "planning_thread, work_thread, review_thread, escalation_thread, or learning_thread"},
+				"participants":   map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+				"continuity_key": map[string]any{"type": "string", "description": "Optional continuity key"},
+				"created_by":     map[string]any{"type": "string", "description": "Optional creator role"},
+			},
+			"required": []string{"channel", "title"},
+		},
+		Handler: r.handleCreateExchangeThread,
+	}
+
+	r.tools["publish_exchange_item"] = &InternalTool{
+		Name:        "publish_exchange_item",
+		Description: "Publish a structured managed exchange item into a governed channel or thread.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"channel":     map[string]any{"type": "string", "description": "Registered channel name"},
+				"schema_id":   map[string]any{"type": "string", "description": "Registered schema ID"},
+				"payload":     map[string]any{"type": "object", "description": "Structured exchange payload"},
+				"summary":     map[string]any{"type": "string", "description": "Optional summary override"},
+				"addressed_to": map[string]any{"type": "string", "description": "Optional target role or team"},
+				"thread_id":   map[string]any{"type": "string", "description": "Optional thread UUID"},
+				"visibility":  map[string]any{"type": "string", "description": "Optional visibility override"},
+				"created_by":  map[string]any{"type": "string", "description": "Optional creator role"},
+			},
+			"required": []string{"channel", "schema_id", "payload"},
+		},
+		Handler: r.handlePublishExchangeItem,
 	}
 
 	r.tools["generate_blueprint"] = &InternalTool{
@@ -1197,6 +1275,19 @@ func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map
 		"message":  fmt.Sprintf("Artifact '%s' stored (type: %s, id: %s).", title, artType, artifactID),
 		"artifact": artifactRef,
 	}
+	if r.exchange != nil {
+		if parsedID, err := uuid.Parse(artifactID); err == nil {
+			_, _ = r.exchange.PublishArtifact(ctx, exchange.ArtifactNormalizationInput{
+				ArtifactID:   parsedID,
+				ArtifactType: artType,
+				Title:        title,
+				AgentID:      "internal",
+				Status:       "pending",
+				TargetRole:   "soma",
+				Tags:         []string{"artifact", artType},
+			})
+		}
+	}
 	data, _ := json.Marshal(result)
 	return string(data), nil
 }
@@ -1618,6 +1709,19 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 			"cached":       true,
 			"expires_at":   expiresAt,
 		},
+	}
+	if r.exchange != nil && strings.TrimSpace(artifactID) != "" {
+		if parsedID, err := uuid.Parse(artifactID); err == nil {
+			_, _ = r.exchange.PublishArtifact(ctx, exchange.ArtifactNormalizationInput{
+				ArtifactID:   parsedID,
+				ArtifactType: "image",
+				Title:        title,
+				AgentID:      "internal",
+				Status:       "completed",
+				TargetRole:   "soma",
+				Tags:         []string{"artifact", "image", "generated"},
+			})
+		}
 	}
 	data, _ := json.Marshal(result)
 	return string(data), nil

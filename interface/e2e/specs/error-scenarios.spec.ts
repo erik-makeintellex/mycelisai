@@ -2,8 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Error Scenarios', () => {
     test('404 page renders gracefully', async ({ page }) => {
-        const response = await page.goto('/nonexistent-route');
-        await page.waitForLoadState('domcontentloaded');
+        const response = await page.goto('/nonexistent-route', { waitUntil: 'domcontentloaded' });
 
         expect(response).not.toBeNull();
         expect(page.locator('body')).toBeVisible();
@@ -19,8 +18,7 @@ test.describe('Error Scenarios', () => {
             });
         });
 
-        await page.goto('/dashboard');
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
 
         await expect(page.locator('body')).toBeVisible();
         await expect(page.locator('a[href="/dashboard"]').first()).toBeVisible();
@@ -37,8 +35,7 @@ test.describe('Error Scenarios', () => {
             route.abort('connectionrefused');
         });
 
-        await page.goto('/dashboard');
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(2000);
 
         await expect(page.locator('body')).toBeVisible();

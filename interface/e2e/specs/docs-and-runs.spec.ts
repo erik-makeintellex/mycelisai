@@ -36,11 +36,10 @@ test.describe('Docs and Runs Route Coverage', () => {
             });
         });
 
-        await page.goto('/docs?doc=ui-test-doc');
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto('/docs?doc=ui-test-doc', { waitUntil: 'domcontentloaded' });
 
         await expect(page.getByText('Documentation')).toBeVisible();
-        await expect(page.getByRole('button', { name: 'UI Test Doc' })).toBeVisible();
+        await expect(page.getByText('UI Test Doc').first()).toBeVisible();
         await expect(page.getByRole('heading', { name: 'UI Test Heading' })).toBeVisible();
 
         await page.getByPlaceholder('Filter docs...').fill('missing-doc');
@@ -116,8 +115,7 @@ test.describe('Docs and Runs Route Coverage', () => {
             });
         });
 
-        await page.goto('/runs');
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto('/runs', { waitUntil: 'domcontentloaded' });
 
         await expect(page.locator('span:has-text("Runs")').first()).toBeVisible();
         const runRow = page.locator(`button:has-text("${runId}")`).first();

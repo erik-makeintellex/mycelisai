@@ -60,6 +60,10 @@ vi.mock('@/components/settings/MCPToolRegistry', () => ({
     __esModule: true,
     default: () => <div data-testid="mcp-tools">MCPToolRegistry</div>,
 }));
+vi.mock('@/components/resources/ExchangeInspector', () => ({
+    __esModule: true,
+    default: () => <div data-testid="exchange-inspector">ExchangeInspector</div>,
+}));
 vi.mock('@/components/catalogue/CataloguePage', () => ({
     __esModule: true,
     default: () => <div data-testid="catalogue-page">CataloguePage</div>,

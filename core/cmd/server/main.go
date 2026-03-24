@@ -26,6 +26,7 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
+	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/events"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/inception"
@@ -393,6 +394,22 @@ func main() {
 		}()
 	}
 
+	var exchangeService *exchange.Service
+	if sharedDB != nil {
+		var embedFn exchange.EmbedFunc
+		if cogRouter != nil {
+			embedFn = func(ctx context.Context, content string) ([]float64, error) {
+				return cogRouter.Embed(ctx, content, "")
+			}
+		}
+		exchangeService = exchange.NewService(sharedDB, embedFn, memService)
+		if err := exchangeService.Bootstrap(ctx); err != nil {
+			log.Printf("WARN: Managed Exchange bootstrap failed: %v", err)
+		} else {
+			log.Println("Managed Exchange Active.")
+		}
+	}
+
 	// 5b. Initialize Provisioning Engine
 	provEngine := provisioning.NewEngine(cogRouter)
 
@@ -465,6 +482,7 @@ func main() {
 			Inception: inceptionStore,
 			Comms:     commsGateway,
 			DB:        sharedDB,
+			Exchange:  exchangeService,
 		})
 	}
 
@@ -626,7 +644,7 @@ func main() {
 	}
 
 	// Create Admin Server (V7: pass eventStore + runsManager for Event Spine routes)
-	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, eventStore, runsManager)
+	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, exchangeService, eventStore, runsManager)
 	adminSrv.Comms = commsGateway
 	// V7: wire conversation store into AdminServer for transcript browsing + interjection
 	if convStore != nil {

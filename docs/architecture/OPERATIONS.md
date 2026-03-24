@@ -61,7 +61,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
 | `uv run inv interface.test` | `npm run test` (Vitest) |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
-| `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle plus repo-managed Playwright browsers, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
+| `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle via the built `next start` path plus repo-managed Playwright browsers, defaults to `--workers=1` for repeatability, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
 | `uv run inv interface.stop` | Kill the repo-local Interface server on port 3000 |
 | `uv run inv interface.clean` | rm -rf .next cache |
 | `uv run inv interface.restart` | stop → clean → build → dev → check |

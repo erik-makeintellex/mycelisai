@@ -323,6 +323,23 @@ The required V8.1 layering is:
 - loops = candidate generation, review, and promotion
 - Response Contract, AI Engine Settings, and Runtime Capabilities = separate governed behavior layers, not interchangeable memory fields
 
+### 5.8 Managed exchange foundation
+
+V8.1 now requires a managed exchange foundation so outputs are not treated as unstructured one-off chat blobs.
+
+The managed exchange foundation includes:
+- named channels for work, review, learning, and normalized tool output
+- a canonical field registry used across artifacts and messages
+- typed schemas such as `TextResult`, `PlanResult`, `ReviewResult`, `MediaResult`, `FileResult`, `ToolResult`, `LearningCandidate`, and `Escalation`
+- structured threads for planning, work, review, escalation, and learning
+- structural persistence plus semantic indexing so related prior outputs can be rediscovered
+
+Required rules:
+- Soma, Team Leads, specialist roles, automations, and MCP-backed systems publish governed outputs through the exchange model rather than raw ad hoc payloads when those outputs matter operationally
+- team-local channels may still exist, but operator-reviewable outputs must remain discoverable through the managed exchange layer
+- the managed exchange foundation stays inspectable in V8.1 before broad editing UI ships
+- managed exchange is a runtime coordination substrate, not a replacement for bundle-driven startup or inheritance truth
+
 ## 6. Execution model
 
 ### 6.1 Interactive mode
@@ -391,6 +408,7 @@ Advanced-only detail may include:
 - Specialist role bindings
 - Loop Profile details
 - detailed automation definitions
+- managed exchange inspection for channels, threads, recent artifacts, and schema types
 - Capability assignments
 - Response Style inheritance
 - bundle/config source truth
