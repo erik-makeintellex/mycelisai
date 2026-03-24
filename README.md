@@ -116,6 +116,7 @@ Included in the V8.1 release target:
 - AI Organization creation and Soma-primary workspace flow
 - a primary Soma conversation surface for discussing plans, samples, and delivery intent
 - conversation outputs from Soma may include media and rich artifacts generated directly by Soma or returned from consulted specialists
+- a managed exchange foundation for governed channels, threads, schemas, and normalized outputs beyond single-model request/response
 - guided first-run Soma actions that help a new operator choose a visible next step quickly
 - organization, department, advisor, and role-type visibility in operator language
 - bundle-driven startup truth with policy-bounded inheritance
@@ -154,6 +155,7 @@ Current operator experience summary:
 - the default AI Organization workspace now includes a primary Soma conversation surface for planning, sample discussion, and delivery shaping
 - that same Soma conversation surface is also the canonical operator output lane for imagery, briefs, charts, code, and other rich artifacts, even when specialist or council paths generated them on Soma's behalf
 - the same workspace also gives the operator a direct `Create a team with Soma` path so team formation can begin from conversation or from a guided flow without leaving the AI Organization page
+- advanced Resources support now includes an inspect-only Managed Exchange surface for channels, active threads, and recent normalized outputs
 - Soma always presents guided starting actions instead of a dead-end blank state
 - `Start with Soma` works immediately, even before the operator types a custom request
 - live workspace streaming starts automatically; degraded mode is reserved for an actual connection failure, not normal startup warm-up
@@ -188,6 +190,11 @@ source-of-truth layers remain separate:
 - deployment/env overrides for environment-specific provider/media/runtime wiring
 - runtime state for the live resolved organization and service posture
 - README, V8.1, V8.2, and `V8_DEV_STATE.md` for architecture, release, and implementation truth
+
+Managed exchange note:
+- channels, typed schemas, structured fields, threads, and normalized artifacts are now part of runtime truth for advanced orchestration
+- this exchange layer is how Soma, Team Leads, specialist roles, automations, and MCP-backed systems share governed outputs without falling back to raw message blobs
+- the default operator flow still stays Soma-first; inspect-only exchange visibility belongs to Advanced mode rather than the primary workspace
 
 Contract rule:
 - the default UX must stay simple and intent-first
@@ -361,7 +368,7 @@ Completion rule:
 
 ## Playwright Contract
 
-`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. Ad hoc browser runs default to a managed Next dev server, while the strict branch-readiness gate uses the already-built Next start server for better stability on local hosts.
+`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the built `next start` server and `--workers=1` so direct browser validation stays repeatable on local hosts instead of diverging from the stricter branch-readiness gate.
 
 `uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=1`) and the built `next start` server so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves a single live browser contract, restores the local bridge/core stack before the browser proof when needed, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run.
 

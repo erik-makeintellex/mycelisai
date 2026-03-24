@@ -4,8 +4,7 @@ test.describe('Agent Catalogue Page (/catalogue)', () => {
     test.skip(({ browserName }) => browserName === 'firefox', 'Firefox catalogue coverage is currently unstable; keep Chromium as the baseline browser for now.');
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/catalogue');
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto('/catalogue', { waitUntil: 'domcontentloaded' });
     });
 
     test('page loads without errors', async ({ page }) => {

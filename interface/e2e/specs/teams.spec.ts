@@ -2,10 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Teams Tab (/automations?tab=teams)', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/automations?tab=teams');
-        await page.waitForLoadState('domcontentloaded');
-        await page.getByRole('button', { name: 'Advanced: Off' }).click();
-        await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
+        await page.addInitScript(() => {
+            window.localStorage.setItem('mycelis-advanced-mode', 'true');
+        });
+        await page.goto('/automations?tab=teams', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('button', { name: /Advanced:/ })).toContainText('Advanced: On');
         await expect(page.locator('h1:has-text("Shared Teams")')).toBeVisible({ timeout: 15000 });
     });
 

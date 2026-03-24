@@ -100,7 +100,7 @@ def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
 
 
 def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
-    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts": FakeResult()})
+    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult()})
     events: list[str] = []
     env_seen: dict[str, str] = {}
     port = 4311
@@ -133,7 +133,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
 
-    def fake_start(env, port=interface.INTERFACE_PORT, server_mode="dev"):
+    def fake_start(env, port=interface.INTERFACE_PORT, server_mode="start"):
         env_seen.update(env)
         events.append(f"start:{port}:{server_mode}")
         return FakeServer()
@@ -143,13 +143,13 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts")
 
     assert env_seen["PLAYWRIGHT_SKIP_WEBSERVER"] == "1"
-    assert ctx.commands == ["npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts"]
+    assert ctx.commands == ["npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1"]
     assert ctx.cd_paths == [str(interface.INTERFACE_DIR)]
     assert env_seen["INTERFACE_HOST"] == "127.0.0.1"
     assert env_seen["INTERFACE_BIND_HOST"] == interface.INTERFACE_BIND_HOST
     assert events == [
         f"stop:{port}",
-        f"start:{port}:dev",
+        f"start:{port}:start",
         f"ready:127.0.0.1:{port}",
         "kill:4242",
         f"stop:{port}",

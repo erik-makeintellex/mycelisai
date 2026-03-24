@@ -170,6 +170,37 @@ def test_readme_exposes_layered_architecture_truth():
     assert not missing_snippets, f"README is missing required layered-truth snippets: {missing_snippets}"
 
 
+def test_v8_docs_cover_managed_exchange_foundation():
+    expectations = {
+        README: [
+            "managed exchange foundation",
+            "channels, threads, schemas, and normalized outputs",
+        ],
+        V8_1_LIVING_ARCHITECTURE: [
+            "### 5.8 Managed exchange foundation",
+            "named channels for work, review, learning, and normalized tool output",
+            "structured threads for planning, work, review, escalation, and learning",
+        ],
+        V8_UI_API_CONTRACT: [
+            "managed exchange items and artifact schemas",
+            "inspect-only managed exchange surfaces for Channels, Threads, and Recent Artifacts",
+        ],
+        V8_2_FULL_ARCHITECTURE: [
+            "Managed Exchange",
+            "channels, typed fields, artifact schemas, and inter-agent threads become the governed exchange substrate",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in expectations.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Managed exchange foundation docs are out of sync:\n" + "\n".join(missing)
+
+
 def test_readme_defines_default_and_advanced_surface_contract():
     text = README.read_text(encoding="utf-8")
 

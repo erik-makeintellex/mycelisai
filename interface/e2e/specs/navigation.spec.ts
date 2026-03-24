@@ -17,8 +17,11 @@ test.describe('V8.1 Soma-primary Navigation', () => {
     test.describe.configure({ mode: 'serial' });
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/dashboard');
-        await page.waitForLoadState('domcontentloaded');
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+        await page.evaluate(() => {
+            window.localStorage.setItem('mycelis-advanced-mode', 'false');
+        });
+        await page.reload({ waitUntil: 'domcontentloaded' });
         await expect(page.getByTestId('nav-dashboard')).toBeVisible();
     });
 
@@ -63,9 +66,16 @@ test.describe('V8.1 Soma-primary Navigation', () => {
     });
 
     test('Advanced toggle flips visible state labels', async ({ page }) => {
-        await page.getByRole('button', { name: 'Advanced: Off' }).click();
-        await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
-        await page.getByRole('button', { name: 'Advanced: On' }).click();
-        await expect(page.getByRole('button', { name: 'Advanced: Off' })).toBeVisible();
+        const toggle = page.getByRole('button', { name: /Advanced:/ });
+        await expect(page.getByTestId('nav-resources')).toHaveCount(0);
+        await toggle.click();
+        await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'true');
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(page.getByTestId('nav-resources')).toBeVisible();
+        await expect(page.getByRole('button', { name: /Advanced:/ })).toContainText('Advanced: On');
+        await page.getByRole('button', { name: /Advanced:/ }).click();
+        await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'false');
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(page.getByTestId('nav-resources')).toHaveCount(0);
     });
 });

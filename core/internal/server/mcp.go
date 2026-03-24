@@ -1,12 +1,15 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/mcp"
 )
 
@@ -183,8 +186,47 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, fmt.Sprintf(`{"error":"tool call failed: %s"}`, err.Error()), http.StatusBadGateway)
 		return
 	}
+	if s.Exchange != nil {
+		summary := fmt.Sprintf("%s returned output.", toolName)
+		if text := strings.TrimSpace(extractMCPResultSummary(result)); text != "" {
+			summary = text
+		}
+		_, _ = s.Exchange.PublishMCPResult(ctx, exchange.MCPNormalizationInput{
+			ServerName: serversNameOrFallback(s.MCP, ctx, serverID),
+			ToolName:   toolName,
+			Summary:    summary,
+			TargetRole: "soma",
+			Status:     "completed",
+			Result:     map[string]any{"arguments": body.Arguments, "result": result},
+		})
+	}
 
 	respondJSON(w, result)
+}
+
+func serversNameOrFallback(svc *mcp.Service, ctx context.Context, serverID uuid.UUID) string {
+	if svc == nil {
+		return serverID.String()
+	}
+	server, err := svc.Get(ctx, serverID)
+	if err != nil || server == nil || strings.TrimSpace(server.Name) == "" {
+		return serverID.String()
+	}
+	return server.Name
+}
+
+func extractMCPResultSummary(result any) string {
+	switch typed := result.(type) {
+	case map[string]any:
+		for _, key := range []string{"summary", "message", "text"} {
+			if value, ok := typed[key].(string); ok {
+				return value
+			}
+		}
+	case []any:
+		return fmt.Sprintf("MCP tool returned %d result items.", len(typed))
+	}
+	return ""
 }
 
 // handleMCPLibrary returns the curated MCP server library organized by category.

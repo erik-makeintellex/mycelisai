@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/artifacts"
+	"github.com/mycelis/core/internal/exchange"
 )
 
 // handleListArtifacts returns artifacts filtered by query params.
@@ -163,6 +164,17 @@ func (s *AdminServer) handleStoreArtifact(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"store failed: %s"}`, err.Error()), http.StatusInternalServerError)
 		return
+	}
+	if s.Exchange != nil {
+		_, _ = s.Exchange.PublishArtifact(r.Context(), exchange.ArtifactNormalizationInput{
+			ArtifactID:   stored.ID,
+			ArtifactType: string(stored.ArtifactType),
+			Title:        stored.Title,
+			AgentID:      stored.AgentID,
+			Status:       stored.Status,
+			TargetRole:   "soma",
+			Tags:         []string{"artifact", string(stored.ArtifactType)},
+		})
 	}
 
 	w.WriteHeader(http.StatusCreated)

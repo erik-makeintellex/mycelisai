@@ -554,7 +554,7 @@ def test_coverage(c):
         "server_mode": "Server mode for the managed UI server (dev or start).",
     }
 )
-def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev"):
+def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="start"):
     """
     Run Playwright E2E tests.
     The Invoke wrapper starts a managed local Next.js server and clears any stale
@@ -565,12 +565,13 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     """
     print("Running Playwright E2E Tests...")
     cmd = "npx playwright test --reporter=dot"
+    effective_workers = workers or "1"
     if project:
         cmd += f" --project={project}"
     if spec:
         cmd += f" {spec}"
-    if workers:
-        cmd += f" --workers={workers}"
+    if effective_workers:
+        cmd += f" --workers={effective_workers}"
     if headed:
         cmd += " --headed"
     extra_env = {
@@ -595,8 +596,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
             env["INTERFACE_PORT"] = str(actual_port)
         ready_host = _wait_for_interface_ready(host=env["INTERFACE_HOST"], port=chosen_port)
         if ready_host != env["INTERFACE_HOST"]:
-            print(f"  Managed server reachable via {ready_host}")
-            env["INTERFACE_HOST"] = ready_host
+            print(f"  Managed server also responded via {ready_host}; keeping Playwright pinned to {env['INTERFACE_HOST']}")
         result = run_interface_command(c, cmd, pty=not is_windows(), env=env, hide=True, warn=True)
         _print_ascii_safe(result.stdout)
         _print_ascii_safe(result.stderr)

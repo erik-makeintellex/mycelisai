@@ -1232,8 +1232,10 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(returnToOrganizationLink).toBeVisible();
         await expect(page.getByRole("link", { name: "Return to Organization" })).toHaveAttribute("href", "/organizations/org-123");
 
-        await returnToOrganizationLink.click();
-        await expect(page).toHaveURL(/\/organizations\/org-123$/);
+        await Promise.all([
+            page.waitForURL(/\/organizations\/org-123$/),
+            returnToOrganizationLink.click(),
+        ]);
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
     });
