@@ -14,6 +14,14 @@ type PersistedWorkspaceState = {
     guidance?: TeamLeadGuidanceResponse | null;
 };
 
+export type SomaGuidanceUpdate = {
+    requestLabel: string;
+    summary: string;
+    teamsEngaged: string[];
+    outputs: string[];
+    timestamp: string;
+};
+
 function storageKeyForOrganization(organizationId: string) {
     return `mycelis-soma-workspace:${organizationId}`;
 }
@@ -77,12 +85,16 @@ export default function TeamLeadInteractionPanel({
     somaName,
     teamLeadName,
     autoFocusOnLoad = false,
+    embedded = false,
+    onGuidanceStateChange,
 }: {
     organizationId: string;
     organizationName: string;
     somaName: string;
     teamLeadName: string;
     autoFocusOnLoad?: boolean;
+    embedded?: boolean;
+    onGuidanceStateChange?: (update: SomaGuidanceUpdate) => void;
 }) {
     const panelRef = useRef<HTMLElement | null>(null);
     const promptRef = useRef<HTMLTextAreaElement | null>(null);
@@ -151,8 +163,16 @@ export default function TeamLeadInteractionPanel({
                 throw new Error(extractApiError(responsePayload) || "Team Lead guidance is unavailable right now.");
             }
             const rawGuidance = extractApiData<Partial<TeamLeadGuidanceResponse> | null>(responsePayload);
-            setGuidance(normalizeGuidanceResponse(rawGuidance, action, organizationName, somaName, teamLeadName));
+            const normalized = normalizeGuidanceResponse(rawGuidance, action, organizationName, somaName, teamLeadName);
+            setGuidance(normalized);
             setRequestState("ready");
+            onGuidanceStateChange?.({
+                requestLabel: normalized.request_label,
+                summary: normalized.summary,
+                teamsEngaged: [teamLeadName],
+                outputs: ["Team design guidance"],
+                timestamp: new Date().toISOString(),
+            });
         } catch (err) {
             const message = err instanceof Error ? err.message : "Soma guidance is unavailable right now.";
             setError(rewriteGuidanceText(message, somaName, teamLeadName));
@@ -172,20 +192,33 @@ export default function TeamLeadInteractionPanel({
     };
 
     return (
-        <section id="soma-panel" ref={panelRef} className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
+        <section
+            id="soma-panel"
+            ref={panelRef}
+            className={embedded ? "space-y-5" : "rounded-3xl border border-cortex-border bg-cortex-surface p-6"}
+        >
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold text-cortex-text-main">Create teams with Soma</h2>
+                    <h2 className="text-xl font-semibold text-cortex-text-main">{embedded ? "Create teams with Soma" : "Create teams with Soma"}</h2>
                     <p className="mt-1 text-sm text-cortex-text-muted">
                         Use this lane when you want Soma to shape a team, delivery lane, or first execution structure for {organizationName}.
                     </p>
                 </div>
-                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                    <p className="font-medium text-cortex-text-main">Primary counterpart</p>
-                    <p className="mt-1">{somaName}</p>
-                    <p className="mt-3 font-medium text-cortex-text-main">Operational lead</p>
-                    <p className="mt-1">{teamLeadName}</p>
-                </div>
+                {!embedded ? (
+                    <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
+                        <p className="font-medium text-cortex-text-main">Primary counterpart</p>
+                        <p className="mt-1">{somaName}</p>
+                        <p className="mt-3 font-medium text-cortex-text-main">Operational lead</p>
+                        <p className="mt-1">{teamLeadName}</p>
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
+                        <p className="font-medium text-cortex-text-main">How this mode works</p>
+                        <p className="mt-1 leading-6">
+                            Stay in the same Soma workspace while focusing this mode on team design, delivery lanes, and execution structure.
+                        </p>
+                    </div>
+                )}
             </div>
 
             <div className="mt-5 rounded-2xl border border-cortex-primary/30 bg-cortex-primary/10 p-4">

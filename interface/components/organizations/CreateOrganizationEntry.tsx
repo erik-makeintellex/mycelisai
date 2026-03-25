@@ -190,7 +190,7 @@ export default function CreateOrganizationEntry() {
     return (
         <div className="h-full overflow-auto bg-cortex-bg px-6 py-8">
             <div className="mx-auto max-w-6xl space-y-8">
-                <section className="rounded-3xl border border-cortex-border bg-cortex-surface px-6 py-8 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
+                <section className="rounded-3xl border border-cortex-border bg-cortex-surface px-6 py-8 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                         <div className="max-w-3xl space-y-4">
                             <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-cortex-primary">

@@ -20,10 +20,11 @@ import type {
     ResponseContractProfileId,
     ResponseContractUpdateRequest,
 } from "@/lib/organizations";
-import TeamLeadInteractionPanel from "@/components/organizations/TeamLeadInteractionPanel";
+import TeamLeadInteractionPanel, { type SomaGuidanceUpdate } from "@/components/organizations/TeamLeadInteractionPanel";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import SystemQuickChecks from "@/components/system/SystemQuickChecks";
 import LaunchCrewModal from "@/components/workspace/LaunchCrewModal";
+import { useCortexStore } from "@/store/useCortexStore";
 
 async function readJson(response: Response) {
     try {
@@ -32,6 +33,15 @@ async function readJson(response: Response) {
         return null;
     }
 }
+
+type SomaWorkspaceMode = "conversation" | "team_design";
+
+type CausalStripState = {
+    action: string;
+    teamsEngaged: string[];
+    outputsGenerated: string[];
+    panelsUpdated: string[];
+};
 
 const AI_ENGINE_OPTIONS: Array<{
     id: OrganizationAIEngineProfileId;
@@ -152,6 +162,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [learningInsightsError, setLearningInsightsError] = useState<string | null>(null);
     const [learningInsightsReloadToken, setLearningInsightsReloadToken] = useState(0);
     const [isLaunchCrewOpen, setIsLaunchCrewOpen] = useState(false);
+    const [somaWorkspaceMode, setSomaWorkspaceMode] = useState<SomaWorkspaceMode>("conversation");
+    const [lastGuidanceUpdate, setLastGuidanceUpdate] = useState<SomaGuidanceUpdate | null>(null);
+    const missionChat = useCortexStore((s) => s.missionChat);
 
     useEffect(() => {
         let cancelled = false;
@@ -701,6 +714,11 @@ export default function OrganizationContextShell({ organizationId }: { organizat
 
     const somaName = `Soma for ${organization.name}`;
     const teamLeadName = `${organization.team_lead_label} for ${organization.name}`;
+    const lastConversationAction = [...missionChat].reverse().find((message) => message.role === "user" && !message.content.startsWith("[BROADCAST]"));
+    const lastConversationResult = [...missionChat].reverse().find((message) => message.role !== "user");
+    const latestConversationTimestamp = parseKnownTimestamp(lastConversationResult?.timestamp);
+    const latestGuidanceTimestamp = parseKnownTimestamp(lastGuidanceUpdate?.timestamp);
+    const latestSomaTimestamp = Math.max(latestConversationTimestamp, latestGuidanceTimestamp);
     const overviewItems = [
         { label: "Started from", value: organization.start_mode === "template" ? (organization.template_name || "Template") : "Empty" },
         { label: "Advisors", value: formatConfiguredCount(organization.advisor_count, "Advisor") },
@@ -708,6 +726,28 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         { label: "Specialists", value: formatConfiguredCount(organization.specialist_count, "Specialist") },
         { label: "AI Organization", value: toTitleCase(organization.status) },
     ];
+    const panelUpdates = panelsUpdatedSince(latestSomaTimestamp, recentActivity, automations, learningInsights);
+    const causalStrip: CausalStripState =
+        latestGuidanceTimestamp > latestConversationTimestamp && lastGuidanceUpdate
+            ? {
+                  action: lastGuidanceUpdate.requestLabel,
+                  teamsEngaged: lastGuidanceUpdate.teamsEngaged,
+                  outputsGenerated: lastGuidanceUpdate.outputs,
+                  panelsUpdated: panelUpdates,
+              }
+            : lastConversationAction || lastConversationResult
+              ? {
+                    action: lastConversationAction?.content ?? "Continue the current Soma conversation",
+                    teamsEngaged: extractTeamsFromConversation(lastConversationResult, teamLeadName),
+                    outputsGenerated: extractOutputsFromConversation(lastConversationResult),
+                    panelsUpdated: panelUpdates,
+                }
+              : {
+                    action: "Ready for your first Soma request",
+                    teamsEngaged: ["Soma"],
+                    outputsGenerated: ["Conversation guidance"],
+                    panelsUpdated: panelUpdates.length > 0 ? panelUpdates : ["Quick Checks"],
+                };
 
     return (
         <div className="h-full overflow-auto bg-cortex-bg px-6 py-8">
@@ -731,7 +771,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                     </div>
                 </section>
 
-                <section className="rounded-3xl border border-cortex-border bg-cortex-surface px-6 py-8 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
+                <section className="rounded-3xl border border-cortex-border bg-cortex-surface px-6 py-8 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                         <div className="space-y-3">
                             <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.22em] text-cortex-primary">
@@ -885,7 +925,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             />
                         )}
 
-                        <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
+                        <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-6 shadow-[0_24px_60px_rgba(29,42,53,0.08)]">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                 <div className="space-y-3">
                                     <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/20 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
@@ -906,39 +946,97 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                     </p>
                                 </div>
                             </div>
+                            <SomaCausalStrip
+                                action={causalStrip.action}
+                                teamsEngaged={causalStrip.teamsEngaged}
+                                outputsGenerated={causalStrip.outputsGenerated}
+                                panelsUpdated={causalStrip.panelsUpdated}
+                            />
                             <div className="mt-5 grid gap-3 md:grid-cols-4">
                                 {overviewItems.map((item) => (
                                     <Metric key={item.label} label={item.label} value={item.value} />
                                 ))}
                             </div>
-                            <div className="mt-5 flex flex-wrap gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsLaunchCrewOpen(true)}
-                                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90"
-                                >
-                                    Create a team with Soma
-                                    <Sparkles className="h-4 w-4" />
-                                </button>
+                            <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div className="flex flex-wrap gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSomaWorkspaceMode("conversation")}
+                                        className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                                            somaWorkspaceMode === "conversation"
+                                                ? "border-cortex-primary/35 bg-cortex-primary text-cortex-bg"
+                                                : "border-cortex-border bg-cortex-bg text-cortex-text-main hover:border-cortex-primary/20"
+                                        }`}
+                                    >
+                                        Talk with Soma
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSomaWorkspaceMode("team_design")}
+                                        className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                                            somaWorkspaceMode === "team_design"
+                                                ? "border-cortex-primary/35 bg-cortex-primary text-cortex-bg"
+                                                : "border-cortex-border bg-cortex-bg text-cortex-text-main hover:border-cortex-primary/20"
+                                        }`}
+                                    >
+                                        Create teams with Soma
+                                    </button>
+                                    {somaWorkspaceMode === "team_design" ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsLaunchCrewOpen(true)}
+                                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
+                                        >
+                                            Open crew launcher
+                                        </button>
+                                    ) : null}
+                                </div>
                                 <span className="inline-flex items-center rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm text-cortex-text-muted">
-                                    Soma can help shape examples first, then turn them into a team-ready delivery path.
+                                    {somaWorkspaceMode === "conversation"
+                                        ? "Stay in general conversation for plans, concepts, imagery, and broad delivery shaping."
+                                        : "Use team design mode when you want Soma to turn the current conversation into roles, lanes, and execution structure."}
                                 </span>
                             </div>
-                            <div className="mt-6 h-[42rem] lg:h-[48rem] overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg">
-                                <MissionControlChat />
+                            <div className="mt-6 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg">
+                                {somaWorkspaceMode === "conversation" ? (
+                                    <div className="h-[46rem] lg:h-[52rem]">
+                                        <MissionControlChat simpleMode autoFocus />
+                                    </div>
+                                ) : (
+                                    <div className="p-5 lg:p-6">
+                                        <TeamLeadInteractionPanel
+                                            organizationId={organization.id}
+                                            organizationName={organization.name}
+                                            somaName={somaName}
+                                            teamLeadName={teamLeadName}
+                                            autoFocusOnLoad
+                                            embedded
+                                            onGuidanceStateChange={setLastGuidanceUpdate}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </section>
                     </div>
 
-                    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
-                        <TeamLeadInteractionPanel
-                            organizationId={organization.id}
-                            organizationName={organization.name}
-                            somaName={somaName}
-                            teamLeadName={teamLeadName}
-                            autoFocusOnLoad
-                        />
+                    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+                        <div className="space-y-4">
+                            <RecentActivityPanel
+                                items={recentActivity}
+                                loading={activityLoading}
+                                error={activityError}
+                                onRetry={() => setActivityReloadToken((value) => value + 1)}
+                                causalAction={causalStrip.action}
+                            />
 
+                            <LearningVisibilityPanel
+                                items={learningInsights}
+                                loading={learningInsightsLoading}
+                                error={learningInsightsError}
+                                onRetry={() => setLearningInsightsReloadToken((value) => value + 1)}
+                                causalAction={causalStrip.action}
+                            />
+                        </div>
                         <div className="space-y-4">
                             <SystemQuickChecks />
 
@@ -949,6 +1047,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 summary={advisorSummary(organization.advisor_count, teamLeadName)}
                                 supportLabel="Advisor support"
                                 items={advisorSupportItems(organization.advisor_count)}
+                                changeSummary={organization.advisor_count > 0 ? `${formatConfiguredCount(organization.advisor_count, "Advisor")} visible right now` : "No advisor support configured yet"}
+                                changeReason="Advisor support expands when Soma needs more review coverage around current work."
+                                somaConnection="Soma uses advisor support for decision review, priority checks, and quality assurance."
                                 inspectActionLabel="Review Advisors"
                                 onInspect={() => setActiveDetailView("advisors")}
                             />
@@ -958,8 +1059,11 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 title="Departments"
                                 countLabel={formatConfiguredCount(organization.department_count, "Department")}
                                 summary={departmentSummary(organization.department_count, organization.specialist_count, teamLeadName)}
-                                supportLabel="Department view"
+                                supportLabel="Visible specialist roles"
                                 items={departmentSupportItems(organization)}
+                                changeSummary={organization.department_count > 0 ? `${formatConfiguredCount(organization.department_count, "Department")} shaping delivery` : "No working lanes defined yet"}
+                                changeReason="Departments and specialist roles show the execution structure Soma can work through next."
+                                somaConnection="Soma uses Departments and Specialists to turn intent into concrete delivery lanes."
                                 inspectActionLabel="Open Departments"
                                 onInspect={() => setActiveDetailView("departments")}
                             />
@@ -972,22 +1076,11 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 summary={automationSummary(automations.length, teamLeadName)}
                                 supportLabel="What these cover"
                                 items={automationSupportItems(automations, automationsLoading, automationsError)}
+                                changeSummary={automationsError ? "Automation details unavailable right now" : formatAutomationCount(automations.length, automationsLoading, automationsError)}
+                                changeReason="Automations refresh as ongoing reviews and checks become visible around the organization."
+                                somaConnection="Soma uses Automations to explain what is watching, reviewing, and checking work in the background."
                                 inspectActionLabel="Review Automations"
                                 onInspect={() => setActiveDetailView("automations")}
-                            />
-
-                            <RecentActivityPanel
-                                items={recentActivity}
-                                loading={activityLoading}
-                                error={activityError}
-                                onRetry={() => setActivityReloadToken((value) => value + 1)}
-                            />
-
-                            <LearningVisibilityPanel
-                                items={learningInsights}
-                                loading={learningInsightsLoading}
-                                error={learningInsightsError}
-                                onRetry={() => setLearningInsightsReloadToken((value) => value + 1)}
                             />
 
                             <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
@@ -1000,6 +1093,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                         summary={aiEngineSummary(organization.ai_engine_settings_summary)}
                                         supportLabel="What this affects"
                                         items={aiEngineSupportItems(organization.ai_engine_settings_summary)}
+                                        changeSummary={`Current profile: ${organization.ai_engine_settings_summary || "Starter Defaults"}`}
+                                        changeReason="This guided choice shapes how deeply Soma plans, responds, and carries work forward."
+                                        somaConnection="Soma uses these AI Engine settings as the organization-wide operating posture."
                                         inspectActionLabel="Review AI Engine Settings"
                                         onInspect={() => setActiveDetailView("aiEngine")}
                                     />
@@ -1011,6 +1107,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                         summary={responseContractSummary(organization.response_contract_summary)}
                                         supportLabel="What this shapes"
                                         items={responseContractSupportItems(organization.response_contract_summary)}
+                                        changeSummary={`Current profile: ${organization.response_contract_summary || "Clear & Balanced"}`}
+                                        changeReason="This guided choice shapes how Soma sounds, structures responses, and presents detail."
+                                        somaConnection="Soma uses this Response Style to keep the organization consistent and readable."
                                         inspectActionLabel="Review Response Style"
                                         onInspect={() => setActiveDetailView("responseContract")}
                                     />
@@ -1021,6 +1120,9 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                         summary={learningContextSummary(organization.memory_personality_summary)}
                                         supportLabel="What this affects"
                                         items={learningContextSupportItems(organization.memory_personality_summary)}
+                                        changeSummary={learningInsights.length > 0 ? `${learningInsights.length} learning highlight${learningInsights.length === 1 ? "" : "s"} visible` : "No learning highlights visible yet"}
+                                        changeReason="Learning and retained context become visible as Soma and supporting reviews build repeatable patterns."
+                                        somaConnection="Soma uses retained context to keep guidance continuous across return visits and later work."
                                     />
                                 </div>
                                 <div className="mt-5">
@@ -1075,14 +1177,35 @@ function departmentSummary(count: number, specialistCount: number, teamLeadName:
 }
 
 function departmentSupportItems(organization: OrganizationHomePayload) {
-    const items = [
-        organization.start_mode === "template" && organization.template_name
-            ? `Started from ${organization.template_name}`
-            : "Started from Empty",
-        formatConfiguredCount(organization.specialist_count, "Specialist"),
-        organization.department_count > 0 ? "Open the current team structure" : "Try reviewing your organization setup",
+    const visibleRoles = (organization.departments ?? [])
+        .flatMap((department) =>
+            (department.agent_type_profiles ?? []).map((profile) => ({
+                label: profile.name,
+                detail: profile.helps_with,
+            })),
+        )
+        .slice(0, 3);
+
+    if (visibleRoles.length > 0) {
+        return visibleRoles;
+    }
+
+    return [
+        {
+            label: organization.start_mode === "template" && organization.template_name
+                ? `Started from ${organization.template_name}`
+                : "Started from Empty",
+            detail: "This organization already has a visible starting structure for Soma to work through.",
+        },
+        {
+            label: formatConfiguredCount(organization.specialist_count, "Specialist"),
+            detail: "Specialist roles will appear here with short purpose labels as the structure becomes visible.",
+        },
+        {
+            label: organization.department_count > 0 ? "Open the current team structure" : "Try reviewing your organization setup",
+            detail: "Use the Department view to inspect the current lanes and role bindings in more detail.",
+        },
     ];
-    return items;
 }
 
 function formatAutomationCount(count: number, loading: boolean, error: string | null) {
@@ -1342,6 +1465,91 @@ function learningContextSupportItems(summary: string) {
     return [summary, "Learning visibility", "Context continuity"];
 }
 
+function parseKnownTimestamp(value?: string) {
+    if (!value) {
+        return 0;
+    }
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function panelsUpdatedSince(
+    since: number,
+    recentActivity: OrganizationLoopActivityItem[],
+    automations: OrganizationAutomationItem[],
+    learningInsights: OrganizationLearningInsightItem[],
+) {
+    if (!since) {
+        return [];
+    }
+
+    const panels: string[] = [];
+    if (recentActivity.some((item) => parseKnownTimestamp(item.last_run_at) >= since)) {
+        panels.push("Recent Activity");
+    }
+    if (automations.some((item) => (item.recent_outcomes ?? []).some((outcome) => parseKnownTimestamp(outcome.occurred_at) >= since))) {
+        panels.push("Automations");
+    }
+    if (learningInsights.some((item) => parseKnownTimestamp(item.observed_at) >= since)) {
+        panels.push("Learning & Context");
+    }
+    return panels.length > 0 ? panels : ["Quick Checks"];
+}
+
+function extractTeamsFromConversation(
+    message: ReturnType<typeof useCortexStore.getState>["missionChat"][number] | undefined,
+    teamLeadName: string,
+) {
+    if (!message) {
+        return ["Soma"];
+    }
+
+    const consultationLabels = (message.consultations ?? [])
+        .map((consultation) => friendlyRoleLabel(consultation.member))
+        .filter(Boolean);
+
+    if (consultationLabels.length > 0) {
+        return consultationLabels;
+    }
+
+    if (message.source_node && message.source_node !== "admin") {
+        return [friendlyRoleLabel(message.source_node)];
+    }
+
+    return ["Soma", teamLeadName];
+}
+
+function extractOutputsFromConversation(message: ReturnType<typeof useCortexStore.getState>["missionChat"][number] | undefined) {
+    if (!message) {
+        return ["Conversation guidance"];
+    }
+
+    const artifacts = (message.artifacts ?? []).map((artifact) => artifact.type === "image" ? "Imagery" : artifact.title || `${toTitleCase(artifact.type)} output`);
+    if (artifacts.length > 0) {
+        return artifacts.slice(0, 3);
+    }
+
+    if (message.proposal) {
+        return ["Proposal ready"];
+    }
+
+    if (message.content?.trim()) {
+        return ["Conversation guidance"];
+    }
+
+    return ["No visible output yet"];
+}
+
+function friendlyRoleLabel(value: string) {
+    if (value === "admin") {
+        return "Soma";
+    }
+    return value
+        .replace(/^council-/, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (segment) => segment.toUpperCase());
+}
+
 function toTitleCase(value: string) {
     return value
         .split(/[\s_-]+/)
@@ -1400,6 +1608,9 @@ function InspectOnlySummary({
     summary,
     supportLabel,
     items,
+    changeSummary,
+    changeReason,
+    somaConnection,
     inspectActionLabel,
     onInspect,
     statusLabel = "Inspect only",
@@ -1409,7 +1620,10 @@ function InspectOnlySummary({
     countLabel: string;
     summary: string;
     supportLabel: string;
-    items: string[];
+    items: Array<string | { label: string; detail?: string }>;
+    changeSummary: string;
+    changeReason: string;
+    somaConnection: string;
     inspectActionLabel?: string;
     onInspect?: () => void;
     statusLabel?: string;
@@ -1430,11 +1644,28 @@ function InspectOnlySummary({
                 </div>
             </div>
             <div className="mt-5">
+                <div className="grid gap-3 lg:grid-cols-3">
+                    <CausalFact label="What changed" value={changeSummary} />
+                    <CausalFact label="Why it changed" value={changeReason} />
+                    <CausalFact label="How Soma uses it" value={somaConnection} />
+                </div>
+            </div>
+            <div className="mt-5">
                 <p className="text-sm font-medium text-cortex-text-main">{supportLabel}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 grid gap-2">
                     {items.map((item) => (
-                        <div key={item} className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main">
-                            {item}
+                        <div
+                            key={typeof item === "string" ? item : `${item.label}-${item.detail ?? ""}`}
+                            className="rounded-2xl border border-cortex-border bg-cortex-bg px-3 py-3 text-sm text-cortex-text-main"
+                        >
+                            {typeof item === "string" ? (
+                                item
+                            ) : (
+                                <>
+                                    <p className="font-medium text-cortex-text-main">{item.label}</p>
+                                    {item.detail ? <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{item.detail}</p> : null}
+                                </>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -2554,11 +2785,13 @@ function RecentActivityPanel({
     loading,
     error,
     onRetry,
+    causalAction,
 }: {
     items: OrganizationLoopActivityItem[];
     loading: boolean;
     error: string | null;
     onRetry: () => void;
+    causalAction: string;
 }) {
     const visibleItems = items.slice(0, 8);
 
@@ -2574,6 +2807,11 @@ function RecentActivityPanel({
                         Your AI Organization is actively working through recent reviews, checks, and updates in the background.
                     </p>
                 </div>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                <CausalFact label="What changed" value={visibleItems[0]?.summary ?? "No visible activity yet"} />
+                <CausalFact label="Why it changed" value={`Recent Activity refreshes after Soma requests and ongoing checks create new visible signals.`} />
+                <CausalFact label="How Soma uses it" value={`Soma uses this panel to explain what happened after "${causalAction}".`} />
             </div>
 
             {error && (
@@ -2633,11 +2871,13 @@ function LearningVisibilityPanel({
     loading,
     error,
     onRetry,
+    causalAction,
 }: {
     items: OrganizationLearningInsightItem[];
     loading: boolean;
     error: string | null;
     onRetry: () => void;
+    causalAction: string;
 }) {
     const visibleItems = items.slice(0, 6);
 
@@ -2653,6 +2893,11 @@ function LearningVisibilityPanel({
                         See the recurring improvements and themes your AI Organization is picking up across recent work, and why they matter for what happens next.
                     </p>
                 </div>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                <CausalFact label="What changed" value={visibleItems[0]?.summary ?? "No learning highlights visible yet"} />
+                <CausalFact label="Why it changed" value="Learning highlights appear as repeated work patterns become strong enough to describe in plain language." />
+                <CausalFact label="How Soma uses it" value={`Soma uses this panel to carry context forward after "${causalAction}".`} />
             </div>
 
             {error && (
@@ -2707,6 +2952,37 @@ function LearningVisibilityPanel({
                     ))}
                 </div>
             )}
+        </div>
+    );
+}
+
+function SomaCausalStrip({
+    action,
+    teamsEngaged,
+    outputsGenerated,
+    panelsUpdated,
+}: CausalStripState) {
+    return (
+        <div className="mt-5 rounded-2xl border border-cortex-primary/25 bg-cortex-primary/10 p-4">
+            <div className="flex items-center gap-2 text-cortex-primary">
+                <Sparkles className="h-4 w-4" />
+                <p className="text-sm font-semibold text-cortex-text-main">Soma just did this</p>
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-4">
+                <CausalFact label="Last action" value={action} />
+                <CausalFact label="Teams engaged" value={teamsEngaged.join(", ")} />
+                <CausalFact label="Outputs generated" value={outputsGenerated.join(", ")} />
+                <CausalFact label="Panels updated" value={panelsUpdated.join(", ")} />
+            </div>
+        </div>
+    );
+}
+
+function CausalFact({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3">
+            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">{label}</p>
+            <p className="mt-2 text-sm leading-6 text-cortex-text-main">{value}</p>
         </div>
     );
 }

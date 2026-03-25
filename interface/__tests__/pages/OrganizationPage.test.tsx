@@ -560,18 +560,17 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("link", { name: "AI Organizations" }).getAttribute("href")).toBe("/dashboard");
         expect(screen.getByText("Soma ready")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
         expect(screen.getByText("What I can help with")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Talk with Soma" })).toBeDefined();
         expect(screen.getByText("How to read this workspace")).toBeDefined();
-        expect(screen.getByRole("button", { name: "Create a team with Soma" })).toBeDefined();
-        expect(screen.getByText("Soma can help shape examples first, then turn them into a team-ready delivery path.")).toBeDefined();
         expect(screen.getByText(/Use Soma as the main interface\./)).toBeDefined();
+        expect(screen.getByText("Soma just did this")).toBeDefined();
         expect(screen.getByText("Create teams with Soma")).toBeDefined();
-        expect(screen.getByRole("button", { name: "Start team design" })).toBeDefined();
-        expect(screen.getByLabelText("Tell Soma what team or delivery lane you want to create")).toBeDefined();
         expect(screen.getByTestId("mission-chat")).toBeDefined();
-        expect(screen.getByText("Quick Checks")).toBeDefined();
+        expect(screen.queryByText("Direct")).toBeNull();
+        expect(screen.queryByTitle(/Broadcast mode/i)).toBeNull();
+        expect(screen.getByRole("heading", { name: "Quick Checks" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
@@ -581,20 +580,21 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Learning & Context" })).toBeDefined();
         expect(screen.getByText("Advisor support")).toBeDefined();
-        expect(screen.getByText("Department view")).toBeDefined();
+        expect(screen.getByText("Visible specialist roles")).toBeDefined();
         expect(screen.getByText("Your AI Organization is actively working through recent reviews, checks, and updates in the background.")).toBeDefined();
         expect(screen.getByText("Department check")).toBeDefined();
         expect(screen.getByText("Specialist review")).toBeDefined();
         expect(screen.getAllByText("2 minutes ago").length).toBeGreaterThan(0);
         expect(screen.getAllByText("5 minutes ago").length).toBeGreaterThan(0);
-        expect(screen.getByText("No issues detected")).toBeDefined();
-        expect(screen.getByText("2 items flagged")).toBeDefined();
-        expect(screen.getByText("Platform Department is building a steadier execution lane for the organization.")).toBeDefined();
+        expect(screen.getAllByText("No issues detected").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("2 items flagged").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Platform Department is building a steadier execution lane for the organization.").length).toBeGreaterThan(0);
         expect(screen.getAllByText("Team: Platform Department").length).toBeGreaterThan(0);
-        expect(screen.getByText("Strong")).toBeDefined();
-        expect(screen.getByText("Emerging")).toBeDefined();
-        expect(screen.getByText("Planning review")).toBeDefined();
-        expect(screen.getByText("Started from Engineering Starter")).toBeDefined();
+        expect(screen.getAllByText("Strong").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Emerging").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Planning review").length).toBeGreaterThan(0);
+        expect(screen.getByText("Started from")).toBeDefined();
+        expect(screen.getByText("Engineering Starter")).toBeDefined();
         expect(screen.getByText("Department readiness review • Scheduled")).toBeDefined();
         expect(screen.getByText("Agent type readiness review • Event-driven")).toBeDefined();
         expect(screen.getAllByText("What this affects").length).toBeGreaterThan(0);
@@ -605,9 +605,10 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Verbosity")).toBeDefined();
         expect(screen.getByText("Learning visibility")).toBeDefined();
         expect(screen.getByText("Context continuity")).toBeDefined();
-        expect(screen.getByRole("button", { name: /Run a quick strategy check/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Choose the first priority/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Review your organization setup/i })).toBeDefined();
+        expect(screen.getByText("Explore a concept")).toBeDefined();
+        expect(screen.getByText("Generate samples")).toBeDefined();
+        expect(screen.getByText("Shape a team")).toBeDefined();
+        expect(screen.getByText("Review current state")).toBeDefined();
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Review Automations" }).length).toBeGreaterThan(0);
@@ -649,12 +650,13 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByText("Create teams with Soma")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Create teams with Soma" }));
         fireEvent.click(screen.getByRole("button", { name: /Review your organization setup/i }));
         expect(await screen.findByText("Organization setup review for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
         expect(screen.getByRole("heading", { name: /^Northstar Labs$/ })).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
@@ -695,12 +697,13 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByText("Create teams with Soma")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Create teams with Soma" }));
         fireEvent.click(screen.getByRole("button", { name: /Run a quick strategy check/i }));
 
         expect(await screen.findByText("Soma guidance is unavailable")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getByText("Soma ready")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
 
         fireEvent.click(screen.getByRole("button", { name: "Retry Soma action" }));
 
@@ -777,6 +780,24 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.queryByText(/memory promotion/i)).toBeNull();
     });
 
+    it("keeps one Soma workspace and switches team design into a mode inside that same panel", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByTestId("mission-chat")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Create teams with Soma" }));
+
+        expect(await screen.findByRole("button", { name: "Start team design" })).toBeDefined();
+        expect(screen.getByLabelText("Tell Soma what team or delivery lane you want to create")).toBeDefined();
+        expect(screen.queryByTestId("mission-chat")).toBeNull();
+
+        fireEvent.click(screen.getByRole("button", { name: "Talk with Soma" }));
+        expect(await screen.findByTestId("mission-chat")).toBeDefined();
+    });
+
     it("opens Automation details from the support column and keeps the Soma workspace visible", async () => {
         setupOrganizationFetch();
 
@@ -797,7 +818,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Runs every minute and also after organization setup, Team Lead guidance, AI Engine changes, or Response Style changes.")).toBeDefined();
         expect(screen.getByText("This system runs ongoing reviews and checks to help your organization improve over time.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
         expect(screen.getByText("Create teams with Soma")).toBeDefined();
         expect(screen.queryByText(/loop profile/i)).toBeNull();
         expect(screen.queryByText(/scheduler/i)).toBeNull();
@@ -821,7 +842,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByText("Reviews and checks are temporarily unavailable here. The Soma workspace is still ready.")).toBeDefined();
         expect(screen.getByRole("button", { name: "Retry Automations" })).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
     });
 
     it("opens Advisor details from the Soma action and keeps the Soma workspace visible", async () => {
@@ -838,7 +859,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Planning Advisor")).toBeDefined();
         expect(screen.getByText("Decision support")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
         expect(screen.getByText("Create teams with Soma")).toBeDefined();
     });
 
@@ -857,14 +878,14 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("2 Specialists visible here.")).toBeDefined();
         expect(screen.getByText("Using Organization Default: Starter defaults included")).toBeDefined();
         expect(screen.getByText("Agent Type Profiles")).toBeDefined();
-        expect(screen.getByText("Planner")).toBeDefined();
-        expect(screen.getByText("Delivery Specialist")).toBeDefined();
+        expect(screen.getAllByText("Planner").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("Delivery Specialist").length).toBeGreaterThan(0);
         expect(screen.getByText("Type-specific Engine: High Reasoning")).toBeDefined();
         expect(screen.getByText("Using Team Default: Starter defaults included")).toBeDefined();
         expect(screen.getByText("Type-specific Response Style: Structured & Analytical")).toBeDefined();
         expect(screen.getByText("Using Organization or Team Default: Clear & Balanced")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
 
         fireEvent.click(screen.getByRole("button", { name: "Back to Soma" }));
         expect(screen.queryByRole("heading", { name: "Department details" })).toBeNull();
@@ -927,7 +948,8 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByRole("heading", { name: "Talk with Soma" })).toBeDefined();
-        fireEvent.click(screen.getByRole("button", { name: "Create a team with Soma" }));
+        fireEvent.click(screen.getByRole("button", { name: "Create teams with Soma" }));
+        fireEvent.click(await screen.findByRole("button", { name: "Open crew launcher" }));
 
         expect(await screen.findByRole("heading", { name: "Launch a Crew" })).toBeDefined();
         expect(screen.getByText(/must return a real outcome, not a planning stub/i)).toBeDefined();
@@ -1123,7 +1145,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByText("Unable to update this Agent Type AI Engine")).toBeDefined();
         expect(screen.getByText("Agent Type AI Engine update is unavailable right now.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
 
         fireEvent.click(screen.getAllByRole("button", { name: "Use selected AI Engine" }).at(-1)!);
         expect(await screen.findByText("Type-specific Engine: Balanced")).toBeDefined();
@@ -1194,7 +1216,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Agent Type Response Style update is unavailable right now.")).toBeDefined();
         expect(screen.getByRole("button", { name: "Retry Response Style change" })).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
 
         fireEvent.click(screen.getByRole("button", { name: "Retry Response Style change" }));
         expect(await screen.findByText("Type-specific Response Style: Warm & Supportive")).toBeDefined();
@@ -1234,7 +1256,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("AI Engine update is unavailable right now.")).toBeDefined();
         expect(screen.getByRole("button", { name: "Retry AI Engine change" })).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getAllByText("Team Lead for Northstar Labs").length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
 
         fireEvent.click(screen.getByRole("button", { name: "Retry AI Engine change" }));
 
@@ -1258,6 +1280,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
                         specialist_count: 0,
                         ai_engine_settings_summary: "Set up later in Advanced mode",
                         memory_personality_summary: "Set up later in Advanced mode",
+                        departments: [],
                     },
                 }),
             automationsHandler: () => jsonResponse({ ok: true, data: [] }),

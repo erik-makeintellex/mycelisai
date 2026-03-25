@@ -79,6 +79,17 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Atlas')).toBeDefined();
         });
 
+        it('hides advanced routing controls in simple Soma mode', async () => {
+            useCortexStore.setState({ councilMembers: COUNCIL_MEMBERS });
+            render(<MissionControlChat simpleMode />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            expect(screen.getByText('Soma conversation')).toBeDefined();
+            expect(screen.queryByText('Direct')).toBeNull();
+            expect(screen.queryByTitle(/Broadcast mode/)).toBeNull();
+            expect(screen.getByPlaceholderText(/Tell Soma what you want to create, review, or improve/i)).toBeDefined();
+        });
+
         it('shows "Broadcast" header in broadcast mode', async () => {
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -665,7 +676,7 @@ describe('MissionControlChat', () => {
         it('shows prompt about asking Soma in normal mode', async () => {
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-            expect(screen.getByText(/Ask Soma/i)).toBeDefined();
+            expect(screen.getByText(/Tell Soma what you want to create, review, refine, or improve/i)).toBeDefined();
         });
 
         it('shows broadcast directive text in broadcast mode', async () => {

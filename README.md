@@ -153,19 +153,23 @@ Do not duplicate the full live checklist in this README. Keep the implementation
 Current operator experience summary:
 - a new operator lands in AI Organization setup, not a blank assistant thread
 - Soma is the default workspace route on first load and after AI Organization creation
-- the default AI Organization workspace now includes a primary Soma conversation surface for planning, sample discussion, and delivery shaping
+- the default AI Organization workspace now includes one primary Soma interaction surface with mode switching inside the same panel instead of parallel front doors
+- the default Soma conversation hides raw broadcast and direct-council routing controls until Advanced mode is intentionally opened
 - that same Soma conversation surface is also the canonical operator output lane for imagery, briefs, charts, code, and other rich artifacts, even when specialist or council paths generated them on Soma's behalf
-- the same workspace also gives the operator a direct `Create a team with Soma` path so team formation can begin from conversation or from a guided flow without leaving the AI Organization page
+- team design now lives as a guided Soma mode inside that same workspace so the operator can stay in one continuous interaction context
 - advanced Resources support now includes an inspect-only Managed Exchange surface for channels, active threads, and recent normalized outputs
 - Soma always presents guided starting actions instead of a dead-end blank state
 - `Start with Soma` works immediately, even before the operator types a custom request
 - live workspace streaming starts automatically; degraded mode is reserved for an actual connection failure, not normal startup warm-up
 - Team Leads remain visible as the operational leaders Soma works through
+- a visible `Soma just did this` strip now ties the last action to engaged teams, generated outputs, and updated support panels
+- Departments now show visible specialist-role summaries instead of only counts in the default workspace
 - basic system confidence checks remain visible in the default workspace; operators do not need Advanced mode just to verify core service state
 - the Soma workspace keeps the in-progress request draft and the last guided outcome visible when the operator leaves and returns to the same AI Organization
 - the organization-wide AI Engine and Response Style chosen during setup shape Soma's initial working posture, while the assistant name remains operator-configurable
 - AI Engine providers now carry a safe default token budget profile and max output budget so local and hosted agentry usage stays bounded by configuration instead of hidden hardcoded limits
 - Recent Activity, Automations, Learning, Advisors, and Departments keep readable empty, loading, and failure states without collapsing the workspace
+- the default theme now uses a calmer light neutral surface with lower visual harshness while keeping advanced/runtime surfaces visually consistent
 
 ## Default And Advanced Surfaces
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Network, Settings, Home, Workflow, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2 } from 'lucide-react';
+import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2 } from 'lucide-react';
 import { readLastOrganization, subscribeLastOrganizationChange } from '@/lib/lastOrganization';
 import { useCortexStore } from '@/store/useCortexStore';
 
@@ -40,7 +40,6 @@ export function ZoneA() {
             description: lastOrganization.name,
             testId: 'current-organization-nav',
         }] : []),
-        { href: '/automations', icon: Workflow, label: 'Automations', testId: 'nav-automations' },
         { href: '/docs', icon: BookOpen, label: 'Docs', testId: 'nav-docs' },
     ];
     const advancedNav = [

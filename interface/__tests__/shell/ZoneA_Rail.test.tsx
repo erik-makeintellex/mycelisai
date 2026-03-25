@@ -30,7 +30,6 @@ import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'AI Organization' },
-    { href: '/automations', label: 'Automations' },
     { href: '/docs', label: 'Docs' },
 ];
 
@@ -94,15 +93,8 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     it('uses muted text for inactive routes', () => {
         mockPathname.mockReturnValue('/dashboard');
         const { container } = render(<ZoneA />);
-        const automationsLink = container.querySelector('a[href="/automations"]');
-        expect(automationsLink?.className).toContain('text-cortex-text-muted');
-    });
-
-    it('highlights /automations when active', () => {
-        mockPathname.mockReturnValue('/automations');
-        const { container } = render(<ZoneA />);
-        const automationsLink = container.querySelector('a[href="/automations"]');
-        expect(automationsLink?.className).toContain('bg-cortex-primary');
+        const docsLink = container.querySelector('a[href="/docs"]');
+        expect(docsLink?.className).toContain('text-cortex-text-muted');
     });
 
     it('keeps advanced routes hidden when advancedMode is off', () => {

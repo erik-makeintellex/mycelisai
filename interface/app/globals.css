@@ -5,23 +5,18 @@
   --font-sans: var(--font-ui), "Segoe UI", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: var(--font-code), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Cortex Palette — Midnight (Lifted Contrast) */
-  --color-cortex-bg: #111821;
-  --color-cortex-surface: #1a2430;
-  --color-cortex-primary: #1ab4cf;
-  /* cyan-500 */
-  --color-cortex-primary-glow: rgba(26, 180, 207, 0.39);
-  --color-cortex-success: #23b26f;
-  /* emerald-500 */
-  --color-cortex-warning: #e6a63d;
-  /* amber-500 */
-  --color-cortex-danger: #df5d5d;
-  /* red-500 */
-  --color-cortex-info: #4f8ef7;
-  /* blue-500 */
-  --color-cortex-text-main: #e8eff7;
-  --color-cortex-text-muted: #9fb0c2;
-  --color-cortex-border: #324353;
+  /* Cortex Palette — Calm Daylight */
+  --color-cortex-bg: #f4efe8;
+  --color-cortex-surface: #fffdf9;
+  --color-cortex-primary: #1d7f86;
+  --color-cortex-primary-glow: rgba(29, 127, 134, 0.18);
+  --color-cortex-success: #2d8b57;
+  --color-cortex-warning: #b7791f;
+  --color-cortex-danger: #c05656;
+  --color-cortex-info: #4c75d2;
+  --color-cortex-text-main: #1d2a35;
+  --color-cortex-text-muted: #65727f;
+  --color-cortex-border: #d5dbe2;
 }
 
 @layer base {
@@ -33,7 +28,9 @@
   }
 
   body {
-    background-color: var(--color-cortex-bg);
+    background:
+      radial-gradient(circle at top, rgba(29, 127, 134, 0.08), transparent 34%),
+      linear-gradient(180deg, #f9f6f1 0%, var(--color-cortex-bg) 48%, #efe9e0 100%);
     color: var(--color-cortex-text-main);
     font-family: var(--font-sans);
     line-height: 1.55;
@@ -86,7 +83,7 @@
   /* Glass Morphism */
   .glass {
     @apply backdrop-blur-md border;
-    background-color: rgba(26, 36, 48, 0.78);
+    background-color: rgba(255, 253, 249, 0.86);
     border-color: var(--color-cortex-border);
   }
 

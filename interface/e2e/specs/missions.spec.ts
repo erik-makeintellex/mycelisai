@@ -17,7 +17,8 @@ test.describe('Mission Control Dashboard (/dashboard)', () => {
 
     test('navigation rail is visible', async ({ page }) => {
         await expect(page.locator('a[href="/dashboard"]').first()).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Automations' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
     });
 
     test('organization entry actions render', async ({ page }) => {

@@ -38,29 +38,40 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
     });
 
     test('team quick action links are wired', async ({ page }) => {
-        const openChatLinks = page.locator('[data-testid$="-open-chat"]');
+        const openChatLinks = page.getByRole('link', { name: 'Open chat' });
+        const viewRunsLinks = page.getByRole('link', { name: 'View runs' });
+        const viewWiringLinks = page.getByRole('link', { name: 'View wiring' });
+        const viewSystemLinks = page.getByRole('link', { name: 'View system' });
+        const emptyState = page.locator('text=No teams found');
+        await expect
+            .poll(async () => (await openChatLinks.count()) > 0 || (await emptyState.count()) > 0)
+            .toBeTruthy();
         const count = await openChatLinks.count();
         if (count === 0) {
-            await expect(page.locator('text=No teams found')).toBeVisible();
+            await expect(emptyState).toBeVisible();
             return;
         }
 
-        await expect(page.locator('[data-testid$="-view-runs"]')).toHaveCount(count);
-        await expect(page.locator('[data-testid$="-view-wiring"]')).toHaveCount(count);
-        await expect(page.locator('[data-testid$="-view-logs"]')).toHaveCount(count);
+        await expect(viewRunsLinks).toHaveCount(count);
+        await expect(viewWiringLinks).toHaveCount(count);
+        await expect(viewSystemLinks).toHaveCount(count);
 
         await expect(openChatLinks.first()).toHaveAttribute('href', '/dashboard');
-        await expect(page.locator('[data-testid$="-view-runs"]').first()).toHaveAttribute('href', '/runs');
-        await expect(page.locator('[data-testid$="-view-wiring"]').first()).toHaveAttribute('href', '/automations?tab=wiring');
-        await expect(page.locator('[data-testid$="-view-logs"]').first()).toHaveAttribute('href', '/system?tab=services');
+        await expect(viewRunsLinks.first()).toHaveAttribute('href', '/runs');
+        await expect(viewWiringLinks.first()).toHaveAttribute('href', '/automations?tab=wiring');
+        await expect(viewSystemLinks.first()).toHaveAttribute('href', '/system?tab=services');
     });
 
     test('clicking a team card opens and closes the detail drawer', async ({ page }) => {
         test.slow();
         const cards = page.locator('div[role="button"][tabindex="0"]');
+        const emptyState = page.locator('text=No teams found');
+        await expect
+            .poll(async () => (await cards.count()) > 0 || (await emptyState.count()) > 0)
+            .toBeTruthy();
         const count = await cards.count();
         if (count === 0) {
-            await expect(page.locator('text=No teams found')).toBeVisible({ timeout: 15000 });
+            await expect(emptyState).toBeVisible({ timeout: 15000 });
             return;
         }
 
