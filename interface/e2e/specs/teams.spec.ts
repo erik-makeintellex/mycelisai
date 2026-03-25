@@ -65,10 +65,14 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
     test('clicking a team card opens and closes the detail drawer', async ({ page }) => {
         test.slow();
         const cards = page.locator('div[role="button"][tabindex="0"]');
-        const emptyState = page.locator('text=No teams found');
+        const emptyState = page.getByText('No teams found');
         await expect
-            .poll(async () => (await cards.count()) > 0 || (await emptyState.count()) > 0)
-            .toBeTruthy();
+            .poll(async () => {
+                if ((await cards.count()) > 0) return 'cards';
+                const bodyText = await page.locator('body').textContent();
+                return bodyText?.includes('No teams found') ? 'empty' : 'pending';
+            })
+            .not.toBe('pending');
         const count = await cards.count();
         if (count === 0) {
             await expect(emptyState).toBeVisible({ timeout: 15000 });

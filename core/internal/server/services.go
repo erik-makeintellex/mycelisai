@@ -57,14 +57,18 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 		cogStatus.Status = "offline"
 		cogStatus.Detail = "Cognitive router not initialised"
 	} else {
+		availability := s.Cognitive.ExecutionAvailability("chat", "")
 		enabledCount := 0
+		totalCount := len(s.Cognitive.Config.Providers)
 		for _, p := range s.Cognitive.Config.Providers {
 			if p.Enabled {
 				enabledCount++
 			}
 		}
-		totalCount := len(s.Cognitive.Config.Providers)
-		if enabledCount == 0 {
+		if !availability.Available {
+			cogStatus.Status = "degraded"
+			cogStatus.Detail = availability.Summary
+		} else if enabledCount == 0 {
 			cogStatus.Status = "degraded"
 			cogStatus.Detail = "No providers enabled"
 		} else {

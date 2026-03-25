@@ -69,12 +69,12 @@ test.describe('V8.1 Soma-primary Navigation', () => {
         await expect(page.getByTestId('nav-resources')).toHaveCount(0);
         await toggle.click();
         await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'true');
-        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
         await expect(page.getByTestId('nav-resources')).toBeVisible();
         await expect(page.getByRole('button', { name: /Advanced:/ })).toContainText('Advanced: On');
         await page.getByRole('button', { name: /Advanced:/ }).click();
         await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'false');
-        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
         await expect(page.getByTestId('nav-resources')).toHaveCount(0);
     });
 });

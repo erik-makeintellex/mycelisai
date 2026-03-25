@@ -224,6 +224,10 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		}
 	}
 
+	if rebound := r.EnsureDefaultProfileBindings(); len(rebound) > 0 {
+		log.Printf("INFO: rebound default cognitive profiles to fallback provider: %v", rebound)
+	}
+
 	// 7. Discovery & Grading (startup scope)
 	// Only auto-configure if we have providers.
 	// Startup intentionally probes only default Ollama and profile-routed providers,

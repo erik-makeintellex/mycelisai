@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -46,5 +47,48 @@ func TestCognitiveMatrix(t *testing.T) {
 
 	if val, ok := resp.Profiles["test"]; !ok || val != "mock" {
 		t.Errorf("unexpected profile config: %v", resp.Profiles)
+	}
+}
+
+func TestHandleChat_RequiresAvailableCognitiveEngine(t *testing.T) {
+	s := &AdminServer{
+		Cognitive: &cognitive.Router{
+			Config: &cognitive.BrainConfig{
+				Providers: map[string]cognitive.ProviderConfig{
+					"ollama": {Type: "openai_compatible", Enabled: false, ModelID: "qwen2.5-coder:7b"},
+				},
+				Profiles: map[string]string{
+					"chat": "ollama",
+				},
+			},
+		},
+	}
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"hello"}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusServiceUnavailable)
+	}
+
+	var resp map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp["ok"] != false {
+		t.Fatalf("ok = %v, want false", resp["ok"])
+	}
+	data, ok := resp["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected data object, got %T", resp["data"])
+	}
+	if data["code"] != cognitive.ExecutionProviderDisabled {
+		t.Fatalf("code = %v, want %s", data["code"], cognitive.ExecutionProviderDisabled)
+	}
+	if data["setup_required"] != true {
+		t.Fatalf("setup_required = %v, want true", data["setup_required"])
 	}
 }

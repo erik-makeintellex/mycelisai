@@ -115,6 +115,7 @@ V8.1 defines the MVP release we are aligning implementation to now: a Soma-prima
 Included in the V8.1 release target:
 - AI Organization creation and Soma-primary workspace flow
 - a primary Soma conversation surface for discussing plans, samples, and delivery intent
+- startup and runtime checks that keep Soma bound to an available AI Engine or surface explicit setup guidance before generic interaction failures
 - conversation outputs from Soma may include media and rich artifacts generated directly by Soma or returned from consulted specialists
 - a managed exchange foundation for governed channels, threads, schemas, and normalized outputs beyond single-model request/response
 - foundational managed exchange security for channel visibility, thread participation, artifact sensitivity, capability risk classes, and trust-classified external outputs

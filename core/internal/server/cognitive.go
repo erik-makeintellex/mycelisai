@@ -127,9 +127,12 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 	}
 
 	type engineStatus struct {
-		Status   string `json:"status"`
-		Endpoint string `json:"endpoint,omitempty"`
-		Model    string `json:"model,omitempty"`
+		Status            string `json:"status"`
+		Endpoint          string `json:"endpoint,omitempty"`
+		Model             string `json:"model,omitempty"`
+		Detail            string `json:"detail,omitempty"`
+		RecommendedAction string `json:"recommended_action,omitempty"`
+		SetupRequired     bool   `json:"setup_required,omitempty"`
 	}
 
 	result := map[string]*engineStatus{
@@ -139,6 +142,16 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 
 	// Probe all openai_compatible text engines (vLLM, Ollama, LM Studio, etc.)
 	cfg := s.Cognitive.Config
+	textAvailability := s.Cognitive.ExecutionAvailability("chat", "")
+	if !textAvailability.Available {
+		result["text"] = &engineStatus{
+			Status:            "offline",
+			Model:             textAvailability.ModelID,
+			Detail:            textAvailability.Summary,
+			RecommendedAction: textAvailability.RecommendedAction,
+			SetupRequired:     textAvailability.SetupRequired,
+		}
+	}
 	for provID, prov := range cfg.Providers {
 		if prov.Type != "openai_compatible" || prov.Endpoint == "" {
 			continue
@@ -261,6 +274,15 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if availability := s.chatExecutionAvailability(); !availability.Available {
+		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{
+			OK:    false,
+			Error: availability.Summary,
+			Data:  availability,
+		})
+		return
+	}
+
 	// 2. NATS must be available — the Admin agent is the ONLY path for chat.
 	// No raw LLM fallback: agents must always operate within their context
 	// (system prompt, tools, input/output rules).
@@ -292,17 +314,28 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	// Agent returns structured JSON (ProcessResult with text, tools_used, artifacts, brain info).
 	// Wrap in CTS envelope so artifacts flow to the frontend.
 	var agentResult struct {
-		Text          string                       `json:"text"`
-		ToolsUsed     []string                     `json:"tools_used,omitempty"`
-		Artifacts     []protocol.ChatArtifactRef   `json:"artifacts,omitempty"`
-		ProviderID    string                       `json:"provider_id,omitempty"`
-		ModelUsed     string                       `json:"model_used,omitempty"`
-		Consultations []protocol.ConsultationEntry `json:"consultations,omitempty"`
+		Text          string                           `json:"text"`
+		ToolsUsed     []string                         `json:"tools_used,omitempty"`
+		Artifacts     []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
+		Availability  *cognitive.ExecutionAvailability `json:"availability,omitempty"`
+		ProviderID    string                           `json:"provider_id,omitempty"`
+		ModelUsed     string                           `json:"model_used,omitempty"`
+		Consultations []protocol.ConsultationEntry     `json:"consultations,omitempty"`
 	}
 	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
-		agentResult.Text = string(msg.Data)
-		agentResult.ToolsUsed = nil
-		agentResult.Artifacts = nil
+		if agentResult.Availability == nil {
+			agentResult.Text = string(msg.Data)
+			agentResult.ToolsUsed = nil
+			agentResult.Artifacts = nil
+		}
+	}
+	if agentResult.Availability != nil && !agentResult.Availability.Available {
+		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{
+			OK:    false,
+			Error: agentResult.Availability.Summary,
+			Data:  agentResult.Availability,
+		})
+		return
 	}
 
 	chatPayload := protocol.ChatResponsePayload{
@@ -515,6 +548,15 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if availability := s.chatExecutionAvailability(); !availability.Available {
+		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{
+			OK:    false,
+			Error: availability.Summary,
+			Data:  availability,
+		})
+		return
+	}
+
 	// NATS must be available
 	if s.NC == nil {
 		respondAPIError(w, "Swarm offline — council agents unavailable. Start the organism first.", http.StatusServiceUnavailable)
@@ -542,18 +584,29 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	// Parse structured agent response (ProcessResult JSON with text, tools_used, artifacts, brain info).
 	// Falls back gracefully to raw text if the agent returns plain text.
 	var agentResult struct {
-		Text          string                       `json:"text"`
-		ToolsUsed     []string                     `json:"tools_used,omitempty"`
-		Artifacts     []protocol.ChatArtifactRef   `json:"artifacts,omitempty"`
-		ProviderID    string                       `json:"provider_id,omitempty"`
-		ModelUsed     string                       `json:"model_used,omitempty"`
-		Consultations []protocol.ConsultationEntry `json:"consultations,omitempty"`
+		Text          string                           `json:"text"`
+		ToolsUsed     []string                         `json:"tools_used,omitempty"`
+		Artifacts     []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
+		Availability  *cognitive.ExecutionAvailability `json:"availability,omitempty"`
+		ProviderID    string                           `json:"provider_id,omitempty"`
+		ModelUsed     string                           `json:"model_used,omitempty"`
+		Consultations []protocol.ConsultationEntry     `json:"consultations,omitempty"`
 	}
 	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
-		// Fallback: treat entire response as plain text
-		agentResult.Text = string(msg.Data)
-		agentResult.ToolsUsed = nil
-		agentResult.Artifacts = nil
+		if agentResult.Availability == nil {
+			// Fallback: treat entire response as plain text
+			agentResult.Text = string(msg.Data)
+			agentResult.ToolsUsed = nil
+			agentResult.Artifacts = nil
+		}
+	}
+	if agentResult.Availability != nil && !agentResult.Availability.Available {
+		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{
+			OK:    false,
+			Error: agentResult.Availability.Summary,
+			Data:  agentResult.Availability,
+		})
+		return
 	}
 
 	// Wrap response in CTS envelope with trust score, provenance, and tool metadata
@@ -665,6 +718,21 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
 	log.Printf("Council chat: member=%s team=%s trust=%.1f tools=%v template=%s", memberID, teamID, envelope.TrustScore, agentResult.ToolsUsed, envelope.TemplateID)
+}
+
+func (s *AdminServer) chatExecutionAvailability() cognitive.ExecutionAvailability {
+	if s == nil || s.Cognitive == nil {
+		return cognitive.ExecutionAvailability{
+			Available:         false,
+			Code:              cognitive.ExecutionRouterUnavailable,
+			Summary:           "Soma does not have an available cognitive engine right now.",
+			RecommendedAction: "Open Settings and verify that at least one AI Engine is enabled and reachable for Soma.",
+			Profile:           "chat",
+			SetupRequired:     true,
+			SetupPath:         cognitive.DefaultExecutionSetupPath,
+		}
+	}
+	return s.Cognitive.ExecutionAvailability("chat", "")
 }
 
 // PUT /api/v1/cognitive/profiles

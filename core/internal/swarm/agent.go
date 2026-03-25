@@ -273,6 +273,9 @@ type ProcessResult struct {
 	Text      string                     `json:"text"`
 	ToolsUsed []string                   `json:"tools_used,omitempty"`
 	Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
+	// Availability carries a structured runtime blocker when no cognitive
+	// engine can execute the request.
+	Availability *cognitive.ExecutionAvailability `json:"availability,omitempty"`
 	// Brain provenance: which provider/model executed this request.
 	ProviderID string `json:"provider_id,omitempty"`
 	ModelUsed  string `json:"model_used,omitempty"`
@@ -319,7 +322,17 @@ func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessag
 func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.ChatMessage) ProcessResult {
 	if a.brain == nil {
 		log.Printf("Agent [%s] has no brain. Skipping inference.", a.Manifest.ID)
-		return ProcessResult{}
+		return ProcessResult{
+			Availability: &cognitive.ExecutionAvailability{
+				Available:         false,
+				Code:              cognitive.ExecutionRouterUnavailable,
+				Summary:           "Soma does not have an available cognitive engine right now.",
+				RecommendedAction: "Open Settings and verify that at least one AI Engine is enabled and reachable for Soma.",
+				Profile:           "chat",
+				SetupRequired:     true,
+				SetupPath:         cognitive.DefaultExecutionSetupPath,
+			},
+		}
 	}
 
 	// V7 Conversation Log: generate a new session for this request cycle
@@ -368,7 +381,11 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	resp, err := a.brain.InferWithContract(a.ctx, req)
 	if err != nil {
 		log.Printf("Agent [%s] brain freeze: %v", a.Manifest.ID, err)
-		return ProcessResult{}
+		availability := a.brain.ExecutionAvailability(profile, a.Manifest.Provider)
+		if availability.Summary == "" {
+			availability.Summary = "Soma does not have an available cognitive engine right now."
+		}
+		return ProcessResult{Availability: &availability}
 	}
 
 	// ReAct Tool Loop: if agent has tools bound and LLM returns a tool_call,
@@ -815,7 +832,15 @@ func (a *Agent) handleDirectRequest(msg *nats.Msg) {
 	result := a.processMessageStructured(input, history)
 	if result.Text == "" {
 		if msg.Reply != "" {
-			msg.Respond([]byte("Agent unavailable — no cognitive engine."))
+			if result.Availability != nil {
+				if respBytes, err := json.Marshal(result); err == nil {
+					msg.Respond(respBytes)
+				} else {
+					msg.Respond([]byte(result.Availability.Summary))
+				}
+			} else {
+				msg.Respond([]byte("Agent unavailable — no cognitive engine."))
+			}
 		}
 		return
 	}

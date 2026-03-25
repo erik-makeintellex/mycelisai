@@ -35,6 +35,8 @@ export default function DegradedModeBanner() {
         const m = new Map(services.map((s) => [s.name, s.status]));
         if (m.get("nats") && m.get("nats") !== "online") r.push(`NATS ${m.get("nats")}`);
         if (m.get("postgres") && m.get("postgres") !== "online") r.push(`Database ${m.get("postgres")}`);
+        const cognitive = services.find((s) => s.name === "cognitive");
+        if (cognitive && cognitive.status !== "online") r.push(cognitive.detail || `AI engine ${cognitive.status}`);
         if (streamConnectionState === "offline") r.push("SSE stream offline");
         if (missionChatFailure) r.push(missionChatFailure.bannerLabel);
         else if (missionChatError) r.push("Workspace chat blocked");
