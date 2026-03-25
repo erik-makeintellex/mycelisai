@@ -6,13 +6,30 @@ Mycelis Cortex V8 Workspace (`/dashboard`)
 ## Context and Strategy
 Existing Playwright suites (`workspace-live-backend`, `proposals`, `error-scenarios`, `v7-operational-ux`) already cover Launch Crew proposal flows, degraded-state UI, and proxy regressions. V8 delivery now expects governed inline chat behavior backed by the same template → instantiation → inheritance → precedence contract, so this manual pass concentrates on the **inline Soma chat** happy paths and edge cases that the automated suites only sample.
 
-The focus is validating the four canonical terminal states (`answer`, `proposal`, `execution_result`, `blocker`) and confirming Soma remains direct-first unless the operator explicitly triggers a council consultation. V7-specific references have been removed; every test now references the V8 contract.
+The focus is validating the four canonical terminal states (`answer`, `proposal`, `execution_result`, `blocker`) and confirming Soma remains direct-first unless the operator explicitly triggers a council consultation.
 
 ---
 
-## Part 1: Structured functional paths (Happy Path)
+## Release-Decision Rules
 
-### Test 1.1: Direct Answer (Non-Mutating Intent)
+- If Soma is central in layout but not central in behavior, the product is not ready.
+- If support panels are visible but do not help explain state, the product is not ready.
+- If the operator cannot re-enter and resume with confidence, the product is not ready.
+
+## Release Blockers (Failure Conditions)
+
+The following conditions are release blockers:
+- Soma is not obviously the primary entry within 10 seconds.
+- The main conversation area is visible but does not feel actionable.
+- Team mode feels like a second competing front door.
+- Support panels update, but the user cannot explain why they changed.
+- Returning to the workspace creates uncertainty about current org or current state.
+
+---
+
+## Test Execution Passes
+
+### Pass 1: Direct Answer (Non-Mutating Intent)
 - **Purpose:** Ensure Soma can answer a question without unnecessarily pulling in the council or triggering a mutation proposal.
 - **Steps:**
   1. Open `/dashboard`.
@@ -23,58 +40,95 @@ The focus is validating the four canonical terminal states (`answer`, `proposal`
   - `SomaActivityIndicator` shows streaming UI.
   - Final message bubble shows the answer.
   - State is `answer` (read-only).
-  - No `proposal` card or Confirm/Cancel buttons appear.
 
-### Test 1.2: Inline Governed Mutation (Proposal Generation)
-- **Purpose:** Test that an explicit mutation request in the chat (not the Launch Crew modal) correctly halts at the `proposal` terminal state.
+### Pass 2: Default Path Isolation
+- **Purpose:** Prove the default path stands on its own without requiring team mode.
+- **Steps:**
+  1. Open `/dashboard`.
+  2. Conduct a series of 3-4 tasks (e.g., querying data, simple requests).
+  3. **Strict Constraint:** The user stays *only* in the main Soma conversation and *never* enters team mode.
+- **Expected Result:**
+  - The user can successfully complete tasks and understand context without ever feeling forced to enter team mode.
+
+### Pass 3: Inline Governed Mutation (Causality & Latency)
+- **Purpose:** Test explicit mutation in chat and measure perceived causality.
 - **Steps:**
   1. Open `/dashboard`.
   2. Type: "Create a simple python file named `hello_world.py` in the workspace."
   3. Click Send.
+  4. **Record:** Report the exact elapsed time from action to visible UI change.
 - **Expected Result:**
-  - Soma responds with markdown text explaining the action.
-  - An inline `proposal` card appears below the message.
-  - Risk Level is displayed.
-  - Confirm and Cancel controls are visible and actionable.
+  - Soma responds with an inline `proposal` card.
+  - The timeline separating user action and visible state change is tight enough to feel strictly causal, avoiding vague background motion.
 
-### Test 1.3: Inline Proposal Cancellation
+### Pass 4: Inline Proposal Cancellation
 - **Purpose:** Verify the cancellation flow correctly resets system intent without mutation.
 - **Steps:**
-  1. Follow steps in Test 1.2 to generate a proposal.
-  2. Click the "Cancel" button on the proposal card.
+  1. Generate a proposal as in Pass 3.
+  2. Click the "Cancel" button.
 - **Expected Result:**
-  - The proposal card is dismissed or marked cancelled.
-  - No file actually gets written to the backend workspace.
-  - Chat remains usable for the next intent.
+  - Proposal is dismissed or marked cancelled. No back-end mutation occurs.
+
+### Pass 5: Mid-Stream Interruption & Navigation
+- **Purpose:** Ensure the UI recovers gracefully from navigation interruptions during active streams.
+- **Steps:**
+  1. Ask a complex task that initiates streaming.
+  2. While it streams, hit F5 or refresh the page.
+  3. Start a new complex task. While it streams, explicitly test the browser **Back**, then **Forward** buttons.
+- **Expected Result:**
+  - State resets cleanly. No fatal React hydration errors. The operator can re-enter and resume with confidence.
+
+### Pass 6: Wording and Content Audit
+- **Purpose:** Check for user-friendly terminology and identify leaking architecture concepts.
+- **Steps:**
+  1. Review all side panels, modal dialogs, and Soma responses encountered.
+  2. **Require:** Note whether any panel uses wording that feels internal, architectural, or dev-facing rather than operator-centric.
+- **Expected Result:**
+  - No raw internal architecture terms are exposed in the standard UI surfaces.
+
+### Pass 7: Visual Breakage on Large Layouts
+- **Purpose:** Verify container constraints on oversized content.
+- **Steps:**
+  1. Ask Soma to generate a huge markdown table or long code block.
+- **Expected Result:**
+  - Container handles horizontal overflow without breaking layout.
+
+### Pass 8: Failure Recovery & Trust
+- **Purpose:** Assess whether the system regains operator trust after a failure.
+- **Steps:**
+  1. Deliberately trigger an error scenario or impossible request.
+  2. Observe the failure state and attempt to retry or recover.
+  3. **Require:** The tester must explicitly state whether *trust recovered* after the failure, not just whether a "retry" button existed.
+- **Expected Result:**
+  - The failure is explained clearly, recovery options are present, and the user feels confident continuing.
 
 ---
 
-## Part 2: Exploratory & UI Edge Cases
+## Best Output Shape
 
-### Test 2.1: Mid-Stream Interruption (Page Refresh)
-- **Purpose:** Ensure the UI can recover or gracefully handle a user refreshing the browser while a SSE request to Soma is actively streaming.
-- **Steps:**
-  1. Open `/dashboard`.
-  2. Request a complex task: "Analyze the last 5 mission runs and give me a detailed table."
-  3. While `SomaActivityIndicator` is active (e.g. "Consulting..."), hit F5 / refresh the page.
-- **Expected Result:**
-  - Workspace reloads successfully without fatal React hydration errors.
-  - The state resets cleanly, or the disconnected request is gracefully ignored.
+The testing agent should return each finding in the following format to ensure the next fix pass is easy to triage:
 
-### Test 2.2: Input Sanitization & Empty States
-- **Purpose:** Check how the chat input handles extreme boundary values.
-- **Steps:**
-  1. Open `/dashboard`.
-  2. Try submitting empty text, or just spaces.
-  3. Try submitting common XSS vectors: `<script>alert("test")</script>`
-- **Expected Result:**
-  - Empty submissions are prevented (button disabled or input ignored).
-  - HTML tags are escaped and rendered as raw text in the message bubble, not executed as DOM elements.
+- **Severity:** [e.g., Blocker, High, Medium, Low]
+- **Surface:** [e.g., Main Soma Chat, Support Panel, Proposal Card]
+- **User action:** [What the user did]
+- **Expected:** [What should have happened]
+- **Observed:** [What actually happened]
+- **Why it matters:** [Impact on trust, causality, etc.]
 
-### Test 2.3: Visual Breakage on Large Layouts
-- **Purpose:** Verify that oversized markdown elements (like wide tables or extremely long code blocks) do not break the bounded width of the chat pane.
-- **Steps:**
-  1. Ask Soma: "Generate a markdown table with 10 columns and 5 rows containing dummy data."
-- **Expected Result:**
-  - The table renders via GFM.
-  - The container handles horizontal overflow via scrolling (`overflow-x-auto`), keeping the rest of the message layout intact without pushing the OpsOverview off-screen.
+---
+
+## Recommended Final Prompt Add-on
+
+*Append this text to the end of the testing agent prompt:*
+
+```text
+For every criticism, include one concrete piece of visible evidence.
+For every positive claim, include one concrete reason it earned trust.
+If something feels "off," explain whether it is:
+- clarity
+- hierarchy
+- continuity
+- causality
+- navigation
+- trust
+```
