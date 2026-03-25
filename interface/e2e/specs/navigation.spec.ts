@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'AI Organization', testId: 'nav-dashboard' },
-    { href: '/automations', label: 'Automations', testId: 'nav-automations' },
     { href: '/docs', label: 'Docs', testId: 'nav-docs' },
     { href: '/settings', label: 'Settings', testId: 'nav-settings' },
 ];
@@ -44,7 +43,7 @@ test.describe('V8.1 Soma-primary Navigation', () => {
     });
 
     for (const route of [
-        { href: '/automations', testId: 'nav-automations', url: /\/automations/, label: 'automations' },
+        { href: '/docs', testId: 'nav-docs', url: /\/docs/, label: 'docs' },
         { href: '/settings', testId: 'nav-settings', url: /\/settings/, label: 'settings' },
     ]) {
         test(`navigating to ${route.label} highlights the corresponding nav item`, async ({ page, browserName }) => {

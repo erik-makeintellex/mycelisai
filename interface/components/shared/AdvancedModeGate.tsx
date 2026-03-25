@@ -16,7 +16,7 @@ export default function AdvancedModeGate({
 }) {
     return (
         <div className="flex h-full items-center justify-center bg-cortex-bg px-6 py-10">
-            <div className="max-w-xl rounded-3xl border border-cortex-border bg-cortex-surface p-6 shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
+            <div className="max-w-xl rounded-3xl border border-cortex-border bg-cortex-surface p-6 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
                 <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.22em] text-cortex-primary">
                     <Eye className="h-3.5 w-3.5" />
                     Advanced Mode

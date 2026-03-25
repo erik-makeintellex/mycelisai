@@ -10,7 +10,6 @@ import {
     User,
     Trash2,
     Megaphone,
-    Shield,
     Code,
     FileText,
     Image as ImageIcon,
@@ -820,7 +819,7 @@ function SomaOfflineGuide({ onRetry, assistantName }: { onRetry: () => void; ass
 
 // ── Main Component ───────────────────────────────────────────
 
-export default function MissionControlChat() {
+export default function MissionControlChat({ simpleMode = false, autoFocus = false }: { simpleMode?: boolean; autoFocus?: boolean }) {
     const missionChat = useCortexStore((s) => s.missionChat);
     const isMissionChatting = useCortexStore((s) => s.isMissionChatting);
     const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
@@ -839,6 +838,7 @@ export default function MissionControlChat() {
     const [fetchedMembers, setFetchedMembers] = useState(false);
     const [directTarget, setDirectTarget] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const showAdvancedRouting = !simpleMode;
 
     const isLoading = isMissionChatting || isBroadcasting;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
@@ -854,8 +854,12 @@ export default function MissionControlChat() {
     }, [councilTarget]);
 
     useEffect(() => {
+        if (!showAdvancedRouting) {
+            setFetchedMembers(false);
+            return;
+        }
         fetchCouncilMembers().then(() => setFetchedMembers(true));
-    }, [fetchCouncilMembers]);
+    }, [fetchCouncilMembers, showAdvancedRouting]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -866,7 +870,7 @@ export default function MissionControlChat() {
     const handleSubmit = () => {
         if (!input.trim() || isLoading) return;
 
-        const isBroadcast = broadcastMode || input.trimStart().startsWith("/all ");
+        const isBroadcast = showAdvancedRouting && (broadcastMode || input.trimStart().startsWith("/all "));
         const content =
             isBroadcast && input.trimStart().startsWith("/all ")
                 ? input.trimStart().slice(5).trim()
@@ -891,8 +895,8 @@ export default function MissionControlChat() {
     return (
         <div className="h-full flex flex-col" data-testid="mission-chat">
             {/* Header */}
-            <div className="h-8 px-3 border-b border-cortex-border flex items-center gap-2 flex-shrink-0">
-                {broadcastMode ? (
+            <div className="h-10 px-4 border-b border-cortex-border flex items-center gap-2 flex-shrink-0 bg-cortex-surface/50">
+                {showAdvancedRouting && broadcastMode ? (
                     <>
                         <Megaphone className="w-3.5 h-3.5 text-cortex-warning" />
                         <span className="text-[9px] font-bold uppercase tracking-widest text-cortex-warning">
@@ -902,21 +906,30 @@ export default function MissionControlChat() {
                 ) : (
                     <>
                         <Brain className="w-3.5 h-3.5 text-cortex-primary" />
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-cortex-primary font-mono">
-                            {assistantName}
-                        </span>
-                        {directTarget && (
+                        <div className="min-w-0">
+                            <span className="block text-[9px] font-bold uppercase tracking-widest text-cortex-primary font-mono">
+                                {simpleMode ? "Soma conversation" : assistantName}
+                            </span>
+                            {simpleMode ? (
+                                <span className="block text-[11px] text-cortex-text-muted">
+                                    Work with {assistantName} on plans, concepts, imagery, and delivery decisions.
+                                </span>
+                            ) : null}
+                        </div>
+                        {showAdvancedRouting && directTarget && (
                             <span className="text-[9px] font-mono text-cortex-warning">
                                 → {councilLabel(directTarget, assistantName).name}
                             </span>
                         )}
-                        <DirectCouncilButton
-                            councilMembers={councilMembers}
-                            directTarget={directTarget}
-                            setDirectTarget={setDirectTarget}
-                            setCouncilTarget={setCouncilTarget}
-                            assistantName={assistantName}
-                        />
+                        {showAdvancedRouting ? (
+                            <DirectCouncilButton
+                                councilMembers={councilMembers}
+                                directTarget={directTarget}
+                                setDirectTarget={setDirectTarget}
+                                setCouncilTarget={setCouncilTarget}
+                                assistantName={assistantName}
+                            />
+                        ) : null}
                     </>
                 )}
 
@@ -926,17 +939,19 @@ export default function MissionControlChat() {
                             <Loader2 className="w-3 h-3 animate-spin" />
                         </span>
                     )}
-                    <button
-                        onClick={() => setBroadcastMode((prev) => !prev)}
-                        className={`p-1 rounded transition-colors ${
-                            broadcastMode
-                                ? "bg-cortex-warning/20 text-cortex-warning"
-                                : "hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main"
-                        }`}
-                        title={broadcastMode ? "Broadcast mode ON — messages go to ALL active teams" : "Broadcast mode — click to send to all teams instead of one agent"}
-                    >
-                        <Megaphone className="w-3 h-3" />
-                    </button>
+                    {showAdvancedRouting ? (
+                        <button
+                            onClick={() => setBroadcastMode((prev) => !prev)}
+                            className={`p-1 rounded transition-colors ${
+                                broadcastMode
+                                    ? "bg-cortex-warning/20 text-cortex-warning"
+                                    : "hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main"
+                            }`}
+                            title={broadcastMode ? "Broadcast mode ON — messages go to ALL active teams" : "Broadcast mode — click to send to all teams instead of one agent"}
+                        >
+                            <Megaphone className="w-3 h-3" />
+                        </button>
+                    ) : null}
                     {missionChat.length > 0 && !isLoading && (
                         <button
                             onClick={clearMissionChat}
@@ -950,7 +965,7 @@ export default function MissionControlChat() {
             </div>
 
             {/* Broadcast mode indicator */}
-            {broadcastMode && (
+            {showAdvancedRouting && broadcastMode && (
                 <div className="px-3 py-1 bg-cortex-warning/10 border-b border-cortex-warning/30 flex items-center gap-1.5">
                     <Megaphone className="w-3 h-3 text-cortex-warning" />
                     <p className="text-[9px] text-cortex-warning font-mono font-bold uppercase tracking-wider">
@@ -977,25 +992,34 @@ export default function MissionControlChat() {
                     />
                 )}
                 {missionChat.length === 0 ? (
-                    fetchedMembers && councilMembers.length === 0 ? (
+                    showAdvancedRouting && fetchedMembers && councilMembers.length === 0 ? (
                         <SomaOfflineGuide assistantName={assistantName} onRetry={() => {
                             setFetchedMembers(false);
                             fetchCouncilMembers().then(() => setFetchedMembers(true));
                         }} />
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-cortex-text-muted">
-                            {broadcastMode ? (
+                            {showAdvancedRouting && broadcastMode ? (
                                 <Megaphone className="w-8 h-8 mb-2 opacity-20" />
                             ) : (
-                                <Shield className="w-8 h-8 mb-2 opacity-20" />
+                                <Brain className="w-8 h-8 mb-2 opacity-25 text-cortex-primary" />
                             )}
-                            <p className="text-[10px] font-mono text-center">
-                                {broadcastMode
+                            <p className="max-w-md text-center text-sm leading-6">
+                                {showAdvancedRouting && broadcastMode
                                     ? "Broadcast directives to all active teams"
-                                    : directTarget
+                                    : showAdvancedRouting && directTarget
                                     ? `Direct message to ${councilLabel(directTarget, assistantName).name}...`
-                                    : `Ask ${assistantName} about missions, teams, or your system`}
+                                    : `Tell ${assistantName} what you want to create, review, refine, or improve.`}
                             </p>
+                            {simpleMode ? (
+                                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                    {["Explore a concept", "Generate samples", "Shape a team", "Review current state"].map((hint) => (
+                                        <span key={hint} className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1.5 text-xs text-cortex-text-main">
+                                            {hint}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : null}
                         </div>
                     )
                 ) : (
@@ -1007,12 +1031,12 @@ export default function MissionControlChat() {
                     <div className="flex gap-2 justify-start">
                         <div
                             className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${
-                                isBroadcasting
+                                showAdvancedRouting && isBroadcasting
                                     ? "bg-cortex-warning/10 border border-cortex-warning/20"
                                     : "bg-cortex-primary/10 border border-cortex-primary/20"
                             }`}
                         >
-                            {isBroadcasting ? (
+                            {showAdvancedRouting && isBroadcasting ? (
                                 <Megaphone className="w-3.5 h-3.5 text-cortex-warning animate-pulse" />
                             ) : (
                                 <Brain className="w-3.5 h-3.5 text-cortex-primary animate-pulse" />
@@ -1020,7 +1044,7 @@ export default function MissionControlChat() {
                         </div>
                         <div
                             className={`rounded-lg ${
-                                isBroadcasting
+                                showAdvancedRouting && isBroadcasting
                                     ? "bg-cortex-warning/5 border border-cortex-warning/20"
                                     : "bg-cortex-primary/5 border border-cortex-primary/20"
                             }`}
@@ -1039,16 +1063,19 @@ export default function MissionControlChat() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                        autoFocus={autoFocus}
                         placeholder={
-                            broadcastMode
+                            showAdvancedRouting && broadcastMode
                                 ? "Broadcast to all teams..."
-                                : directTarget
+                                : showAdvancedRouting && directTarget
                                 ? `Direct to ${councilLabel(directTarget, assistantName).name}... (or /all to broadcast)`
+                                : simpleMode
+                                ? `Tell ${assistantName} what you want to create, review, or improve`
                                 : `Ask ${assistantName}... (or /all to broadcast)`
                         }
                         disabled={isLoading}
-                        className={`flex-1 bg-cortex-bg border rounded-lg px-2.5 py-1.5 text-sm text-cortex-text-main placeholder-cortex-text-muted/50 font-mono focus:outline-none focus:ring-1 disabled:opacity-50 ${
-                            broadcastMode
+                        className={`flex-1 bg-cortex-bg border rounded-lg px-3 py-2 text-sm text-cortex-text-main placeholder-cortex-text-muted/60 ${simpleMode ? "" : "font-mono"} focus:outline-none focus:ring-1 disabled:opacity-50 ${
+                            showAdvancedRouting && broadcastMode
                                 ? "border-cortex-warning/40 focus:border-cortex-warning focus:ring-cortex-warning/30"
                                 : "border-cortex-border focus:border-cortex-primary focus:ring-cortex-primary/30"
                         }`}
@@ -1056,8 +1083,8 @@ export default function MissionControlChat() {
                     <button
                         onClick={handleSubmit}
                         disabled={isLoading || !input.trim()}
-                        className={`flex items-center justify-center w-8 h-8 disabled:bg-cortex-border disabled:text-cortex-text-muted text-white rounded-lg transition-colors ${
-                            broadcastMode
+                        className={`flex items-center justify-center h-10 min-w-10 rounded-lg px-3 disabled:bg-cortex-border disabled:text-cortex-text-muted text-white transition-colors ${
+                            showAdvancedRouting && broadcastMode
                                 ? "bg-cortex-warning hover:bg-cortex-warning/80"
                                 : "bg-cortex-primary hover:bg-cortex-primary/80"
                         }`}
@@ -1068,7 +1095,7 @@ export default function MissionControlChat() {
             </div>
 
             {/* Orchestration Inspector drawer */}
-            <OrchestrationInspector />
+            {showAdvancedRouting ? <OrchestrationInspector /> : null}
         </div>
     );
 }

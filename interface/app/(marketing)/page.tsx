@@ -110,7 +110,7 @@ export default function LandingPage() {
                 <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
                     <Link href="/" className="flex items-center gap-3">
                         <span className="h-3 w-3 rounded-full bg-cortex-primary shadow-[0_0_16px_rgba(34,211,238,0.7)]" />
-                        <span className="text-sm font-semibold uppercase tracking-[0.22em] text-zinc-100">Mycelis</span>
+                        <span className="text-sm font-semibold uppercase tracking-[0.22em] text-cortex-text-main">Mycelis</span>
                     </Link>
                     <div className="hidden items-center gap-6 text-sm text-cortex-text-muted md:flex">
                         <Link href="#structure" className="transition-colors hover:text-cortex-text-main">
@@ -148,7 +148,7 @@ export default function LandingPage() {
                             </div>
 
                             <div className="space-y-5">
-                                <h1 className="max-w-4xl text-5xl font-semibold leading-tight tracking-tight text-zinc-100 md:text-7xl">
+                                <h1 className="max-w-4xl text-5xl font-semibold leading-tight tracking-tight text-cortex-text-main md:text-7xl">
                                     Build AI Organizations that think, review, and evolve.
                                 </h1>
                                 <p className="max-w-2xl text-lg leading-8 text-cortex-text-muted md:text-xl">
@@ -186,18 +186,21 @@ export default function LandingPage() {
 
                         <div className="relative">
                             <div className="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_60%)] blur-2xl" />
-                            <div className="relative space-y-5 rounded-[2rem] border border-cortex-border bg-cortex-surface/90 p-6 shadow-2xl shadow-cortex-bg/30">
+                            <div className="relative space-y-5 rounded-[2rem] border border-cortex-border bg-cortex-surface/95 p-6 shadow-[0_28px_80px_rgba(29,42,53,0.10)]">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-cortex-warning/25 bg-cortex-warning/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-warning">
+                                    Illustrative preview
+                                </div>
                                 <div className="rounded-3xl border border-cortex-border bg-cortex-bg px-5 py-5">
                                     <div className="flex items-start justify-between gap-4">
                                         <div>
                                             <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">Organization home</p>
-                                            <h2 className="mt-2 text-2xl font-semibold text-zinc-100">Northstar Labs</h2>
+                                            <h2 className="mt-2 text-2xl font-semibold text-cortex-text-main">Northstar Labs</h2>
                                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
                                                 Soma-guided delivery organization for product planning, specialist review, and steady execution.
                                             </p>
                                         </div>
-                                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-emerald-200">
-                                            Active
+                                        <span className="rounded-full border border-cortex-success/30 bg-cortex-success/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-cortex-success">
+                                            Example state
                                         </span>
                                     </div>
                                 </div>
@@ -205,7 +208,7 @@ export default function LandingPage() {
                                 <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
                                     <div className="rounded-3xl border border-cortex-border bg-cortex-bg px-5 py-5">
                                         <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">Work with Soma</p>
-                                        <p className="mt-3 text-lg font-semibold text-zinc-100">Soma for Northstar Labs</p>
+                                        <p className="mt-3 text-lg font-semibold text-cortex-text-main">Soma for Northstar Labs</p>
                                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
                                             Guides planning, reviews structure, and recommends the next move while keeping the wider AI Organization visible.
                                         </p>
@@ -252,7 +255,7 @@ export default function LandingPage() {
                     <div className="mx-auto max-w-7xl px-6">
                         <div className="max-w-3xl">
                             <p className="text-sm font-medium uppercase tracking-[0.2em] text-cortex-primary">Three truths</p>
-                            <h2 className="mt-4 text-4xl font-semibold tracking-tight text-zinc-100">
+                            <h2 className="mt-4 text-4xl font-semibold tracking-tight text-cortex-text-main">
                                 Mycelis is built around structure, control, and continuous operation.
                             </h2>
                             <p className="mt-4 text-lg leading-8 text-cortex-text-muted">
@@ -272,7 +275,7 @@ export default function LandingPage() {
                                         {card.icon}
                                     </div>
                                     <p className="mt-5 text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">{card.eyebrow}</p>
-                                    <h3 className="mt-2 text-2xl font-semibold text-zinc-100">{card.title}</h3>
+                                    <h3 className="mt-2 text-2xl font-semibold text-cortex-text-main">{card.title}</h3>
                                     <p className="mt-4 text-sm leading-7 text-cortex-text-muted">{card.description}</p>
                                     <ul className="mt-6 space-y-3">
                                         {card.bullets.map((bullet) => (
@@ -292,7 +295,7 @@ export default function LandingPage() {
                     <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
                         <div className="space-y-4">
                             <p className="text-sm font-medium uppercase tracking-[0.2em] text-cortex-primary">What happens after creation</p>
-                            <h2 className="text-4xl font-semibold tracking-tight text-zinc-100">
+                            <h2 className="text-4xl font-semibold tracking-tight text-cortex-text-main">
                                 The first screen after creation is a real operating workspace.
                             </h2>
                             <p className="text-lg leading-8 text-cortex-text-muted">
@@ -319,7 +322,7 @@ export default function LandingPage() {
                 <section className="border-t border-cortex-border bg-cortex-surface/40 py-20">
                     <div className="mx-auto max-w-5xl px-6 text-center">
                         <p className="text-sm font-medium uppercase tracking-[0.2em] text-cortex-primary">Start here</p>
-                        <h2 className="mt-4 text-4xl font-semibold tracking-tight text-zinc-100">
+                        <h2 className="mt-4 text-4xl font-semibold tracking-tight text-cortex-text-main">
                             Create an AI Organization with clear structure, guided control, and visible activity.
                         </h2>
                         <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-cortex-text-muted">
@@ -363,7 +366,7 @@ function SurfaceCard({ icon, title, description }: { icon: ReactNode; title: str
             <div className="inline-flex rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 p-3 text-cortex-primary">
                 {icon}
             </div>
-            <h3 className="mt-5 text-xl font-semibold text-zinc-100">{title}</h3>
+            <h3 className="mt-5 text-xl font-semibold text-cortex-text-main">{title}</h3>
             <p className="mt-3 text-sm leading-7 text-cortex-text-muted">{description}</p>
         </div>
     );
