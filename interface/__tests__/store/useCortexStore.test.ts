@@ -436,6 +436,34 @@ describe('useCortexStore', () => {
             });
         });
 
+        it('stores a setup-required blocker when Soma has no bound AI engine', async () => {
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 503,
+                text: async () => JSON.stringify({
+                    ok: false,
+                    error: 'Soma is routed to an AI Engine that is configured but disabled.',
+                    data: {
+                        code: 'provider_disabled',
+                        summary: 'Soma is routed to an AI Engine that is configured but disabled.',
+                        recommended_action: 'Open Settings and enable a reachable AI Engine for Soma.',
+                        setup_required: true,
+                        setup_path: '/settings',
+                    },
+                }),
+            });
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'workspace',
+                type: 'setup_required',
+                bannerLabel: 'AI engine setup required',
+                setupPath: '/settings',
+            });
+        });
+
         it('routes Soma failures through the workspace contract when no council target is selected', async () => {
             store.setState({
                 councilTarget: 'admin',

@@ -34,6 +34,7 @@ describe("DegradedModeBanner", () => {
                 data: [
                     { name: "nats", status: "online" },
                     { name: "postgres", status: "online" },
+                    { name: "cognitive", status: "online" },
                 ],
             }),
         });
@@ -144,6 +145,7 @@ describe("DegradedModeBanner", () => {
                 data: [
                     { name: "nats", status: "online" },
                     { name: "postgres", status: "online" },
+                    { name: "cognitive", status: "online" },
                 ],
             }),
         });
@@ -152,6 +154,26 @@ describe("DegradedModeBanner", () => {
 
         await waitFor(() => {
             expect(screen.getByText(/Workspace chat server error/i)).toBeDefined();
+        });
+    });
+
+    it("shows cognitive setup detail when the engine is not available yet", async () => {
+        useCortexStore.setState({
+            missionChatError: null,
+            missionChatFailure: null,
+            isStreamConnected: true,
+            streamConnectionState: "online",
+            servicesStatus: [
+                { name: "nats", status: "online" },
+                { name: "postgres", status: "online" },
+                { name: "cognitive", status: "degraded", detail: "Soma is routed to an AI Engine that is configured but disabled." },
+            ],
+        });
+
+        render(<DegradedModeBanner />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/AI Engine that is configured but disabled/i)).toBeDefined();
         });
     });
 });

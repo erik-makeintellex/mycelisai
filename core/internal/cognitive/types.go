@@ -12,6 +12,19 @@ type BrainConfig struct {
 	Media     *MediaConfig              `yaml:"media,omitempty" json:"media,omitempty"`
 }
 
+type ExecutionAvailability struct {
+	Available         bool   `json:"available"`
+	Code              string `json:"code,omitempty"`
+	Summary           string `json:"summary"`
+	RecommendedAction string `json:"recommended_action,omitempty"`
+	Profile           string `json:"profile,omitempty"`
+	ProviderID        string `json:"provider_id,omitempty"`
+	ModelID           string `json:"model_id,omitempty"`
+	SetupRequired     bool   `json:"setup_required,omitempty"`
+	SetupPath         string `json:"setup_path,omitempty"`
+	FallbackApplied   bool   `json:"fallback_applied,omitempty"`
+}
+
 // MediaConfig holds the Diffusers media engine endpoint (OpenAI-compatible images API).
 type MediaConfig struct {
 	Endpoint string `yaml:"endpoint" json:"endpoint"` // e.g. "http://127.0.0.1:8001/v1"

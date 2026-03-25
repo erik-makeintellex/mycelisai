@@ -94,4 +94,35 @@ describe("CouncilCallErrorCard", () => {
         fireEvent.click(screen.getByText("Copy Diagnostics"));
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith("failed to fetch");
     });
+
+    it("offers settings navigation for setup-required blockers", () => {
+        const assign = vi.fn();
+        Object.defineProperty(window, "location", {
+            value: { assign },
+            configurable: true,
+        });
+
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "admin",
+                    message: "Soma does not have an available cognitive engine right now.",
+                    availability: {
+                        code: "provider_disabled",
+                        summary: "Soma is routed to an AI Engine that is configured but disabled.",
+                        recommended_action: "Open Settings and enable a reachable AI Engine for Soma.",
+                        setup_required: true,
+                        setup_path: "/settings",
+                    },
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        fireEvent.click(screen.getByText("Open Settings"));
+        expect(assign).toHaveBeenCalledWith("/settings");
+    });
 });

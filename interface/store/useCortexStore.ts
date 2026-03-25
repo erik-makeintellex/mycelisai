@@ -9,7 +9,7 @@ import {
 } from 'reactflow';
 import type { ConversationTurn } from '@/types/conversations';
 import { extractApiData } from '@/lib/apiContracts';
-import { buildMissionChatFailure, type MissionChatFailure } from '@/lib/missionChatFailure';
+import { buildMissionChatFailure, type MissionChatAvailability, type MissionChatFailure } from '@/lib/missionChatFailure';
 import { normalizeIncomingSignal } from '@/lib/signalNormalize';
 import {
     CHAT_STORAGE_KEY,
@@ -1700,9 +1700,13 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             if (!res.ok) {
                 const text = await res.text();
                 let errMsg: string;
+                let availability: MissionChatAvailability | undefined;
                 try {
                     const parsed = JSON.parse(text);
                     errMsg = parsed.error || `${routeLabel} blocked (${res.status})`;
+                    if (parsed.data && typeof parsed.data === 'object') {
+                        availability = parsed.data as MissionChatAvailability;
+                    }
                 } catch {
                     errMsg = `${routeLabel} unreachable (${res.status})`;
                 }
@@ -1714,6 +1718,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                         targetId: councilTarget,
                         message: errMsg,
                         statusCode: res.status,
+                        availability,
                     }),
                     missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget, mode: 'blocker' }],
                     activeMode: 'blocker',
@@ -1726,6 +1731,9 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
             if (!body.ok || !body.data) {
                 const errText = body.error || `${routeLabel} failed (${res.status})`;
+                const availability = body.data && typeof body.data === 'object'
+                    ? body.data as MissionChatAvailability
+                    : undefined;
                 set((s) => ({
                     isMissionChatting: false,
                     missionChatError: errText,
@@ -1734,6 +1742,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                         targetId: councilTarget,
                         message: errText,
                         statusCode: res.status,
+                        availability,
                     }),
                     missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget, mode: 'blocker' }],
                     activeMode: 'blocker',

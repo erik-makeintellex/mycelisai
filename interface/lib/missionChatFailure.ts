@@ -1,9 +1,23 @@
 export type MissionChatFailureType =
+    | 'setup_required'
     | 'timeout'
     | 'unreachable'
     | 'server_error'
     | 'permission_denied'
     | 'unknown';
+
+export interface MissionChatAvailability {
+    available?: boolean;
+    code?: string;
+    summary?: string;
+    recommended_action?: string;
+    profile?: string;
+    provider_id?: string;
+    model_id?: string;
+    setup_required?: boolean;
+    setup_path?: string;
+    fallback_applied?: boolean;
+}
 
 export interface MissionChatFailure {
     routeKind: 'workspace' | 'council';
@@ -16,9 +30,23 @@ export interface MissionChatFailure {
     recommendedAction: string;
     diagnostics: string;
     statusCode?: number;
+    availability?: MissionChatAvailability;
+    setupPath?: string;
 }
 
-function classifyMissionChatFailure(message: string, statusCode?: number): MissionChatFailureType {
+function classifyMissionChatFailure(message: string, statusCode?: number, availability?: MissionChatAvailability): MissionChatFailureType {
+    if (
+        availability?.setup_required ||
+        availability?.code === 'no_provider_available' ||
+        availability?.code === 'profile_unbound' ||
+        availability?.code === 'provider_missing' ||
+        availability?.code === 'provider_disabled' ||
+        availability?.code === 'provider_uninitialized' ||
+        availability?.code === 'model_missing' ||
+        availability?.code === 'router_unavailable'
+    ) {
+        return 'setup_required';
+    }
     const lower = message.toLowerCase();
     if (statusCode === 401 || statusCode === 403 || lower.includes('401') || lower.includes('403') || lower.includes('unauthorized') || lower.includes('forbidden')) {
         return 'permission_denied';
@@ -53,18 +81,21 @@ export function buildMissionChatFailure({
     targetId,
     message,
     statusCode,
+    availability,
 }: {
     assistantName: string;
     targetId: string;
     message: string;
     statusCode?: number;
+    availability?: MissionChatAvailability;
 }): MissionChatFailure {
     const routeKind = targetId === 'admin' ? 'workspace' : 'council';
     const targetLabel = routeKind === 'workspace' ? assistantName : targetId;
-    const type = classifyMissionChatFailure(message, statusCode);
+    const type = classifyMissionChatFailure(message, statusCode, availability);
 
     if (routeKind === 'workspace') {
         const bannerLabel = {
+            setup_required: 'AI engine setup required',
             timeout: 'Workspace chat timeout',
             unreachable: 'Workspace chat unreachable',
             server_error: 'Workspace chat server error',
@@ -72,6 +103,7 @@ export function buildMissionChatFailure({
             unknown: 'Workspace chat blocked',
         }[type];
         const summary = {
+            setup_required: availability?.summary || `${assistantName} does not currently have an available AI engine for workspace chat.`,
             timeout: `${assistantName} did not return a response before the request deadline.`,
             unreachable: `${assistantName} or the local API proxy is currently unreachable from this client.`,
             server_error: `${assistantName} hit a server-side failure while handling the request.`,
@@ -79,6 +111,7 @@ export function buildMissionChatFailure({
             unknown: `${assistantName} could not complete the request and returned an unclassified blocker.`,
         }[type];
         const recommendedAction = {
+            setup_required: availability?.recommended_action || `Open Settings and verify that at least one AI Engine is enabled and reachable for ${assistantName}.`,
             timeout: 'Retry once, then open System Status if the timeout repeats.',
             unreachable: 'Open System Status and verify Core, NATS, and the local proxy are online.',
             server_error: 'Retry once. If the failure persists, inspect System Status and recent startup logs.',
@@ -90,16 +123,19 @@ export function buildMissionChatFailure({
             targetId,
             targetLabel,
             type,
-            title: `${assistantName} Chat Blocked`,
+            title: type === 'setup_required' ? `${assistantName} Setup Required` : `${assistantName} Chat Blocked`,
             bannerLabel,
             summary,
             recommendedAction,
             diagnostics: message,
             statusCode,
+            availability,
+            setupPath: availability?.setup_path || '/settings',
         };
     }
 
     const summary = {
+        setup_required: availability?.summary || `${assistantName} cannot continue because the shared AI engine setup is incomplete.`,
         timeout: 'The council member did not respond before the request deadline.',
         unreachable: 'The council member service or proxy is currently unreachable from this client.',
         server_error: 'The council member service returned an internal error while handling the request.',
@@ -107,6 +143,7 @@ export function buildMissionChatFailure({
         unknown: 'The council request failed unexpectedly and did not return a classified blocker.',
     }[type];
     const recommendedAction = {
+        setup_required: availability?.recommended_action || `Open Settings and verify that ${assistantName} has an available AI Engine before retrying council routing.`,
         timeout: `Retry once, then continue with ${assistantName} or open System Status if the blocker persists.`,
         unreachable: `Switch to ${assistantName} or open System Status to inspect runtime connectivity.`,
         server_error: `Retry once. If it fails again, continue with ${assistantName} and inspect System Status.`,
@@ -119,11 +156,13 @@ export function buildMissionChatFailure({
         targetId,
         targetLabel,
         type,
-        title: 'Council Call Failed',
-        bannerLabel: `Council member ${type.replace('_', ' ')}`,
+        title: type === 'setup_required' ? `${assistantName} Setup Required` : 'Council Call Failed',
+        bannerLabel: type === 'setup_required' ? 'AI engine setup required' : `Council member ${type.replace('_', ' ')}`,
         summary,
         recommendedAction,
         diagnostics: message,
         statusCode,
+        availability,
+        setupPath: availability?.setup_path || '/settings',
     };
 }

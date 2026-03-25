@@ -16,6 +16,7 @@ export default function CouncilCallErrorCard({
     onContinueWithSoma: () => void;
 }) {
     const isSoma = failure.routeKind === "workspace";
+    const showSetupAction = failure.type === "setup_required" && Boolean(failure.setupPath);
 
     return (
         <div className="m-3 rounded-xl border border-cortex-danger/30 bg-cortex-danger/10 p-3 space-y-3">
@@ -40,6 +41,14 @@ export default function CouncilCallErrorCard({
                     <RotateCcw className="w-3 h-3" />
                     Retry
                 </button>
+                {showSetupAction && (
+                    <button
+                        onClick={() => window.location.assign(failure.setupPath!)}
+                        className="px-2 py-1 rounded border border-cortex-primary/30 text-cortex-primary text-[10px] font-mono hover:bg-cortex-primary/10"
+                    >
+                        Open Settings
+                    </button>
+                )}
                 {!isSoma && (
                     <button onClick={onSwitchToSoma} className="px-2 py-1 rounded border border-cortex-warning/30 text-cortex-warning text-[10px] font-mono hover:bg-cortex-warning/10">
                         Switch to Soma

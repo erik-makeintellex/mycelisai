@@ -28,4 +28,25 @@ describe("buildMissionChatFailure", () => {
         expect(failure.targetLabel).toBe("council-coder");
         expect(failure.recommendedAction).toMatch(/continue with Soma/i);
     });
+
+    it("builds a setup-required contract from structured availability data", () => {
+        const failure = buildMissionChatFailure({
+            assistantName: "Soma",
+            targetId: "admin",
+            message: "Soma does not have an available cognitive engine right now.",
+            statusCode: 503,
+            availability: {
+                code: "provider_disabled",
+                summary: "Soma is routed to an AI Engine that is configured but disabled.",
+                recommended_action: "Open Settings and enable a reachable AI Engine for Soma.",
+                setup_required: true,
+                setup_path: "/settings",
+            },
+        });
+
+        expect(failure.type).toBe("setup_required");
+        expect(failure.title).toBe("Soma Setup Required");
+        expect(failure.bannerLabel).toBe("AI engine setup required");
+        expect(failure.setupPath).toBe("/settings");
+    });
 });
