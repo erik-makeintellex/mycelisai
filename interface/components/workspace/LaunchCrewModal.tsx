@@ -31,6 +31,7 @@ type LaunchCrewState =
     | "describe"
     | "waiting"
     | "proposal"
+    | "confirmed_pending_execution"
     | "answer"
     | "execution_result"
     | "blocker";
@@ -87,10 +88,12 @@ function StepIndicator({ current }: { current: 1 | 2 | 3 }) {
     );
 }
 
-function OutcomeBadge({ mode }: { mode: ExecutionMode | "execution_result" | "blocker" }) {
+function OutcomeBadge({ mode }: { mode: ExecutionMode | "confirmed_pending_execution" | "execution_result" | "blocker" }) {
     const tone =
         mode === "proposal"
             ? "border-amber-400/30 bg-amber-400/10 text-amber-400"
+            : mode === "confirmed_pending_execution"
+              ? "border-cortex-primary/30 bg-cortex-primary/10 text-cortex-primary"
             : mode === "execution_result"
               ? "border-cortex-success/30 bg-cortex-success/10 text-cortex-success"
               : mode === "blocker"
@@ -99,6 +102,8 @@ function OutcomeBadge({ mode }: { mode: ExecutionMode | "execution_result" | "bl
     const label =
         mode === "proposal"
             ? "Proposal"
+            : mode === "confirmed_pending_execution"
+              ? "Awaiting Proof"
             : mode === "execution_result"
               ? "Execution Result"
               : mode === "blocker"
@@ -147,7 +152,6 @@ export default function LaunchCrewModal({ onClose }: Props) {
     const blockerMessage = confirmError || missionChatError || outcomeMessage?.content || "Launch Crew hit a blocker.";
 
     useEffect(() => {
-        cancelProposal();
         setCouncilTarget("admin");
         setState("describe");
         setIntent("");
@@ -161,7 +165,7 @@ export default function LaunchCrewModal({ onClose }: Props) {
         if (state !== "waiting" || isMissionChatting) return;
 
         if (pendingProposal || activeMode === "proposal") {
-            setState("proposal");
+            setState(pendingProposal ? "proposal" : "confirmed_pending_execution");
             return;
         }
 
@@ -194,7 +198,7 @@ export default function LaunchCrewModal({ onClose }: Props) {
         setConfirmError("");
         const result = await confirmProposal();
         if (result.ok) {
-            setState("execution_result");
+            setState(result.runId ? "execution_result" : "confirmed_pending_execution");
             return;
         }
         setConfirmError(result.error || "Launch Crew failed.");
@@ -387,6 +391,27 @@ export default function LaunchCrewModal({ onClose }: Props) {
                         </div>
                     )}
 
+                    {state === "confirmed_pending_execution" && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 text-cortex-primary" />
+                                    <p className="font-mono text-sm font-bold text-cortex-text-main">Proposal confirmed</p>
+                                </div>
+                                <OutcomeBadge mode="confirmed_pending_execution" />
+                            </div>
+                            <div className="rounded-lg border border-cortex-primary/30 bg-cortex-primary/5 px-3 py-3">
+                                <p className="mb-1 text-[9px] font-mono uppercase tracking-widest text-cortex-primary">Waiting for durable proof</p>
+                                <p className="text-[10px] font-mono leading-relaxed text-cortex-text-main">
+                                    {outcomeMessage?.content || "The proposal was confirmed, but Workspace has not attached a run or durable execution proof yet."}
+                                </p>
+                            </div>
+                            <p className="text-[10px] font-mono text-cortex-text-muted">
+                                Keep tracking this request in Workspace chat until a verified run or execution record appears.
+                            </p>
+                        </div>
+                    )}
+
                     {state === "blocker" && (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between gap-2">
@@ -501,6 +526,15 @@ export default function LaunchCrewModal({ onClose }: Props) {
                                 </button>
                             )}
                         </>
+                    )}
+
+                    {state === "confirmed_pending_execution" && (
+                        <button
+                            onClick={onClose}
+                            className="rounded-lg border border-cortex-border px-4 py-2 text-sm font-mono text-cortex-text-muted transition-colors hover:text-cortex-text-main"
+                        >
+                            Review in chat
+                        </button>
                     )}
 
                     {state === "blocker" && (

@@ -35,6 +35,7 @@ const CTS_CHAT_RESPONSE = {
 function resetStore() {
     useCortexStore.setState({
         missionChat: [],
+        workspaceChatScope: null,
         isMissionChatting: false,
         missionChatError: null,
         missionChatFailure: null,
@@ -43,6 +44,8 @@ function resetStore() {
         assistantName: 'Soma',
         councilTarget: 'admin',
         councilMembers: [],
+        pendingProposal: null,
+        activeConfirmToken: null,
         isBroadcasting: false,
         lastBroadcastResult: null,
         streamLogs: [],
@@ -53,6 +56,7 @@ function resetStore() {
 
 describe('MissionControlChat', () => {
     beforeEach(() => {
+        localStorage.clear();
         resetStore();
         // Default: council members fetch returns the members
         mockFetch.mockResolvedValue({
@@ -77,6 +81,18 @@ describe('MissionControlChat', () => {
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
             expect(screen.getByText('Atlas')).toBeDefined();
+        });
+
+        it('rehydrates organization-scoped chat history when organizationId is provided', async () => {
+            localStorage.setItem('mycelis-workspace-chat:org-123', JSON.stringify([
+                { role: 'user', content: 'Persisted org message' },
+            ]));
+
+            render(<MissionControlChat simpleMode organizationId="org-123" />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            expect(useCortexStore.getState().workspaceChatScope).toBe('org-123');
+            expect(screen.getByText('Persisted org message')).toBeDefined();
         });
 
         it('hides advanced routing controls in simple Soma mode', async () => {

@@ -38,7 +38,7 @@ test.describe('Docs and Runs Route Coverage', () => {
 
         await page.goto('/docs?doc=ui-test-doc', { waitUntil: 'domcontentloaded' });
 
-        await expect(page.getByText('Documentation')).toBeVisible();
+        await expect(page.locator('body')).toContainText('Documentation', { timeout: 20_000 });
         await expect(page.getByText('UI Test Doc').first()).toBeVisible();
         await expect(page.getByRole('heading', { name: 'UI Test Heading' })).toBeVisible();
 

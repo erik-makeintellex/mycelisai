@@ -44,7 +44,7 @@ test.describe('Mission Proposal Entry Points', () => {
         await expect(page.locator('button:has-text("Launch Crew"), button:has-text("Launch")').first()).toBeVisible();
     });
 
-    test('launch crew reaches a proposal outcome instead of a planning-only modal state', async ({ page }) => {
+    test('launch crew reaches a proposal outcome and can be cancelled without executing', async ({ page }) => {
         await page.route('**/api/v1/council/members', async (route) => {
             await route.fulfill({
                 json: {
@@ -89,6 +89,11 @@ test.describe('Mission Proposal Entry Points', () => {
         await expect(modal.getByText(/prepared a crew proposal/i)).toBeVisible();
         await expect(modal.getByText(/Create a documentation delivery crew/i)).toBeVisible();
         await expect(modal.getByRole('button', { name: /^Launch Crew$/i })).toBeVisible();
+
+        await modal.getByRole('button', { name: /Back to intent/i }).click();
+
+        await expect(modal.getByPlaceholder('Describe the outcome you need...')).toBeVisible();
+        await expect(modal.getByText(/prepared a crew proposal/i)).toHaveCount(0);
     });
 
     test('launch crew reaches a blocker outcome with recovery actions when Soma chat fails', async ({ page }) => {
@@ -125,7 +130,7 @@ test.describe('Mission Proposal Entry Points', () => {
 
     test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires a live Core backend');
 
-    test('launch crew confirm path uses the live backend confirm-action contract', async ({ page, request }) => {
+    test('launch crew confirm path returns durable proof when the live backend verifies execution', async ({ page, request }) => {
         const { confirmToken, intentProofId } = await issueLiveConfirmToken(request);
 
         await page.route('**/api/v1/chat', async (route) => {
@@ -175,8 +180,10 @@ test.describe('Mission Proposal Entry Points', () => {
         const confirmBody = await confirmResponse.json();
         expect(confirmBody?.data?.confirmed).toBeTruthy();
 
-        await expect(modal.getByText(/Crew launch submitted/i)).toBeVisible();
-        await expect(modal.getByText(/Backend transaction complete/i)).toBeVisible();
-        await expect(modal.getByRole('button', { name: /View Run/i })).toHaveCount(0);
+        expect(typeof confirmBody?.data?.run_id).toBe('string');
+        expect(confirmBody?.data?.run_id?.length ?? 0).toBeGreaterThan(0);
+        expect(confirmBody?.data?.verified).toBeTruthy();
+
+        await expect(modal.getByText(/Mission activated/i)).toBeVisible();
     });
 });

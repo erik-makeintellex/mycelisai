@@ -18,6 +18,8 @@ vi.mock('reactflow', () => {
 import type { MissionBlueprint } from '@/store/useCortexStore';
 import {
     CHAT_STORAGE_KEY,
+    buildChatStorageKey,
+    clearPersistedChat,
     blueprintToGraph,
     dispatchSignalToNodes,
     loadPersistedChat,
@@ -148,5 +150,25 @@ describe('cortexStoreUtils', () => {
         expect(loaded).toHaveLength(2);
         expect(localStorage.getItem(CHAT_STORAGE_KEY)).toContain('hello');
         expect(loaded[1]).toMatchObject({ role: 'council', content: 'world' });
+    });
+
+    it('scopes persisted chat by organization key', () => {
+        persistChat([{ role: 'user', content: 'org-a' }] as any, 'org-a');
+        persistChat([{ role: 'user', content: 'org-b' }] as any, 'org-b');
+
+        expect(loadPersistedChat('org-a')).toMatchObject([{ role: 'user', content: 'org-a' }]);
+        expect(loadPersistedChat('org-b')).toMatchObject([{ role: 'user', content: 'org-b' }]);
+        expect(localStorage.getItem(buildChatStorageKey('org-a'))).toContain('org-a');
+        expect(localStorage.getItem(buildChatStorageKey('org-b'))).toContain('org-b');
+    });
+
+    it('clears only the requested scoped chat history', () => {
+        persistChat([{ role: 'user', content: 'scoped' }] as any, 'org-1');
+        persistChat([{ role: 'user', content: 'global' }] as any);
+
+        clearPersistedChat('org-1');
+
+        expect(loadPersistedChat('org-1')).toEqual([]);
+        expect(loadPersistedChat()).toMatchObject([{ role: 'user', content: 'global' }]);
     });
 });

@@ -261,22 +261,25 @@ func loadFromDB(db *sql.DB, config *BrainConfig) error {
 			continue
 		}
 
-		// Parse JSON Config for ModelID etc
-		var extra struct {
-			ModelID string `json:"model_id"`
+		pConfig := config.Providers[id]
+		pConfig.Driver = driver
+		if strings.TrimSpace(pConfig.Type) == "" {
+			pConfig.Type = driver
+		}
+		if strings.TrimSpace(baseURL) != "" {
+			pConfig.Endpoint = baseURL
+		}
+		if envVar.Valid && strings.TrimSpace(envVar.String) != "" {
+			pConfig.AuthKeyEnv = envVar.String
 		}
 		if len(configJSON) > 0 {
-			_ = json.Unmarshal(configJSON, &extra)
+			var extra struct {
+				ModelID string `json:"model_id"`
+			}
+			if err := json.Unmarshal(configJSON, &extra); err == nil && strings.TrimSpace(extra.ModelID) != "" {
+				pConfig.ModelID = extra.ModelID
+			}
 		}
-
-		pConfig := ProviderConfig{
-			Type:       driver, // Mapping 'driver' to 'type'
-			Driver:     driver, // Keep original
-			Endpoint:   baseURL,
-			ModelID:    extra.ModelID,
-			AuthKeyEnv: envVar.String,
-		}
-
 		config.Providers[id] = pConfig
 	}
 
@@ -405,42 +408,16 @@ func (r *Router) AutoConfigureStartup(ctx context.Context) {
 
 // InferWithContract executes the request against the configured profile/provider
 func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*InferResponse, error) {
-	var providerID string
-	var ok bool
-
-	// 1. Resolve explicit Provider override first, then profile routing fallback.
-	if req.Provider != "" {
-		providerID = req.Provider
-	} else {
-		providerID, ok = r.Config.Profiles[req.Profile]
-		if !ok {
-			log.Printf("WARN: Profile '%s' not found. Attempting fallback chain...", req.Profile)
-
-			// Tier 1: Try sentry (safe default)
-			if sentryID, exists := r.Config.Profiles["sentry"]; exists {
-				log.Printf("Fallback: '%s' -> sentry ('%s')", req.Profile, sentryID)
-				providerID = sentryID
-			} else if len(r.Adapters) > 0 {
-				// Tier 2: First available adapter
-				for k := range r.Adapters {
-					log.Printf("Fallback: '%s' -> first available adapter '%s'", req.Profile, k)
-					providerID = k
-					break
-				}
-			} else {
-				// Tier 3: No profiles, no adapters — total cognitive blackout
-				return nil, fmt.Errorf("profile '%s' not found — no providers available (check config/cognitive.yaml and DB connectivity)", req.Profile)
-			}
-		}
+	resolution := r.resolveExecutionProvider(req.Profile, req.Provider)
+	if !resolution.Available {
+		return nil, fmt.Errorf("%s", resolution.Summary)
 	}
+	providerID := resolution.ProviderID
 
 	// 2. Get Adapter
 	adapter, ok := r.Adapters[providerID]
 	if !ok {
-		if req.Provider != "" {
-			return nil, fmt.Errorf("provider '%s' (explicit override) is not initialized", providerID)
-		}
-		return nil, fmt.Errorf("provider '%s' (for profile '%s') is not initialized", providerID, req.Profile)
+		return nil, fmt.Errorf("provider '%s' is not initialized at runtime", providerID)
 	}
 
 	// 3. Execute
@@ -480,14 +457,11 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 			r.AutoConfigure(ctx)
 
 			// 3. Retry on NEW provider
-			newProviderID := providerID
-			if req.Provider == "" {
-				var exists bool
-				newProviderID, exists = r.Config.Profiles[req.Profile]
-				if !exists {
-					return nil, fmt.Errorf("profile lost during recovery")
-				}
+			recovered := r.resolveExecutionProvider(req.Profile, req.Provider)
+			if !recovered.Available {
+				return nil, fmt.Errorf("recovery failed: %s", recovered.Summary)
 			}
+			newProviderID := recovered.ProviderID
 
 			if newProviderID == providerID {
 				return nil, fmt.Errorf("recovery failed: no alternative provider found (stuck on %s, probe error: %v)", providerID, probeErr)

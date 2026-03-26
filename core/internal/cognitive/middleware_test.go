@@ -44,7 +44,7 @@ func (m *MockProvider) Probe(ctx context.Context) (bool, error) {
 func setupRouter() *Router {
 	cfg := &BrainConfig{
 		Providers: map[string]ProviderConfig{
-			"mock-provider": {Type: "mock", ModelID: "mock-v1"},
+			"mock-provider": {Type: "mock", ModelID: "mock-v1", Enabled: true},
 		},
 		Profiles: map[string]string{
 			"test-retry":      "mock-provider",

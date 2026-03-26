@@ -1,13 +1,25 @@
 package swarm
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
+
+type teamProviderStub struct{}
+
+func (teamProviderStub) Infer(_ context.Context, _ string, _ cognitive.InferOptions) (*cognitive.InferResponse, error) {
+	return &cognitive.InferResponse{Text: "ok", Provider: "stub", ModelUsed: "stub"}, nil
+}
+
+func (teamProviderStub) Probe(_ context.Context) (bool, error) {
+	return true, nil
+}
 
 func TestTeam_TriggerLogic(t *testing.T) {
 	// 1. Start NATS
@@ -160,5 +172,42 @@ func TestTeam_TriggerLogic_UnwrapsCommandEnvelope(t *testing.T) {
 		}
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for internal trigger payload")
+	}
+}
+
+func TestTeamNormalizeRuntimeProviderRoutingFallsBackExplicitDefaults(t *testing.T) {
+	team := &Team{
+		Manifest: &TeamManifest{
+			ID:       "admin-core",
+			Name:     "Soma",
+			Provider: "local-ollama-dev",
+			Members: []protocol.AgentManifest{
+				{ID: "admin", Role: "admin"},
+				{ID: "council-coder", Role: "coder", Provider: "local-ollama-dev"},
+			},
+		},
+		brain: &cognitive.Router{
+			Config: &cognitive.BrainConfig{
+				Providers: map[string]cognitive.ProviderConfig{
+					"ollama":           {Enabled: true, ModelID: "qwen2.5-coder:7b", Location: "local"},
+					"local-ollama-dev": {Enabled: false, ModelID: "qwen2.5-coder:7b", Location: "local"},
+				},
+			},
+			Adapters: map[string]cognitive.LLMProvider{
+				"ollama": teamProviderStub{},
+			},
+		},
+	}
+
+	team.normalizeRuntimeProviderRouting()
+
+	if team.Manifest.Provider != "ollama" {
+		t.Fatalf("team provider = %q, want ollama", team.Manifest.Provider)
+	}
+	if team.Manifest.Members[0].Provider != "ollama" {
+		t.Fatalf("admin provider = %q, want ollama", team.Manifest.Members[0].Provider)
+	}
+	if team.Manifest.Members[1].Provider != "ollama" {
+		t.Fatalf("coder provider = %q, want ollama", team.Manifest.Members[1].Provider)
 	}
 }

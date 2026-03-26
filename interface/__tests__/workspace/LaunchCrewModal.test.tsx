@@ -85,6 +85,53 @@ describe('LaunchCrewModal', () => {
         expect(screen.getByRole('button', { name: /^Launch Crew$/i })).toBeDefined();
     });
 
+    it('cancels the proposal and returns to the intent step without implying execution', async () => {
+        const cancelProposal = vi.fn();
+        const proposal = baseProposal();
+        resetStore({
+            cancelProposal,
+            pendingProposal: proposal,
+            activeMode: 'proposal',
+            missionChat: [
+                { role: 'user', content: 'Assemble a team for docs cleanup' },
+                {
+                    role: 'council',
+                    content: 'I have a proposal ready.',
+                    source_node: 'admin',
+                    mode: 'proposal',
+                    proposal,
+                },
+            ],
+        });
+
+        render(<LaunchCrewModal onClose={vi.fn()} />);
+
+        fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
+            target: { value: 'Assemble a team for docs cleanup' },
+        });
+        fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+
+        act(() => {
+            useCortexStore.setState({
+                isMissionChatting: false,
+                activeMode: 'proposal',
+                pendingProposal: proposal,
+            });
+        });
+
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: /^Launch Crew$/i })).toBeDefined();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: /Back to intent/i }));
+
+        expect(cancelProposal).toHaveBeenCalledTimes(1);
+        await waitFor(() => {
+            expect(screen.getByText(/What should this crew accomplish/i)).toBeDefined();
+        });
+        expect(screen.queryByText(/prepared a crew proposal/i)).toBeNull();
+    });
+
     it('renders a direct answer outcome when no crew launch is needed', async () => {
         render(<LaunchCrewModal onClose={vi.fn()} />);
 
@@ -196,7 +243,7 @@ describe('LaunchCrewModal', () => {
         expect(screen.getByRole('button', { name: /View Run/i })).toBeDefined();
     });
 
-    it('shows an execution result without a run link when confirmation returns no run id', async () => {
+    it('shows a pending-proof state when confirmation returns no run id', async () => {
         const proposal = baseProposal();
         const confirmProposal = vi.fn(async () => ({ ok: true, runId: null }));
         resetStore({
@@ -238,9 +285,10 @@ describe('LaunchCrewModal', () => {
         fireEvent.click(screen.getByRole('button', { name: /^Launch Crew$/i }));
 
         await waitFor(() => {
-            expect(screen.getByText(/Crew launch submitted/i)).toBeDefined();
+            expect(screen.getByText(/Proposal confirmed/i)).toBeDefined();
         });
         expect(confirmProposal).toHaveBeenCalledTimes(1);
+        expect(screen.getByText(/Waiting for durable proof/i)).toBeDefined();
         expect(screen.queryByRole('button', { name: /View Run/i })).toBeNull();
     });
 });

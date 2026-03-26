@@ -2,7 +2,10 @@ package cognitive
 
 import (
 	"context"
+	"database/sql"
 	"testing"
+
+	"github.com/DATA-DOG/go-sqlmock"
 )
 
 type startupProbeStub struct {
@@ -109,5 +112,49 @@ func TestAutoConfigureStartup_ProbesAdditionalProfileProvider(t *testing.T) {
 	}
 	if vllm.probeCalls == 0 {
 		t.Fatal("expected vllm to be probed when explicitly profile-routed")
+	}
+}
+
+func TestLoadFromDB_PreservesYAMLExecutionFields(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	providerRows := sqlmock.NewRows([]string{"id", "driver", "base_url", "api_key_env_var", "config"}).
+		AddRow("ollama", "openai_compatible", "http://127.0.0.1:11434/v1", sql.NullString{String: "OLLAMA_API_KEY", Valid: true}, []byte(`{"model_id":"qwen2.5-coder:7b"}`))
+	mock.ExpectQuery("SELECT id, driver, base_url, api_key_env_var, config FROM llm_providers").WillReturnRows(providerRows)
+	profileRows := sqlmock.NewRows([]string{"key", "value"}).
+		AddRow("role.chat", "ollama")
+	mock.ExpectQuery("SELECT key, value FROM system_config WHERE key LIKE 'role\\.%'").WillReturnRows(profileRows)
+
+	config := &BrainConfig{
+		Providers: map[string]ProviderConfig{
+			"ollama": {
+				Enabled:      true,
+				Location:     "local",
+				DataBoundary: "local_only",
+			},
+		},
+	}
+
+	if err := loadFromDB(db, config); err != nil {
+		t.Fatalf("loadFromDB: %v", err)
+	}
+	if !config.Providers["ollama"].Enabled {
+		t.Fatal("expected enabled flag from YAML to survive DB overlay")
+	}
+	if config.Providers["ollama"].Location != "local" {
+		t.Fatalf("location = %q, want local", config.Providers["ollama"].Location)
+	}
+	if config.Providers["ollama"].ModelID != "qwen2.5-coder:7b" {
+		t.Fatalf("model_id = %q", config.Providers["ollama"].ModelID)
+	}
+	if got := config.Profiles["chat"]; got != "ollama" {
+		t.Fatalf("chat profile = %q, want ollama", got)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
 	}
 }
