@@ -16,7 +16,7 @@ providers:
     local-ollama-dev:
         type: ollama
         endpoint: http://127.0.0.1:11434/v1
-        model_id: qwen2.5-coder:7b
+        model_id: qwen2.5-coder:7b-instruct
         api_key: ""
         api_key_env: ""
         location: ""
@@ -29,7 +29,7 @@ providers:
     local-sovereign:
         type: ollama
         endpoint: http://127.0.0.1:11434/v1
-        model_id: qwen2.5-coder:7b
+        model_id: qwen2.5-coder:7b-instruct
         api_key: ""
         api_key_env: ""
         location: ""
@@ -42,7 +42,7 @@ providers:
     ollama:
         type: openai_compatible
         endpoint: http://127.0.0.1:11434/v1
-        model_id: qwen2.5-coder:1.5b-base
+        model_id: qwen2.5-coder:7b-instruct
         api_key: ollama
         api_key_env: ""
         location: local

@@ -36,7 +36,7 @@ func TestArchivist_GenerateSitRep(t *testing.T) {
 	// Inject Mock Adapter for "architect" profile
 	cog.Config = &cognitive.BrainConfig{
 		Providers: map[string]cognitive.ProviderConfig{
-			"mock-llm": {Type: "mock"},
+			"mock-llm": {Type: "mock", Enabled: true, ModelID: "mock-model"},
 		},
 		Profiles: map[string]string{
 			"architect": "mock-llm",
@@ -270,7 +270,7 @@ func TestArchivistCompression(t *testing.T) {
 	}
 	cog.Config = &cognitive.BrainConfig{
 		Providers: map[string]cognitive.ProviderConfig{
-			"mock-llm": {Type: "mock"},
+			"mock-llm": {Type: "mock", Enabled: true, ModelID: "mock-model"},
 		},
 		Profiles: map[string]string{
 			"architect": "mock-llm",
