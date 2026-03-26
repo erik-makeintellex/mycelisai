@@ -52,3 +52,32 @@ func TestInferWithContract_ProviderOverrideMissing(t *testing.T) {
 		t.Fatal("expected error for missing explicit provider override")
 	}
 }
+
+func TestInferWithContract_ProviderOverrideFallsBackWhenDisabled(t *testing.T) {
+	r := &Router{
+		Config: &BrainConfig{
+			Providers: map[string]ProviderConfig{
+				"provider-a": {Enabled: false, ModelID: "disabled-model", Location: "local"},
+				"provider-b": {Enabled: true, ModelID: "fallback-model", Location: "local"},
+			},
+			Profiles: map[string]string{
+				"chat": "provider-a",
+			},
+		},
+		Adapters: map[string]LLMProvider{
+			"provider-b": &MockProvider{OutputSequence: []string{"from-b"}},
+		},
+	}
+
+	resp, err := r.InferWithContract(context.Background(), InferRequest{
+		Profile:  "chat",
+		Provider: "provider-a",
+		Prompt:   "hello",
+	})
+	if err != nil {
+		t.Fatalf("InferWithContract: %v", err)
+	}
+	if resp.Text != "from-b" {
+		t.Fatalf("expected fallback response from provider-b, got %q", resp.Text)
+	}
+}

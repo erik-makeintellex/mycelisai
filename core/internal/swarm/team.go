@@ -84,6 +84,7 @@ func NewTeam(manifest *TeamManifest, nc *nats.Conn, brain *cognitive.Router, too
 // Start activates the Team's subscriptions.
 func (t *Team) Start() error {
 	log.Printf("Team [%s] (%s) Online.", t.Manifest.Name, t.Manifest.Type)
+	t.normalizeRuntimeProviderRouting()
 
 	// 1. Subscribe to defined Inputs (Triggers)
 	for _, subject := range t.Manifest.Inputs {
@@ -184,6 +185,36 @@ func (t *Team) Start() error {
 	}
 
 	return nil
+}
+
+func (t *Team) normalizeRuntimeProviderRouting() {
+	if t == nil || t.Manifest == nil || t.brain == nil {
+		return
+	}
+
+	if explicit := strings.TrimSpace(t.Manifest.Provider); explicit != "" {
+		if availability := t.brain.ExecutionAvailability("", explicit); availability.Available && availability.FallbackApplied && availability.ProviderID != "" {
+			log.Printf("WARN: Team [%s] provider '%s' is not executable; falling back to '%s'", t.Manifest.Name, explicit, availability.ProviderID)
+			t.Manifest.Provider = availability.ProviderID
+		}
+	}
+
+	for idx := range t.Manifest.Members {
+		member := &t.Manifest.Members[idx]
+		explicit := strings.TrimSpace(member.Provider)
+		if explicit == "" && strings.TrimSpace(t.Manifest.Provider) != "" {
+			member.Provider = t.Manifest.Provider
+			continue
+		}
+		if explicit == "" {
+			continue
+		}
+		availability := t.brain.ExecutionAvailability("", explicit)
+		if availability.Available && availability.FallbackApplied && availability.ProviderID != "" {
+			log.Printf("WARN: Team [%s] member [%s] provider '%s' is not executable; falling back to '%s'", t.Manifest.Name, member.ID, explicit, availability.ProviderID)
+			member.Provider = availability.ProviderID
+		}
+	}
 }
 
 // handleTrigger receives an external signal and broadens it to the internal team bus.

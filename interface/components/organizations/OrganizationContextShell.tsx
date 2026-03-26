@@ -43,6 +43,13 @@ type CausalStripState = {
     panelsUpdated: string[];
 };
 
+type ConversationOutcomeSummary = {
+    actionLabel: string;
+    teamsEngaged: string[];
+    outputsGenerated: string[];
+    timestamp: number;
+};
+
 const AI_ENGINE_OPTIONS: Array<{
     id: OrganizationAIEngineProfileId;
     label: string;
@@ -715,8 +722,8 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const somaName = `Soma for ${organization.name}`;
     const teamLeadName = `${organization.team_lead_label} for ${organization.name}`;
     const lastConversationAction = [...missionChat].reverse().find((message) => message.role === "user" && !message.content.startsWith("[BROADCAST]"));
-    const lastConversationResult = [...missionChat].reverse().find((message) => message.role !== "user");
-    const latestConversationTimestamp = parseKnownTimestamp(lastConversationResult?.timestamp);
+    const lastConversationOutcome = findLatestConversationOutcome(missionChat, teamLeadName);
+    const latestConversationTimestamp = lastConversationOutcome?.timestamp ?? 0;
     const latestGuidanceTimestamp = parseKnownTimestamp(lastGuidanceUpdate?.timestamp);
     const latestSomaTimestamp = Math.max(latestConversationTimestamp, latestGuidanceTimestamp);
     const overviewItems = [
@@ -735,12 +742,19 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                   outputsGenerated: lastGuidanceUpdate.outputs,
                   panelsUpdated: panelUpdates,
               }
-            : lastConversationAction || lastConversationResult
+            : lastConversationOutcome
               ? {
-                    action: lastConversationAction?.content ?? "Continue the current Soma conversation",
-                    teamsEngaged: extractTeamsFromConversation(lastConversationResult, teamLeadName),
-                    outputsGenerated: extractOutputsFromConversation(lastConversationResult),
+                    action: lastConversationOutcome.actionLabel,
+                    teamsEngaged: lastConversationOutcome.teamsEngaged,
+                    outputsGenerated: lastConversationOutcome.outputsGenerated,
                     panelsUpdated: panelUpdates,
+                }
+              : lastConversationAction
+                ? {
+                    action: lastConversationAction.content,
+                    teamsEngaged: ["Soma"],
+                    outputsGenerated: ["Awaiting a trustworthy workspace outcome"],
+                    panelsUpdated: panelUpdates.length > 0 ? panelUpdates : ["Workspace chat"],
                 }
               : {
                     action: "Ready for your first Soma request",
@@ -1000,7 +1014,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             <div className="mt-6 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg">
                                 {somaWorkspaceMode === "conversation" ? (
                                     <div className="h-[46rem] lg:h-[52rem]">
-                                        <MissionControlChat simpleMode autoFocus />
+                                        <MissionControlChat simpleMode autoFocus organizationId={organizationId} />
                                     </div>
                                 ) : (
                                     <div className="p-5 lg:p-6">
@@ -1496,6 +1510,83 @@ function panelsUpdatedSince(
     return panels.length > 0 ? panels : ["Quick Checks"];
 }
 
+export function findLatestConversationOutcome(
+    messages: ReturnType<typeof useCortexStore.getState>["missionChat"],
+    teamLeadName: string,
+): ConversationOutcomeSummary | null {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+        if (message.role === "user") {
+            continue;
+        }
+
+        const outcome = summarizeConversationOutcome(message, teamLeadName);
+        if (outcome) {
+            return outcome;
+        }
+    }
+
+    return null;
+}
+
+function summarizeConversationOutcome(
+    message: ReturnType<typeof useCortexStore.getState>["missionChat"][number] | undefined,
+    teamLeadName: string,
+): ConversationOutcomeSummary | null {
+    if (!message) {
+        return null;
+    }
+
+    const outputsGenerated = extractOutputsFromConversation(message);
+    if (outputsGenerated.length === 0) {
+        return null;
+    }
+
+    return {
+        actionLabel: actionLabelForConversationOutcome(message),
+        teamsEngaged: extractTeamsFromConversation(message, teamLeadName),
+        outputsGenerated,
+        timestamp: parseKnownTimestamp(message.timestamp),
+    };
+}
+
+function actionLabelForConversationOutcome(
+    message: ReturnType<typeof useCortexStore.getState>["missionChat"][number],
+) {
+    const hasRunProof = Boolean(message.run_id?.trim());
+
+    if (message.mode === "blocker") {
+        return "Resolve the current workspace blocker";
+    }
+
+    if (message.proposal) {
+        const lifecycle = message.proposal_status ?? "active";
+        if (lifecycle === "cancelled") {
+            return "Resume after cancelling the last proposal";
+        }
+        if (lifecycle === "confirmed_pending_execution") {
+            return "Follow the confirmed proposal until proof arrives";
+        }
+        if (lifecycle === "executed") {
+            return hasRunProof ? "Review the verified execution result" : "Follow the confirmed proposal until proof arrives";
+        }
+        if (lifecycle === "failed") {
+            return "Recover from the failed proposal confirmation";
+        }
+        return "Review the governed proposal";
+    }
+
+    if (hasRunProof) {
+        return "Inspect the verified run outcome";
+    }
+
+    if (message.mode === "execution_result") {
+        return "Follow the confirmed proposal until proof arrives";
+    }
+
+    return "Continue the current Soma conversation";
+}
+
 function extractTeamsFromConversation(
     message: ReturnType<typeof useCortexStore.getState>["missionChat"][number] | undefined,
     teamLeadName: string,
@@ -1519,9 +1610,39 @@ function extractTeamsFromConversation(
     return ["Soma", teamLeadName];
 }
 
-function extractOutputsFromConversation(message: ReturnType<typeof useCortexStore.getState>["missionChat"][number] | undefined) {
+export function extractOutputsFromConversation(message: ReturnType<typeof useCortexStore.getState>["missionChat"][number] | undefined) {
     if (!message) {
-        return ["Conversation guidance"];
+        return [];
+    }
+
+    if (message.mode === "blocker") {
+        return ["Blocked before completion"];
+    }
+
+    const hasRunProof = Boolean(message.run_id?.trim());
+    const lifecycle = message.proposal?.intent_proof_id ? message.proposal_status ?? "active" : null;
+    if (lifecycle === "cancelled") {
+        return ["Proposal cancelled"];
+    }
+    if (lifecycle === "confirmed_pending_execution") {
+        return ["Awaiting execution proof"];
+    }
+    if (lifecycle === "executed") {
+        return hasRunProof ? ["Verified run created"] : ["Awaiting execution proof"];
+    }
+    if (lifecycle === "failed") {
+        return ["Proposal confirmation failed"];
+    }
+    if (lifecycle === "active") {
+        return ["Governed proposal ready"];
+    }
+
+    if (hasRunProof) {
+        return ["Verified run created"];
+    }
+
+    if (message.mode === "execution_result") {
+        return ["Awaiting execution proof"];
     }
 
     const artifacts = (message.artifacts ?? []).map((artifact) => artifact.type === "image" ? "Imagery" : artifact.title || `${toTitleCase(artifact.type)} output`);
@@ -1529,15 +1650,11 @@ function extractOutputsFromConversation(message: ReturnType<typeof useCortexStor
         return artifacts.slice(0, 3);
     }
 
-    if (message.proposal) {
-        return ["Proposal ready"];
-    }
-
-    if (message.content?.trim()) {
+    if (message.mode === "answer" && message.content?.trim()) {
         return ["Conversation guidance"];
     }
 
-    return ["No visible output yet"];
+    return [];
 }
 
 function friendlyRoleLabel(value: string) {

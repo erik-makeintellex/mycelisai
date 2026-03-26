@@ -274,7 +274,8 @@ type ProcessResult struct {
 	ToolsUsed []string                   `json:"tools_used,omitempty"`
 	Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
 	// Availability carries a structured runtime blocker when no cognitive
-	// engine can execute the request.
+	// engine can execute the request or the provider returns an unreadable
+	// terminal state.
 	Availability *cognitive.ExecutionAvailability `json:"availability,omitempty"`
 	// Brain provenance: which provider/model executed this request.
 	ProviderID string `json:"provider_id,omitempty"`
@@ -465,6 +466,14 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 				break
 			}
 			autofillToolArguments(toolCall, input)
+			// Proposal planning must stay side-effect free. Mutation-capable tools
+			// are captured as intended actions only and never executed here.
+			if blocksProposalPlanningTool(toolCall.Name) {
+				log.Printf("Agent [%s] proposal-planning tool captured without execution: %s", a.Manifest.ID, toolCall.Name)
+				toolsUsed = append(toolsUsed, toolCall.Name)
+				a.logTurn("tool_call", responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
+				break
+			}
 			// Simple drafting requests should stay in chat instead of bouncing through tools.
 			if directAnswerPreferred && shouldAvoidToolsForDirectDraft(toolCall.Name) {
 				if !reinferWithToolFeedback(toolCall.Name,
@@ -533,6 +542,7 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 				SourceKind:    protocol.SourceKindSystem,
 				SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID),
 				PayloadKind:   protocol.PayloadKindCommand,
+				PlanningOnly:  true,
 			})
 
 			serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, toolCall.Name)
@@ -670,6 +680,31 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	if resp != nil {
 		providerID = resp.Provider
 		modelUsed = resp.ModelUsed
+	}
+
+	if strings.TrimSpace(responseText) == "" {
+		summary := "Soma could not produce a readable reply for that request."
+		if len(toolsUsed) > 0 {
+			summary = fmt.Sprintf("Soma captured tool intent (%s) but the provider did not return a readable reply.", strings.Join(toolsUsed, ", "))
+		}
+		availability := cognitive.ExecutionAvailability{
+			Available:         false,
+			Code:              "empty_provider_output",
+			Summary:           summary,
+			RecommendedAction: "Retry the request. If the issue persists, inspect the configured provider output or switch to a different engine.",
+			Profile:           profile,
+			ProviderID:        providerID,
+			ModelID:           modelUsed,
+		}
+		a.logTurn("assistant", availability.Summary, providerID, modelUsed, "", nil, "", "")
+		return ProcessResult{
+			ToolsUsed:     toolsUsed,
+			Artifacts:     artifacts,
+			Availability:  &availability,
+			ProviderID:    providerID,
+			ModelUsed:     modelUsed,
+			Consultations: consultations,
+		}
 	}
 
 	// V7 Conversation Log: emit final assistant response with brain provenance
@@ -830,31 +865,19 @@ func (a *Agent) handleDirectRequest(msg *nats.Msg) {
 	log.Printf("Agent [%s] direct request (%d prior turns): %s", a.Manifest.ID, len(history), truncateLog(input, 200))
 
 	result := a.processMessageStructured(input, history)
-	if result.Text == "" {
-		if msg.Reply != "" {
-			if result.Availability != nil {
-				if respBytes, err := json.Marshal(result); err == nil {
-					msg.Respond(respBytes)
-				} else {
-					msg.Respond([]byte(result.Availability.Summary))
-				}
-			} else {
-				msg.Respond([]byte("Agent unavailable — no cognitive engine."))
-			}
-		}
-		return
-	}
-
-	// Return structured JSON so callers can extract tools_used metadata
 	if msg.Reply != "" {
 		respBytes, err := json.Marshal(result)
 		if err != nil {
-			msg.Respond([]byte(result.Text))
+			fallback := result.Text
+			if fallback == "" && result.Availability != nil {
+				fallback = result.Availability.Summary
+			}
+			msg.Respond([]byte(fallback))
 		} else {
 			msg.Respond(respBytes)
 		}
 	}
-	log.Printf("Agent [%s] direct request replied (tools: %v).", a.Manifest.ID, result.ToolsUsed)
+	log.Printf("Agent [%s] direct request replied (tools: %v readable=%t).", a.Manifest.ID, result.ToolsUsed, strings.TrimSpace(result.Text) != "")
 }
 
 func preferDirectDraftResponse(input string) bool {

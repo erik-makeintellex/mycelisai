@@ -29,6 +29,16 @@ func (r *Router) profileAvailability(profile string) ExecutionAvailability {
 	return r.ExecutionAvailability(profile, "")
 }
 
+type executionProviderResolution struct {
+	Profile         string
+	ProviderID      string
+	Provider        ProviderConfig
+	Code            string
+	Summary         string
+	FallbackApplied bool
+	Available       bool
+}
+
 func (r *Router) ExecutionAvailability(profile string, explicitProvider string) ExecutionAvailability {
 	availability := ExecutionAvailability{
 		Available:         false,
@@ -38,74 +48,24 @@ func (r *Router) ExecutionAvailability(profile string, explicitProvider string) 
 		SetupPath:         DefaultExecutionSetupPath,
 	}
 
-	if r == nil || r.Config == nil {
-		availability.Code = ExecutionRouterUnavailable
-		availability.Summary = "Soma cannot run because the cognitive router is offline."
-		return availability
-	}
-
-	providerID := strings.TrimSpace(explicitProvider)
-	if providerID == "" {
-		if profile == "" {
-			profile = DefaultExecutionProfileName
-			availability.Profile = profile
-		}
-		providerID = strings.TrimSpace(r.Config.Profiles[profile])
-		if providerID == "" {
-			if r.preferredFallbackProviderID() == "" {
-				availability.Code = ExecutionNoProviders
-				availability.Summary = "Soma does not have any available AI Engines configured for chat."
-				return availability
-			}
-			availability.Code = ExecutionProfileUnbound
-			availability.Summary = "Soma does not have an AI Engine profile bound for chat."
-			if fallbackID := r.preferredFallbackProviderID(); fallbackID != "" {
-				provider := r.Config.Providers[fallbackID]
-				availability.ProviderID = fallbackID
-				availability.ModelID = provider.ModelID
-				availability.Summary = "Soma needed a default AI Engine binding and will use the available local fallback."
-				availability.RecommendedAction = "Review AI Engine Settings if you want a different default for Soma."
-				availability.FallbackApplied = true
-				availability.Available = true
-				availability.Code = ExecutionAvailable
-				return availability
-			}
-			return availability
+	resolution := r.resolveExecutionProvider(profile, explicitProvider)
+	availability.Profile = resolution.Profile
+	availability.ProviderID = resolution.ProviderID
+	availability.ModelID = strings.TrimSpace(resolution.Provider.ModelID)
+	availability.FallbackApplied = resolution.FallbackApplied
+	availability.Available = resolution.Available
+	availability.Code = resolution.Code
+	availability.Summary = resolution.Summary
+	if resolution.Available {
+		availability.SetupRequired = false
+		availability.RecommendedAction = ""
+		availability.SetupPath = ""
+		if resolution.FallbackApplied {
+			availability.SetupRequired = true
+			availability.RecommendedAction = "Review AI Engine Settings if you want a different default for Soma."
+			availability.SetupPath = DefaultExecutionSetupPath
 		}
 	}
-
-	availability.ProviderID = providerID
-
-	provider, ok := r.Config.Providers[providerID]
-	if !ok {
-		availability.Code = ExecutionProviderMissing
-		availability.Summary = "Soma is routed to an AI Engine provider that is not configured."
-		return availability
-	}
-
-	availability.ModelID = strings.TrimSpace(provider.ModelID)
-	if !provider.Enabled {
-		availability.Code = ExecutionProviderDisabled
-		availability.Summary = "Soma is routed to an AI Engine that is configured but disabled."
-		return availability
-	}
-	if availability.ModelID == "" {
-		availability.Code = ExecutionModelMissing
-		availability.Summary = "Soma is routed to an AI Engine without a model configured."
-		return availability
-	}
-	if r.Adapters == nil || r.Adapters[providerID] == nil {
-		availability.Code = ExecutionProviderOffline
-		availability.Summary = "Soma is routed to an AI Engine that is not available at runtime."
-		return availability
-	}
-
-	availability.Available = true
-	availability.Code = ExecutionAvailable
-	availability.Summary = "Soma has an available cognitive engine."
-	availability.SetupRequired = false
-	availability.RecommendedAction = ""
-	availability.SetupPath = ""
 	return availability
 }
 
@@ -148,6 +108,102 @@ func (r *Router) providerConfiguredForExecution(providerID string) bool {
 		return false
 	}
 	return r.Adapters[providerID] != nil
+}
+
+func (r *Router) resolveExecutionProvider(profile string, explicitProvider string) executionProviderResolution {
+	resolution := executionProviderResolution{
+		Profile: strings.TrimSpace(profile),
+	}
+
+	if r == nil || r.Config == nil {
+		resolution.Code = ExecutionRouterUnavailable
+		resolution.Summary = "Soma cannot run because the cognitive router is offline."
+		return resolution
+	}
+
+	requestedProviderID := strings.TrimSpace(explicitProvider)
+	if requestedProviderID == "" {
+		if resolution.Profile == "" {
+			resolution.Profile = DefaultExecutionProfileName
+		}
+		requestedProviderID = strings.TrimSpace(r.Config.Profiles[resolution.Profile])
+		if requestedProviderID == "" {
+			fallbackID := r.preferredFallbackProviderID()
+			if fallbackID == "" {
+				resolution.Code = ExecutionNoProviders
+				resolution.Summary = "Soma does not have any available AI Engines configured for chat."
+				return resolution
+			}
+			fallbackProvider := r.Config.Providers[fallbackID]
+			resolution.ProviderID = fallbackID
+			resolution.Provider = fallbackProvider
+			resolution.Code = ExecutionAvailable
+			resolution.Summary = "Soma needed a default AI Engine binding and will use the available local fallback."
+			resolution.FallbackApplied = true
+			resolution.Available = true
+			return resolution
+		}
+	}
+
+	provider, ok := r.Config.Providers[requestedProviderID]
+	if ok && r.providerConfiguredForExecution(requestedProviderID) {
+		resolution.ProviderID = requestedProviderID
+		resolution.Provider = provider
+		resolution.Code = ExecutionAvailable
+		resolution.Summary = "Soma has an available cognitive engine."
+		resolution.Available = true
+		return resolution
+	}
+	if !ok && r.Adapters != nil && r.Adapters[requestedProviderID] != nil {
+		resolution.ProviderID = requestedProviderID
+		resolution.Code = ExecutionAvailable
+		resolution.Summary = "Soma has an available cognitive engine."
+		resolution.Available = true
+		return resolution
+	}
+
+	resolution.ProviderID = requestedProviderID
+	if !ok {
+		resolution.Code = ExecutionProviderMissing
+		resolution.Summary = "Soma is routed to an AI Engine provider that is not configured."
+		return resolution
+	}
+
+	if fallbackID, fallbackProvider, applied := r.executionFallbackProvider(requestedProviderID); applied {
+		resolution.ProviderID = fallbackID
+		resolution.Provider = fallbackProvider
+		resolution.Code = ExecutionAvailable
+		resolution.Summary = "Soma will use the available fallback AI Engine because the configured default is not executable."
+		resolution.FallbackApplied = true
+		resolution.Available = true
+		return resolution
+	}
+
+	resolution.Provider = provider
+	switch {
+	case !provider.Enabled:
+		resolution.Code = ExecutionProviderDisabled
+		resolution.Summary = "Soma is routed to an AI Engine that is configured but disabled."
+	case strings.TrimSpace(provider.ModelID) == "":
+		resolution.Code = ExecutionModelMissing
+		resolution.Summary = "Soma is routed to an AI Engine without a model configured."
+	default:
+		resolution.Code = ExecutionProviderOffline
+		resolution.Summary = "Soma is routed to an AI Engine that is not available at runtime."
+	}
+	return resolution
+}
+
+func (r *Router) executionFallbackProvider(excludeProviderID string) (string, ProviderConfig, bool) {
+	fallbackID := r.preferredFallbackProviderID()
+	if fallbackID == "" || fallbackID == strings.TrimSpace(excludeProviderID) {
+		return "", ProviderConfig{}, false
+	}
+	fallbackProvider, ok := r.Config.Providers[fallbackID]
+	if !ok {
+		return "", ProviderConfig{}, false
+	}
+	return fallbackID, fallbackProvider, true
 }
 
 func (r *Router) preferredFallbackProviderID() string {

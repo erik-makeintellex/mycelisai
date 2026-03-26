@@ -45,6 +45,10 @@ func (c *CompositeToolExecutor) FindToolByName(ctx context.Context, name string)
 // CallTool invokes a tool. Routes to internal registry if serverID is the
 // sentinel, otherwise to the MCP adapter.
 func (c *CompositeToolExecutor) CallTool(ctx context.Context, serverID uuid.UUID, toolName string, args map[string]any) (string, error) {
+	if inv, ok := ToolInvocationContextFromContext(ctx); ok && inv.PlanningOnly && blocksProposalPlanningTool(toolName) {
+		return "", fmt.Errorf("tool %q is blocked during proposal planning; confirmation is required before execution", toolName)
+	}
+
 	// Route to internal if sentinel
 	if serverID == InternalServerID {
 		if c.internal == nil {
@@ -77,9 +81,9 @@ func (c *CompositeToolExecutor) CallTool(ctx context.Context, serverID uuid.UUID
 // allowAll is true and all MCP tools remain accessible (pre-binding behavior).
 type ScopedToolExecutor struct {
 	inner       *CompositeToolExecutor
-	allowedMCP  []mcp.ToolRef             // parsed from agent manifest
-	serverNames map[uuid.UUID]string      // serverID → server name (for ToolRef matching)
-	allowAll    bool                       // true when no mcp: refs → backward compat
+	allowedMCP  []mcp.ToolRef        // parsed from agent manifest
+	serverNames map[uuid.UUID]string // serverID → server name (for ToolRef matching)
+	allowAll    bool                 // true when no mcp: refs → backward compat
 }
 
 // NewScopedToolExecutor creates a scoped executor from the agent's MCP tool refs.

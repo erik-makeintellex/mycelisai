@@ -20,6 +20,9 @@ type ToolInvocationContext struct {
 	SourceChannel string
 	PayloadKind   protocol.SignalPayloadKind
 	Timestamp     time.Time
+	// PlanningOnly marks an invocation that is part of proposal generation and
+	// must not produce any mutation side effects before confirmation.
+	PlanningOnly bool
 }
 
 // WithToolInvocationContext stores invocation metadata in context.

@@ -689,8 +689,8 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                     </div>
                 )}
 
-                {/* Proposed action block for proposal-mode messages */}
-                {!isUser && msg.mode === "proposal" && msg.proposal && (
+                {/* Proposed action block for governed proposal messages */}
+                {!isUser && msg.proposal && (
                     <ProposedActionBlock message={msg} />
                 )}
 
@@ -819,12 +819,21 @@ function SomaOfflineGuide({ onRetry, assistantName }: { onRetry: () => void; ass
 
 // ── Main Component ───────────────────────────────────────────
 
-export default function MissionControlChat({ simpleMode = false, autoFocus = false }: { simpleMode?: boolean; autoFocus?: boolean }) {
+export default function MissionControlChat({
+    simpleMode = false,
+    autoFocus = false,
+    organizationId,
+}: {
+    simpleMode?: boolean;
+    autoFocus?: boolean;
+    organizationId?: string;
+}) {
     const missionChat = useCortexStore((s) => s.missionChat);
     const isMissionChatting = useCortexStore((s) => s.isMissionChatting);
     const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const sendMissionChat = useCortexStore((s) => s.sendMissionChat);
     const clearMissionChat = useCortexStore((s) => s.clearMissionChat);
+    const setMissionChatScope = useCortexStore((s) => s.setMissionChatScope);
     const broadcastToSwarm = useCortexStore((s) => s.broadcastToSwarm);
     const isBroadcasting = useCortexStore((s) => s.isBroadcasting);
     const assistantName = useCortexStore((s) => s.assistantName);
@@ -847,6 +856,10 @@ export default function MissionControlChat({ simpleMode = false, autoFocus = fal
     useEffect(() => {
         setCouncilTarget('admin');
     }, [setCouncilTarget]);
+
+    useEffect(() => {
+        setMissionChatScope(organizationId ?? null);
+    }, [organizationId, setMissionChatScope]);
 
     // Keep local direct-target label synchronized with global council target.
     useEffect(() => {

@@ -2,8 +2,10 @@ package cognitive
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -76,11 +78,58 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 		return nil, fmt.Errorf("no choices returned")
 	}
 
+	text := normalizeOpenAIMessage(resp.Choices[0].Message)
+
 	return &InferResponse{
-		Text:      resp.Choices[0].Message.Content,
+		Text:      text,
 		ModelUsed: a.model,
 		Provider:  "openai",
 	}, nil
+}
+
+func normalizeOpenAIMessage(msg openai.ChatCompletionMessage) string {
+	if len(msg.ToolCalls) > 0 {
+		if payload, ok := synthesizeToolCallPayload(msg.ToolCalls[0].Function.Name, msg.ToolCalls[0].Function.Arguments); ok {
+			return payload
+		}
+	}
+	if msg.FunctionCall != nil {
+		if payload, ok := synthesizeToolCallPayload(msg.FunctionCall.Name, msg.FunctionCall.Arguments); ok {
+			return payload
+		}
+	}
+	if strings.TrimSpace(msg.Content) != "" {
+		return msg.Content
+	}
+	if strings.TrimSpace(msg.Refusal) != "" {
+		return msg.Refusal
+	}
+	return msg.Content
+}
+
+func synthesizeToolCallPayload(name, arguments string) (string, bool) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", false
+	}
+
+	args := map[string]any{}
+	if rawArgs := strings.TrimSpace(arguments); rawArgs != "" {
+		if err := json.Unmarshal([]byte(rawArgs), &args); err != nil {
+			args["raw_arguments"] = rawArgs
+		}
+	}
+
+	payload, err := json.Marshal(map[string]any{
+		"tool_call": map[string]any{
+			"name":      name,
+			"arguments": args,
+		},
+	})
+	if err != nil {
+		return "", false
+	}
+	return string(payload), true
 }
 
 // Embed generates a vector embedding for the given text using the OpenAI-compatible

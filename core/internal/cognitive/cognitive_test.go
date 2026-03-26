@@ -21,6 +21,14 @@ func TestInfer_Mock(t *testing.T) {
 	// This prevents test drift when local config remaps "sentry" to a different provider.
 	const mockProviderID = "mock-test"
 	r.Adapters[mockProviderID] = &cognitive.MockAdapter{FixedResponse: "Explicit Mock"}
+	if r.Config.Providers == nil {
+		r.Config.Providers = make(map[string]cognitive.ProviderConfig)
+	}
+	r.Config.Providers[mockProviderID] = cognitive.ProviderConfig{
+		Type:    "mock",
+		ModelID: "mock-test",
+		Enabled: true,
+	}
 	if r.Config.Profiles == nil {
 		r.Config.Profiles = make(map[string]string)
 	}
