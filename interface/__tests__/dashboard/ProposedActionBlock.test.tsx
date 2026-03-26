@@ -12,7 +12,7 @@ describe('ProposedActionBlock', () => {
         });
     });
 
-    function buildMessage(): ChatMessage {
+    function buildMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
         return {
             role: 'council',
             content: 'Proposed execution path',
@@ -43,6 +43,8 @@ describe('ProposedActionBlock', () => {
                     },
                 ],
             },
+            proposal_status: 'active',
+            ...overrides,
         };
     }
 
@@ -62,10 +64,76 @@ describe('ProposedActionBlock', () => {
 
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        fireEvent.click(screen.getByRole('button', { name: /confirm & execute/i }));
+        fireEvent.click(screen.getByRole('button', { name: /approve & execute/i }));
         fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
         expect(confirmProposal).toHaveBeenCalledTimes(1);
         expect(cancelProposal).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders terminal lifecycle messaging and hides actions for cancelled proposals', () => {
+        render(<ProposedActionBlock message={buildMessage({ proposal_status: 'cancelled' })} />);
+
+        expect(screen.getByText(/cancelled/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /approve & execute|execute/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /cancel/i })).toBeNull();
+    });
+
+    it('shows pending-proof messaging after confirmation without execution proof', () => {
+        render(<ProposedActionBlock message={buildMessage({ proposal_status: 'confirmed_pending_execution' })} />);
+
+        expect(screen.getByText(/awaiting execution proof/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /approve & execute|execute/i })).toBeNull();
+    });
+
+    it('does not claim verification for an executed proposal until run proof exists', () => {
+        render(<ProposedActionBlock message={buildMessage({ proposal_status: 'executed' })} />);
+
+        expect(screen.getByText(/awaiting execution proof/i)).toBeDefined();
+        expect(screen.queryByText(/execution verified/i)).toBeNull();
+    });
+
+    it('renders a verified execution label when run proof exists', () => {
+        render(<ProposedActionBlock message={buildMessage({ proposal_status: 'executed', run_id: 'run-123' })} />);
+
+        expect(screen.getByText(/execution verified/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /approve & execute|execute/i })).toBeNull();
+    });
+
+    it('renders a failed lifecycle without offering approval actions', () => {
+        render(<ProposedActionBlock message={buildMessage({ proposal_status: 'failed' })} />);
+
+        expect(screen.getByText(/confirmation failed/i)).toBeDefined();
+        expect(screen.queryByRole('button', { name: /approve & execute|execute/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /cancel/i })).toBeNull();
+    });
+
+    it('renders approval-required governance details by default', () => {
+        render(<ProposedActionBlock message={buildMessage()} />);
+
+        expect(screen.getByText(/approval required before execution/i)).toBeDefined();
+        expect(screen.getByText(/capability medium/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /approve & execute/i })).toBeDefined();
+    });
+
+    it('shows auto-approved execution details for low-risk actions', () => {
+        render(<ProposedActionBlock message={buildMessage({
+            proposal: {
+                ...buildMessage().proposal!,
+                tools: ['generate_blueprint'],
+                risk_level: 'low',
+                approval_required: false,
+                approval_mode: 'auto_allowed',
+                approval_reason: 'auto_approve',
+                capability_risk: 'low',
+                capability_ids: ['planning'],
+                estimated_cost: 0.2,
+            },
+        })} />);
+
+        expect(screen.getByText(/auto-approved within governance thresholds/i)).toBeDefined();
+        expect(screen.getByText(/reason: auto approve/i)).toBeDefined();
+        expect(screen.getByText(/planning/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /^execute$/i })).toBeDefined();
     });
 });

@@ -112,12 +112,14 @@ type ChatTeamExpression struct {
 }
 
 type ChatProposal struct {
-	Intent          string               `json:"intent"`
-	Tools           []string             `json:"tools"`
-	RiskLevel       string               `json:"risk_level"` // "low" | "medium" | "high"
-	ConfirmToken    string               `json:"confirm_token"`
-	IntentProofID   string               `json:"intent_proof_id"`
-	TeamExpressions []ChatTeamExpression `json:"team_expressions,omitempty"`
+	Intent            string                     `json:"intent"`
+	Tools             []string                   `json:"tools"`
+	RiskLevel         string                     `json:"risk_level"` // "low" | "medium" | "high"
+	ConfirmToken      string                     `json:"confirm_token"`
+	IntentProofID     string                     `json:"intent_proof_id"`
+	TeamExpressions   []ChatTeamExpression       `json:"team_expressions,omitempty"`
+	Approval          *ApprovalPolicy            `json:"approval,omitempty"`
+	GovernanceProfile *GovernanceProfileSnapshot `json:"governance_profile,omitempty"`
 }
 
 // ConsultationEntry records a single council member consultation made by an agent

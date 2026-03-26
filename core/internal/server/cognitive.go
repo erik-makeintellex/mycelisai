@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -23,6 +24,30 @@ var mutationTools = map[string]bool{
 	"broadcast":          true,
 }
 
+const emptyProviderOutputCode = "empty_provider_output"
+const governedMutationRoutePrefix = "[GOVERNED MUTATION ROUTE]"
+
+var (
+	namedFilePattern     = regexp.MustCompile("(?i)(?:named|called|at path|path)\\s+[`'\"]?([^`'\"\\s]+)[`'\"]?")
+	printsPattern        = regexp.MustCompile("(?i)prints?\\s+[`'\"]?([^`'\".]+(?:\\s+[^`'\".]+)*)[`'\"]?")
+	quotedContentPattern = regexp.MustCompile("(?i)(?:with content|containing|that says)\\s+[`'\"]([^`'\"]+)[`'\"]")
+)
+
+type chatRequestMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type chatAgentResult struct {
+	Text          string                           `json:"text"`
+	ToolsUsed     []string                         `json:"tools_used,omitempty"`
+	Artifacts     []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
+	Availability  *cognitive.ExecutionAvailability `json:"availability,omitempty"`
+	ProviderID    string                           `json:"provider_id,omitempty"`
+	ModelUsed     string                           `json:"model_used,omitempty"`
+	Consultations []protocol.ConsultationEntry     `json:"consultations,omitempty"`
+}
+
 // hasMutationTools checks if any tools in the list are mutation tools.
 func hasMutationTools(tools []string) (bool, []string) {
 	var mutations []string
@@ -37,7 +62,10 @@ func hasMutationTools(tools []string) (bool, []string) {
 // chatToolRisk estimates risk level from mutation tools used.
 func chatToolRisk(tools []string) string {
 	for _, t := range tools {
-		if t == "generate_blueprint" || t == "delegate" || t == "broadcast" {
+		if t == "publish_signal" || t == "broadcast" {
+			return "high"
+		}
+		if t == "generate_blueprint" || t == "delegate" || t == "write_file" {
 			return "medium"
 		}
 	}
@@ -59,6 +87,205 @@ func uniqueOrderedTools(tools []string) []string {
 		out = append(out, t)
 	}
 	return out
+}
+
+func latestUserMessageIndex(messages []chatRequestMessage) int {
+	for i := len(messages) - 1; i >= 0; i-- {
+		if strings.EqualFold(strings.TrimSpace(messages[i].Role), "user") {
+			return i
+		}
+	}
+	return -1
+}
+
+func latestUserMessageContent(messages []chatRequestMessage) string {
+	idx := latestUserMessageIndex(messages)
+	if idx < 0 {
+		return ""
+	}
+	return strings.TrimSpace(messages[idx].Content)
+}
+
+func requestContainsAny(lower string, needles []string) bool {
+	for _, needle := range needles {
+		if strings.Contains(lower, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func inferMutationToolsFromText(text string) []string {
+	lower := strings.ToLower(strings.TrimSpace(text))
+	if lower == "" {
+		return nil
+	}
+
+	var tools []string
+
+	fileActions := []string{"create", "write", "update", "edit", "modify", "replace", "append", "save", "persist", "store", "generate", "draft"}
+	fileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "document", "doc", "repo", "repository", "codebase"}
+	if requestContainsAny(lower, fileActions) && requestContainsAny(lower, fileTargets) {
+		tools = append(tools, "write_file")
+	}
+
+	blueprintActions := []string{"create", "generate", "draft", "build", "compose", "design"}
+	blueprintTargets := []string{"blueprint", "architecture", "spec", "proposal", "plan", "workflow", "mission"}
+	if requestContainsAny(lower, blueprintActions) && requestContainsAny(lower, blueprintTargets) {
+		tools = append(tools, "generate_blueprint")
+	}
+
+	delegationActions := []string{"delegate", "assign", "route", "hand off", "handoff", "send to", "consult"}
+	delegationTargets := []string{"team", "agent", "council", "member", "task"}
+	if requestContainsAny(lower, delegationActions) && requestContainsAny(lower, delegationTargets) {
+		tools = append(tools, "delegate")
+	}
+
+	signalActions := []string{"publish", "emit", "send", "post"}
+	signalTargets := []string{"signal", "status", "result", "event"}
+	if requestContainsAny(lower, signalActions) && requestContainsAny(lower, signalTargets) {
+		tools = append(tools, "publish_signal")
+	}
+
+	if requestContainsAny(lower, []string{"broadcast", "announce to all", "fan out", "broadcast to"}) {
+		tools = append(tools, "broadcast")
+	}
+
+	return uniqueOrderedTools(tools)
+}
+
+func normalizeChatRequestMessages(messages []chatRequestMessage) ([]chatRequestMessage, []string) {
+	idx := latestUserMessageIndex(messages)
+	if idx < 0 {
+		return messages, nil
+	}
+
+	mutTools := inferMutationToolsFromText(messages[idx].Content)
+	if len(mutTools) == 0 {
+		return messages, nil
+	}
+
+	normalized := make([]chatRequestMessage, len(messages))
+	copy(normalized, messages)
+	normalized[idx].Content = governedMutationRoutePrefix + "\n" +
+		"Treat this latest request as governed proposal-only work and emit tool_call JSON if a mutation is needed.\n\n" +
+		"Original request:\n" + strings.TrimSpace(messages[idx].Content)
+
+	return normalized, mutTools
+}
+
+func parsePlannedToolCall(text string) (protocol.PlannedToolCall, bool) {
+	var envelope struct {
+		ToolCall struct {
+			Name      string         `json:"name"`
+			Arguments map[string]any `json:"arguments"`
+		} `json:"tool_call"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(text)), &envelope); err != nil {
+		return protocol.PlannedToolCall{}, false
+	}
+	if strings.TrimSpace(envelope.ToolCall.Name) == "" {
+		return protocol.PlannedToolCall{}, false
+	}
+	if envelope.ToolCall.Arguments == nil {
+		envelope.ToolCall.Arguments = map[string]any{}
+	}
+	return protocol.PlannedToolCall{
+		Name:      strings.TrimSpace(envelope.ToolCall.Name),
+		Arguments: envelope.ToolCall.Arguments,
+	}, true
+}
+
+func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool) {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return protocol.PlannedToolCall{}, false
+	}
+
+	pathMatch := namedFilePattern.FindStringSubmatch(trimmed)
+	if len(pathMatch) < 2 {
+		return protocol.PlannedToolCall{}, false
+	}
+
+	targetPath := strings.TrimSpace(pathMatch[1])
+	if targetPath == "" {
+		return protocol.PlannedToolCall{}, false
+	}
+
+	content := ""
+	if quoted := quotedContentPattern.FindStringSubmatch(trimmed); len(quoted) >= 2 {
+		content = strings.TrimSpace(quoted[1])
+	} else if prints := printsPattern.FindStringSubmatch(trimmed); len(prints) >= 2 {
+		value := strings.TrimSpace(prints[1])
+		switch strings.ToLower(filepathExt(targetPath)) {
+		case ".py":
+			content = fmt.Sprintf("print(%q)\n", value)
+		default:
+			content = value + "\n"
+		}
+	} else if strings.EqualFold(filepathExt(targetPath), ".py") {
+		content = "print(\"hello world\")\n"
+	}
+
+	if content == "" {
+		return protocol.PlannedToolCall{}, false
+	}
+
+	return protocol.PlannedToolCall{
+		Name: "write_file",
+		Arguments: map[string]any{
+			"path":    targetPath,
+			"content": content,
+		},
+	}, true
+}
+
+func filepathExt(targetPath string) string {
+	lastDot := strings.LastIndex(targetPath, ".")
+	if lastDot < 0 {
+		return ""
+	}
+	return strings.ToLower(targetPath[lastDot:])
+}
+
+func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
+	var planned []protocol.PlannedToolCall
+	if call, ok := parsePlannedToolCall(agentResult.Text); ok {
+		planned = append(planned, call)
+	}
+	if len(planned) == 0 {
+		for _, tool := range mutTools {
+			if tool == "write_file" {
+				if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
+					planned = append(planned, call)
+				}
+			}
+		}
+	}
+	return planned
+}
+
+func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []string {
+	var resources []string
+	for _, call := range planned {
+		switch strings.TrimSpace(call.Name) {
+		case "write_file":
+			if rawPath, ok := call.Arguments["path"].(string); ok && strings.TrimSpace(rawPath) != "" {
+				resources = append(resources, strings.TrimSpace(rawPath))
+				continue
+			}
+		case "publish_signal":
+			if subject, ok := call.Arguments["subject"].(string); ok && strings.TrimSpace(subject) != "" {
+				resources = append(resources, strings.TrimSpace(subject))
+				continue
+			}
+		}
+		resources = append(resources, "state")
+	}
+	if len(resources) == 0 {
+		return []string{"state"}
+	}
+	return uniqueOrderedTools(resources)
 }
 
 func inferAdapterKindFromTool(tool string) string {
@@ -106,16 +333,130 @@ func buildTeamExpressionsFromTools(tools []string, teamID string, rolePlan []str
 	return expressions
 }
 
-func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID string, rolePlan []string) *protocol.ChatProposal {
+func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID string, rolePlan []string, approval *protocol.ApprovalPolicy, profile *protocol.GovernanceProfileSnapshot) *protocol.ChatProposal {
 	deduped := uniqueOrderedTools(mutTools)
 	return &protocol.ChatProposal{
-		Intent:          "chat-action",
-		Tools:           deduped,
-		RiskLevel:       chatToolRisk(deduped),
-		ConfirmToken:    confirmToken,
-		IntentProofID:   proofID,
-		TeamExpressions: buildTeamExpressionsFromTools(deduped, teamID, rolePlan),
+		Intent:            "chat-action",
+		Tools:             deduped,
+		RiskLevel:         chatToolRisk(deduped),
+		ConfirmToken:      confirmToken,
+		IntentProofID:     proofID,
+		TeamExpressions:   buildTeamExpressionsFromTools(deduped, teamID, rolePlan),
+		Approval:          approval,
+		GovernanceProfile: profile,
 	}
+}
+
+func decodeChatAgentResult(data []byte) chatAgentResult {
+	var result chatAgentResult
+	if err := json.Unmarshal(data, &result); err == nil && result.hasStructuredState() {
+		return result
+	}
+	return chatAgentResult{
+		Text: string(data),
+	}
+}
+
+func (r chatAgentResult) hasStructuredState() bool {
+	return strings.TrimSpace(r.Text) != "" ||
+		len(r.ToolsUsed) > 0 ||
+		len(r.Artifacts) > 0 ||
+		r.Availability != nil ||
+		strings.TrimSpace(r.ProviderID) != "" ||
+		strings.TrimSpace(r.ModelUsed) != "" ||
+		len(r.Consultations) > 0
+}
+
+func buildChatBlocker(agentResult chatAgentResult, fallbackSummary string) cognitive.ExecutionAvailability {
+	if agentResult.Availability != nil {
+		blocker := *agentResult.Availability
+		if blocker.Summary == "" {
+			blocker.Summary = fallbackSummary
+		}
+		if blocker.Code == "" {
+			blocker.Code = emptyProviderOutputCode
+		}
+		if blocker.RecommendedAction == "" {
+			blocker.RecommendedAction = "Retry the request. If the issue persists, inspect the configured provider output or switch to another engine."
+		}
+		if blocker.ProviderID == "" {
+			blocker.ProviderID = agentResult.ProviderID
+		}
+		if blocker.ModelID == "" {
+			blocker.ModelID = agentResult.ModelUsed
+		}
+		blocker.Available = false
+		return blocker
+	}
+	return cognitive.ExecutionAvailability{
+		Available:         false,
+		Code:              emptyProviderOutputCode,
+		Summary:           fallbackSummary,
+		RecommendedAction: "Retry the request. If the issue persists, inspect the configured provider output or switch to another engine.",
+		ProviderID:        agentResult.ProviderID,
+		ModelID:           agentResult.ModelUsed,
+	}
+}
+
+func readableChatText(agentResult chatAgentResult, isMutation bool) string {
+	if isMutation {
+		if _, ok := parsePlannedToolCall(agentResult.Text); ok {
+			return "Soma captured a governed mutation intent. Review the proposal details below."
+		}
+	}
+	if strings.TrimSpace(agentResult.Text) != "" {
+		return agentResult.Text
+	}
+	if isMutation {
+		return "Soma captured a governed mutation intent. Review the proposal details below."
+	}
+	if len(agentResult.Artifacts) > 0 {
+		return "Soma returned artifacts for this request."
+	}
+	return ""
+}
+
+func mergeMutationTools(agentTools, requestTools []string) (bool, []string) {
+	combined := uniqueOrderedTools(append(append([]string{}, agentTools...), requestTools...))
+	isMutation, mutTools := hasMutationTools(combined)
+	return isMutation, mutTools
+}
+
+func applyBrainProvenance(s *AdminServer, chatPayload *protocol.ChatResponsePayload, agentResult chatAgentResult) {
+	if agentResult.ProviderID == "" || s.Cognitive == nil {
+		return
+	}
+	brain := &protocol.BrainProvenance{
+		ProviderID: agentResult.ProviderID,
+		ModelID:    agentResult.ModelUsed,
+	}
+	if s.Cognitive.Config != nil {
+		if pCfg, ok := s.Cognitive.Config.Providers[agentResult.ProviderID]; ok {
+			brain.ProviderName = agentResult.ProviderID
+			brain.Location = pCfg.Location
+			brain.DataBoundary = pCfg.DataBoundary
+			if brain.Location == "" {
+				brain.Location = "local"
+			}
+			if brain.DataBoundary == "" {
+				brain.DataBoundary = "local_only"
+			}
+		}
+	}
+	chatPayload.Brain = brain
+}
+
+func respondStructuredChatBlocker(w http.ResponseWriter, agentResult chatAgentResult) {
+	blocker := buildChatBlocker(agentResult, "Soma could not produce a readable reply for that request.")
+	status := http.StatusBadGateway
+	if blocker.Code != emptyProviderOutputCode {
+		status = http.StatusServiceUnavailable
+	}
+	respondAPIJSON(w, status, protocol.APIResponse{
+		OK:    false,
+		Error: blocker.Summary,
+		Data:  blocker,
+	})
 }
 
 // GET /api/v1/cognitive/status
@@ -256,13 +597,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Parse Vercel Request: { messages: [ { role, content }, ... ] }
-	type VercelMessage struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
 	var req struct {
-		Messages []VercelMessage `json:"messages"`
+		Messages []chatRequestMessage `json:"messages"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
@@ -292,6 +628,14 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	profile := userGovernanceProfileFromRequest(r)
+	normalizedMessages, requestMutationTools := normalizeChatRequestMessages(req.Messages)
+	normalizedMessages = applyGovernanceProfileToLatestMessage(normalizedMessages, profile)
+	latestUserText := latestUserMessageContent(req.Messages)
+	if len(normalizedMessages) > 0 {
+		req.Messages = normalizedMessages
+	}
+
 	// 3. Forward FULL conversation history to admin agent via NATS.
 	// Serialize the entire messages array so the agent can reconstruct context.
 	payload, err := json.Marshal(req.Messages)
@@ -311,64 +655,25 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Agent returns structured JSON (ProcessResult with text, tools_used, artifacts, brain info).
-	// Wrap in CTS envelope so artifacts flow to the frontend.
-	var agentResult struct {
-		Text          string                           `json:"text"`
-		ToolsUsed     []string                         `json:"tools_used,omitempty"`
-		Artifacts     []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
-		Availability  *cognitive.ExecutionAvailability `json:"availability,omitempty"`
-		ProviderID    string                           `json:"provider_id,omitempty"`
-		ModelUsed     string                           `json:"model_used,omitempty"`
-		Consultations []protocol.ConsultationEntry     `json:"consultations,omitempty"`
+	agentResult := decodeChatAgentResult(msg.Data)
+	isMutation, mutTools := mergeMutationTools(agentResult.ToolsUsed, requestMutationTools)
+	if agentResult.Availability != nil && !agentResult.Availability.Available && (!isMutation || agentResult.Availability.Code != emptyProviderOutputCode) {
+		respondStructuredChatBlocker(w, agentResult)
+		return
 	}
-	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
-		if agentResult.Availability == nil {
-			agentResult.Text = string(msg.Data)
-			agentResult.ToolsUsed = nil
-			agentResult.Artifacts = nil
-		}
-	}
-	if agentResult.Availability != nil && !agentResult.Availability.Available {
-		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{
-			OK:    false,
-			Error: agentResult.Availability.Summary,
-			Data:  agentResult.Availability,
-		})
+	if !isMutation && strings.TrimSpace(agentResult.Text) == "" && len(agentResult.Artifacts) == 0 {
+		respondStructuredChatBlocker(w, agentResult)
 		return
 	}
 
 	chatPayload := protocol.ChatResponsePayload{
-		Text:          agentResult.Text,
-		ToolsUsed:     agentResult.ToolsUsed,
+		Text:          readableChatText(agentResult, isMutation),
+		ToolsUsed:     mutTools,
 		Artifacts:     agentResult.Artifacts,
 		Consultations: agentResult.Consultations,
 	}
 
-	// Build brain provenance from agent inference metadata.
-	if agentResult.ProviderID != "" && s.Cognitive != nil {
-		brain := &protocol.BrainProvenance{
-			ProviderID: agentResult.ProviderID,
-			ModelID:    agentResult.ModelUsed,
-		}
-		if s.Cognitive.Config != nil {
-			if pCfg, ok := s.Cognitive.Config.Providers[agentResult.ProviderID]; ok {
-				brain.ProviderName = agentResult.ProviderID
-				brain.Location = pCfg.Location
-				brain.DataBoundary = pCfg.DataBoundary
-				if brain.Location == "" {
-					brain.Location = "local"
-				}
-				if brain.DataBoundary == "" {
-					brain.DataBoundary = "local_only"
-				}
-			}
-		}
-		chatPayload.Brain = brain
-	}
-
-	// Detect mutation tools and switch to proposal mode when needed.
-	isMutation, mutTools := hasMutationTools(agentResult.ToolsUsed)
+	applyBrainProvenance(s, &chatPayload, agentResult)
 
 	var templateID protocol.TemplateID
 	var mode protocol.ExecutionMode
@@ -377,17 +682,37 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		templateID = protocol.TemplateChatToProposal
 		mode = protocol.ModeProposal
 
-		// Build scope from mutation tools
+		plannedToolCalls := buildPlannedToolCalls(agentResult, latestUserText, mutTools)
+		approval := buildApprovalPolicy(profile, plannedToolCalls, mutTools)
 		scope := &protocol.ScopeValidation{
 			Tools:             mutTools,
-			AffectedResources: []string{"state"},
+			AffectedResources: affectedResourcesForPlannedCalls(plannedToolCalls),
 			RiskLevel:         chatToolRisk(mutTools),
+			PlannedToolCalls:  plannedToolCalls,
+			Approval:          approval,
+			GovernanceProfile: profile.snapshot(),
+		}
+		if approval != nil {
+			scope.CapabilityIDs = approval.CapabilityIDs
+			scope.ExternalDataUse = approval.ExternalDataUse
+			scope.EstimatedCost = approval.EstimatedCost
 		}
 
 		auditEventID, _ := s.createAuditEvent(
 			protocol.TemplateChatToProposal, "admin",
 			"Chat mutation detected",
-			map[string]any{"tools": agentResult.ToolsUsed, "mutations": mutTools},
+			map[string]any{
+				"tools":           mutTools,
+				"agent_tools":     agentResult.ToolsUsed,
+				"requested_tools": requestMutationTools,
+				"actor":           "Soma",
+				"user":            auditUserLabelFromRequest(r),
+				"action":          "proposal_generated",
+				"result_status":   "pending",
+				"approval_status": approvalStatusValue(approval),
+				"approval_reason": approvalReasonValue(approval),
+				"capability_used": strings.Join(scope.CapabilityIDs, ","),
+			},
 		)
 
 		proof, _ := s.createIntentProof(protocol.TemplateChatToProposal, "chat-action", scope, auditEventID)
@@ -404,12 +729,12 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, "admin-core", []string{"admin"})
+		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, "admin-core", []string{"admin"}, approval, profile.snapshot())
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",
 			PermissionCheck: "pass",
-			PolicyDecision:  "allow",
+			PolicyDecision:  policyDecisionForApproval(approval),
 			AuditEventID:    auditEventID,
 		}
 	} else {
@@ -419,13 +744,36 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		auditEventID, _ := s.createAuditEvent(
 			protocol.TemplateChatToAnswer, "admin",
 			"Admin chat",
-			map[string]any{"tools": agentResult.ToolsUsed},
+			map[string]any{
+				"tools":         agentResult.ToolsUsed,
+				"actor":         "Soma",
+				"user":          auditUserLabelFromRequest(r),
+				"action":        "answer_delivered",
+				"result_status": "completed",
+			},
 		)
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "answer",
 			PermissionCheck: "pass",
 			PolicyDecision:  "allow",
 			AuditEventID:    auditEventID,
+		}
+		if len(agentResult.Artifacts) > 0 {
+			for _, artifact := range agentResult.Artifacts {
+				_, _ = s.createAuditEvent(
+					protocol.TemplateChatToAnswer, "admin",
+					"Chat artifact created",
+					map[string]any{
+						"actor":           "Soma",
+						"user":            auditUserLabelFromRequest(r),
+						"action":          "artifact_created",
+						"result_status":   "completed",
+						"capability_used": "artifact_output",
+						"resource":        strings.TrimSpace(artifact.Title),
+						"details":         map[string]any{"artifact_type": artifact.Type},
+					},
+				)
+			}
 		}
 	}
 
@@ -531,13 +879,8 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Parse Vercel-format messages: { messages: [{role, content}] }
-	type VercelMessage struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
 	var req struct {
-		Messages []VercelMessage `json:"messages"`
+		Messages []chatRequestMessage `json:"messages"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondAPIError(w, "Bad JSON", http.StatusBadRequest)
@@ -563,6 +906,14 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	profile := userGovernanceProfileFromRequest(r)
+	normalizedMessages, requestMutationTools := normalizeChatRequestMessages(req.Messages)
+	normalizedMessages = applyGovernanceProfileToLatestMessage(normalizedMessages, profile)
+	latestUserText := latestUserMessageContent(req.Messages)
+	if len(normalizedMessages) > 0 {
+		req.Messages = normalizedMessages
+	}
+
 	// Forward conversation to the council member's personal NATS topic
 	payload, err := json.Marshal(req.Messages)
 	if err != nil {
@@ -581,67 +932,26 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Parse structured agent response (ProcessResult JSON with text, tools_used, artifacts, brain info).
-	// Falls back gracefully to raw text if the agent returns plain text.
-	var agentResult struct {
-		Text          string                           `json:"text"`
-		ToolsUsed     []string                         `json:"tools_used,omitempty"`
-		Artifacts     []protocol.ChatArtifactRef       `json:"artifacts,omitempty"`
-		Availability  *cognitive.ExecutionAvailability `json:"availability,omitempty"`
-		ProviderID    string                           `json:"provider_id,omitempty"`
-		ModelUsed     string                           `json:"model_used,omitempty"`
-		Consultations []protocol.ConsultationEntry     `json:"consultations,omitempty"`
+	agentResult := decodeChatAgentResult(msg.Data)
+	isMutation, mutTools := mergeMutationTools(agentResult.ToolsUsed, requestMutationTools)
+	if agentResult.Availability != nil && !agentResult.Availability.Available && (!isMutation || agentResult.Availability.Code != emptyProviderOutputCode) {
+		respondStructuredChatBlocker(w, agentResult)
+		return
 	}
-	if err := json.Unmarshal(msg.Data, &agentResult); err != nil || agentResult.Text == "" {
-		if agentResult.Availability == nil {
-			// Fallback: treat entire response as plain text
-			agentResult.Text = string(msg.Data)
-			agentResult.ToolsUsed = nil
-			agentResult.Artifacts = nil
-		}
-	}
-	if agentResult.Availability != nil && !agentResult.Availability.Available {
-		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{
-			OK:    false,
-			Error: agentResult.Availability.Summary,
-			Data:  agentResult.Availability,
-		})
+	if !isMutation && strings.TrimSpace(agentResult.Text) == "" && len(agentResult.Artifacts) == 0 {
+		respondStructuredChatBlocker(w, agentResult)
 		return
 	}
 
 	// Wrap response in CTS envelope with trust score, provenance, and tool metadata
 	chatPayload := protocol.ChatResponsePayload{
-		Text:          agentResult.Text,
-		ToolsUsed:     agentResult.ToolsUsed,
+		Text:          readableChatText(agentResult, isMutation),
+		ToolsUsed:     mutTools,
 		Artifacts:     agentResult.Artifacts,
 		Consultations: agentResult.Consultations,
 	}
 
-	// Build brain provenance from agent inference metadata.
-	if agentResult.ProviderID != "" && s.Cognitive != nil {
-		brain := &protocol.BrainProvenance{
-			ProviderID: agentResult.ProviderID,
-			ModelID:    agentResult.ModelUsed,
-		}
-		// Enrich with provider config metadata (location, data boundary)
-		if s.Cognitive.Config != nil {
-			if pCfg, ok := s.Cognitive.Config.Providers[agentResult.ProviderID]; ok {
-				brain.ProviderName = agentResult.ProviderID // Use ID as display name
-				brain.Location = pCfg.Location
-				brain.DataBoundary = pCfg.DataBoundary
-				if brain.Location == "" {
-					brain.Location = "local" // default to local
-				}
-				if brain.DataBoundary == "" {
-					brain.DataBoundary = "local_only"
-				}
-			}
-		}
-		chatPayload.Brain = brain
-	}
-
-	// Detect mutation tools and switch to proposal mode when needed.
-	isMutation, mutTools := hasMutationTools(agentResult.ToolsUsed)
+	applyBrainProvenance(s, &chatPayload, agentResult)
 
 	var templateID protocol.TemplateID
 	var mode protocol.ExecutionMode
@@ -650,17 +960,39 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		templateID = protocol.TemplateChatToProposal
 		mode = protocol.ModeProposal
 
-		// Build scope from mutation tools
+		plannedToolCalls := buildPlannedToolCalls(agentResult, latestUserText, mutTools)
+		approval := buildApprovalPolicy(profile, plannedToolCalls, mutTools)
 		scope := &protocol.ScopeValidation{
 			Tools:             mutTools,
-			AffectedResources: []string{"state"},
+			AffectedResources: affectedResourcesForPlannedCalls(plannedToolCalls),
 			RiskLevel:         chatToolRisk(mutTools),
+			PlannedToolCalls:  plannedToolCalls,
+			Approval:          approval,
+			GovernanceProfile: profile.snapshot(),
+		}
+		if approval != nil {
+			scope.CapabilityIDs = approval.CapabilityIDs
+			scope.ExternalDataUse = approval.ExternalDataUse
+			scope.EstimatedCost = approval.EstimatedCost
 		}
 
 		auditEventID, _ := s.createAuditEvent(
 			protocol.TemplateChatToProposal, memberID,
 			fmt.Sprintf("Council chat mutation detected from %s", memberID),
-			map[string]any{"tools": agentResult.ToolsUsed, "mutations": mutTools, "member": memberID, "team": teamID},
+			map[string]any{
+				"tools":           mutTools,
+				"agent_tools":     agentResult.ToolsUsed,
+				"requested_tools": requestMutationTools,
+				"member":          memberID,
+				"team":            teamID,
+				"actor":           "Soma",
+				"user":            auditUserLabelFromRequest(r),
+				"action":          "proposal_generated",
+				"result_status":   "pending",
+				"approval_status": approvalStatusValue(approval),
+				"approval_reason": approvalReasonValue(approval),
+				"capability_used": strings.Join(scope.CapabilityIDs, ","),
+			},
 		)
 
 		proof, _ := s.createIntentProof(protocol.TemplateChatToProposal, "chat-action", scope, auditEventID)
@@ -677,12 +1009,12 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, teamID, []string{memberID})
+		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, teamID, []string{memberID}, approval, profile.snapshot())
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",
 			PermissionCheck: "pass",
-			PolicyDecision:  "allow",
+			PolicyDecision:  policyDecisionForApproval(approval),
 			AuditEventID:    auditEventID,
 		}
 	} else {
@@ -692,13 +1024,38 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		auditEventID, _ := s.createAuditEvent(
 			protocol.TemplateChatToAnswer, memberID,
 			fmt.Sprintf("Council chat with %s", memberID),
-			map[string]any{"tools": agentResult.ToolsUsed, "member": memberID, "team": teamID},
+			map[string]any{
+				"tools":         agentResult.ToolsUsed,
+				"member":        memberID,
+				"team":          teamID,
+				"actor":         "Soma",
+				"user":          auditUserLabelFromRequest(r),
+				"action":        "answer_delivered",
+				"result_status": "completed",
+			},
 		)
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "answer",
 			PermissionCheck: "pass",
 			PolicyDecision:  "allow",
 			AuditEventID:    auditEventID,
+		}
+		if len(agentResult.Artifacts) > 0 {
+			for _, artifact := range agentResult.Artifacts {
+				_, _ = s.createAuditEvent(
+					protocol.TemplateChatToAnswer, memberID,
+					fmt.Sprintf("Council artifact created by %s", memberID),
+					map[string]any{
+						"actor":           "Soma",
+						"user":            auditUserLabelFromRequest(r),
+						"action":          "artifact_created",
+						"result_status":   "completed",
+						"capability_used": "artifact_output",
+						"resource":        strings.TrimSpace(artifact.Title),
+						"details":         map[string]any{"artifact_type": artifact.Type, "member": memberID, "team": teamID},
+					},
+				)
+			}
 		}
 	}
 

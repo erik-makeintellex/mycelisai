@@ -1,6 +1,10 @@
 package server
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/mycelis/core/pkg/protocol"
+)
 
 func TestInferAdapterKindFromTool(t *testing.T) {
 	tests := []struct {
@@ -30,6 +34,13 @@ func TestBuildMutationChatProposal(t *testing.T) {
 		"token-123",
 		"admin-core",
 		[]string{"admin"},
+		&protocol.ApprovalPolicy{
+			ApprovalRequired: true,
+			ApprovalReason:   "capability_risk",
+			ApprovalMode:     "required",
+			CapabilityRisk:   "medium",
+		},
+		&protocol.GovernanceProfileSnapshot{Role: "owner"},
 	)
 
 	if proposal == nil {
@@ -50,6 +61,12 @@ func TestBuildMutationChatProposal(t *testing.T) {
 	}
 	if len(proposal.TeamExpressions) != 2 {
 		t.Fatalf("team_expressions length = %d, want 2", len(proposal.TeamExpressions))
+	}
+	if proposal.Approval == nil || !proposal.Approval.ApprovalRequired {
+		t.Fatalf("expected approval metadata, got %+v", proposal.Approval)
+	}
+	if proposal.GovernanceProfile == nil || proposal.GovernanceProfile.Role != "owner" {
+		t.Fatalf("expected governance profile owner, got %+v", proposal.GovernanceProfile)
 	}
 
 	first := proposal.TeamExpressions[0]

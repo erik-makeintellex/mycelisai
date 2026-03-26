@@ -12,8 +12,8 @@ import { extractApiData } from '@/lib/apiContracts';
 import { buildMissionChatFailure, type MissionChatAvailability, type MissionChatFailure } from '@/lib/missionChatFailure';
 import { normalizeIncomingSignal } from '@/lib/signalNormalize';
 import {
-    CHAT_STORAGE_KEY,
     blueprintToGraph,
+    clearPersistedChat,
     dispatchSignalToNodes,
     loadPersistedChat,
     normalizeProposalData,
@@ -43,6 +43,12 @@ export interface ChatArtifactRef {
 // CE-1: Orchestration Template types
 export type TemplateID = 'chat-to-answer' | 'chat-to-proposal';
 export type ExecutionMode = 'answer' | 'proposal' | 'execution_result' | 'blocker';
+export type ProposalLifecycleStatus =
+    | 'active'
+    | 'cancelled'
+    | 'confirmed_pending_execution'
+    | 'executed'
+    | 'failed';
 
 export interface AnswerProvenance {
     resolved_intent: string;
@@ -60,6 +66,13 @@ export interface ProposalData {
     risk_level: string;
     confirm_token: string;
     intent_proof_id: string;
+    approval_required?: boolean;
+    approval_reason?: string;
+    approval_mode?: string;
+    capability_risk?: string;
+    capability_ids?: string[];
+    external_data_use?: boolean;
+    estimated_cost?: number;
     team_expressions?: TeamExpressionData[];
 }
 
@@ -141,6 +154,7 @@ export interface ChatMessage {
     mode?: ExecutionMode;
     provenance?: AnswerProvenance;
     proposal?: ProposalData;
+    proposal_status?: ProposalLifecycleStatus;
     // Brain provenance
     brain?: BrainProvenance;
     // V7: run link for system messages
@@ -162,6 +176,171 @@ function fallbackChatContent(payload: CTSChatEnvelope["payload"], assistantName:
     }
 
     return `${assistantName} could not produce a readable reply for that request. Retry or ask ${assistantName} to summarize the result directly.`;
+}
+
+function trimToNonEmpty(value: unknown): string | null {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function extractRunIdFromResponse(raw: unknown): string | null {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+
+    const record = raw as Record<string, unknown>;
+    const directRunId = trimToNonEmpty(record.run_id);
+    if (directRunId) {
+        return directRunId;
+    }
+
+    const nestedCandidates = [
+        record.data,
+        record.execution,
+        record.result,
+        record.proof,
+    ];
+
+    for (const candidate of nestedCandidates) {
+        if (!candidate || typeof candidate !== 'object') {
+            continue;
+        }
+        const nestedRunId = trimToNonEmpty((candidate as Record<string, unknown>).run_id);
+        if (nestedRunId) {
+            return nestedRunId;
+        }
+    }
+
+    return null;
+}
+
+function updateProposalLifecycle(
+    messages: ChatMessage[],
+    intentProofId: string,
+    lifecycle: ProposalLifecycleStatus,
+    updates?: Partial<ChatMessage>,
+): ChatMessage[] {
+    if (!intentProofId.trim()) {
+        return messages;
+    }
+
+    let updated = false;
+    const nextMessages = messages.map((message) => {
+        if (message.proposal?.intent_proof_id !== intentProofId) {
+            return message;
+        }
+
+        updated = true;
+        return {
+            ...message,
+            ...updates,
+            proposal_status: lifecycle,
+        };
+    });
+
+    return updated ? nextMessages : messages;
+}
+
+type DerivedMissionChatState = {
+    activeMode: ExecutionMode;
+    activeRunId: string | null;
+    pendingProposal: ProposalData | null;
+    activeConfirmToken: string | null;
+};
+
+function deriveMissionChatState(messages: ChatMessage[]): DerivedMissionChatState {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+        const proposalLifecycle = message.proposal ? message.proposal_status ?? 'active' : null;
+        const runId = trimToNonEmpty(message.run_id);
+
+        if (message.proposal && proposalLifecycle === 'active') {
+            return {
+                activeMode: 'proposal',
+                activeRunId: null,
+                pendingProposal: message.proposal,
+                activeConfirmToken: trimToNonEmpty(message.proposal.confirm_token),
+            };
+        }
+
+        if (proposalLifecycle === 'confirmed_pending_execution') {
+            return {
+                activeMode: 'proposal',
+                activeRunId: null,
+                pendingProposal: null,
+                activeConfirmToken: null,
+            };
+        }
+
+        if (proposalLifecycle === 'executed' || message.mode === 'execution_result' || runId) {
+            if (!runId && message.proposal) {
+                return {
+                    activeMode: 'proposal',
+                    activeRunId: null,
+                    pendingProposal: null,
+                    activeConfirmToken: null,
+                };
+            }
+
+            if (!runId && message.mode === 'execution_result') {
+                return {
+                    activeMode: 'answer',
+                    activeRunId: null,
+                    pendingProposal: null,
+                    activeConfirmToken: null,
+                };
+            }
+
+            return {
+                activeMode: 'execution_result',
+                activeRunId: runId,
+                pendingProposal: null,
+                activeConfirmToken: null,
+            };
+        }
+
+        if (message.mode === 'blocker') {
+            return {
+                activeMode: 'blocker',
+                activeRunId: null,
+                pendingProposal: null,
+                activeConfirmToken: null,
+            };
+        }
+
+        if (proposalLifecycle === 'failed' || proposalLifecycle === 'cancelled') {
+            return {
+                activeMode: 'answer',
+                activeRunId: null,
+                pendingProposal: null,
+                activeConfirmToken: null,
+            };
+        }
+
+        if (message.mode === 'proposal') {
+            return {
+                activeMode: 'proposal',
+                activeRunId: null,
+                pendingProposal: null,
+                activeConfirmToken: null,
+            };
+        }
+
+        if (message.mode === 'answer') {
+            return {
+                activeMode: 'answer',
+                activeRunId: null,
+                pendingProposal: null,
+                activeConfirmToken: null,
+            };
+        }
+    }
+
+    return {
+        activeMode: 'answer',
+        activeRunId: null,
+        pendingProposal: null,
+        activeConfirmToken: null,
+    };
 }
 
 export interface StreamSignal {
@@ -591,6 +770,23 @@ export interface PendingApproval {
     expires_at: string;
 }
 
+export interface AuditLogEntry {
+    id: string;
+    template_id?: string;
+    actor: string;
+    user: string;
+    action: string;
+    timestamp: string;
+    capability_used?: string;
+    result_status: string;
+    approval_status?: string;
+    approval_reason?: string;
+    run_id?: string;
+    intent_proof_id?: string;
+    resource?: string;
+    details?: Record<string, unknown>;
+}
+
 export interface CognitiveEngineStatus {
     status: "online" | "offline";
     endpoint?: string;
@@ -682,6 +878,7 @@ export interface CortexState {
     isFetchingMCPLibrary: boolean;
 
     // Mission Control Chat (Phase 7.6) + Council API
+    workspaceChatScope: string | null;
     missionChat: ChatMessage[];
     isMissionChatting: boolean;
     missionChatError: string | null;
@@ -703,6 +900,8 @@ export interface CortexState {
     pendingApprovals: PendingApproval[];
     isFetchingPolicy: boolean;
     isFetchingApprovals: boolean;
+    auditLog: AuditLogEntry[];
+    isFetchingAuditLog: boolean;
 
     // Cognitive Engine Status (Phase 7.7 vLLM)
     cognitiveStatus: CognitiveStatus | null;
@@ -806,6 +1005,7 @@ export interface CortexState {
     // Mission Control Chat (Phase 7.6) + Council API
     sendMissionChat: (message: string) => Promise<void>;
     clearMissionChat: () => void;
+    setMissionChatScope: (scope: string | null) => void;
     fetchUserSettings: () => Promise<void>;
     updateAssistantName: (name: string) => Promise<boolean>;
     setCouncilTarget: (id: string) => void;
@@ -828,6 +1028,7 @@ export interface CortexState {
     updatePolicy: (config: PolicyConfig) => Promise<void>;
     fetchPendingApprovals: () => Promise<void>;
     resolveApproval: (id: string, approved: boolean) => Promise<void>;
+    fetchAuditLog: () => Promise<void>;
 
     // Cognitive Engine Status (Phase 7.7 vLLM)
     fetchCognitiveStatus: () => Promise<void>;
@@ -883,6 +1084,9 @@ export interface CortexState {
 let _eventSource: EventSource | null = null;
 // ── Zustand Store ─────────────────────────────────────────────
 
+const initialMissionChat = loadPersistedChat(null);
+const initialMissionChatState = deriveMissionChatState(initialMissionChat);
+
 export const useCortexStore = create<CortexState>((set, get) => ({
     chatHistory: [],
     nodes: [],
@@ -931,7 +1135,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     isFetchingMCPLibrary: false,
 
     // Mission Control Chat (Phase 7.6) — rehydrated from localStorage
-    missionChat: loadPersistedChat(),
+    workspaceChatScope: null,
+    missionChat: initialMissionChat,
     isMissionChatting: false,
     missionChatError: null,
     missionChatFailure: null,
@@ -952,6 +1157,8 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     pendingApprovals: [],
     isFetchingPolicy: false,
     isFetchingApprovals: false,
+    auditLog: [],
+    isFetchingAuditLog: false,
     cognitiveStatus: null,
     servicesStatus: [],
     isFetchingServicesStatus: false,
@@ -969,12 +1176,12 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     isAgentEditorOpen: false,
 
     // CE-1: Orchestration Templates
-    pendingProposal: null,
-    activeConfirmToken: null,
+    pendingProposal: initialMissionChatState.pendingProposal,
+    activeConfirmToken: initialMissionChatState.activeConfirmToken,
     lastCommitProof: null,
 
     // V7: Run Timeline
-    activeRunId: null,
+    activeRunId: initialMissionChatState.activeRunId,
     runTimeline: null,
     isFetchingTimeline: false,
 
@@ -995,7 +1202,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
     // Agent/provider orchestration
     activeBrain: null,
-    activeMode: 'answer' as ExecutionMode,
+    activeMode: initialMissionChatState.activeMode,
     activeRole: '',
     governanceMode: 'passive' as const,
     inspectedMessage: null,
@@ -1769,6 +1976,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 brain: envelope.payload?.brain,
                 // Extract proposal from chat response
                 proposal: normalizeProposalData(envelope.payload?.proposal),
+                proposal_status: envelope.payload?.proposal ? 'active' : undefined,
             };
 
             // Derive governance mode from trust threshold
@@ -1779,6 +1987,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 isMissionChatting: false,
                 missionChat: [...s.missionChat, chatMsg],
                 missionChatFailure: null,
+                missionChatError: null,
                 // Update active orchestration state
                 activeBrain: chatMsg.brain ?? null,
                 activeMode: chatMsg.mode || 'answer',
@@ -1788,7 +1997,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 ...(chatMsg.proposal ? {
                     pendingProposal: chatMsg.proposal,
                     activeConfirmToken: chatMsg.proposal.confirm_token,
-                } : {}),
+                } : {
+                    pendingProposal: null,
+                    activeConfirmToken: null,
+                }),
             }));
         } catch (err) {
             const msg = err instanceof Error ? err.message : `${routeLabel} failed`;
@@ -1808,10 +2020,37 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     },
 
     clearMissionChat: () => {
-        set({ missionChat: [], missionChatError: null, missionChatFailure: null });
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem(CHAT_STORAGE_KEY);
+        clearPersistedChat(get().workspaceChatScope);
+        set({
+            missionChat: [],
+            missionChatError: null,
+            missionChatFailure: null,
+            pendingProposal: null,
+            activeConfirmToken: null,
+            activeRunId: null,
+            activeMode: 'answer',
+        });
+    },
+
+    setMissionChatScope: (scope: string | null) => {
+        const normalizedScope = typeof scope === 'string' && scope.trim() ? scope.trim() : null;
+        if (get().workspaceChatScope === normalizedScope) {
+            return;
         }
+
+        const scopedMessages = loadPersistedChat(normalizedScope);
+        const derivedState = deriveMissionChatState(scopedMessages);
+
+        set({
+            workspaceChatScope: normalizedScope,
+            missionChat: scopedMessages,
+            missionChatError: null,
+            missionChatFailure: null,
+            pendingProposal: derivedState.pendingProposal,
+            activeConfirmToken: derivedState.activeConfirmToken,
+            activeRunId: derivedState.activeRunId,
+            activeMode: derivedState.activeMode,
+        });
     },
 
     // ── Broadcast (Phase 8.0) ─────────────────────────────────────
@@ -1955,6 +2194,22 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 set({ pendingApprovals: [], isFetchingApprovals: false });
             }
         } catch { set({ pendingApprovals: [], isFetchingApprovals: false }); }
+    },
+
+    fetchAuditLog: async () => {
+        set({ isFetchingAuditLog: true });
+        try {
+            const res = await fetch('/api/v1/audit?limit=20');
+            if (res.ok) {
+                const payload = await res.json();
+                const data = extractApiData<AuditLogEntry[] | unknown>(payload);
+                set({ auditLog: Array.isArray(data) ? data : [], isFetchingAuditLog: false });
+            } else {
+                set({ auditLog: [], isFetchingAuditLog: false });
+            }
+        } catch {
+            set({ auditLog: [], isFetchingAuditLog: false });
+        }
     },
 
     resolveApproval: async (id: string, approved: boolean) => {
@@ -2253,20 +2508,31 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             });
             if (res.ok) {
                 const body = await res.json();
-                const runId: string | null = body?.data?.run_id ?? body?.run_id ?? null;
+                const runId = extractRunIdFromResponse(body);
+                const proofSummary = trimToNonEmpty(body?.data?.message)
+                    ?? trimToNonEmpty(body?.message)
+                    ?? trimToNonEmpty(body?.data?.summary)
+                    ?? trimToNonEmpty(body?.summary);
+                const lifecycle = runId ? 'executed' : 'confirmed_pending_execution';
                 const systemMsg: ChatMessage = {
                     role: 'system',
-                    content: 'Mission activated',
-                    mode: 'execution_result',
+                    content: proofSummary ?? (runId ? 'Mission activated' : 'Proposal confirmed. Waiting for execution proof.'),
+                    mode: runId ? 'execution_result' : 'proposal',
                     run_id: runId ?? undefined,
                     timestamp: new Date().toISOString(),
                 };
                 set((s) => ({
                     activeRunId: runId,
-                    activeMode: 'execution_result',
+                    activeMode: runId ? 'execution_result' : 'proposal',
                     missionChatError: null,
                     missionChatFailure: null,
-                    missionChat: [...s.missionChat, systemMsg],
+                    missionChat: [
+                        ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, lifecycle, {
+                            mode: runId ? 'execution_result' : 'proposal',
+                            run_id: runId ?? undefined,
+                        }),
+                        systemMsg,
+                    ],
                     pendingProposal: null,
                     activeConfirmToken: null,
                 }));
@@ -2285,8 +2551,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                     missionChatError: errMsg,
                     missionChatFailure: null,
                     activeMode: 'blocker',
+                    activeRunId: null,
                     missionChat: [
-                        ...s.missionChat,
+                        ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'failed', {
+                            mode: 'blocker',
+                        }),
                         { role: 'council', content: errMsg, source_node: 'admin', mode: 'blocker' },
                     ],
                     pendingProposal: null,
@@ -2301,8 +2570,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
                 missionChatError: errMsg,
                 missionChatFailure: null,
                 activeMode: 'blocker',
+                activeRunId: null,
                 missionChat: [
-                    ...s.missionChat,
+                    ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'failed', {
+                        mode: 'blocker',
+                    }),
                     { role: 'council', content: errMsg, source_node: 'admin', mode: 'blocker' },
                 ],
                 pendingProposal: null,
@@ -2313,7 +2585,34 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     },
 
     cancelProposal: () => {
-        set({ pendingProposal: null, activeConfirmToken: null });
+        const { pendingProposal } = get();
+        if (pendingProposal?.intent_proof_id) {
+            void fetch('/api/v1/intent/cancel-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ intent_proof_id: pendingProposal.intent_proof_id }),
+            });
+        }
+        set((s) => ({
+            missionChat: pendingProposal
+                ? [
+                    ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'cancelled', {
+                        mode: 'proposal',
+                    }),
+                    {
+                        role: 'system',
+                        content: 'Proposal cancelled. No action executed.',
+                        timestamp: new Date().toISOString(),
+                    },
+                ]
+                : s.missionChat,
+            pendingProposal: null,
+            activeConfirmToken: null,
+            activeRunId: null,
+            activeMode: 'answer',
+            missionChatError: null,
+            missionChatFailure: null,
+        }));
     },
 
     // V7: Fetch run timeline from event store
@@ -2610,7 +2909,10 @@ export const useCortexStore = create<CortexState>((set, get) => ({
 
 // ── Auto-sync missionChat → localStorage ─────────────────────
 useCortexStore.subscribe((state, prevState) => {
-    if (state.missionChat !== prevState.missionChat) {
-        persistChat(state.missionChat);
+    if (
+        state.missionChat !== prevState.missionChat
+        || state.workspaceChatScope !== prevState.workspaceChatScope
+    ) {
+        persistChat(state.missionChat, state.workspaceChatScope);
     }
 });

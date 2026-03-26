@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-24
+> Updated: 2026-03-26
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -29,6 +29,7 @@ Development is progressing toward the V8.2 full production target.
 
 Release posture:
 - `ACTIVE` current posture is `V1 MVP Release Candidate`.
+- `ACTIVE` a release-blocking V8.2 integrity recovery pass is now in flight for the Soma action path: governed mutation requests must always enter proposal mode, proposal generation must be side-effect free, and confirmation must always produce durable execution proof before the RC can be treated as trustworthy.
 - `COMPLETE` the default Soma-primary operator flow is now release-candidate ready with guided first-run actions, resilient support panels, and user-facing vocabulary aligned around Automations, Learning & Context, AI Engine, Response Style, Advisors, and Departments.
 - `COMPLETE` Soma is now the primary default interface and organization orchestrator for the AI Organization workspace.
 - `COMPLETE` Team Leads remain the operational layer Soma works through, while Routing / Council remains advisory and planning-oriented rather than default visible UX jargon.
@@ -43,7 +44,9 @@ Release posture:
 - `NEXT` advanced architecture/runtime configuration remains a separate contract and implementation lane; it must stay non-default until the dedicated advanced surface ships without polluting the MVP operator flow.
 - `NEXT` extend the same cognitive-engine availability contract into broader team, automation, and council execution paths beyond the primary Soma chat route.
 - `NEXT` build on the managed exchange foundation with richer persistent team runs, deeper inter-agent review loops, and broader channel-aware orchestration across MCP-backed services.
-- `NEXT` enterprise identity, approval workflows, and multi-user access management remain deferred; the current free-node posture is a foundational runtime security boundary, not full enterprise IAM.
+- `COMPLETE` Chunk 8.7 is now landed for the free-node release: Soma reads a user-level governance profile, mutation proposals now carry approval posture and capability-risk context, and audit records cover proposal generation, proposal confirmation/cancellation, execution runs, capability use, artifact creation, and channel writes.
+- `NEXT` enterprise identity, approval workflows, and multi-user access management remain deferred beyond the free-node governance foundation; the current release now has enterprise-capable governance posture, not full enterprise identity management.
+- `NEXT` multi-user enterprise IAM, delegated approver chains, and broader organization-level access management remain deferred; the current release now has enterprise-capable governance foundations, not full enterprise identity management.
 
 ## Architecture Synchronization Rule
 

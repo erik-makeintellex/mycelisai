@@ -7,6 +7,7 @@ const store = useCortexStore;
 
 describe('useCortexStore', () => {
     beforeEach(() => {
+        localStorage.clear();
         // Reset relevant state between tests
         store.setState({
             missions: [],
@@ -20,6 +21,7 @@ describe('useCortexStore', () => {
             catalogueAgents: [],
             isFetchingCatalogue: false,
             missionChat: [],
+            workspaceChatScope: null,
             missionChatError: null,
             missionChatFailure: null,
             councilTarget: 'admin',
@@ -348,6 +350,29 @@ describe('useCortexStore', () => {
             expect(store.getState().pendingArtifacts).toHaveLength(0);
             expect(store.getState().selectedArtifact).toBeNull();
         });
+
+        it('fetchAuditLog stores recent audit entries from the API envelope', async () => {
+            const auditLog = [
+                {
+                    id: 'audit-1',
+                    actor: 'Soma',
+                    user: 'local-user',
+                    action: 'proposal_generated',
+                    timestamp: '2026-03-26T12:00:00Z',
+                    result_status: 'pending',
+                    approval_status: 'approval_required',
+                },
+            ];
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({ ok: true, data: auditLog }),
+            });
+
+            await store.getState().fetchAuditLog();
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/audit?limit=20');
+            expect(store.getState().auditLog).toEqual(auditLog);
+        });
     });
 
     // ── Launch Crew / proposal confirmation ─────────────────────
@@ -415,6 +440,9 @@ describe('useCortexStore', () => {
             expect(store.getState().pendingProposal?.team_expressions?.[0].module_bindings?.[0]).toMatchObject({
                 module_id: 'delegate',
                 adapter_kind: 'internal',
+            });
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                proposal_status: 'active',
             });
         });
 
@@ -525,7 +553,7 @@ describe('useCortexStore', () => {
     });
 
     describe('confirmProposal', () => {
-        it('records an execution result when confirmation succeeds without a run id', async () => {
+        it('keeps the proposal in a pending-proof state when confirmation succeeds without a run id', async () => {
             store.setState({
                 pendingProposal: {
                     intent: 'Launch a docs crew',
@@ -537,7 +565,21 @@ describe('useCortexStore', () => {
                     intent_proof_id: 'ip-123',
                 },
                 activeConfirmToken: 'ct-123',
-                missionChat: [],
+                missionChat: [{
+                    role: 'council',
+                    content: 'Proposed execution path',
+                    mode: 'proposal',
+                    proposal: {
+                        intent: 'Launch a docs crew',
+                        teams: 1,
+                        agents: 2,
+                        tools: ['delegate_task'],
+                        risk_level: 'medium',
+                        confirm_token: 'ct-123',
+                        intent_proof_id: 'ip-123',
+                    },
+                    proposal_status: 'active',
+                }],
                 missionChatError: null,
                 activeMode: 'proposal',
                 activeRunId: null,
@@ -550,12 +592,17 @@ describe('useCortexStore', () => {
             const result = await store.getState().confirmProposal();
 
             expect(result).toEqual({ ok: true, runId: null });
-            expect(store.getState().activeMode).toBe('execution_result');
+            expect(store.getState().activeMode).toBe('proposal');
             expect(store.getState().activeRunId).toBeNull();
             expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat[0]).toMatchObject({
+                proposal_status: 'confirmed_pending_execution',
+                mode: 'proposal',
+            });
             expect(store.getState().missionChat.at(-1)).toMatchObject({
                 role: 'system',
-                mode: 'execution_result',
+                mode: 'proposal',
+                content: 'Proposal confirmed. Waiting for execution proof.',
             });
         });
 
@@ -571,7 +618,21 @@ describe('useCortexStore', () => {
                     intent_proof_id: 'ip-123',
                 },
                 activeConfirmToken: 'ct-123',
-                missionChat: [],
+                missionChat: [{
+                    role: 'council',
+                    content: 'Proposed execution path',
+                    mode: 'proposal',
+                    proposal: {
+                        intent: 'Launch a docs crew',
+                        teams: 1,
+                        agents: 2,
+                        tools: ['delegate_task'],
+                        risk_level: 'medium',
+                        confirm_token: 'ct-123',
+                        intent_proof_id: 'ip-123',
+                    },
+                    proposal_status: 'active',
+                }],
                 missionChatError: null,
                 activeMode: 'proposal',
                 activeRunId: null,
@@ -587,6 +648,11 @@ describe('useCortexStore', () => {
             expect(store.getState().activeMode).toBe('execution_result');
             expect(store.getState().activeRunId).toBe('run-123');
             expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat[0]).toMatchObject({
+                proposal_status: 'executed',
+                mode: 'execution_result',
+                run_id: 'run-123',
+            });
             expect(store.getState().missionChat.at(-1)).toMatchObject({
                 role: 'system',
                 mode: 'execution_result',
@@ -606,7 +672,21 @@ describe('useCortexStore', () => {
                     intent_proof_id: 'ip-123',
                 },
                 activeConfirmToken: 'ct-123',
-                missionChat: [],
+                missionChat: [{
+                    role: 'council',
+                    content: 'Proposed execution path',
+                    mode: 'proposal',
+                    proposal: {
+                        intent: 'Launch a docs crew',
+                        teams: 1,
+                        agents: 2,
+                        tools: ['delegate_task'],
+                        risk_level: 'medium',
+                        confirm_token: 'ct-123',
+                        intent_proof_id: 'ip-123',
+                    },
+                    proposal_status: 'active',
+                }],
                 missionChatError: null,
                 activeMode: 'proposal',
             });
@@ -621,10 +701,103 @@ describe('useCortexStore', () => {
             expect(store.getState().activeMode).toBe('blocker');
             expect(store.getState().missionChatError).toBe('confirmation denied');
             expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat[0]).toMatchObject({
+                proposal_status: 'failed',
+                mode: 'blocker',
+            });
             expect(store.getState().missionChat.at(-1)).toMatchObject({
                 role: 'council',
                 mode: 'blocker',
                 content: 'confirmation denied',
+            });
+        });
+
+        it('marks the proposal cancelled and appends a no-op system message when cancelled', () => {
+            store.setState({
+                pendingProposal: {
+                    intent: 'Launch a docs crew',
+                    teams: 1,
+                    agents: 2,
+                    tools: ['delegate_task'],
+                    risk_level: 'medium',
+                    confirm_token: 'ct-123',
+                    intent_proof_id: 'ip-123',
+                },
+                activeConfirmToken: 'ct-123',
+                missionChat: [{
+                    role: 'council',
+                    content: 'Proposed execution path',
+                    mode: 'proposal',
+                    proposal: {
+                        intent: 'Launch a docs crew',
+                        teams: 1,
+                        agents: 2,
+                        tools: ['delegate_task'],
+                        risk_level: 'medium',
+                        confirm_token: 'ct-123',
+                        intent_proof_id: 'ip-123',
+                    },
+                    proposal_status: 'active',
+                }],
+                activeMode: 'proposal',
+            });
+
+            store.getState().cancelProposal();
+
+            expect(store.getState().activeMode).toBe('answer');
+            expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().activeConfirmToken).toBeNull();
+            expect(store.getState().missionChat[0]).toMatchObject({
+                proposal_status: 'cancelled',
+            });
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                role: 'system',
+                content: 'Proposal cancelled. No action executed.',
+            });
+        });
+    });
+
+    describe('setMissionChatScope', () => {
+        it('rehydrates scoped chat history when the organization scope changes', () => {
+            localStorage.setItem('mycelis-workspace-chat:org-1', JSON.stringify([{ role: 'user', content: 'org-1 history' }]));
+            localStorage.setItem('mycelis-workspace-chat:org-2', JSON.stringify([{ role: 'user', content: 'org-2 history' }]));
+
+            store.getState().setMissionChatScope('org-1');
+            expect(store.getState().workspaceChatScope).toBe('org-1');
+            expect(store.getState().missionChat).toMatchObject([{ role: 'user', content: 'org-1 history' }]);
+
+            store.getState().setMissionChatScope('org-2');
+            expect(store.getState().workspaceChatScope).toBe('org-2');
+            expect(store.getState().missionChat).toMatchObject([{ role: 'user', content: 'org-2 history' }]);
+        });
+
+        it('rehydrates a proof-pending proposal without promoting it to verified execution', () => {
+            localStorage.setItem('mycelis-workspace-chat:org-proof', JSON.stringify([
+                {
+                    role: 'council',
+                    content: 'Proposal confirmed. Waiting for execution proof.',
+                    mode: 'proposal',
+                    proposal: {
+                        intent: 'Launch a docs crew',
+                        teams: 1,
+                        agents: 2,
+                        tools: ['delegate_task'],
+                        risk_level: 'medium',
+                        confirm_token: 'ct-123',
+                        intent_proof_id: 'ip-123',
+                    },
+                    proposal_status: 'executed',
+                },
+            ]));
+
+            store.getState().setMissionChatScope('org-proof');
+
+            expect(store.getState().workspaceChatScope).toBe('org-proof');
+            expect(store.getState().activeMode).toBe('proposal');
+            expect(store.getState().activeRunId).toBeNull();
+            expect(store.getState().pendingProposal).toBeNull();
+            expect(store.getState().missionChat[0]).toMatchObject({
+                proposal_status: 'executed',
             });
         });
     });
