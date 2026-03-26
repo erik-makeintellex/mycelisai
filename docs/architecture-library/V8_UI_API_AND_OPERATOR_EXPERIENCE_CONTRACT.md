@@ -436,6 +436,7 @@ Make Soma the default operating surface for the AI Organization while keeping Te
 
 - operator receives an answer, proposal, execution result, or blocker in the Soma workspace while remaining inside the AI Organization frame
 - if Soma consults a specialist path for output generation, the resulting artifacts still return through Soma's conversation turn rather than only appearing as team-delivery side effects
+- proposal cards surface approval-required vs auto-allowed posture, approval reason, capability-risk summary, and bounded cost/external-data hints before the operator executes anything
 
 **Empty state**
 
@@ -448,6 +449,38 @@ Make Soma the default operating surface for the AI Organization while keeping Te
 **Error state**
 
 - structured workspace blocker explains whether the issue is organization readiness, policy, tooling, or transport
+
+### 4.5.1 Approval and audit behavior
+
+**Purpose**
+
+Keep governance visible enough to build operator trust without turning the default Soma workspace into a raw audit console.
+
+**User sees**
+
+- proposals that clearly distinguish `Approve & Execute` from `Execute` when governance auto-allows a low-risk action
+- approval reason, capability-risk posture, and limited cost/external-data hints on the proposal card
+- an inspect-only `Audit` / `Activity Log` view under Automations for recent approvals, execution status, capability use, and audit events
+
+**User actions**
+
+- inspect why a proposal needs approval
+- approve, execute, or cancel a proposal
+- review recent governance activity without opening raw backend logs
+
+**API data required**
+
+- proposal payloads include approval metadata, capability-risk summary, cost/external-data hints, and governance profile snapshots when relevant
+- `GET /api/v1/audit`
+  - returns recent normalized audit records for proposal, execution, and capability events
+- `POST /api/v1/intent/cancel-action`
+  - records proposal cancellation in the same audit trail
+
+**Hidden advanced details**
+
+- raw log-entry JSON
+- verbose transport traces
+- internal-only policy authoring controls that are not part of the MVP operator flow
 
 ### 4.6 Advisor, Department, and Specialist visibility rules
 

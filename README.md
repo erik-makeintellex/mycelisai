@@ -99,6 +99,7 @@ V8.2 summary:
 - distributed execution means the AI Organization can coordinate work across more than one host or environment
 - the learning system turns reviewed outcomes into governed memory, reusable procedures, and safer organization improvement
 - the capability system keeps action surfaces allowlisted, scoped, auditable, and policy-checked
+- user-level governance profiles, approval thresholds, and audit trails make enterprise-style traceability available even in the single-user free-node posture
 
 Explicit distinction:
 - V8.1 is the current release target
@@ -206,7 +207,7 @@ Managed exchange note:
 
 Managed exchange security note:
 - connected tools and external services are governed rather than implicitly trusted
-- the free-node release now includes foundational security boundaries for exchange visibility, capability risk, audit-ready metadata, and external trust classification
+- the free-node release now includes foundational security boundaries for exchange visibility, capability risk, user-level approval posture, audit records, and external trust classification
 - env overrides are deployment-time infrastructure wiring, not runtime organization behavior
 - do not replace bundle-defined runtime organization truth
 

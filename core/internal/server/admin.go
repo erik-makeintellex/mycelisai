@@ -15,8 +15,8 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
-	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/events"
+	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/mcp"
@@ -210,6 +210,8 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Intent Commit (Instantiate Mission into Ledger + Activate in Soma)
 	mux.HandleFunc("POST /api/v1/intent/commit", s.handleIntentCommit)
 	mux.HandleFunc("POST /api/v1/intent/confirm-action", s.HandleConfirmAction)
+	mux.HandleFunc("POST /api/v1/intent/cancel-action", s.HandleCancelAction)
+	mux.HandleFunc("GET /api/v1/audit", s.handleListAuditLog)
 
 	// CE-1: Orchestration Templates & Intent Proofs
 	mux.HandleFunc("GET /api/v1/templates", s.handleListTemplatesAPI)

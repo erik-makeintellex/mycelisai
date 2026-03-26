@@ -19,6 +19,11 @@ export const CHAT_STORAGE_KEY = 'mycelis-workspace-chat';
 const CHAT_STORAGE_KEY_LEGACY = 'mycelis-mission-chat'; // migrate old key
 const CHAT_MAX_PERSISTED = 200; // cap to avoid localStorage quota issues
 
+export function buildChatStorageKey(scope?: string | null): string {
+    const normalizedScope = typeof scope === 'string' ? scope.trim() : '';
+    return normalizedScope ? `${CHAT_STORAGE_KEY}:${normalizedScope}` : CHAT_STORAGE_KEY;
+}
+
 export function blueprintToGraph(bp: MissionBlueprint): { nodes: Node[]; edges: Edge[] } {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -289,17 +294,38 @@ export function normalizeProposalData(raw: unknown): ProposalData | undefined {
         risk_level: typeof rec.risk_level === 'string' && rec.risk_level.trim() ? rec.risk_level : 'medium',
         confirm_token: typeof rec.confirm_token === 'string' ? rec.confirm_token : '',
         intent_proof_id: typeof rec.intent_proof_id === 'string' ? rec.intent_proof_id : '',
+        approval_required: typeof (rec.approval as Record<string, unknown> | undefined)?.approval_required === 'boolean'
+            ? Boolean((rec.approval as Record<string, unknown>).approval_required)
+            : undefined,
+        approval_reason: typeof (rec.approval as Record<string, unknown> | undefined)?.approval_reason === 'string'
+            ? String((rec.approval as Record<string, unknown>).approval_reason)
+            : undefined,
+        approval_mode: typeof (rec.approval as Record<string, unknown> | undefined)?.approval_mode === 'string'
+            ? String((rec.approval as Record<string, unknown>).approval_mode)
+            : undefined,
+        capability_risk: typeof (rec.approval as Record<string, unknown> | undefined)?.capability_risk === 'string'
+            ? String((rec.approval as Record<string, unknown>).capability_risk)
+            : undefined,
+        capability_ids: Array.isArray((rec.approval as Record<string, unknown> | undefined)?.capability_ids)
+            ? (rec.approval as Record<string, unknown>).capability_ids as string[]
+            : undefined,
+        external_data_use: typeof (rec.approval as Record<string, unknown> | undefined)?.external_data_use === 'boolean'
+            ? Boolean((rec.approval as Record<string, unknown>).external_data_use)
+            : undefined,
+        estimated_cost: typeof (rec.approval as Record<string, unknown> | undefined)?.estimated_cost === 'number'
+            ? Number((rec.approval as Record<string, unknown>).estimated_cost)
+            : undefined,
         team_expressions: teamExpressions.length > 0 ? teamExpressions : undefined,
     };
 }
 
 // Soma's memory: chat survives page refreshes. Use clearMissionChat to reset.
-export function loadPersistedChat(): ChatMessage[] {
+export function loadPersistedChat(scope?: string | null): ChatMessage[] {
     if (typeof window === 'undefined') return [];
     try {
-        // Try new key first, fall back to legacy key on first load (migration)
-        const raw = localStorage.getItem(CHAT_STORAGE_KEY)
-            ?? localStorage.getItem(CHAT_STORAGE_KEY_LEGACY);
+        const scopedKey = buildChatStorageKey(scope);
+        const raw = localStorage.getItem(scopedKey)
+            ?? (!scope ? localStorage.getItem(CHAT_STORAGE_KEY_LEGACY) : null);
         if (!raw) return [];
         const msgs: ChatMessage[] = JSON.parse(raw);
         return Array.isArray(msgs) ? msgs.slice(-CHAT_MAX_PERSISTED) : [];
@@ -308,13 +334,25 @@ export function loadPersistedChat(): ChatMessage[] {
     }
 }
 
-export function persistChat(messages: ChatMessage[]) {
+export function persistChat(messages: ChatMessage[], scope?: string | null) {
     if (typeof window === 'undefined') return;
     try {
         // Only persist the last N messages to respect localStorage limits
         const toStore = messages.slice(-CHAT_MAX_PERSISTED);
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
+        localStorage.setItem(buildChatStorageKey(scope), JSON.stringify(toStore));
     } catch {
         // quota exceeded - silently drop
+    }
+}
+
+export function clearPersistedChat(scope?: string | null) {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.removeItem(buildChatStorageKey(scope));
+        if (!scope) {
+            localStorage.removeItem(CHAT_STORAGE_KEY_LEGACY);
+        }
+    } catch {
+        // ignore localStorage failures
     }
 }

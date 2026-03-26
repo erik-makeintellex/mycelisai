@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -32,9 +33,14 @@ type Team struct {
 
 func defaultUserSettings() map[string]any {
 	return map[string]any{
-		"theme":          "aero-light",
-		"matrix_view":    "grid",
-		"assistant_name": defaultAssistantName,
+		"theme":                 "aero-light",
+		"matrix_view":           "grid",
+		"assistant_name":        defaultAssistantName,
+		"role":                  "owner",
+		"cost_sensitivity":      "balanced",
+		"review_strictness":     "standard",
+		"automation_tolerance":  "balanced",
+		"escalation_preference": "ask",
 	}
 }
 
@@ -89,6 +95,15 @@ func loadUserSettings() map[string]any {
 		settings["matrix_view"] = strings.TrimSpace(matrixView)
 	}
 	settings["assistant_name"] = normalizeAssistantName(raw["assistant_name"])
+	if role, ok := raw["role"]; ok {
+		if normalized := normalizeGovernanceRole(fmt.Sprint(role)); normalized != "" {
+			settings["role"] = normalized
+		}
+	}
+	settings["cost_sensitivity"] = normalizeCostSensitivity(raw["cost_sensitivity"])
+	settings["review_strictness"] = normalizeReviewStrictness(raw["review_strictness"])
+	settings["automation_tolerance"] = normalizeAutomationTolerance(raw["automation_tolerance"])
+	settings["escalation_preference"] = normalizeEscalationPreference(raw["escalation_preference"])
 	return settings
 }
 
@@ -179,6 +194,23 @@ func (s *AdminServer) HandleUpdateSettings(w http.ResponseWriter, r *http.Reques
 	}
 	if _, hasAssistantName := input["assistant_name"]; hasAssistantName {
 		settings["assistant_name"] = normalizeAssistantName(input["assistant_name"])
+	}
+	if _, hasRole := input["role"]; hasRole {
+		if normalized := normalizeGovernanceRole(fmt.Sprint(input["role"])); normalized != "" {
+			settings["role"] = normalized
+		}
+	}
+	if _, hasCostSensitivity := input["cost_sensitivity"]; hasCostSensitivity {
+		settings["cost_sensitivity"] = normalizeCostSensitivity(input["cost_sensitivity"])
+	}
+	if _, hasReviewStrictness := input["review_strictness"]; hasReviewStrictness {
+		settings["review_strictness"] = normalizeReviewStrictness(input["review_strictness"])
+	}
+	if _, hasAutomationTolerance := input["automation_tolerance"]; hasAutomationTolerance {
+		settings["automation_tolerance"] = normalizeAutomationTolerance(input["automation_tolerance"])
+	}
+	if _, hasEscalationPreference := input["escalation_preference"]; hasEscalationPreference {
+		settings["escalation_preference"] = normalizeEscalationPreference(input["escalation_preference"])
 	}
 
 	if err := saveUserSettings(settings); err != nil {

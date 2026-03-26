@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Shield, AlertTriangle, CheckCircle, XCircle, Edit3 } from "lucide-react";
+import { Shield, AlertTriangle, CheckCircle, Clock3, XCircle } from "lucide-react";
 import { useCortexStore, type ChatMessage } from "@/store/useCortexStore";
 import { brainBadge, toolLabel, sourceNodeLabel } from "@/lib/labels";
 
@@ -16,14 +16,58 @@ export default function ProposedActionBlock({ message }: Props) {
 
     const proposal = message.proposal;
     if (!proposal) return null;
+    const lifecycle = message.proposal_status ?? "active";
+    const hasRunProof = Boolean(message.run_id?.trim());
+    const renderedLifecycle = lifecycle === "executed" && !hasRunProof ? "confirmed_pending_execution" : lifecycle;
     const expressions = proposal.team_expressions ?? [];
     const bindingCount = expressions.reduce((sum, expr) => sum + (expr.module_bindings?.length ?? 0), 0);
+    const isActionable = renderedLifecycle === "active";
+    const approvalRequired = proposal.approval_required ?? true;
+    const approvalMode = proposal.approval_mode ?? (approvalRequired ? "required" : "auto_allowed");
+    const capabilityRisk = proposal.capability_risk ?? proposal.risk_level ?? "low";
+    const capabilityIDs = proposal.capability_ids ?? [];
+    const governanceSummary = approvalRequired
+        ? "Approval required before execution"
+        : approvalMode === "optional"
+            ? "Approval optional for this action"
+            : "Auto-approved within governance thresholds";
+    const actionLabel = approvalRequired ? "Approve & Execute" : "Execute";
 
     const riskColor = proposal.risk_level === "high"
         ? "text-red-400 border-red-400/30"
         : proposal.risk_level === "medium"
             ? "text-amber-400 border-amber-400/30"
             : "text-cortex-success border-cortex-success/30";
+
+    const lifecycleTone = renderedLifecycle === "cancelled"
+        ? "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted"
+        : renderedLifecycle === "confirmed_pending_execution"
+            ? "border-cortex-primary/30 bg-cortex-primary/10 text-cortex-primary"
+            : renderedLifecycle === "executed"
+                ? "border-cortex-success/30 bg-cortex-success/10 text-cortex-success"
+                : renderedLifecycle === "failed"
+                    ? "border-red-400/30 bg-red-400/10 text-red-300"
+                    : "border-amber-400/20 bg-amber-400/5 text-amber-300";
+
+    const lifecycleLabel = renderedLifecycle === "cancelled"
+        ? "Cancelled"
+        : renderedLifecycle === "confirmed_pending_execution"
+            ? "Confirmed, awaiting execution proof"
+            : renderedLifecycle === "executed"
+                ? "Execution verified"
+                : renderedLifecycle === "failed"
+                    ? "Confirmation failed"
+                    : "Awaiting approval";
+
+    const LifecycleIcon = renderedLifecycle === "cancelled"
+        ? XCircle
+        : renderedLifecycle === "confirmed_pending_execution"
+            ? Clock3
+            : renderedLifecycle === "executed"
+                ? CheckCircle
+                : renderedLifecycle === "failed"
+                    ? AlertTriangle
+                    : Shield;
 
     return (
         <div className="mt-3 rounded-lg border border-amber-400/30 bg-cortex-surface/80 overflow-hidden">
@@ -35,6 +79,10 @@ export default function ProposedActionBlock({ message }: Props) {
 
             {/* Details grid */}
             <div className="px-4 py-3 space-y-2 text-xs font-mono">
+                <div className={`flex items-center gap-2 rounded border px-2.5 py-2 text-[10px] ${lifecycleTone}`}>
+                    <LifecycleIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>{lifecycleLabel}</span>
+                </div>
                 <div className="flex items-center gap-4">
                     <span className="text-cortex-text-muted w-16">Role</span>
                     <span className="text-cortex-text-main">{sourceNodeLabel(message.source_node || "admin", assistantName)}</span>
@@ -57,6 +105,47 @@ export default function ProposedActionBlock({ message }: Props) {
                     <span className={`px-2 py-0.5 rounded border text-[10px] ${riskColor}`}>
                         {proposal.risk_level?.toUpperCase() || "LOW"}
                     </span>
+                </div>
+                <div className="flex items-start gap-4">
+                    <span className="text-cortex-text-muted w-16 pt-0.5">Approval</span>
+                    <div className="flex-1 space-y-1">
+                        <div className="text-cortex-text-main">{governanceSummary}</div>
+                        <div className="flex flex-wrap gap-1">
+                            <span className={`px-2 py-0.5 rounded border text-[10px] ${approvalRequired ? "text-amber-300 border-amber-400/30" : "text-cortex-success border-cortex-success/30"}`}>
+                                {approvalMode.replaceAll("_", " ").toUpperCase()}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded border text-[10px] ${capabilityRisk === "high" ? "text-red-300 border-red-400/30" : capabilityRisk === "medium" ? "text-amber-300 border-amber-400/30" : "text-cortex-success border-cortex-success/30"}`}>
+                                Capability {capabilityRisk.toUpperCase()}
+                            </span>
+                            {proposal.external_data_use ? (
+                                <span className="px-2 py-0.5 rounded border text-[10px] text-cortex-primary border-cortex-primary/30">
+                                    External data
+                                </span>
+                            ) : null}
+                            {typeof proposal.estimated_cost === "number" ? (
+                                <span className="px-2 py-0.5 rounded border text-[10px] text-cortex-text-main border-cortex-border">
+                                    Cost {proposal.estimated_cost.toFixed(2)}
+                                </span>
+                            ) : null}
+                        </div>
+                        {proposal.approval_reason ? (
+                            <div className="text-cortex-text-muted text-[10px]">
+                                Reason: {proposal.approval_reason.replaceAll("_", " ")}
+                            </div>
+                        ) : null}
+                        {capabilityIDs.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                                {capabilityIDs.map((capability) => (
+                                    <span
+                                        key={capability}
+                                        className="px-1.5 py-0.5 rounded border text-[10px] bg-cortex-bg/60 text-cortex-text-main border-cortex-border"
+                                    >
+                                        {capability.replaceAll("_", " ")}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
                 {proposal.tools.length > 0 && (
                     <div className="flex items-start gap-4">
@@ -108,28 +197,24 @@ export default function ProposedActionBlock({ message }: Props) {
             </div>
 
             {/* Actions */}
-            <div className="px-4 py-3 border-t border-cortex-border flex items-center gap-2">
-                <button
-                    onClick={() => confirmProposal()}
-                    className="px-3 py-1.5 rounded bg-cortex-success/20 border border-cortex-success/40 text-cortex-success text-xs font-mono hover:bg-cortex-success/30 transition-colors flex items-center gap-1.5"
-                >
-                    <CheckCircle className="w-3 h-3" />
-                    Confirm &amp; Execute
-                </button>
-                <button
-                    className="px-3 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10 transition-colors flex items-center gap-1.5"
-                >
-                    <Edit3 className="w-3 h-3" />
-                    Modify Plan
-                </button>
-                <button
-                    onClick={() => cancelProposal()}
-                    className="px-3 py-1.5 rounded text-red-400 text-xs font-mono hover:bg-red-400/10 transition-colors flex items-center gap-1.5"
-                >
-                    <XCircle className="w-3 h-3" />
-                    Cancel
-                </button>
-            </div>
+            {isActionable ? (
+                <div className="px-4 py-3 border-t border-cortex-border flex items-center gap-2">
+                    <button
+                        onClick={() => confirmProposal()}
+                        className="px-3 py-1.5 rounded bg-cortex-success/20 border border-cortex-success/40 text-cortex-success text-xs font-mono hover:bg-cortex-success/30 transition-colors flex items-center gap-1.5"
+                    >
+                        <CheckCircle className="w-3 h-3" />
+                        {actionLabel}
+                    </button>
+                    <button
+                        onClick={() => cancelProposal()}
+                        className="px-3 py-1.5 rounded text-red-400 text-xs font-mono hover:bg-red-400/10 transition-colors flex items-center gap-1.5"
+                    >
+                        <XCircle className="w-3 h-3" />
+                        Cancel
+                    </button>
+                </div>
+            ) : null}
         </div>
     );
 }

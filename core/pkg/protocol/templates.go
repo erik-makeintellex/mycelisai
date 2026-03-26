@@ -82,16 +82,29 @@ type IntentProof struct {
 	ScopeValidation  *ScopeValidation `json:"scope_validation,omitempty"`
 	AuditEventID     string           `json:"audit_event_id"`
 	MissionID        string           `json:"mission_id,omitempty"`
-	Status           string           `json:"status"`     // "pending", "confirmed", "denied"
+	Status           string           `json:"status"` // "pending", "confirmed", "denied"
 	CreatedAt        time.Time        `json:"created_at"`
 	ConfirmedAt      *time.Time       `json:"confirmed_at,omitempty"`
 }
 
 // ScopeValidation tracks what resources a proposal will affect.
 type ScopeValidation struct {
-	Tools             []string `json:"tools"`
-	AffectedResources []string `json:"affected_resources"` // e.g. ["missions", "teams", "service_manifests"]
-	RiskLevel         string   `json:"risk_level"`         // "low", "medium", "high"
+	Tools             []string                   `json:"tools"`
+	AffectedResources []string                   `json:"affected_resources"`           // e.g. ["missions", "teams", "service_manifests"]
+	RiskLevel         string                     `json:"risk_level"`                   // "low", "medium", "high"
+	PlannedToolCalls  []PlannedToolCall          `json:"planned_tool_calls,omitempty"` // governed mutation actions to execute only after confirmation
+	Approval          *ApprovalPolicy            `json:"approval,omitempty"`
+	CapabilityIDs     []string                   `json:"capability_ids,omitempty"`
+	ExternalDataUse   bool                       `json:"external_data_use,omitempty"`
+	EstimatedCost     float64                    `json:"estimated_cost,omitempty"`
+	GovernanceProfile *GovernanceProfileSnapshot `json:"governance_profile,omitempty"`
+}
+
+// PlannedToolCall captures a governed tool action and its arguments so the
+// confirmed execution path can replay the approved mutation without re-planning.
+type PlannedToolCall struct {
+	Name      string         `json:"name"`
+	Arguments map[string]any `json:"arguments,omitempty"`
 }
 
 // ── Answer Provenance ───────────────────────────────────────────────
@@ -99,9 +112,9 @@ type ScopeValidation struct {
 // AnswerProvenance is the minimal proof for Chat-to-Answer responses.
 // No confirm token, no scope validation — just audit linkage.
 type AnswerProvenance struct {
-	ResolvedIntent  string   `json:"resolved_intent"`   // "answer"
-	PermissionCheck string   `json:"permission_check"`  // "pass"
-	PolicyDecision  string   `json:"policy_decision"`   // "allow"
+	ResolvedIntent  string   `json:"resolved_intent"`  // "answer"
+	PermissionCheck string   `json:"permission_check"` // "pass"
+	PolicyDecision  string   `json:"policy_decision"`  // "allow"
 	AuditEventID    string   `json:"audit_event_id"`
 	ConsultChain    []string `json:"consult_chain,omitempty"`
 }
