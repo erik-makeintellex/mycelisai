@@ -123,8 +123,8 @@ func TestTemplateBundle_InstantiateRuntimeOrganization(t *testing.T) {
 	if len(org.Teams[0].Members) == 0 || org.Teams[0].Members[0].ID != "admin" {
 		t.Fatalf("expected admin-core members to be embedded, got %+v", org.Teams[0].Members)
 	}
-	if org.ProviderPolicy.Provider != "local-ollama-dev" {
-		t.Fatalf("expected migration bridge provider default local-ollama-dev, got %q", org.ProviderPolicy.Provider)
+	if org.ProviderPolicy.Provider != "ollama" {
+		t.Fatalf("expected migration bridge provider default ollama, got %q", org.ProviderPolicy.Provider)
 	}
 }
 
