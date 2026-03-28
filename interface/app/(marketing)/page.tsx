@@ -17,25 +17,25 @@ const truthCards = [
     },
     {
         title: "Control",
-        eyebrow: "Guided tuning",
+        eyebrow: "Governance and guided tuning",
         description:
-            "Adjust AI Engine Settings and Response Style through safe guided choices so output stays intentional, reviewable, and easy to manage.",
+            "Adjust governance posture, AI Engine Settings, and Response Style through safe guided choices so execution stays intentional, reviewable, and easy to manage.",
         bullets: [
-            "Use curated AI Engine options for planning depth and pace",
-            "Choose a Response Style that matches tone, structure, and detail",
+            "Route higher-risk changes through proposal and approval instead of hidden mutation",
+            "Use curated AI Engine and Response Style profiles for steady behavior",
             "Keep advanced controls hidden until they are truly needed",
         ],
         icon: <ShieldCheck className="h-5 w-5" />,
     },
     {
         title: "Continuous Operation",
-        eyebrow: "Reviews, checks, and updates",
+        eyebrow: "Reviews, continuity, and updates",
         description:
-            "See recent reviews and checks so the organization feels active between operator actions without turning the workspace into a control panel.",
+            "See recent reviews, checks, and retained continuity so the organization feels active between operator actions without turning the workspace into a control panel.",
         bullets: [
-            "Keep Recent Activity visible inside the Soma workspace",
+            "Keep Recent Activity and continuity signals visible inside the Soma workspace",
             "Surface updates in user-facing language instead of technical noise",
-            "Reinforce that your AI Organization keeps watch on ongoing work",
+            "Reinforce that your AI Organization keeps watch and remembers what matters",
         ],
         icon: <Activity className="h-5 w-5" />,
     },
@@ -74,12 +74,12 @@ const workspaceHighlights = [
         value: "Primary counterpart",
     },
     {
-        label: "AI Engine Settings",
-        value: "Guided, safe choices",
+        label: "Governed Execution",
+        value: "Proposal-first changes",
     },
     {
-        label: "Response Style",
-        value: "Consistent output behavior",
+        label: "Memory & Continuity",
+        value: "Reusable recall, clean planning",
     },
 ];
 
@@ -153,8 +153,8 @@ export default function LandingPage() {
                                 </h1>
                                 <p className="max-w-2xl text-lg leading-8 text-cortex-text-muted md:text-xl">
                                     Mycelis starts with an AI Organization, keeps Soma at the center of the workspace,
-                                    and makes continuous reviews, checks, and updates visible without turning the product into a
-                                    generic assistant experience.
+                                    and makes governed execution, memory continuity, and visible reviews feel native instead of
+                                    bolted onto a generic assistant experience.
                                 </p>
                             </div>
 
@@ -196,7 +196,7 @@ export default function LandingPage() {
                                             <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">Organization home</p>
                                             <h2 className="mt-2 text-2xl font-semibold text-cortex-text-main">Northstar Labs</h2>
                                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                                                Soma-guided delivery organization for product planning, specialist review, and steady execution.
+                                                Soma-guided delivery organization for product planning, specialist review, memory-backed continuity, and steady execution.
                                             </p>
                                         </div>
                                         <span className="rounded-full border border-cortex-success/30 bg-cortex-success/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-cortex-success">
@@ -210,10 +210,10 @@ export default function LandingPage() {
                                         <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">Work with Soma</p>
                                         <p className="mt-3 text-lg font-semibold text-cortex-text-main">Soma for Northstar Labs</p>
                                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                                            Guides planning, reviews structure, and recommends the next move while keeping the wider AI Organization visible.
+                                            Guides planning, reviews structure, and recommends the next move while keeping governance, continuity, and the wider AI Organization visible.
                                         </p>
                                         <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-main">
-                                            What I can help with: organize priorities, review setup choices, and turn the next step into a practical plan.
+                                            What I can help with: organize priorities, review setup choices, recall durable context, and turn the next step into a practical plan.
                                         </div>
                                     </div>
 
@@ -259,8 +259,8 @@ export default function LandingPage() {
                                 Mycelis is built around structure, control, and continuous operation.
                             </h2>
                             <p className="mt-4 text-lg leading-8 text-cortex-text-muted">
-                                The product starts from an AI Organization design, keeps tuning safe and guided, and makes ongoing
-                                activity visible without dragging operators into technical complexity.
+                                The product starts from an AI Organization design, keeps execution governed and guided, and makes
+                                ongoing activity and continuity visible without dragging operators into technical complexity.
                             </p>
                         </div>
 
@@ -326,8 +326,8 @@ export default function LandingPage() {
                             Create an AI Organization with clear structure, guided control, and visible activity.
                         </h2>
                         <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-cortex-text-muted">
-                            Mycelis opens with a Soma-primary workspace, not a one-off assistant prompt. Build from a
-                            template or begin empty, then shape the organization with confidence.
+                            Mycelis opens with a Soma-primary workspace, governed changes, and retained continuity, not a
+                            one-off assistant prompt. Build from a template or begin empty, then shape the organization with confidence.
                         </p>
                         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                             <Link

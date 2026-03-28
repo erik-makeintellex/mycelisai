@@ -18,25 +18,25 @@ if (typeof window !== 'undefined' && !window.ResizeObserver) {
 vi.mock('reactflow', () => {
     const React = require('react');
 
-    const ReactFlow = React.forwardRef(({ children, ...props }: any, ref: any) =>
-        React.createElement('div', { 'data-testid': 'react-flow', ref, ...props }, children)
+    const ReactFlow = React.forwardRef(({ children }: any, ref: any) =>
+        React.createElement('div', { 'data-testid': 'react-flow', ref }, children)
     );
     ReactFlow.displayName = 'ReactFlow';
 
-    const Background = (props: any) =>
-        React.createElement('div', { 'data-testid': 'react-flow-background', ...props });
+    const Background = () =>
+        React.createElement('div', { 'data-testid': 'react-flow-background' });
 
-    const Controls = (props: any) =>
-        React.createElement('div', { 'data-testid': 'react-flow-controls', ...props });
+    const Controls = () =>
+        React.createElement('div', { 'data-testid': 'react-flow-controls' });
 
-    const MiniMap = (props: any) =>
-        React.createElement('div', { 'data-testid': 'react-flow-minimap', ...props });
+    const MiniMap = () =>
+        React.createElement('div', { 'data-testid': 'react-flow-minimap' });
 
-    const Handle = (props: any) =>
-        React.createElement('div', { 'data-testid': 'react-flow-handle', ...props });
+    const Handle = () =>
+        React.createElement('div', { 'data-testid': 'react-flow-handle' });
 
-    const Panel = ({ children, ...props }: any) =>
-        React.createElement('div', { 'data-testid': 'react-flow-panel', ...props }, children);
+    const Panel = ({ children }: any) =>
+        React.createElement('div', { 'data-testid': 'react-flow-panel' }, children);
 
     // Position enum
     const Position = {

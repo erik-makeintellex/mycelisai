@@ -667,12 +667,13 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	// or the loop may break early leaving raw JSON in the response.
 	responseText = stripToolCallJSON(responseText)
 
-	// Auto-summarize: every 15 messages, compress conversation into pgvector.
-	// Non-blocking background goroutine — failures are logged, never fatal.
+	// Auto-summarize: every 15 messages, checkpoint planning continuity into
+	// temporary memory. General exploratory chat should stay available for the
+	// active team without silently becoming long-term semantic memory.
 	if a.internalTools != nil && len(priorHistory) > 0 && len(priorHistory)%15 == 0 {
 		histCopy := make([]cognitive.ChatMessage, len(priorHistory))
 		copy(histCopy, priorHistory)
-		go a.internalTools.AutoSummarize(a.ctx, a.Manifest.ID, histCopy)
+		go a.internalTools.AutoSummarize(a.ctx, a.Manifest.ID, a.TeamID, histCopy)
 	}
 
 	// Capture brain provenance from the last inference response

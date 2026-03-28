@@ -103,7 +103,7 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Soma conversation')).toBeDefined();
             expect(screen.queryByText('Direct')).toBeNull();
             expect(screen.queryByTitle(/Broadcast mode/)).toBeNull();
-            expect(screen.getByPlaceholderText(/Tell Soma what you want to create, review, or improve/i)).toBeDefined();
+            expect(screen.getByPlaceholderText(/Tell Soma what you want to plan, review, create, or execute/i)).toBeDefined();
         });
 
         it('shows "Broadcast" header in broadcast mode', async () => {
@@ -692,7 +692,7 @@ describe('MissionControlChat', () => {
         it('shows prompt about asking Soma in normal mode', async () => {
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-            expect(screen.getByText(/Tell Soma what you want to create, review, refine, or improve/i)).toBeDefined();
+            expect(screen.getByText(/Tell Soma what you want to plan, review, create, or execute/i)).toBeDefined();
         });
 
         it('shows broadcast directive text in broadcast mode', async () => {

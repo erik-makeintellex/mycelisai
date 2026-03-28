@@ -15,7 +15,7 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Mycelis | AI Organizations",
-  description: "Soma-primary AI Organizations with governed execution, reviews, and operator control.",
+  description: "Soma-primary AI Organizations with governed execution, memory continuity, reviews, and operator control.",
 };
 
 export default function RootLayout({

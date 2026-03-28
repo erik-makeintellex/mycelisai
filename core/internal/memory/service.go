@@ -203,6 +203,20 @@ type VectorResult struct {
 	CreatedAt time.Time      `json:"created_at"`
 }
 
+// SemanticSearchOptions constrains pgvector recall so durable memory can be
+// queried safely for a tenant, team, agent, or memory class.
+type SemanticSearchOptions struct {
+	Limit                int
+	TenantID             string
+	TeamID               string
+	AgentID              string
+	RunID                string
+	Visibility           string
+	Types                []string
+	AllowGlobal          bool
+	AllowLegacyUnscoped  bool
+}
+
 // StoreVector persists an embedding into context_vectors for future RAG retrieval.
 func (s *Service) StoreVector(ctx context.Context, content string, embedding []float64, metadata map[string]any) error {
 	metaJSON, _ := json.Marshal(metadata)
@@ -221,19 +235,100 @@ func (s *Service) StoreVector(ctx context.Context, content string, embedding []f
 
 // SemanticSearch finds the top-K nearest vectors by cosine similarity.
 func (s *Service) SemanticSearch(ctx context.Context, queryVec []float64, limit int) ([]VectorResult, error) {
+	return s.SemanticSearchWithOptions(ctx, queryVec, SemanticSearchOptions{
+		Limit:               limit,
+		TenantID:            "default",
+		AllowGlobal:         true,
+		AllowLegacyUnscoped: true,
+	})
+}
+
+// SemanticSearchWithOptions finds the top-K nearest vectors by cosine
+// similarity while respecting optional scope and visibility boundaries.
+func (s *Service) SemanticSearchWithOptions(ctx context.Context, queryVec []float64, opts SemanticSearchOptions) ([]VectorResult, error) {
+	limit := opts.Limit
 	if limit <= 0 {
 		limit = 5
 	}
 
-	vecStr := formatVector(queryVec)
+	tenantID := strings.TrimSpace(opts.TenantID)
+	if tenantID == "" {
+		tenantID = "default"
+	}
 
-	rows, err := s.db.QueryContext(ctx, `
+	vecStr := formatVector(queryVec)
+	clauses := []string{"embedding IS NOT NULL"}
+	args := []any{vecStr}
+	nextArg := 2
+
+	clauses = append(clauses, fmt.Sprintf("COALESCE(metadata->>'tenant_id', 'default') = $%d", nextArg))
+	args = append(args, tenantID)
+	nextArg++
+
+	teamID := strings.TrimSpace(opts.TeamID)
+	agentID := strings.TrimSpace(opts.AgentID)
+	runID := strings.TrimSpace(opts.RunID)
+	visibility := strings.ToLower(strings.TrimSpace(opts.Visibility))
+
+	if runID != "" {
+		clauses = append(clauses, fmt.Sprintf("metadata->>'run_id' = $%d", nextArg))
+		args = append(args, runID)
+		nextArg++
+	}
+
+	if len(opts.Types) > 0 {
+		typeParts := make([]string, 0, len(opts.Types))
+		for _, raw := range opts.Types {
+			value := strings.TrimSpace(raw)
+			if value == "" {
+				continue
+			}
+			typeParts = append(typeParts, fmt.Sprintf("metadata->>'type' = $%d", nextArg))
+			args = append(args, value)
+			nextArg++
+		}
+		if len(typeParts) > 0 {
+			clauses = append(clauses, "("+strings.Join(typeParts, " OR ")+")")
+		}
+	}
+
+	switch {
+	case teamID != "" || agentID != "":
+		scopeParts := make([]string, 0, 4)
+		if opts.AllowGlobal {
+			scopeParts = append(scopeParts, "COALESCE(metadata->>'visibility', '') = 'global'")
+		}
+		if teamID != "" {
+			scopeParts = append(scopeParts, fmt.Sprintf("(metadata->>'team_id' = $%d AND COALESCE(NULLIF(metadata->>'visibility', ''), 'team') IN ('team', 'global'))", nextArg))
+			args = append(args, teamID)
+			nextArg++
+		}
+		if agentID != "" {
+			scopeParts = append(scopeParts, fmt.Sprintf("(metadata->>'agent_id' = $%d AND COALESCE(NULLIF(metadata->>'visibility', ''), 'private') = 'private')", nextArg))
+			args = append(args, agentID)
+			nextArg++
+		}
+		if opts.AllowLegacyUnscoped {
+			scopeParts = append(scopeParts, "(NOT (metadata ? 'visibility') AND NOT (metadata ? 'team_id') AND NOT (metadata ? 'agent_id'))")
+		}
+		if len(scopeParts) > 0 {
+			clauses = append(clauses, "("+strings.Join(scopeParts, " OR ")+")")
+		}
+	case visibility != "":
+		clauses = append(clauses, fmt.Sprintf("COALESCE(metadata->>'visibility', '') = $%d", nextArg))
+		args = append(args, visibility)
+		nextArg++
+	}
+
+	query := `
 		SELECT id, content, metadata, 1 - (embedding <=> $1::vector) AS score, created_at
 		FROM context_vectors
-		WHERE embedding IS NOT NULL
+		WHERE ` + strings.Join(clauses, " AND ") + `
 		ORDER BY embedding <=> $1::vector
-		LIMIT $2
-	`, vecStr, limit)
+		LIMIT $` + fmt.Sprintf("%d", nextArg)
+	args = append(args, limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("semantic search failed: %w", err)
 	}
@@ -331,6 +426,22 @@ type TempMemoryEntry struct {
 	ExpiresAt    *time.Time     `json:"expires_at,omitempty"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
+}
+
+// ConversationSummaryInput captures the durable summary payload plus the
+// recall-scope metadata that will be stored alongside its vector embedding.
+type ConversationSummaryInput struct {
+	AgentID          string
+	TenantID         string
+	TeamID           string
+	RunID            string
+	Visibility       string
+	Summary          string
+	KeyTopics        []string
+	UserPreferences  map[string]any
+	PersonalityNotes string
+	DataReferences   []any
+	MessageCount     int
 }
 
 // PutTempMemory stores a temporary working-memory checkpoint.
@@ -461,29 +572,49 @@ func (s *Service) ClearTempMemory(ctx context.Context, tenantID, channelKey stri
 // StoreConversationSummary persists a conversation summary and embeds it into pgvector.
 // The embedding is stored in context_vectors with metadata linking back to this summary.
 // cog may be nil — in that case, only the RDBMS record is created (no vector).
-func (s *Service) StoreConversationSummary(ctx context.Context, cog EmbedFunc, agentID, summary string, topics []string, prefs map[string]any, personalityNotes string, dataRefs []any, messageCount int) (string, error) {
-	prefsJSON, _ := json.Marshal(prefs)
-	refsJSON, _ := json.Marshal(dataRefs)
+func (s *Service) StoreConversationSummary(ctx context.Context, cog EmbedFunc, input ConversationSummaryInput) (string, error) {
+	if strings.TrimSpace(input.AgentID) == "" {
+		input.AgentID = "admin"
+	}
+	if strings.TrimSpace(input.TenantID) == "" {
+		input.TenantID = "default"
+	}
+	if strings.TrimSpace(input.Visibility) == "" {
+		input.Visibility = "private"
+	}
+	if input.UserPreferences == nil {
+		input.UserPreferences = map[string]any{}
+	}
+	if input.DataReferences == nil {
+		input.DataReferences = []any{}
+	}
+	prefsJSON, _ := json.Marshal(input.UserPreferences)
+	refsJSON, _ := json.Marshal(input.DataReferences)
 
 	var summaryID string
 	err := s.db.QueryRowContext(ctx, `
 		INSERT INTO conversation_summaries (agent_id, summary, key_topics, user_preferences, personality_notes, data_references, message_count)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
-	`, agentID, summary, pqTextArray(topics), prefsJSON, personalityNotes, refsJSON, messageCount).Scan(&summaryID)
+	`, input.AgentID, input.Summary, pqTextArray(input.KeyTopics), prefsJSON, input.PersonalityNotes, refsJSON, input.MessageCount).Scan(&summaryID)
 	if err != nil {
 		return "", fmt.Errorf("store conversation summary: %w", err)
 	}
 
 	// Embed and store vector (best-effort)
 	if cog != nil {
-		embText := fmt.Sprintf("[conversation] %s", summary)
+		embText := fmt.Sprintf("[conversation] %s", input.Summary)
 		vec, err := cog(ctx, embText, "")
 		if err == nil {
 			meta := map[string]any{
 				"type":       "conversation",
-				"agent_id":   agentID,
+				"agent_id":   input.AgentID,
 				"summary_id": summaryID,
+				"tenant_id":  input.TenantID,
+				"team_id":    strings.TrimSpace(input.TeamID),
+				"run_id":     strings.TrimSpace(input.RunID),
+				"visibility": strings.ToLower(strings.TrimSpace(input.Visibility)),
+				"source":     "conversation_summary",
 			}
 			if storeErr := s.StoreVector(ctx, embText, vec, meta); storeErr != nil {
 				log.Printf("conversation summary: vector store failed (non-fatal): %v", storeErr)

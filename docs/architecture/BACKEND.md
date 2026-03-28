@@ -137,7 +137,7 @@ Agent container and task dispatcher.
 |------|---------|---------------|
 | `consult_council` | Query a specific council member | Admin |
 | `delegate_task` | Publish task to team trigger topic | Admin |
-| `search_memory` | Vector semantic search on SitReps | Admin, Council |
+| `search_memory` | Scoped semantic search over durable memory | Admin, Council |
 | `list_teams` | Enumerate teams from Soma | Admin |
 | `list_missions` | Query missions from DB | Admin |
 | `get_system_status` | Aggregate runtime metrics | Admin |
@@ -683,7 +683,7 @@ type Proof struct {
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/v1/memory/stream` | Event log SSE |
-| GET | `/api/v1/memory/search` | Vector semantic search (cosine) |
+| GET | `/api/v1/memory/search` | Scoped vector semantic search (cosine) |
 | GET | `/api/v1/memory/sitreps` | List SitReps |
 | GET | `/api/v1/sensors` | List sensor subscriptions |
 

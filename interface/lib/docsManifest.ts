@@ -119,6 +119,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Release verification plan for the UI testing team, including workflows, expected API calls, and terminal states",
             },
             {
+                slug: "v8-memory-continuity-rag-plan",
+                label: "V8 Memory Continuity & RAG Plan",
+                path: "docs/architecture-library/V8_MEMORY_CONTINUITY_AND_RAG_STRIKE_TEAM_PLAN.md",
+                description: "Strike-team plan for scoped pgvector memory, temporary planning continuity, and trace-clean memory boundaries",
+            },
+            {
                 slug: "v7-dev-state",
                 label: "V7 Dev State (Historical)",
                 path: "V7_DEV_STATE.md",

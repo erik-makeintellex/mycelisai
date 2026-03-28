@@ -18,6 +18,22 @@ All three tiers are populated automatically as agents work. You don't need to ma
 
 ---
 
+## Memory Classes
+
+Mycelis now treats memory as three different classes with different purposes:
+
+- **Durable semantic memory**: reusable facts, decisions, SitReps, recipes, and intentionally promoted summaries. This is the pgvector-backed recall substrate.
+- **Temporary continuity**: restart-safe planning checkpoints and in-flight working context. This stays in temporary memory channels and does **not** automatically become long-term semantic memory.
+- **Trace and audit**: conversation turns, mission events, and operational review logs used for causality, inspection, and governance. These are review surfaces, not default semantic memory.
+
+Rule of thumb:
+
+- if it should be reusable later by meaning, promote it into durable memory
+- if it is only useful for the current planning cycle, keep it in temporary continuity
+- if it exists to explain what happened, treat it as trace or audit
+
+---
+
 ## Semantic Search
 
 The primary interface on the Memory page is the **semantic search bar**.
@@ -38,6 +54,8 @@ Each result card shows:
 - **Score** — similarity confidence (0.0–1.0)
 - **Timestamp** — when it was stored
 
+Semantic search can also be scoped for teams and planning lanes through the API when a narrower recall boundary is required.
+
 ---
 
 ## Storing a Memory
@@ -49,7 +67,9 @@ Agents store memories automatically during runs (via the `remember` tool). You c
 3. Enter content
 4. Click **Save**
 
-Stored facts are immediately available to agents for RAG recall.
+Stored facts are immediately available to agents for RAG recall within their allowed memory scope.
+
+General exploratory planning and routine conversation checkpoints are no longer promoted into semantic memory automatically. They stay in temporary continuity unless an agent deliberately promotes them.
 
 ---
 
@@ -107,6 +127,11 @@ Archivist compresses raw logs into SitReps every 5 minutes
 ```
 
 Every `tool.invoked`, `memory.stored`, and `artifact.created` event in a run's timeline corresponds to an entry in this store.
+
+Important boundary:
+
+- ordinary chat continuity and draft planning do **not** automatically become durable semantic memory
+- they remain available through temporary continuity and trace surfaces until deliberately promoted
 
 ---
 

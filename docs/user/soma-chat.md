@@ -34,8 +34,8 @@ You type -> Soma reasons (ReAct, up to 10 iterations)
 Live activity text indicates current steps (thinking, consulting, searching memory, invoking tools).
 
 AI Organization home adds a guided Soma entrypoint:
-- type a request and choose `Start with Soma`, or
-- leave the field blank and use `Start with Soma` to trigger a quick strategy check immediately
+- type a team or delivery request and choose `Start team design`, or
+- leave the field blank and use `Run a quick strategy check` to trigger an immediate first-pass review
 
 If you leave the organization workspace and come back later, the current guided Soma draft and the last successful guidance for that organization should still be there.
 
@@ -60,6 +60,10 @@ Soma responses can include:
 - explicit action preview with confirm/cancel
 
 No mutation executes until you confirm.
+
+6. **Memory-backed continuity**
+- durable memory stays available for scoped recall when it has been intentionally promoted
+- ordinary draft planning and return-visit continuity can stay useful without automatically becoming long-term semantic memory
 
 5. **Inline image outputs**
 - if a response generates an image, it is rendered directly in chat

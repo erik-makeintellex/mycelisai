@@ -1129,14 +1129,14 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                     />
                                     <InspectOnlySummary
                                         icon={<BrainCircuit className="h-4 w-4" />}
-                                        title="Learning & Context"
+                                        title="Memory & Continuity"
                                         countLabel="Inspect only"
                                         summary={learningContextSummary(organization.memory_personality_summary)}
                                         supportLabel="What this affects"
                                         items={learningContextSupportItems(organization.memory_personality_summary)}
-                                        changeSummary={learningInsights.length > 0 ? `${learningInsights.length} learning highlight${learningInsights.length === 1 ? "" : "s"} visible` : "No learning highlights visible yet"}
-                                        changeReason="Learning and retained context become visible as Soma and supporting reviews build repeatable patterns."
-                                        somaConnection="Soma uses retained context to keep guidance continuous across return visits and later work."
+                                        changeSummary={learningInsights.length > 0 ? `${learningInsights.length} retained pattern${learningInsights.length === 1 ? "" : "s"} visible` : "No retained patterns visible yet"}
+                                        changeReason="Reusable patterns and continuity cues become visible as Soma and supporting reviews build repeatable signals."
+                                        somaConnection="Soma uses durable memory for reusable recall and temporary continuity to stay oriented across return visits and later work."
                                     />
                                 </div>
                                 <div className="mt-5">
@@ -1467,16 +1467,16 @@ function responseContractDetailItems(summary: string) {
 function learningContextSummary(summary: string) {
     const normalized = summary.trim();
     if (!normalized || normalized === "Set up later in Advanced mode") {
-        return "Learning & Context stay on a simple starter posture so Soma keeps a steady working style while the organization gets established.";
+        return "Memory & Continuity stay on a simple starter posture so Soma can keep working continuity without turning every conversation into durable memory.";
     }
-    return `Learning & Context are currently ${normalized.toLowerCase()}, which shapes how Soma carries context forward and keeps guidance grounded.`;
+    return `Memory & Continuity are currently ${normalized.toLowerCase()}, which shapes what Soma retains for later recall and what stays as temporary working context.`;
 }
 
 function learningContextSupportItems(summary: string) {
     if (summary.trim() === "Set up later in Advanced mode") {
-        return ["Learning visibility", "Context continuity", "Inspect only for now"];
+        return ["Durable memory recall", "Temporary planning continuity", "Inspect only for now"];
     }
-    return [summary, "Learning visibility", "Context continuity"];
+    return [summary, "Durable memory recall", "Temporary planning continuity"];
 }
 
 function parseKnownTimestamp(value?: string) {
@@ -1505,7 +1505,7 @@ function panelsUpdatedSince(
         panels.push("Automations");
     }
     if (learningInsights.some((item) => parseKnownTimestamp(item.observed_at) >= since)) {
-        panels.push("Learning & Context");
+        panels.push("Memory & Continuity");
     }
     return panels.length > 0 ? panels : ["Quick Checks"];
 }
@@ -3005,45 +3005,45 @@ function LearningVisibilityPanel({
                     <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                    <h2 className="text-xl font-semibold text-cortex-text-main">What the Organization is Learning</h2>
+                    <h2 className="text-xl font-semibold text-cortex-text-main">What the Organization Is Retaining</h2>
                     <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
-                        See the recurring improvements and themes your AI Organization is picking up across recent work, and why they matter for what happens next.
+                        See the recurring patterns and continuity cues your AI Organization is turning into reusable guidance, and why they matter for what happens next.
                     </p>
                 </div>
             </div>
             <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                <CausalFact label="What changed" value={visibleItems[0]?.summary ?? "No learning highlights visible yet"} />
-                <CausalFact label="Why it changed" value="Learning highlights appear as repeated work patterns become strong enough to describe in plain language." />
-                <CausalFact label="How Soma uses it" value={`Soma uses this panel to carry context forward after "${causalAction}".`} />
+                <CausalFact label="What changed" value={visibleItems[0]?.summary ?? "No retained patterns visible yet"} />
+                <CausalFact label="Why it changed" value="Retained patterns appear when repeated work and review signals become strong enough to describe in plain language." />
+                <CausalFact label="How Soma uses it" value={`Soma uses this panel to separate reusable knowledge from temporary continuity after "${causalAction}".`} />
             </div>
 
             {error && (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                    <p className="font-medium text-cortex-text-main">Learning updates unavailable</p>
-                    <p className="mt-1 leading-6">Recent learning highlights are not available right now. The Soma workspace is still ready.</p>
+                    <p className="font-medium text-cortex-text-main">Memory &amp; continuity updates unavailable</p>
+                    <p className="mt-1 leading-6">Recent retained patterns are not available right now. The Soma workspace is still ready.</p>
                     <button
                         type="button"
                         onClick={onRetry}
                         className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
                     >
                         <RefreshCcw className="h-4 w-4" />
-                        Retry Learning
+                        Retry Memory &amp; Continuity
                     </button>
                 </div>
             )}
 
             {!error && loading && visibleItems.length === 0 && (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                    <p className="font-medium text-cortex-text-main">Checking recent learning</p>
-                    <p className="mt-1 leading-6">The latest improvements and patterns will appear here shortly.</p>
+                    <p className="font-medium text-cortex-text-main">Checking recent retained patterns</p>
+                    <p className="mt-1 leading-6">The latest reusable patterns and continuity cues will appear here shortly.</p>
                 </div>
             )}
 
             {!error && !loading && visibleItems.length === 0 && (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                    <p className="font-medium text-cortex-text-main">No learning highlights yet</p>
-                    <p className="mt-1 leading-6">This is where recurring patterns, improvements, and stronger working habits will appear in plain language.</p>
-                    <p className="mt-1 leading-6">Use Soma guidance and early reviews to give the organization enough signal to learn from.</p>
+                    <p className="font-medium text-cortex-text-main">No retained patterns yet</p>
+                    <p className="mt-1 leading-6">This is where reusable patterns, continuity cues, and stronger working habits will appear in plain language.</p>
+                    <p className="mt-1 leading-6">Ordinary planning chat stays in working continuity until a stronger reusable pattern or deliberate memory promotion emerges.</p>
                 </div>
             )}
 
