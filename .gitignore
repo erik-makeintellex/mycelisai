@@ -8,6 +8,7 @@ __pycache__/
 venv/
 env/
 .env
+.env.local
 
 # Node.js
 node_modules/
@@ -53,6 +54,7 @@ architect_work_order.md
 scripts/__pycache__/
 
 kubeconfig.yaml
+workspace/kind-kubeconfig.yaml
 
 uv.lock
 
@@ -63,3 +65,4 @@ interface/test-results/
 interface/playwright-report/
 workspace/tool-cache/
 workspace/logs/
+interface/.env.local

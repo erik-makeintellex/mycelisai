@@ -49,7 +49,6 @@ WINDOWS_COMPILED_GO_PROCESS_NAMES = (
     "signal_gen.exe",
     "smoke.exe",
 )
-WINDOWS_COMPILED_GO_PROCESS_BASENAMES = tuple(name.removesuffix(".exe") for name in WINDOWS_COMPILED_GO_PROCESS_NAMES)
 COMPILED_GO_PROCESS_HINTS = tuple(
     hint.lower()
     for hint in {
@@ -279,21 +278,6 @@ def _matches_compiled_go_service(name: str, command_line: str) -> bool:
     if not normalized_cmd:
         return False
     return any(hint.replace("\\", "/") in normalized_cmd for hint in COMPILED_GO_PROCESS_HINTS)
-
-
-def _matches_compiled_go_binary_path(name: str, path: str) -> bool:
-    """Return True when a process path looks like a repo-local compiled Go binary."""
-    normalized_name = (name or "").lower()
-    normalized_path = (path or "").lower().replace("\\", "/")
-    if normalized_name not in WINDOWS_COMPILED_GO_PROCESS_NAMES and normalized_name not in WINDOWS_COMPILED_GO_PROCESS_BASENAMES:
-        return False
-    if normalized_name in WINDOWS_COMPILED_GO_PROCESS_NAMES:
-        return True
-    return any(
-        hint.replace("\\", "/") == normalized_path
-        for hint in COMPILED_GO_PROCESS_HINTS
-        if "/bin/" in hint.replace("\\", "/")
-    )
 
 
 def _list_compiled_go_service_processes() -> list[dict[str, str | int]]:

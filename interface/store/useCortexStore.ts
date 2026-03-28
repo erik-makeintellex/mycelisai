@@ -2,15 +2,13 @@ import { create } from 'zustand';
 import {
     type Node,
     type Edge,
-    type OnNodesChange,
-    type OnEdgesChange,
     applyNodeChanges,
     applyEdgeChanges,
 } from 'reactflow';
-import type { ConversationTurn } from '@/types/conversations';
 import { extractApiData } from '@/lib/apiContracts';
-import { buildMissionChatFailure, type MissionChatAvailability, type MissionChatFailure } from '@/lib/missionChatFailure';
+import { buildMissionChatFailure, type MissionChatAvailability } from '@/lib/missionChatFailure';
 import { normalizeIncomingSignal } from '@/lib/signalNormalize';
+import type { CortexState } from '@/store/cortexStoreState';
 import {
     blueprintToGraph,
     clearPersistedChat,
@@ -823,281 +821,6 @@ export interface ServiceHealthStatus {
     status: "online" | "offline" | "degraded";
     detail?: string;
     latency_ms?: number;
-}
-
-// ── Store Contract ────────────────────────────────────────────
-
-export interface CortexState {
-    chatHistory: ChatMessage[];
-    nodes: Node[];
-    edges: Edge[];
-    isDrafting: boolean;
-    isCommitting: boolean;
-    error: string | null;
-    blueprint: MissionBlueprint | null;
-    missionStatus: MissionStatus;
-    activeMissionId: string | null;
-
-    // SSE stream state
-    streamLogs: StreamSignal[];
-    isStreamConnected: boolean;
-    streamConnectionState: StreamConnectionState;
-
-    // Fractal navigation (Squad Room drill-down)
-    activeSquadRoomId: string | null;
-
-    // Governance / Deliverables
-    pendingArtifacts: CTSEnvelope[];
-    selectedArtifact: CTSEnvelope | null;
-
-    // Missions (Dashboard)
-    missions: Mission[];
-    isFetchingMissions: boolean;
-
-    // Trust Economy (Phase 5.2)
-    trustThreshold: number;
-    isSyncingThreshold: boolean;
-
-    // Blueprint Library (Phase 5.2)
-    savedBlueprints: MissionBlueprint[];
-    isBlueprintDrawerOpen: boolean;
-
-    // V7: Advanced Mode toggle — controls System tab + advanced surfaces visibility
-    advancedMode: boolean;
-    toggleAdvancedMode: () => void;
-
-    // Tools Palette (Phase 7.7) — workspace tool browser
-    isToolsPaletteOpen: boolean;
-
-    // Sensor Library (Phase 5.3) — grouped subscriptions
-    sensorFeeds: SensorNode[];
-    isFetchingSensors: boolean;
-    subscribedSensorGroups: string[];
-
-    // Team Manifestation Proposals (Phase 5.3)
-    teamProposals: TeamProposal[];
-    isFetchingProposals: boolean;
-
-    // Agent Catalogue (Phase 7.5)
-    catalogueAgents: CatalogueAgent[];
-    isFetchingCatalogue: boolean;
-    selectedCatalogueAgent: CatalogueAgent | null;
-
-    // Artifacts (Phase 7.5)
-    artifacts: Artifact[];
-    isFetchingArtifacts: boolean;
-    selectedArtifactDetail: Artifact | null;
-
-    // MCP Servers (Phase 7.5)
-    mcpServers: MCPServerWithTools[];
-    isFetchingMCPServers: boolean;
-    mcpTools: MCPTool[];
-
-    // MCP Library (Phase 7.7)
-    mcpLibrary: MCPLibraryCategory[];
-    isFetchingMCPLibrary: boolean;
-
-    // Mission Control Chat (Phase 7.6) + Council API
-    workspaceChatScope: string | null;
-    missionChat: ChatMessage[];
-    isMissionChatting: boolean;
-    missionChatError: string | null;
-    missionChatFailure: MissionChatFailure | null;
-    workspaceChatPrimed: boolean;
-    assistantName: string;
-    councilTarget: string;              // active council member ID ("admin" default)
-    councilMembers: CouncilMember[];    // populated from GET /council/members
-
-    // Broadcast (Phase 8.0)
-    isBroadcasting: boolean;
-    lastBroadcastResult: { teams_hit: number } | null;
-
-    // Team Explorer (Phase 7.6)
-    teamRoster: TeamDetail[];
-    isFetchingTeamRoster: boolean;
-
-    // Governance (Phase 7.7)
-    policyConfig: PolicyConfig | null;
-    pendingApprovals: PendingApproval[];
-    isFetchingPolicy: boolean;
-    isFetchingApprovals: boolean;
-    auditLog: AuditLogEntry[];
-    isFetchingAuditLog: boolean;
-
-    // Cognitive Engine Status (Phase 7.7 vLLM)
-    cognitiveStatus: CognitiveStatus | null;
-    servicesStatus: ServiceHealthStatus[];
-    isFetchingServicesStatus: boolean;
-    servicesStatusUpdatedAt: string | null;
-
-    // Team Management (Phase 11)
-    teamsDetail: TeamDetailEntry[];
-    isFetchingTeamsDetail: boolean;
-    selectedTeamId: string | null;
-    isTeamDrawerOpen: boolean;
-    teamsFilter: TeamsFilter;
-
-    // Wiring Edit/Delete (Phase 9)
-    selectedAgentNodeId: string | null;
-    isAgentEditorOpen: boolean;
-
-    // CE-1: Orchestration Templates
-    pendingProposal: ProposalData | null;
-    activeConfirmToken: string | null;
-    lastCommitProof: { intent_proof_id: string; audit_event_id: string } | null;
-
-    // V7: Run Timeline
-    activeRunId: string | null;
-    runTimeline: MissionEvent[] | null;
-    isFetchingTimeline: boolean;
-
-    // V7: Recent Runs (dashboard widget)
-    recentRuns: MissionRun[];
-    isFetchingRuns: boolean;
-
-    // V7: Trigger Rules (Team B)
-    triggerRules: TriggerRule[];
-    isFetchingTriggers: boolean;
-
-    // V7: Conversation Log
-    conversationTurns: ConversationTurn[] | null;
-    isFetchingConversation: boolean;
-
-    // Signal Detail Drawer
-    selectedSignalDetail: SignalDetail | null;
-
-    // Agent/provider orchestration
-    activeBrain: BrainProvenance | null;
-    activeMode: ExecutionMode;
-    activeRole: string;
-    governanceMode: 'passive' | 'active' | 'strict';
-    inspectedMessage: ChatMessage | null;
-    isInspectorOpen: boolean;
-    isStatusDrawerOpen: boolean;
-
-    onNodesChange: OnNodesChange;
-    onEdgesChange: OnEdgesChange;
-
-    submitIntent: (text: string) => Promise<void>;
-    instantiateMission: () => Promise<void>;
-    fetchMissions: () => Promise<void>;
-    initializeStream: (force?: boolean) => void;
-    disconnectStream: () => void;
-    enterSquadRoom: (teamId: string) => void;
-    exitSquadRoom: () => void;
-    selectArtifact: (artifact: CTSEnvelope | null) => void;
-    approveArtifact: (id: string) => void;
-    rejectArtifact: (id: string, reason: string) => void;
-    setTrustThreshold: (value: number) => void;
-    fetchTrustThreshold: () => Promise<void>;
-    toggleBlueprintDrawer: () => void;
-    toggleToolsPalette: () => void;
-    setStatusDrawerOpen: (open: boolean) => void;
-    saveBlueprint: (bp: MissionBlueprint) => void;
-    loadBlueprint: (bp: MissionBlueprint) => void;
-    fetchSensors: () => Promise<void>;
-    toggleSensorGroup: (group: string) => void;
-    fetchProposals: () => Promise<void>;
-    approveProposal: (id: string) => Promise<void>;
-    rejectProposal: (id: string) => Promise<void>;
-
-    // Agent Catalogue (Phase 7.5)
-    fetchCatalogue: () => Promise<void>;
-    createCatalogueAgent: (agent: Partial<CatalogueAgent>) => Promise<void>;
-    updateCatalogueAgent: (id: string, agent: Partial<CatalogueAgent>) => Promise<void>;
-    deleteCatalogueAgent: (id: string) => Promise<void>;
-    selectCatalogueAgent: (agent: CatalogueAgent | null) => void;
-
-    // Artifacts (Phase 7.5)
-    fetchArtifacts: (filters?: ArtifactFilters) => Promise<void>;
-    getArtifactDetail: (id: string) => Promise<void>;
-    updateArtifactStatus: (id: string, status: string) => Promise<void>;
-
-    // MCP Servers (Phase 7.5)
-    fetchMCPServers: () => Promise<void>;
-    installMCPServer: (config: Partial<MCPServer>) => Promise<void>;
-    deleteMCPServer: (id: string) => Promise<void>;
-    fetchMCPTools: () => Promise<void>;
-
-    // MCP Library (Phase 7.7)
-    fetchMCPLibrary: () => Promise<void>;
-    installFromLibrary: (name: string, env?: Record<string, string>) => Promise<void>;
-
-    // Mission Control Chat (Phase 7.6) + Council API
-    sendMissionChat: (message: string) => Promise<void>;
-    clearMissionChat: () => void;
-    setMissionChatScope: (scope: string | null) => void;
-    fetchUserSettings: () => Promise<void>;
-    updateAssistantName: (name: string) => Promise<boolean>;
-    setCouncilTarget: (id: string) => void;
-    fetchCouncilMembers: () => Promise<void>;
-
-    // Broadcast (Phase 8.0)
-    broadcastToSwarm: (message: string) => Promise<void>;
-
-    // CE-1: Template-aware actions
-    confirmProposal: () => Promise<ConfirmProposalResult>;
-    cancelProposal: () => void;
-    fetchRunTimeline: (runId: string) => Promise<void>;
-    fetchRecentRuns: () => Promise<void>;
-
-    // Team Explorer (Phase 7.6)
-    fetchTeamDetails: () => Promise<void>;
-
-    // Governance (Phase 7.7)
-    fetchPolicy: () => Promise<void>;
-    updatePolicy: (config: PolicyConfig) => Promise<void>;
-    fetchPendingApprovals: () => Promise<void>;
-    resolveApproval: (id: string, approved: boolean) => Promise<void>;
-    fetchAuditLog: () => Promise<void>;
-
-    // Cognitive Engine Status (Phase 7.7 vLLM)
-    fetchCognitiveStatus: () => Promise<void>;
-    fetchServicesStatus: () => Promise<ServiceHealthStatus[]>;
-
-    // Team Management (Phase 11)
-    fetchTeamsDetail: () => Promise<void>;
-    selectTeam: (teamId: string | null) => void;
-    setTeamsFilter: (filter: TeamsFilter) => void;
-
-    // Wiring Edit/Delete (Phase 9)
-    selectAgentNode: (nodeId: string | null) => void;
-    updateAgentInDraft: (teamIdx: number, agentIdx: number, updates: Partial<AgentManifest>) => void;
-    deleteAgentFromDraft: (teamIdx: number, agentIdx: number) => void;
-    discardDraft: () => void;
-    updateAgentInMission: (agentName: string, manifest: Partial<AgentManifest>) => Promise<void>;
-    deleteAgentFromMission: (agentName: string) => Promise<void>;
-    deleteMission: (missionId: string) => Promise<void>;
-
-    // Signal Detail Drawer
-    selectSignalDetail: (detail: SignalDetail | null) => void;
-
-    // Agent/provider orchestration
-    setInspectedMessage: (msg: ChatMessage | null) => void;
-
-    // Mission Profiles & Context Snapshots
-    missionProfiles: MissionProfile[];
-    activeProfileId: string | null;
-    contextSnapshots: ContextSnapshot[];
-
-    fetchMissionProfiles: () => Promise<void>;
-    createMissionProfile: (p: MissionProfileCreate) => Promise<MissionProfile | null>;
-    updateMissionProfile: (id: string, p: MissionProfileCreate) => Promise<void>;
-    deleteMissionProfile: (id: string) => Promise<void>;
-    activateMissionProfile: (id: string) => Promise<void>;
-    fetchContextSnapshots: () => Promise<void>;
-    createContextSnapshot: (name: string) => Promise<ContextSnapshot | null>;
-
-    // V7 Trigger Rules (Team B)
-    fetchTriggerRules: () => Promise<void>;
-    createTriggerRule: (r: TriggerRuleCreate) => Promise<TriggerRule | null>;
-    updateTriggerRule: (id: string, r: TriggerRuleCreate) => Promise<void>;
-    deleteTriggerRule: (id: string) => Promise<void>;
-    toggleTriggerRule: (id: string, isActive: boolean) => Promise<void>;
-
-    // V7: Conversation Log
-    fetchRunConversation: (runId: string, agentFilter?: string) => Promise<void>;
-    interjectInRun: (runId: string, message: string, agentId?: string) => Promise<void>;
 }
 
 // ── SSE Connection (module-level ref) ─────────────────────────
@@ -2065,6 +1788,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             missionChat: [],
             missionChatError: null,
             missionChatFailure: null,
+            workspaceChatPrimed: false,
             pendingProposal: null,
             activeConfirmToken: null,
             activeRunId: null,
@@ -2081,11 +1805,15 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         const scopedMessages = loadPersistedChat(normalizedScope);
         const derivedState = deriveMissionChatState(scopedMessages);
 
+        // Scope changes start a fresh interactive session even when we
+        // rehydrate older messages, so the first new Soma request can absorb
+        // a transient startup wobble before surfacing a blocker.
         set({
             workspaceChatScope: normalizedScope,
             missionChat: scopedMessages,
             missionChatError: null,
             missionChatFailure: null,
+            workspaceChatPrimed: false,
             pendingProposal: derivedState.pendingProposal,
             activeConfirmToken: derivedState.activeConfirmToken,
             activeRunId: derivedState.activeRunId,

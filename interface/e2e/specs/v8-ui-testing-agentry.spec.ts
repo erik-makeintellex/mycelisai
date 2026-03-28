@@ -337,7 +337,7 @@ test.describe("V8 UI testing agentry product contract", () => {
         expect(body).not.toContain("bg-white");
     });
 
-    test("absorbs a first transient Soma failure before surfacing a blocker", async ({ page }) => {
+    test("surfaces a graceful blocker and recovers on retry after a first transient Soma failure", async ({ page }) => {
         let attempts = 0;
 
         await mockOrganizationWorkspace(page, () => {
@@ -357,8 +357,13 @@ test.describe("V8 UI testing agentry product contract", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Summarize the current Workspace V8 design objectives.");
 
+        const chatRetryButton = page.getByTestId("mission-chat").getByRole("button", { name: /^Retry$/i });
+        await expect(page.getByText(/Soma Chat Blocked/i)).toBeVisible({ timeout: 20_000 });
+        await expect(chatRetryButton).toBeVisible();
+        await chatRetryButton.click();
+
         await expect(page.getByText("Recovered answer after startup wobble.")).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByText(/Soma chat unreachable|Workspace chat server error/i)).toHaveCount(0);
+        await expect(page.getByText(/Soma Chat Blocked/i)).toHaveCount(0);
         expect(attempts).toBe(2);
     });
 

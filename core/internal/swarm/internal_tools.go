@@ -2395,7 +2395,6 @@ func (r *InternalToolRegistry) writeCognitiveStatus(sb *strings.Builder) {
 	sb.WriteString(strings.Join(parts, ", "))
 	sb.WriteString("\n\n")
 }
-
 func (r *InternalToolRegistry) writeMCPServers(sb *strings.Builder) {
 	sb.WriteString("### Installed MCP Servers & Tools\n")
 	if r.db == nil {
