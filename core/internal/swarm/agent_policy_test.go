@@ -234,8 +234,14 @@ func TestPreferDirectDraftResponse(t *testing.T) {
 	if !preferDirectDraftResponse("create a simple hello letter for me") {
 		t.Fatal("expected direct draft preference for simple letter request")
 	}
+	if !preferDirectDraftResponse("Summarize the current Workspace V8 design objectives.") {
+		t.Fatal("expected informational summary request to prefer a direct answer")
+	}
 	if preferDirectDraftResponse("write the result to workspace/hello.txt") {
 		t.Fatal("did not expect direct draft preference for explicit file write")
+	}
+	if preferDirectDraftResponse("Explain the contents of workspace/logs/hello.txt") {
+		t.Fatal("did not expect direct draft preference for explicit workspace file inspection")
 	}
 }
 

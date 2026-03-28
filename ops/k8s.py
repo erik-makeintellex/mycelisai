@@ -1,3 +1,7 @@
+import socket
+import subprocess
+import time
+
 from invoke import task, Collection
 from .config import CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
 from .core import build as core_build
@@ -38,6 +42,43 @@ def _wait_rollout(c, resource: str, timeout_seconds: int = 180, required: bool =
     print(f"  ERROR: {resource} failed readiness check within {timeout}")
     return False
 
+
+def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except (ConnectionRefusedError, TimeoutError, OSError):
+        return False
+
+
+def _wait_for_local_port(port: int, label: str, timeout_seconds: int = 30, interval_seconds: float = 1.0) -> bool:
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        if _port_open(port):
+            return True
+        time.sleep(interval_seconds)
+    print(f"  ERROR: {label} did not bind localhost:{port} within {timeout_seconds}s")
+    return False
+
+
+def _start_port_forward_detached(service: str, forward: str):
+    if is_windows():
+        subprocess.Popen(
+            ["kubectl", "port-forward", "-n", NAMESPACE, service, forward],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+        )
+    else:
+        subprocess.Popen(
+            ["kubectl", "port-forward", "-n", NAMESPACE, service, forward],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+
 @task
 def init(c):
     """
@@ -49,7 +90,9 @@ def init(c):
         print("Cluster exists.")
     else:
         # Check if we need to hydrate absolute paths for Windows Kind
-        with open("kind-config.yaml", "r") as f:
+        kind_config_path = ROOT_DIR / "kind-config.yaml"
+        generated_config_path = ROOT_DIR / "kind-config.gen.yaml"
+        with kind_config_path.open("r", encoding="utf-8") as f:
             config = f.read()
         
         # Replace relative paths with absolute
@@ -63,11 +106,11 @@ def init(c):
         config = config.replace("./logs", abs_logs)
 
         # Write temp
-        with open("kind-config.gen.yaml", "w") as f:
+        with generated_config_path.open("w", encoding="utf-8") as f:
             f.write(config)
 
-        print(f"Generated absolute config at kind-config.gen.yaml")
-        c.run(f"kind create cluster --name {CLUSTER_NAME} --config kind-config.gen.yaml")
+        print(f"Generated absolute config at {generated_config_path}")
+        c.run(f"kind create cluster --name {CLUSTER_NAME} --config {generated_config_path}")
     
     
     # Legacy raw manifests removed. Helm chart handles infra.
@@ -81,7 +124,7 @@ def deploy(c):
     Uses Immutable Identity Tagging.
     """
     # 1. Build Artifact (Delegated to Core)
-    tag = core_build(c)
+    tag = core_build.body(c)
     
     print(f"Deploying Release: [{tag}]")
     
@@ -189,18 +232,38 @@ def bridge(c):
     Forwards cluster ports (NATS:4222, HTTP:8080, PG:5432) to localhost.
     """
     print("Starting Port-Forward Proxy (NATS:4222, HTTP:8080, PG:5432)...")
-    if is_windows():
-        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core-nats 4222:4222")
-        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080")
-        c.run(f"start kubectl port-forward -n {NAMESPACE} svc/mycelis-core-postgresql 5432:5432")
-    else:
-        p1 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core-nats 4222:4222", asynchronous=True)
-        p2 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core 8080:8080", asynchronous=True)
-        p3 = c.run(f"kubectl port-forward -n {NAMESPACE} svc/mycelis-core-postgresql 5432:5432", asynchronous=True)
-        print("Bridge active. Press Ctrl+C to stop.")
-        p1.join() 
-        p2.join()
-        p3.join()
+    cluster_ready = c.run("kubectl cluster-info", hide=True, warn=True)
+    if not cluster_ready.ok:
+        raise SystemExit(
+            "K8S BRIDGE FAILED: kubectl cannot reach the cluster. "
+            "Start Docker/Kind first with 'uv run inv k8s.status' or 'uv run inv k8s.up'."
+        )
+
+    forwards = [
+        ("svc/mycelis-core-nats", "4222:4222", 4222, "NATS"),
+        ("svc/mycelis-core", "8080:8080", 8080, "Core API bridge"),
+        ("svc/mycelis-core-postgresql", "5432:5432", 5432, "PostgreSQL"),
+    ]
+
+    failures: list[str] = []
+    for service, forward, port, label in forwards:
+        if _port_open(port):
+            print(f"  {label} already active on localhost:{port}")
+            continue
+        _start_port_forward_detached(service, forward)
+        if _wait_for_local_port(port, label, timeout_seconds=30):
+            print(f"  {label} active on localhost:{port}")
+        else:
+            failures.append(f"{label} localhost:{port}")
+
+    if failures:
+        joined = ", ".join(failures)
+        raise SystemExit(
+            f"K8S BRIDGE FAILED: {joined} did not become reachable. "
+            "Inspect cluster readiness with 'uv run inv k8s.status'."
+        )
+
+    print("Bridge active.")
 
 @task
 def status(c):
@@ -230,10 +293,16 @@ def status(c):
     print("\nPersistence (PVC) Status:")
     c.run(f"kubectl get pvc -n {NAMESPACE}")
 
-@task
-def recover(c):
+@task(help={"timeout": "Seconds to wait for recovered rollouts to become ready (default: 180)."})
+def recover(c, timeout=180):
     """Attempt to heal the cluster."""
     print("Attempting Recovery...")
+    cluster_ready = c.run("kubectl cluster-info", hide=True, warn=True)
+    if not cluster_ready.ok:
+        raise SystemExit(
+            "K8S RECOVER FAILED: kubectl cannot reach the cluster. "
+            "Start Docker Desktop / Kind first, then retry."
+        )
     # Core API
     c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}", warn=True)
     # NATS can be statefulset or deployment depending on chart version
@@ -244,7 +313,9 @@ def recover(c):
     # PostgreSQL (statefulset)
     if _resource_exists(c, "statefulset/mycelis-core-postgresql"):
         c.run(f"kubectl rollout restart statefulset/mycelis-core-postgresql -n {NAMESPACE}", warn=True)
-    print("Restart signals sent.")
+    print("Restart signals sent. Waiting for readiness...")
+    wait(c, timeout=timeout)
+    print("Recovery complete.")
 
 @task
 def reset(c):
@@ -262,7 +333,7 @@ def reset(c):
     up(c)
     
     print("Infrastructure Reset Complete.")
-    print("Run 'inv k8s.status' to verify.")
+    print("Run 'uv run inv k8s.status' to verify.")
 
 ns = Collection("k8s")
 ns.add_task(init)

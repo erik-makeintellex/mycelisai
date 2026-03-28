@@ -456,6 +456,8 @@ def test_canonical_task_docs_cover_required_invoke_commands():
         ],
         ROOT / "docs" / "architecture" / "OPERATIONS.md": [
             "uv run inv auth.dev-key",
+            "uv run inv core.compile",
+            "uv run inv interface.typecheck",
             "uv run inv lifecycle.memory-restart",
             "uv run inv logging.check-schema",
             "uv run inv quality.max-lines --limit 350",
@@ -466,6 +468,8 @@ def test_canonical_task_docs_cover_required_invoke_commands():
         ],
         ROOT / "ops" / "README.md": [
             "uv run inv core.build",
+            "uv run inv core.compile",
+            "uv run inv interface.typecheck",
             "uv run inv auth.dev-key",
             "uv run inv lifecycle.health",
             "uv run inv ci.service-check",

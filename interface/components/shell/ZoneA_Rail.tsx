@@ -52,7 +52,7 @@ export function ZoneA() {
         <div className="w-16 md:w-64 bg-cortex-surface text-cortex-text-main flex flex-col border-r border-cortex-border z-50 flex-shrink-0 transition-all duration-300">
             {/* 1. Identity / Logo → Home */}
             <Link href="/" className="h-14 flex items-center justify-center md:justify-start md:px-4 border-b border-cortex-border hover:bg-cortex-bg/50 transition-colors">
-                <div className="w-8 h-8 bg-cortex-primary rounded-lg flex items-center justify-center shadow-[0_4px_14px_0_rgba(6,182,212,0.39)]">
+                <div className="w-8 h-8 bg-cortex-primary rounded-lg flex items-center justify-center shadow-[0_4px_14px_0_rgba(75,78,109,0.28)]">
                     <Network className="w-5 h-5 text-white" />
                 </div>
                 <span className="hidden md:block ml-3 font-bold text-sm tracking-widest uppercase text-cortex-text-muted">
@@ -114,7 +114,7 @@ function NavItem({ icon: Icon, label, href, title, description, onClick, testId 
     const classes = `
         flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200
         ${isActive
-            ? 'bg-cortex-primary text-cortex-bg shadow-[0_4px_14px_0_rgba(6,182,212,0.39)]'
+            ? 'bg-cortex-primary text-cortex-bg shadow-[0_4px_14px_0_rgba(75,78,109,0.28)]'
             : 'text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg'
         }
     `;

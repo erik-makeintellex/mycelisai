@@ -1,7 +1,7 @@
 [project]
 name = "mycelis"
 version = "0.1.0"
-description = "Mycelis Cortex V6.2 — Recursive Swarm Operating System"
+description = "Mycelis V8 — Soma-primary AI Organization platform"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

@@ -653,6 +653,8 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		return fmt.Errorf("no approved execution plan was stored for this proposal")
 	}
 
+	// Confirmation executes only the stored approved plan. The model does not
+	// get a fresh chance to improvise a different action during confirm-action.
 	registry := swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
 		NC:    s.NC,
 		Brain: s.Cognitive,

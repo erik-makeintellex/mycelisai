@@ -152,6 +152,17 @@ def _apply_migrations(strict=False):
 
     _ensure_database_exists()
 
+    if not strict and schema_bootstrapped():
+        print(
+            f"Schema for '{db}' already appears bootstrapped; "
+            "skipping forward migration replay."
+        )
+        print(
+            "Use 'uv run inv db.reset' for a clean rebuild if you need to "
+            "reapply the canonical migration stack end-to-end."
+        )
+        return
+
     files = _migration_files()
     if not files:
         print("No migration files found.")

@@ -438,9 +438,8 @@ def _kill_port(port: int, label: str) -> bool:
 def _start_port_forward(svc: str, forward: str):
     """Start a kubectl port-forward in the background (detached)."""
     if is_windows():
-        # Use cmd /c start to launch detached on Windows (kubectl on Windows PATH)
         subprocess.Popen(
-            ["cmd", "/c", "start", "/B", "kubectl", "port-forward", "-n", NAMESPACE, svc, forward],
+            ["kubectl", "port-forward", "-n", NAMESPACE, svc, forward],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
@@ -501,7 +500,7 @@ def _start_core_background():
     _load_env()
     bin_path = CORE_DIR / ("bin/server.exe" if is_windows() else "bin/server")
     if not bin_path.exists():
-        print(f"  ERROR: Binary not found at {bin_path}. Run 'uv run inv core.build' first.")
+        print(f"  ERROR: Binary not found at {bin_path}. Run 'uv run inv core.compile' first.")
         return False
 
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
@@ -544,8 +543,11 @@ def status(c):
 
     # Docker / Kind — use invoke's c.run() which resolves PATH correctly
     try:
-        c.run("docker version --format {{.Server.Version}}", hide=True, warn=True)
-        print("  Docker          : UP")
+        docker_result = c.run("docker version --format {{.Server.Version}}", hide=True, warn=True)
+        if getattr(docker_result, "ok", None) is True or getattr(docker_result, "exited", 1) == 0:
+            print("  Docker          : UP")
+        else:
+            print("  Docker          : DOWN")
     except Exception:
         print("  Docker          : DOWN")
 
@@ -625,12 +627,12 @@ def up(c, frontend=False, build=False):
     # 0. Optionally build
     if build:
         print("[1/4] Building core binary...")
-        from .core import build as core_build
-        core_build(c)
+        from .core import compile as core_compile
+        core_compile.body(c)
     else:
         bin_path = CORE_DIR / ("bin/server.exe" if is_windows() else "bin/server")
         if not bin_path.exists():
-            print("ERROR: No binary found. Run with --build or 'uv run inv core.build' first.")
+            print("ERROR: No binary found. Run with --build or 'uv run inv core.compile' first.")
             return
 
     # 1. Port-forwards

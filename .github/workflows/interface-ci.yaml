@@ -6,12 +6,22 @@ on:
     paths:
       - "interface/**"
       - "ops/interface.py"
+      - "ops/config.py"
+      - ".npmrc"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tasks.py"
       - ".github/workflows/interface-ci.yaml"
   pull_request:
     branches: ["main", "develop"]
     paths:
       - "interface/**"
       - "ops/interface.py"
+      - "ops/config.py"
+      - ".npmrc"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tasks.py"
       - ".github/workflows/interface-ci.yaml"
 
 jobs:
@@ -21,6 +31,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -28,21 +46,21 @@ jobs:
           cache: "npm"
           cache-dependency-path: interface/package-lock.json
 
+      - name: Install Invoke Dependencies
+        run: uv sync --all-packages --dev
+
       - name: Install Dependencies
         working-directory: ./interface
         run: npm ci
 
       - name: Lint
-        working-directory: ./interface
-        run: npm run lint
+        run: uv run inv interface.lint
 
       - name: Type Check
-        working-directory: ./interface
-        run: npx tsc --noEmit
+        run: uv run inv interface.typecheck
 
       - name: Test
-        working-directory: ./interface
-        run: npm run test
+        run: uv run inv interface.test
 
   build:
     name: Build Production
@@ -51,6 +69,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -58,11 +84,13 @@ jobs:
           cache: "npm"
           cache-dependency-path: interface/package-lock.json
 
+      - name: Install Invoke Dependencies
+        run: uv sync --all-packages --dev
+
       - name: Install Dependencies
         working-directory: ./interface
         # Using npm ci for clean install
         run: npm ci
 
       - name: Build
-        working-directory: ./interface
-        run: npm run build
+        run: uv run inv interface.build

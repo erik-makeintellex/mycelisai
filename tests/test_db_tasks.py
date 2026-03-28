@@ -125,3 +125,29 @@ def test_reset_fails_fast_when_a_migration_errors(monkeypatch):
         db_tasks.reset.body(None)
 
     assert "019_agent_memories.up.sql" in calls
+
+
+def test_migrate_skips_replay_when_schema_is_already_bootstrapped(monkeypatch, capsys):
+    migrate_calls: list[str] = []
+
+    monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
+    monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
+    monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: True)
+    monkeypatch.setattr(
+        db_tasks,
+        "_migration_files",
+        lambda: [db_tasks.MIGRATIONS_DIR / "001_init_memory.sql"],
+    )
+    monkeypatch.setattr(
+        db_tasks,
+        "_psql",
+        lambda sql=None, file=None, dbname=None: migrate_calls.append(file.name if file else sql or "") or 0,
+    )
+    monkeypatch.setenv("DB_NAME", "cortex")
+
+    db_tasks.migrate.body(None)
+
+    captured = capsys.readouterr()
+    assert "already appears bootstrapped" in captured.out
+    assert "uv run inv db.reset" in captured.out
+    assert migrate_calls == []

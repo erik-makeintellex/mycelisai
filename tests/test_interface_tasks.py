@@ -33,7 +33,7 @@ class FakeContext(Context):
 
 
 def test_matches_repo_local_interface_process_accepts_repo_postcss_worker():
-    command = r'"node" D:\MakeIntellex\Projects\mycelisai\scratch\interface\.next\dev\build\postcss.js 52847'
+    command = f'"node" {interface.INTERFACE_DIR / ".next" / "dev" / "build" / "postcss.js"} 52847'
 
     assert interface._matches_repo_local_interface_process("node.exe", command)
 
@@ -83,6 +83,26 @@ def test_build_cleans_residual_interface_workers(monkeypatch):
     assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
     assert cleaned == ["clean", "cleanup", "cleanup"]
     assert shell_calls == [["npm", "run", "build"]]
+
+
+def test_clean_ignores_missing_files_during_rmtree(monkeypatch):
+    removed: list[str] = []
+
+    monkeypatch.setattr(interface.os.path, "isdir", lambda path: True)
+
+    def fake_rmtree(path, onexc=None):
+        removed.append(path)
+        assert onexc is not None
+        try:
+            raise FileNotFoundError("gone")
+        except FileNotFoundError:
+            onexc(None, path, __import__("sys").exc_info())
+
+    monkeypatch.setattr(interface.shutil, "rmtree", fake_rmtree)
+
+    interface.clean.body(FakeContext())
+
+    assert removed == [interface.os.path.join("interface", ".next")]
 
 
 def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
@@ -157,6 +177,66 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     ]
 
 
+def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_host(monkeypatch, capsys):
+    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult()})
+    events: list[str] = []
+    env_seen: dict[str, str] = {}
+    port = 4312
+
+    class FakeServer:
+        pid = 5252
+
+        @staticmethod
+        def poll():
+            return None
+
+    monkeypatch.setattr(
+        interface,
+        "_task_env",
+        lambda extra=None: {
+            "PLAYWRIGHT_SKIP_WEBSERVER": extra["PLAYWRIGHT_SKIP_WEBSERVER"],
+            "INTERFACE_HOST": extra["INTERFACE_HOST"],
+            "INTERFACE_BIND_HOST": extra["INTERFACE_BIND_HOST"],
+        },
+    )
+    monkeypatch.setattr(interface, "INTERFACE_PORT", port)
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: events.append(f"stop:{port}"))
+    monkeypatch.setattr(
+        interface,
+        "_wait_for_interface_ready",
+        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120: events.append(f"ready:{host}:{port}") or "::1",
+    )
+    monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+
+    def fake_start(env, port=interface.INTERFACE_PORT, server_mode="start"):
+        events.append(f"start:{port}:{server_mode}")
+        return FakeServer()
+
+    monkeypatch.setattr(interface, "_start_playwright_server", fake_start)
+    monkeypatch.setattr(
+        interface,
+        "run_interface_command",
+        lambda _c, command, pty=True, env=None, hide=False, warn=False: env_seen.update(env or {}) or FakeResult(),
+    )
+
+    interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts")
+
+    captured = capsys.readouterr()
+    assert "Managed server is reachable via ::1; updating Playwright host from 127.0.0.1" in captured.out
+    assert env_seen["INTERFACE_HOST"] == "::1"
+    assert events == [
+        f"stop:{port}",
+        f"start:{port}:start",
+        f"ready:127.0.0.1:{port}",
+        "kill:5252",
+        f"stop:{port}",
+        "cleanup",
+    ]
+
+
 def test_test_uses_direct_shell_command(monkeypatch):
     shell_calls: list[list[str]] = []
     ctx = FakeContext()
@@ -170,6 +250,21 @@ def test_test_uses_direct_shell_command(monkeypatch):
     interface.test.body(ctx)
 
     assert shell_calls == [["npm", "run", "test"]]
+
+
+def test_typecheck_uses_direct_shell_command(monkeypatch):
+    shell_calls: list[list[str]] = []
+    ctx = FakeContext()
+
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: shell_calls.append(command) or interface.CommandResult(exited=0, stdout="", stderr=""),
+    )
+
+    interface.typecheck.body(ctx)
+
+    assert shell_calls == [["npx", "tsc", "--noEmit"]]
 
 
 def test_test_coverage_uses_direct_shell_command(monkeypatch):

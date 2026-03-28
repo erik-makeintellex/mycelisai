@@ -5,18 +5,18 @@
   --font-sans: var(--font-ui), "Segoe UI", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: var(--font-code), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  /* Cortex Palette — Calm Daylight */
-  --color-cortex-bg: #f4efe8;
-  --color-cortex-surface: #fffdf9;
-  --color-cortex-primary: #1d7f86;
-  --color-cortex-primary-glow: rgba(29, 127, 134, 0.18);
-  --color-cortex-success: #2d8b57;
-  --color-cortex-warning: #b7791f;
-  --color-cortex-danger: #c05656;
-  --color-cortex-info: #4c75d2;
-  --color-cortex-text-main: #1d2a35;
-  --color-cortex-text-muted: #65727f;
-  --color-cortex-border: #d5dbe2;
+  /* Cortex Palette — Slate + Mint */
+  --color-cortex-bg: #ffffff;
+  --color-cortex-surface: #f2f5f8;
+  --color-cortex-primary: #3f4364;
+  --color-cortex-primary-glow: rgba(63, 67, 100, 0.24);
+  --color-cortex-success: #4e9b88;
+  --color-cortex-warning: #66758b;
+  --color-cortex-danger: #765466;
+  --color-cortex-info: #5d6987;
+  --color-cortex-text-main: #17181d;
+  --color-cortex-text-muted: #566276;
+  --color-cortex-border: #c6d0db;
 }
 
 @layer base {
@@ -29,8 +29,9 @@
 
   body {
     background:
-      radial-gradient(circle at top, rgba(29, 127, 134, 0.08), transparent 34%),
-      linear-gradient(180deg, #f9f6f1 0%, var(--color-cortex-bg) 48%, #efe9e0 100%);
+      radial-gradient(circle at top, rgba(63, 67, 100, 0.13), transparent 34%),
+      radial-gradient(circle at 82% 14%, rgba(132, 220, 198, 0.14), transparent 24%),
+      linear-gradient(180deg, #ffffff 0%, var(--color-cortex-bg) 52%, #ecf1f5 100%);
     color: var(--color-cortex-text-main);
     font-family: var(--font-sans);
     line-height: 1.55;
@@ -83,21 +84,21 @@
   /* Glass Morphism */
   .glass {
     @apply backdrop-blur-md border;
-    background-color: rgba(255, 253, 249, 0.86);
+    background-color: rgba(255, 255, 255, 0.9);
     border-color: var(--color-cortex-border);
   }
 
   /* Glow Utilities */
   .glow-stable {
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 12px rgba(78, 155, 136, 0.28);
   }
 
   .glow-active {
-    box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+    box-shadow: 0 0 12px rgba(75, 78, 109, 0.3);
   }
 
   .glow-critical {
-    box-shadow: 0 0 12px rgba(234, 84, 85, 0.3);
+    box-shadow: 0 0 12px rgba(118, 84, 102, 0.24);
   }
 
   .glow-primary {
@@ -119,7 +120,7 @@
   .react-flow__node.ghost-draft>div {
     opacity: 0.5;
     border-style: dashed;
-    border-color: rgba(6, 182, 212, 0.4);
+    border-color: rgba(75, 78, 109, 0.4);
   }
 
   /* Observable Plot — Dark Overrides */
@@ -163,12 +164,12 @@
 
   0%,
   100% {
-    border-color: rgba(6, 182, 212, 0.4);
+    border-color: rgba(75, 78, 109, 0.4);
   }
 
   50% {
-    border-color: rgba(6, 182, 212, 1);
-    box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+    border-color: rgba(75, 78, 109, 0.92);
+    box-shadow: 0 0 15px rgba(75, 78, 109, 0.36);
   }
 }
 
@@ -186,13 +187,13 @@
 
   0%,
   100% {
-    border-color: rgba(6, 182, 212, 0.3);
-    box-shadow: 0 0 0 rgba(6, 182, 212, 0);
+    border-color: rgba(75, 78, 109, 0.3);
+    box-shadow: 0 0 0 rgba(75, 78, 109, 0);
   }
 
   50% {
-    border-color: rgba(6, 182, 212, 0.8);
-    box-shadow: 0 0 16px rgba(6, 182, 212, 0.35);
+    border-color: rgba(75, 78, 109, 0.82);
+    box-shadow: 0 0 16px rgba(75, 78, 109, 0.3);
   }
 }
 
@@ -205,10 +206,10 @@
 
   0%,
   100% {
-    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
+    box-shadow: 0 4px 20px rgba(132, 220, 198, 0.14);
   }
 
   50% {
-    box-shadow: 0 4px 24px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 4px 24px rgba(132, 220, 198, 0.28);
   }
 }

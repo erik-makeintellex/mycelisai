@@ -10,8 +10,8 @@ def all(c):
     print("Executing Full Test Suite...")
 
     try:
-        core.test(c)
-        interface.test(c)
+        core.test.body(c)
+        interface.test.body(c)
         print("All Tests Passed.")
     except Exception as e:
         print(f"Test Failure: {e}")
@@ -49,7 +49,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False):
     only when the spec needs a live backend instead of route stubs. The task
     clears stale Interface listeners before and after the browser run.
     """
-    interface.e2e(c, headed=headed, project=project, spec=spec, live_backend=live_backend)
+    interface.e2e.body(c, headed=headed, project=project, spec=spec, live_backend=live_backend)
 
 ns = Collection("test")
 ns.add_task(all)

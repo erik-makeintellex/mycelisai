@@ -1,6 +1,6 @@
 """
-Local CI Pipeline — runs on dev machine or configured host.
-No GitHub Actions, no auto-triggers. Manual invocation only.
+Local CI task entrypoints for operator and workflow use.
+GitHub workflows may reuse these task surfaces after workflow-native bootstrap.
 
 Usage:
     uv run inv ci.lint          # Go vet + Next.js lint
@@ -13,16 +13,13 @@ Usage:
 import time
 from invoke import task, Collection
 from .config import (
-    API_HOST,
-    API_PORT,
     CORE_DIR,
-    INTERFACE_PORT,
     ensure_managed_cache_dirs,
-    is_windows,
     managed_cache_env,
 )
 from . import db as db_tasks
 from . import logging as logging_tasks
+from . import core as core_tasks
 from . import interface as interface_tasks
 from . import lifecycle
 from . import quality
@@ -31,10 +28,6 @@ from . import quality
 def _task_env(extra=None):
     ensure_managed_cache_dirs()
     return managed_cache_env(extra=extra)
-
-
-def _run_interface_command(c, command: str, **run_kwargs):
-    return interface_tasks.run_interface_command(c, command, cleanup=True, **run_kwargs)
 
 
 @task
@@ -55,9 +48,10 @@ def lint(c):
             print("  OK")
 
     # 2. Next.js lint
-    print("[2/2] next lint")
-    result = _run_interface_command(c, "npm run lint", warn=True)
-    if result.exited != 0:
+    print("[2/2] interface lint")
+    try:
+        interface_tasks.lint.body(c)
+    except SystemExit:
         errors.append("next lint failed")
     else:
         print("  OK")
@@ -87,9 +81,10 @@ def test(c):
             print("  OK")
 
     # 2. Interface tests
-    print("[2/2] interface vitest run")
-    result = _run_interface_command(c, "npx vitest run --reporter=dot", warn=True, hide=True)
-    if result.exited != 0:
+    print("[2/2] interface test")
+    try:
+        interface_tasks.test.body(c)
+    except SystemExit:
         errors.append("interface tests failed")
     else:
         print("  OK")
@@ -110,19 +105,19 @@ def build(c):
     print()
 
     # 1. Go binary
-    print("[1/2] go build")
-    with c.cd(str(CORE_DIR)):
-        bin_cmd = "go build -v -o bin/server.exe ./cmd/server" if is_windows() else "go build -v -o bin/server ./cmd/server"
-        result = c.run(bin_cmd, warn=True, env=_task_env())
-        if result.exited != 0:
-            errors.append("go build failed")
-        else:
-            print("  OK")
+    print("[1/2] core compile")
+    try:
+        core_tasks.compile.body(c)
+    except SystemExit:
+        errors.append("go build failed")
+    else:
+        print("  OK")
 
     # 2. Next.js production build (type-checks + compiles)
-    print("[2/2] next build")
-    result = _run_interface_command(c, "npx next build", warn=True)
-    if result.exited != 0:
+    print("[2/2] interface build")
+    try:
+        interface_tasks.build.body(c)
+    except SystemExit:
         errors.append("next build failed")
     else:
         print("  OK")
@@ -212,7 +207,7 @@ def baseline(c, e2e=True):
         else:
             print("  OK")
 
-    print("[5/7] interface npm run build")
+    print("[5/7] interface build")
     try:
         interface_tasks.build.body(c)
     except SystemExit:
@@ -220,14 +215,15 @@ def baseline(c, e2e=True):
     else:
         print("  OK")
 
-    print("[6/7] interface tsc --noEmit")
-    result = _run_interface_command(c, "npx tsc --noEmit", warn=True, hide=True)
-    if result.exited != 0:
+    print("[6/7] interface typecheck")
+    try:
+        interface_tasks.typecheck.body(c)
+    except SystemExit:
         errors.append("interface typecheck failed")
     else:
         print("  OK")
 
-    print("[7/7] interface vitest run")
+    print("[7/7] interface test")
     try:
         interface_tasks.stop.body(c)
         interface_tasks.clean.body(c)
@@ -257,11 +253,11 @@ def baseline(c, e2e=True):
     print("BASELINE PASSED")
 
 
-@task(help={"live_backend": "Also run the live-backend workspace Playwright contract after health checks."})
+@task(help={"live_backend": "Also run the live-backend governed Soma browser contract after health checks."})
 def service_check(c, live_backend=False):
     """
     Validate the currently running local stack and optionally prove the live
-    backend workspace contract through the browser.
+    backend governed Soma contract through the browser.
     """
     errors = []
 
@@ -292,20 +288,20 @@ def service_check(c, live_backend=False):
         except SystemExit:
             errors.append("lifecycle health failed")
 
-        print("[3/3] interface live-backend playwright")
+        print("[3/3] interface live-backend governed playwright")
         try:
             interface_tasks.build.body(c)
             time.sleep(3)
             interface_tasks.e2e.body(
                 c,
                 project="chromium",
-                spec="e2e/specs/workspace-live-backend.spec.ts",
+                spec="e2e/specs/soma-governance-live.spec.ts",
                 live_backend=True,
                 workers="1",
                 server_mode="start",
             )
         except SystemExit:
-            errors.append("interface live-backend playwright failed")
+            errors.append("interface live-backend governed playwright failed")
         else:
             print("  OK")
     else:

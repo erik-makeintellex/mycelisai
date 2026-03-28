@@ -1,7 +1,7 @@
 -- V7 Team B: Trigger Rules — declarative IF/THEN rules evaluated on event ingest.
 -- Depends on: mission_runs (023), mission_events (024).
 
-CREATE TABLE trigger_rules (
+CREATE TABLE IF NOT EXISTS trigger_rules (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id           TEXT NOT NULL DEFAULT 'default',
     name                TEXT NOT NULL,
@@ -19,5 +19,5 @@ CREATE TABLE trigger_rules (
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX trigger_rules_tenant_active ON trigger_rules(tenant_id, is_active);
-CREATE INDEX trigger_rules_event_pattern ON trigger_rules(event_pattern) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS trigger_rules_tenant_active ON trigger_rules(tenant_id, is_active);
+CREATE INDEX IF NOT EXISTS trigger_rules_event_pattern ON trigger_rules(event_pattern) WHERE is_active = true;

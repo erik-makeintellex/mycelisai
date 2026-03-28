@@ -384,7 +384,7 @@ Recommended existing baseline commands:
 ```bash
 cd core && go test ./internal/mcp/ -count=1
 cd core && go test ./internal/server/ -run TestHandleMCP -count=1
-cd interface && npm run build
+uv run inv interface.build
 ```
 
 ---

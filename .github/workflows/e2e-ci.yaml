@@ -5,13 +5,23 @@ on:
     branches: ["main", "develop"]
     paths:
       - "interface/**"
-      - "core/**"
+      - "ops/config.py"
+      - "ops/interface.py"
+      - ".npmrc"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tasks.py"
       - ".github/workflows/e2e-ci.yaml"
   pull_request:
     branches: ["main", "develop"]
     paths:
       - "interface/**"
-      - "core/**"
+      - "ops/config.py"
+      - "ops/interface.py"
+      - ".npmrc"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tasks.py"
       - ".github/workflows/e2e-ci.yaml"
 
 jobs:
@@ -22,16 +32,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── Backend ────────────────────────────────────────
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          go-version: "1.26"
-          cache-dependency-path: core/go.sum
+          python-version: "3.12"
 
-      - name: Build Core Binary
-        working-directory: ./core
-        run: go build -o ../bin/server ./cmd/server
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Invoke Dependencies
+        run: uv sync --all-packages --dev
 
       # ── Frontend ───────────────────────────────────────
       - name: Set up Node.js
@@ -48,35 +58,14 @@ jobs:
       - name: Install Playwright Browsers
         working-directory: ./interface
         run: npx playwright install --with-deps chromium firefox webkit
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/workspace/tool-cache/playwright
 
       - name: Build Next.js
-        working-directory: ./interface
-        run: npm run build
-
-      # ── Run ────────────────────────────────────────────
-      - name: Start Core Server
-        run: ./bin/server &
-        env:
-          MYCELIS_API_KEY: "mycelis-dev-key-change-in-prod"
-          OLLAMA_HOST: "http://localhost:11434"
-          DATABASE_URL: ""
-
-      - name: Wait for Servers
-        run: |
-          for i in $(seq 1 30); do
-            curl -s http://localhost:8081/healthz > /dev/null 2>&1 && break
-            sleep 1
-          done
+        run: uv run inv interface.build
 
       - name: Run Playwright Tests
-        working-directory: ./interface
-        run: npx playwright test
-        env:
-          INTERFACE_HOST: 127.0.0.1
-          INTERFACE_PORT: "3000"
-          MYCELIS_API_KEY: "mycelis-dev-key-change-in-prod"
-          PLAYWRIGHT_LIVE_BACKEND: "1"
-          PLAYWRIGHT_UI_SERVER_COMMAND: npm run start -- --hostname 127.0.0.1 --port 3000
+        run: uv run inv interface.e2e
 
       - name: Upload Test Results
         if: failure()
