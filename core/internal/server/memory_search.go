@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/mycelis/core/internal/memory"
 )
 
 // GET /api/v1/memory/search?q=<text>&limit=5
@@ -37,6 +40,18 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 			limit = parsed
 		}
 	}
+	teamID := strings.TrimSpace(r.URL.Query().Get("team_id"))
+	agentID := strings.TrimSpace(r.URL.Query().Get("agent_id"))
+	runID := strings.TrimSpace(r.URL.Query().Get("run_id"))
+	visibility := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("visibility")))
+	rawTypes := strings.Split(strings.TrimSpace(r.URL.Query().Get("types")), ",")
+	searchTypes := make([]string, 0, len(rawTypes))
+	for _, raw := range rawTypes {
+		value := strings.TrimSpace(raw)
+		if value != "" {
+			searchTypes = append(searchTypes, value)
+		}
+	}
 
 	// 1. Embed the query text
 	vec, err := s.Cognitive.Embed(r.Context(), query, "")
@@ -47,7 +62,17 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 	}
 
 	// 2. Semantic search
-	results, err := s.Mem.SemanticSearch(r.Context(), vec, limit)
+	results, err := s.Mem.SemanticSearchWithOptions(r.Context(), vec, memory.SemanticSearchOptions{
+		Limit:               limit,
+		TenantID:            "default",
+		TeamID:              teamID,
+		AgentID:             agentID,
+		RunID:               runID,
+		Visibility:          visibility,
+		Types:               searchTypes,
+		AllowGlobal:         true,
+		AllowLegacyUnscoped: teamID == "" && agentID == "",
+	})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, `{"error":"search query failed"}`, http.StatusInternalServerError)
@@ -55,7 +80,15 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondJSON(w, map[string]any{
-		"query":   query,
+		"query": query,
+		"scope": map[string]any{
+			"tenant_id":  "default",
+			"team_id":    teamID,
+			"agent_id":   agentID,
+			"run_id":     runID,
+			"visibility": visibility,
+			"types":      searchTypes,
+		},
 		"results": results,
 		"count":   len(results),
 	})

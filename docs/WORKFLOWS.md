@@ -901,18 +901,18 @@ A "Summary" tab at the top of the mission page shows aggregate metrics:
 
 ## Workflow 10: Three-Tier Memory
 
-**Purpose**: The user explores the platform's memory architecture across three speed tiers — hot operational memory (real-time), warm structured storage (queryable), and cold vector memory (semantic recall). The cold tier enables **memory-driven actuation**: past experience encoded as vectors can be retrieved by agents during mission execution to inform decisions, trigger learned behaviors, and avoid repeated mistakes.
+**Purpose**: The user explores the platform's memory architecture across three speed tiers — hot operational memory (real-time), warm structured storage (queryable), and cold vector memory (semantic recall). The cold tier enables **memory-driven actuation**: past experience encoded as vectors can be retrieved by agents during mission execution to inform decisions, trigger learned behaviors, and avoid repeated mistakes. Temporary planning continuity remains separate from durable semantic memory so exploratory work does not automatically pollute long-term recall.
 
 **Route**: `/memory`
 
 **Backend Dependencies**:
 - `GET /api/v1/stream` — SSE live event buffer (hot tier, existing)
 - `GET /api/v1/memory/sitreps` — compressed situation reports (warm tier, existing)
-- `GET /api/v1/memory/search?q={query}` — semantic vector search (cold tier, existing)
+- `GET /api/v1/memory/search?q={query}` — semantic vector search over durable memory, with optional scope filters (cold tier, existing)
 - `GET /api/v1/artifacts` — agent outputs with metadata (warm tier, existing)
 - `GET /api/v1/telemetry/compute` — system performance metrics (existing)
 
-**No new backend changes required** — this workflow exposes existing memory layers through a unified UI.
+This workflow depends on durable memory remaining distinct from temporary continuity and trace storage.
 
 ### Architecture Overview
 
@@ -927,6 +927,8 @@ A "Summary" tab at the top of the mission page shows aggregate metrics:
 │ 20-event    │ sitreps          │ pgvector 768-dim         │
 │ threshold   │ artifacts        │ nomic-embed-text         │
 │ flush       │ agent_state      │ cosine distance          │
+│ temp memory │ conversation     │ durable promoted memory  │
+│ checkpoints │ traces           │ scoped semantic recall   │
 │             │ agent_catalogue  │                          │
 │ ↓           │ ↓                │ ↓                        │
 │ SSE Stream  │ PostgreSQL       │ pgvector + embeddings    │
@@ -987,6 +989,7 @@ The semantic search and vector recall panel:
 - Text input with brain icon
 - "Search long-term memory..." placeholder
 - Debounced 500ms → `GET /api/v1/memory/search?q={query}`
+- When team or planning scope is active, the same API can apply team/agent filters without widening recall silently
 
 **Results** — ranked by cosine similarity:
 

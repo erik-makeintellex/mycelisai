@@ -4,8 +4,8 @@ import { render, screen } from '@testing-library/react';
 // Mock reactflow with factory (must return default export properly)
 vi.mock('reactflow', () => {
     const React = require('react');
-    const ReactFlow = React.forwardRef(({ children, ...props }: any, ref: any) =>
-        React.createElement('div', { 'data-testid': 'react-flow', ref, ...props }, children)
+    const ReactFlow = React.forwardRef(({ children }: any, ref: any) =>
+        React.createElement('div', { 'data-testid': 'react-flow', ref }, children)
     );
     ReactFlow.displayName = 'ReactFlow';
     return {
@@ -14,12 +14,12 @@ vi.mock('reactflow', () => {
         ReactFlow,
         ReactFlowProvider: ({ children }: any) =>
             React.createElement('div', { 'data-testid': 'react-flow-provider' }, children),
-        Background: (props: any) => React.createElement('div', { 'data-testid': 'react-flow-background', ...props }),
+        Background: () => React.createElement('div', { 'data-testid': 'react-flow-background' }),
         BackgroundVariant: { Dots: 'dots', Lines: 'lines', Cross: 'cross' },
-        Controls: (props: any) => React.createElement('div', { 'data-testid': 'react-flow-controls', ...props }),
-        MiniMap: (props: any) => React.createElement('div', { 'data-testid': 'react-flow-minimap', ...props }),
-        Handle: (props: any) => React.createElement('div', { 'data-testid': 'react-flow-handle', ...props }),
-        Panel: ({ children, ...props }: any) => React.createElement('div', { 'data-testid': 'react-flow-panel', ...props }, children),
+        Controls: () => React.createElement('div', { 'data-testid': 'react-flow-controls' }),
+        MiniMap: () => React.createElement('div', { 'data-testid': 'react-flow-minimap' }),
+        Handle: () => React.createElement('div', { 'data-testid': 'react-flow-handle' }),
+        Panel: ({ children }: any) => React.createElement('div', { 'data-testid': 'react-flow-panel' }, children),
         Position: { Left: 'left', Right: 'right', Top: 'top', Bottom: 'bottom' },
         MarkerType: { Arrow: 'arrow', ArrowClosed: 'arrowclosed' },
         useNodesState: (init: any[] = []) => {

@@ -575,10 +575,10 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Recent Activity" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "What the Organization Is Retaining" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Learning & Context" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Memory & Continuity" })).toBeDefined();
         expect(screen.getByText("Advisor support")).toBeDefined();
         expect(screen.getByText("Visible specialist roles")).toBeDefined();
         expect(screen.getByText("Your AI Organization is actively working through recent reviews, checks, and updates in the background.")).toBeDefined();
@@ -603,11 +603,11 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Tone")).toBeDefined();
         expect(screen.getByText("Structure")).toBeDefined();
         expect(screen.getByText("Verbosity")).toBeDefined();
-        expect(screen.getByText("Learning visibility")).toBeDefined();
-        expect(screen.getByText("Context continuity")).toBeDefined();
-        expect(screen.getByText("Explore a concept")).toBeDefined();
-        expect(screen.getByText("Generate samples")).toBeDefined();
-        expect(screen.getByText("Shape a team")).toBeDefined();
+        expect(screen.getByText("Durable memory recall")).toBeDefined();
+        expect(screen.getByText("Temporary planning continuity")).toBeDefined();
+        expect(screen.getByText("Plan the next move")).toBeDefined();
+        expect(screen.getByText("Run a governed change")).toBeDefined();
+        expect(screen.getByText("Create an artifact")).toBeDefined();
         expect(screen.getByText("Review current state")).toBeDefined();
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
@@ -661,7 +661,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Learning & Context" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Memory & Continuity" })).toBeDefined();
     });
 
     it("preserves the organization context when a Soma action fails and then succeeds on retry", async () => {
@@ -753,10 +753,10 @@ describe("OrganizationPage (/organizations/[id])", () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
         });
 
-        expect(await screen.findByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
-        expect(screen.getByText("No learning highlights yet")).toBeDefined();
-        expect(screen.getByText("This is where recurring patterns, improvements, and stronger working habits will appear in plain language.")).toBeDefined();
-        expect(screen.getByText("Use Soma guidance and early reviews to give the organization enough signal to learn from.")).toBeDefined();
+        expect(await screen.findByRole("heading", { name: "What the Organization Is Retaining" })).toBeDefined();
+        expect(screen.getByText("No retained patterns yet")).toBeDefined();
+        expect(screen.getByText("This is where reusable patterns, continuity cues, and stronger working habits will appear in plain language.")).toBeDefined();
+        expect(screen.getByText("Ordinary planning chat stays in working continuity until a stronger reusable pattern or deliberate memory promotion emerges.")).toBeDefined();
     });
 
     it("shows learning updates unavailable without breaking the workspace when insights cannot be loaded", async () => {
@@ -768,10 +768,10 @@ describe("OrganizationPage (/organizations/[id])", () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
         });
 
-        expect(await screen.findByRole("heading", { name: "What the Organization is Learning" })).toBeDefined();
-        expect(screen.getByText("Learning updates unavailable")).toBeDefined();
-        expect(screen.getByText("Recent learning highlights are not available right now. The Soma workspace is still ready.")).toBeDefined();
-        expect(screen.getByRole("button", { name: "Retry Learning" })).toBeDefined();
+        expect(await screen.findByRole("heading", { name: "What the Organization Is Retaining" })).toBeDefined();
+        expect(screen.getByText("Memory & continuity updates unavailable")).toBeDefined();
+        expect(screen.getByText("Recent retained patterns are not available right now. The Soma workspace is still ready.")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Retry Memory & Continuity" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
@@ -1295,14 +1295,14 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Learning & Context" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Memory & Continuity" })).toBeDefined();
         expect(screen.getAllByText("Inspect only").length).toBeGreaterThan(0);
         expect(screen.getByText("Review support appears here")).toBeDefined();
         expect(screen.getAllByText("Try reviewing your organization setup").length).toBeGreaterThan(0);
         expect(screen.getByText("Reviews appear here")).toBeDefined();
         expect(screen.getByText("Started from Empty")).toBeDefined();
         expect(screen.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeDefined();
-        expect(screen.getByText("Learning & Context stay on a simple starter posture so Soma keeps a steady working style while the organization gets established.")).toBeDefined();
+        expect(screen.getByText("Memory & Continuity stay on a simple starter posture so Soma can keep working continuity without turning every conversation into durable memory.")).toBeDefined();
     });
 
     it("offers retry guidance when the organization home cannot be loaded", async () => {

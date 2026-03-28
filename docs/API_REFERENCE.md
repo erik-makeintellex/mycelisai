@@ -39,7 +39,7 @@
 | `/api/v1/trust/threshold` | GET/PUT | Read/write autonomy threshold |
 | `/api/v1/sensors` | GET | Sensor library (static + dynamic) |
 | **Memory & Search** | | |
-| `/api/v1/memory/search` | GET | Semantic vector search over SitReps |
+| `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters |
 | `/api/v1/memory/sitreps` | GET | Recent SitReps (filterable by team) |
 | `/api/v1/memory/stream` | GET | Live memory/log stream (polling) |
 | `/api/v1/memory/sitrep` | POST | Trigger SitRep generation |

@@ -63,7 +63,7 @@ Built-in tools available to agents without external MCP servers:
 | :--- | :--- | :--- |
 | `consult_council` | NATS request-reply to a council member (30s timeout) | Admin |
 | `delegate_task` | Publish task to a team's trigger topic | Admin |
-| `search_memory` | Semantic vector search over SitReps | Admin, Council |
+| `search_memory` | Semantic search over durable memory with optional team/agent scope | Admin, Council |
 | `list_teams` | Active team roster with member counts | Admin |
 | `list_missions` | Active missions from DB | Admin |
 | `get_system_status` | Goroutines, heap, LLM tokens/sec | Admin |

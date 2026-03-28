@@ -28,10 +28,13 @@ describe('SensorLibrary', () => {
         vi.useRealTimers();
     });
 
-    it('renders sensor library container', () => {
+    it('renders sensor library container', async () => {
         mockFetch.mockResolvedValue({ ok: true, json: async () => ({ sensors: [] }) });
         render(<SensorLibrary />);
         expect(screen.getByTestId('sensor-library')).toBeDefined();
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/sensors');
+        });
     });
 
     it('shows "No sensor groups" when API returns empty', async () => {

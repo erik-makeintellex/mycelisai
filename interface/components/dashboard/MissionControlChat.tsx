@@ -925,7 +925,7 @@ export default function MissionControlChat({
                             </span>
                             {simpleMode ? (
                                 <span className="block text-[11px] text-cortex-text-muted">
-                                    Work with {assistantName} on plans, concepts, imagery, and delivery decisions.
+                                    Work with {assistantName} on plans, governed changes, reusable context, and delivery decisions.
                                 </span>
                             ) : null}
                         </div>
@@ -1022,11 +1022,11 @@ export default function MissionControlChat({
                                     ? "Broadcast directives to all active teams"
                                     : showAdvancedRouting && directTarget
                                     ? `Direct message to ${councilLabel(directTarget, assistantName).name}...`
-                                    : `Tell ${assistantName} what you want to create, review, refine, or improve.`}
+                                    : `Tell ${assistantName} what you want to plan, review, create, or execute.`}
                             </p>
                             {simpleMode ? (
                                 <div className="mt-4 flex flex-wrap justify-center gap-2">
-                                    {["Explore a concept", "Generate samples", "Shape a team", "Review current state"].map((hint) => (
+                                    {["Plan the next move", "Review current state", "Run a governed change", "Create an artifact"].map((hint) => (
                                         <span key={hint} className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1.5 text-xs text-cortex-text-main">
                                             {hint}
                                         </span>
@@ -1083,7 +1083,7 @@ export default function MissionControlChat({
                                 : showAdvancedRouting && directTarget
                                 ? `Direct to ${councilLabel(directTarget, assistantName).name}... (or /all to broadcast)`
                                 : simpleMode
-                                ? `Tell ${assistantName} what you want to create, review, or improve`
+                                ? `Tell ${assistantName} what you want to plan, review, create, or execute`
                                 : `Ask ${assistantName}... (or /all to broadcast)`
                         }
                         disabled={isLoading}

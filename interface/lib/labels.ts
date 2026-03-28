@@ -25,7 +25,7 @@ export const TOOL_LABELS: Record<string, string> = {
   generate_image: "Generate Image",
   save_cached_image: "Save Image",
   research_for_blueprint: "Research Mission",
-  summarize_conversation: "Save Context",
+  summarize_conversation: "Promote to Memory",
 };
 
 export function toolLabel(name: string): string {
@@ -171,14 +171,14 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   get_system_status: "Retrieves system telemetry",
   list_available_tools: "Lists all available tools",
   list_catalogue: "Lists agent templates from catalogue",
-  remember: "Stores fact to persistent memory",
+  remember: "Stores fact to scoped durable memory",
   store_artifact: "Persists agent output to artifacts table",
   broadcast: "Sends message to all active teams",
   read_signals: "Subscribes to NATS topic pattern",
   read_file: "Reads file from sandboxed workspace",
   generate_image: "Generates image via cognitive pipeline",
   save_cached_image: "Persists cached generated image to workspace saved-media",
-  summarize_conversation: "Compresses conversation for long-term memory",
+  summarize_conversation: "Stores a deliberate conversation summary in durable memory",
 };
 
 export function toolDescription(name: string): string {

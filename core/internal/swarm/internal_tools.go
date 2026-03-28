@@ -220,12 +220,17 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["search_memory"] = &InternalTool{
 		Name:        "search_memory",
-		Description: "Semantic vector search over SitReps (situation reports) from past operations.",
+		Description: "Semantic search over durable memory with optional team, agent, visibility, and type scope.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"query": map[string]any{"type": "string", "description": "The search query text"},
-				"limit": map[string]any{"type": "integer", "description": "Max results (default 5)"},
+				"query":      map[string]any{"type": "string", "description": "The search query text"},
+				"limit":      map[string]any{"type": "integer", "description": "Max results (default 5)"},
+				"team_id":    map[string]any{"type": "string", "description": "Optional team scope override"},
+				"agent_id":   map[string]any{"type": "string", "description": "Optional private-agent scope override"},
+				"type":       map[string]any{"type": "string", "description": "Optional durable memory type filter"},
+				"types":      map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional durable memory type filters"},
+				"visibility": map[string]any{"type": "string", "description": "Optional visibility override: private, team, global"},
 			},
 			"required": []string{"query"},
 		},
@@ -359,9 +364,12 @@ func (r *InternalToolRegistry) registerAll() {
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"category": map[string]any{"type": "string", "description": "Category: user_preference, goal, fact, decision, lesson_learned"},
-				"content":  map[string]any{"type": "string", "description": "The information to remember"},
-				"context":  map[string]any{"type": "string", "description": "Optional context about when/why this was learned"},
+				"category":   map[string]any{"type": "string", "description": "Category: user_preference, goal, fact, decision, lesson_learned"},
+				"content":    map[string]any{"type": "string", "description": "The information to remember"},
+				"context":    map[string]any{"type": "string", "description": "Optional context about when/why this was learned"},
+				"team_id":    map[string]any{"type": "string", "description": "Optional team ownership override"},
+				"agent_id":   map[string]any{"type": "string", "description": "Optional private owner override"},
+				"visibility": map[string]any{"type": "string", "description": "Optional visibility override: private, team, global"},
 			},
 			"required": []string{"category", "content"},
 		},
@@ -374,9 +382,12 @@ func (r *InternalToolRegistry) registerAll() {
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"query":    map[string]any{"type": "string", "description": "What to recall — natural language query"},
-				"category": map[string]any{"type": "string", "description": "Optional filter: user_preference, goal, fact, decision, lesson_learned"},
-				"limit":    map[string]any{"type": "integer", "description": "Max results (default 5)"},
+				"query":      map[string]any{"type": "string", "description": "What to recall — natural language query"},
+				"category":   map[string]any{"type": "string", "description": "Optional filter: user_preference, goal, fact, decision, lesson_learned"},
+				"limit":      map[string]any{"type": "integer", "description": "Max results (default 5)"},
+				"team_id":    map[string]any{"type": "string", "description": "Optional team scope override"},
+				"agent_id":   map[string]any{"type": "string", "description": "Optional private-agent scope override"},
+				"visibility": map[string]any{"type": "string", "description": "Optional visibility override: private, team, global"},
 			},
 			"required": []string{"query"},
 		},
@@ -593,11 +604,14 @@ func (r *InternalToolRegistry) registerAll() {
 
 	r.tools["summarize_conversation"] = &InternalTool{
 		Name:        "summarize_conversation",
-		Description: "Summarize recent conversation into persistent memory. Extracts key topics, user preferences, personality notes, and data references. The summary is embedded into pgvector for future semantic recall. Call this when you want to checkpoint important conversation context.",
+		Description: "Summarize recent conversation into deliberate persistent memory. Use this only when the conversation should become durable semantic memory.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"messages": map[string]any{"type": "string", "description": "The conversation text to summarize (last 15-20 messages)"},
+				"messages":   map[string]any{"type": "string", "description": "The conversation text to summarize (last 15-20 messages)"},
+				"team_id":    map[string]any{"type": "string", "description": "Optional team ownership override"},
+				"agent_id":   map[string]any{"type": "string", "description": "Optional private owner override"},
+				"visibility": map[string]any{"type": "string", "description": "Optional visibility override: private, team, global"},
 			},
 			"required": []string{"messages"},
 		},
@@ -990,12 +1004,28 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 		limit = int(l)
 	}
 
+	scope := resolveMemoryScope(ctx, args)
+	searchTypes := stringSlice(args["types"])
+	if singleType := stringValue(args["type"]); singleType != "" {
+		searchTypes = append(searchTypes, singleType)
+	}
+
 	vec, err := r.brain.Embed(ctx, query, "")
 	if err != nil {
 		return "Embedding failed — no embed provider available.", nil
 	}
 
-	results, err := r.mem.SemanticSearch(ctx, vec, limit)
+	results, err := r.mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
+		Limit:               limit,
+		TenantID:            scope.TenantID,
+		TeamID:              scope.TeamID,
+		AgentID:             scope.AgentID,
+		RunID:               scope.RunID,
+		Visibility:          normalizedVisibility(stringValue(args["visibility"])),
+		Types:               dedupeStringValues(searchTypes),
+		AllowGlobal:         true,
+		AllowLegacyUnscoped: scope.TeamID == "" && scope.AgentID == "",
+	})
 	if err != nil {
 		return fmt.Sprintf("Search failed: %v", err), nil
 	}
@@ -1305,11 +1335,13 @@ func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[stri
 		return "", fmt.Errorf("database not available — cannot persist memory")
 	}
 
+	scope := resolveMemoryScope(ctx, args)
+
 	// 1. Store structured record in RDBMS (agent_memories table)
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO agent_memories (category, content, context, created_at)
-		VALUES ($1, $2, $3, NOW())
-	`, category, content, memContext)
+		INSERT INTO agent_memories (category, content, context, tenant_id, team_id, agent_id, run_id, visibility, created_at)
+		VALUES ($1, $2, $3, $4, NULLIF($5,''), $6, NULLIF($7,''), $8, NOW())
+	`, category, content, memContext, scope.TenantID, scope.TeamID, scope.AgentID, scope.RunID, scope.Visibility)
 	if err != nil {
 		log.Printf("remember: RDBMS insert failed: %v", err)
 		return fmt.Sprintf("Failed to store memory: %v", err), nil
@@ -1323,7 +1355,16 @@ func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[stri
 		}
 		vec, err := r.brain.Embed(ctx, embeddingText, "")
 		if err == nil {
-			meta := map[string]any{"category": category, "source": "agent_memory"}
+			meta := map[string]any{
+				"type":       "agent_memory",
+				"category":   category,
+				"source":     "agent_memory",
+				"tenant_id":  scope.TenantID,
+				"team_id":    scope.TeamID,
+				"agent_id":   scope.AgentID,
+				"run_id":     scope.RunID,
+				"visibility": scope.Visibility,
+			}
 			if insertErr := r.mem.StoreVector(ctx, embeddingText, vec, meta); insertErr != nil {
 				log.Printf("remember: vector insert failed: %v", insertErr)
 			}
@@ -1347,6 +1388,8 @@ func (r *InternalToolRegistry) handleRecall(ctx context.Context, args map[string
 		limit = int(l)
 	}
 
+	scope := resolveMemoryScope(ctx, args)
+
 	type memoryResult struct {
 		Category  string  `json:"category"`
 		Content   string  `json:"content"`
@@ -1360,25 +1403,35 @@ func (r *InternalToolRegistry) handleRecall(ctx context.Context, args map[string
 
 	// 1. RDBMS keyword search (structured records)
 	if r.db != nil {
-		var rdbmsQuery string
-		var queryArgs []any
+		clauses := []string{"tenant_id = $1", "content ILIKE '%' || $2 || '%'"}
+		queryArgs := []any{scope.TenantID, query}
+		nextArg := 3
 		if category != "" {
-			rdbmsQuery = `
-				SELECT category, content, COALESCE(context, ''), created_at
-				FROM agent_memories
-				WHERE category = $1 AND content ILIKE '%' || $2 || '%'
-				ORDER BY created_at DESC LIMIT $3
-			`
-			queryArgs = []any{category, query, limit}
-		} else {
-			rdbmsQuery = `
-				SELECT category, content, COALESCE(context, ''), created_at
-				FROM agent_memories
-				WHERE content ILIKE '%' || $1 || '%'
-				ORDER BY created_at DESC LIMIT $2
-			`
-			queryArgs = []any{query, limit}
+			clauses = append(clauses, fmt.Sprintf("category = $%d", nextArg))
+			queryArgs = append(queryArgs, category)
+			nextArg++
 		}
+		scopeParts := make([]string, 0, 3)
+		if scope.TeamID != "" {
+			scopeParts = append(scopeParts, fmt.Sprintf("(team_id = $%d AND visibility IN ('team', 'global'))", nextArg))
+			queryArgs = append(queryArgs, scope.TeamID)
+			nextArg++
+		}
+		if scope.AgentID != "" {
+			scopeParts = append(scopeParts, fmt.Sprintf("(agent_id = $%d AND visibility = 'private')", nextArg))
+			queryArgs = append(queryArgs, scope.AgentID)
+			nextArg++
+		}
+		if len(scopeParts) > 0 {
+			scopeParts = append(scopeParts, "visibility = 'global'")
+			clauses = append(clauses, "("+strings.Join(scopeParts, " OR ")+")")
+		}
+		rdbmsQuery := `
+			SELECT category, content, COALESCE(context, ''), created_at
+			FROM agent_memories
+			WHERE ` + strings.Join(clauses, " AND ") + `
+			ORDER BY created_at DESC LIMIT $` + fmt.Sprintf("%d", nextArg)
+		queryArgs = append(queryArgs, limit)
 
 		rows, err := r.db.QueryContext(ctx, rdbmsQuery, queryArgs...)
 		if err == nil {
@@ -1400,7 +1453,15 @@ func (r *InternalToolRegistry) handleRecall(ctx context.Context, args map[string
 	if r.brain != nil && r.mem != nil {
 		vec, err := r.brain.Embed(ctx, query, "")
 		if err == nil {
-			vecResults, err := r.mem.SemanticSearch(ctx, vec, limit)
+			vecResults, err := r.mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
+				Limit:               limit,
+				TenantID:            scope.TenantID,
+				TeamID:              scope.TeamID,
+				AgentID:             scope.AgentID,
+				RunID:               scope.RunID,
+				AllowGlobal:         true,
+				AllowLegacyUnscoped: scope.TeamID == "" && scope.AgentID == "",
+			})
 			if err == nil {
 				for _, vr := range vecResults {
 					results = append(results, memoryResult{
@@ -1953,12 +2014,14 @@ func (r *InternalToolRegistry) handleSummarizeConversation(ctx context.Context, 
 		return "", fmt.Errorf("memory service offline — cannot store summary")
 	}
 
-	return r.summarizeAndStore(ctx, "admin", messagesText, 0)
+	scope := resolveMemoryScope(ctx, args)
+	return r.summarizeAndStore(ctx, scope, messagesText, 0)
 }
 
-// AutoSummarize compresses a chat history window into a persistent summary.
-// Called as a background goroutine from the agent's ReAct pipeline — non-blocking, non-fatal.
-func (r *InternalToolRegistry) AutoSummarize(ctx context.Context, agentID string, history []cognitive.ChatMessage) {
+// AutoSummarize compresses a chat history window into a temporary continuity
+// checkpoint. General planning and exploratory conversation should remain
+// available for the active team without silently becoming durable vector memory.
+func (r *InternalToolRegistry) AutoSummarize(ctx context.Context, agentID, teamID string, history []cognitive.ChatMessage) {
 	if r.brain == nil || r.mem == nil {
 		return
 	}
@@ -1969,17 +2032,32 @@ func (r *InternalToolRegistry) AutoSummarize(ctx context.Context, agentID string
 		sb.WriteString(fmt.Sprintf("[%s]: %s\n", m.Role, m.Content))
 	}
 
-	summaryID, err := r.summarizeAndStore(ctx, agentID, sb.String(), len(history))
+	scope := memoryScope{
+		TenantID:   "default",
+		TeamID:     strings.TrimSpace(teamID),
+		AgentID:    strings.TrimSpace(agentID),
+		Visibility: "team",
+	}
+	checkpointID, err := r.summarizeAndCheckpoint(ctx, scope, sb.String(), len(history))
 	if err != nil {
 		log.Printf("AutoSummarize [%s]: failed: %v", agentID, err)
 		return
 	}
-	log.Printf("AutoSummarize [%s]: stored summary %s (%d messages)", agentID, summaryID, len(history))
+	log.Printf("AutoSummarize [%s]: stored continuity checkpoint %s (%d messages)", agentID, checkpointID, len(history))
 }
 
-// summarizeAndStore sends conversation text to the LLM for compression, parses the
-// structured output, and stores it in the conversation_summaries table + pgvector.
-func (r *InternalToolRegistry) summarizeAndStore(ctx context.Context, agentID, messagesText string, msgCount int) (string, error) {
+type parsedConversationSummary struct {
+	Summary          string         `json:"summary"`
+	KeyTopics        []string       `json:"key_topics"`
+	UserPreferences  map[string]any `json:"user_preferences"`
+	PersonalityNotes string         `json:"personality_notes"`
+	DataReferences   []any          `json:"data_references"`
+}
+
+// summarizeConversation sends conversation text to the LLM for compression and
+// returns the parsed summary payload for either durable promotion or temporary
+// continuity checkpointing.
+func (r *InternalToolRegistry) summarizeConversation(ctx context.Context, messagesText string) (parsedConversationSummary, error) {
 	compressionPrompt := `Summarize this conversation in 2-3 sentences. Then extract structured metadata.
 
 Respond with ONLY this JSON (no markdown fences):
@@ -2004,17 +2082,11 @@ Conversation:
 
 	resp, err := r.brain.InferWithContract(ctx, req)
 	if err != nil {
-		return "", fmt.Errorf("LLM compression failed: %w", err)
+		return parsedConversationSummary{}, fmt.Errorf("LLM compression failed: %w", err)
 	}
 
 	// Parse structured output from LLM
-	var parsed struct {
-		Summary          string         `json:"summary"`
-		KeyTopics        []string       `json:"key_topics"`
-		UserPreferences  map[string]any `json:"user_preferences"`
-		PersonalityNotes string         `json:"personality_notes"`
-		DataReferences   []any          `json:"data_references"`
-	}
+	var parsed parsedConversationSummary
 
 	// Strip markdown fences if present
 	text := strings.TrimSpace(resp.Text)
@@ -2042,14 +2114,73 @@ Conversation:
 		parsed.DataReferences = []any{}
 	}
 
+	return parsed, nil
+}
+
+// summarizeAndStore promotes conversation context into durable memory. This
+// should only be used for deliberate long-term checkpointing, not background
+// planning continuity.
+func (r *InternalToolRegistry) summarizeAndStore(ctx context.Context, scope memoryScope, messagesText string, msgCount int) (string, error) {
+	parsed, err := r.summarizeConversation(ctx, messagesText)
+	if err != nil {
+		return "", err
+	}
+
 	embedFunc := memory.EmbedFunc(r.brain.Embed)
-	summaryID, err := r.mem.StoreConversationSummary(ctx, embedFunc, agentID, parsed.Summary,
-		parsed.KeyTopics, parsed.UserPreferences, parsed.PersonalityNotes, parsed.DataReferences, msgCount)
+	summaryID, err := r.mem.StoreConversationSummary(ctx, embedFunc, memory.ConversationSummaryInput{
+		AgentID:          scope.AgentID,
+		TenantID:         scope.TenantID,
+		TeamID:           scope.TeamID,
+		RunID:            scope.RunID,
+		Visibility:       scope.Visibility,
+		Summary:          parsed.Summary,
+		KeyTopics:        parsed.KeyTopics,
+		UserPreferences:  parsed.UserPreferences,
+		PersonalityNotes: parsed.PersonalityNotes,
+		DataReferences:   parsed.DataReferences,
+		MessageCount:     msgCount,
+	})
 	if err != nil {
 		return "", fmt.Errorf("store summary failed: %w", err)
 	}
 
 	return summaryID, nil
+}
+
+func (r *InternalToolRegistry) summarizeAndCheckpoint(ctx context.Context, scope memoryScope, messagesText string, msgCount int) (string, error) {
+	parsed, err := r.summarizeConversation(ctx, messagesText)
+	if err != nil {
+		return "", err
+	}
+
+	content := strings.TrimSpace(parsed.Summary)
+	if len(parsed.KeyTopics) > 0 {
+		content += "\nTopics: " + strings.Join(parsed.KeyTopics, ", ")
+	}
+	if strings.TrimSpace(parsed.PersonalityNotes) != "" {
+		content += "\nInteraction notes: " + strings.TrimSpace(parsed.PersonalityNotes)
+	}
+
+	metadata := map[string]any{
+		"summary_type":       "planning_continuity",
+		"tenant_id":          scope.TenantID,
+		"team_id":            scope.TeamID,
+		"agent_id":           scope.AgentID,
+		"run_id":             scope.RunID,
+		"visibility":         scope.Visibility,
+		"message_count":      msgCount,
+		"key_topics":         parsed.KeyTopics,
+		"user_preferences":   parsed.UserPreferences,
+		"personality_notes":  parsed.PersonalityNotes,
+		"data_references":    parsed.DataReferences,
+		"promotion_boundary": "temporary_only",
+	}
+
+	channelKey := fmt.Sprintf("lead.%s", scope.AgentID)
+	if strings.TrimSpace(scope.TeamID) != "" {
+		channelKey = fmt.Sprintf("team.%s.planning", scope.TeamID)
+	}
+	return r.mem.PutTempMemory(ctx, scope.TenantID, channelKey, scope.AgentID, content, metadata, 240)
 }
 
 // ── Inception Recipe Handlers ────────────────────────────────────
@@ -2066,12 +2197,13 @@ func (r *InternalToolRegistry) handleStoreInceptionRecipe(ctx context.Context, a
 	if r.inception == nil {
 		return "", fmt.Errorf("inception store not available")
 	}
+	scope := resolveMemoryScope(ctx, args)
 
 	recipe := inception.Recipe{
 		Category:      category,
 		Title:         title,
 		IntentPattern: intentPattern,
-		AgentID:       "admin",
+		AgentID:       scope.AgentID,
 	}
 
 	if params, ok := args["parameters"].(map[string]any); ok {
@@ -2102,9 +2234,15 @@ func (r *InternalToolRegistry) handleStoreInceptionRecipe(ctx context.Context, a
 		vec, err := r.brain.Embed(ctx, embeddingText, "")
 		if err == nil {
 			meta := map[string]any{
-				"category":  category,
-				"source":    "inception_recipe",
-				"recipe_id": id,
+				"type":       "inception_recipe",
+				"category":   category,
+				"source":     "inception_recipe",
+				"recipe_id":  id,
+				"tenant_id":  scope.TenantID,
+				"team_id":    scope.TeamID,
+				"agent_id":   scope.AgentID,
+				"run_id":     scope.RunID,
+				"visibility": scope.Visibility,
 			}
 			if insertErr := r.mem.StoreVector(ctx, embeddingText, vec, meta); insertErr != nil {
 				log.Printf("store_inception_recipe: vector insert failed (non-fatal): %v", insertErr)
@@ -2133,6 +2271,7 @@ func (r *InternalToolRegistry) handleRecallInceptionRecipes(ctx context.Context,
 	if l, ok := args["limit"].(float64); ok && l > 0 {
 		limit = int(l)
 	}
+	scope := resolveMemoryScope(ctx, args)
 
 	type recipeResult struct {
 		ID            string         `json:"id"`
@@ -2177,7 +2316,16 @@ func (r *InternalToolRegistry) handleRecallInceptionRecipes(ctx context.Context,
 	if r.brain != nil && r.mem != nil {
 		vec, err := r.brain.Embed(ctx, fmt.Sprintf("[inception] %s", query), "")
 		if err == nil {
-			vecResults, err := r.mem.SemanticSearch(ctx, vec, limit)
+			vecResults, err := r.mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
+				Limit:               limit,
+				TenantID:            scope.TenantID,
+				TeamID:              scope.TeamID,
+				AgentID:             scope.AgentID,
+				RunID:               scope.RunID,
+				Types:               []string{"inception_recipe"},
+				AllowGlobal:         true,
+				AllowLegacyUnscoped: scope.TeamID == "" && scope.AgentID == "",
+			})
 			if err == nil {
 				for _, vr := range vecResults {
 					// Only include inception recipe vectors
@@ -2243,11 +2391,11 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 	sb.WriteString("8. Check if data would benefit from visualization → `store_artifact` with type=chart\n\n")
 	sb.WriteString("9. For explicit image requests, call `generate_image`; if user asks to keep the image, call `save_cached_image`\n\n")
 	sb.WriteString("**Post-response** (after completing a task):\n")
-	sb.WriteString("1. Store important learnings or decisions → `remember`\n")
+	sb.WriteString("1. Promote only durable learnings or decisions → `remember`\n")
 	sb.WriteString("2. Store significant outputs → `store_artifact`\n")
 	sb.WriteString("3. Distill successful complex approaches → `store_inception_recipe` (for future reuse)\n")
 	sb.WriteString("4. Report actions taken and outcomes clearly to the user\n")
-	sb.WriteString("5. For lead-agent workflows, checkpoint state via `temp_memory_write` and reload with `temp_memory_read`\n")
+	sb.WriteString("5. For in-flight planning or continuity, checkpoint state via `temp_memory_write` and reload with `temp_memory_read`\n")
 	sb.WriteString("6. Generated images are ephemeral cache by default (60m). Persist only on user request via `save_cached_image`\n")
 
 	return sb.String()
@@ -2286,6 +2434,9 @@ func (r *InternalToolRegistry) writeLeadTempMemory(sb *strings.Builder, agentID,
 			"interaction.contract",
 			"lead.shared",
 			fmt.Sprintf("lead.%s", agentID),
+		}
+		if strings.TrimSpace(teamID) != "" {
+			channels = append(channels, fmt.Sprintf("team.%s.planning", teamID))
 		}
 
 		type channelDump struct {

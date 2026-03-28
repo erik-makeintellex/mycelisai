@@ -29,7 +29,7 @@ describe('labels', () => {
             expect(toolLabel('search_memory')).toBe('Search Memory');
             expect(toolLabel('list_teams')).toBe('View Teams');
             expect(toolLabel('generate_blueprint')).toBe('Design Mission');
-            expect(toolLabel('summarize_conversation')).toBe('Save Context');
+            expect(toolLabel('summarize_conversation')).toBe('Promote to Memory');
             expect(toolLabel('save_cached_image')).toBe('Save Image');
         });
 

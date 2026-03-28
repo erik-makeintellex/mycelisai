@@ -18,7 +18,7 @@ Soma can:
 
 You do not need to manually pick Soma. It is the default route in Workspace chat.
 On normal startup, Workspace opens with Soma already selected and starts the live stream automatically, so you should not need a recovery click just to begin.
-For AI Organizations, the organization-wide AI Engine and Response Style chosen during setup become Soma's starting posture until you intentionally change them.
+For AI Organizations, the organization-wide AI Engine, Response Style, and Memory & Continuity posture chosen during setup become Soma's starting posture until you intentionally change them.
 You can rename Soma from `Settings -> Profile -> Assistant Name`; the updated name appears across chat and operational UI labels.
 
 ---

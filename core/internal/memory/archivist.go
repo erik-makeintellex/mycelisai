@@ -185,7 +185,9 @@ func (a *Archivist) embedSitRep(ctx context.Context, teamID string, summary stri
 
 	metadata := map[string]any{
 		"type":              "sitrep",
+		"tenant_id":         "default",
 		"team_id":           teamID,
+		"visibility":        "team",
 		"time_window_start": windowStart.Format(time.RFC3339),
 		"time_window_end":   windowEnd.Format(time.RFC3339),
 	}
