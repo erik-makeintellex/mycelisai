@@ -420,6 +420,51 @@ describe('useCortexStore', () => {
             }
         });
 
+        it('retries a cold-start Soma failure after a scope change even when a prior session was primed', async () => {
+            vi.useFakeTimers();
+            try {
+                store.setState({
+                    workspaceChatPrimed: true,
+                    missionChat: [],
+                });
+                store.getState().setMissionChatScope('org-123');
+                mockFetch
+                    .mockResolvedValueOnce({
+                        ok: false,
+                        status: 500,
+                        text: async () => '{"error":"Soma chat blocked (500)"}',
+                    })
+                    .mockResolvedValueOnce({
+                        ok: true,
+                        json: async () => ({
+                            ok: true,
+                            data: {
+                                meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                                signal_type: 'chat_response',
+                                trust_score: 0.5,
+                                template_id: 'chat-to-answer',
+                                mode: 'answer',
+                                payload: {
+                                    text: 'Recovered answer after scoped reset.',
+                                    tools_used: [],
+                                },
+                            },
+                        }),
+                    });
+
+                const sendPromise = store.getState().sendMissionChat('hello');
+                await vi.advanceTimersByTimeAsync(400);
+                await sendPromise;
+
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+                expect(store.getState().missionChatFailure).toBeNull();
+                expect(store.getState().workspaceChatPrimed).toBe(true);
+                expect(store.getState().missionChat.at(-1)?.content).toBe('Recovered answer after scoped reset.');
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
         it('normalizes team expressions and module bindings from proposal payload', async () => {
             mockFetch.mockResolvedValue({
                 ok: true,

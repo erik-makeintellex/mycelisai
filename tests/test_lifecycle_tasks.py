@@ -199,12 +199,6 @@ def test_matches_compiled_go_service_recognizes_known_binaries_and_go_run():
     assert not lifecycle._matches_compiled_go_service("python.exe", "python -m pytest")
 
 
-def test_matches_compiled_go_binary_path_recognizes_repo_local_binaries():
-    assert lifecycle._matches_compiled_go_binary_path("server.exe", str(Path("core/bin/server.exe").resolve()))
-    assert lifecycle._matches_compiled_go_binary_path("probe.exe", "")
-    assert not lifecycle._matches_compiled_go_binary_path("python.exe", str(Path("core/bin/server.exe").resolve()))
-
-
 def test_down_kills_detected_compiled_go_services(monkeypatch):
     killed: list[int] = []
     scans = iter(

@@ -23,7 +23,7 @@ The UI testing agentry must cover these operator-visible actions.
 | Governed mutation | Ask for a file or other mutating action | Response lands in `proposal` state with approval context and capability risk |
 | Proposal cancellation | Cancel a pending proposed action | Proposal is neutralized and the UI states that no action executed |
 | Approval execution | Confirm a pending proposed action | UI shows execution proof or an explicit bounded blocker |
-| Cold-start recovery | Trigger a first-query transient failure | One transient startup wobble is absorbed before a blocker is shown |
+| Cold-start recovery | Trigger a first-query transient failure | Transient startup failure is surfaced gracefully with a retry path, and retry recovers to a valid terminal state |
 | Continuity | Refresh or re-enter the same AI Organization | Prior Soma context remains legible and scoped to that organization |
 | Audit visibility | Open Automations -> Approvals -> Audit | Inspect-only `Activity Log` shows recent governance and execution events |
 | Large content resilience | Ask for oversized markdown or code output | Content stays inside a bounded reading surface with horizontal overflow handling |
@@ -78,7 +78,7 @@ No single test lane is enough on its own.
 The UI testing agentry must fail the release recommendation if any of the following are true:
 
 - Soma is present in layout but not clearly primary in behavior
-- the first-path workspace request visibly collapses into an avoidable blocker
+- the first-path workspace request fails without a clear retry and recovery path
 - a mutating request bypasses the proposal and approval contract
 - cancelling a proposal leaves uncertainty about whether execution still happened
 - the operator cannot refresh or re-enter with confidence

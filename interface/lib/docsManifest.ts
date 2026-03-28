@@ -113,6 +113,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Live implementation scoreboard for current V8 delivery status, blockers, and evidence",
             },
             {
+                slug: "v8-ui-workflow-verification",
+                label: "V8 UI Workflow Verification",
+                path: "docs/architecture-library/V8_UI_WORKFLOW_VERIFICATION_PLAN.md",
+                description: "Release verification plan for the UI testing team, including workflows, expected API calls, and terminal states",
+            },
+            {
                 slug: "v7-dev-state",
                 label: "V7 Dev State (Historical)",
                 path: "V7_DEV_STATE.md",
