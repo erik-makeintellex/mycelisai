@@ -1,96 +1,84 @@
 # Governance & Policy System
 
-> 🔙 **Navigation**: [Back to README](../README.md) | [Architecture Overview](../architecture.md)
+> 🔙 **Navigation**: [Back to README](../README.md)
 
-The Mycelis Core includes a **Governance Guard** that intercepts every message passing through the Swarm Router. It enforces a logic-based policy defined in `core/policy/policy.yaml`.
+This document describes the current release governance model, not just the older router-guard pattern.
 
-## 1. How It Works
+## Current Release Truth
 
-1.  **Intercept**: The Router passes every `MsgEnvelope` to the Guard before routing.
-2.  **Evaluate**: The Guard checks the message against the loaded Policy rules.
-    -   **Matches Team/Agent**: Does the sender belong to a targeted group?
-    -   **Matches Intent**: Does the message `intent` (or event type) match a rule?
-    -   **Unlocks Condition**: Do the context variables satisfy the logic (e.g., `amount > 50`)?
-3.  **Decide**:
-    -   `ALLOW`: The message proceeds normally.
-    -   `DENY`: The message is dropped and logged.
-    -   `REQUIRE_APPROVAL`: The message is **Parked** in memory. An `ApprovalRequest` is generated. It will not be delivered until an admin signal approves it.
+Mycelis now governs actions through three linked layers:
 
-## 2. Policy Configuration (`policy.yaml`)
+1. User governance profile
+   - role
+   - cost sensitivity
+   - review strictness
+   - automation tolerance
+   - escalation preference
+2. Capability-aware approval policy
+   - low-risk actions can be auto-allowed
+   - medium-risk actions can stay optional
+   - high-risk or explicitly bounded actions require approval
+3. Audit lineage
+   - proposal generated
+   - proposal confirmed or cancelled
+   - execution run created
+   - capability used
+   - artifact created
+   - channel write recorded
 
-Policies are grouped by "Risk Profile".
+The normal operator-facing outcomes are:
+- `answer`
+- `proposal`
+- `execution_result`
+- `blocker`
 
-```yaml
-groups:
-  - name: "High Risk"
-    targets: ["team:finance", "agent:sre-bot"]
-    rules:
-      - intent: "transfer_funds"
-        condition: "amount > 1000"
-        action: "REQUIRE_APPROVAL"
-```
+Mutation-capable work should enter `proposal` mode before execution.
 
-### Available Actions
-- `ALLOW`
-- `DENY`
-- `REQUIRE_APPROVAL`
+## Approval Model
 
-### Conditions
-Simple comparison logic is supported for context variables (extracted from `swarm_context` or event data).
-- Operators: `>`, `<`, `==`, `>=` `...`
-- Example: `temperature > 100`, `role == "admin"`
+Every governed action can carry:
+- `approval_required`
+- `approval_reason`
+- `approval_mode`
+- threshold context for cost, capability risk, and external data use
 
----
+Current release posture:
+- capability risk drives the baseline expectation
+- user governance profile shapes how strict the approval policy becomes
+- confirm/cancel is explicit and inspectable
+- approval and execution decisions are audit-linked
 
-## 3. Ideal Configurations
+## Audit Model
 
-### Scenario A: High-Velocity IoT (Sensor Networks)
-**Goal**: Maximize throughput, minimize latency. Only block dangerous actuators.
+The base audit system is inspect-only in the operator UI.
 
-**Recommended Policy**:
-- **Defaults**: `ALLOW` (Assume telemetry is safe).
-- **Restrictions**: Only guard physical control signals.
+Operators should expect to see:
+- recent actions
+- execution status
+- approvals
+- capability usage
 
-```yaml
-groups:
-  - name: "IoT Actuators"
-    description: "Prevent hardware damage"
-    targets: ["team:robotics"]
-    rules:
-      - intent: "motor.set_speed"
-        condition: "rpm > 8000"
-        action: "DENY" 
-      - intent: "firmware.update"
-        action: "REQUIRE_APPROVAL"
+Raw backend logs are not the default operator surface. The default surface is the normalized Activity Log / Audit view.
 
-defaults:
-  default_action: "ALLOW"
-```
+## Legacy Router Guard Note
 
-### Scenario B: High-Stakes Agents (Message Parsing & Finance)
-**Goal**: Safety & Human-in-the-loop. Prevent hallucinations from executing expensive actions.
+The lower-level governance guard still exists for message/policy enforcement, but it is no longer the whole product story by itself.
 
-**Recommended Policy**:
-- **Defaults**: `ALLOW` (for harmless "thinking" logs), but strictly guard "tool usage".
-- **Restrictions**: Gate interactions with external APIs or databases.
+Release review should treat governance as:
+- policy enforcement
+- proposal/approval flow
+- capability risk mapping
+- audit visibility
 
-```yaml
-groups:
-  - name: "Autonomous Agents"
-    description: "Guard against hallucinated tool calls"
-    targets: ["team:finance", "team:devops"]
-    rules:
-      - intent: "stripe.charge"
-        condition: "amount > 50"
-        action: "REQUIRE_APPROVAL"
-      - intent: "k8s.delete_pod"
-        action: "REQUIRE_APPROVAL"
-      - intent: "k8s.scale"
-        condition: "replicas > 10"
-        action: "REQUIRE_APPROVAL"
+not only as a raw allow/deny/intercept subsystem.
 
-# Allow chatter, block action by default if unknown intent?
-# For development, usually ALLOW default.
-defaults:
-  default_action: "ALLOW"
-```
+## Operator Guidance
+
+- treat mutating and external work as governed by default
+- use `Automations -> Approvals` for inspect-only approval and audit review
+- use the live governed browser proof when release work changes proposal, confirm, or execution behavior
+
+Related references:
+- `docs/user/governance-trust.md`
+- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
+- `docs/architecture-library/V8_RELEASE_PLATFORM_REVIEW_SECURITY_MONITORING_DEBUG.md`

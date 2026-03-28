@@ -6,12 +6,20 @@ on:
     paths:
       - "core/**"
       - "ops/core.py"
+      - "ops/config.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tasks.py"
       - ".github/workflows/core-ci.yaml"
   pull_request:
     branches: ["main", "develop"]
     paths:
       - "core/**"
       - "ops/core.py"
+      - "ops/config.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "tasks.py"
       - ".github/workflows/core-ci.yaml"
 
 jobs:
@@ -21,13 +29,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.26"
           cache-dependency-path: core/go.sum
 
-      - name: Test
+      - name: Install Invoke Dependencies
+        run: uv sync --all-packages --dev
+
+      - name: Core Task Test
+        run: uv run inv core.test
+
+      - name: Coverage
         working-directory: ./core
         run: go test -v -coverprofile=coverage.out ./...
 
@@ -44,18 +66,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.26"
           cache-dependency-path: core/go.sum
 
+      - name: Install Invoke Dependencies
+        run: uv sync --all-packages --dev
+
       - name: Build
-        working-directory: ./core
-        run: go build -v -o ../bin/server ./cmd/server
+        run: uv run inv core.compile
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: mycelis-core-binary
-          path: bin/server
+          path: core/bin/server

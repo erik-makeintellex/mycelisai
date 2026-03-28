@@ -110,6 +110,7 @@ The March 25, 2026 live QA pass established the following product failures befor
 - Status: `NEXT`
 - Ownership:
   - `interface/e2e/specs/workspace-live-backend.spec.ts`
+  - `interface/e2e/specs/soma-governance-live.spec.ts`
   - new or updated Soma workspace live-backend specs
   - `tests/ui/browser_qa_plan_workspace_chat.md`
   - `docs/TESTING.md` if acceptance coverage language changes

@@ -23,11 +23,14 @@ Handles the atomic deployment to Kubernetes (Kind).
 - **Init**: `uv run inv k8s.init` (Infra).
 - **Deploy**: `uv run inv k8s.deploy` (Core).
 - **Status**: `uv run inv k8s.status` (Health).
+- **Bridge**: `uv run inv k8s.bridge` now verifies the local PostgreSQL/NATS/Core port-forwards actually bind before reporting success.
+- **Recover**: `uv run inv k8s.recover` now fails closed when the cluster is unreachable and waits for rollout readiness before claiming recovery.
 - Chart/runtime config alignment: the deployed Core image resolves startup config from `/core/config`, so the chart mount path and container workdir must stay in sync for bootstrap bundles to load.
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
-- **Build**: `uv run inv core.build` (Returns Tag).
+- **Compile**: `uv run inv core.compile` (repo-local binary only).
+- **Build**: `uv run inv core.build` (Returns immutable image tag; no `latest` aliasing).
 
 ### `auth.py` (Local Operator Auth)
 Keeps local API-key development access aligned.
@@ -63,6 +66,14 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - local Interface tasking now binds the UI broadly by default (`[::]:3000`) while probing it through `127.0.0.1:3000`; override with `MYCELIS_INTERFACE_BIND_HOST`, `MYCELIS_INTERFACE_HOST`, and `MYCELIS_INTERFACE_PORT` when a host needs a different split
 - frontend teardown falls back to matching both `next dev` and `next start` command lines, so built UI servers do not survive outside the lifecycle contract
 
+### `interface.py` (Frontend Build And Browser Tasks)
+- **Install**: `uv run inv interface.install`
+- **Type Check**: `uv run inv interface.typecheck`
+- **Build**: `uv run inv interface.build`
+- **Test**: `uv run inv interface.test`
+- **E2E**: `uv run inv interface.e2e`
+- Live backend browser specs that assert filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the spec checkout and the running Core checkout differ.
+
 ## Clean Run Discipline for Runtime and Integration Checks
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
@@ -70,6 +81,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - Detect running compiled Go services before the test begins. Check repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Detect repo-local Interface worker residue before and after browser/build/test runs. Windows `node.exe` children from `.next`, Vitest, or Playwright count as leaked dev state and should be swept by the task wrappers.
 - Treat browser proof as a stability-sensitive path by default. `uv run inv interface.e2e` now uses the built `next start` server and `--workers=1` unless you explicitly override it, `uv run inv ci.baseline` keeps the same low-parallelism posture, and `uv run inv ci.service-check --live-backend` stays at `--workers=1` while restoring the local bridge/core stack before the live proof when needed. The live service check now reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run, so the managed gate prefers repeatable results over peak local parallelism without turning database state into false failure noise.
+- `uv run inv db.migrate` is intentionally a forward-bootstrap helper now, not a replay-everything hammer. Once the schema is already bootstrapped, it skips replay and points operators to `uv run inv db.reset` for a clean rebuild path.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -100,6 +112,7 @@ Delivery-focused validation, runner checks, and release preflight.
 - **Service Check**: `uv run inv ci.service-check --live-backend`
 - **Release Preflight**: `uv run inv ci.release-preflight --strict-toolchain --service-health --live-backend`
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
+- GitHub validation workflows should keep dependency/bootstrap steps workflow-native (`actions/setup-*`, `npm ci`, Playwright browser install), then hand real build/test execution back to the same `uv run inv ...` task surfaces so local and CI validation stay aligned
 
 ### `misc.py` (Team Coordination)
 Central architect sync path and utility task surfaces.

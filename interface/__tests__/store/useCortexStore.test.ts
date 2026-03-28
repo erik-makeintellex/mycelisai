@@ -24,6 +24,7 @@ describe('useCortexStore', () => {
             workspaceChatScope: null,
             missionChatError: null,
             missionChatFailure: null,
+            workspaceChatPrimed: false,
             councilTarget: 'admin',
             assistantName: 'Soma',
             mcpServers: [],
@@ -378,6 +379,47 @@ describe('useCortexStore', () => {
     // ── Launch Crew / proposal confirmation ─────────────────────
 
     describe('sendMissionChat', () => {
+        it('silently retries the first transient Soma failure and recovers on the second attempt', async () => {
+            vi.useFakeTimers();
+            try {
+                mockFetch
+                    .mockResolvedValueOnce({
+                        ok: false,
+                        status: 500,
+                        text: async () => '{"error":"Soma chat blocked (500)"}',
+                    })
+                    .mockResolvedValueOnce({
+                        ok: true,
+                        json: async () => ({
+                            ok: true,
+                            data: {
+                                meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                                signal_type: 'chat_response',
+                                trust_score: 0.5,
+                                template_id: 'chat-to-answer',
+                                mode: 'answer',
+                                payload: {
+                                    text: 'Recovered answer.',
+                                    tools_used: [],
+                                },
+                            },
+                        }),
+                    });
+
+                const sendPromise = store.getState().sendMissionChat('hello');
+                await vi.advanceTimersByTimeAsync(400);
+                await sendPromise;
+
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+                expect(store.getState().missionChatFailure).toBeNull();
+                expect(store.getState().missionChatError).toBeNull();
+                expect(store.getState().workspaceChatPrimed).toBe(true);
+                expect(store.getState().missionChat.at(-1)?.content).toBe('Recovered answer.');
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
         it('normalizes team expressions and module bindings from proposal payload', async () => {
             mockFetch.mockResolvedValue({
                 ok: true,
@@ -447,21 +489,29 @@ describe('useCortexStore', () => {
         });
 
         it('stores a structured workspace failure when Soma chat returns 500', async () => {
-            mockFetch.mockResolvedValue({
-                ok: false,
-                status: 500,
-                text: async () => '{"error":"Soma chat blocked (500)"}',
-            });
+            vi.useFakeTimers();
+            try {
+                mockFetch.mockResolvedValue({
+                    ok: false,
+                    status: 500,
+                    text: async () => '{"error":"Soma chat blocked (500)"}',
+                });
 
-            await store.getState().sendMissionChat('hello');
+                const sendPromise = store.getState().sendMissionChat('hello');
+                await vi.advanceTimersByTimeAsync(400);
+                await sendPromise;
 
-            expect(store.getState().activeMode).toBe('blocker');
-            expect(store.getState().missionChatError).toBe('Soma chat blocked (500)');
-            expect(store.getState().missionChatFailure).toMatchObject({
-                routeKind: 'workspace',
-                type: 'server_error',
-                bannerLabel: 'Workspace chat server error',
-            });
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+                expect(store.getState().activeMode).toBe('blocker');
+                expect(store.getState().missionChatError).toBe('Soma chat blocked (500)');
+                expect(store.getState().missionChatFailure).toMatchObject({
+                    routeKind: 'workspace',
+                    type: 'server_error',
+                    bannerLabel: 'Workspace chat server error',
+                });
+            } finally {
+                vi.useRealTimers();
+            }
         });
 
         it('stores a setup-required blocker when Soma has no bound AI engine', async () => {

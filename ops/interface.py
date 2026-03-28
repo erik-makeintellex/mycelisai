@@ -541,6 +541,22 @@ def test(c):
     finally:
         _cleanup_repo_local_interface_processes()
 
+
+@task
+def typecheck(c):
+    """Run the Interface TypeScript typecheck."""
+    print("Running Interface Type Check...")
+    _cleanup_repo_local_interface_processes()
+    try:
+        result = _run_interface_shell_command(["npx", "tsc", "--noEmit"])
+        _print_ascii_safe(result.stdout)
+        _print_ascii_safe(result.stderr)
+        if result.exited != 0:
+            raise SystemExit(result.exited)
+    finally:
+        _cleanup_repo_local_interface_processes()
+
+
 @task
 def test_coverage(c):
     """Run Interface unit tests with V8 coverage report."""
@@ -603,7 +619,8 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
             env["INTERFACE_PORT"] = str(actual_port)
         ready_host = _wait_for_interface_ready(host=env["INTERFACE_HOST"], port=chosen_port)
         if ready_host != env["INTERFACE_HOST"]:
-            print(f"  Managed server also responded via {ready_host}; keeping Playwright pinned to {env['INTERFACE_HOST']}")
+            print(f"  Managed server is reachable via {ready_host}; updating Playwright host from {env['INTERFACE_HOST']}")
+            env["INTERFACE_HOST"] = ready_host
         result = run_interface_command(c, cmd, pty=not is_windows(), env=env, hide=True, warn=True)
         _print_ascii_safe(result.stdout)
         _print_ascii_safe(result.stderr)
@@ -650,10 +667,17 @@ def clean(c):
     Use when HMR gets stuck or stale chunks cause ghost errors.
     """
     import shutil, os
+
+    def _ignore_missing_rmtree_error(function, path, excinfo):
+        error = excinfo[1]
+        if isinstance(error, FileNotFoundError):
+            return
+        raise error
+
     cache_dir = os.path.join("interface", ".next")
     print("Clearing Next.js cache...")
     if os.path.isdir(cache_dir):
-        shutil.rmtree(cache_dir)
+        shutil.rmtree(cache_dir, onexc=_ignore_missing_rmtree_error)
     print("Cache cleared.")
 
 @task
@@ -754,6 +778,7 @@ ns.add_task(install)
 ns.add_task(build)
 ns.add_task(lint)
 ns.add_task(test)
+ns.add_task(typecheck)
 ns.add_task(test_coverage, name="test-coverage")
 ns.add_task(e2e)
 ns.add_task(stop)

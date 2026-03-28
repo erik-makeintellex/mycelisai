@@ -104,15 +104,15 @@ const recentActivityPreview = [
 export default function LandingPage() {
     return (
         <div className="min-h-screen bg-cortex-bg text-cortex-text-main">
-            <div className="absolute inset-x-0 top-0 -z-10 h-[36rem] bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.16),transparent_56%)]" />
+            <div className="absolute inset-x-0 top-0 -z-10 h-[36rem] bg-[radial-gradient(circle_at_top,rgba(75,78,109,0.16),transparent_56%)]" />
 
             <nav className="sticky top-0 z-50 border-b border-cortex-border bg-cortex-bg/90 backdrop-blur">
                 <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
                     <Link href="/" className="flex items-center gap-3">
-                        <span className="h-3 w-3 rounded-full bg-cortex-primary shadow-[0_0_16px_rgba(34,211,238,0.7)]" />
+                        <span className="h-3 w-3 rounded-full bg-cortex-primary shadow-[0_0_16px_rgba(75,78,109,0.36)]" />
                         <span className="text-sm font-semibold uppercase tracking-[0.22em] text-cortex-text-main">Mycelis</span>
                     </Link>
-                    <div className="hidden items-center gap-6 text-sm text-cortex-text-muted md:flex">
+                    <div className="hidden items-center gap-6 text-sm text-cortex-info md:flex">
                         <Link href="#structure" className="transition-colors hover:text-cortex-text-main">
                             Structure
                         </Link>
@@ -142,7 +142,7 @@ export default function LandingPage() {
                 <section className="mx-auto max-w-7xl px-6 pb-20 pt-20 md:pb-28 md:pt-28">
                     <div className="grid gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                         <div className="space-y-8">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-1.5 text-sm text-cortex-primary">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-4 py-1.5 text-sm font-medium text-cortex-primary">
                                 <Sparkles className="h-4 w-4" />
                                 Living AI Organization platform
                             </div>
@@ -176,8 +176,8 @@ export default function LandingPage() {
 
                             <div className="grid gap-4 md:grid-cols-3">
                                 {workspaceHighlights.map((item) => (
-                                    <div key={item.label} className="rounded-3xl border border-cortex-border bg-cortex-surface/80 px-5 py-4">
-                                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">{item.label}</p>
+                                    <div key={item.label} className="rounded-3xl border border-cortex-border bg-cortex-surface px-5 py-4 shadow-[0_12px_30px_rgba(63,67,100,0.06)]">
+                                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">{item.label}</p>
                                         <p className="mt-2 text-sm font-semibold text-cortex-text-main">{item.value}</p>
                                     </div>
                                 ))}
@@ -185,15 +185,15 @@ export default function LandingPage() {
                         </div>
 
                         <div className="relative">
-                            <div className="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_60%)] blur-2xl" />
-                            <div className="relative space-y-5 rounded-[2rem] border border-cortex-border bg-cortex-surface/95 p-6 shadow-[0_28px_80px_rgba(29,42,53,0.10)]">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-cortex-warning/25 bg-cortex-warning/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-warning">
+                            <div className="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,rgba(132,220,198,0.24),transparent_60%)] blur-2xl" />
+                            <div className="relative space-y-5 rounded-[2rem] border border-cortex-border bg-cortex-surface/95 p-6 shadow-[0_30px_90px_rgba(63,67,100,0.14)]">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-cortex-warning/30 bg-cortex-warning/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-warning">
                                     Illustrative preview
                                 </div>
                                 <div className="rounded-3xl border border-cortex-border bg-cortex-bg px-5 py-5">
                                     <div className="flex items-start justify-between gap-4">
                                         <div>
-                                            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">Organization home</p>
+                                            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">Organization home</p>
                                             <h2 className="mt-2 text-2xl font-semibold text-cortex-text-main">Northstar Labs</h2>
                                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
                                                 Soma-guided delivery organization for product planning, specialist review, and steady execution.
@@ -207,7 +207,7 @@ export default function LandingPage() {
 
                                 <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
                                     <div className="rounded-3xl border border-cortex-border bg-cortex-bg px-5 py-5">
-                                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">Work with Soma</p>
+                                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">Work with Soma</p>
                                         <p className="mt-3 text-lg font-semibold text-cortex-text-main">Soma for Northstar Labs</p>
                                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
                                             Guides planning, reviews structure, and recommends the next move while keeping the wider AI Organization visible.
@@ -228,7 +228,7 @@ export default function LandingPage() {
                                     <div className="flex items-center gap-3">
                                         <Activity className="h-5 w-5 text-cortex-primary" />
                                         <div>
-                                            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">Recent Activity</p>
+                                            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">Recent Activity</p>
                                             <p className="mt-1 text-sm text-cortex-text-muted">
                                                 Your AI Organization stays visibly active through recent reviews, checks, and updates.
                                             </p>
@@ -354,7 +354,7 @@ export default function LandingPage() {
 function PreviewCard({ title, description }: { title: string; description: string }) {
     return (
         <div className="rounded-3xl border border-cortex-border bg-cortex-bg px-4 py-4">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-text-muted">{title}</p>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">{title}</p>
             <p className="mt-2 text-sm font-semibold text-cortex-text-main">{description}</p>
         </div>
     );

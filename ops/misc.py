@@ -4,9 +4,12 @@ from .config import ROOT_DIR
 WORKTREE_REVIEW_TARGETS = (
     "README.md",
     "V8_DEV_STATE.md",
+    "docs/LOCAL_DEV_WORKFLOW.md",
+    "docs/architecture/OPERATIONS.md",
     "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
     "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
     "docs/TESTING.md",
+    "ops/README.md",
 )
 
 WORKTREE_BASELINE_INSTALLS = (
@@ -23,7 +26,10 @@ WORKTREE_AREA_RULES = (
         "name": "Core runtime",
         "prefixes": ("core/", "proto/"),
         "installs": ("cd core && go mod download",),
-        "commands": ("uv run inv core.test",),
+        "commands": (
+            "uv run inv core.test",
+            "uv run inv core.compile",
+        ),
     },
     {
         "name": "Interface",
@@ -31,7 +37,7 @@ WORKTREE_AREA_RULES = (
         "installs": ("uv run inv interface.install",),
         "commands": (
             "uv run inv interface.test",
-            "cd interface && npx tsc --noEmit",
+            "uv run inv interface.typecheck",
             "uv run inv interface.build",
         ),
     },
@@ -47,7 +53,8 @@ WORKTREE_AREA_RULES = (
         "exact_paths": ("pyproject.toml", "tasks.py"),
         "installs": ("uv sync --all-packages --dev",),
         "commands": (
-            "$env:PYTHONPATH='.'; uv run pytest tests/test_ci_tasks.py tests/test_misc_tasks.py -q",
+            "$env:PYTHONPATH='.'; uv run pytest tests/test_core_tasks.py tests/test_ci_tasks.py tests/test_interface_tasks.py tests/test_k8s_tasks.py tests/test_lifecycle_tasks.py tests/test_misc_tasks.py -q",
+            "uv run inv ci.build",
         ),
     },
     {

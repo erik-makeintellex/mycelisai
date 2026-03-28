@@ -147,7 +147,8 @@ Baseline command pack:
 
 Focused UI/recovery pack:
 1. `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v7-operational-ux.spec.ts`
-2. `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts`
+2. `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+3. `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts`
 
 Slice-specific focused tests should be attached in the same state-file update that reports the lane transition.
 

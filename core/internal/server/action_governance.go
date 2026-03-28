@@ -171,6 +171,9 @@ func applyGovernanceProfileToLatestMessage(messages []chatRequestMessage, profil
 }
 
 func approvalThresholdsForProfile(profile userGovernanceProfile) approvalThresholds {
+	// These are bounded release defaults for the single-user free-node posture.
+	// They shape approval behavior without claiming full enterprise policy or
+	// delegated-approval coverage.
 	thresholds := approvalThresholds{
 		MaxCost:         1.0,
 		MaxRisk:         "medium",

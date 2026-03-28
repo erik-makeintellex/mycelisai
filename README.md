@@ -69,6 +69,10 @@ Bootstrap reminder:
 - startup truth is bundle-driven and fail-closed: normal startup fails closed unless a valid bootstrap bundle is present, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must select a bundle whenever more than one is mounted
 - the deployed Core image resolves runtime config from `/core/config`, and the Helm chart mounts the config volume there so bootstrap bundles, cognitive defaults, and policy files line up with the container workdir
 
+Tasking note:
+- `uv run inv db.migrate` is a forward-bootstrap task for schemas that are not already initialized; if the `cortex` schema is already bootstrapped, it now skips replay and points operators to `uv run inv db.reset` for a clean rebuild
+- live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend
+
 ## What Mycelis Is
 
 Mycelis is a governed AI Organization system.
@@ -322,11 +326,14 @@ Required command references for active V8 work:
 Use `uv run inv ...` for execution.
 Use `uvx --from invoke inv -l` only as a compatibility probe.
 Do not use bare `uvx inv ...`.
+- CI validation should reuse the same invoke task surfaces for interface build/test/browser execution after the workflow-native dependency/bootstrap steps complete
 
 Provider/runtime workflow reminders:
 - review architecture and state docs before implementation slices
 - attach tests and evidence in the same delivery window
 - keep state-file updates current with gate results and blocker changes
+- use `uv run inv core.compile` when you need the repo-local Core binary refreshed without building a Docker image; reserve `uv run inv core.build` for immutable image work
+- use `uv run inv interface.typecheck` for managed TypeScript validation instead of ad hoc `npx tsc --noEmit` runs
 - deployment automation may override provider/model/profile/media config through env vars using `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*`; use that path instead of the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps
 - env overrides are deployment-time infrastructure wiring, not runtime organization behavior: they define provider instances, profile defaults, and environment-specific endpoints or model ids
 - env overrides must not become a shadow runtime architecture: team, role, and agent routing truth still comes from `Bundle -> Instantiated Organization -> Inheritance -> Routing`
@@ -385,7 +392,7 @@ Completion rule:
 
 `uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the built `next start` server and `--workers=1` so direct browser validation stays repeatable on local hosts instead of diverging from the stricter branch-readiness gate.
 
-`uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=1`) and the built `next start` server so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves a single live browser contract, restores the local bridge/core stack before the browser proof when needed, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run.
+`uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=1`) and the built `next start` server so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves the current live governed Soma browser contract, restores the local bridge/core stack before the browser proof when needed, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run.
 
 Browser matrix baseline:
 - `chromium firefox webkit`

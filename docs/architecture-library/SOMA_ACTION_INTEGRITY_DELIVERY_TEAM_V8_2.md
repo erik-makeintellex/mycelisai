@@ -195,8 +195,8 @@ Confirm proposal, real `run_id`, verified execution state, file exists only afte
 Required before completion:
 
 - `cd core && go test ./... -count=1 -p 1`
-- `cd interface && npm test`
-- `cd interface && npx tsc --noEmit`
+- `uv run inv interface.test`
+- `uv run inv interface.typecheck`
 - `uv run inv interface.e2e`
 - rerun the blocked browser scenarios:
   - mixed-chat mutation downgrade

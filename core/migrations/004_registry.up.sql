@@ -1,5 +1,5 @@
 -- 1. Connector Templates (The "Class")
-CREATE TABLE connector_templates (
+CREATE TABLE IF NOT EXISTS connector_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     type TEXT NOT NULL, -- 'ingress' (Source) or 'egress' (Sink)
@@ -9,7 +9,7 @@ CREATE TABLE connector_templates (
 );
 
 -- 2. Active Connectors (The "Instance")
-CREATE TABLE active_connectors (
+CREATE TABLE IF NOT EXISTS active_connectors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team_id UUID REFERENCES teams(id),
     template_id UUID REFERENCES connector_templates(id),
@@ -19,7 +19,7 @@ CREATE TABLE active_connectors (
 );
 
 -- 3. Agent Blueprints (Reusable Roles)
-CREATE TABLE blueprints (
+CREATE TABLE IF NOT EXISTS blueprints (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     role TEXT NOT NULL,

@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS inception_recipes (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_inception_category ON inception_recipes(category);
-CREATE INDEX idx_inception_agent    ON inception_recipes(agent_id, created_at DESC);
-CREATE INDEX idx_inception_tags     ON inception_recipes USING gin(tags);
-CREATE INDEX idx_inception_title_trgm ON inception_recipes USING gin(title gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_inception_category ON inception_recipes(category);
+CREATE INDEX IF NOT EXISTS idx_inception_agent    ON inception_recipes(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_inception_tags     ON inception_recipes USING gin(tags);
+CREATE INDEX IF NOT EXISTS idx_inception_title_trgm ON inception_recipes USING gin(title gin_trgm_ops);

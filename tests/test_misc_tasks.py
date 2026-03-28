@@ -167,9 +167,15 @@ def test_build_worktree_triage_maps_changed_paths_to_installs_and_commands():
     assert "uv run inv interface.install" in triage["priority_installs"]
     assert "uv sync --all-packages --dev" in triage["priority_installs"]
     assert "uv run inv core.test" in triage["recommended_commands"]
+    assert "uv run inv core.compile" in triage["recommended_commands"]
     assert "uv run inv interface.test" in triage["recommended_commands"]
+    assert "uv run inv interface.typecheck" in triage["recommended_commands"]
     assert "uv run inv interface.build" in triage["recommended_commands"]
-    assert "$env:PYTHONPATH='.'; uv run pytest tests/test_ci_tasks.py tests/test_misc_tasks.py -q" in triage["recommended_commands"]
+    assert (
+        "$env:PYTHONPATH='.'; uv run pytest tests/test_core_tasks.py tests/test_ci_tasks.py tests/test_interface_tasks.py tests/test_k8s_tasks.py tests/test_lifecycle_tasks.py tests/test_misc_tasks.py -q"
+        in triage["recommended_commands"]
+    )
+    assert "uv run inv ci.build" in triage["recommended_commands"]
     assert "$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q" in triage["recommended_commands"]
 
 
@@ -188,3 +194,18 @@ def test_worktree_triage_reports_clean_tree(capsys):
     assert "uv run inv ci.entrypoint-check" in output
     assert "uv run inv ci.baseline" in output
     assert "none triggered by current paths" in output
+
+
+def test_worktree_triage_expected_targets_cover_task_contract_docs(capsys):
+    ctx = FakeContext(
+        {
+            "git status --porcelain": FakeResult(stdout=""),
+        }
+    )
+
+    misc.worktree_triage.body(ctx)
+
+    output = capsys.readouterr().out
+    assert "docs/LOCAL_DEV_WORKFLOW.md" in output
+    assert "docs/architecture/OPERATIONS.md" in output
+    assert "ops/README.md" in output

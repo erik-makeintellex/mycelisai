@@ -1,7 +1,7 @@
 # Architecture Library Index
 
 > Status: Canonical
-> Last Updated: 2026-03-21
+> Last Updated: 2026-03-28
 > Purpose: Replace monolithic planning with a modular, cross-linked architecture and target-delivery library.
 
 ## Why This Library Exists
@@ -45,6 +45,10 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning how V8 concepts enter the system through config and bootstrap behavior | configuration sources, templates, instantiation entry points, bootstrap resolution, scope inheritance, precedence rules, and the V7-to-V8 bootstrap migration contract |
 | [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | working on first-run flow, AI Organization creation, Soma-primary workspace, advanced architecture/runtime boundaries, or screen-to-API mapping | canonical V8 operator PRD, anti-generic-chat UX guardrails, default-vs-advanced surface rules, managed exchange visibility boundaries, security-label inspection boundaries, source-of-truth layering, and API/UI contracts |
 | [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) | defining the current bounded release architecture for loop profiles, learning loops, semantic continuity, procedure/skill memory, managed exchange, runtime capabilities, promoted response/style inheritance, or Automations visibility | Current Release Architecture for persistent execution, policy-bounded automation, semantic continuity, managed exchange foundations, exchange security foundations, Agent Type Profile runtime truth, and the first bounded Automations posture |
+| [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | defining what the UI testing agentry must prove before a workspace or organization change is ready for review | canonical Soma-first browser proof contract for direct answers, governed proposals, approval/cancel behavior, continuity, audit visibility, and operator trust |
+| [V8 UI Testing Stabilization Strike Team Plan](V8_UI_TESTING_STABILIZATION_STRIKE_TEAM_PLAN.md) | coordinating mocked browser proof, live governed-chat repair, and UI testing release hygiene | active strike-team ownership plan for the current UI-testing stabilization effort |
+| [V8.2 Cross-Repo Cleanup and Release Structure Plan](V8_2_CROSS_REPO_CLEANUP_AND_RELEASE_STRUCTURE_PLAN.md) | coordinating git hygiene, commit-lane packaging, release cleanup, cross-team ownership, and final validation order | prioritized cleanup lanes, commit boundaries, owner assignments, validation gates, and release-structure rules for the current mixed worktree |
+| [V8 Release Platform Review: Security, Monitoring, and Debug](V8_RELEASE_PLATFORM_REVIEW_SECURITY_MONITORING_DEBUG.md) | aligning release truth across governance/security, monitoring/ops, and debug/live-browser proof | canonical shared review surface for platform release readiness, operator checklist, residual risks, and matching-doc requirements |
 | [V8.2 Full Production Architecture](../../v8-2.md) | defining the full distributed, learning, capability-enabled, managed-exchange, and actuation target beyond the current release | Full Production Architecture (Canonical Target) for distributed execution, governed learning, managed exchange, permissioned trust boundaries, capability-backed execution, and full actuation scope |
 
 ### V8 migration reminder
@@ -72,7 +76,11 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 13. Use [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) when planning how V8 contracts enter the system through configuration, templates, organization entry points, bootstrap resolution, and precedence rules.
 14. Use [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) when defining first-run flow, AI Organization creation, Soma-primary workspace behavior, role visibility, advanced-mode boundaries, source-of-truth layering, and screen-to-API mapping.
 15. Use [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) when defining the current bounded release architecture for Loop Profiles, Learning Loops, semantic continuity, managed exchange foundations, Procedure / Skill Sets, Runtime Capabilities, Agent Type runtime truth, promoted Response Style inheritance, and the read-only Automations surface.
-16. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production, managed exchange, and actuation target rather than the current release.
+16. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining what the browser/testing agentry must prove for Soma-first entry, governed actions, continuity, audit visibility, and trust recovery.
+17. Use [V8 UI Testing Stabilization Strike Team Plan](V8_UI_TESTING_STABILIZATION_STRIKE_TEAM_PLAN.md) when coordinating the active mocked-browser, live-governed-chat, and release-hygiene UI stabilization effort.
+18. Use [V8.2 Cross-Repo Cleanup and Release Structure Plan](V8_2_CROSS_REPO_CLEANUP_AND_RELEASE_STRUCTURE_PLAN.md) when coordinating git hygiene, commit boundaries, cleanup lanes, release structure, and final validation order across a mixed worktree.
+19. Use [V8 Release Platform Review: Security, Monitoring, and Debug](V8_RELEASE_PLATFORM_REVIEW_SECURITY_MONITORING_DEBUG.md) when aligning release truth across security/governance, monitoring/ops, and debug/live-browser proof.
+20. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production, managed exchange, and actuation target rather than the current release.
 
 Execution governance reminder:
 - `NEXT_EXECUTION_SLICES_V7.md`, `DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, and `TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` now describe V8 migration slices; apply the V8 bootstrap pipeline (`docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`) and update `V8_DEV_STATE.md` whenever those docs change.

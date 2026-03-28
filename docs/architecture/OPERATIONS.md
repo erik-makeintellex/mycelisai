@@ -43,7 +43,8 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv core.build` | Compile Go binary + Docker image (returns TAG) |
+| `uv run inv core.compile` | Compile the repo-local Go binary only |
+| `uv run inv core.build` | Compile Go binary + Docker image (returns immutable TAG) |
 | `uv run inv core.test` | `go test ./...` |
 | `uv run inv core.run` | Run Core locally (foreground, blocking) |
 | `uv run inv core.stop` | Kill running Core process (taskkill on Windows, pkill on Linux) |
@@ -60,6 +61,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | `uv run inv interface.build` | `npm run build` (production) |
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
 | `uv run inv interface.test` | `npm run test` (Vitest) |
+| `uv run inv interface.typecheck` | `npx tsc --noEmit` |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
 | `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle via the built `next start` path plus repo-managed Playwright browsers, defaults to `--workers=1` for repeatability, then clears stale Interface listeners and repo-local worker residue before/after; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
 | `uv run inv interface.stop` | Kill the repo-local Interface server on port 3000 |
@@ -71,7 +73,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv db.migrate` | Apply canonical forward SQL migrations (`001_init_memory.sql` + `*.up.sql`) to a schema that is not already initialized |
+| `uv run inv db.migrate` | Apply canonical forward SQL migrations (`001_init_memory.sql` + `*.up.sql`) only when the target schema is not already initialized; otherwise skip replay and point to `db.reset` |
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | List tables + row counts |
 | `uv run inv db.create` | Create cortex database (if not exists) |
@@ -141,7 +143,8 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect compiled Go binaries before starting the check. Inspect for repo-local command lines or binary paths plus listeners on declared dev/test ports, terminate them through lifecycle/task helpers when found, and never assume they belong to the current slice.
 - Treat repo-local Interface workers as the same cleanup surface. Build/test/browser runs must not leave `node.exe` helpers from `.next`, Vitest, or Playwright behind after the command exits.
-- Merge-readiness browser gates should bias toward repeatability. The managed readiness tasks now run Playwright with reduced worker counts on the local host path: `uv run inv ci.baseline` uses `--workers=1` against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays at `--workers=1`, restores the local bridge/core stack before the live proof when that bridge is absent, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations every run.
+- Merge-readiness browser gates should bias toward repeatability. The managed readiness tasks now run Playwright with reduced worker counts on the local host path: `uv run inv ci.baseline` uses `--workers=1` against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays at `--workers=1`, restores the local bridge/core stack before the live governed Soma proof when that bridge is absent, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations every run.
+- Live browser specs that assert backend-written files should bind to the backend's real workspace root. When the browser spec runs from a different checkout or worktree than the live Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual `core/workspace` directory before running `soma-governance-live.spec.ts`.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -180,9 +183,9 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `uv run inv k8s.up` | Canonical cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
 | `uv run inv k8s.deploy` | Build Core, load Docker image, helm upgrade (injects secrets from .env) |
 | `uv run inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
-| `uv run inv k8s.bridge` | Port-forward NATS:4222, HTTP:8081←8080, PG:5432 |
+| `uv run inv k8s.bridge` | Port-forward NATS:4222, HTTP:8080, PG:5432 and verify the local forwards actually bind before reporting success |
 | `uv run inv k8s.status` | Check Docker, Kind cluster, pod status, PVC status |
-| `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
+| `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL), then wait for readiness and fail closed if the cluster is unreachable |
 | `uv run inv k8s.reset` | Full reset: delete cluster -> canonical bring-up (includes readiness wait) |
 
 ### Cognitive Tasks (`ops/cognitive.py`)
@@ -213,7 +216,7 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `uv run inv ci.build` | Go binary + Next.js production build (no Docker) |
 | `uv run inv ci.check` | Full pipeline: lint → test → build (with stage timers) |
 | `uv run inv ci.baseline` | Strict delivery baseline covering gates, focused runtime tests, interface build/typecheck, Vitest, and the shared `interface.e2e` path by default (use `--no-e2e` only for intentionally narrower local debugging) |
-| `uv run inv ci.service-check` | Verify the currently running local stack with `lifecycle.health`, plus optional live-backend browser proof |
+| `uv run inv ci.service-check` | Verify the currently running local stack with `lifecycle.health`, plus optional live-backend governed Soma browser proof |
 | `uv run inv ci.entrypoint-check` | Verify the supported invoke runner matrix and reject unsupported bare aliases |
 | `uv run inv ci.toolchain-check` | Report toolchain versions and optionally enforce Go lock policy |
 | `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with optional `--service-health` and `--live-backend` proof for service/runtime changes |
@@ -294,7 +297,7 @@ uv run inv k8s.up        # Kind + Helm + readiness gates (PostgreSQL -> NATS -> 
 uv run inv k8s.bridge
 
 # 4. Initialize database
-uv run inv db.migrate    # Apply canonical forward migrations (fresh reset verified on 2026-03-06)
+uv run inv db.migrate    # Apply canonical forward migrations if the schema is not already bootstrapped
 
 # 5. Start backend
 uv run inv core.run
@@ -485,9 +488,9 @@ Deployment automation rule:
 
 | Workflow | File | Trigger Paths | Checks |
 |----------|------|--------------|--------|
-| **Core CI** | `core-ci.yaml` | `core/**`, `ops/core.py` | Go test + coverage, GolangCI-Lint v1.64.5, binary build |
-| **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py` | ESLint, `tsc --noEmit`, Vitest, production build |
-| **E2E CI** | `e2e-ci.yaml` | `interface/**`, `core/**` | Build Core + Next.js, start Core, Playwright-managed UI server, Chromium/Firefox/WebKit + mobile smoke |
+| **Core CI** | `core-ci.yaml` | `core/**`, `ops/core.py`, `ops/config.py`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, direct coverage capture, GolangCI-Lint v1.64.5, `uv run inv core.compile` |
+| **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, `uv run inv interface.build` |
+| **E2E CI** | `e2e-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed Chromium/Firefox/WebKit + mobile smoke browser matrix via `uv run inv interface.e2e` |
 
 **Trigger:** Push/PR to `main` and `develop`
 
@@ -548,7 +551,7 @@ Validation:
 
 ```yaml
 replicaCount: 1
-image: mycelis/core:latest (immutable TAG from core.build)
+image: mycelis/core:<immutable-tag> (from core.build)
 service: ClusterIP:8080
 resources:
   requests: { cpu: 50m, memory: 64Mi }

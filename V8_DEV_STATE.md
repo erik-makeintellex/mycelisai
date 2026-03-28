@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-26
+> Updated: 2026-03-28
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -45,6 +45,10 @@ Release posture:
 - `NEXT` extend the same cognitive-engine availability contract into broader team, automation, and council execution paths beyond the primary Soma chat route.
 - `NEXT` build on the managed exchange foundation with richer persistent team runs, deeper inter-agent review loops, and broader channel-aware orchestration across MCP-backed services.
 - `COMPLETE` Chunk 8.7 is now landed for the free-node release: Soma reads a user-level governance profile, mutation proposals now carry approval posture and capability-risk context, and audit records cover proposal generation, proposal confirmation/cancellation, execution runs, capability use, artifact creation, and channel writes.
+- `ACTIVE` a dedicated UI-testing stabilization strike plan is now in flight to align the new mocked browser contract, the live governed-chat browser gate, and release hygiene into one coordinated release lane.
+- `IN_REVIEW` the new stable UI-testing agentry contract is now documented and partially automated: mocked browser proof for Soma-first entry, direct answer, continuity, cold-start recovery, governed proposal/cancel, audit visibility, and oversized-content handling is green.
+- `COMPLETE` the live governed-chat browser gate is now green on a fresh cluster reset and local stack bring-up: the managed live backend proof passes the real `/api/v1/chat` and `/api/v1/intent/confirm-action` path with governed proposal/confirm behavior intact.
+- `IN_REVIEW` a cross-team release platform review is now active to align security/governance, monitoring/ops, debug/live-browser proof, and matching documentation before release packaging.
 - `NEXT` enterprise identity, approval workflows, and multi-user access management remain deferred beyond the free-node governance foundation; the current release now has enterprise-capable governance posture, not full enterprise identity management.
 - `NEXT` multi-user enterprise IAM, delegated approver chains, and broader organization-level access management remain deferred; the current release now has enterprise-capable governance foundations, not full enterprise identity management.
 
@@ -74,6 +78,29 @@ State reporting rule:
 - `IN_REVIEW`: implemented and awaiting validation/review
 - `COMPLETE`: delivered and accepted
 - `BLOCKED`: cannot advance until a dependency or defect is resolved
+
+## Current Review (2026-03-28)
+
+Review summary:
+1. `COMPLETE` a fresh-cluster release proof is now green: `k8s.reset`, `lifecycle.up --frontend`, `lifecycle.status`, `lifecycle.health`, `db.migrate`, and the live governed Soma browser spec now pass together on the current local stack.
+2. `COMPLETE` the governed live browser lane is no longer blocked by the previous chat/proposal and confirm/write proof failures; informational summary prompts now stay answer-first, and the live file-side-effect proof supports explicit backend workspace roots when the spec checkout differs from the running Core checkout.
+3. `IN_REVIEW` release-platform documentation is being synchronized across security/governance, monitoring/ops, and debug/live-browser proof through a dedicated shared review doc plus updates to the state file, architecture index, and in-app docs manifest.
+4. `IN_REVIEW` monitoring/ops posture is materially stronger: `db.migrate` now behaves as a forward-bootstrap helper once the schema is already initialized, while fresh-cluster proof confirms that `k8s.reset` plus sequential lifecycle bring-up is the trustworthy recovery path.
+5. `ACTIVE` the local worktree remains mixed and still needs commit-boundary packaging across the live-governed-chat, db/bootstrap cleanup, docs/state sync, and earlier cleanup lanes before release promotion.
+
+## Current Review (2026-03-27)
+
+Review summary:
+1. `COMPLETE` the pushed V8.2 branch history still carries the accepted RC-delivery spine through Soma-first UX, execution reliability, governance/approval foundations, proposal-integrity closure, and provider-default cleanup (`247fe16`, `bfb3b80`, `212d5d2`, `94b531c`, `2a3c5f8`).
+2. `IN_REVIEW` the build/task/workflow cleanup lane is now locally validated: `core.compile` and `interface.typecheck` are first-class invoke tasks, CI workflows now watch `uv.lock` and frontend config changes via root `.npmrc`, and canonical operator docs were updated to the current invoke contract.
+3. `IN_REVIEW` operator-truthfulness cleanup is now locally validated in the ops layer: `lifecycle.status` no longer reports Docker healthy on failed probes, `ci.service-check --live-backend` now points at the current governed Soma live-browser proof instead of the stale workspace-only spec, `team.worktree-triage` now covers the full task-contract doc set plus stronger evidence commands, and `k8s.reset` no longer emits bare-`inv` guidance.
+4. `COMPLETE` local validation for that cleanup lane is green: Python task-module compile checks, focused pytest task/doc/workflow suites, `uv run inv interface.typecheck`, `uv run inv interface.test`, `uv run inv interface.build`, `uv run inv test.all`, and `uv run inv ci.build`.
+5. `IN_REVIEW` the live governed-chat browser lane is now green in fresh-cluster validation: direct informational chat returns `answer`, governed mutations stay proposal-first, confirm-action proof passes end-to-end, and the live spec supports explicit backend-workspace binding for cross-worktree validation.
+6. `ACTIVE` the local worktree remains mixed after the cleanup pass: in addition to the ops/workflow/doc hardening lane, there are still uncommitted UI/testing stabilization edits, governance/monitoring release-review docs, and related cleanup that need packaging into intentional commit boundaries before release promotion.
+7. `NEXT` low-confidence cleanup remains intentionally deferred until proven safe: do not delete `_matches_compiled_go_binary_path` or similar low-usage helpers until a focused usage review confirms no hidden dependency path remains.
+
+Retained completed checkpoint:
+- `COMPLETE` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.
 
 ## V8 Delivery Program Snapshot
 
@@ -273,7 +300,7 @@ Evidence:
 24. bounded browser automation for the entry flow now lives in `interface/e2e/specs/v8-organization-entry.spec.ts` and covers dominant AI Organization entry framing, template selection, empty start, organization-home landing, retry/recovery under partial failure, and visible forbidden-copy enforcement
 25. the organization page now functions as a Team Lead-first workspace shell rather than a static landing state: `interface/components/organizations/OrganizationContextShell.tsx` keeps the AI Organization header visible, adds a concrete Team Lead identity block plus next-action controls, and switches the active workspace focus between planning, advisor review, department review, AI Engine Settings summary, and Learning & Context summary with focused page and browser coverage
 26. the default workspace now includes a direct Soma prompt entry, post-create autofocus, current-organization resume path, and clearer degraded-mode reassurance through `interface/components/organizations/CreateOrganizationEntry.tsx`, `interface/components/organizations/TeamLeadInteractionPanel.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/components/shell/ZoneA_Rail.tsx`, and `interface/components/dashboard/DegradedModeBanner.tsx`
-27. release-candidate validation on 2026-03-22: `cd interface && npm test` -> pass (`65` files, `404` tests), `cd interface && npx tsc --noEmit` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `66` skipped), `uv run pytest tests/test_docs_links.py -q` -> pass (`37` passed)
+27. release-candidate validation on 2026-03-22: `uv run inv interface.test` -> pass (`65` files, `404` tests), `uv run inv interface.typecheck` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `66` skipped), `uv run pytest tests/test_docs_links.py -q` -> pass (`37` passed)
 28. accepted non-blockers at the RC gate are warning-only test noise rather than product regressions: `--localstorage-file` worker warnings, one `SensorLibrary` `act(...)` warning, and ReactFlow mock-prop warnings in `CircuitBoard.test.tsx`
 26. the first Team Lead interaction workflow now lives in `core/internal/server/organizations.go`, `interface/components/organizations/TeamLeadInteractionPanel.tsx`, `interface/components/organizations/OrganizationContextShell.tsx`, `interface/__tests__/organizations/TeamLeadInteractionPanel.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and `interface/e2e/specs/v8-organization-entry.spec.ts`; it intentionally stops at guided Team Lead responses and does not yet implement advisor orchestration, raw agent selection, advanced configuration panels, or a full chat system
 27. guided Team Lead resilience now adds readable fallback shaping in `core/internal/server/organizations.go`, failure/retry and malformed-response rendering in `interface/components/organizations/TeamLeadInteractionPanel.tsx`, focused backend/frontend tests in `core/internal/server/organizations_test.go`, `interface/__tests__/organizations/TeamLeadInteractionPanel.test.tsx`, `interface/__tests__/pages/OrganizationPage.test.tsx`, and bounded browser retry coverage in `interface/e2e/specs/v8-organization-entry.spec.ts`; advisor orchestration, raw agent selection, advanced configuration panels, and a full chat system remain intentionally out of scope
@@ -482,7 +509,7 @@ Evidence:
 1. `interface/components/shell/ZoneA_Rail.tsx`, `interface/app/(app)/automations/page.tsx`, `interface/app/(app)/resources/page.tsx`, `interface/app/(app)/memory/page.tsx`, `interface/app/(app)/system/page.tsx`, `interface/app/(app)/settings/page.tsx`, and their redirect pages now reflect the MVP keep/revise/remove decisions in code.
 2. `docs/architecture/FRONTEND.md`, `docs/TESTING.md`, `README.md`, and `docs/architecture/OPERATIONS.md` now document the Team Lead-first route inventory, advanced-route boundary, and managed Playwright runtime/testing contract.
 3. `interface/e2e/specs/navigation.spec.ts`, `interface/e2e/specs/missions.spec.ts`, `interface/e2e/specs/mobile.spec.ts`, `interface/e2e/specs/v8-organization-entry.spec.ts`, and the skipped legacy/raw coverage specs now align the default browser gate with the surviving MVP workflow.
-4. Validation on 2026-03-20: `uv run pytest tests/test_docs_links.py -q` -> pass (`25` passed), `cd interface && npm test` -> pass (`65` files, `401` tests), `cd interface && npx tsc --noEmit` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `63` skipped).
+4. Validation on 2026-03-20: `uv run pytest tests/test_docs_links.py -q` -> pass (`25` passed), `uv run inv interface.test` -> pass (`65` files, `401` tests), `uv run inv interface.typecheck` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `63` skipped).
 
 ### 25. V8.2 MVP release-candidate stabilization and suite classification
 
@@ -500,24 +527,50 @@ Accepted non-blockers:
 
 Evidence:
 1. `interface/e2e/specs/navigation.spec.ts` now resets to `/dashboard` before each primary-route navigation, which removes the stale page-reuse assumption without widening the MVP route surface.
-2. Validation on 2026-03-22: `cd interface && npm test` -> pass (`65` files, `404` tests), `cd interface && npx tsc --noEmit` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `66` skipped), `uv run pytest tests/test_docs_links.py -q` -> pass (`37` passed).
+2. Validation on 2026-03-22: `uv run inv interface.test` -> pass (`65` files, `404` tests), `uv run inv interface.typecheck` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `66` skipped), `uv run pytest tests/test_docs_links.py -q` -> pass (`37` passed).
 
 ## Immediate Next Actions
 
-1. `COMPLETE` run the planning-integration validation pass so README, the architecture-library index, docs manifests, and doc-tests all confirm the new V7-to-V8 bootstrap migration contract.
-2. `NEXT` update the next-execution and governance guidance so delivery slices are expressed as V8 migration slices rather than only V7 holdovers.
-3. `REQUIRED` apply the touched-file cleanup/convergence rule and review-team sweep to the first backend/runtime refactor chunk and all later code-editing slices.
-4. `REQUIRED` validate doc-surface integrity after the state-file migration (`docs links`, `docs manifest`, and in-app docs visibility).
-5. `REQUIRED` keep all new implementation/testing checkpoints in `V8_DEV_STATE.md` going forward.
-6. `BLOCKED` restore SSH-agent/key access and push the latest local lifecycle/doc/state commits to the remote branch.
-7. `NEXT` continue the documentation authority cleanup so active entrypoints stay lean while compatibility docs and archive material remain intentionally separated.
-8. `NEXT` promote generated per-organization bootstrap bundles so startup remains bundle-only without relying on the fixed standing-team bridge asset long term.
-9. `NEXT` extend the Team Lead workspace from guided starting actions into real request/history API flows and deeper structure surfaces while keeping advisor orchestration, raw agent selection, and advanced configuration behind intentional later slices.
-10. `NEXT` add bounded Team Lead response history and operator-visible continuity inside the AI Organization workspace without widening into generic chat or exposing raw agent-selection controls.
-11. `NEXT` define the first bundle/config contract slice for Loop Profiles and Runtime Capabilities so V8.1 execution surfaces exist as safe, inspectable configuration before live execution is introduced.
-12. `NEXT` plan the semantic continuity and memory-promotion implementation around pgvector-backed raw, reviewed, and promoted memory stages plus reviewed procedure/skill retrieval.
-13. `NEXT` implement the first bounded Learning Loop path for candidate capture, reviewed promotion, and safe operator-visible outcomes behind the new read-only learning surface without silent self-rewrite.
-14. `NEXT` replace hard-coded/default interval loop seeding with bundle-defined Loop Profiles so scheduled and event-driven Automations stay reproducible and organization-specific.
-15. `NEXT` define the first bounded Runtime Capabilities implementation slice so capability visibility and policy enforcement can land without exposing advanced controls too early.
+1. `NEXT` split the current local worktree into explicit delivery lanes before any further promotion.
+   - lane A: UI/testing stabilization changes already in progress (`useCortexStore`, theme/readability, UI agentry docs/specs, live governed spec parity work)
+   - lane B: build/task/workflow cleanup and operator-truthfulness hardening (`ops/**`, workflow YAML, task docs, workflow/task pytest coverage)
+   - lane C: any remaining backend test-only follow-up (`core/internal/server/cognitive_test.go`, `core/internal/server/templates_test.go`) if it is not part of lane B
+2. `REQUIRED` prove each lane from a clean committed checkout, not a mixed working tree.
+   - rerun the targeted pytest suites for the touched lane
+   - rerun the relevant invoke tasks from the committed state
+   - record the exact passing command set in the lane close-out notes
+3. `NEXT` finish the live governed-chat stabilization lane.
+   - reproduce the non-JSON `/api/v1/chat` failure under `interface/e2e/specs/soma-governance-live.spec.ts`
+   - identify whether the fault is route normalization, backend panic/error envelope drift, or proposal/approval runtime state
+   - restore selector parity with the current `Approve & Execute` / `Execute` UI contract
+   - do not mark the live lane complete until the governed browser proof is green against the real backend
+4. `NEXT` rerun the full live-service gate once the governed lane is repaired.
+   - `uv run inv ci.service-check --live-backend`
+   - any additional focused live browser proof needed for the repaired path
+   - update this state file from `BLOCKED` to `IN_REVIEW` only after those commands pass from the repaired branch state
+5. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
+   - `README.md`
+   - `docs/TESTING.md`
+   - `docs/LOCAL_DEV_WORKFLOW.md`
+   - `docs/architecture/OPERATIONS.md`
+   - `ops/README.md`
+   - `interface/lib/docsManifest.ts` whenever the in-app docs surface changes
+6. `NEXT` finish the workflow/release hygiene pass.
+   - make sure CI trigger paths match the actual task/dependency contract
+   - confirm release-facing docs describe the stable E2E matrix and the live governed-browser gate accurately
+   - keep `uv.lock` and root `.npmrc` in the watched CI surface unless the bootstrap contract changes again
+7. `NEXT` perform the deferred low-confidence cleanup review as a separate pass.
+   - inspect `_matches_compiled_go_binary_path` and similar low-usage helpers
+   - remove only what is proven unused by production code and supporting tests
+   - do not bundle speculative deletion with unrelated UX or backend fixes
+8. `NEXT` continue documentation authority cleanup with intent.
+   - keep canonical planning, delivery-governance, and UI-target docs under `docs/architecture-library/`
+   - avoid letting temporary strike notes float untracked or mixed with product code
+   - index any newly canonical doc in `interface/lib/docsManifest.ts` in the same slice
+9. `NEXT` once the worktree is split and the live governed lane is green, package the release structure.
+   - verify `main` or the release branch is clean
+   - confirm the final validation matrix from committed state
+   - tag or branch the accepted V8.2 RC boundary only after the clean-tree proof is recorded
+10. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
 
 

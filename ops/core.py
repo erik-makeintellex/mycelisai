@@ -6,11 +6,26 @@ def _task_env(extra=None):
     ensure_managed_cache_dirs()
     return managed_cache_env(extra=extra)
 
+
+def _binary_output_path() -> str:
+    return "bin/server.exe" if is_windows() else "bin/server"
+
 @task
 def test(c):
     """Run Go Core Unit Tests."""
     with c.cd(str(CORE_DIR)):
         c.run("go test ./...", env=_task_env())
+
+
+@task
+def compile(c):
+    """Compile the Go Core binary without building a container image."""
+    print("Compiling Core binary...")
+    with c.cd(str(CORE_DIR)):
+        c.run(
+            f"go build -v -o {_binary_output_path()} ./cmd/server",
+            env=_task_env(),
+        )
 
 @task
 def clean(c):
@@ -32,24 +47,15 @@ def build(c):
     """
     tag = get_version(c)
     print(f"Building Artifact: mycelis/core:{tag}")
-    
+
     # 1. Build Go Binary
-    print("   Compiling Go Binary...")
-    with c.cd(str(CORE_DIR)):
-        c.run(
-            "go build -v -o bin/server.exe ./cmd/server" if is_windows() else "go build -v -o bin/server ./cmd/server",
-            env=_task_env(),
-        )
-    
+    compile.body(c)
+
     # 2. Build Docker Image
     print(f"   Building Container...")
     # Assumes Dockerfile is in core/Dockerfile and context is root
     c.run(f"docker build -t mycelis/core:{tag} -f core/Dockerfile .")
-    
-    # 3. Dev Tagging (Warning)
-    c.run(f"docker tag mycelis/core:{tag} mycelis/core:latest")
-    print("WARNING: Local 'latest' tag created for debugging only. Do NOT push to production.")
-    
+
     return tag
 
 def _load_env():
@@ -116,6 +122,7 @@ def smoke(c):
 
 ns = Collection("core")
 ns.add_task(test)
+ns.add_task(compile)
 ns.add_task(clean)
 ns.add_task(build)
 ns.add_task(run)

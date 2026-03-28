@@ -213,6 +213,26 @@ function extractRunIdFromResponse(raw: unknown): string | null {
     return null;
 }
 
+function isRetryableWorkspaceChatFailure(message: string, statusCode?: number): boolean {
+    if (statusCode != null && [500, 502, 503, 504].includes(statusCode)) {
+        return true;
+    }
+
+    const lower = message.toLowerCase();
+    return (
+        lower.includes('failed to fetch')
+        || lower.includes('deadline exceeded')
+        || lower.includes('timeout')
+        || lower.includes('unreachable')
+        || lower.includes('connection refused')
+        || lower.includes('bad gateway')
+    );
+}
+
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function updateProposalLifecycle(
     messages: ChatMessage[],
     intentProofId: string,
@@ -883,6 +903,7 @@ export interface CortexState {
     isMissionChatting: boolean;
     missionChatError: string | null;
     missionChatFailure: MissionChatFailure | null;
+    workspaceChatPrimed: boolean;
     assistantName: string;
     councilTarget: string;              // active council member ID ("admin" default)
     councilMembers: CouncilMember[];    // populated from GET /council/members
@@ -1140,6 +1161,7 @@ export const useCortexStore = create<CortexState>((set, get) => ({
     isMissionChatting: false,
     missionChatError: null,
     missionChatFailure: null,
+    workspaceChatPrimed: false,
     assistantName: 'Soma',
     councilTarget: 'admin',
     councilMembers: [],
@@ -1875,10 +1897,11 @@ export const useCortexStore = create<CortexState>((set, get) => ({
         const trimmed = message.trim();
         if (!trimmed) return;
 
-        const { councilTarget, assistantName } = get();
+        const { councilTarget, assistantName, workspaceChatPrimed } = get();
         const isSomaRoute = councilTarget === 'admin';
         const chatRoute = isSomaRoute ? '/api/v1/chat' : `/api/v1/council/${councilTarget}/chat`;
         const routeLabel = isSomaRoute ? 'Soma chat' : 'Council agent';
+        const allowSilentColdStartRetry = isSomaRoute && !workspaceChatPrimed;
 
         // Append user message and set loading
         set((s) => ({
@@ -1888,134 +1911,151 @@ export const useCortexStore = create<CortexState>((set, get) => ({
             missionChatFailure: null,
         }));
 
-        try {
-            // Smart windowing: send only the last 20 messages to the LLM.
-            // Older context is auto-recalled from pgvector by the backend.
-            const messages = [...get().missionChat]
-                .slice(-20)
-                .map((m) => ({
-                    role: m.role === 'user' ? 'user' : 'assistant',
-                    content: m.content,
-                }));
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            const isRetryAttempt = attempt > 0;
+            try {
+                // Smart windowing: send only the last 20 messages to the LLM.
+                // Older context is auto-recalled from pgvector by the backend.
+                const messages = [...get().missionChat]
+                    .slice(-20)
+                    .map((m) => ({
+                        role: m.role === 'user' ? 'user' : 'assistant',
+                        content: m.content,
+                    }));
 
-            const res = await fetch(chatRoute, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages }),
-            });
+                const res = await fetch(chatRoute, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages }),
+                });
 
-            if (!res.ok) {
-                const text = await res.text();
-                let errMsg: string;
-                let availability: MissionChatAvailability | undefined;
-                try {
-                    const parsed = JSON.parse(text);
-                    errMsg = parsed.error || `${routeLabel} blocked (${res.status})`;
-                    if (parsed.data && typeof parsed.data === 'object') {
-                        availability = parsed.data as MissionChatAvailability;
+                if (!res.ok) {
+                    const text = await res.text();
+                    let errMsg: string;
+                    let availability: MissionChatAvailability | undefined;
+                    try {
+                        const parsed = JSON.parse(text);
+                        errMsg = parsed.error || `${routeLabel} blocked (${res.status})`;
+                        if (parsed.data && typeof parsed.data === 'object') {
+                            availability = parsed.data as MissionChatAvailability;
+                        }
+                    } catch {
+                        errMsg = `${routeLabel} unreachable (${res.status})`;
                     }
-                } catch {
-                    errMsg = `${routeLabel} unreachable (${res.status})`;
+
+                    if (allowSilentColdStartRetry && !isRetryAttempt && isRetryableWorkspaceChatFailure(errMsg, res.status)) {
+                        await delay(350);
+                        continue;
+                    }
+
+                    set((s) => ({
+                        isMissionChatting: false,
+                        missionChatError: errMsg,
+                        missionChatFailure: buildMissionChatFailure({
+                            assistantName,
+                            targetId: councilTarget,
+                            message: errMsg,
+                            statusCode: res.status,
+                            availability,
+                        }),
+                        missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget, mode: 'blocker' }],
+                        activeMode: 'blocker',
+                        activeRole: councilTarget,
+                    }));
+                    return;
                 }
+
+                const body: APIResponse<CTSChatEnvelope> = await res.json();
+
+                if (!body.ok || !body.data) {
+                    const errText = body.error || `${routeLabel} failed (${res.status})`;
+                    const availability = body.data && typeof body.data === 'object'
+                        ? body.data as MissionChatAvailability
+                        : undefined;
+                    set((s) => ({
+                        isMissionChatting: false,
+                        missionChatError: errText,
+                        missionChatFailure: buildMissionChatFailure({
+                            assistantName,
+                            targetId: councilTarget,
+                            message: errText,
+                            statusCode: res.status,
+                            availability,
+                        }),
+                        missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget, mode: 'blocker' }],
+                        activeMode: 'blocker',
+                        activeRole: councilTarget,
+                    }));
+                    return;
+                }
+
+                const envelope = body.data;
+                const chatMsg: ChatMessage = {
+                    role: 'council',
+                    content: fallbackChatContent(envelope.payload, assistantName),
+                    consultations: envelope.payload.consultations,
+                    tools_used: envelope.payload.tools_used,
+                    source_node: envelope.meta.source_node,
+                    trust_score: envelope.trust_score,
+                    timestamp: envelope.meta.timestamp,
+                    artifacts: envelope.payload.artifacts,
+                    // CE-1: Template metadata
+                    template_id: envelope.template_id || 'chat-to-answer',
+                    mode: envelope.mode || 'answer',
+                    provenance: envelope.payload?.provenance,
+                    // Brain provenance
+                    brain: envelope.payload?.brain,
+                    // Extract proposal from chat response
+                    proposal: normalizeProposalData(envelope.payload?.proposal),
+                    proposal_status: envelope.payload?.proposal ? 'active' : undefined,
+                };
+
+                // Derive governance mode from trust threshold
+                const trust = get().trustThreshold;
+                const govMode = trust >= 0.8 ? 'strict' as const : trust >= 0.5 ? 'active' as const : 'passive' as const;
+
                 set((s) => ({
                     isMissionChatting: false,
-                    missionChatError: errMsg,
+                    missionChat: [...s.missionChat, chatMsg],
+                    missionChatFailure: null,
+                    missionChatError: null,
+                    workspaceChatPrimed: s.workspaceChatPrimed || isSomaRoute,
+                    // Update active orchestration state
+                    activeBrain: chatMsg.brain ?? null,
+                    activeMode: chatMsg.mode || 'answer',
+                    activeRole: chatMsg.source_node || '',
+                    governanceMode: govMode,
+                    // Set pending proposal when present
+                    ...(chatMsg.proposal ? {
+                        pendingProposal: chatMsg.proposal,
+                        activeConfirmToken: chatMsg.proposal.confirm_token,
+                    } : {
+                        pendingProposal: null,
+                        activeConfirmToken: null,
+                    }),
+                }));
+                return;
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : `${routeLabel} failed`;
+                if (allowSilentColdStartRetry && !isRetryAttempt && isRetryableWorkspaceChatFailure(msg)) {
+                    await delay(350);
+                    continue;
+                }
+
+                set((s) => ({
+                    isMissionChatting: false,
+                    missionChatError: msg,
                     missionChatFailure: buildMissionChatFailure({
                         assistantName,
                         targetId: councilTarget,
-                        message: errMsg,
-                        statusCode: res.status,
-                        availability,
+                        message: msg,
                     }),
-                    missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget, mode: 'blocker' }],
+                    missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget, mode: 'blocker' }],
                     activeMode: 'blocker',
                     activeRole: councilTarget,
                 }));
                 return;
             }
-
-            const body: APIResponse<CTSChatEnvelope> = await res.json();
-
-            if (!body.ok || !body.data) {
-                const errText = body.error || `${routeLabel} failed (${res.status})`;
-                const availability = body.data && typeof body.data === 'object'
-                    ? body.data as MissionChatAvailability
-                    : undefined;
-                set((s) => ({
-                    isMissionChatting: false,
-                    missionChatError: errText,
-                    missionChatFailure: buildMissionChatFailure({
-                        assistantName,
-                        targetId: councilTarget,
-                        message: errText,
-                        statusCode: res.status,
-                        availability,
-                    }),
-                    missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget, mode: 'blocker' }],
-                    activeMode: 'blocker',
-                    activeRole: councilTarget,
-                }));
-                return;
-            }
-
-            const envelope = body.data;
-            const chatMsg: ChatMessage = {
-                role: 'council',
-                content: fallbackChatContent(envelope.payload, assistantName),
-                consultations: envelope.payload.consultations,
-                tools_used: envelope.payload.tools_used,
-                source_node: envelope.meta.source_node,
-                trust_score: envelope.trust_score,
-                timestamp: envelope.meta.timestamp,
-                artifacts: envelope.payload.artifacts,
-                // CE-1: Template metadata
-                template_id: envelope.template_id || 'chat-to-answer',
-                mode: envelope.mode || 'answer',
-                provenance: envelope.payload?.provenance,
-                // Brain provenance
-                brain: envelope.payload?.brain,
-                // Extract proposal from chat response
-                proposal: normalizeProposalData(envelope.payload?.proposal),
-                proposal_status: envelope.payload?.proposal ? 'active' : undefined,
-            };
-
-            // Derive governance mode from trust threshold
-            const trust = get().trustThreshold;
-            const govMode = trust >= 0.8 ? 'strict' as const : trust >= 0.5 ? 'active' as const : 'passive' as const;
-
-            set((s) => ({
-                isMissionChatting: false,
-                missionChat: [...s.missionChat, chatMsg],
-                missionChatFailure: null,
-                missionChatError: null,
-                // Update active orchestration state
-                activeBrain: chatMsg.brain ?? null,
-                activeMode: chatMsg.mode || 'answer',
-                activeRole: chatMsg.source_node || '',
-                governanceMode: govMode,
-                // Set pending proposal when present
-                ...(chatMsg.proposal ? {
-                    pendingProposal: chatMsg.proposal,
-                    activeConfirmToken: chatMsg.proposal.confirm_token,
-                } : {
-                    pendingProposal: null,
-                    activeConfirmToken: null,
-                }),
-            }));
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : `${routeLabel} failed`;
-            set((s) => ({
-                isMissionChatting: false,
-                missionChatError: msg,
-                missionChatFailure: buildMissionChatFailure({
-                    assistantName,
-                    targetId: councilTarget,
-                    message: msg,
-                }),
-                missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget, mode: 'blocker' }],
-                activeMode: 'blocker',
-                activeRole: councilTarget,
-            }));
         }
     },
 

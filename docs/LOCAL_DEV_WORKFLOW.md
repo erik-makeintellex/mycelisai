@@ -213,8 +213,8 @@ uv run inv k8s.bridge
 # 4. Initialize the database
 uv run inv db.migrate        # Apply canonical forward migrations (001_init_memory.sql + *.up.sql)
 
-# 5. Build the Go backend
-uv run inv core.build        # Compile binary + Docker image
+# 5. Compile the Go backend
+uv run inv core.compile      # Compile the repo-local binary without building a Docker image
 
 # 6. Start the backend (new terminal — stays running)
 uv run inv core.run
@@ -246,7 +246,7 @@ Port-forwards NATS, PostgreSQL, and the in-cluster API from Kind to localhost.
 uv run inv k8s.bridge
 ```
 
-> On Windows, this opens 3 new CMD windows (one per port-forward). Keep them open.
+> On Windows, this now launches detached `kubectl port-forward` workers without relying on `cmd /c start`; verify readiness with `uv run inv lifecycle.status` if you suspect the bridge did not bind.
 
 ### Terminal 2: Go Backend
 
@@ -449,6 +449,7 @@ Then change profiles in `cognitive.yaml` to `"vllm"`.
 | Command | Description |
 |:--|:--|
 | **Core** | |
+| `uv run inv core.compile` | Compile Go binary only |
 | `uv run inv core.build` | Compile Go binary + Docker image |
 | `uv run inv core.test` | Go unit tests (`go test ./...`) |
 | `uv run inv core.run` | Start backend (foreground) |
@@ -459,13 +460,14 @@ Then change profiles in `cognitive.yaml` to `"vllm"`.
 | `uv run inv interface.dev` | Start Next.js dev server |
 | `uv run inv interface.build` | Production build |
 | `uv run inv interface.test` | Vitest unit tests |
+| `uv run inv interface.typecheck` | TypeScript type check |
 | `uv run inv interface.e2e` | Playwright E2E tests (self-managed Next.js server lifecycle; add `--live-backend` for real Core-backed UI flows) |
 | `uv run inv interface.check` | Smoke-test running pages |
 | `uv run inv interface.stop` | Kill dev server |
 | `uv run inv interface.clean` | Clear `.next` cache |
 | `uv run inv interface.restart` | Full restart cycle |
 | **Database** | |
-| `uv run inv db.migrate` | Apply canonical forward migrations (`001_init_memory.sql` + `*.up.sql`) to a schema that is not already initialized |
+| `uv run inv db.migrate` | Apply canonical forward migrations (`001_init_memory.sql` + `*.up.sql`) only when the target schema is not already initialized; otherwise skip replay and use `db.reset` for a clean rebuild |
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | Show tables |
 | **Infrastructure** | |

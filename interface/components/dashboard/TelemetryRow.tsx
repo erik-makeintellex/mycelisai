@@ -135,7 +135,7 @@ export default function TelemetryRow() {
                 value={current.goroutines.toString()}
                 unit=""
                 history={history.map((h) => h.goroutines)}
-                color="#06b6d4"
+                color="#4B4E6D"
             />
             <MetricCard
                 icon={MemoryStick}
@@ -143,7 +143,7 @@ export default function TelemetryRow() {
                 value={current.heap_alloc_mb.toFixed(1)}
                 unit="MB"
                 history={history.map((h) => h.heap_alloc_mb)}
-                color="#22d3ee"
+                color="#95A3B3"
             />
             <MetricCard
                 icon={Activity}
@@ -151,7 +151,7 @@ export default function TelemetryRow() {
                 value={current.sys_mem_mb.toFixed(0)}
                 unit="MB"
                 history={history.map((h) => h.sys_mem_mb)}
-                color="#10b981"
+                color="#84DCC6"
             />
             <MetricCard
                 icon={Zap}
@@ -159,7 +159,7 @@ export default function TelemetryRow() {
                 value={current.llm_tokens_sec.toFixed(1)}
                 unit="t/s"
                 history={history.map((h) => h.llm_tokens_sec)}
-                color="#f59e0b"
+                color="#6C7A96"
             />
         </div>
     );

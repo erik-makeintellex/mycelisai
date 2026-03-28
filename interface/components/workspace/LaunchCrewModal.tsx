@@ -60,7 +60,7 @@ function StepIndicator({ current }: { current: 1 | 2 | 3 }) {
                                     done
                                         ? "bg-cortex-success text-white"
                                         : active
-                                          ? "bg-cortex-primary text-white shadow-[0_0_8px_rgba(6,182,212,0.4)]"
+                                          ? "bg-cortex-primary text-white shadow-[0_0_8px_rgba(75,78,109,0.32)]"
                                           : "bg-cortex-border text-cortex-text-muted"
                                 }`}
                             >

@@ -886,6 +886,39 @@ func preferDirectDraftResponse(input string) bool {
 		return false
 	}
 
+	// Conceptual summary/explanation prompts should stay answer-first even when
+	// they mention the workspace generally. We only suppress this shortcut when
+	// the request crosses into an explicit file/runtime boundary.
+	informationalLead := []string{
+		"summarize ", "summarise ", "explain ", "describe ", "recap ",
+		"give me a summary", "provide a summary", "walk me through ",
+	}
+	requestsInformationalAnswer := false
+	for _, marker := range informationalLead {
+		if strings.HasPrefix(lower, marker) {
+			requestsInformationalAnswer = true
+			break
+		}
+	}
+	if requestsInformationalAnswer {
+		informationalBoundary := []string{
+			"file", "path", "workspace/", "workspace\\", "folder", "directory", "save", "persist", "store",
+			"read ", "open ", "command", "run ", "execute", "shell", "terminal",
+			"team", "agent", "council", "signal", "nats", "api", "http", "url",
+			"image", "diagram",
+		}
+		hitsBoundary := false
+		for _, token := range informationalBoundary {
+			if strings.Contains(lower, token) {
+				hitsBoundary = true
+				break
+			}
+		}
+		if !hitsBoundary {
+			return true
+		}
+	}
+
 	explicitAction := []string{
 		"file", "path", "workspace", "folder", "directory", "save", "persist", "store",
 		"read ", "open ", "inspect", "command", "run ", "execute", "shell", "terminal",

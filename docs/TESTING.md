@@ -8,6 +8,7 @@ Current validation contract:
 - use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
 - use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses an already-initialized `cortex` schema when present, and otherwise bootstraps the database before proving the browser contract against the managed built server
 - use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
+- when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual `core/workspace` root before running the spec
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
 
 ## Target-Action Testing Matrix (Intent -> Manifestation)
@@ -32,7 +33,7 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 
 | GUI surface | Unit/component coverage | Playwright coverage | Status |
 | --- | --- | --- | --- |
-| `/organizations/[id]` Soma-primary AI Organization workspace | `OrganizationPage.test.tsx`, organization/workspace/store suites | `v8-organization-entry.spec.ts` plus live-backend proof via `workspace-live-backend.spec.ts` when proxy/runtime contracts change | `ACTIVE` |
+| `/organizations/[id]` Soma-primary AI Organization workspace | `OrganizationPage.test.tsx`, organization/workspace/store suites | `v8-organization-entry.spec.ts`, `v8-ui-testing-agentry.spec.ts`, plus live-backend proof via `soma-governance-live.spec.ts` for governed Soma execution and `workspace-live-backend.spec.ts` for proxy/status continuity when those contracts change | `ACTIVE` |
 | `/dashboard` AI Organization re-entry and status overview | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `navigation.spec.ts`, accessibility baseline | `ACTIVE` |
 | `/automations` | `AutomationsPage.test.tsx`, automations component suites | `layout.spec.ts`, `proposals.spec.ts` | `ACTIVE` |
 | `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial) | `ACTIVE` |
@@ -48,6 +49,11 @@ Immediate test additions required for stronger full-stack confidence:
 2. unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven
 3. expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches
 4. deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states
+
+Canonical UI testing agentry contract:
+- `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
+- Stable operator-flow browser proof: `interface/e2e/specs/v8-ui-testing-agentry.spec.ts`
+- Live backend governed-chat proof: `interface/e2e/specs/soma-governance-live.spec.ts`
 
 ## Backend/API -> UI Target Plan (Required)
 
@@ -66,6 +72,7 @@ Backend/API -> UI Target Plan
 - Evidence commands:
   - uv run inv core.test
   - uv run inv interface.test
+  - uv run inv interface.typecheck
   - uv run inv interface.build
   - <focused playwright command(s) for impacted UI path>
   - <live-backend playwright command when proxy/core contract changed>
@@ -113,8 +120,11 @@ Stopping containers or port-forwards alone is not enough. The pre-test cleanup p
 # Unsupported bare alias: uvx inv ...
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv interface.test        # Vitest unit tests (jsdom)
+uv run inv interface.typecheck   # TypeScript typecheck through the managed Interface task path
 uv run inv interface.e2e         # Playwright E2E tests (Invoke manages the built Next.js server, serial worker default, managed browser cache, and repo-local UI worker cleanup)
-uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real Core-backed Workspace UI contract
+uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts   # Real governed Soma chat + approval contract
+uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real workspace proxy/status continuity contract
+MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts  # Set explicitly when spec checkout != backend checkout
 uv run inv core.smoke            # Governance smoke tests
 uv run inv ci.test               # Blocking Go + Vitest validation
 uv run inv interface.check       # HTTP smoke test against the running Interface server
@@ -158,6 +168,8 @@ Signal/channel standard:
 - Current focused Launch Crew contract check: `cd interface && npx vitest run __tests__/workspace/LaunchCrewModal.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused Launch Crew browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/proposals.spec.ts` (proposal outcome + blocker recovery)
 - Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
+- Current focused UI testing agentry browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
+- Current focused UI testing agentry live governance proof: `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 - Current focused team-sync contract check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
 - Current focused README navigation check: `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
 - Current docs/task drift rule: canonical docs must not contain executable bare `uvx inv ...` examples outside explicit negative-control guidance.
@@ -319,6 +331,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/telemetry.spec.ts` | Legacy raw-endpoint probe (skipped in default MVP gate) |
 | `interface/e2e/specs/memory.spec.ts` | Memory explorer, search |
 | `interface/e2e/specs/proposals.spec.ts` | Proposal CRUD flow |
+| `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` | Stable V8 operator-flow proof for Soma-first entry, continuity, cold-start recovery, governed mutation/cancel, audit visibility, and oversized content handling |
 | `interface/e2e/specs/teams.spec.ts` | Team management, roster |
 | `interface/e2e/specs/wiring-edit.spec.ts` | Neural wiring, agent edit/delete |
 | `interface/e2e/specs/v7-operational-ux.spec.ts` | Legacy V7 operator UX probe (skipped in default MVP gate) |
@@ -428,18 +441,18 @@ Three GitHub Actions workflows enforce quality on every push/PR to `main` and `d
 
 | Workflow | File | What it does |
 |----------|------|-------------|
-| **Core CI** | `.github/workflows/core-ci.yaml` | Go test with coverage + GolangCI-Lint v1.64.5 + binary build |
-| **Interface CI** | `.github/workflows/interface-ci.yaml` | npm lint + `tsc --noEmit` + Vitest + production build |
-| **E2E CI** | `.github/workflows/e2e-ci.yaml` | Build Core binary + Next.js, start Core, let Playwright own the UI server, run browser matrix, upload results on failure |
+| **Core CI** | `.github/workflows/core-ci.yaml` | Workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, coverage, GolangCI-Lint v1.64.5, and `uv run inv core.compile` |
+| **Interface CI** | `.github/workflows/interface-ci.yaml` | Workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
+| **E2E CI** | `.github/workflows/e2e-ci.yaml` | Workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed browser matrix via `uv run inv interface.e2e` |
 
 ### CI Checks
 
 - **Go:** `go test -v -coverprofile=coverage.out ./...`
 - **Go Lint:** GolangCI-Lint v1.64.5
-- **TypeScript:** `npx tsc --noEmit` (strict type checking)
-- **Frontend Lint:** `npm run lint` (ESLint)
-- **Frontend Tests:** `npm run test` (Vitest non-watch run)
-- **E2E:** Playwright browser matrix (`chromium`, `firefox`, `webkit`, `mobile-chromium`) with axe accessibility baseline, test results uploaded as artifact on failure
+- **TypeScript:** `uv run inv interface.typecheck` (strict type checking)
+- **Frontend Lint:** `uv run inv interface.lint`
+- **Frontend Tests:** `uv run inv interface.test`
+- **E2E:** stable Playwright browser matrix (`chromium`, `firefox`, `webkit`, `mobile-chromium`) via `uv run inv interface.e2e`, with live-backend proof kept in `ci.service-check` / `ci.release-preflight`
 
 ---
 

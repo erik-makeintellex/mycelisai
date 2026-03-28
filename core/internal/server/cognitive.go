@@ -26,6 +26,8 @@ var mutationTools = map[string]bool{
 
 const emptyProviderOutputCode = "empty_provider_output"
 const governedMutationRoutePrefix = "[GOVERNED MUTATION ROUTE]"
+const directAnswerRoutePrefix = "[DIRECT ANSWER ROUTE]"
+const directAnswerRetryRoutePrefix = "[DIRECT ANSWER RETRY]"
 
 var (
 	namedFilePattern     = regexp.MustCompile("(?i)(?:named|called|at path|path)\\s+[`'\"]?([^`'\"\\s]+)[`'\"]?")
@@ -160,18 +162,36 @@ func normalizeChatRequestMessages(messages []chatRequestMessage) ([]chatRequestM
 		return messages, nil
 	}
 
+	trimmed := strings.TrimSpace(messages[idx].Content)
 	mutTools := inferMutationToolsFromText(messages[idx].Content)
+	normalized := make([]chatRequestMessage, len(messages))
+	copy(normalized, messages)
 	if len(mutTools) == 0 {
-		return messages, nil
+		normalized[idx].Content = directAnswerRoutePrefix + "\n" +
+			"Answer the latest request directly in readable text. Do not call mutating tools, do not emit tool_call JSON, and do not route work unless the user explicitly asked to change something.\n\n" +
+			"Original request:\n" + trimmed
+		return normalized, nil
+	}
+
+	normalized[idx].Content = governedMutationRoutePrefix + "\n" +
+		"Treat this latest request as governed proposal-only work and emit tool_call JSON if a mutation is needed.\n\n" +
+		"Original request:\n" + trimmed
+
+	return normalized, mutTools
+}
+
+func applyDirectAnswerRetryInstruction(messages []chatRequestMessage, latestRequest string) []chatRequestMessage {
+	idx := latestUserMessageIndex(messages)
+	if idx < 0 {
+		return messages
 	}
 
 	normalized := make([]chatRequestMessage, len(messages))
 	copy(normalized, messages)
-	normalized[idx].Content = governedMutationRoutePrefix + "\n" +
-		"Treat this latest request as governed proposal-only work and emit tool_call JSON if a mutation is needed.\n\n" +
-		"Original request:\n" + strings.TrimSpace(messages[idx].Content)
-
-	return normalized, mutTools
+	normalized[idx].Content = directAnswerRetryRoutePrefix + "\n" +
+		"Answer the latest request directly in readable text. Do not call tools. Do not emit tool_call JSON. If more context is needed, ask one concise clarifying question.\n\n" +
+		"Original request:\n" + strings.TrimSpace(latestRequest)
+	return normalized
 }
 
 func parsePlannedToolCall(text string) (protocol.PlannedToolCall, bool) {
@@ -404,6 +424,9 @@ func readableChatText(agentResult chatAgentResult, isMutation bool) string {
 			return "Soma captured a governed mutation intent. Review the proposal details below."
 		}
 	}
+	if !isMutation && containsToolCallJSON(agentResult.Text) {
+		return ""
+	}
 	if strings.TrimSpace(agentResult.Text) != "" {
 		return agentResult.Text
 	}
@@ -417,9 +440,64 @@ func readableChatText(agentResult chatAgentResult, isMutation bool) string {
 }
 
 func mergeMutationTools(agentTools, requestTools []string) (bool, []string) {
-	combined := uniqueOrderedTools(append(append([]string{}, agentTools...), requestTools...))
+	if len(requestTools) == 0 {
+		return false, nil
+	}
+	combined := uniqueOrderedTools(append(append([]string{}, requestTools...), agentTools...))
 	isMutation, mutTools := hasMutationTools(combined)
 	return isMutation, mutTools
+}
+
+func containsToolCallJSON(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return false
+	}
+	if _, ok := parsePlannedToolCall(trimmed); ok {
+		return true
+	}
+	return strings.Contains(trimmed, `"tool_call"`)
+}
+
+func shouldRetryDirectAnswer(agentResult chatAgentResult, requestMutationTools []string) bool {
+	if len(requestMutationTools) != 0 {
+		return false
+	}
+	if isMutation, _ := hasMutationTools(agentResult.ToolsUsed); isMutation {
+		return true
+	}
+	return containsToolCallJSON(agentResult.Text)
+}
+
+func directAnswerDriftBlocker(agentResult chatAgentResult) chatAgentResult {
+	return chatAgentResult{
+		Availability: &cognitive.ExecutionAvailability{
+			Available:         false,
+			Code:              emptyProviderOutputCode,
+			Summary:           "Soma drifted into a governed action while answering a read-only request. Retry the request or restate it more directly.",
+			RecommendedAction: "Retry the request. If this repeats, simplify the question or inspect the active cognitive provider output.",
+			ProviderID:        agentResult.ProviderID,
+			ModelID:           agentResult.ModelUsed,
+		},
+		ProviderID: agentResult.ProviderID,
+		ModelUsed:  agentResult.ModelUsed,
+	}
+}
+
+func (s *AdminServer) requestChatAgent(parent context.Context, subject string, messages []chatRequestMessage) (chatAgentResult, error) {
+	payload, err := json.Marshal(messages)
+	if err != nil {
+		return chatAgentResult{}, err
+	}
+
+	reqCtx, cancel := context.WithTimeout(parent, 60*time.Second)
+	defer cancel()
+
+	msg, err := s.NC.RequestWithContext(reqCtx, subject, payload)
+	if err != nil {
+		return chatAgentResult{}, err
+	}
+	return decodeChatAgentResult(msg.Data), nil
 }
 
 func applyBrainProvenance(s *AdminServer, chatPayload *protocol.ChatResponsePayload, agentResult chatAgentResult) {
@@ -636,26 +714,27 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		req.Messages = normalizedMessages
 	}
 
-	// 3. Forward FULL conversation history to admin agent via NATS.
-	// Serialize the entire messages array so the agent can reconstruct context.
-	payload, err := json.Marshal(req.Messages)
-	if err != nil {
-		http.Error(w, "Failed to serialize messages", http.StatusInternalServerError)
-		return
-	}
-
 	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, "admin")
-	reqCtx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
-	defer cancel()
-
-	msg, err := s.NC.RequestWithContext(reqCtx, subject, payload)
+	agentResult, err := s.requestChatAgent(r.Context(), subject, req.Messages)
 	if err != nil {
 		log.Printf("Chat via Admin agent failed: %v", err)
 		respondError(w, "Admin agent did not respond: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 
-	agentResult := decodeChatAgentResult(msg.Data)
+	if shouldRetryDirectAnswer(agentResult, requestMutationTools) {
+		retryMessages := applyDirectAnswerRetryInstruction(req.Messages, latestUserText)
+		retryResult, retryErr := s.requestChatAgent(r.Context(), subject, retryMessages)
+		if retryErr == nil {
+			agentResult = retryResult
+		}
+	}
+
+	if shouldRetryDirectAnswer(agentResult, requestMutationTools) {
+		respondStructuredChatBlocker(w, directAnswerDriftBlocker(agentResult))
+		return
+	}
+
 	isMutation, mutTools := mergeMutationTools(agentResult.ToolsUsed, requestMutationTools)
 	if agentResult.Availability != nil && !agentResult.Availability.Available && (!isMutation || agentResult.Availability.Code != emptyProviderOutputCode) {
 		respondStructuredChatBlocker(w, agentResult)
@@ -914,25 +993,27 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		req.Messages = normalizedMessages
 	}
 
-	// Forward conversation to the council member's personal NATS topic
-	payload, err := json.Marshal(req.Messages)
-	if err != nil {
-		respondAPIError(w, "Failed to serialize messages", http.StatusInternalServerError)
-		return
-	}
-
 	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, memberID)
-	reqCtx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
-	defer cancel()
-
-	msg, err := s.NC.RequestWithContext(reqCtx, subject, payload)
+	agentResult, err := s.requestChatAgent(r.Context(), subject, req.Messages)
 	if err != nil {
 		log.Printf("Council chat with %s failed: %v", memberID, err)
 		respondAPIError(w, fmt.Sprintf("Council member %s did not respond: %s", memberID, err.Error()), http.StatusBadGateway)
 		return
 	}
 
-	agentResult := decodeChatAgentResult(msg.Data)
+	if shouldRetryDirectAnswer(agentResult, requestMutationTools) {
+		retryMessages := applyDirectAnswerRetryInstruction(req.Messages, latestUserText)
+		retryResult, retryErr := s.requestChatAgent(r.Context(), subject, retryMessages)
+		if retryErr == nil {
+			agentResult = retryResult
+		}
+	}
+
+	if shouldRetryDirectAnswer(agentResult, requestMutationTools) {
+		respondStructuredChatBlocker(w, directAnswerDriftBlocker(agentResult))
+		return
+	}
+
 	isMutation, mutTools := mergeMutationTools(agentResult.ToolsUsed, requestMutationTools)
 	if agentResult.Availability != nil && !agentResult.Availability.Available && (!isMutation || agentResult.Availability.Code != emptyProviderOutputCode) {
 		respondStructuredChatBlocker(w, agentResult)

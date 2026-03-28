@@ -21,6 +21,6 @@ CREATE TABLE IF NOT EXISTS conversation_turns (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_convturns_run     ON conversation_turns(run_id, created_at);
-CREATE INDEX idx_convturns_session ON conversation_turns(session_id, turn_index);
-CREATE INDEX idx_convturns_agent   ON conversation_turns(agent_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_convturns_run     ON conversation_turns(run_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_convturns_session ON conversation_turns(session_id, turn_index);
+CREATE INDEX IF NOT EXISTS idx_convturns_agent   ON conversation_turns(agent_id, created_at);

@@ -100,6 +100,29 @@ def test_wait_for_port_closed_returns_true_when_port_drops(monkeypatch):
     assert lifecycle._wait_for_port_closed(8081, "Core", timeout=1, interval=0.01)
 
 
+def test_start_port_forward_uses_direct_detached_kubectl_on_windows(monkeypatch):
+    captured: dict[str, object] = {}
+
+    def fake_popen(command, **kwargs):
+        captured["command"] = command
+        captured["kwargs"] = kwargs
+
+        class DummyProcess:
+            pass
+
+        return DummyProcess()
+
+    monkeypatch.setattr(lifecycle, "is_windows", lambda: True)
+    monkeypatch.setattr(lifecycle.subprocess, "Popen", fake_popen)
+
+    lifecycle._start_port_forward("svc/mycelis-core-nats", "4222:4222")
+
+    assert captured["command"] == ["kubectl", "port-forward", "-n", lifecycle.NAMESPACE, "svc/mycelis-core-nats", "4222:4222"]
+    assert captured["kwargs"]["stdout"] is lifecycle.subprocess.DEVNULL
+    assert captured["kwargs"]["stderr"] is lifecycle.subprocess.DEVNULL
+    assert captured["kwargs"]["creationflags"] == lifecycle.subprocess.CREATE_NEW_PROCESS_GROUP | lifecycle.subprocess.DETACHED_PROCESS
+
+
 def test_health_raises_when_any_probe_fails(monkeypatch):
     monkeypatch.setattr(lifecycle, "_load_env", lambda: None)
     monkeypatch.setattr(lifecycle, "_port_open", lambda port, host="127.0.0.1", timeout=1.0: port == 11434)
@@ -264,6 +287,8 @@ def test_list_compiled_go_service_processes_falls_back_when_cim_times_out(monkey
 
 def test_status_reports_unknown_when_compiled_go_inspection_fails(monkeypatch, capsys):
     class Result:
+        ok = True
+        exited = 0
         stdout = "mycelis-cluster\n"
 
     monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
@@ -277,6 +302,30 @@ def test_status_reports_unknown_when_compiled_go_inspection_fails(monkeypatch, c
 
     output = capsys.readouterr().out
     assert "Compiled Go svc : UNKNOWN" in output
+
+
+def test_status_reports_docker_down_when_docker_version_fails(monkeypatch, capsys):
+    class Result:
+        def __init__(self, stdout="", exited=0, ok=True):
+            self.stdout = stdout
+            self.exited = exited
+            self.ok = ok
+
+    monkeypatch.setattr(lifecycle, "_port_open", lambda *args, **kwargs: False)
+    monkeypatch.setattr(lifecycle, "_list_compiled_go_service_processes", lambda: [])
+
+    class DummyContext:
+        def run(self, command, hide=True, warn=True):
+            if command.startswith("docker version"):
+                return Result(exited=1, ok=False)
+            if command == "kind get clusters":
+                return Result(stdout="")
+            raise AssertionError(f"unexpected command: {command}")
+
+    lifecycle.status.body(DummyContext())
+
+    output = capsys.readouterr().out
+    assert "Docker          : DOWN" in output
 
 
 def test_down_fails_when_repo_local_interface_residuals_remain(monkeypatch):
@@ -536,3 +585,23 @@ def test_up_frontend_uses_shared_interface_launcher(monkeypatch):
 
     assert f"frontend:{lifecycle.INTERFACE_BIND_HOST}:{lifecycle.INTERFACE_PORT}:1" in events
     assert f"wait:{lifecycle.INTERFACE_PORT}:Frontend" in events
+
+
+def test_up_with_build_uses_core_compile_task_body(monkeypatch):
+    compile_calls: list[str] = []
+
+    monkeypatch.setattr(lifecycle, "_ensure_bridge", lambda: None)
+    monkeypatch.setattr(lifecycle, "_wait_for_port", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_wait_for_http_ok", lambda *args, **kwargs: True)
+    monkeypatch.setattr(lifecycle, "_core_council_ready", lambda timeout=10, interval=1.0: True)
+    monkeypatch.setattr(lifecycle, "_port_open", lambda port, host="127.0.0.1", timeout=1.0: False if port == lifecycle.API_PORT else True)
+    monkeypatch.setattr(db_tasks.create, "body", lambda _c: None)
+    monkeypatch.setattr(lifecycle, "_start_core_background", lambda: True)
+
+    from ops import core as core_tasks
+
+    monkeypatch.setattr(core_tasks.compile, "body", lambda _c: compile_calls.append("compile"))
+
+    lifecycle.up.body(Context(), frontend=False, build=True)
+
+    assert compile_calls == ["compile"]
