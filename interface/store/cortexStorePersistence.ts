@@ -1,4 +1,4 @@
-import type { ChatMessage } from '@/store/useCortexStore';
+import type { ChatMessage } from '@/store/cortexStoreTypes';
 
 export const CHAT_STORAGE_KEY = 'mycelis-workspace-chat';
 const CHAT_STORAGE_KEY_LEGACY = 'mycelis-mission-chat';

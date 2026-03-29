@@ -1,4 +1,4 @@
-import type { ModuleBindingData, ProposalData, TeamExpressionData } from '@/store/useCortexStore';
+import type { ModuleBindingData, ProposalData, TeamExpressionData } from '@/store/cortexStoreTypes';
 
 function uniqueStrings(values: string[]): string[] {
     const seen = new Set<string>();

@@ -38,7 +38,7 @@ import type {
     TeamsFilter,
     TriggerRule,
     TriggerRuleCreate,
-} from '@/store/useCortexStore';
+} from '@/store/cortexStoreTypes';
 
 // Keep the runtime store focused on behavior; the full public state contract
 // lives here so UI consumers and tests have one explicit source of truth.
@@ -58,7 +58,7 @@ export interface CortexState {
     activeSquadRoomId: string | null;
     pendingArtifacts: CTSEnvelope[];
     selectedArtifact: CTSEnvelope | null;
-    missions: import('@/store/useCortexStore').Mission[];
+    missions: import('@/store/cortexStoreTypes').Mission[];
     isFetchingMissions: boolean;
     trustThreshold: number;
     isSyncingThreshold: boolean;

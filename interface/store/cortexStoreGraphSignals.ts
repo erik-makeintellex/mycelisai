@@ -1,5 +1,5 @@
 import type { Edge, Node } from 'reactflow';
-import type { StreamSignal } from '@/store/useCortexStore';
+import type { StreamSignal } from '@/store/cortexStoreTypes';
 
 export function solidifyNodes(nodes: Node[]): Node[] {
     return nodes.map((node) => {
