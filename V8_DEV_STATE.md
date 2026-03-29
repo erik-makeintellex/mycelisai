@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-28
+> Updated: 2026-03-29
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -50,6 +50,8 @@ Release posture:
 - `COMPLETE` the live governed-chat browser gate is now green on a fresh cluster reset and local stack bring-up: the managed live backend proof passes the real `/api/v1/chat` and `/api/v1/intent/confirm-action` path with governed proposal/confirm behavior intact.
 - `IN_REVIEW` a cross-team release platform review is now active to align security/governance, monitoring/ops, debug/live-browser proof, and matching documentation before release packaging.
 - `ACTIVE` a dedicated memory continuity and RAG review lane is now in flight to align pgvector-backed durable memory, temporary planning continuity, and trace-clean conversation handling before release promotion.
+- `ACTIVE` a dedicated demo-product strike team is now in flight to make Mycelis legible as an obvious product for technical partners/funders while preserving Soma capability and advanced power through advanced surfaces and documentation.
+- `ACTIVE` the first demo-product execution brief is now in place: default-vs-advanced surfaces, feature-preservation rules, a golden-path partner demo, and the UI testing checklist are defined as immediate engaged-team deliverables.
 - `NEXT` enterprise identity, approval workflows, and multi-user access management remain deferred beyond the free-node governance foundation; the current release now has enterprise-capable governance posture, not full enterprise identity management.
 - `NEXT` multi-user enterprise IAM, delegated approver chains, and broader organization-level access management remain deferred; the current release now has enterprise-capable governance foundations, not full enterprise identity management.
 
@@ -80,6 +82,19 @@ State reporting rule:
 - `COMPLETE`: delivered and accepted
 - `BLOCKED`: cannot advance until a dependency or defect is resolved
 
+## Current Review (2026-03-29)
+
+Review summary:
+1. `ACTIVE` the demo-product strike team is now engaged beyond coordination: the canonical execution brief now defines the current platform review, default-vs-advanced surface truth, feature-preservation rules, team-by-team assignments, cross-team dependency order, and the concrete acceptance outputs required next.
+2. `COMPLETE` the default-vs-advanced product split is now evidenced against the current UI surface: primary navigation keeps the product story centered on AI Organization entry, the current organization, and Docs, while `Resources`, `Memory`, and `System` remain intentionally advanced-gated rather than removed.
+3. `COMPLETE` the first wording-drift audit now exists in canonical form: README, landing, organization setup, organization home, and user-doc surfaces were reviewed against the current product story, with `Memory & Continuity` vs older `Learning` terminology called out as the main cleanup target and internal-vs-user-facing rename boundaries made explicit.
+4. `ACTIVE` product-language cleanup is now materially underway across both product and documentation: README, the V8 UI/operator contract, the workflow verification plan, organization-home fallback copy, and targeted verification assets now converge on `Memory & Continuity` and retained-knowledge language, while architecture-level references to `Learning Loops` remain intentionally separate as deeper system terminology.
+5. `COMPLETE` the first feature-preservation artifact now exists in canonical form: the retained-home map proves where advanced power currently lives across navigation, advanced routes, governed chat, team-design mode, and runtime/operator depth so demo-product simplification does not become accidental feature regression.
+6. `COMPLETE` the Demo Scenario Team and UI Testing Agentry Team now have canonical engagement outputs: a partner demo script and a demo-specific verification checklist now define the exact product story, governed-action proof, continuity proof, optional advanced reveal, and fallback expectations for high-stakes partner review.
+7. `COMPLETE` the managed organization-entry browser blocker is now resolved: the issue was not product source drift but task-contract drift in `interface.e2e`, where a stale listener could satisfy the run and `next start` could serve an older build. The managed browser task now refreshes the production bundle in start mode, fails closed if it cannot own a clean managed UI server, and the focused organization-entry browser proof is green against current product language.
+8. `COMPLETE` targeted product-language convergence is now green across the current AI Organization entry and home path: `Memory & Continuity`, retained-knowledge wording, current Soma quick-action phrasing, and non-technical empty-state language all match between the current UI, the focused page suite, the managed browser proof, and the active docs/test gates.
+9. `NEXT` Phase 1 product framing and Phase 2 golden-path demo work should now proceed against the corrected managed-browser contract so landing, organization creation, organization home, Soma workspace, docs, and targeted browser proof keep telling the same product story before more demo polish work begins.
+
 ## Current Review (2026-03-28)
 
 Review summary:
@@ -90,6 +105,8 @@ Review summary:
 5. `ACTIVE` the local worktree remains mixed and still needs commit-boundary packaging across the live-governed-chat, db/bootstrap cleanup, docs/state sync, and earlier cleanup lanes before release promotion.
 6. `ACTIVE` the memory continuity review has now started: pgvector-backed semantic memory, team-scoped recall, temporary planning continuity, and trace-vs-memory boundaries are under cross-team review before the next runtime slice lands.
 7. `IN_REVIEW` the first memory-continuity runtime slice is now locally validated: durable memory recall can be scoped by team/agent context, `remember` now stores scoped durable metadata, automatic conversation checkpointing now writes restart-safe temporary planning continuity instead of silently promoting exploratory chat into pgvector, and operator/docs surfaces now describe durable vs temporary vs trace memory more explicitly.
+8. `ACTIVE` demo-product delivery is now being managed as its own strike-team lane: the immediate target is partner/funder legibility in minutes, the default experience must read as product rather than nerd tool, and advanced depth must be preserved through advanced surfaces/docs instead of removed.
+9. `COMPLETE` Phase 0 team engagement outputs now exist in canonical form: the demo-product execution brief defines the default-vs-advanced surface inventory, the feature-preservation map, the golden-path partner demo sequence, and the UI-testing checklist the teams should now execute against.
 
 ## Current Review (2026-03-27)
 

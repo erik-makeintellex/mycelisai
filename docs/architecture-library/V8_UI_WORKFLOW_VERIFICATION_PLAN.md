@@ -65,7 +65,7 @@
   - `GET /api/v1/services/status`
 - Expected UI:
   - Soma is clearly primary
-  - Recent Activity, Learning, Quick Checks, and support panels remain readable
+  - Recent Activity, Memory & Continuity, Quick Checks, and support panels remain readable
   - no generic-assistant or backend-framework wording leaks
 - Acceptance evidence:
   - page opens with organization context intact

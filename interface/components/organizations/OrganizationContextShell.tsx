@@ -303,7 +303,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                 const response = await fetch(`/api/v1/organizations/${organizationId}/learning-insights`, { cache: "no-store" });
                 const payload = await readJson(response);
                 if (!response.ok) {
-                    throw new Error(extractApiError(payload) || "Learning updates unavailable");
+                    throw new Error(extractApiError(payload) || "Memory & Continuity updates unavailable");
                 }
                 if (cancelled) {
                     return;
@@ -314,7 +314,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                 if (cancelled) {
                     return;
                 }
-                setLearningInsightsError("Learning updates unavailable");
+                setLearningInsightsError("Memory & Continuity updates unavailable");
             } finally {
                 if (!cancelled) {
                     setLearningInsightsLoading(false);
@@ -3019,7 +3019,7 @@ function LearningVisibilityPanel({
 
             {error && (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                    <p className="font-medium text-cortex-text-main">Memory &amp; continuity updates unavailable</p>
+                    <p className="font-medium text-cortex-text-main">Memory &amp; Continuity updates unavailable</p>
                     <p className="mt-1 leading-6">Recent retained patterns are not available right now. The Soma workspace is still ready.</p>
                     <button
                         type="button"
@@ -3043,7 +3043,7 @@ function LearningVisibilityPanel({
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">No retained patterns yet</p>
                     <p className="mt-1 leading-6">This is where reusable patterns, continuity cues, and stronger working habits will appear in plain language.</p>
-                    <p className="mt-1 leading-6">Ordinary planning chat stays in working continuity until a stronger reusable pattern or deliberate memory promotion emerges.</p>
+                    <p className="mt-1 leading-6">Ordinary planning chat stays in working continuity until a stronger reusable pattern emerges or you intentionally save something for later recall.</p>
                 </div>
             )}
 

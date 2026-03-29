@@ -5,58 +5,7 @@ import (
 	"log"
 	"regexp"
 	"strings"
-
-	"github.com/mycelis/core/internal/cognitive"
 )
-
-// parseConversationPayload detects whether the NATS payload is a JSON conversation
-// array or plain text. Returns the last user message as input and any prior turns
-// as ChatMessage history.
-func (a *Agent) parseConversationPayload(data []byte) (string, []cognitive.ChatMessage) {
-	// Quick check: does it look like a JSON array?
-	trimmed := strings.TrimSpace(string(data))
-	if len(trimmed) == 0 || trimmed[0] != '[' {
-		return string(data), nil
-	}
-
-	// Try to parse as conversation array.
-	type chatTurn struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
-	var turns []chatTurn
-	if err := json.Unmarshal(data, &turns); err != nil {
-		// Not valid JSON array; treat as plain text.
-		return string(data), nil
-	}
-
-	if len(turns) == 0 {
-		return "", nil
-	}
-
-	// Last turn is the current input; everything before is history.
-	last := turns[len(turns)-1]
-	if len(turns) == 1 {
-		return last.Content, nil
-	}
-
-	// Build prior history: map roles to LLM-compatible roles.
-	history := make([]cognitive.ChatMessage, 0, len(turns)-1)
-	for _, t := range turns[:len(turns)-1] {
-		role := t.Role
-		switch role {
-		case "admin", "architect", "assistant":
-			role = "assistant"
-		case "user":
-			// keep as-is
-		default:
-			role = "user" // unknown roles treated as user context
-		}
-		history = append(history, cognitive.ChatMessage{Role: role, Content: t.Content})
-	}
-
-	return last.Content, history
-}
 
 // truncateLog shortens a string for log output.
 func truncateLog(s string, maxLen int) string {
@@ -132,48 +81,14 @@ func parseToolCall(text string) *toolCallPayload {
 			break
 		}
 		if ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
-			break // unexpected character before "tool_call"
+			break
 		}
 	}
 	if start == -1 {
 		return nil
 	}
 
-	// Find the matching closing brace, respecting JSON string escaping.
-	depth := 0
-	end := -1
-	inStr := false
-	esc := false
-	for i := start; i < len(text); i++ {
-		ch := text[i]
-		if esc {
-			esc = false
-			continue
-		}
-		if ch == '\\' && inStr {
-			esc = true
-			continue
-		}
-		if ch == '"' {
-			inStr = !inStr
-			continue
-		}
-		if inStr {
-			continue
-		}
-		switch ch {
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				end = i + 1
-			}
-		}
-		if end != -1 {
-			break
-		}
-	}
+	end := scanJSONObject(text, start)
 	if end == -1 {
 		if loose := parseLooseToolCall(text[start:]); loose != nil {
 			return loose
@@ -235,40 +150,7 @@ func parseOperationCall(text string) *toolCallPayload {
 		return nil
 	}
 
-	depth := 0
-	end := -1
-	inStr := false
-	esc := false
-	for i := start; i < len(text); i++ {
-		ch := text[i]
-		if esc {
-			esc = false
-			continue
-		}
-		if ch == '\\' && inStr {
-			esc = true
-			continue
-		}
-		if ch == '"' {
-			inStr = !inStr
-			continue
-		}
-		if inStr {
-			continue
-		}
-		switch ch {
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				end = i + 1
-			}
-		}
-		if end != -1 {
-			break
-		}
-	}
+	end := scanJSONObject(text, start)
 	if end == -1 {
 		return nil
 	}
@@ -338,4 +220,42 @@ func autofillToolArguments(call *toolCallPayload, latestUserInput string) {
 			}
 		}
 	}
+}
+
+func scanJSONObject(text string, start int) int {
+	depth := 0
+	end := -1
+	inStr := false
+	esc := false
+	for i := start; i < len(text); i++ {
+		ch := text[i]
+		if esc {
+			esc = false
+			continue
+		}
+		if ch == '\\' && inStr {
+			esc = true
+			continue
+		}
+		if ch == '"' {
+			inStr = !inStr
+			continue
+		}
+		if inStr {
+			continue
+		}
+		switch ch {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				end = i + 1
+			}
+		}
+		if end != -1 {
+			break
+		}
+	}
+	return end
 }

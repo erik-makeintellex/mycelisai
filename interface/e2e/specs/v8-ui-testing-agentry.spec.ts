@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const organizationId = "org-ui-testing-agent";
-const chatPlaceholder = /Tell .* what you want to create, review, or improve/i;
+const chatPlaceholder = /Tell .* what you want to plan, review, create, or execute/i;
 
 const organizationHome = {
     id: organizationId,
@@ -299,7 +299,7 @@ async function sendWorkspaceMessage(page: Page, content: string) {
 test.describe("V8 UI testing agentry product contract", () => {
     test("keeps Soma primary, preserves continuity on reload, and contains oversized markdown output", async ({ page }) => {
         const directAnswer =
-            "Workspace V8 keeps Soma at the center of the AI Organization while recent activity, learning, and quick checks explain what changed and why.";
+            "Workspace V8 keeps Soma at the center of the AI Organization while recent activity, retained knowledge, and quick checks explain what changed and why.";
         const hugeTable = [
             "| C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8 | C9 | C10 | C11 | C12 | C13 | C14 | C15 | C16 | C17 | C18 | C19 | C20 |",
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
@@ -316,7 +316,6 @@ test.describe("V8 UI testing agentry product contract", () => {
 
         await openOrganization(page);
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "What the Organization is Learning" })).toBeVisible();
 
         await sendWorkspaceMessage(page, "Summarize the current Workspace V8 design objectives.");
         await expect(page.getByText(directAnswer)).toBeVisible({ timeout: 20_000 });
@@ -337,7 +336,7 @@ test.describe("V8 UI testing agentry product contract", () => {
         expect(body).not.toContain("bg-white");
     });
 
-    test("surfaces a graceful blocker and recovers on retry after a first transient Soma failure", async ({ page }) => {
+    test("silently retries a first transient Soma failure and recovers without surfacing a blocker", async ({ page }) => {
         let attempts = 0;
 
         await mockOrganizationWorkspace(page, () => {
@@ -357,13 +356,9 @@ test.describe("V8 UI testing agentry product contract", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Summarize the current Workspace V8 design objectives.");
 
-        const chatRetryButton = page.getByTestId("mission-chat").getByRole("button", { name: /^Retry$/i });
-        await expect(page.getByText(/Soma Chat Blocked/i)).toBeVisible({ timeout: 20_000 });
-        await expect(chatRetryButton).toBeVisible();
-        await chatRetryButton.click();
-
         await expect(page.getByText("Recovered answer after startup wobble.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText(/Soma Chat Blocked/i)).toHaveCount(0);
+        await expect(page.getByTestId("mission-chat").getByRole("button", { name: /^Retry$/i })).toHaveCount(0);
         expect(attempts).toBe(2);
     });
 

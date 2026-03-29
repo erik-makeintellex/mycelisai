@@ -125,6 +125,42 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Strike-team plan for scoped pgvector memory, temporary planning continuity, and trace-clean memory boundaries",
             },
             {
+                slug: "v8-demo-product-plan",
+                label: "V8 Demo Product Plan",
+                path: "docs/architecture-library/V8_DEMO_PRODUCT_STRIKE_TEAM_PLAN.md",
+                description: "Strike-team plan for making Mycelis feel like an obvious product for partner demos without removing advanced power",
+            },
+            {
+                slug: "v8-demo-product-execution-brief",
+                label: "V8 Demo Product Execution Brief",
+                path: "docs/architecture-library/V8_DEMO_PRODUCT_EXECUTION_BRIEF.md",
+                description: "First engaged-team deliverables for default surfaces, advanced preservation, golden-path demo, and UI verification",
+            },
+            {
+                slug: "v8-demo-product-wording-drift",
+                label: "V8 Demo Product Wording Drift",
+                path: "docs/architecture-library/V8_DEMO_PRODUCT_WORDING_DRIFT_INVENTORY.md",
+                description: "Prioritized wording-drift inventory for README, landing, organization entry, organization home, and continuity language",
+            },
+            {
+                slug: "v8-demo-product-feature-retention",
+                label: "V8 Demo Product Feature Retention",
+                path: "docs/architecture-library/V8_DEMO_PRODUCT_FEATURE_RETENTION_MAP.md",
+                description: "Retention map proving advanced power remains reachable while the default product story stays simple",
+            },
+            {
+                slug: "v8-partner-demo-script",
+                label: "V8 Partner Demo Script",
+                path: "docs/architecture-library/V8_PARTNER_DEMO_SCRIPT.md",
+                description: "Canonical partner/funder demo story proving product value, governance, continuity, and retained platform depth",
+            },
+            {
+                slug: "v8-partner-demo-verification",
+                label: "V8 Partner Demo Verification",
+                path: "docs/architecture-library/V8_PARTNER_DEMO_VERIFICATION_CHECKLIST.md",
+                description: "UI testing and release checklist for validating the partner demo as a product story rather than a narrow technical path",
+            },
+            {
                 slug: "v7-dev-state",
                 label: "V7 Dev State (Historical)",
                 path: "V7_DEV_STATE.md",

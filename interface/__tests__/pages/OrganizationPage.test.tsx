@@ -756,10 +756,10 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByRole("heading", { name: "What the Organization Is Retaining" })).toBeDefined();
         expect(screen.getByText("No retained patterns yet")).toBeDefined();
         expect(screen.getByText("This is where reusable patterns, continuity cues, and stronger working habits will appear in plain language.")).toBeDefined();
-        expect(screen.getByText("Ordinary planning chat stays in working continuity until a stronger reusable pattern or deliberate memory promotion emerges.")).toBeDefined();
+        expect(screen.getByText("Ordinary planning chat stays in working continuity until a stronger reusable pattern emerges or you intentionally save something for later recall.")).toBeDefined();
     });
 
-    it("shows learning updates unavailable without breaking the workspace when insights cannot be loaded", async () => {
+    it("shows Memory & Continuity updates unavailable without breaking the workspace when insights cannot be loaded", async () => {
         setupOrganizationFetch({
             learningInsightsHandler: () => jsonResponse({ ok: false, error: "learning updates unavailable" }, 503),
         });
@@ -769,7 +769,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByRole("heading", { name: "What the Organization Is Retaining" })).toBeDefined();
-        expect(screen.getByText("Memory & continuity updates unavailable")).toBeDefined();
+        expect(screen.getByText("Memory & Continuity updates unavailable")).toBeDefined();
         expect(screen.getByText("Recent retained patterns are not available right now. The Soma workspace is still ready.")).toBeDefined();
         expect(screen.getByRole("button", { name: "Retry Memory & Continuity" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeDefined();

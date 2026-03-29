@@ -880,7 +880,7 @@ def test_v8_ui_api_contract_is_indexed_exposed_and_complete():
         "Departments",
         "Specialists",
         "AI Engine Settings",
-        "Learning & Context",
+        "Memory & Continuity",
         "### 3.3 Two explicit UX and control layers",
         "### 3.4 Source-of-truth layers",
         "### 3.5 Primary orchestration flow",

@@ -7,7 +7,7 @@
 
 ## 1. Why this document exists
 
-V8 introduces AI Organizations, Soma, Team Leads, Advisors, Departments, Specialists, AI Engine Settings, and Learning & Context as first-class product concepts.
+V8 introduces AI Organizations, Soma, Team Leads, Advisors, Departments, Specialists, AI Engine Settings, and Memory & Continuity as first-class product concepts.
 
 Those terms are not decorative renames for a generic assistant UI.
 
@@ -29,7 +29,7 @@ The default product experience must feel like creating and operating an AI Organ
 - **Departments**: grouped execution areas within the AI Organization. Departments organize Specialist work and scoped operating context.
 - **Specialists**: individual role-focused workers inside a Department or a governed roster. They are visible as organizational members, not presented as a flat buddy list by default.
 - **AI Engine Settings**: provider-policy and model-routing controls that shape how the organization runs. These are real configuration surfaces, but they are advanced by default.
-- **Learning & Context**: continuity, learning visibility, reviewed memory posture, tone, and behavioral defaults for the AI Organization. These settings exist, but they should not overwhelm first-run creation.
+- **Memory & Continuity**: continuity, retained-knowledge visibility, reviewed memory posture, tone, and behavioral defaults for the AI Organization. These settings exist, but they should not overwhelm first-run creation.
 
 Terminology rule:
 - UI copy should use these names directly.
@@ -67,7 +67,7 @@ Advanced operators may inspect:
 - Department structure
 - Specialist roster
 - AI Engine Settings
-- Learning & Context
+- Memory & Continuity
 - deeper org configuration
 
 But those advanced surfaces should be hidden until the operator intentionally opens them.
@@ -78,7 +78,7 @@ Default Operator Surface:
 - create AI Organization
 - Soma-primary workspace
 - intent-driven interaction
-- Advisors, Departments, Automations, Recent Activity, and Learning & Context
+- Advisors, Departments, Automations, Recent Activity, and Memory & Continuity
 - AI Engine Settings and Response Style as guided, bounded controls
 
 Advanced Architecture / Runtime Surface:
@@ -128,7 +128,7 @@ User
   -> Routing / Council
   -> Team Leads
   -> Departments / Specialist Roles / Automations
-  -> Reviews / Learning / Activity
+  -> Reviews / Memory / Activity
   -> back through Soma
 ```
 
@@ -170,7 +170,7 @@ Help a new operator understand that Mycelis creates AI Organizations, not dispos
   - Departments
   - Specialists
   - AI Engine Settings
-  - Learning & Context
+  - Memory & Continuity
 
 **User actions**
 
@@ -194,7 +194,7 @@ Help a new operator understand that Mycelis creates AI Organizations, not dispos
 - full Advisor roster defaults
 - Department/Specialist editable structure
 - AI Engine Settings internals
-- Learning & Context internals
+- Memory & Continuity internals
 
 **Success state**
 
@@ -232,7 +232,7 @@ Guide the operator through creating a real AI Organization with a clear structur
   - Specialists
 - advanced sections collapsed by default:
   - AI Engine Settings
-  - Learning & Context
+  - Memory & Continuity
 
 **User actions**
 
@@ -292,7 +292,7 @@ Make the start-mode decision explicit without confusing templates with live orga
   - Department count
   - Specialist count
   - AI Engine Settings summary
-  - Learning & Context summary
+  - Memory & Continuity summary
 - an `Empty AI Organization` card that clearly states the operator will define structure manually
 
 **User actions**
@@ -351,7 +351,7 @@ Provide a stable home screen that makes the AI Organization legible before the o
   - Departments summary
   - Specialists summary
   - AI Engine Settings summary
-  - Learning & Context summary
+  - Memory & Continuity summary
 - primary actions:
   - `Open Soma Workspace`
   - `Review Organization Structure`
@@ -612,7 +612,7 @@ Protect the default AI Organization experience from collapsing into a config das
 2. The default conversation surface must always be the Soma workspace for that AI Organization.
 3. Advisors, Departments, and Specialists must appear as organization structure, not as a flat chat-contact list by default.
 4. Template selection must be framed as choosing an AI Organization starting blueprint, not as selecting a chat persona.
-5. AI Engine Settings and Learning & Context must be real product concepts, but they must stay behind progressive disclosure until the operator intentionally opens advanced mode.
+5. AI Engine Settings and Memory & Continuity must be real product concepts, but they must stay behind progressive disclosure until the operator intentionally opens advanced mode.
 6. Empty-start flows must still feel like creating an AI Organization, not like launching a blank assistant session.
 7. Every screen must define purpose, visible structure, user actions, API data requirements, and explicit loading/empty/error/success states before UI implementation begins.
 
