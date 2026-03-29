@@ -1,6 +1,6 @@
 import { type Edge, type Node, Position } from 'reactflow';
 import type { AgentNodeData } from '@/components/wiring/AgentNode';
-import type { MissionBlueprint } from '@/store/useCortexStore';
+import type { MissionBlueprint } from '@/store/cortexStoreTypes';
 
 const TEAM_WIDTH = 280;
 const TEAM_GAP = 60;
