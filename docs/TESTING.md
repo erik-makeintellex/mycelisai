@@ -121,7 +121,7 @@ Stopping containers or port-forwards alone is not enough. The pre-test cleanup p
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv interface.test        # Vitest unit tests (jsdom)
 uv run inv interface.typecheck   # TypeScript typecheck through the managed Interface task path
-uv run inv interface.e2e         # Playwright E2E tests (Invoke manages the built Next.js server, serial worker default, managed browser cache, and repo-local UI worker cleanup)
+uv run inv interface.e2e         # Playwright E2E tests (Invoke refreshes the built Next.js bundle for start-mode runs, manages the server lifecycle, uses serial workers by default, keeps browser cache repo-managed, cleans repo-local UI workers, and fails if it cannot own a clean managed UI server)
 uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts   # Real governed Soma chat + approval contract
 uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real workspace proxy/status continuity contract
 MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts  # Set explicitly when spec checkout != backend checkout
@@ -345,8 +345,8 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 - **Base URL:** `http://127.0.0.1:3000` by default for local browser traffic (`INTERFACE_HOST` / `INTERFACE_PORT` override supported)
 - **Bind Host:** the managed Next.js server binds to `[::]:3000` by default so IPv4 localhost, IPv6 localhost, and LAN clients can all reach the UI (`INTERFACE_BIND_HOST` / `MYCELIS_INTERFACE_BIND_HOST` override supported)
 - **Browser Projects:** `chromium`, `firefox`, `webkit`, `mobile-chromium`
-- **Server Lifecycle:** `uv run inv interface.e2e` starts/stops the managed Next.js app and now defaults that owned server lifecycle to the built `next start` path for task-based E2E runs so the direct browser path and the strict baseline use the same stable server posture
-- **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run, launches a managed local Next.js server, defaults Playwright to `--workers=1`, and sweeps repo-local Next/Vitest/Playwright worker residue
+- **Server Lifecycle:** `uv run inv interface.e2e` starts/stops the managed Next.js app and now defaults that owned server lifecycle to the built `next start` path for task-based E2E runs so the direct browser path and the strict baseline use the same stable server posture; start-mode runs refresh the production bundle before the managed server launches
+- **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run, launches a managed local Next.js server, defaults Playwright to `--workers=1`, sweeps repo-local Next/Vitest/Playwright worker residue, and fails closed if the managed server exits or a stale port prevents it from owning the browser target
 - **Managed Browsers:** default task runs expect Playwright browser binaries under `workspace/tool-cache/playwright`
 - **Live Backend Mode:** `uv run inv interface.e2e --live-backend ...` loads proxy auth env and enables specs that require a real Core backend
 - **Accessibility Gate:** `@axe-core/playwright` is a required dev dependency; accessibility specs must fail when violated, not skip because the package is missing

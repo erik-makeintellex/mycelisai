@@ -115,7 +115,7 @@ V8.2 is not the current MVP release surface. It is the final production architec
 
 The current release target is [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md).
 
-V8.1 defines the MVP release we are aligning implementation to now: a Soma-primary AI Organization system with bounded automation visibility, learning visibility, inheritance contracts, and safe organization structure surfaces.
+V8.1 defines the MVP release we are aligning implementation to now: a Soma-primary AI Organization system with bounded automation visibility, memory and continuity visibility, inheritance contracts, and safe organization structure surfaces.
 
 Included in the V8.1 release target:
 - AI Organization creation and Soma-primary workspace flow
@@ -129,7 +129,7 @@ Included in the V8.1 release target:
 - bundle-driven startup truth with policy-bounded inheritance
 - bounded AI Engine and Response Style controls
 - read-only Automations visibility
-- read-only learning visibility
+- read-only retained-knowledge visibility
 - intentional empty states, retry guidance, and partial-failure-safe workspace panels
 - Loop Profiles, Runtime Capabilities, semantic continuity, and Procedure / Skill Sets defined as architecture truth even where implementation is still partial
 
@@ -174,7 +174,7 @@ Current operator experience summary:
 - the Soma workspace keeps the in-progress request draft and the last guided outcome visible when the operator leaves and returns to the same AI Organization
 - the organization-wide AI Engine and Response Style chosen during setup shape Soma's initial working posture, while the assistant name remains operator-configurable
 - AI Engine providers now carry a safe default token budget profile and max output budget so local and hosted agentry usage stays bounded by configuration instead of hidden hardcoded limits
-- Recent Activity, Automations, Learning, Advisors, and Departments keep readable empty, loading, and failure states without collapsing the workspace
+- Recent Activity, Automations, Memory & Continuity, Advisors, and Departments keep readable empty, loading, and failure states without collapsing the workspace
 - the default theme now uses a calmer light neutral surface with lower visual harshness while keeping advanced/runtime surfaces visually consistent
 
 ## Default And Advanced Surfaces
@@ -185,7 +185,7 @@ Default Operator Surface:
 - Create AI Organization
 - Soma-primary workspace
 - intent-driven interaction
-- Advisors, Departments, Automations, Recent Activity, and Learning & Context
+- Advisors, Departments, Automations, Recent Activity, and Memory & Continuity
 - AI Engine Settings and Response Style as guided, bounded controls
 
 Advanced Architecture / Runtime Surface:
@@ -238,9 +238,9 @@ Use these translations consistently:
 | Agent Instances / Agent Types | Specialists / Roles |
 | Provider Policy / Routing | AI Engine Settings |
 | Response Contract | Response Style |
-| Identity / Continuity State | Learning & Context |
+| Identity / Continuity State | Memory & Continuity |
 | Loop Profiles | Automations |
-| Learning Loops / reviewed learning | What the Organization is Learning |
+| Learning Loops / reviewed learning | What the Organization Is Retaining |
 
 Translation rule:
 - architecture docs may use the precise runtime terms
@@ -390,7 +390,7 @@ Completion rule:
 
 ## Playwright Contract
 
-`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the built `next start` server and `--workers=1` so direct browser validation stays repeatable on local hosts instead of diverging from the stricter branch-readiness gate.
+`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the built `next start` server and `--workers=1` so direct browser validation stays repeatable on local hosts instead of diverging from the stricter branch-readiness gate. In `start` mode it refreshes the production bundle before launching the managed server, and it must successfully start and hold that server before the browser run continues; a stale listener or failed startup is treated as a hard task failure instead of silently reusing the wrong UI instance.
 
 `uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=1`) and the built `next start` server so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves the current live governed Soma browser contract, restores the local bridge/core stack before the browser proof when needed, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run.
 

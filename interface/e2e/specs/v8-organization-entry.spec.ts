@@ -569,7 +569,7 @@ async function mockOrganizationEntryApis(
             body: JSON.stringify(
                 payload !== undefined
                     ? { ok: true, data: payload }
-                    : { ok: false, error: "Learning updates unavailable" },
+                    : { ok: false, error: "Memory & Continuity updates unavailable" },
             ),
         });
     });
@@ -915,7 +915,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(starterCard).toContainText("Departments");
         await expect(starterCard).toContainText("Specialists");
         await expect(starterCard).toContainText("AI Engine Settings");
-        await expect(starterCard).toContainText("Learning & Context");
+        await expect(starterCard).toContainText("Memory & Continuity");
         await expect(page.getByText("Hidden until Advanced mode")).toBeVisible();
         await expect(page.getByText("Learn about AI Organizations")).toBeVisible();
         await expect(page.getByText("Inception")).toHaveCount(0);
@@ -993,10 +993,10 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Automations" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "What the Organization is Learning" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "What the Organization Is Retaining" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Learning & Context" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Memory & Continuity" })).toBeVisible();
         await expect(page.getByText("Advisor support", { exact: true })).toBeVisible();
         await expect(page.getByText("Visible specialist roles", { exact: true })).toBeVisible();
         await expect(page.getByText("Department readiness review • Scheduled")).toBeVisible();
@@ -1019,12 +1019,12 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Tone", { exact: true })).toBeVisible();
         await expect(page.getByText("Structure", { exact: true })).toBeVisible();
         await expect(page.getByText("Verbosity", { exact: true })).toBeVisible();
-        await expect(page.getByText("Learning visibility")).toBeVisible();
-        await expect(page.getByText("Context continuity")).toBeVisible();
-        await expect(page.getByText("Explore a concept")).toBeVisible();
-        await expect(page.getByText("Generate samples")).toBeVisible();
-        await expect(page.getByText("Shape a team")).toBeVisible();
+        await expect(page.getByText("Durable memory recall")).toBeVisible();
+        await expect(page.getByText("Temporary planning continuity")).toBeVisible();
+        await expect(page.getByText("Plan the next move")).toBeVisible();
         await expect(page.getByText("Review current state")).toBeVisible();
+        await expect(page.getByText("Run a governed change")).toBeVisible();
+        await expect(page.getByText("Create an artifact")).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Advisors" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Open Departments" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Automations" }).first()).toBeVisible();
@@ -1179,25 +1179,25 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Soma ready")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Talk with Soma" })).toBeVisible();
         await expect(page.getByRole("link", { name: "Start with Soma" })).toBeVisible();
-        await expect(page.getByPlaceholder("Tell Soma what you want to create, review, or improve")).toBeFocused();
+        await expect(page.getByPlaceholder("Tell Soma what you want to plan, review, create, or execute")).toBeFocused();
         await expect(page.getByText("Started from", { exact: true })).toBeVisible();
         await expect(page.getByText("Empty", { exact: true })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Automations" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "What the Organization is Learning" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "What the Organization Is Retaining" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Learning & Context" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Memory & Continuity" })).toBeVisible();
         await expect(page.getByText("Review support appears here")).toBeVisible();
         await expect(page.getByText("Try reviewing your organization setup").first()).toBeVisible();
         await expect(page.getByText("Reviews appear here")).toBeVisible();
         await expect(page.getByText("No recent activity yet")).toBeVisible();
-        await expect(page.getByText("No learning highlights yet")).toBeVisible();
+        await expect(page.getByText("No retained patterns yet")).toBeVisible();
         await expect(page.getByText("The current AI Engine Settings keep the organization on a simple starter profile until deeper tuning is needed.")).toBeVisible();
         await expect(page.getByText("The current Response Style is clear & balanced, which shapes how Soma presents tone, structure, and detail.")).toBeVisible();
-        await expect(page.getByText("Learning & Context stay on a simple starter posture so Soma keeps a steady working style while the organization gets established.")).toBeVisible();
+        await expect(page.getByText("Memory & Continuity stay on a simple starter posture so Soma can keep working continuity without turning every conversation into durable memory.")).toBeVisible();
         await expectNoForbiddenCopy(page);
 
         await saveScreenshot(page, testInfo, "empty-success-home.png");
@@ -1335,7 +1335,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Learning & Context" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Memory & Continuity" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry Soma action" })).toBeVisible();
         await expectNoForbiddenCopy(page);
 

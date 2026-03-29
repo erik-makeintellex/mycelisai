@@ -293,20 +293,34 @@ def _pick_interface_port(preferred: int = INTERFACE_PORT) -> int:
     port, so the task prefers a safe managed range outside Windows' typical
     dynamic client-port band unless a non-default port was explicitly requested.
     """
+    def _port_has_listener(port: int) -> bool:
+        families = [socket.AF_INET]
+        if socket.has_ipv6:
+            families.append(socket.AF_INET6)
+        for family in families:
+            try:
+                with socket.socket(family, socket.SOCK_STREAM) as probe:
+                    probe.settimeout(0.2)
+                    host = "127.0.0.1" if family == socket.AF_INET else "::1"
+                    if probe.connect_ex((host, port)) == 0:
+                        return True
+            except OSError:
+                continue
+        return False
+
     def _port_is_available(port: int) -> bool:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ipv4_sock:
-            ipv4_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             ipv4_sock.bind(("127.0.0.1", port))
             with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_loopback_sock:
-                ipv6_loopback_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 ipv6_loopback_sock.bind(("::1", port))
                 with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_wildcard_sock:
-                    ipv6_wildcard_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     ipv6_wildcard_sock.bind(("::", port))
                     return True
 
     if preferred not in (0, 3000):
         try:
+            if _port_has_listener(preferred):
+                raise OSError("listener already active")
             if _port_is_available(preferred):
                 return preferred
         except OSError:
@@ -314,6 +328,8 @@ def _pick_interface_port(preferred: int = INTERFACE_PORT) -> int:
 
     for candidate in range(3100, 3200):
         try:
+            if _port_has_listener(candidate):
+                continue
             if _port_is_available(candidate):
                 return candidate
         except OSError:
@@ -321,15 +337,14 @@ def _pick_interface_port(preferred: int = INTERFACE_PORT) -> int:
 
     for _ in range(32):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ipv4_sock:
-            ipv4_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             ipv4_sock.bind(("127.0.0.1", 0))
             candidate = ipv4_sock.getsockname()[1]
             try:
+                if _port_has_listener(candidate):
+                    continue
                 with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_loopback_sock:
-                    ipv6_loopback_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     ipv6_loopback_sock.bind(("::1", candidate))
                     with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_wildcard_sock:
-                        ipv6_wildcard_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                         ipv6_wildcard_sock.bind(("::", candidate))
                         return candidate
             except OSError:
@@ -461,11 +476,21 @@ def _interface_ready_urls(host: str, port: int) -> list[str]:
     return urls
 
 
-def _wait_for_interface_ready(host: str = INTERFACE_HOST, port: int = INTERFACE_PORT, timeout_seconds: int = 120) -> str:
+def _wait_for_interface_ready(
+    host: str = INTERFACE_HOST,
+    port: int = INTERFACE_PORT,
+    timeout_seconds: int = 120,
+    process: subprocess.Popen[str] | None = None,
+) -> str:
     urls = _interface_ready_urls(host, port)
     deadline = time.time() + timeout_seconds
     last_error = "server did not respond"
     while time.time() < deadline:
+        if process is not None and process.poll() is not None:
+            raise RuntimeError(
+                f"Managed Interface server exited before it became ready on port {port}. "
+                f"See {_playwright_server_log_path()} for server output."
+            )
         for url in urls:
             try:
                 with urllib.request.urlopen(url, timeout=5) as response:
@@ -608,6 +633,9 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
         extra_env["PLAYWRIGHT_LIVE_BACKEND"] = "1"
     env = _task_env(extra_env)
     stop(c)
+    if server_mode == "start":
+        print("Refreshing built Interface bundle for managed start-mode browser proof...")
+        build(c)
     print(f"Using managed Interface port {chosen_port}")
     server: subprocess.Popen[str] | None = None
     try:
@@ -617,7 +645,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
             print(f"  Managed server bound to port {actual_port} instead of requested {chosen_port}")
             chosen_port = actual_port
             env["INTERFACE_PORT"] = str(actual_port)
-        ready_host = _wait_for_interface_ready(host=env["INTERFACE_HOST"], port=chosen_port)
+        ready_host = _wait_for_interface_ready(host=env["INTERFACE_HOST"], port=chosen_port, process=server)
         if ready_host != env["INTERFACE_HOST"]:
             print(f"  Managed server is reachable via {ready_host}; updating Playwright host from {env['INTERFACE_HOST']}")
             env["INTERFACE_HOST"] = ready_host

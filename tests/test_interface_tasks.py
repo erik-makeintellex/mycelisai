@@ -143,10 +143,11 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     )
     monkeypatch.setattr(interface, "INTERFACE_PORT", port)
     monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: events.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "build", lambda _c: events.append("build"))
     monkeypatch.setattr(
         interface,
         "_wait_for_interface_ready",
-        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120: events.append(f"ready:{host}:{port}") or "127.0.0.1",
+        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120, process=None: events.append(f"ready:{host}:{port}") or "127.0.0.1",
     )
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
@@ -169,6 +170,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     assert env_seen["INTERFACE_BIND_HOST"] == interface.INTERFACE_BIND_HOST
     assert events == [
         f"stop:{port}",
+        "build",
         f"start:{port}:start",
         f"ready:127.0.0.1:{port}",
         "kill:4242",
@@ -201,10 +203,11 @@ def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_ho
     )
     monkeypatch.setattr(interface, "INTERFACE_PORT", port)
     monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: events.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "build", lambda _c: events.append("build"))
     monkeypatch.setattr(
         interface,
         "_wait_for_interface_ready",
-        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120: events.append(f"ready:{host}:{port}") or "::1",
+        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120, process=None: events.append(f"ready:{host}:{port}") or "::1",
     )
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
@@ -229,10 +232,58 @@ def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_ho
     assert env_seen["INTERFACE_HOST"] == "::1"
     assert events == [
         f"stop:{port}",
+        "build",
         f"start:{port}:start",
         f"ready:127.0.0.1:{port}",
         "kill:5252",
         f"stop:{port}",
+        "cleanup",
+    ]
+
+
+def test_e2e_dev_mode_skips_build(monkeypatch):
+    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult()})
+    events: list[str] = []
+
+    class FakeServer:
+        pid = 6262
+
+        @staticmethod
+        def poll():
+            return None
+
+    monkeypatch.setattr(
+        interface,
+        "_task_env",
+        lambda extra=None: {
+            "PLAYWRIGHT_SKIP_WEBSERVER": extra["PLAYWRIGHT_SKIP_WEBSERVER"],
+            "INTERFACE_HOST": extra["INTERFACE_HOST"],
+            "INTERFACE_BIND_HOST": extra["INTERFACE_BIND_HOST"],
+        },
+    )
+    monkeypatch.setattr(interface, "INTERFACE_PORT", 4313)
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: events.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "build", lambda _c: events.append("build"))
+    monkeypatch.setattr(
+        interface,
+        "_wait_for_interface_ready",
+        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120, process=None: events.append(f"ready:{host}:{port}") or "127.0.0.1",
+    )
+    monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+    monkeypatch.setattr(interface, "_start_playwright_server", lambda env, port=interface.INTERFACE_PORT, server_mode="start": events.append(f"start:{port}:{server_mode}") or FakeServer())
+
+    interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts", server_mode="dev")
+
+    assert "build" not in events
+    assert events == [
+        "stop:4313",
+        "start:4313:dev",
+        "ready:127.0.0.1:4313",
+        "kill:6262",
+        "stop:4313",
         "cleanup",
     ]
 
@@ -293,6 +344,8 @@ def test_interface_ready_urls_prioritize_requested_host_then_loopback_fallbacks(
 
 
 def test_pick_interface_port_falls_back_when_preferred_port_is_busy(monkeypatch):
+    occupied_ports = {3000}
+
     class FakeSocket:
         def __init__(self, family, *args, **kwargs):
             self.family = family
@@ -302,9 +355,15 @@ def test_pick_interface_port_falls_back_when_preferred_port_is_busy(monkeypatch)
         def setsockopt(self, *args, **kwargs):
             return None
 
+        def settimeout(self, *args, **kwargs):
+            return None
+
+        def connect_ex(self, address):
+            return 0 if address[1] in occupied_ports else 111
+
         def bind(self, address):
             self.bind_calls.append(address)
-            if address[1] == 3000 and self.family == interface.socket.AF_INET6:
+            if address[1] in occupied_ports:
                 raise OSError("address in use")
             self.port = 43210 if address[1] == 3000 else 43211
 
@@ -323,3 +382,20 @@ def test_pick_interface_port_falls_back_when_preferred_port_is_busy(monkeypatch)
     monkeypatch.setattr(interface.socket, "socket", lambda family, *args, **kwargs: FakeSocket(family))
 
     assert interface._pick_interface_port(3000) == 3100
+
+
+def test_wait_for_interface_ready_fails_when_managed_server_exits(monkeypatch):
+    class FakeServer:
+        @staticmethod
+        def poll():
+            return 1
+
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+
+    try:
+        interface._wait_for_interface_ready("127.0.0.1", 4310, timeout_seconds=1, process=FakeServer())
+    except RuntimeError as exc:
+        assert "Managed Interface server exited before it became ready" in str(exc)
+        assert "4310" in str(exc)
+    else:
+        raise AssertionError("expected managed server startup failure")
