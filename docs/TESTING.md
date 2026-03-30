@@ -7,6 +7,8 @@ Current validation contract:
 - `uv run inv ci.baseline` is the default branch-readiness gate and now includes Playwright by default
 - use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
 - use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses an already-initialized `cortex` schema when present, and otherwise bootstraps the database before proving the browser contract against the managed built server
+- when the validation target is the supported home-runtime stack, use `uv run inv compose.up`, `uv run inv compose.status`, and `uv run inv compose.health` before browser proof instead of assuming Kind/bridge is the only real local environment
+- in the supported home-runtime stack, `.env.compose` must keep container-host assumptions separate from `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`
 - use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual `core/workspace` root before running the spec
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
@@ -85,6 +87,8 @@ Minimum policy:
 ## Clean Run Discipline for Runtime and Integration Checks
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
+- For Docker Compose runtime proof, use `uv run inv compose.down --volumes` as the clean reset equivalent so PostgreSQL, NATS, and Core state are truly rebuilt instead of inherited from a prior container run.
+- For Docker Compose runtime proof, treat `uv run inv compose.health` as a product-availability gate, not only a port gate: the text cognitive engine must be online before browser proof is considered valid.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect running compiled binaries with process inspection before the test begins. Look for repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Treat repo-local Interface worker residue as part of the same cleanup surface. On Windows in particular, `next`, `vitest`, `playwright`, and generated `.next/dev/build/postcss.js` workers can survive after the owning command exits unless the task wrapper sweeps them.
@@ -138,6 +142,8 @@ uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 uv run inv ci.baseline           # Canonical strict baseline (docs/logging/topics/line gates + core + interface + Playwright by default)
 uv run inv ci.baseline --no-e2e  # Narrower local debug path when browser proof is intentionally skipped
 uv run inv ci.service-check      # Running-stack health proof against local services
+uv run inv compose.up --build    # Supported home-runtime bring-up without Kind
+uv run inv compose.health        # Deep health proof for the compose stack
 uv run inv ci.release-preflight --service-health --live-backend  # Clean-tree + baseline + live service/browser proof
 ```
 

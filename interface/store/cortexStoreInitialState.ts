@@ -52,6 +52,7 @@ export const initialCortexState: Omit<
     | 'setMissionChatScope'
     | 'fetchUserSettings'
     | 'updateAssistantName'
+    | 'updateTheme'
     | 'setCouncilTarget'
     | 'fetchCouncilMembers'
     | 'broadcastToSwarm'
@@ -146,6 +147,7 @@ export const initialCortexState: Omit<
     missionChatFailure: null,
     workspaceChatPrimed: false,
     assistantName: 'Soma',
+    theme: 'aero-light',
     councilTarget: 'admin',
     councilMembers: [],
     isBroadcasting: false,

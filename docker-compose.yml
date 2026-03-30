@@ -1,0 +1,111 @@
+name: mycelis-home
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mycelis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-cortex}
+    ports:
+      - "${MYCELIS_COMPOSE_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./core/migrations:/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mycelis} -d ${POSTGRES_DB:-cortex}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging: *default-logging
+
+  nats:
+    image: nats:2.11-alpine
+    restart: unless-stopped
+    command: ["-js", "-m", "8222", "-sd", "/data/jetstream"]
+    ports:
+      - "${MYCELIS_COMPOSE_NATS_PORT:-4222}:4222"
+      - "${MYCELIS_COMPOSE_NATS_MONITOR_PORT:-8222}:8222"
+    volumes:
+      - nats-data:/data/jetstream
+    logging: *default-logging
+
+  core:
+    build:
+      context: .
+      dockerfile: core/Dockerfile
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      PORT: "8080"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      MYCELIS_API_URL: http://127.0.0.1:8080
+      MYCELIS_API_KEY: ${MYCELIS_API_KEY:?set MYCELIS_API_KEY in .env.compose}
+      MYCELIS_BOOTSTRAP_TEMPLATE_ID: ${MYCELIS_BOOTSTRAP_TEMPLATE_ID:-v8-migration-standing-team-bridge}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-mycelis}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_NAME: ${DB_NAME:-cortex}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      OLLAMA_HOST: ${MYCELIS_COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}
+      MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP: ${MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP:-true}
+      DATA_DIR: ${DATA_DIR:-/data/artifacts}
+      MYCELIS_WORKSPACE: ${MYCELIS_WORKSPACE:-/data/workspace}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    ports:
+      - "${MYCELIS_COMPOSE_CORE_PORT:-8081}:8080"
+    volumes:
+      - ./core/config:/core/config:ro
+      - ./workspace/docker-compose/data:/data
+    healthcheck:
+      test: ["CMD", "/server", "action", "GET", "/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging: *default-logging
+
+  interface:
+    build:
+      context: ./interface
+      dockerfile: Dockerfile
+      args:
+        MYCELIS_API_HOST: core
+        MYCELIS_API_PORT: "8080"
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      MYCELIS_API_HOST: core
+      MYCELIS_API_PORT: "8080"
+      MYCELIS_API_KEY: ${MYCELIS_API_KEY:?set MYCELIS_API_KEY in .env.compose}
+    depends_on:
+      core:
+        condition: service_healthy
+    ports:
+      - "${MYCELIS_COMPOSE_INTERFACE_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    logging: *default-logging
+
+volumes:
+  postgres-data:
+  nats-data:

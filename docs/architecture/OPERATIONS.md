@@ -137,6 +137,23 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | `uv run inv lifecycle.memory-restart` | Destructive recovery path: down -> db.reset -> up -> health -> memory probes |
 | `uv run inv lifecycle.up` | Also ensures the `cortex` database exists before Core starts so bootstrap listeners do not crash after a fresh bridge or cluster reset |
 
+### Compose Tasks (`ops/compose.py`)
+
+| Command | Description |
+|---------|-------------|
+| `uv run inv compose.up` | Managed Docker Compose bring-up: postgres + nats -> canonical migrations -> core + interface, with host readiness checks |
+| `uv run inv compose.down` | Stop the compose stack (`--volumes` for a truly fresh rebuild) |
+| `uv run inv compose.migrate` | Apply canonical migrations through the PostgreSQL compose service |
+| `uv run inv compose.status` | Show compose service state plus host-port reachability |
+| `uv run inv compose.health` | Deep health probe for core, text inference availability, frontend, and NATS monitor |
+| `uv run inv compose.logs` | Tail compose logs for the full stack or a single service |
+
+Compose runtime guardrails:
+- `.env.compose` is the supported env contract for the home-runtime path; do not reuse Kind/bridge `OLLAMA_HOST` values blindly
+- use `MYCELIS_COMPOSE_OLLAMA_HOST` for the home-runtime AI engine path so host-level `OLLAMA_HOST` bind settings do not override the compose runtime
+- loopback compose Ollama values (`localhost`, `127.0.0.1`, `0.0.0.0`) are invalid for the Core container and are rejected by the compose task layer
+- the slim compose Core image disables default npm-backed MCP auto-bootstrap by default to keep startup logs honest; manual/external MCP connectivity remains supported
+
 ### Clean Run Discipline for Runtime and Integration Checks
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
@@ -231,7 +248,7 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `ops/device.py` | `device.boot --id=ghost-01` | Device simulation (NATS announce) |
 | `ops/cache.py` | `cache.status`, `cache.clean`, `cache.apply-user-policy` | Managed cache reporting, cleanup, and Windows user-policy stamping |
 | `.dockerignore` | root Docker build-context exclusions | Excludes Interface build/test outputs so repo-root Docker builds do not ingest stale `.next`, coverage, or browser artifacts |
-| `ops/misc.py` | `clean.legacy` | Remove legacy Makefile/docker-compose |
+| `ops/misc.py` | `clean.legacy` | Remove legacy Makefiles |
 | `ops/misc.py` | `team.sensors`, `team.output`, `team.test`, `team.architecture-sync` | Python agent teams and central architect sync |
 
 Key coordination example: `uv run inv team.architecture-sync`
@@ -265,7 +282,20 @@ powershell(command: str) → str  # PowerShell with -NoProfile flag
 
 ## III. Development Workflow
 
-### Local Development (3 terminals)
+### Docker Compose Home Runtime
+
+```bash
+cp .env.compose.example .env.compose
+# set MYCELIS_API_KEY and adjust OLLAMA_HOST if needed
+
+uv run inv compose.up --build
+uv run inv compose.status
+uv run inv compose.health
+```
+
+This is the supported single-host runtime for home-lab and demo use when Kind/Kubernetes is unnecessary.
+
+### Kind / Kubernetes Local Development (3 terminals)
 
 ```bash
 # Prerequisite (run once per reboot/reset):

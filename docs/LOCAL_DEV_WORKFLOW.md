@@ -196,6 +196,17 @@ Defines approval thresholds, deny rules, and safety constraints.
 
 Run all commands from `scratch/` (project root where `tasks.py` lives).
 
+Choose one supported local runtime:
+- `Kind/Kubernetes` for chart and cluster parity
+- `Docker Compose` for home-lab, single-host, and partner-demo use
+
+Docker Compose rule:
+- keep `.env.compose` separate from `.env`
+- use `MYCELIS_COMPOSE_OLLAMA_HOST` in `.env.compose` so Windows/macOS host-level `OLLAMA_HOST` bind settings do not override the container runtime
+- `MYCELIS_COMPOSE_OLLAMA_HOST` must resolve from inside the Core container, so use `http://host.docker.internal:11434` or another reachable service hostname instead of `localhost`
+
+### Option A: Kind / Kubernetes
+
 ```bash
 # 1. Configure environment
 cp .env.example .env
@@ -228,7 +239,40 @@ uv run inv interface.dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Option B: Docker Compose Home Runtime
+
+```bash
+# 1. Configure compose-specific environment
+cp .env.compose.example .env.compose
+# Edit .env.compose — set MYCELIS_API_KEY and adjust OLLAMA_HOST if needed
+
+# 2. Bring up the full single-host stack
+uv run inv compose.up --build
+```
+
+Compose bring-up order is managed for you:
+- PostgreSQL + NATS first
+- canonical migrations through the PostgreSQL container
+- Core + Interface second
+- host health verification last
+
 ## Daily Startup Sequence
+
+### Docker Compose Alternative
+
+For the home-runtime path, the canonical daily cycle is:
+
+```bash
+uv run inv compose.up
+uv run inv compose.status
+uv run inv compose.health
+```
+
+Shutdown:
+
+```bash
+uv run inv compose.down
+```
 
 Four terminals, in order:
 
@@ -276,8 +320,9 @@ uv run inv core.test        # Run Go unit tests
 |:--|:--|:--|:--|
 | Next.js (frontend) | **3000** | Native | HTTP |
 | Go Core (backend) | **8081** | Native | HTTP |
-| PostgreSQL | **5432** | Kind bridge | TCP |
-| NATS | **4222** | Kind bridge | TCP |
+| PostgreSQL | **5432** | Kind bridge or Compose publish | TCP |
+| NATS | **4222** | Kind bridge or Compose publish | TCP |
+| NATS Monitor | **8222** | Compose publish | HTTP |
 | Ollama | **11434** | Local / LAN | HTTP |
 | vLLM (optional) | **8000** | Native | HTTP |
 | Media Server (optional) | **8001** | Native | HTTP |
@@ -306,6 +351,10 @@ Quick commands to verify each service:
 ```bash
 # Kind cluster + pods
 uv run inv k8s.status
+
+# Compose stack
+uv run inv compose.status
+uv run inv compose.health
 
 # Backend health
 curl http://localhost:8081/healthz
@@ -479,6 +528,11 @@ Then change profiles in `cognitive.yaml` to `"vllm"`.
 | `uv run inv k8s.status` | Cluster health check |
 | `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
 | `uv run inv k8s.reset` | Full teardown + canonical bring-up (includes readiness wait) |
+| `uv run inv compose.up` | Managed Docker Compose bring-up: postgres/nats -> migrate -> core/interface |
+| `uv run inv compose.down` | Stop the Docker Compose stack |
+| `uv run inv compose.status` | Compose service + host-port status |
+| `uv run inv compose.health` | Deep health probe for the compose runtime |
+| `uv run inv compose.logs` | Tail compose logs for all services or one service |
 | **CI** | |
 | `uv run inv ci.check` | Full pipeline: lint → test → build |
 | **Cognitive** | |

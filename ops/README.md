@@ -27,6 +27,19 @@ Handles the atomic deployment to Kubernetes (Kind).
 - **Recover**: `uv run inv k8s.recover` now fails closed when the cluster is unreachable and waits for rollout readiness before claiming recovery.
 - Chart/runtime config alignment: the deployed Core image resolves startup config from `/core/config`, so the chart mount path and container workdir must stay in sync for bootstrap bundles to load.
 
+### `compose.py` (Home Runtime)
+Handles the supported Docker Compose single-host runtime for home-lab and demo use.
+- **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface)
+- **Down**: `uv run inv compose.down`
+- **Health**: `uv run inv compose.health`
+- **Status**: `uv run inv compose.status`
+- **Logs**: `uv run inv compose.logs`
+- Compose uses `.env.compose` so host/container assumptions stay separate from the Kind/bridge `.env` path.
+- Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally.
+- Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.
+- `compose.health` is a usable-product gate for the home runtime, so it fails when text inference is offline even if the API still responds.
+- The slim compose Core image disables default npm-backed MCP auto-bootstrap by default to keep startup logs honest; manual/external MCP connectivity remains supported.
+
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
 - **Compile**: `uv run inv core.compile` (repo-local binary only).
@@ -77,6 +90,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 ## Clean Run Discipline for Runtime and Integration Checks
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
+- For the supported home-runtime stack, `uv run inv compose.down --volumes` is the clean reset path before runtime/browser proof.
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect running compiled Go services before the test begins. Check repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Detect repo-local Interface worker residue before and after browser/build/test runs. Windows `node.exe` children from `.next`, Vitest, or Playwright count as leaked dev state and should be swept by the task wrappers.

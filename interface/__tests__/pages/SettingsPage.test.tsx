@@ -32,6 +32,8 @@ vi.mock('@/components/settings/MCPToolRegistry', () => ({
 
 const mockSearchParams = new URLSearchParams();
 const mockAdvancedMode = vi.fn(() => true);
+const mockUpdateAssistantName = vi.fn(async () => true);
+const mockUpdateTheme = vi.fn(async () => true);
 vi.mock('next/navigation', () => ({
     useSearchParams: () => mockSearchParams,
 }));
@@ -42,7 +44,9 @@ vi.mock('@/store/useCortexStore', async (importOriginal) => {
         useCortexStore: (selector: any) => selector({
             advancedMode: mockAdvancedMode(),
             assistantName: 'Soma',
-            updateAssistantName: vi.fn(async () => true),
+            theme: 'aero-light',
+            updateAssistantName: mockUpdateAssistantName,
+            updateTheme: mockUpdateTheme,
         }),
     };
 });
@@ -55,6 +59,8 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             ok: true,
             json: async () => ({}),
         });
+        mockUpdateAssistantName.mockClear();
+        mockUpdateTheme.mockClear();
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
@@ -87,7 +93,9 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
 
         expect(screen.getByText('Appearance')).toBeDefined();
-        expect(screen.getByText('Midnight Cortex')).toBeDefined();
+        expect(screen.getByRole('option', { name: 'Aero Light' })).toBeDefined();
+        expect(screen.getByRole('option', { name: 'Midnight Cortex' })).toBeDefined();
+        expect(screen.getByRole('option', { name: 'System' })).toBeDefined();
     });
 
     it('hides advanced tabs when advanced mode is off', async () => {
@@ -98,5 +106,20 @@ describe('Settings Page (app/settings/page.tsx)', () => {
 
         expect(screen.queryByText('AI Engines')).toBeNull();
         expect(screen.queryByText('Connected Tools')).toBeNull();
+    });
+
+    it('saves the selected theme', async () => {
+        const { fireEvent } = await import('@testing-library/react');
+
+        await act(async () => {
+            render(<SettingsPage />);
+        });
+
+        fireEvent.change(screen.getByLabelText('Theme'), { target: { value: 'midnight-cortex' } });
+        await act(async () => {
+            fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[1]);
+        });
+
+        expect(mockUpdateTheme).toHaveBeenCalledWith('midnight-cortex');
     });
 });

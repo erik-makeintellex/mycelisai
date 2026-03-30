@@ -8,6 +8,7 @@ import DegradedModeBanner from "@/components/dashboard/DegradedModeBanner";
 import StatusDrawer from "@/components/dashboard/StatusDrawer";
 import { Activity } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
+import { ThemeSync } from "@/components/shell/ThemeSync";
 
 interface ShellLayoutProps {
     children?: React.ReactNode;
@@ -31,6 +32,7 @@ export function ShellLayout({ children }: ShellLayoutProps) {
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-cortex-bg text-cortex-text-main font-sans selection:bg-cortex-primary/30 selection:text-white">
+            <ThemeSync />
 
             {/* ZONE A: Rail (Navigation & Vitals) */}
             <ZoneA />

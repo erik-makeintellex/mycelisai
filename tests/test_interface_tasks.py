@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
-
 from invoke import Context
 
 from ops import interface
@@ -399,3 +398,30 @@ def test_wait_for_interface_ready_fails_when_managed_server_exits(monkeypatch):
         assert "4310" in str(exc)
     else:
         raise AssertionError("expected managed server startup failure")
+
+
+def test_check_does_not_treat_plain_html_words_as_hydration_failure(monkeypatch, capsys):
+    class FakeHTTPResponse:
+        def __init__(self, body: str):
+            self.status = 200
+            self._body = body.encode("utf-8")
+
+        def read(self):
+            return self._body
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(
+        interface.urllib.request,
+        "urlopen",
+        lambda req, timeout=10: FakeHTTPResponse("<html><body>hydration and error words in static docs text</body></html>"),
+    )
+
+    interface.check.body(FakeContext(), port=3000)
+
+    out = capsys.readouterr().out
+    assert "ALL PAGES HEALTHY." in out

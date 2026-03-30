@@ -12,6 +12,10 @@ RUN npm ci
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+ARG MYCELIS_API_HOST=localhost
+ARG MYCELIS_API_PORT=8081
+ENV MYCELIS_API_HOST=${MYCELIS_API_HOST}
+ENV MYCELIS_API_PORT=${MYCELIS_API_PORT}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -28,6 +32,10 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+ARG MYCELIS_API_HOST=localhost
+ARG MYCELIS_API_PORT=8081
+ENV MYCELIS_API_HOST=${MYCELIS_API_HOST}
+ENV MYCELIS_API_PORT=${MYCELIS_API_PORT}
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

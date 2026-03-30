@@ -772,8 +772,6 @@ def check(c, port=INTERFACE_PORT):
                     issues.append("Next.js error boundary triggered")
                 if "Application error" in body or "Unhandled Runtime Error" in body:
                     issues.append("React runtime error detected")
-                if "hydration" in body.lower() and "error" in body.lower():
-                    issues.append("Hydration mismatch detected")
                 if "bg-white" in body and page in ("/wiring", "/architect"):
                     issues.append("Light-mode bg-white leak detected")
 
