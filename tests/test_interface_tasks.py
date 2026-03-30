@@ -104,6 +104,23 @@ def test_clean_ignores_missing_files_during_rmtree(monkeypatch):
     assert removed == [interface.os.path.join("interface", ".next")]
 
 
+def test_clean_ignores_missing_files_when_rmtree_passes_exception_object(monkeypatch):
+    removed: list[str] = []
+
+    monkeypatch.setattr(interface.os.path, "isdir", lambda path: True)
+
+    def fake_rmtree(path, onexc=None):
+        removed.append(path)
+        assert onexc is not None
+        onexc(None, path, FileNotFoundError("gone"))
+
+    monkeypatch.setattr(interface.shutil, "rmtree", fake_rmtree)
+
+    interface.clean.body(FakeContext())
+
+    assert removed == [interface.os.path.join("interface", ".next")]
+
+
 def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
     cleaned: list[str] = []
     ctx = FakeContext()

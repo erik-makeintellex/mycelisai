@@ -119,6 +119,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Release verification plan for the UI testing team, including workflows, expected API calls, and terminal states",
             },
             {
+                slug: "v8-ui-team-full-test-set",
+                label: "V8 UI Team Full Test Set",
+                path: "docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md",
+                description: "Full UI team test matrix for Central Soma, AI Organization flows, settings persistence, governed execution, and deployed runtime proof",
+            },
+            {
                 slug: "v8-ui-testing-agentry-runbook",
                 label: "V8 UI Testing Agentry Runbook",
                 path: "docs/architecture-library/V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md",
@@ -135,6 +141,18 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "V8 Content Generation & Collaboration Plan",
                 path: "docs/architecture-library/V8_CONTENT_GENERATION_AND_COLLABORATION_STRIKE_TEAM_PLAN.md",
                 description: "Strike-team plan for inline content delivery, governed artifact generation, and policy-configurable specialist/model collaboration",
+            },
+            {
+                slug: "v8-approval-product-trust-plan",
+                label: "V8 Approval & Product Trust Plan",
+                path: "docs/architecture-library/V8_APPROVAL_AND_PRODUCT_TRUST_STRIKE_TEAM_PLAN.md",
+                description: "Strike-team plan for simplifying approval/auth-style interactions, clarifying content/artifact delivery, and preserving governed depth behind inspectable details",
+            },
+            {
+                slug: "v8-universal-soma-context-model",
+                label: "V8 Universal Soma Context Model",
+                path: "docs/architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md",
+                description: "Canonical PRD for one persistent Soma/Council pair, Central Soma home, context switching, and scoped execution across organizations and deployments",
             },
             {
                 slug: "v8-home-docker-compose-runtime",

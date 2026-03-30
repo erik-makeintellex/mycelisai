@@ -31,7 +31,7 @@ export function ZoneA() {
     const currentOrganizationHref = lastOrganization ? `/organizations/${lastOrganization.id}` : null;
     const isCurrentOrganizationRoute = !!currentOrganizationHref && (pathname === currentOrganizationHref || pathname.startsWith(currentOrganizationHref + '/'));
     const primaryNav = [
-        { href: '/dashboard', icon: Home, label: 'AI Organization', testId: 'nav-dashboard' },
+        { href: '/dashboard', icon: Home, label: 'Soma', description: 'Home', testId: 'nav-dashboard' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,

@@ -697,7 +697,7 @@ def clean(c):
     import shutil, os
 
     def _ignore_missing_rmtree_error(function, path, excinfo):
-        error = excinfo[1]
+        error = excinfo[1] if isinstance(excinfo, tuple) else excinfo
         if isinstance(error, FileNotFoundError):
             return
         raise error

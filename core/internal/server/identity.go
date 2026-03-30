@@ -107,6 +107,37 @@ func loadUserSettings() map[string]any {
 	return settings
 }
 
+func mergeUserSettings(input map[string]any) map[string]any {
+	settings := loadUserSettings()
+	if theme, ok := input["theme"].(string); ok && strings.TrimSpace(theme) != "" {
+		settings["theme"] = strings.TrimSpace(theme)
+	}
+	if matrixView, ok := input["matrix_view"].(string); ok && strings.TrimSpace(matrixView) != "" {
+		settings["matrix_view"] = strings.TrimSpace(matrixView)
+	}
+	if _, hasAssistantName := input["assistant_name"]; hasAssistantName {
+		settings["assistant_name"] = normalizeAssistantName(input["assistant_name"])
+	}
+	if _, hasRole := input["role"]; hasRole {
+		if normalized := normalizeGovernanceRole(fmt.Sprint(input["role"])); normalized != "" {
+			settings["role"] = normalized
+		}
+	}
+	if _, hasCostSensitivity := input["cost_sensitivity"]; hasCostSensitivity {
+		settings["cost_sensitivity"] = normalizeCostSensitivity(input["cost_sensitivity"])
+	}
+	if _, hasReviewStrictness := input["review_strictness"]; hasReviewStrictness {
+		settings["review_strictness"] = normalizeReviewStrictness(input["review_strictness"])
+	}
+	if _, hasAutomationTolerance := input["automation_tolerance"]; hasAutomationTolerance {
+		settings["automation_tolerance"] = normalizeAutomationTolerance(input["automation_tolerance"])
+	}
+	if _, hasEscalationPreference := input["escalation_preference"]; hasEscalationPreference {
+		settings["escalation_preference"] = normalizeEscalationPreference(input["escalation_preference"])
+	}
+	return settings
+}
+
 func saveUserSettings(settings map[string]any) error {
 	path := userSettingsPath()
 	if path == "" {
@@ -172,56 +203,34 @@ func (s *AdminServer) HandleTeams(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Soma Unavailable", http.StatusServiceUnavailable)
 }
 
-// HandleUpdateSettings updates user preferences
-func (s *AdminServer) HandleUpdateSettings(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var input map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, "invalid JSON body", http.StatusBadRequest)
-		return
-	}
-
-	settings := loadUserSettings()
-	if theme, ok := input["theme"].(string); ok && strings.TrimSpace(theme) != "" {
-		settings["theme"] = strings.TrimSpace(theme)
-	}
-	if matrixView, ok := input["matrix_view"].(string); ok && strings.TrimSpace(matrixView) != "" {
-		settings["matrix_view"] = strings.TrimSpace(matrixView)
-	}
-	if _, hasAssistantName := input["assistant_name"]; hasAssistantName {
-		settings["assistant_name"] = normalizeAssistantName(input["assistant_name"])
-	}
-	if _, hasRole := input["role"]; hasRole {
-		if normalized := normalizeGovernanceRole(fmt.Sprint(input["role"])); normalized != "" {
-			settings["role"] = normalized
+// HandleUserSettings is the canonical settings contract.
+// The frontend loads persisted settings from GET and updates them through PUT.
+func (s *AdminServer) HandleUserSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		respondJSON(w, loadUserSettings())
+	case http.MethodPut:
+		var input map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, "invalid JSON body", http.StatusBadRequest)
+			return
 		}
-	}
-	if _, hasCostSensitivity := input["cost_sensitivity"]; hasCostSensitivity {
-		settings["cost_sensitivity"] = normalizeCostSensitivity(input["cost_sensitivity"])
-	}
-	if _, hasReviewStrictness := input["review_strictness"]; hasReviewStrictness {
-		settings["review_strictness"] = normalizeReviewStrictness(input["review_strictness"])
-	}
-	if _, hasAutomationTolerance := input["automation_tolerance"]; hasAutomationTolerance {
-		settings["automation_tolerance"] = normalizeAutomationTolerance(input["automation_tolerance"])
-	}
-	if _, hasEscalationPreference := input["escalation_preference"]; hasEscalationPreference {
-		settings["escalation_preference"] = normalizeEscalationPreference(input["escalation_preference"])
-	}
 
-	if err := saveUserSettings(settings); err != nil {
-		http.Error(w, "failed to persist user settings", http.StatusInternalServerError)
-		return
-	}
+		settings := mergeUserSettings(input)
+		if err := saveUserSettings(settings); err != nil {
+			http.Error(w, "failed to persist user settings", http.StatusInternalServerError)
+			return
+		}
 
-	respondJSON(w, map[string]any{
-		"status":   "updated",
-		"settings": settings,
-	})
+		respondJSON(w, settings)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// HandleUpdateSettings is retained as a compatibility wrapper for older callers.
+func (s *AdminServer) HandleUpdateSettings(w http.ResponseWriter, r *http.Request) {
+	s.HandleUserSettings(w, r)
 }
 
 func mustJSON(v any) json.RawMessage {
