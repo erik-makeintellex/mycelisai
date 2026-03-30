@@ -16,10 +16,12 @@ export function createCortexUserSettingsSlice(
     set: CortexSet,
     _get: CortexGet,
 ): Pick<CortexState, 'fetchUserSettings' | 'updateAssistantName' | 'updateTheme' | 'setCouncilTarget' | 'fetchCouncilMembers'> {
+    const settingsEndpoint = '/api/v1/user/settings';
+
     return {
         fetchUserSettings: async () => {
             try {
-                const res = await fetch('/api/v1/settings/user');
+                const res = await fetch(settingsEndpoint);
                 if (!res.ok) return;
                 const payload = await res.json();
                 const data = extractApiData<Record<string, unknown> | unknown>(payload);
@@ -40,7 +42,7 @@ export function createCortexUserSettingsSlice(
             const trimmed = name.trim();
             if (!trimmed) return false;
             try {
-                const res = await fetch('/api/v1/settings/user', {
+                const res = await fetch(settingsEndpoint, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ assistant_name: trimmed }),
@@ -60,7 +62,7 @@ export function createCortexUserSettingsSlice(
         updateTheme: async (theme: ThemeSetting) => {
             const normalized = normalizeTheme(theme);
             try {
-                const res = await fetch('/api/v1/settings/user', {
+                const res = await fetch(settingsEndpoint, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ theme: normalized }),

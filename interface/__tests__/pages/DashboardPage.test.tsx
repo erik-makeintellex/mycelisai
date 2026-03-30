@@ -51,6 +51,19 @@ const diagnosticOrganizationSummary = {
     status: "ready",
 };
 
+const diagnosticOrganizationSummaryTwo = {
+    ...diagnosticOrganizationSummary,
+    id: "org-qa-2",
+    name: "Testing Setup B 171718",
+    purpose: "UI verification lane",
+};
+
+const diagnosticOrganizationSummaryThree = {
+    ...diagnosticOrganizationSummary,
+    id: "org-qa-3",
+    name: "QA Scenario C 171719",
+};
+
 function jsonResponse(body: unknown, status = 200) {
     return Promise.resolve(new Response(JSON.stringify(body), { status }));
 }
@@ -107,14 +120,19 @@ describe("Dashboard Page (V8 AI Organization entry flow)", () => {
         localStorage.clear();
     });
 
-    it("renders the Create AI Organization entry flow without architecture copy leaks", async () => {
+    it("renders Central Soma home above the AI Organization entry flow without architecture copy leaks", async () => {
         setupEntryFlowFetch();
 
         render(<DashboardPage />);
 
+        expect(await screen.findByRole("heading", { name: "Work with one Soma across every AI Organization." })).toBeDefined();
+        expect(screen.getByText("Central Soma")).toBeDefined();
+        expect(screen.getByText(/Soma and Council stay persistent across organizations/i)).toBeDefined();
+        expect(screen.getByRole("link", { name: /Review the Soma context model/i })).toBeDefined();
         expect(await screen.findByRole("heading", { name: "Create AI Organization" })).toBeDefined();
         expect(screen.getByText("AI Organization Setup")).toBeDefined();
         expect(screen.getByRole("button", { name: "Explore Templates" })).toBeDefined();
+        expect(screen.getAllByText("Create AI Organization").length).toBeGreaterThan(0);
         expect(screen.getByRole("button", { name: "Start Empty" })).toBeDefined();
         expect(screen.getByText("Memory & Continuity")).toBeDefined();
         expect(screen.queryByText("Memory & Personality")).toBeNull();
@@ -217,10 +235,33 @@ describe("Dashboard Page (V8 AI Organization entry flow)", () => {
 
         expect(await screen.findByText("Atlas")).toBeDefined();
         expect(screen.queryByText("QA Scenario A 171717")).toBeNull();
-        expect(screen.getByRole("button", { name: /Show 1 testing organizations/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Show 1 testing setup/i })).toBeDefined();
 
-        fireEvent.click(screen.getByRole("button", { name: /Show 1 testing organizations/i }));
+        fireEvent.click(screen.getByRole("button", { name: /Show 1 testing setup/i }));
         expect(await screen.findByText("QA Scenario A 171717")).toBeDefined();
+    });
+
+    it("caps revealed testing setups to two and explains when older fixtures stay hidden", async () => {
+        setupEntryFlowFetch({
+            organizationsHandler: () => jsonResponse({
+                ok: true,
+                data: [organizationSummary, diagnosticOrganizationSummary, diagnosticOrganizationSummaryTwo, diagnosticOrganizationSummaryThree],
+            }),
+        });
+
+        render(<DashboardPage />);
+
+        expect(await screen.findByText("Atlas")).toBeDefined();
+        expect(screen.queryByText("QA Scenario A 171717")).toBeNull();
+        expect(screen.queryByText("Testing Setup B 171718")).toBeNull();
+        expect(screen.queryByText("QA Scenario C 171719")).toBeNull();
+
+        fireEvent.click(screen.getByRole("button", { name: /Show 2 testing setups/i }));
+
+        expect(await screen.findByText("QA Scenario A 171717")).toBeDefined();
+        expect(screen.getByText("Testing Setup B 171718")).toBeDefined();
+        expect(screen.queryByText("QA Scenario C 171719")).toBeNull();
+        expect(screen.getByText(/Keeping 1 older testing setup out of the default product view/i)).toBeDefined();
     });
 
     it("submits an empty-start organization and routes into the landing screen", async () => {

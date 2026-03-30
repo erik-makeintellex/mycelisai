@@ -53,19 +53,42 @@ func TestHandleTeams_POST_NilSoma(t *testing.T) {
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
-// ── PUT /api/v1/user/settings ──────────────────────────────────────
+// ── GET/PUT /api/v1/user/settings ──────────────────────────────────
+
+func TestHandleUserSettings_GET(t *testing.T) {
+	s := newTestServer()
+	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
+	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "GET", "/api/v1/user/settings", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var settings map[string]any
+	assertJSON(t, rr, &settings)
+	if settings["theme"] != "aero-light" {
+		t.Errorf("Expected theme aero-light, got %#v", settings["theme"])
+	}
+	if settings["assistant_name"] != "Soma" {
+		t.Errorf("Expected assistant_name Soma, got %#v", settings["assistant_name"])
+	}
+}
 
 func TestHandleUpdateSettings(t *testing.T) {
 	s := newTestServer()
-	rr := doRequest(t, http.HandlerFunc(s.HandleUpdateSettings), "PUT", "/api/v1/user/settings", `{"theme":"dark"}`)
+	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
+	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"theme":"midnight-cortex"}`)
 	assertStatus(t, rr, http.StatusOK)
+
+	var settings map[string]any
+	assertJSON(t, rr, &settings)
+	if settings["theme"] != "midnight-cortex" {
+		t.Errorf("Expected theme midnight-cortex, got %#v", settings["theme"])
+	}
 }
 
 func TestHandleUpdateSettings_AssistantNamePersists(t *testing.T) {
 	s := newTestServer()
 	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
 
-	rr := doRequest(t, http.HandlerFunc(s.HandleUpdateSettings), "PUT", "/api/v1/user/settings", `{"assistant_name":"Mycelis Prime"}`)
+	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"assistant_name":"Mycelis Prime"}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	me := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")

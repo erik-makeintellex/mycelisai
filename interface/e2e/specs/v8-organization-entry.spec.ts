@@ -354,7 +354,7 @@ async function expectNoForbiddenCopy(page: Page) {
     expect(workspaceText).not.toMatch(/loop profile/i);
     expect(workspaceText).not.toMatch(/scheduler/i);
     expect(workspaceText).not.toMatch(/Memory & Personality/i);
-    expect(workspaceText).not.toMatch(/\bcouncil\b/i);
+    expect(workspaceText).not.toMatch(/central council/i);
     expect(workspaceText).not.toMatch(/raw architecture controls/i);
     expect(workspaceText).not.toMatch(/contract/i);
     expect(workspaceText).not.toMatch(/vector/i);
@@ -887,6 +887,9 @@ test.describe("V8 AI Organization entry flow", () => {
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
 
+        await expect(page.getByRole("heading", { name: "Work with one Soma across every AI Organization." })).toBeVisible();
+        await expect(page.getByText("Central Soma")).toBeVisible();
+        await expect(page.getByText("Universal counterpart, scoped action.")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Create AI Organization" })).toBeVisible();
         await expect(page.getByText("AI Organization Setup")).toBeVisible();
         await expect(page.getByRole("button", { name: "Explore Templates" })).toBeVisible();

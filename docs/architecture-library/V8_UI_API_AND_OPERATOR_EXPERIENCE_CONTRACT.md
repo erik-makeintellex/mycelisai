@@ -1,9 +1,13 @@
 # V8 UI API and Operator Experience Contract
 
 > Status: Canonical V8 PRD
-> Last Updated: 2026-03-21
+> Last Updated: 2026-03-29
 > Purpose: Define the exact V8 operator and user-facing flows so UI implementation reflects AI Organization behavior instead of collapsing into generic chat UX.
 > Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+
+Compatibility note:
+- This document remains the bounded current-release UI contract.
+- `docs/architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md` defines the next canonical product correction where Soma and Council are universal entities and AI Organizations become governed work contexts rather than separate Soma identities.
 
 ## 1. Why this document exists
 

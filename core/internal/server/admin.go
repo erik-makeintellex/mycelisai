@@ -163,7 +163,9 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
 	mux.HandleFunc("GET /api/v1/teams/detail", s.HandleTeamsDetail)
-	mux.HandleFunc("/api/v1/user/settings", s.HandleUpdateSettings)
+	mux.HandleFunc("/api/v1/user/settings", s.HandleUserSettings)
+	// Compatibility alias for older UI/test clients while the canonical route settles.
+	mux.HandleFunc("/api/v1/settings/user", s.HandleUserSettings)
 	mux.HandleFunc("GET /api/v1/groups", s.HandleListGroups)
 	mux.HandleFunc("GET /api/v1/groups/monitor", s.HandleGroupMonitor)
 	mux.HandleFunc("POST /api/v1/groups", s.HandleCreateGroup)

@@ -28,7 +28,9 @@ function isDiagnosticOrganization(organization: OrganizationSummary) {
     const purpose = organization.purpose.trim();
     return /^qa scenario\b/i.test(name)
         || /^qa\b/i.test(name)
+        || /^testing setup\b/i.test(name)
         || /live governance verification/i.test(purpose)
+        || /ui verification/i.test(purpose)
         || /qa_browser_/i.test(purpose);
 }
 
@@ -175,8 +177,14 @@ export default function CreateOrganizationEntry() {
         () => organizations.filter((organization) => isDiagnosticOrganization(organization)),
         [organizations],
     );
+    const visibleDiagnosticOrganizations = useMemo(
+        () => diagnosticOrganizations.slice(0, 2),
+        [diagnosticOrganizations],
+    );
+    const hiddenDiagnosticCount = Math.max(0, diagnosticOrganizations.length - visibleDiagnosticOrganizations.length);
+    const testingSetupCountLabel = visibleDiagnosticOrganizations.length === 1 ? "testing setup" : "testing setups";
     const visibleOrganizations = showDiagnosticOrganizations
-        ? [...regularOrganizations, ...diagnosticOrganizations]
+        ? [...regularOrganizations, ...visibleDiagnosticOrganizations]
         : regularOrganizations;
     const creationReadinessMessage =
         selectedMode === null
@@ -235,8 +243,7 @@ export default function CreateOrganizationEntry() {
     const showRecentOrganizations = organizationsState !== "ready" || organizations.length > 0;
 
     return (
-        <div className="h-full overflow-auto bg-cortex-bg px-6 py-8">
-            <div className="mx-auto max-w-6xl space-y-8">
+        <div className="space-y-8">
                 <section className="rounded-3xl border border-cortex-border bg-cortex-surface px-6 py-8 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                         <div className="max-w-3xl space-y-4">
@@ -292,7 +299,7 @@ export default function CreateOrganizationEntry() {
                     </section>
                 )}
 
-                <section ref={createSectionRef} className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                <section id="create-ai-organization" ref={createSectionRef} className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <div className="space-y-6 rounded-3xl border border-cortex-border bg-cortex-surface p-6">
                         <div>
                             <h2 className="text-xl font-semibold text-cortex-text-main">Choose how to start</h2>
@@ -519,13 +526,20 @@ export default function CreateOrganizationEntry() {
                                 </p>
                             </div>
                             {diagnosticOrganizations.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDiagnosticOrganizations((value) => !value)}
-                                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-muted transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
-                                >
-                                    {showDiagnosticOrganizations ? "Hide" : "Show"} {diagnosticOrganizations.length} testing organizations
-                                </button>
+                                <div className="flex flex-col items-start gap-2 lg:items-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDiagnosticOrganizations((value) => !value)}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-muted transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
+                                    >
+                                        {showDiagnosticOrganizations ? "Hide" : "Show"} {visibleDiagnosticOrganizations.length} {testingSetupCountLabel}
+                                    </button>
+                                    {(showDiagnosticOrganizations && hiddenDiagnosticCount > 0) && (
+                                        <p className="text-xs text-cortex-text-muted">
+                                            Keeping {hiddenDiagnosticCount} older testing {hiddenDiagnosticCount === 1 ? "setup" : "setups"} out of the default product view.
+                                        </p>
+                                    )}
+                                </div>
                             )}
                         </div>
 
@@ -607,7 +621,6 @@ export default function CreateOrganizationEntry() {
                         </Link>
                     </div>
                 </section>
-            </div>
         </div>
     );
 }

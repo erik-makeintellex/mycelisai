@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const DEFAULT_NAV_ENTRIES = [
-    { href: '/dashboard', label: 'AI Organization', testId: 'nav-dashboard' },
+    { href: '/dashboard', label: 'Soma', testId: 'nav-dashboard' },
     { href: '/docs', label: 'Docs', testId: 'nav-docs' },
     { href: '/settings', label: 'Settings', testId: 'nav-settings' },
 ];

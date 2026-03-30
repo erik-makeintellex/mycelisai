@@ -23,6 +23,7 @@ Mycelis is at true MVP only when all of the following are true:
 
 Mycelis must reliably:
 
+- present one persistent Soma counterpart even while work stays context-scoped
 - answer planning and review requests inline
 - generate visible content when content is requested
 - generate and reference artifacts clearly when durable output is requested
@@ -94,6 +95,7 @@ Key outcomes:
 - cleaner narrative
 - better default surfaces
 - preserved advanced reveal
+- clearer progression toward a Central Soma home instead of a purely org-scoped front door
 
 ### Lane C: Settings and Operator Functionality
 
@@ -132,9 +134,11 @@ Key outcomes:
 
 3. Audit remaining visible settings for dead controls or partial wiring.
 
-4. Align the UI testing agentry around the new content/artifact/collaboration expectations.
+4. Align the UI model around universal Soma with context-scoped AI Organizations, starting from the dashboard/home contract.
 
-5. Re-run full MVP validation from a clean environment after the next delivery slice.
+5. Align the UI testing agentry around the new content/artifact/collaboration expectations.
+
+6. Re-run full MVP validation from a clean environment after the next delivery slice.
 
 ## Release Gate For True MVP
 
