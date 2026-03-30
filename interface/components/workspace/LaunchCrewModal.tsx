@@ -12,8 +12,9 @@ import {
     AlertTriangle,
     MessageSquareText,
     Sparkles,
+    ExternalLink,
 } from "lucide-react";
-import { useCortexStore, type ChatMessage, type ExecutionMode } from "@/store/useCortexStore";
+import { useCortexStore, type ChatArtifactRef, type ChatMessage, type ExecutionMode } from "@/store/useCortexStore";
 
 const STEPS = [
     { id: 1, label: "Describe" },
@@ -117,6 +118,57 @@ function OutcomeBadge({ mode }: { mode: ExecutionMode | "confirmed_pending_execu
     );
 }
 
+function artifactReference(artifact: ChatArtifactRef): string {
+    if (artifact.saved_path?.trim()) return artifact.saved_path.trim();
+    if (artifact.url?.trim()) return artifact.url.trim();
+    if (artifact.id?.trim()) return `Artifact ID: ${artifact.id.trim()}`;
+    if (artifact.content_type?.trim()) return artifact.content_type.trim();
+    return `${artifact.type} output`;
+}
+
+function OutcomeArtifacts({ artifacts }: { artifacts: ChatArtifactRef[] }) {
+    if (artifacts.length === 0) return null;
+
+    return (
+        <div className="rounded-lg border border-cortex-border bg-cortex-bg px-3 py-3">
+            <p className="mb-2 text-[9px] font-mono uppercase tracking-widest text-cortex-text-muted">
+                Delivered outputs
+            </p>
+            <div className="space-y-2">
+                {artifacts.map((artifact, index) => (
+                    <div
+                        key={artifact.id || artifact.url || `${artifact.title}-${index}`}
+                        className="rounded-lg border border-cortex-border/60 bg-cortex-surface/40 px-2.5 py-2"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="flex-1 text-[10px] font-mono font-bold text-cortex-text-main">
+                                {artifact.title}
+                            </span>
+                            <span className="rounded border border-cortex-primary/20 bg-cortex-primary/10 px-1.5 py-0.5 text-[8px] font-mono uppercase text-cortex-primary">
+                                {artifact.type}
+                            </span>
+                            {artifact.url ? (
+                                <a
+                                    href={artifact.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-cortex-primary transition-colors hover:text-cortex-primary/80"
+                                    aria-label={`Open ${artifact.title}`}
+                                >
+                                    <ExternalLink className="h-3 w-3" />
+                                </a>
+                            ) : null}
+                        </div>
+                        <p className="mt-1 text-[10px] font-mono text-cortex-text-muted break-all">
+                            {artifactReference(artifact)}
+                        </p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function lastOutcomeMessage(messages: ChatMessage[], startIndex: number | null): ChatMessage | null {
     if (startIndex == null) return null;
     const tail = messages.slice(startIndex).filter((msg) => msg.role !== "user");
@@ -149,6 +201,7 @@ export default function LaunchCrewModal({ onClose }: Props) {
         () => lastOutcomeMessage(missionChat, requestStartIndex),
         [missionChat, requestStartIndex],
     );
+    const outcomeArtifacts = outcomeMessage?.artifacts ?? [];
     const blockerMessage = confirmError || missionChatError || outcomeMessage?.content || "Launch Crew hit a blocker.";
 
     useEffect(() => {
@@ -368,6 +421,7 @@ export default function LaunchCrewModal({ onClose }: Props) {
                                     {outcomeMessage.content}
                                 </p>
                             </div>
+                            <OutcomeArtifacts artifacts={outcomeArtifacts} />
                         </div>
                     )}
 
@@ -383,11 +437,14 @@ export default function LaunchCrewModal({ onClose }: Props) {
                             <div className="rounded-lg border border-cortex-success/30 bg-cortex-success/5 px-3 py-3">
                                 <p className="mb-1 text-[9px] font-mono uppercase tracking-widest text-cortex-success">Backend transaction complete</p>
                                 <p className="text-[10px] font-mono leading-relaxed text-cortex-text-main">
-                                    {activeRunId
+                                    {outcomeMessage?.content?.trim()
+                                        ? outcomeMessage.content
+                                        : activeRunId
                                         ? `Mission run ${activeRunId.slice(0, 8)}... was activated and is ready to inspect.`
                                         : "The launch completed and is recorded in Workspace chat."}
                                 </p>
                             </div>
+                            <OutcomeArtifacts artifacts={outcomeArtifacts} />
                         </div>
                     )}
 

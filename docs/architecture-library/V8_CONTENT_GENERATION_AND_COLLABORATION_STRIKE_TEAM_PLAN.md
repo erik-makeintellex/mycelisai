@@ -2,7 +2,7 @@
 
 > Status: ACTIVE
 > Owner: Product Management / Delivery Coordination
-> Last Updated: 2026-03-29
+> Last Updated: 2026-03-30
 > Primary Goal: Make Soma reliably deliver visible content, governed artifact generation, and policy-configurable specialist/model collaboration without flattening Mycelis into a narrow chat tool.
 
 ---
@@ -266,7 +266,7 @@ Exit criteria:
 
 ## Phase 2: Contract Definition
 
-Status: `NEXT`
+Status: `ACTIVE`
 
 Deliverables:
 
@@ -278,16 +278,18 @@ Deliverables:
 Exit criteria:
 
 - runtime, UI, docs, and testing teams are all working from the same contract
+- first result-surfacing slice is identified and attached to concrete product surfaces
 
 ## Phase 3: Runtime and UX Delivery
 
-Status: `NEXT`
+Status: `ACTIVE`
 
 Deliverables:
 
 - implementation changes for mode selection
 - implementation changes for result return/preview/reference
 - implementation changes for policy-configurable collaboration posture
+- first execution slice: Launch Crew execution outcomes must surface returned artifact references in the modal itself when Soma returns durable outputs, instead of forcing the operator to infer success from run activation alone
 - updated browser coverage
 
 Exit criteria:
