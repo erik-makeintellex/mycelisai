@@ -99,8 +99,8 @@ Review summary:
 8. `COMPLETE` targeted proof for the packaged checkpoint is green from committed state: `uv run inv core.test`, `uv run inv interface.typecheck`, `cd interface; npx vitest run __tests__/dashboard/ProposedActionBlock.test.tsx`, and `$env:PYTHONPATH='.'; uv run pytest tests/test_tasks_root.py tests/test_misc_tasks.py tests/test_docs_links.py -q` all pass against the committed approval/task-contract batch.
 9. `COMPLETE` GitHub workflow posture is now intentionally quieter until initial release readiness: push-triggered CI/dev-build/release runs are paused, while local proof, `pull_request` validation, and manual `workflow_dispatch` remain the active release-discipline path.
 10. `COMPLETE` the invoke service/task contract is now cleaner against the current architecture: `uv run inv install` targets the supported default Core + Interface stack, optional local vLLM/Diffusers helpers are explicitly opt-in, and the stale `team.sensors`, `team.output`, and `team.test` helper tasks have been removed from the exposed invoke surface so the task layer no longer presents them as active runtime services.
-11. `NEXT` after this simplification checkpoint, the team must close the content/artifact value-delivery loop so drafting requests return inline value and durable outputs return explicit artifact references or previews instead of leaving operators to infer that work happened.
-12. `BLOCKED` the full local release-proof matrix is not clean yet even though the tree is clean: `uv run inv interface.test` currently fails on `interface/__tests__/pages/ResourcesPage.test.tsx`, and the focused local `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts` run did not complete inside the timeout window.
+11. `ACTIVE` Phase 2 of the content/artifact value-delivery lane is now underway with a concrete first slice: Launch Crew execution outcomes now surface returned artifact references in the modal itself when Soma returns durable outputs, instead of only reporting that a run was activated somewhere else.
+12. `COMPLETE` the current local validation blockers from committed state are cleared again: `uv run inv interface.test` is green after tightening the `ResourcesPage` deep-link test to the real tab-selection contract, and `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts` passes again from a cleaned local machine state with managed start-mode ownership.
 13. `NEXT` the compose live fresh-organization direct-answer defect remains part of this lane’s release risk until proven fixed or clearly reclassified; approval/product-trust work cannot be considered truly clean while a healthy compose stack can still surface a first-path `500` in the live browser gate.
 
 ## Current Review (2026-03-29)
@@ -582,37 +582,29 @@ Evidence:
 
 ## Immediate Next Actions
 
-1. `NEXT` execute Phase 2 of the approval/product-trust lane: close the content/artifact value-delivery loop so drafting requests return visible inline value and durable outputs return explicit artifact references or previews.
+1. `NEXT` continue Phase 2 of the approval/product-trust lane: extend visible content/artifact value delivery beyond the first Launch Crew artifact-reference slice so drafting requests return inline value and durable outputs return explicit artifact references or previews wherever Soma surfaces the result.
 2. `REQUIRED` keep future delivery slices on clean committed checkpoints instead of mixed local batches.
    - do not reopen a large cross-surface dirty tree
    - prove each slice from committed state with the exact command set recorded here
-3. `NEXT` clear the current local `test` blocker from committed state.
-   - reproduce and fix the failing deep-link expectation in `interface/__tests__/pages/ResourcesPage.test.tsx`
-   - rerun `uv run inv interface.test`
-   - record the repaired command result here before moving the checkpoint back to green
-4. `NEXT` clear the current local `environment` / `test` blocker from committed state.
-   - rerun `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
-   - determine whether the timeout is startup ownership, local Next build state, or browser-runner environment drift
-   - do not treat the focused browser proof as green again until it passes from the committed tree
-5. `NEXT` finish the live governed-chat stabilization lane.
+3. `NEXT` finish the live governed-chat stabilization lane.
    - reproduce the fresh-organization direct-answer failure under `interface/e2e/specs/soma-governance-live.spec.ts`
    - identify whether the fault is route normalization, backend panic/error envelope drift, or proposal/approval runtime state
    - restore selector parity with the current `Approve & Execute` / `Execute` UI contract
-6. `NEXT` rerun the full live-service gate once the governed lane is repaired.
+4. `NEXT` rerun the full live-service gate once the governed lane is repaired.
    - `uv run inv ci.service-check --live-backend`
    - any additional focused live browser proof needed for the repaired path
    - update this state file from `BLOCKED` only after those commands pass from committed state
-7. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
+5. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
    - `README.md`
    - `docs/TESTING.md`
    - `docs/LOCAL_DEV_WORKFLOW.md`
    - `docs/architecture/OPERATIONS.md`
    - `ops/README.md`
    - `interface/lib/docsManifest.ts` whenever the in-app docs surface changes
-8. `NEXT` continue documentation authority cleanup with intent.
+6. `NEXT` continue documentation authority cleanup with intent.
    - keep canonical planning, delivery-governance, and UI-target docs under `docs/architecture-library/`
    - avoid letting temporary strike notes float untracked or mixed with product code
    - index any newly canonical doc in `interface/lib/docsManifest.ts` in the same slice
-9. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
+7. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
 
 

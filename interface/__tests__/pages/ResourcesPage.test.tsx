@@ -98,7 +98,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
         mockSearchParams.set('tab', 'roles');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByTestId('catalogue-page')).toBeDefined();
+            expect(screen.getByRole('button', { name: 'Role Library' }).className).toContain('border-cortex-primary');
         });
     });
 
@@ -106,7 +106,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
         mockSearchParams.set('tab', 'exchange');
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
-            expect(screen.getByTestId('exchange-inspector')).toBeDefined();
+            expect(screen.getByRole('button', { name: 'Exchange' }).className).toContain('border-cortex-primary');
         });
     });
 

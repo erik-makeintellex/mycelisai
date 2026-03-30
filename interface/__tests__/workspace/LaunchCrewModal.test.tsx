@@ -196,7 +196,35 @@ describe('LaunchCrewModal', () => {
     it('shows an execution result after confirmation succeeds', async () => {
         const proposal = baseProposal();
         const confirmProposal = vi.fn(async () => {
-            useCortexStore.setState({ activeRunId: 'run-12345' });
+            useCortexStore.setState({
+                activeRunId: 'run-12345',
+                activeMode: 'execution_result',
+                missionChat: [
+                    { role: 'user', content: 'Launch a docs crew' },
+                    {
+                        role: 'council',
+                        content: 'I have a proposal ready.',
+                        source_node: 'admin',
+                        mode: 'proposal',
+                        proposal,
+                    },
+                    {
+                        role: 'system',
+                        content: 'Weekly summary report created and saved for review.',
+                        source_node: 'admin',
+                        mode: 'execution_result',
+                        run_id: 'run-12345',
+                        artifacts: [
+                            {
+                                id: 'artifact-123',
+                                type: 'document',
+                                title: 'Weekly summary report',
+                                saved_path: 'workspace/reports/weekly-summary.md',
+                            },
+                        ],
+                    },
+                ],
+            });
             return { ok: true, runId: 'run-12345' };
         });
         resetStore({
@@ -240,6 +268,10 @@ describe('LaunchCrewModal', () => {
             expect(screen.getByText(/Crew launch submitted/i)).toBeDefined();
         });
         expect(confirmProposal).toHaveBeenCalledTimes(1);
+        expect(screen.getByText(/Weekly summary report created and saved for review\./i)).toBeDefined();
+        expect(screen.getByText(/Delivered outputs/i)).toBeDefined();
+        expect(screen.getAllByText(/Weekly summary report/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/workspace\/reports\/weekly-summary\.md/i)).toBeDefined();
         expect(screen.getByRole('button', { name: /View Run/i })).toBeDefined();
     });
 

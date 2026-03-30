@@ -308,6 +308,7 @@ Expected:
 
 - execution completes
 - artifact path or result is clearly referenced
+- if Launch Crew or another bounded outcome surface returns artifacts, the success state itself names the returned output instead of only pointing to a run
 - reload preserves execution status
 
 Terminal state:
