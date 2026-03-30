@@ -64,6 +64,11 @@ export function normalizeProposalData(raw: unknown): ProposalData | undefined {
 
     return {
         intent: typeof rec.intent === 'string' && rec.intent.trim() ? rec.intent : 'chat-action',
+        operator_summary: typeof rec.operator_summary === 'string' ? rec.operator_summary.trim() || undefined : undefined,
+        expected_result: typeof rec.expected_result === 'string' ? rec.expected_result.trim() || undefined : undefined,
+        affected_resources: Array.isArray(rec.affected_resources)
+            ? rec.affected_resources.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean)
+            : undefined,
         teams: typeof rec.teams === 'number' ? rec.teams : derivedTeams,
         agents: typeof rec.agents === 'number' ? rec.agents : derivedAgents,
         tools: uniqueStrings(rawTools.length > 0 ? rawTools : derivedTools),

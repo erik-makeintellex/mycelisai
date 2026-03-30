@@ -20,12 +20,20 @@ describe('ProposedActionBlock', () => {
             source_node: 'admin',
             proposal: {
                 intent: 'chat-action',
+                operator_summary: 'create a hello_world.py file in your workspace.',
+                expected_result: 'A new Python file will be saved to workspace/logs/hello_world.py after approval.',
+                affected_resources: ['workspace/logs/hello_world.py'],
                 teams: 1,
                 agents: 1,
                 tools: ['delegate'],
                 risk_level: 'medium',
                 confirm_token: 'ct-123',
                 intent_proof_id: 'ip-123',
+                approval_required: true,
+                approval_reason: 'capability_risk',
+                approval_mode: 'required',
+                capability_risk: 'medium',
+                capability_ids: ['write_file'],
                 team_expressions: [
                     {
                         expression_id: 'expr-1',
@@ -48,13 +56,32 @@ describe('ProposedActionBlock', () => {
         };
     }
 
-    it('renders team expression and module binding details', () => {
+    it('renders the user-facing approval summary by default and hides low-level mechanics', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
         expect(screen.getByText(/proposed action/i)).toBeDefined();
+        expect(screen.getByText(/soma wants to/i)).toBeDefined();
+        expect(screen.getByText(/create a hello_world\.py file in your workspace\./i)).toBeDefined();
+        expect(screen.getByText(/a new python file will be saved to workspace\/logs\/hello_world\.py after approval\./i)).toBeDefined();
+        expect(screen.getAllByText(/workspace\/logs\/hello_world\.py/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/this action will change your workspace, so soma needs your approval before running it\./i)).toBeDefined();
+        expect(screen.getByText(/approval required/i)).toBeDefined();
+        expect(screen.getByText(/risk medium/i)).toBeDefined();
+        expect(screen.getByRole('button', { name: /show details/i })).toBeDefined();
+        expect(screen.queryByText(/execute delegate through governed module binding/i)).toBeNull();
+        expect(screen.queryByText(/delegate \(internal\)/i)).toBeNull();
+    });
+
+    it('reveals advanced execution details only after inspection', () => {
+        render(<ProposedActionBlock message={buildMessage()} />);
+
+        fireEvent.click(screen.getByRole('button', { name: /show details/i }));
+
         expect(screen.getByText(/execute delegate through governed module binding/i)).toBeDefined();
         expect(screen.getByText(/1 expression/i)).toBeDefined();
         expect(screen.getByText(/delegate \(internal\)/i)).toBeDefined();
+        expect(screen.getByText(/capability risk/i)).toBeDefined();
+        expect(screen.getByText(/write file/i)).toBeDefined();
     });
 
     it('dispatches confirm and cancel actions', () => {
@@ -111,16 +138,19 @@ describe('ProposedActionBlock', () => {
     it('renders approval-required governance details by default', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
-        expect(screen.getByText(/approval required before execution/i)).toBeDefined();
-        expect(screen.getByText(/capability medium/i)).toBeDefined();
+        expect(screen.getByText(/why approval is needed/i)).toBeDefined();
+        expect(screen.getByText(/this action will change your workspace/i)).toBeDefined();
         expect(screen.getByRole('button', { name: /approve & execute/i })).toBeDefined();
     });
 
-    it('shows auto-approved execution details for low-risk actions', () => {
+    it('shows auto-approved execution posture for low-risk actions and keeps raw reasons in details', () => {
         render(<ProposedActionBlock message={buildMessage({
             proposal: {
                 ...buildMessage().proposal!,
                 tools: ['generate_blueprint'],
+                operator_summary: 'prepare a reusable implementation blueprint.',
+                expected_result: 'A saved blueprint artifact will be returned in this conversation.',
+                affected_resources: ['Blueprint artifact'],
                 risk_level: 'low',
                 approval_required: false,
                 approval_mode: 'auto_allowed',
@@ -131,8 +161,15 @@ describe('ProposedActionBlock', () => {
             },
         })} />);
 
-        expect(screen.getByText(/auto-approved within governance thresholds/i)).toBeDefined();
-        expect(screen.getByText(/reason: auto approve/i)).toBeDefined();
+        expect(screen.getByText(/execution posture/i)).toBeDefined();
+        expect(screen.getByText(/within current policy thresholds and can run without a mandatory approval/i)).toBeDefined();
+        expect(screen.getByText(/auto-approved/i)).toBeDefined();
+        expect(screen.getByText(/risk low/i)).toBeDefined();
+        expect(screen.queryByText(/auto approve/i)).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', { name: /show details/i }));
+
+        expect(screen.getByText(/auto approve/i)).toBeDefined();
         expect(screen.getByText(/planning/i)).toBeDefined();
         expect(screen.getByRole('button', { name: /^execute$/i })).toBeDefined();
     });

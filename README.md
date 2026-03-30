@@ -317,6 +317,7 @@ Particular attention belongs on:
 ## Command Contract
 
 Required command references for active V8 work:
+- `uv run inv install`
 - `uv run inv ci.entrypoint-check`
 - `uv run inv ci.service-check`
 - `uv run inv cache.status`
@@ -329,13 +330,14 @@ Required command references for active V8 work:
 Use `uv run inv ...` for execution.
 Use `uvx --from invoke inv -l` only as a compatibility probe.
 Do not use bare `uvx inv ...`.
-- CI validation should reuse the same invoke task surfaces for interface build/test/browser execution after the workflow-native dependency/bootstrap steps complete
+- CI validation should reuse the same invoke task surfaces for interface build/test/browser execution after the workflow-native dependency/bootstrap steps complete, but push-triggered GitHub pipeline runs are intentionally paused until initial release readiness so local proof and PR-time validation remain the active gate
 
 Provider/runtime workflow reminders:
 - review architecture and state docs before implementation slices
 - attach tests and evidence in the same delivery window
 - keep state-file updates current with gate results and blocker changes
 - use `uv run inv core.compile` when you need the repo-local Core binary refreshed without building a Docker image; reserve `uv run inv core.build` for immutable image work
+- `uv run inv install` now installs the supported default Core + Interface stack only; use `uv run inv install --optional-engines` or `uv run inv cognitive.install` when you explicitly need local vLLM/Diffusers helpers
 - use `uv run inv interface.typecheck` for managed TypeScript validation instead of ad hoc `npx tsc --noEmit` runs
 - deployment automation may override provider/model/profile/media config through env vars using `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*`; use that path instead of the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps
 - env overrides are deployment-time infrastructure wiring, not runtime organization behavior: they define provider instances, profile defaults, and environment-specific endpoints or model ids

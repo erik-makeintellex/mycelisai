@@ -209,12 +209,14 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv cognitive.install` | `uv sync` dependencies |
-| `uv run inv cognitive.llm` | Start vLLM text server (GPU, configurable) |
-| `uv run inv cognitive.media` | Start Diffusers media server (OpenAI-compatible) |
-| `uv run inv cognitive.up` | Start full stack (vLLM + Media, handles Ctrl+C) |
-| `uv run inv cognitive.stop` | Kill all cognitive processes |
-| `uv run inv cognitive.status` | HTTP probes to check vLLM + Media health |
+| `uv run inv cognitive.install` | Install optional local vLLM/Diffusers dependencies |
+| `uv run inv cognitive.llm` | Start optional local vLLM text server (GPU, configurable) |
+| `uv run inv cognitive.media` | Start optional local Diffusers media server (OpenAI-compatible) |
+| `uv run inv cognitive.up` | Start the optional local engine stack (vLLM + Media, handles Ctrl+C) |
+| `uv run inv cognitive.stop` | Kill optional local cognitive processes |
+| `uv run inv cognitive.status` | HTTP probes to check optional local vLLM + Media health |
+
+These tasks are not part of the supported default Core + Interface runtime path. The default `uv run inv install` path now targets the supported stack only; use `uv run inv install --optional-engines` or `uv run inv cognitive.install` when you explicitly want local engine helpers.
 
 ### Test Tasks (`ops/test.py`)
 
@@ -249,7 +251,7 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `ops/cache.py` | `cache.status`, `cache.clean`, `cache.apply-user-policy` | Managed cache reporting, cleanup, and Windows user-policy stamping |
 | `.dockerignore` | root Docker build-context exclusions | Excludes Interface build/test outputs so repo-root Docker builds do not ingest stale `.next`, coverage, or browser artifacts |
 | `ops/misc.py` | `clean.legacy` | Remove legacy Makefiles |
-| `ops/misc.py` | `team.sensors`, `team.output`, `team.test`, `team.architecture-sync` | Python agent teams and central architect sync |
+| `ops/misc.py` | `team.architecture-sync`, `team.worktree-triage` | central architect sync plus local worktree/task triage helpers |
 
 Key coordination example: `uv run inv team.architecture-sync`
 
@@ -519,10 +521,10 @@ Deployment automation rule:
 | Workflow | File | Trigger Paths | Checks |
 |----------|------|--------------|--------|
 | **Core CI** | `core-ci.yaml` | `core/**`, `ops/core.py`, `ops/config.py`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, direct coverage capture, GolangCI-Lint v1.64.5, `uv run inv core.compile` |
-| **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, `uv run inv interface.build` |
+| **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
 | **E2E CI** | `e2e-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed Chromium/Firefox/WebKit + mobile smoke browser matrix via `uv run inv interface.e2e` |
 
-**Trigger:** Push/PR to `main` and `develop`
+**Trigger:** `pull_request` to `main` and `develop`; push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens. Container/image workflows are manual-only via `workflow_dispatch`.
 
 ### Local CI
 

@@ -1,17 +1,6 @@
 name: E2E Tests
 
 on:
-  push:
-    branches: ["main", "develop"]
-    paths:
-      - "interface/**"
-      - "ops/config.py"
-      - "ops/interface.py"
-      - ".npmrc"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "tasks.py"
-      - ".github/workflows/e2e-ci.yaml"
   pull_request:
     branches: ["main", "develop"]
     paths:

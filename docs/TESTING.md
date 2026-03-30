@@ -123,6 +123,7 @@ Stopping containers or port-forwards alone is not enough. The pre-test cleanup p
 # Compatibility probe: uvx --from invoke inv -l
 # Unsupported bare alias: uvx inv ...
 uv run inv core.test             # Go unit tests (all packages)
+uv run inv install               # Default Core + Interface dependency install (add --optional-engines only when local vLLM/Diffusers helpers are needed)
 uv run inv interface.test        # Vitest unit tests (jsdom)
 uv run inv interface.typecheck   # TypeScript typecheck through the managed Interface task path
 uv run inv interface.e2e         # Playwright E2E tests (Invoke refreshes the built Next.js bundle for start-mode runs, manages the server lifecycle, uses serial workers by default, keeps browser cache repo-managed, cleans repo-local UI workers, and fails if it cannot own a clean managed UI server)
@@ -443,13 +444,19 @@ Expected command outcomes:
 
 ## CI Pipelines
 
-Three GitHub Actions workflows enforce quality on every push/PR to `main` and `develop`:
+Three GitHub Actions workflows remain available for PR-time and manual validation while push-triggered pipeline runs are intentionally disabled until the initial release-readiness gate is accepted:
 
 | Workflow | File | What it does |
 |----------|------|-------------|
 | **Core CI** | `.github/workflows/core-ci.yaml` | Workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, coverage, GolangCI-Lint v1.64.5, and `uv run inv core.compile` |
 | **Interface CI** | `.github/workflows/interface-ci.yaml` | Workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
 | **E2E CI** | `.github/workflows/e2e-ci.yaml` | Workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed browser matrix via `uv run inv interface.e2e` |
+
+Current trigger posture:
+
+- `core-ci.yaml`, `interface-ci.yaml`, and `e2e-ci.yaml` run on `pull_request` to `main` and `develop`
+- `dev-build.yaml` and `release.yaml` are manual-only via `workflow_dispatch`
+- direct push-triggered GitHub pipeline runs are paused until the initial release-ready boundary is explicitly reopened
 
 ### CI Checks
 

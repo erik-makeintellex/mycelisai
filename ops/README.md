@@ -13,6 +13,12 @@
 ## 🛠️ Components
 This directory contains the logic for the **Service Release Standard 1.0**.
 
+### Root `install` Task
+`uv run inv install` now installs the supported default Core + Interface stack only.
+
+- Use `uv run inv install --optional-engines` when you also want the local `cognitive/` extras.
+- Use `uv run inv cognitive.install` if you want only the optional local engine dependencies.
+
 ### `version.py` (Identity)
 Calculates the **Immutable Tag**: `v{SEMVER}-{SHA}`.
 - Source: `../VERSION` file.
@@ -87,6 +93,15 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **E2E**: `uv run inv interface.e2e`
 - Live backend browser specs that assert filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the spec checkout and the running Core checkout differ.
 
+### `cognitive.py` (Optional Local Engine Helpers)
+- **Install**: `uv run inv cognitive.install`
+- **LLM**: `uv run inv cognitive.llm`
+- **Media**: `uv run inv cognitive.media`
+- **Up**: `uv run inv cognitive.up`
+- **Stop**: `uv run inv cognitive.stop`
+- **Status**: `uv run inv cognitive.status`
+- These are optional local helpers for vLLM/Diffusers experimentation, not part of the supported default Core + Interface runtime contract.
+
 ## Clean Run Discipline for Runtime and Integration Checks
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
@@ -127,10 +142,12 @@ Delivery-focused validation, runner checks, and release preflight.
 - **Release Preflight**: `uv run inv ci.release-preflight --strict-toolchain --service-health --live-backend`
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
 - GitHub validation workflows should keep dependency/bootstrap steps workflow-native (`actions/setup-*`, `npm ci`, Playwright browser install), then hand real build/test execution back to the same `uv run inv ...` task surfaces so local and CI validation stay aligned
+- Push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens; use local `uv run inv ...` proof plus PR/manual workflow runs as the active validation path
 
 ### `misc.py` (Team Coordination)
 Central architect sync path and utility task surfaces.
 - **Architecture Sync**: `uv run inv team.architecture-sync`
+- **Worktree Triage**: `uv run inv team.worktree-triage`
 
 ## ⚡ Directives
 - **Never tag `latest`** for production.

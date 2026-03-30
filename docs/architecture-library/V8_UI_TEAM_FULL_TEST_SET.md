@@ -1,7 +1,7 @@
 # V8 UI Team Full Test Set
 
 > Status: ACTIVE
-> Last Updated: 2026-03-29
+> Last Updated: 2026-03-30
 > Owner: UI Testing Agentry Team
 > Purpose: Provide the full browser and operator-experience test set for the current V8.2 MVP, including Central Soma home, AI Organization context flows, settings persistence, governed execution, and deployed-runtime proof.
 > Supporting Docs: `V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md`, `V8_UI_WORKFLOW_VERIFICATION_PLAN.md`, `V8_PARTNER_DEMO_VERIFICATION_CHECKLIST.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
@@ -261,7 +261,14 @@ Action:
 Expected:
 
 - proposal appears
-- approval posture and capability context are visible
+- default-visible surface answers:
+  - what Soma wants to do
+  - why approval is needed, or why the action is optional/auto-allowed
+  - expected result
+  - what will change
+- approval posture and risk/cost context are visible
+- low-level tool, module-binding, and expression detail is not dumped into the default view
+- advanced execution detail is reachable behind `Show details`
 - no side effect before confirm
 
 Terminal state:
