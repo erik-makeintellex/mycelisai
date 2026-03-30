@@ -19,6 +19,35 @@
   --color-cortex-border: #c6d0db;
 }
 
+:root,
+html[data-theme="aero-light"] {
+  --color-cortex-bg: #ffffff;
+  --color-cortex-surface: #f2f5f8;
+  --color-cortex-primary: #3f4364;
+  --color-cortex-primary-glow: rgba(63, 67, 100, 0.24);
+  --color-cortex-success: #4e9b88;
+  --color-cortex-warning: #66758b;
+  --color-cortex-danger: #765466;
+  --color-cortex-info: #5d6987;
+  --color-cortex-text-main: #17181d;
+  --color-cortex-text-muted: #566276;
+  --color-cortex-border: #c6d0db;
+}
+
+html[data-theme="midnight-cortex"] {
+  --color-cortex-bg: #0f1116;
+  --color-cortex-surface: #171b23;
+  --color-cortex-primary: #84dcc6;
+  --color-cortex-primary-glow: rgba(132, 220, 198, 0.26);
+  --color-cortex-success: #7ecfb2;
+  --color-cortex-warning: #aeb9c9;
+  --color-cortex-danger: #d38aa7;
+  --color-cortex-info: #9eb0d1;
+  --color-cortex-text-main: #eef3f8;
+  --color-cortex-text-muted: #a6b2c3;
+  --color-cortex-border: #2a3342;
+}
+
 @layer base {
   /* Cortex readability: bump base from 16px to 17px so all rem-based
      Tailwind classes scale up proportionally. text-xs → 12.75px,
@@ -38,6 +67,13 @@
     text-rendering: optimizeLegibility;
     font-feature-settings: "kern" 1, "liga" 1;
     -webkit-font-smoothing: antialiased;
+  }
+
+  html[data-theme="midnight-cortex"] body {
+    background:
+      radial-gradient(circle at top, rgba(132, 220, 198, 0.1), transparent 34%),
+      radial-gradient(circle at 82% 14%, rgba(93, 105, 135, 0.16), transparent 24%),
+      linear-gradient(180deg, #0d1016 0%, var(--color-cortex-bg) 52%, #111621 100%);
   }
 
   h1, h2, h3, h4, h5, h6 {

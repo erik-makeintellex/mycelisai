@@ -1,0 +1,8 @@
+.next
+node_modules
+coverage
+test-results
+playwright-report
+npm-debug.log
+yarn-error.log
+.env.local

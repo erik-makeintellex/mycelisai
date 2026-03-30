@@ -90,6 +90,7 @@ export interface CortexState {
     missionChatFailure: MissionChatFailure | null;
     workspaceChatPrimed: boolean;
     assistantName: string;
+    theme: 'aero-light' | 'midnight-cortex' | 'system';
     councilTarget: string;
     councilMembers: CouncilMember[];
     isBroadcasting: boolean;
@@ -176,6 +177,7 @@ export interface CortexState {
     setMissionChatScope: (scope: string | null) => void;
     fetchUserSettings: () => Promise<void>;
     updateAssistantName: (name: string) => Promise<boolean>;
+    updateTheme: (theme: 'aero-light' | 'midnight-cortex' | 'system') => Promise<boolean>;
     setCouncilTarget: (id: string) => void;
     fetchCouncilMembers: () => Promise<void>;
     broadcastToSwarm: (message: string) => Promise<void>;

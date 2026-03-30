@@ -119,10 +119,34 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Release verification plan for the UI testing team, including workflows, expected API calls, and terminal states",
             },
             {
+                slug: "v8-ui-testing-agentry-runbook",
+                label: "V8 UI Testing Agentry Runbook",
+                path: "docs/architecture-library/V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md",
+                description: "Step-by-step execution runbook for the UI testing agentry, including lane order, prompts, evidence packaging, and triage rules",
+            },
+            {
                 slug: "v8-memory-continuity-rag-plan",
                 label: "V8 Memory Continuity & RAG Plan",
                 path: "docs/architecture-library/V8_MEMORY_CONTINUITY_AND_RAG_STRIKE_TEAM_PLAN.md",
                 description: "Strike-team plan for scoped pgvector memory, temporary planning continuity, and trace-clean memory boundaries",
+            },
+            {
+                slug: "v8-content-generation-collaboration-plan",
+                label: "V8 Content Generation & Collaboration Plan",
+                path: "docs/architecture-library/V8_CONTENT_GENERATION_AND_COLLABORATION_STRIKE_TEAM_PLAN.md",
+                description: "Strike-team plan for inline content delivery, governed artifact generation, and policy-configurable specialist/model collaboration",
+            },
+            {
+                slug: "v8-home-docker-compose-runtime",
+                label: "V8 Home Docker Compose Runtime",
+                path: "docs/architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md",
+                description: "Canonical single-host Docker Compose runtime for home-lab, demo, and partner-review use with managed env, health, and logging expectations",
+            },
+            {
+                slug: "v8-true-mvp-finish-plan",
+                label: "V8 True MVP Finish Plan",
+                path: "docs/architecture-library/V8_TRUE_MVP_FINISH_PLAN.md",
+                description: "Prioritized finish plan for getting Mycelis from release-candidate posture to a true MVP",
             },
             {
                 slug: "v8-demo-product-plan",

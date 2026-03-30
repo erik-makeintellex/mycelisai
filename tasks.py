@@ -4,6 +4,7 @@ from ops import auth
 from ops import cache
 from ops import ci
 from ops import cognitive
+from ops import compose
 from ops import core
 from ops import db
 from ops import device
@@ -48,6 +49,7 @@ def install(c):
 
 ns.add_task(install)
 ns.add_collection(cache.ns)
+ns.add_collection(compose.ns)
 ns.add_collection(core.ns)
 ns.add_collection(k8s.ns)
 ns.add_collection(proto_relay.ns_proto)

@@ -8,6 +8,7 @@ __pycache__/
 venv/
 env/
 .env
+.env.compose
 .env.local
 
 # Node.js
@@ -65,4 +66,5 @@ interface/test-results/
 interface/playwright-report/
 workspace/tool-cache/
 workspace/logs/
+workspace/docker-compose/
 interface/.env.local

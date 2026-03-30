@@ -3,10 +3,19 @@ import type { CortexState } from '@/store/cortexStoreState';
 import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
 import type { CouncilMember } from '@/store/cortexStoreTypes';
 
+type ThemeSetting = CortexState['theme'];
+
+function normalizeTheme(value: unknown): ThemeSetting {
+    if (value === 'midnight-cortex' || value === 'system') {
+        return value;
+    }
+    return 'aero-light';
+}
+
 export function createCortexUserSettingsSlice(
     set: CortexSet,
     _get: CortexGet,
-): Pick<CortexState, 'fetchUserSettings' | 'updateAssistantName' | 'setCouncilTarget' | 'fetchCouncilMembers'> {
+): Pick<CortexState, 'fetchUserSettings' | 'updateAssistantName' | 'updateTheme' | 'setCouncilTarget' | 'fetchCouncilMembers'> {
     return {
         fetchUserSettings: async () => {
             try {
@@ -17,9 +26,11 @@ export function createCortexUserSettingsSlice(
                 const assistantName = typeof (data as Record<string, unknown>)?.assistant_name === 'string'
                     ? ((data as Record<string, unknown>).assistant_name as string).trim()
                     : '';
-                if (assistantName) {
-                    set({ assistantName });
-                }
+                const theme = normalizeTheme((data as Record<string, unknown>)?.theme);
+                set({
+                    theme,
+                    ...(assistantName ? { assistantName } : {}),
+                });
             } catch {
                 // degraded mode — keep local defaults
             }
@@ -42,6 +53,23 @@ export function createCortexUserSettingsSlice(
                 return res.ok;
             } catch {
                 set({ assistantName: trimmed });
+                return false;
+            }
+        },
+
+        updateTheme: async (theme: ThemeSetting) => {
+            const normalized = normalizeTheme(theme);
+            try {
+                const res = await fetch('/api/v1/settings/user', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ theme: normalized }),
+                });
+                const persisted = res.ok ? await res.json().then((body) => extractApiData<Record<string, unknown> | unknown>(body)) : null;
+                set({ theme: normalizeTheme((persisted as Record<string, unknown> | null)?.theme ?? normalized) });
+                return res.ok;
+            } catch {
+                set({ theme: normalized });
                 return false;
             }
         },

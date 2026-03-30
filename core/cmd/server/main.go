@@ -26,8 +26,8 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
 	"github.com/mycelis/core/internal/conversations"
-	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/events"
+	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/mcp"
@@ -192,18 +192,8 @@ func main() {
 	}
 
 	// 1a. Initialize Database (Shared)
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "mycelis-core-postgresql"
-	}
-
-	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-		"mycelis",  // User (pinned in values.yaml)
-		"password", // Password (pinned in values.yaml)
-		dbHost,
-		"5432",
-		"cortex",
-	)
+	dbConfig := resolveDatabaseConfig()
+	dbURL := dbConfig.connectionString()
 
 	// Open Shared DB Connection — retry up to 90s to let Postgres come up in parallel.
 	sharedDB, err := sql.Open("pgx", dbURL)
@@ -631,9 +621,15 @@ func main() {
 		log.Println("MCP Library Active.")
 	}
 
-	// Phase 18: Bootstrap default MCP servers (filesystem, fetch) on first run
+	// The compose home-runtime image is intentionally slim and may not include npm/npx
+	// for zero-config local MCP subprocesses. Keep manual/external MCP support active,
+	// but allow operators to disable default bootstrap noise explicitly per runtime.
 	if mcpService != nil && mcpPool != nil && mcpLibrary != nil {
-		mcpService.BootstrapDefaults(ctx, mcpLibrary, mcpPool)
+		if defaultMCPBootstrapEnabled() {
+			mcpService.BootstrapDefaults(ctx, mcpLibrary, mcpPool)
+		} else {
+			log.Println("MCP bootstrap: default server auto-install disabled by runtime environment.")
+		}
 	}
 
 	// Wire system capabilities into Meta-Architect (tools, MCP servers, library)

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ArrowRight, Blocks, Bot, BrainCircuit, Building2, Layers3, Loader2, RefreshCcw, Sparkles } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import { readLastOrganization, rememberLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
@@ -23,6 +23,15 @@ async function readJson(response: Response) {
     }
 }
 
+function isDiagnosticOrganization(organization: OrganizationSummary) {
+    const name = organization.name.trim();
+    const purpose = organization.purpose.trim();
+    return /^qa scenario\b/i.test(name)
+        || /^qa\b/i.test(name)
+        || /live governance verification/i.test(purpose)
+        || /qa_browser_/i.test(purpose);
+}
+
 export default function CreateOrganizationEntry() {
     const router = useRouter();
     const [templates, setTemplates] = useState<OrganizationTemplateSummary[]>([]);
@@ -41,7 +50,20 @@ export default function CreateOrganizationEntry() {
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [openingOrganizationId, setOpeningOrganizationId] = useState<string | null>(null);
+    const [showDiagnosticOrganizations, setShowDiagnosticOrganizations] = useState(false);
     const [, startTransition] = useTransition();
+    const createSectionRef = useRef<HTMLElement | null>(null);
+    const nameInputRef = useRef<HTMLInputElement | null>(null);
+
+    const focusCreateFlow = (mode: OrganizationStartMode) => {
+        setSelectedMode(mode);
+        requestAnimationFrame(() => {
+            if (typeof createSectionRef.current?.scrollIntoView === "function") {
+                createSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            nameInputRef.current?.focus();
+        });
+    };
 
     const rememberOrganization = (organization: Pick<OrganizationSummary, "id" | "name">) => {
         rememberLastOrganization({ id: organization.id, name: organization.name });
@@ -145,6 +167,31 @@ export default function CreateOrganizationEntry() {
         purpose.trim().length > 8 &&
         selectedMode !== null &&
         (!isTemplateMode || (templatesState === "ready" && !!selectedTemplate));
+    const regularOrganizations = useMemo(
+        () => organizations.filter((organization) => !isDiagnosticOrganization(organization)),
+        [organizations],
+    );
+    const diagnosticOrganizations = useMemo(
+        () => organizations.filter((organization) => isDiagnosticOrganization(organization)),
+        [organizations],
+    );
+    const visibleOrganizations = showDiagnosticOrganizations
+        ? [...regularOrganizations, ...diagnosticOrganizations]
+        : regularOrganizations;
+    const creationReadinessMessage =
+        selectedMode === null
+            ? "Choose Start from template or Start empty first."
+            : name.trim().length <= 1
+              ? "Add a clear AI Organization name."
+              : purpose.trim().length <= 8
+                ? "Add a short purpose so Soma knows what this organization is for."
+                : isTemplateMode && templatesState === "loading"
+                  ? "Wait for starter templates to finish loading."
+                  : isTemplateMode && templatesState === "error"
+                    ? "Starter templates are unavailable right now. Retry or start empty."
+                    : isTemplateMode && !selectedTemplate
+                      ? "Choose a starter template to continue."
+                      : null;
 
     const handleCreate = async () => {
         if (!canSubmit || isSubmitting || selectedMode === null) {
@@ -206,10 +253,10 @@ export default function CreateOrganizationEntry() {
                                 </p>
                             </div>
                             <div className="flex flex-wrap gap-3">
-                                <ActionButton onClick={() => setSelectedMode("template")} kind="primary">
+                                <ActionButton onClick={() => focusCreateFlow("template")} kind="primary">
                                     Explore Templates
                                 </ActionButton>
-                                <ActionButton onClick={() => setSelectedMode("empty")} kind="secondary">
+                                <ActionButton onClick={() => focusCreateFlow("empty")} kind="secondary">
                                     Start Empty
                                 </ActionButton>
                             </div>
@@ -245,71 +292,7 @@ export default function CreateOrganizationEntry() {
                     </section>
                 )}
 
-                {showRecentOrganizations && (
-                    <section className="space-y-3">
-                        <div>
-                            <h2 className="text-lg font-semibold text-cortex-text-main">Recent AI Organizations</h2>
-                            <p className="text-sm text-cortex-text-muted">Reopen an existing organization when you want to continue instead of starting over.</p>
-                        </div>
-
-                        {organizationsState === "loading" && (
-                            <LoadingState label="Loading recent AI Organizations..." />
-                        )}
-
-                        {organizationsState === "error" && organizationsError && (
-                            <ActionableState
-                                title="Recent AI Organizations are unavailable"
-                                message={organizationsError}
-                                guidance="You can still create a new AI Organization below while we retry your recent organizations."
-                                actions={
-                                    <ActionButton onClick={() => setOrganizationsReloadToken((value) => value + 1)} kind="secondary" showRetryIcon>
-                                        Retry recent AI Organizations
-                                    </ActionButton>
-                                }
-                            />
-                        )}
-
-                        {organizationsState === "ready" && organizations.length > 0 && (
-                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                                {organizations.map((organization) => (
-                                    <button
-                                        key={organization.id}
-                                        type="button"
-                                        onClick={() => openOrganization(organization)}
-                                        disabled={openingOrganizationId === organization.id || isSubmitting}
-                                        className="rounded-2xl border border-cortex-border bg-cortex-surface p-4 text-left transition-colors hover:border-cortex-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
-                                        aria-busy={openingOrganizationId === organization.id}
-                                    >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <p className="text-base font-semibold text-cortex-text-main">{organization.name}</p>
-                                                <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{organization.purpose}</p>
-                                            </div>
-                                            <span className="rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
-                                                {organization.start_mode === "template" ? "Template" : "Empty"}
-                                            </span>
-                                        </div>
-                                        <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-cortex-text-muted">
-                                            <Metric label="Team Lead" value={organization.team_lead_label} />
-                                            <Metric label="Departments" value={String(organization.department_count)} />
-                                                <Metric label="Specialists" value={String(organization.specialist_count)} />
-                                                <Metric label="AI Organization" value={organization.status} />
-                                            </div>
-                                        <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10">
-                                            {openingOrganizationId === organization.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : null}
-                                            Open AI Organization
-                                            <ArrowRight className="h-4 w-4" />
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </section>
-                )}
-
-                <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                <section ref={createSectionRef} className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <div className="space-y-6 rounded-3xl border border-cortex-border bg-cortex-surface p-6">
                         <div>
                             <h2 className="text-xl font-semibold text-cortex-text-main">Choose how to start</h2>
@@ -324,14 +307,14 @@ export default function CreateOrganizationEntry() {
                                 title="Start from template"
                                 description="Use a starter that already defines a Team Lead, initial Departments, and Specialist structure."
                                 icon={<Layers3 className="h-5 w-5" />}
-                                onClick={() => setSelectedMode("template")}
+                                onClick={() => focusCreateFlow("template")}
                             />
                             <StartModeCard
                                 active={selectedMode === "empty"}
                                 title="Start empty"
                                 description="Begin with a clean AI Organization and shape the structure after the organization exists."
                                 icon={<Building2 className="h-5 w-5" />}
-                                onClick={() => setSelectedMode("empty")}
+                                onClick={() => focusCreateFlow("empty")}
                             />
                         </div>
 
@@ -421,6 +404,7 @@ export default function CreateOrganizationEntry() {
                         <label className="block space-y-2">
                             <span className="text-sm font-medium text-cortex-text-main">AI Organization name</span>
                             <input
+                                ref={nameInputRef}
                                 value={name}
                                 onChange={(event) => setName(event.target.value)}
                                 placeholder="Northstar Labs"
@@ -437,6 +421,32 @@ export default function CreateOrganizationEntry() {
                                 className="min-h-[120px] w-full rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-main outline-none transition-colors placeholder:text-cortex-text-muted focus:border-cortex-primary/40"
                             />
                         </label>
+
+                        <div className="space-y-2">
+                            <p className="text-sm font-medium text-cortex-text-main">Suggested starting points</p>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setName("Northstar Labs");
+                                        setPurpose("Launch a focused AI product organization that can plan priorities, review work, and execute governed changes.");
+                                    }}
+                                    className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1.5 text-xs font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
+                                >
+                                    Product delivery organization
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setName("Skylight Works");
+                                        setPurpose("Create an AI operations organization that can review workflows, coordinate specialists, and keep execution visible.");
+                                    }}
+                                    className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1.5 text-xs font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
+                                >
+                                    Operations organization
+                                </button>
+                            </div>
+                        </div>
 
                         <div className="rounded-2xl border border-cortex-border bg-cortex-bg p-4 text-sm text-cortex-text-muted">
                             <p className="font-medium text-cortex-text-main">Selected start</p>
@@ -477,6 +487,9 @@ export default function CreateOrganizationEntry() {
                             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Blocks className="h-4 w-4" />}
                             Create AI Organization
                         </button>
+                        {creationReadinessMessage && !submitError && (
+                            <p className="text-sm text-cortex-text-muted">{creationReadinessMessage}</p>
+                        )}
                         {isSubmitting && (
                             <p className="text-sm text-cortex-text-muted">
                                 Opening your Soma workspace as soon as the organization is ready.
@@ -495,6 +508,92 @@ export default function CreateOrganizationEntry() {
                         </div>
                     </div>
                 </section>
+
+                {showRecentOrganizations && (
+                    <section className="space-y-3">
+                        <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                                <h2 className="text-lg font-semibold text-cortex-text-main">Recent AI Organizations</h2>
+                                <p className="text-sm text-cortex-text-muted">
+                                    Reopen an existing organization when you want to continue instead of starting over.
+                                </p>
+                            </div>
+                            {diagnosticOrganizations.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDiagnosticOrganizations((value) => !value)}
+                                    className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-muted transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
+                                >
+                                    {showDiagnosticOrganizations ? "Hide" : "Show"} {diagnosticOrganizations.length} testing organizations
+                                </button>
+                            )}
+                        </div>
+
+                        {organizationsState === "loading" && (
+                            <LoadingState label="Loading recent AI Organizations..." />
+                        )}
+
+                        {organizationsState === "error" && organizationsError && (
+                            <ActionableState
+                                title="Recent AI Organizations are unavailable"
+                                message={organizationsError}
+                                guidance="You can still create a new AI Organization above while we retry your recent organizations."
+                                actions={
+                                    <ActionButton onClick={() => setOrganizationsReloadToken((value) => value + 1)} kind="secondary" showRetryIcon>
+                                        Retry recent AI Organizations
+                                    </ActionButton>
+                                }
+                            />
+                        )}
+
+                        {organizationsState === "ready" && visibleOrganizations.length > 0 && (
+                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                {visibleOrganizations.map((organization) => (
+                                    <button
+                                        key={organization.id}
+                                        type="button"
+                                        onClick={() => openOrganization(organization)}
+                                        disabled={openingOrganizationId === organization.id || isSubmitting}
+                                        className="rounded-2xl border border-cortex-border bg-cortex-surface p-4 text-left transition-colors hover:border-cortex-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
+                                        aria-busy={openingOrganizationId === organization.id}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p className="text-base font-semibold text-cortex-text-main">{organization.name}</p>
+                                                <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
+                                                    {organization.purpose || "Reopen this AI Organization and continue where you left off."}
+                                                </p>
+                                            </div>
+                                            <span className="rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
+                                                {organization.start_mode === "template" ? "Template" : "Empty"}
+                                            </span>
+                                        </div>
+                                        <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-cortex-text-muted">
+                                            <Metric label="Team Lead" value={organization.team_lead_label} />
+                                            <Metric label="Departments" value={String(organization.department_count)} />
+                                            <Metric label="Specialists" value={String(organization.specialist_count)} />
+                                            <Metric label="AI Organization" value={organization.status} />
+                                        </div>
+                                        <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10">
+                                            {openingOrganizationId === organization.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : null}
+                                            Open AI Organization
+                                            <ArrowRight className="h-4 w-4" />
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {organizationsState === "ready" && visibleOrganizations.length === 0 && (
+                            <EmptyState
+                                title="No recent AI Organizations yet"
+                                detail="Create your first AI Organization above to give Soma a real workspace, team structure, and continuity."
+                            />
+                        )}
+                    </section>
+                )}
 
                 <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-6 text-sm text-cortex-text-muted">
                     <p className="font-medium text-cortex-text-main">Why start here</p>

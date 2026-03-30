@@ -37,6 +37,20 @@ const organizationSummary = {
     status: "ready",
 };
 
+const diagnosticOrganizationSummary = {
+    id: "org-qa-1",
+    name: "QA Scenario A 171717",
+    purpose: "Live governance verification",
+    start_mode: "empty",
+    team_lead_label: "Team Lead",
+    advisor_count: 0,
+    department_count: 0,
+    specialist_count: 0,
+    ai_engine_settings_summary: "Set up later in Advanced mode",
+    memory_personality_summary: "Set up later in Advanced mode",
+    status: "ready",
+};
+
 function jsonResponse(body: unknown, status = 200) {
     return Promise.resolve(new Response(JSON.stringify(body), { status }));
 }
@@ -192,6 +206,21 @@ describe("Dashboard Page (V8 AI Organization entry flow)", () => {
         expect(await screen.findByRole("link", { name: /Return to Organization/i })).toBeDefined();
         expect(screen.getByText("Atlas")).toBeDefined();
         expect(screen.getByRole("link", { name: /Return to Organization/i }).getAttribute("href")).toBe("/organizations/org-42");
+    });
+
+    it("hides diagnostic QA organizations by default and lets the operator reveal them intentionally", async () => {
+        setupEntryFlowFetch({
+            organizationsHandler: () => jsonResponse({ ok: true, data: [organizationSummary, diagnosticOrganizationSummary] }),
+        });
+
+        render(<DashboardPage />);
+
+        expect(await screen.findByText("Atlas")).toBeDefined();
+        expect(screen.queryByText("QA Scenario A 171717")).toBeNull();
+        expect(screen.getByRole("button", { name: /Show 1 testing organizations/i })).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: /Show 1 testing organizations/i }));
+        expect(await screen.findByText("QA Scenario A 171717")).toBeDefined();
     });
 
     it("submits an empty-start organization and routes into the landing screen", async () => {

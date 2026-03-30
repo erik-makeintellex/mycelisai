@@ -72,6 +72,7 @@ Bootstrap reminder:
 Tasking note:
 - `uv run inv db.migrate` is a forward-bootstrap task for schemas that are not already initialized; if the `cortex` schema is already bootstrapped, it now skips replay and points operators to `uv run inv db.reset` for a clean rebuild
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend
+- the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, and point it at a host-reachable endpoint such as `http://host.docker.internal:11434`
 
 ## What Mycelis Is
 
@@ -321,6 +322,8 @@ Required command references for active V8 work:
 - `uv run inv cache.status`
 - `uv run inv cache.clean`
 - `uv run inv lifecycle.memory-restart`
+- `uv run inv compose.up`
+- `uv run inv compose.health`
 - `uv run inv team.architecture-sync`
 
 Use `uv run inv ...` for execution.
@@ -343,6 +346,7 @@ Provider/runtime workflow reminders:
 - check `uv run inv cache.status` before large build/test/browser runs when disk headroom is tight; the main repo-local growth surfaces are `workspace/tool-cache`, `interface/.next`, Playwright browser binaries, and other generated test artifacts
 - use `uv run inv cache.clean` as the first repo-safe reclaim path when builds or tests start failing under disk pressure instead of manually deleting random working files
 - local lifecycle tasks target the bridged Core API on `localhost:8081` by default unless `MYCELIS_API_PORT` overrides it
+- the home-runtime compose path keeps the same host port contract (`3000`, `8081`, `5432`, `4222`) through `.env.compose` so browser/operator proof does not need a separate port story
 - Interface tasking now separates the bind host from the local probe host: by default the UI binds on `[::]:3000` for dual-stack LAN reachability, while local checks and browser tooling target `127.0.0.1:3000` unless `MYCELIS_INTERFACE_BIND_HOST` / `MYCELIS_INTERFACE_HOST` override that split
 - expect Invoke-managed Interface build/test/browser tasks to sweep repo-local Next/Vitest/Playwright worker residue after each run so old `node.exe` workers do not accumulate between sessions
 - expect Invoke-managed Interface and CI tasks to execute from the `interface/` working directory through the same `npm`/`node` entrypoints on Windows and Linux rather than relying on shell-specific `cd ... &&` wrappers
@@ -410,6 +414,7 @@ Documentation rule:
 Agents implementing V8 should follow this process:
 1. clean runtime environment and running services when the slice requires a deterministic baseline
    - `uv run inv lifecycle.down` now treats repo-local Interface worker residue as part of the shutdown contract, not just bound ports
+   - when the validation target is the supported home single-host stack, use `uv run inv compose.down --volumes` instead of Kind teardown so the compose runtime starts from a truly clean database/bus state
    - when repeated build/test cycles have been running for a while, clear stale runtime residue before assuming the issue is just disk: leaked Interface workers and long-lived local services can keep caches hot and hold build outputs open
 2. review the layered architecture truth in README, the owning architecture doc, and `V8_DEV_STATE.md`
 3. review V7 architecture-library documentation as migration input when a V8 replacement has not fully landed yet

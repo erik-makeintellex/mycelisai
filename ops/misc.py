@@ -81,7 +81,6 @@ def legacy(c):
     legacy_files = [
         ROOT_DIR / "Makefile", 
         ROOT_DIR / "Makefile.legacy",
-        ROOT_DIR / "docker-compose.yml"
     ]
     for p in legacy_files:
         if p.exists():
