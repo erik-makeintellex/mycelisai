@@ -201,6 +201,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+    monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
 
     def fake_start(env, port=interface.INTERFACE_PORT, server_mode="start"):
         env_seen.update(env)
@@ -218,8 +219,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     assert env_seen["INTERFACE_BIND_HOST"] == interface.INTERFACE_BIND_HOST
     assert events == [
         f"stop:{port}",
-        "build",
-        f"start:{port}:start",
+        f"start:{port}:dev",
         f"ready:127.0.0.1:{port}",
         "kill:4242",
         f"stop:{port}",
@@ -273,7 +273,7 @@ def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_ho
         lambda _c, command, pty=True, env=None, hide=False, warn=False: env_seen.update(env or {}) or FakeResult(),
     )
 
-    interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts")
+    interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts", server_mode="start")
 
     captured = capsys.readouterr()
     assert "Managed server is reachable via ::1; updating Playwright host from 127.0.0.1" in captured.out
