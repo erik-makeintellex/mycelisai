@@ -41,6 +41,11 @@ func TestBuildMutationChatProposal(t *testing.T) {
 			CapabilityRisk:   "medium",
 		},
 		&protocol.GovernanceProfileSnapshot{Role: "owner"},
+		proposalDisplayContract{
+			OperatorSummary:   "Hand the requested work to the right team.",
+			ExpectedResult:    "The approved task will be routed to the selected team with execution proof.",
+			AffectedResources: []string{"governed state"},
+		},
 	)
 
 	if proposal == nil {
@@ -51,6 +56,15 @@ func TestBuildMutationChatProposal(t *testing.T) {
 	}
 	if proposal.IntentProofID != "proof-123" {
 		t.Fatalf("intent_proof_id = %q, want proof-123", proposal.IntentProofID)
+	}
+	if proposal.OperatorSummary != "Hand the requested work to the right team." {
+		t.Fatalf("operator_summary = %q", proposal.OperatorSummary)
+	}
+	if proposal.ExpectedResult != "The approved task will be routed to the selected team with execution proof." {
+		t.Fatalf("expected_result = %q", proposal.ExpectedResult)
+	}
+	if len(proposal.AffectedResources) != 1 || proposal.AffectedResources[0] != "governed state" {
+		t.Fatalf("affected_resources = %#v", proposal.AffectedResources)
 	}
 	if proposal.ConfirmToken != "token-123" {
 		t.Fatalf("confirm_token = %q, want token-123", proposal.ConfirmToken)
@@ -89,5 +103,19 @@ func TestBuildMutationChatProposal(t *testing.T) {
 	second := proposal.TeamExpressions[1]
 	if second.ModuleBindings[0].AdapterKind != "mcp" {
 		t.Fatalf("adapter_kind = %q, want mcp", second.ModuleBindings[0].AdapterKind)
+	}
+}
+
+func TestBuildProposalDisplayContractUsesDelegateTaskFallback(t *testing.T) {
+	display := buildProposalDisplayContract(nil, "", []string{"delegate_task"})
+
+	if display.OperatorSummary != "Hand the requested work to the right team." {
+		t.Fatalf("operator_summary = %q", display.OperatorSummary)
+	}
+	if display.ExpectedResult != "The approved task will be routed to the selected team with execution proof." {
+		t.Fatalf("expected_result = %q", display.ExpectedResult)
+	}
+	if len(display.AffectedResources) != 1 || display.AffectedResources[0] != "governed state" {
+		t.Fatalf("affected_resources = %#v, want [governed state]", display.AffectedResources)
 	}
 }

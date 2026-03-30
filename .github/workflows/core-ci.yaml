@@ -1,16 +1,6 @@
 name: Core CI
 
 on:
-  push:
-    branches: ["main", "develop"]
-    paths:
-      - "core/**"
-      - "ops/core.py"
-      - "ops/config.py"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "tasks.py"
-      - ".github/workflows/core-ci.yaml"
   pull_request:
     branches: ["main", "develop"]
     paths:

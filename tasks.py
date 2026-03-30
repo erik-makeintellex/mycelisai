@@ -20,10 +20,14 @@ from ops import test
 ns = Collection()
 
 
-@task
-def install(c):
+@task(
+    help={
+        "optional_engines": "Also install optional local cognitive engine dependencies from cognitive/ (default: False).",
+    }
+)
+def install(c, optional_engines=False):
     """
-    Install all local development dependencies.
+    Install the default local development dependencies for the supported Core + Interface stack.
     Assumes the shell/session is already running with admin rights.
     """
     print("Installing workspace Python dependencies...")
@@ -40,9 +44,13 @@ def install(c):
     print("Installing Interface dependencies...")
     c.run("npm install --prefix interface", env=env)
 
-    print("Installing Cognitive dependencies...")
-    with c.cd("cognitive"):
-        c.run("uv sync", env=env)
+    if optional_engines:
+        print("Installing optional cognitive engine dependencies...")
+        with c.cd("cognitive"):
+            c.run("uv sync", env=env)
+    else:
+        print("Skipping optional cognitive engine dependencies.")
+        print("  Use `uv run inv install --optional-engines` or `uv run inv cognitive.install` when you need local vLLM/Diffusers helpers.")
 
     print("Install complete.")
 

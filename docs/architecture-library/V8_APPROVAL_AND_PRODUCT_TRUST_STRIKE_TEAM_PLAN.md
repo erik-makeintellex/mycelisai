@@ -213,7 +213,7 @@ Deliverables:
 
 ### Phase 0: Truth Mapping
 
-Status target: ACTIVE -> COMPLETE
+Status target: COMPLETE
 
 Goals:
 
@@ -242,9 +242,78 @@ Acceptance:
 - every major approval/content path is classified
 - no open ambiguity about whether “approval needed” is a product issue or a policy issue
 
+### Phase 0 Output: Proposal Card Field Inventory
+
+`default-visible`
+
+- lifecycle status
+- `operator_summary`
+- `expected_result`
+- `affected_resources`
+- human-readable approval posture
+- human-readable explanation of why approval is needed, or why approval is optional/auto-allowed
+- risk
+- estimated cost when relevant
+- external-data indicator when relevant
+- approve / cancel actions
+- explicit `Show details` control
+
+`details-only`
+
+- source role / source node
+- engine / provider location
+- tool labels
+- team and agent scope counts
+- capability labels
+- raw approval reason label
+- team expression summaries
+- module binding summaries
+
+`runtime-only`
+
+- `confirm_token`
+- `intent_proof_id`
+- internal binding or expression identifiers not needed for the operator decision
+- audit/proof correlation fields that belong in runtime, logs, or advanced inspectors rather than the default proposal card
+
+### Phase 0 Output: Request Taxonomy
+
+`answer`
+
+- summarize
+- explain
+- review
+- brainstorm
+- draft short inline content when no durable governed artifact is needed
+
+`governed artifact`
+
+- create, save, export, or package a durable file, image, blueprint, or other persistent result
+
+`optional approval`
+
+- governed work that stays within current policy thresholds and may be operator-reviewed without being hard-blocked
+
+`required approval`
+
+- workspace mutation
+- external exposure or external-data use
+- spend/cost threshold crossings
+- higher-risk capability paths
+
+### Phase 0 Output: First Simplification Slice
+
+The first implementation slice for this lane is:
+
+- add a product-facing proposal display contract in runtime payloads
+- make the default proposal card show summary, expected result, affected resources, approval rationale, and risk/cost posture
+- move tool/expression/module-binding detail behind an explicit details control
+- keep governance logic unchanged while improving operator legibility
+- update unit/browser expectations to prevent drift back to raw internal-first presentation
+
 ### Phase 1: Approval Surface Simplification
 
-Status target: NEXT -> IN_REVIEW
+Status target: IN_REVIEW
 
 Goals:
 

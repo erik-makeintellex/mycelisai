@@ -90,26 +90,6 @@ def legacy(c):
 ns_clean = Collection("clean")
 ns_clean.add_task(legacy)
 
-# -- TEAM --
-@task
-def sensors(c):
-    """Run Sensor Manager."""
-    env = {"PYTHONPATH": "sdk/python/src"}
-    c.run("uv run python agents/sensors/manager.py", env=env)
-
-@task
-def output(c):
-    """Run Output Manager."""
-    env = {"PYTHONPATH": "sdk/python/src"}
-    c.run("uv run python agents/output/manager.py", env=env)
-
-@task
-def test(c):
-    """Run Team Agent Unit Tests."""
-    env = {"PYTHONPATH": "sdk/python/src"}
-    c.run("uv run pytest agents/tests", env=env)
-
-
 def _unique_strings(items):
     ordered = []
     seen = set()
@@ -434,8 +414,5 @@ def architecture_sync(c, timeout=12):
         sock.close()
 
 ns_team = Collection("team")
-ns_team.add_task(sensors)
-ns_team.add_task(output)
-ns_team.add_task(test)
 ns_team.add_task(architecture_sync)
 ns_team.add_task(worktree_triage)

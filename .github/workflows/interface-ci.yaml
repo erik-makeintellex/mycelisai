@@ -1,17 +1,6 @@
 name: Interface CI
 
 on:
-  push:
-    branches: ["main", "develop"]
-    paths:
-      - "interface/**"
-      - "ops/interface.py"
-      - "ops/config.py"
-      - ".npmrc"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "tasks.py"
-      - ".github/workflows/interface-ci.yaml"
   pull_request:
     branches: ["main", "develop"]
     paths:

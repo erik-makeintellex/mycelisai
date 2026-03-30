@@ -353,10 +353,127 @@ func buildTeamExpressionsFromTools(tools []string, teamID string, rolePlan []str
 	return expressions
 }
 
-func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID string, rolePlan []string, approval *protocol.ApprovalPolicy, profile *protocol.GovernanceProfileSnapshot) *protocol.ChatProposal {
+type proposalDisplayContract struct {
+	OperatorSummary   string
+	ExpectedResult    string
+	AffectedResources []string
+}
+
+func firstStringArgument(arguments map[string]any, key string) string {
+	if arguments == nil {
+		return ""
+	}
+	raw, ok := arguments[key]
+	if !ok {
+		return ""
+	}
+	value, ok := raw.(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(value)
+}
+
+func formatProposalResource(resource string) string {
+	trimmed := strings.TrimSpace(resource)
+	if trimmed == "" {
+		return ""
+	}
+	if trimmed == "state" {
+		return "governed state"
+	}
+	return trimmed
+}
+
+func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequest string, mutTools []string) proposalDisplayContract {
+	display := proposalDisplayContract{
+		OperatorSummary: "Carry out the requested governed action.",
+		ExpectedResult:  "Soma will perform the approved action and return durable execution proof.",
+	}
+
+	for _, resource := range affectedResourcesForPlannedCalls(planned) {
+		if formatted := formatProposalResource(resource); formatted != "" {
+			display.AffectedResources = append(display.AffectedResources, formatted)
+		}
+	}
+
+	if len(planned) > 0 {
+		switch strings.TrimSpace(planned[0].Name) {
+		case "write_file":
+			path := firstStringArgument(planned[0].Arguments, "path")
+			if path != "" {
+				display.OperatorSummary = fmt.Sprintf("Create %q in the workspace.", path)
+				display.ExpectedResult = fmt.Sprintf("One new workspace file will be created at %q after approval.", path)
+				if len(display.AffectedResources) == 0 {
+					display.AffectedResources = []string{path}
+				}
+				return display
+			}
+			display.OperatorSummary = "Create a new workspace file."
+			display.ExpectedResult = "One new workspace file will be created after approval."
+			return display
+		case "publish_signal":
+			subject := firstStringArgument(planned[0].Arguments, "subject")
+			if subject != "" {
+				display.OperatorSummary = fmt.Sprintf("Publish a governed signal to %q.", subject)
+				display.ExpectedResult = fmt.Sprintf("A signal will be sent on %q after approval.", subject)
+				if len(display.AffectedResources) == 0 {
+					display.AffectedResources = []string{subject}
+				}
+				return display
+			}
+			display.OperatorSummary = "Publish a governed signal."
+			display.ExpectedResult = "A governed signal will be sent after approval."
+			return display
+		case "generate_blueprint":
+			display.OperatorSummary = "Prepare a reusable blueprint from this request."
+			display.ExpectedResult = "A governed blueprint draft will be created for review."
+			return display
+		case "delegate", "delegate_task":
+			display.OperatorSummary = "Hand the requested work to the right team."
+			display.ExpectedResult = "The approved task will be routed to the selected team with execution proof."
+			return display
+		case "broadcast":
+			display.OperatorSummary = "Broadcast the requested update to connected teams."
+			display.ExpectedResult = "The approved broadcast will be sent and logged with execution proof."
+			return display
+		}
+	}
+
+	if len(mutTools) > 0 {
+		switch strings.TrimSpace(mutTools[0]) {
+		case "write_file":
+			display.OperatorSummary = "Create a new workspace file."
+			display.ExpectedResult = "One new workspace file will be created after approval."
+		case "publish_signal":
+			display.OperatorSummary = "Publish a governed signal."
+			display.ExpectedResult = "A governed signal will be sent after approval."
+		case "generate_blueprint":
+			display.OperatorSummary = "Prepare a reusable blueprint from this request."
+			display.ExpectedResult = "A governed blueprint draft will be created for review."
+		case "delegate", "delegate_task":
+			display.OperatorSummary = "Hand the requested work to the right team."
+			display.ExpectedResult = "The approved task will be routed to the selected team with execution proof."
+		case "broadcast":
+			display.OperatorSummary = "Broadcast the requested update to connected teams."
+			display.ExpectedResult = "The approved broadcast will be sent and logged with execution proof."
+		}
+	}
+
+	if strings.TrimSpace(latestRequest) != "" && display.OperatorSummary == "Carry out the requested governed action." {
+		display.ExpectedResult = "Soma will carry out the approved request and return durable execution proof."
+	}
+
+	return display
+}
+
+func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID string, rolePlan []string, approval *protocol.ApprovalPolicy, profile *protocol.GovernanceProfileSnapshot, display proposalDisplayContract) *protocol.ChatProposal {
 	deduped := uniqueOrderedTools(mutTools)
 	return &protocol.ChatProposal{
 		Intent:            "chat-action",
+		OperatorSummary:   display.OperatorSummary,
+		ExpectedResult:    display.ExpectedResult,
+		AffectedResources: display.AffectedResources,
 		Tools:             deduped,
 		RiskLevel:         chatToolRisk(deduped),
 		ConfirmToken:      confirmToken,
@@ -808,7 +925,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, "admin-core", []string{"admin"}, approval, profile.snapshot())
+		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, mutTools)
+		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, "admin-core", []string{"admin"}, approval, profile.snapshot(), display)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",
@@ -1090,7 +1208,8 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, teamID, []string{memberID}, approval, profile.snapshot())
+		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, mutTools)
+		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, teamID, []string{memberID}, approval, profile.snapshot(), display)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",

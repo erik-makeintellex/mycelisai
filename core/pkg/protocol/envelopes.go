@@ -113,6 +113,9 @@ type ChatTeamExpression struct {
 
 type ChatProposal struct {
 	Intent            string                     `json:"intent"`
+	OperatorSummary   string                     `json:"operator_summary,omitempty"`
+	ExpectedResult    string                     `json:"expected_result,omitempty"`
+	AffectedResources []string                   `json:"affected_resources,omitempty"`
 	Tools             []string                   `json:"tools"`
 	RiskLevel         string                     `json:"risk_level"` // "low" | "medium" | "high"
 	ConfirmToken      string                     `json:"confirm_token"`

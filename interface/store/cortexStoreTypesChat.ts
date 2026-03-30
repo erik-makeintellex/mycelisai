@@ -49,6 +49,9 @@ export interface TeamExpressionData {
 
 export interface ProposalData {
     intent: string;
+    operator_summary?: string;
+    expected_result?: string;
+    affected_resources?: string[];
     teams: number;
     agents: number;
     tools: string[];

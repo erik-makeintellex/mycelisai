@@ -487,6 +487,7 @@ OLLAMA_HOST=http://192.168.x.x:11434
 ### Option C: vLLM (GPU inference)
 
 ```bash
+uv run inv install --optional-engines    # Or run cognitive.install directly for engine-only extras
 uv run inv cognitive.install    # Install vLLM + deps
 uv run inv cognitive.llm        # Start on port 8000
 ```
@@ -536,8 +537,8 @@ Then change profiles in `cognitive.yaml` to `"vllm"`.
 | **CI** | |
 | `uv run inv ci.check` | Full pipeline: lint → test → build |
 | **Cognitive** | |
-| `uv run inv cognitive.up` | Start vLLM + Media servers |
-| `uv run inv cognitive.stop` | Kill cognitive processes |
-| `uv run inv cognitive.status` | Health check providers |
+| `uv run inv cognitive.up` | Start optional local vLLM + Media servers |
+| `uv run inv cognitive.stop` | Kill optional local cognitive processes |
+| `uv run inv cognitive.status` | Health check optional local providers |
 
 

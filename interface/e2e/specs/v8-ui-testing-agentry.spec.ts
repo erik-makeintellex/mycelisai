@@ -153,6 +153,9 @@ function proposalEnvelope(): RouteResponse {
                     artifacts: [],
                     proposal: {
                         intent: "create_workspace_file",
+                        operator_summary: "create a hello_world.py file in your workspace.",
+                        expected_result: "A new Python file will be saved to workspace/logs/hello_world.py after approval.",
+                        affected_resources: ["workspace/logs/hello_world.py"],
                         teams: 1,
                         agents: 1,
                         tools: ["write_file"],
@@ -369,8 +372,13 @@ test.describe("V8 UI testing agentry product contract", () => {
         await sendWorkspaceMessage(page, "Create a simple python file named hello_world.py in the workspace.");
 
         await expect(page.getByText("PROPOSED ACTION")).toBeVisible({ timeout: 20_000 });
-        await expect(page.getByText("Approval optional for this action")).toBeVisible();
-        await expect(page.getByText(/Capability MEDIUM/i)).toBeVisible();
+        await expect(page.getByText("Soma wants to")).toBeVisible();
+        await expect(page.getByText("create a hello_world.py file in your workspace.")).toBeVisible();
+        await expect(page.getByText("A new Python file will be saved to workspace/logs/hello_world.py after approval.")).toBeVisible();
+        await expect(page.getByText("workspace/logs/hello_world.py", { exact: true })).toBeVisible();
+        await expect(page.getByText("Approval optional")).toBeVisible();
+        await expect(page.getByText(/RISK MEDIUM/i)).toBeVisible();
+        await expect(page.getByRole("button", { name: /Show details/i })).toBeVisible();
 
         await page.getByRole("button", { name: /^Cancel$/i }).click();
         await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 20_000 });

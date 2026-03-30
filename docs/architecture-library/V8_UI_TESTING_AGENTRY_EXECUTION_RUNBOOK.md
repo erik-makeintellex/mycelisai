@@ -1,7 +1,7 @@
 # V8 UI Testing Agentry Execution Runbook
 
 > Status: ACTIVE
-> Last Updated: 2026-03-29
+> Last Updated: 2026-03-30
 > Owner: UI Testing Agentry Team
 > Supporting Docs:
 > - `V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
@@ -170,7 +170,9 @@ Action:
 Expected:
 
 - result lands in `proposal`
-- proposal card shows approval posture and capability/risk context
+- proposal card default view shows what Soma wants to do, why approval is needed or optional, the expected result, and what will change
+- proposal card still shows approval posture and risk/cost context
+- tool, module-binding, and expression mechanics stay behind an explicit details control instead of leading the default surface
 - mutation does not silently execute
 
 Evidence:

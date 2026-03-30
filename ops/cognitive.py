@@ -22,8 +22,8 @@ def _load_engine_config():
 
 @task
 def install(c):
-    """Install cognitive engine dependencies via uv (vLLM + Diffusers)."""
-    print("Installing Mycelis Cognitive Engine dependencies...")
+    """Install optional local cognitive engine dependencies via uv (vLLM + Diffusers)."""
+    print("Installing optional Mycelis cognitive engine dependencies...")
     with c.cd(str(COGNITIVE_DIR)):
         c.run("uv sync", pty=not is_windows(), env=_task_env())
     print("Cognitive engine dependencies installed.")
@@ -32,7 +32,7 @@ def install(c):
 @task
 def llm(c):
     """
-    Start the vLLM text inference server.
+    Start the optional local vLLM text inference server.
 
     Serves the configured model with OpenAI-compatible API on the configured port.
     Uses AWQ quantization and respects GPU memory partitioning from engine.yaml.
@@ -75,7 +75,7 @@ def llm(c):
 @task
 def media(c):
     """
-    Start the Diffusers media generation server.
+    Start the optional local Diffusers media generation server.
 
     Serves an OpenAI-compatible /v1/images/generations endpoint.
     """
@@ -101,7 +101,7 @@ def media(c):
 @task
 def up(c):
     """
-    Start the full cognitive stack (vLLM + Media Server).
+    Start the optional full cognitive stack (vLLM + Media Server).
 
     Launches both services. Use Ctrl+C to stop.
     For production, run `cognitive.llm` and `cognitive.media` in separate terminals.
@@ -169,7 +169,7 @@ def up(c):
 
 @task
 def stop(c):
-    """Stop all cognitive engine processes (vLLM + Media Server)."""
+    """Stop the optional local cognitive engine processes (vLLM + Media Server)."""
     print("Stopping Cognitive Engine...")
     if is_windows():
         # vLLM runs as python process
@@ -191,7 +191,7 @@ def stop(c):
 
 @task
 def status(c):
-    """Check the status of cognitive engine services."""
+    """Check the status of the optional local cognitive engine services."""
     import urllib.request
     import json
 
