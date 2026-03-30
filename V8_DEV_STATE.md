@@ -94,12 +94,14 @@ Review summary:
 3. `ACTIVE` the default product problem is now named precisely: users are still being exposed to too much raw governance detail before they receive value, while content/media/file requests can still be perceived as “asked for permission but did not clearly deliver content or clearly reference the result.”
 4. `ACTIVE` the strike-team plan now locks the non-negotiable posture that not all MCP/specialist/model collaboration should be manually approval-gated by default; the correct standard is policy-configurable governance tied to risk, mutation impact, external exposure, cost, and integration trust.
 5. `COMPLETE` Phase 0 truth mapping now has canonical outputs in `docs/architecture-library/V8_APPROVAL_AND_PRODUCT_TRUST_STRIKE_TEAM_PLAN.md`: proposal fields are classified into `default-visible`, `details-only`, and `runtime-only`, and request types are classified into `answer`, `governed artifact`, `optional approval`, and `required approval`.
-6. `IN_REVIEW` the first approval-surface simplification slice is now wired end to end: runtime proposal payloads carry `operator_summary`, `expected_result`, and `affected_resources`, the dashboard proposal card now leads with user-legible action/result/change framing, and advanced mechanics move behind an explicit details control instead of leading the default surface.
-7. `COMPLETE` the stable validation checkpoint for this slice is green: `uv run inv core.test`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts` all pass against the updated approval/product-trust contract.
-8. `COMPLETE` GitHub workflow posture is now intentionally quieter until initial release readiness: push-triggered CI/dev-build/release runs are paused, while local proof, `pull_request` validation, and manual `workflow_dispatch` remain the active release-discipline path.
-9. `COMPLETE` the invoke service/task contract is now cleaner against the current architecture: `uv run inv install` targets the supported default Core + Interface stack, optional local vLLM/Diffusers helpers are explicitly opt-in, and the stale `team.sensors`, `team.output`, and `team.test` helper tasks have been removed from the exposed invoke surface so the task layer no longer presents them as active runtime services.
-10. `NEXT` after this simplification checkpoint, the team must close the content/artifact value-delivery loop so drafting requests return inline value and durable outputs return explicit artifact references or previews instead of leaving operators to infer that work happened.
-11. `NEXT` the compose live fresh-organization direct-answer defect remains part of this lane’s release risk until proven fixed or clearly reclassified; approval/product-trust work cannot be considered truly clean while a healthy compose stack can still surface a first-path `500` in the live browser gate.
+6. `COMPLETE` the repo-hygiene packaging checkpoint is now closed at commit `8344f33` (`Package approval trust and task-contract cleanup`): the approval/product-trust proposal-card slice, the paused push-triggered workflow posture, and the invoke task-surface cleanup are committed from a clean tree instead of being carried as lingering local drift.
+7. `IN_REVIEW` the first approval-surface simplification slice is now wired end to end and packaged cleanly: runtime proposal payloads carry `operator_summary`, `expected_result`, and `affected_resources`, the dashboard proposal card now leads with user-legible action/result/change framing, and advanced mechanics move behind an explicit details control instead of leading the default surface.
+8. `COMPLETE` targeted proof for the packaged checkpoint is green from committed state: `uv run inv core.test`, `uv run inv interface.typecheck`, `cd interface; npx vitest run __tests__/dashboard/ProposedActionBlock.test.tsx`, and `$env:PYTHONPATH='.'; uv run pytest tests/test_tasks_root.py tests/test_misc_tasks.py tests/test_docs_links.py -q` all pass against the committed approval/task-contract batch.
+9. `COMPLETE` GitHub workflow posture is now intentionally quieter until initial release readiness: push-triggered CI/dev-build/release runs are paused, while local proof, `pull_request` validation, and manual `workflow_dispatch` remain the active release-discipline path.
+10. `COMPLETE` the invoke service/task contract is now cleaner against the current architecture: `uv run inv install` targets the supported default Core + Interface stack, optional local vLLM/Diffusers helpers are explicitly opt-in, and the stale `team.sensors`, `team.output`, and `team.test` helper tasks have been removed from the exposed invoke surface so the task layer no longer presents them as active runtime services.
+11. `NEXT` after this simplification checkpoint, the team must close the content/artifact value-delivery loop so drafting requests return inline value and durable outputs return explicit artifact references or previews instead of leaving operators to infer that work happened.
+12. `BLOCKED` the full local release-proof matrix is not clean yet even though the tree is clean: `uv run inv interface.test` currently fails on `interface/__tests__/pages/ResourcesPage.test.tsx`, and the focused local `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts` run did not complete inside the timeout window.
+13. `NEXT` the compose live fresh-organization direct-answer defect remains part of this lane’s release risk until proven fixed or clearly reclassified; approval/product-trust work cannot be considered truly clean while a healthy compose stack can still surface a first-path `500` in the live browser gate.
 
 ## Current Review (2026-03-29)
 
@@ -580,46 +582,37 @@ Evidence:
 
 ## Immediate Next Actions
 
-1. `NEXT` split the current local worktree into explicit delivery lanes before any further promotion.
-   - lane A: UI/testing stabilization changes already in progress (`useCortexStore`, theme/readability, UI agentry docs/specs, live governed spec parity work)
-   - lane B: build/task/workflow cleanup and operator-truthfulness hardening (`ops/**`, workflow YAML, task docs, workflow/task pytest coverage)
-   - lane C: any remaining backend test-only follow-up (`core/internal/server/cognitive_test.go`, `core/internal/server/templates_test.go`) if it is not part of lane B
-2. `REQUIRED` prove each lane from a clean committed checkout, not a mixed working tree.
-   - rerun the targeted pytest suites for the touched lane
-   - rerun the relevant invoke tasks from the committed state
-   - record the exact passing command set in the lane close-out notes
-3. `NEXT` finish the live governed-chat stabilization lane.
-   - reproduce the non-JSON `/api/v1/chat` failure under `interface/e2e/specs/soma-governance-live.spec.ts`
+1. `NEXT` execute Phase 2 of the approval/product-trust lane: close the content/artifact value-delivery loop so drafting requests return visible inline value and durable outputs return explicit artifact references or previews.
+2. `REQUIRED` keep future delivery slices on clean committed checkpoints instead of mixed local batches.
+   - do not reopen a large cross-surface dirty tree
+   - prove each slice from committed state with the exact command set recorded here
+3. `NEXT` clear the current local `test` blocker from committed state.
+   - reproduce and fix the failing deep-link expectation in `interface/__tests__/pages/ResourcesPage.test.tsx`
+   - rerun `uv run inv interface.test`
+   - record the repaired command result here before moving the checkpoint back to green
+4. `NEXT` clear the current local `environment` / `test` blocker from committed state.
+   - rerun `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
+   - determine whether the timeout is startup ownership, local Next build state, or browser-runner environment drift
+   - do not treat the focused browser proof as green again until it passes from the committed tree
+5. `NEXT` finish the live governed-chat stabilization lane.
+   - reproduce the fresh-organization direct-answer failure under `interface/e2e/specs/soma-governance-live.spec.ts`
    - identify whether the fault is route normalization, backend panic/error envelope drift, or proposal/approval runtime state
    - restore selector parity with the current `Approve & Execute` / `Execute` UI contract
-   - do not mark the live lane complete until the governed browser proof is green against the real backend
-4. `NEXT` rerun the full live-service gate once the governed lane is repaired.
+6. `NEXT` rerun the full live-service gate once the governed lane is repaired.
    - `uv run inv ci.service-check --live-backend`
    - any additional focused live browser proof needed for the repaired path
-   - update this state file from `BLOCKED` to `IN_REVIEW` only after those commands pass from the repaired branch state
-5. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
+   - update this state file from `BLOCKED` only after those commands pass from committed state
+7. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
    - `README.md`
    - `docs/TESTING.md`
    - `docs/LOCAL_DEV_WORKFLOW.md`
    - `docs/architecture/OPERATIONS.md`
    - `ops/README.md`
    - `interface/lib/docsManifest.ts` whenever the in-app docs surface changes
-6. `NEXT` finish the workflow/release hygiene pass.
-   - make sure CI trigger paths match the actual task/dependency contract
-   - confirm release-facing docs describe the stable E2E matrix and the live governed-browser gate accurately
-   - keep `uv.lock` and root `.npmrc` in the watched CI surface unless the bootstrap contract changes again
-7. `NEXT` perform the deferred low-confidence cleanup review as a separate pass.
-   - inspect `_matches_compiled_go_binary_path` and similar low-usage helpers
-   - remove only what is proven unused by production code and supporting tests
-   - do not bundle speculative deletion with unrelated UX or backend fixes
 8. `NEXT` continue documentation authority cleanup with intent.
    - keep canonical planning, delivery-governance, and UI-target docs under `docs/architecture-library/`
    - avoid letting temporary strike notes float untracked or mixed with product code
    - index any newly canonical doc in `interface/lib/docsManifest.ts` in the same slice
-9. `NEXT` once the worktree is split and the live governed lane is green, package the release structure.
-   - verify `main` or the release branch is clean
-   - confirm the final validation matrix from committed state
-   - tag or branch the accepted V8.2 RC boundary only after the clean-tree proof is recorded
-10. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
+9. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
 
 
