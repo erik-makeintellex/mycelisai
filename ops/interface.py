@@ -623,15 +623,17 @@ def test_coverage(c):
         "spec": "Optional Playwright spec path or glob.",
         "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
         "workers": "Optional Playwright worker count override for stability-sensitive runs.",
-        "server_mode": "Server mode for the managed UI server (dev or start).",
+        "server_mode": "Server mode for the managed UI server (dev or start, defaults to dev).",
     }
 )
-def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="start"):
+def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev"):
     """
     Run Playwright E2E tests.
     The Invoke wrapper starts a managed local Next.js server and clears any stale
     Interface listener before and after the run because Next.js dev servers can
     linger on Windows after Playwright exits.
+    Stable mocked browser proof defaults to a managed dev server; use
+    --server-mode=start when the run should refresh and serve the built bundle.
     Use --live-backend when the spec should talk to the real Core API through
     the Next.js proxy instead of relying entirely on route stubs.
     """
