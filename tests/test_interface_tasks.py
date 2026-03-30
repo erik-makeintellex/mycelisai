@@ -84,6 +84,38 @@ def test_build_cleans_residual_interface_workers(monkeypatch):
     assert shell_calls == [["npm", "run", "build"]]
 
 
+def test_build_retries_once_after_next_lock_conflict(monkeypatch):
+    cleaned: list[str] = []
+    stopped: list[str] = []
+    shell_calls: list[list[str]] = []
+    shell_results = iter(
+        [
+            interface.CommandResult(
+                exited=1,
+                stdout="",
+                stderr="Unable to acquire lock at D:\\repo\\interface\\.next\\lock, is another instance of next build running?",
+            ),
+            interface.CommandResult(exited=0, stdout="", stderr=""),
+        ]
+    )
+    ctx = FakeContext()
+
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: stopped.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "clean", lambda _c: cleaned.append("clean") or None)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: shell_calls.append(command) or next(shell_results),
+    )
+
+    interface.build.body(ctx)
+
+    assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
+    assert cleaned == ["clean", "cleanup", "cleanup", "clean", "cleanup", "cleanup"]
+    assert shell_calls == [["npm", "run", "build"], ["npm", "run", "build"]]
+
+
 def test_clean_ignores_missing_files_during_rmtree(monkeypatch):
     removed: list[str] = []
 

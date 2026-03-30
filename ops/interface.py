@@ -75,6 +75,11 @@ class CommandResult:
     stderr: str = ""
 
 
+def _is_next_build_lock_conflict(result: CommandResult) -> bool:
+    text = _normalize_process_text(f"{result.stdout}\n{result.stderr}")
+    return "unable to acquire lock at" in text and ".next/lock" in text
+
+
 def interface_task_env(extra=None):
     """Public wrapper for callers that need the managed Interface task env."""
     return _task_env(extra=extra)
@@ -207,6 +212,17 @@ def _kill_pid_tree(pid: int):
                 capture_output=True,
                 timeout=12,
             )
+            with suppress(subprocess.SubprocessError, OSError):
+                subprocess.run(
+                    [
+                        "powershell",
+                        "-NoProfile",
+                        "-Command",
+                        f"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue",
+                    ],
+                    capture_output=True,
+                    timeout=5,
+                )
         else:
             subprocess.run(["kill", "-9", str(pid)], capture_output=True, timeout=5)
     except subprocess.TimeoutExpired:
@@ -541,6 +557,14 @@ def build(c):
         result = _run_interface_shell_command(["npm", "run", "build"])
         _print_ascii_safe(result.stdout)
         _print_ascii_safe(result.stderr)
+        if result.exited != 0 and _is_next_build_lock_conflict(result):
+            print("Detected a stale Next.js build lock. Cleaning repo-local Interface workers and retrying once...")
+            _cleanup_repo_local_interface_processes()
+            clean(c)
+            _cleanup_repo_local_interface_processes()
+            result = _run_interface_shell_command(["npm", "run", "build"])
+            _print_ascii_safe(result.stdout)
+            _print_ascii_safe(result.stderr)
         if result.exited != 0:
             raise SystemExit(result.exited)
     finally:
@@ -704,8 +728,18 @@ def clean(c):
 
     cache_dir = os.path.join("interface", ".next")
     print("Clearing Next.js cache...")
+    _cleanup_repo_local_interface_processes()
     if os.path.isdir(cache_dir):
-        shutil.rmtree(cache_dir, onexc=_ignore_missing_rmtree_error)
+        for attempt in range(3):
+            try:
+                shutil.rmtree(cache_dir, onexc=_ignore_missing_rmtree_error)
+                break
+            except PermissionError as exc:
+                if attempt == 2:
+                    raise
+                print(f"  WARN: cache removal was blocked by an open file handle ({exc}); retrying after cleanup...")
+                _cleanup_repo_local_interface_processes()
+                time.sleep(0.5)
     print("Cache cleared.")
 
 @task

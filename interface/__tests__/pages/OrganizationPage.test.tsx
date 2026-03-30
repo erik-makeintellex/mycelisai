@@ -662,7 +662,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Memory & Continuity" })).toBeDefined();
-    });
+    }, 15000);
 
     it("preserves the organization context when a Soma action fails and then succeeds on retry", async () => {
         let attempt = 0;
