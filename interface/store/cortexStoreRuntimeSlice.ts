@@ -4,13 +4,12 @@ import type {
     MissionProfile,
     MissionProfileCreate,
 } from '@/store/cortexStoreTypes';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 
 export function createCortexRuntimeSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<
-    CortexState,
+): CortexSlice<
     | 'fetchRunTimeline'
     | 'fetchRecentRuns'
     | 'fetchMissionProfiles'

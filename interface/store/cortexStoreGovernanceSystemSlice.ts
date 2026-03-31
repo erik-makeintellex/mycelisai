@@ -7,13 +7,12 @@ import type {
     TeamAgent,
     TeamDetail,
 } from '@/store/cortexStoreTypes';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 
 export function createCortexGovernanceSystemSlice(
     set: CortexSet,
     _get: CortexGet,
-): Pick<
-    CortexState,
+): CortexSlice<
     | 'fetchTeamDetails'
     | 'fetchPolicy'
     | 'updatePolicy'

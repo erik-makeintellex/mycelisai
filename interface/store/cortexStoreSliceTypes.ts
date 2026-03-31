@@ -8,3 +8,5 @@ export type CortexSet = (
 ) => void;
 
 export type CortexGet = () => CortexState;
+
+export type CortexSlice<K extends keyof CortexState> = Pick<CortexState, K>;

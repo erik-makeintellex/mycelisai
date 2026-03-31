@@ -1,14 +1,13 @@
 import { applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import type { CortexState } from '@/store/cortexStoreState';
 import { blueprintToGraph } from '@/store/cortexStoreUtils';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { ChatMessage, CTSEnvelope, MissionBlueprint, ProposalData, SignalDetail } from '@/store/cortexStoreTypes';
 
 export function createCortexGraphUiSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<
-    CortexState,
+): CortexSlice<
     | 'onNodesChange'
     | 'onEdgesChange'
     | 'submitIntent'

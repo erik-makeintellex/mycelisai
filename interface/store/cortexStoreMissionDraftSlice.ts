@@ -1,5 +1,5 @@
 import type { CortexState } from '@/store/cortexStoreState';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { AgentManifest, MissionBlueprint, TeamsFilter } from '@/store/cortexStoreTypes';
 import { blueprintToGraph, solidifyNodes } from '@/store/cortexStoreUtils';
 
@@ -76,8 +76,7 @@ function removeAgentById(blueprint: MissionBlueprint, agentId: string) {
 export function createCortexMissionDraftSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<
-    CortexState,
+): CortexSlice<
     | 'instantiateMission'
     | 'fetchTeamsDetail'
     | 'selectTeam'
