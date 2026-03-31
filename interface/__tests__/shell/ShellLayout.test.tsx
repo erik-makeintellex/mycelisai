@@ -10,9 +10,6 @@ vi.mock('@/components/shell/ZoneB_Workspace', () => ({
         <div data-testid="zone-b">{children}</div>
     ),
 }));
-vi.mock('@/components/shell/ZoneD_Decision', () => ({
-    ZoneD: () => <div data-testid="zone-d">ZoneD</div>,
-}));
 vi.mock('@/components/dashboard/DegradedModeBanner', () => ({
     __esModule: true,
     default: () => <div data-testid="degraded-banner">DegradedBanner</div>,
@@ -40,11 +37,10 @@ describe('ShellLayout', () => {
         expect(initializeStream).toHaveBeenCalled();
     });
 
-    it('renders all three zones', () => {
+    it('renders the shell rail and workspace zones', () => {
         render(<ShellLayout />);
         expect(screen.getByTestId('zone-a')).toBeDefined();
         expect(screen.getByTestId('zone-b')).toBeDefined();
-        expect(screen.getByTestId('zone-d')).toBeDefined();
     });
 
     it('applies cortex-bg background class', () => {

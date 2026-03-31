@@ -68,7 +68,7 @@ export function normalizeIncomingSignal(raw: RawSignalEnvelope): StreamSignal {
     };
 }
 
-/** Convert an SSE StreamSignal (or SignalContext Signal) to a normalized SignalDetail */
+/** Convert a StreamSignal into a normalized SignalDetail. */
 export function streamSignalToDetail(signal: StreamSignal): SignalDetail {
     return {
         type: signal.type ?? 'unknown',

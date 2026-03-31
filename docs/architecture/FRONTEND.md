@@ -38,12 +38,12 @@ Release-candidate MVP note:
 | --- | --- | --- |
 | Rail | `ZoneA_Rail.tsx` | Workflow-first navigation + advanced toggle + settings |
 | Main workspace container | `ZoneB_Workspace.tsx` | Hosts route content |
-| Governance side rail | `ZoneD_Decision.tsx` | Approval and decision overlays |
 | Global degraded feedback | `DegradedModeBanner.tsx` | Recovery-oriented degraded state messaging |
 | Global status inspector | `StatusDrawer.tsx` | Unified service/chat failure diagnostics |
 
 Implementation note:
-- `ZoneC_Stream.tsx` exists but is not part of the global `ShellLayout`; stream/telemetry surfaces are route-local.
+- governed approval review is store-driven through `GovernanceModal.tsx` in advanced workspace contexts, not a legacy shell side rail
+- stream/telemetry surfaces are route-local, with `NatsWaterfall.tsx` and `SignalDetailDrawer.tsx` carrying the active advanced inspection path
 
 ---
 

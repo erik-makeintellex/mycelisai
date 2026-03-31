@@ -3,7 +3,6 @@
 import React, { useEffect } from "react";
 import { ZoneA } from "./ZoneA_Rail";
 import { ZoneB } from "./ZoneB_Workspace";
-import { ZoneD } from "./ZoneD_Decision";
 import DegradedModeBanner from "@/components/dashboard/DegradedModeBanner";
 import StatusDrawer from "@/components/dashboard/StatusDrawer";
 import { Activity } from "lucide-react";
@@ -48,8 +47,6 @@ export function ShellLayout({ children }: ShellLayoutProps) {
 
             </div>
 
-            {/* ZONE D: Decision (Governance Overlay) */}
-            <ZoneD />
             <StatusDrawer />
             <button
                 onClick={() => setStatusDrawerOpen(true)}
