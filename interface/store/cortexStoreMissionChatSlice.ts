@@ -10,6 +10,102 @@ import type { APIResponse, ChatMessage, CTSChatEnvelope } from '@/store/cortexSt
 import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
 import { clearPersistedChat, loadPersistedChat, normalizeProposalData } from '@/store/cortexStoreUtils';
 
+interface ChatRouteConfig {
+    isSomaRoute: boolean;
+    chatRoute: string;
+    routeLabel: string;
+    allowSilentColdStartRetry: boolean;
+}
+
+interface MissionChatBlockerOptions {
+    assistantName: string;
+    targetId: string;
+    message: string;
+    routeLabel: string;
+    set: CortexSet;
+    statusCode?: number;
+    availability?: MissionChatAvailability;
+    content?: string;
+}
+
+function buildChatRouteConfig(councilTarget: string, workspaceChatPrimed: boolean): ChatRouteConfig {
+    const isSomaRoute = councilTarget === 'admin';
+    return {
+        isSomaRoute,
+        chatRoute: isSomaRoute ? '/api/v1/chat' : `/api/v1/council/${councilTarget}/chat`,
+        routeLabel: isSomaRoute ? 'Soma chat' : 'Council agent',
+        allowSilentColdStartRetry: isSomaRoute && !workspaceChatPrimed,
+    };
+}
+
+function buildRecentMissionMessages(messages: ChatMessage[]) {
+    return [...messages]
+        .slice(-20)
+        .map((entry) => ({
+            role: entry.role === 'user' ? 'user' : 'assistant',
+            content: entry.content,
+        }));
+}
+
+function resolveGovernanceMode(trustThreshold: number): CortexState['governanceMode'] {
+    if (trustThreshold >= 0.8) return 'strict';
+    if (trustThreshold >= 0.5) return 'active';
+    return 'passive';
+}
+
+function setMissionChatBlocker({
+    assistantName,
+    targetId,
+    message,
+    routeLabel,
+    set,
+    statusCode,
+    availability,
+    content,
+}: MissionChatBlockerOptions) {
+    set((s) => ({
+        isMissionChatting: false,
+        missionChatError: message,
+        missionChatFailure: buildMissionChatFailure({
+            assistantName,
+            targetId,
+            message,
+            statusCode,
+            availability,
+        }),
+        missionChat: [...s.missionChat, {
+            role: 'council',
+            content: content ?? message,
+            source_node: targetId,
+            mode: 'blocker',
+        }],
+        activeMode: 'blocker',
+        activeRole: targetId || routeLabel,
+    }));
+}
+
+function setMissionChatSuccess(set: CortexSet, get: CortexGet, chatMsg: ChatMessage, isSomaRoute: boolean) {
+    const govMode = resolveGovernanceMode(get().trustThreshold);
+    set((s) => ({
+        isMissionChatting: false,
+        missionChat: [...s.missionChat, chatMsg],
+        missionChatFailure: null,
+        missionChatError: null,
+        workspaceChatPrimed: s.workspaceChatPrimed || isSomaRoute,
+        activeBrain: chatMsg.brain ?? null,
+        activeMode: chatMsg.mode || 'answer',
+        activeRole: chatMsg.source_node || '',
+        governanceMode: govMode,
+        ...(chatMsg.proposal ? {
+            pendingProposal: chatMsg.proposal,
+            activeConfirmToken: chatMsg.proposal.confirm_token,
+        } : {
+            pendingProposal: null,
+            activeConfirmToken: null,
+        }),
+    }));
+}
+
 export function createCortexMissionChatSlice(
     set: CortexSet,
     get: CortexGet,
@@ -23,10 +119,12 @@ export function createCortexMissionChatSlice(
             if (!trimmed) return;
 
             const { councilTarget, assistantName, workspaceChatPrimed } = get();
-            const isSomaRoute = councilTarget === 'admin';
-            const chatRoute = isSomaRoute ? '/api/v1/chat' : `/api/v1/council/${councilTarget}/chat`;
-            const routeLabel = isSomaRoute ? 'Soma chat' : 'Council agent';
-            const allowSilentColdStartRetry = isSomaRoute && !workspaceChatPrimed;
+            const {
+                isSomaRoute,
+                chatRoute,
+                routeLabel,
+                allowSilentColdStartRetry,
+            } = buildChatRouteConfig(councilTarget, workspaceChatPrimed);
 
             set((s) => ({
                 missionChat: [...s.missionChat, { role: 'user', content: trimmed }],
@@ -38,12 +136,7 @@ export function createCortexMissionChatSlice(
             for (let attempt = 0; attempt < 2; attempt += 1) {
                 const isRetryAttempt = attempt > 0;
                 try {
-                    const messages = [...get().missionChat]
-                        .slice(-20)
-                        .map((entry) => ({
-                            role: entry.role === 'user' ? 'user' : 'assistant',
-                            content: entry.content,
-                        }));
+                    const messages = buildRecentMissionMessages(get().missionChat);
 
                     const res = await fetch(chatRoute, {
                         method: 'POST',
@@ -70,20 +163,15 @@ export function createCortexMissionChatSlice(
                             continue;
                         }
 
-                        set((s) => ({
-                            isMissionChatting: false,
-                            missionChatError: errMsg,
-                            missionChatFailure: buildMissionChatFailure({
-                                assistantName,
-                                targetId: councilTarget,
-                                message: errMsg,
-                                statusCode: res.status,
-                                availability,
-                            }),
-                            missionChat: [...s.missionChat, { role: 'council', content: errMsg, source_node: councilTarget, mode: 'blocker' }],
-                            activeMode: 'blocker',
-                            activeRole: councilTarget,
-                        }));
+                        setMissionChatBlocker({
+                            assistantName,
+                            targetId: councilTarget,
+                            message: errMsg,
+                            routeLabel,
+                            set,
+                            statusCode: res.status,
+                            availability,
+                        });
                         return;
                     }
 
@@ -94,20 +182,15 @@ export function createCortexMissionChatSlice(
                         const availability = body.data && typeof body.data === 'object'
                             ? body.data as MissionChatAvailability
                             : undefined;
-                        set((s) => ({
-                            isMissionChatting: false,
-                            missionChatError: errText,
-                            missionChatFailure: buildMissionChatFailure({
-                                assistantName,
-                                targetId: councilTarget,
-                                message: errText,
-                                statusCode: res.status,
-                                availability,
-                            }),
-                            missionChat: [...s.missionChat, { role: 'council', content: errText, source_node: councilTarget, mode: 'blocker' }],
-                            activeMode: 'blocker',
-                            activeRole: councilTarget,
-                        }));
+                        setMissionChatBlocker({
+                            assistantName,
+                            targetId: councilTarget,
+                            message: errText,
+                            routeLabel,
+                            set,
+                            statusCode: res.status,
+                            availability,
+                        });
                         return;
                     }
 
@@ -129,27 +212,7 @@ export function createCortexMissionChatSlice(
                         proposal_status: envelope.payload?.proposal ? 'active' : undefined,
                     };
 
-                    const trust = get().trustThreshold;
-                    const govMode = trust >= 0.8 ? 'strict' as const : trust >= 0.5 ? 'active' as const : 'passive' as const;
-
-                    set((s) => ({
-                        isMissionChatting: false,
-                        missionChat: [...s.missionChat, chatMsg],
-                        missionChatFailure: null,
-                        missionChatError: null,
-                        workspaceChatPrimed: s.workspaceChatPrimed || isSomaRoute,
-                        activeBrain: chatMsg.brain ?? null,
-                        activeMode: chatMsg.mode || 'answer',
-                        activeRole: chatMsg.source_node || '',
-                        governanceMode: govMode,
-                        ...(chatMsg.proposal ? {
-                            pendingProposal: chatMsg.proposal,
-                            activeConfirmToken: chatMsg.proposal.confirm_token,
-                        } : {
-                            pendingProposal: null,
-                            activeConfirmToken: null,
-                        }),
-                    }));
+                    setMissionChatSuccess(set, get, chatMsg, isSomaRoute);
                     return;
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : `${routeLabel} failed`;
@@ -158,18 +221,14 @@ export function createCortexMissionChatSlice(
                         continue;
                     }
 
-                    set((s) => ({
-                        isMissionChatting: false,
-                        missionChatError: msg,
-                        missionChatFailure: buildMissionChatFailure({
-                            assistantName,
-                            targetId: councilTarget,
-                            message: msg,
-                        }),
-                        missionChat: [...s.missionChat, { role: 'council', content: `Error: ${msg}`, source_node: councilTarget, mode: 'blocker' }],
-                        activeMode: 'blocker',
-                        activeRole: councilTarget,
-                    }));
+                    setMissionChatBlocker({
+                        assistantName,
+                        targetId: councilTarget,
+                        message: msg,
+                        routeLabel,
+                        set,
+                        content: `Error: ${msg}`,
+                    });
                     return;
                 }
             }
