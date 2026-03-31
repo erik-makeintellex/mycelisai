@@ -709,7 +709,7 @@ type Proof struct {
 ### MCP Management
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/v1/mcp/install` | Register server |
+| POST | `/api/v1/mcp/install` | Raw install boundary (intentionally disabled; returns `403`) |
 | GET | `/api/v1/mcp/servers` | List servers + tools |
 | DELETE | `/api/v1/mcp/servers/{id}` | Uninstall |
 | POST | `/api/v1/mcp/servers/{id}/tools/{tool}/call` | Invoke tool |

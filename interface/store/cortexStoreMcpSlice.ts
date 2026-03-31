@@ -1,7 +1,7 @@
 import { extractApiData } from '@/lib/apiContracts';
 import type { CortexState } from '@/store/cortexStoreState';
 import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
-import type { MCPServer, MCPServerWithTools, MCPLibraryCategory, MCPTool } from '@/store/cortexStoreTypes';
+import type { MCPServerWithTools, MCPLibraryCategory, MCPTool } from '@/store/cortexStoreTypes';
 
 export function createCortexMcpSlice(
     set: CortexSet,
@@ -9,7 +9,6 @@ export function createCortexMcpSlice(
 ): Pick<
     CortexState,
     | 'fetchMCPServers'
-    | 'installMCPServer'
     | 'deleteMCPServer'
     | 'fetchMCPTools'
     | 'fetchMCPLibrary'
@@ -29,21 +28,6 @@ export function createCortexMcpSlice(
                 }
             } catch {
                 set({ mcpServers: [], isFetchingMCPServers: false });
-            }
-        },
-
-        installMCPServer: async (config: Partial<MCPServer>) => {
-            try {
-                const res = await fetch('/api/v1/mcp/install', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config),
-                });
-                if (res.ok) {
-                    get().fetchMCPServers();
-                }
-            } catch (err) {
-                console.error('[MCP] Install failed:', err);
             }
         },
 
