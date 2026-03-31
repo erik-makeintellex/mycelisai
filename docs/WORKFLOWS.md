@@ -329,7 +329,7 @@ The user clicks "Activate Mission". The commit flow (Workflow 3.4) executes. The
 On Mission Control (`/`):
 - The ActiveMissionsBar shows the new mission with team/agent counts
 - The PriorityStream begins showing signals from the new teams
-- The ActivityStream (SSE) shows agent heartbeats, cognitive events, tool calls
+- The live workspace and ops surfaces begin reflecting agent heartbeats, cognitive events, tool calls, and proposal activity
 - The SensorLibrary shows any new sensor agents
 
 ---
@@ -358,11 +358,10 @@ The user lands on `/`. The layout (existing `MissionControl.tsx`) shows:
 
 **Below**: ActiveMissionsBar — horizontal scroll of active mission chips showing name, team count, agent count, status color.
 
-**Main Grid** (3 columns):
-- **Left**: SensorLibrary — grouped sensor subscriptions (toggle on/off)
-- **Center Top**: PriorityStream — filtered high-priority signals (governance halts, errors, artifacts)
-- **Center Bottom**: ManifestationPanel — pending team proposals
-- **Right**: ActivityStream — full SSE feed (all events)
+**Main Workspace**:
+- **Primary panel**: MissionControlChat — Soma-first governed interaction surface for direct answers, proposals, and crew launches
+- **Operations panel**: OpsOverview — current widget surface for status, proposals, support signals, and recent activity summaries
+- **Advanced surfaces**: TelemetryRow and related ops widgets remain available without replacing the primary Soma-first workspace
 
 #### 5.2 — Inspect a Mission
 
