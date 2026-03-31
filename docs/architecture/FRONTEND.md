@@ -146,7 +146,8 @@ Component files under `interface/components`: `112` (`.tsx` and `.ts`).
 ## 6. GUI -> API Contract Map
 
 Frontend API traffic primarily originates from:
-- `interface/store/useCortexStore.ts`
+- the composed Zustand entrypoint in `interface/store/useCortexStore.ts`
+- slice modules under `interface/store/cortexStore*Slice.ts`
 - route-level pages in `interface/app/(app)/**`
 - targeted feature components (memory, matrix, teams, dashboard)
 
@@ -192,14 +193,14 @@ Frontend API traffic primarily originates from:
 
 ## 7. State Orchestration Standard
 
-All shared app state is centralized in `interface/store/useCortexStore.ts`.
+All shared app state is composed through `interface/store/useCortexStore.ts`, with behavior split across bounded slice modules under `interface/store/`.
 
 Rules:
 1. execution-facing flows must classify terminal states as `answer`, `proposal`, `execution_result`, or `blocker`
 2. Workspace defaults to Soma (`/api/v1/chat`) and only routes to direct council endpoint when user targeting demands it
 3. stream and service health must feed shared status/failure models used by banner, drawer, and chat blockers
 4. new UI flows must map API effects and failure affordances in `UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
-5. extracted store helpers that carry graph/proposal/persistence behavior live in `interface/store/cortexStoreUtils.ts` and require direct test coverage (`interface/__tests__/store/cortexStoreUtils.test.ts`)
+5. shared store helpers that carry graph/proposal/persistence behavior live in focused modules such as `interface/store/cortexStoreUtils.ts` and require direct test coverage (`interface/__tests__/store/cortexStoreUtils.test.ts`)
 
 ---
 
@@ -208,7 +209,7 @@ Rules:
 | Area | Current state | Delivery status |
 | --- | --- | --- |
 | MVP browser gate scope | default Playwright coverage is now trimmed to Team Lead-first MVP routes/tabs; legacy V7 operational and raw telemetry specs remain out of the default RC gate | `COMPLETE` audit alignment |
-| Max-lines gate pressure | `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts` over cap | `REQUIRED` Slice 4 |
+| Max-lines gate pressure | `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, and the largest remaining store slices (`cortexStoreMissionChatSlice.ts`, `cortexStoreMissionDraftSlice.ts`, `cortexStoreResourceCatalogSlice.ts`) still carry the main frontend cap pressure | `REQUIRED` Slice 4 |
 | Created-team communications inspector | architecture contract exists but dedicated team workspace/communications tabs are not fully delivered | `BLOCKED` Slice 7 |
 | Docs and runs route browser depth | route-level smoke coverage now exists, but failure/recovery depth (error branches + interjection/terminal transitions) still needs expansion | `NEXT` |
 
