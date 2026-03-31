@@ -71,7 +71,7 @@ The current local tree is mixed across at least five logical lanes:
 5. Theme/readability polish
    - `interface/app/globals.css`
    - `interface/app/(marketing)/page.tsx`
-   - `interface/components/dashboard/TelemetryRow.tsx`
+   - `interface/components/dashboard/CentralSomaHome.tsx`
    - `interface/components/shell/ZoneA_Rail.tsx`
    - `interface/components/workspace/DeliverablesTray.tsx`
    - `interface/components/workspace/LaunchCrewModal.tsx`
