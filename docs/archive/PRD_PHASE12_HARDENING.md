@@ -8,6 +8,10 @@
 > This PRD combines the next feature phase (Persistent Agent Memory) with a critical
 > system hardening track. The hardening clears production-blocking debt discovered in
 > the full-stack audit conducted on 2026-02-18.
+>
+> Historical note: several file references below describe the V7/V8 transition-era
+> repo layout. Some of those duplicate components were removed in later V8 cleanup
+> slices and are no longer present in the active codebase.
 
 ---
 
@@ -88,15 +92,11 @@ Both tracks share the Phase 12 migration window (Migrations 021–023).
 
 #### A1.1 Remove Debug Code from Production
 
-**CircuitBoard DEBUG button** — [components/wiring/CircuitBoard.tsx:113-125](interface/components/wiring/CircuitBoard.tsx#L113-L125)
+**CircuitBoard DEBUG button**
 
-A hardcoded red `DEBUG STATE` button renders in the top-left of the ReactFlow canvas.
-Logs full blueprint state to console on click. Must be deleted.
-
-```
-Files: interface/components/wiring/CircuitBoard.tsx (lines 113-125)
-Action: DELETE the entire <div> block containing the debug button
-```
+Historical finding: the older `interface/components/wiring/CircuitBoard.tsx` surface
+once rendered a hardcoded red `DEBUG STATE` button in the top-left of the ReactFlow
+canvas. That legacy file was later removed during the V8 cleanup lane.
 
 **Zustand DOM injection** — [store/useCortexStore.ts:1820-1832](interface/store/useCortexStore.ts#L1820-L1832)
 
@@ -122,9 +122,9 @@ Action: DELETE all console.log("[DEBUG]") statements
 
 | Duplicate | Location A | Location B | Action |
 |:----------|:-----------|:-----------|:-------|
-| CircuitBoard | `components/workspace/CircuitBoard.tsx` | `components/wiring/CircuitBoard.tsx` | DELETE workspace/ version — wiring/ is canonical (has Phase 9 editor) |
-| LogStream | `components/hud/LogStream.tsx` | `components/stream/LogStream.tsx` | Audit usage, DELETE non-canonical |
-| TeamRoster | `components/dashboard/TeamRoster.tsx` | `components/missions/TeamRoster.tsx` | Audit usage, DELETE non-canonical |
+| CircuitBoard | `components/workspace/CircuitBoard.tsx` | `components/wiring/CircuitBoard.tsx` | Historical duplicate resolved later: workspace board is the active surface and the legacy wiring board was removed |
+| LogStream | `components/hud/LogStream.tsx` | `components/LogStream.tsx` | Historical duplicate resolved later: both stale log-stream surfaces were removed after the signal UI moved elsewhere |
+| TeamRoster | `components/dashboard/TeamRoster.tsx` | `components/missions/TeamRoster.tsx` | Historical duplicate resolved later: the mission roster remains canonical and the unused dashboard roster was removed |
 
 #### A1.3 Implement Governance Stubs
 
