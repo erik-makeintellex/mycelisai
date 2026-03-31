@@ -112,11 +112,12 @@ This is a dry-run. No NATS messages, no team context, no side effects.
 **Route**: `/settings/tools` (sub-route of Settings)
 
 **Backend Dependencies**:
-- `POST /api/v1/mcp/install` — install a new MCP server (existing)
 - `GET /api/v1/mcp/servers` — list servers with tools (existing)
 - `DELETE /api/v1/mcp/servers/{id}` — remove a server (existing)
 - `POST /api/v1/mcp/servers/{id}/tools/{tool}/call` — invoke a tool (existing)
 - `GET /api/v1/mcp/tools` — flat tool list (existing)
+- `GET /api/v1/mcp/library` — browse curated MCP server library (existing)
+- `POST /api/v1/mcp/library/install` — install an approved MCP server from the curated library (existing)
 
 ### Step-by-Step User Flow
 
@@ -136,25 +137,22 @@ Expanding a server card reveals its tools list — each tool showing: name, desc
 
 **API Call on mount**: `GET /api/v1/mcp/servers` → populates Zustand `mcpServers[]`
 
-#### 2.2 — Install a New Server
+#### 2.2 — Install an Approved Server From the Library
 
-The user clicks "+ Install Server". A modal appears with:
+The user opens the **Library** tab from the MCP Tool Registry. The library shows curated server entries with:
 
-| Field | Input Type | Shown When | Validation |
-|-------|-----------|------------|------------|
-| **Name** | text | always | required, unique |
-| **Transport** | radio: `stdio` / `sse` | always | required |
-| **Command** | text | transport=stdio | required for stdio |
-| **Arguments** | tag input | transport=stdio | optional, array of strings |
-| **Environment** | key-value editor | transport=stdio | optional |
-| **URL** | text (url) | transport=sse | required for sse |
-| **Headers** | key-value editor | transport=sse | optional |
+| Field | Description |
+|-------|-------------|
+| **Name** | Approved server name |
+| **Description** | Human-readable summary of what the server does |
+| **Tags** | Quick capability hints for filtering |
+| **Required Environment** | Any required keys that must be supplied before install |
 
-The transport toggle dynamically shows/hides the relevant fields.
+If a library entry requires environment variables, the user is prompted for those values in a lightweight configuration modal before install.
 
-**Submit**: `POST /api/v1/mcp/install` → server installs + connects + discovers tools → modal closes → server card appears in list with its tools.
+**Submit**: `POST /api/v1/mcp/library/install` with `{ name, env? }` → server installs + connects + discovers tools → server appears in the installed list.
 
-**Loading state**: The submit button shows a spinner with "Installing... Connecting... Discovering tools..." stages (SSE would be ideal here, but for now a single POST with loading state suffices — the connect+discover happens server-side).
+**Policy note**: Raw custom MCP registration through `POST /api/v1/mcp/install` is intentionally disabled in the current product posture. Default operator installs must stay on the curated library path.
 
 #### 2.3 — Test a Tool
 
@@ -687,7 +685,7 @@ All live data flows through the existing SSE stream at `/api/v1/stream`. The Zus
 - `GET /api/v1/memory/sitreps` — situation reports
 - `GET /api/v1/sensors` — sensor status
 - `GET/POST /api/v1/proposals` — team proposals
-- `POST /api/v1/mcp/install` — install MCP server
+- `POST /api/v1/mcp/library/install` — install approved MCP server from library
 - `GET /api/v1/mcp/servers` — list MCP servers
 - `DELETE /api/v1/mcp/servers/{id}` — remove MCP server
 - `POST /api/v1/mcp/servers/{id}/tools/{tool}/call` — tool invocation

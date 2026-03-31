@@ -10,7 +10,7 @@
 
 > Baseline source of truth for this document:
 > code-audited against `interface/app/**`, `interface/components/**`, `interface/store/useCortexStore.ts`,
-> `core/internal/server/admin.go`, and `core/cmd/server/main.go` on 2026-03-10.
+> `core/internal/server/admin.go`, and `core/cmd/server/main.go` on 2026-03-30.
 
 ---
 
@@ -186,7 +186,7 @@ Frontend API traffic primarily originates from:
 | Endpoint | Ownership note |
 | --- | --- |
 | `POST /api/v1/swarm/broadcast` | wired directly in `core/cmd/server/main.go` via `soma.HandleBroadcast` |
-| `POST /api/v1/mcp/install` | intentionally returns `403` (raw MCP install disabled; curated install via `/api/v1/mcp/library/install`) |
+| `POST /api/v1/mcp/install` | intentionally returns `403`; the shipped UI now routes installs through the curated library flow at `/api/v1/mcp/library/install` |
 
 ---
 
@@ -211,7 +211,6 @@ Rules:
 | Max-lines gate pressure | `core/internal/swarm/agent.go`, `core/internal/swarm/internal_tools.go`, `interface/store/useCortexStore.ts` over cap | `REQUIRED` Slice 4 |
 | Created-team communications inspector | architecture contract exists but dedicated team workspace/communications tabs are not fully delivered | `BLOCKED` Slice 7 |
 | Docs and runs route browser depth | route-level smoke coverage now exists, but failure/recovery depth (error branches + interjection/terminal transitions) still needs expansion | `NEXT` |
-| Raw MCP install action in store | `installMCPServer` still points to disabled `/api/v1/mcp/install` path | `REQUIRED` cleanup |
 
 ---
 
@@ -246,7 +245,7 @@ Proof targets:
 
 Scope:
 - split hot-path store logic into bounded modules without changing API contracts
-- remove stale or disabled UI action paths (for example raw MCP install path)
+- keep MCP tool registry surfaces aligned to the curated-library install contract and disabled raw-admin boundary
 - keep API endpoint usage aligned with backend route ownership
 
 Proof targets:

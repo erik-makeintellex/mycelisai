@@ -51,7 +51,6 @@ vi.mock('@/components/catalogue/CataloguePage', () => ({
 
 const mockAdvancedMode = vi.fn(() => true);
 const mockFetchMCPServers = vi.fn();
-const mockInstallMCPServer = vi.fn();
 const mockDeleteMCPServer = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) =>
@@ -60,7 +59,6 @@ vi.mock('@/store/useCortexStore', () => ({
             mcpServers: [],
             isFetchingMCPServers: false,
             fetchMCPServers: mockFetchMCPServers,
-            installMCPServer: mockInstallMCPServer,
             deleteMCPServer: mockDeleteMCPServer,
         }),
 }));

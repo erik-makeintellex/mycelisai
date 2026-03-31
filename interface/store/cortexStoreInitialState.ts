@@ -42,7 +42,6 @@ export const initialCortexState: Omit<
     | 'getArtifactDetail'
     | 'updateArtifactStatus'
     | 'fetchMCPServers'
-    | 'installMCPServer'
     | 'deleteMCPServer'
     | 'fetchMCPTools'
     | 'fetchMCPLibrary'

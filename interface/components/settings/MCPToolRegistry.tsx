@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Wrench, Plus, BookOpen } from "lucide-react";
+import { Wrench, BookOpen } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import MCPServerCard from "./MCPServerCard";
-import MCPInstallModal from "./MCPInstallModal";
 import MCPLibraryBrowser from "./MCPLibraryBrowser";
 
 type Tab = "installed" | "library";
@@ -13,10 +12,8 @@ export default function MCPToolRegistry() {
     const mcpServers = useCortexStore((s) => s.mcpServers);
     const isFetching = useCortexStore((s) => s.isFetchingMCPServers);
     const fetchMCPServers = useCortexStore((s) => s.fetchMCPServers);
-    const installMCPServer = useCortexStore((s) => s.installMCPServer);
     const deleteMCPServer = useCortexStore((s) => s.deleteMCPServer);
 
-    const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>("installed");
 
     useEffect(() => {
@@ -68,11 +65,11 @@ export default function MCPToolRegistry() {
 
                 {activeTab === "installed" && (
                     <button
-                        onClick={() => setIsInstallModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cortex-success/10 border border-cortex-success/30 text-xs font-mono font-bold text-cortex-success hover:bg-cortex-success/20 transition-colors"
+                        onClick={() => setActiveTab("library")}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cortex-primary/10 border border-cortex-primary/30 text-xs font-mono font-bold text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
                     >
-                        <Plus className="w-3.5 h-3.5" />
-                        INSTALL
+                        <BookOpen className="w-3.5 h-3.5" />
+                        BROWSE LIBRARY
                     </button>
                 )}
             </div>
@@ -96,8 +93,14 @@ export default function MCPToolRegistry() {
                                 <Wrench className="w-12 h-12 mb-3 opacity-20" />
                                 <p className="text-sm font-mono">No MCP servers installed.</p>
                                 <p className="text-[10px] font-mono mt-1 opacity-50">
-                                    Click &quot;+ Install&quot; or browse the Library tab.
+                                    Browse the Library tab to add approved tool servers.
                                 </p>
+                                <button
+                                    onClick={() => setActiveTab("library")}
+                                    className="mt-4 rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-1.5 text-[10px] font-mono font-bold text-cortex-primary transition-colors hover:bg-cortex-primary/20"
+                                >
+                                    OPEN LIBRARY
+                                </button>
                             </div>
                         )}
 
@@ -114,13 +117,6 @@ export default function MCPToolRegistry() {
 
                 {activeTab === "library" && <MCPLibraryBrowser />}
             </div>
-
-            {/* Install Modal */}
-            <MCPInstallModal
-                isOpen={isInstallModalOpen}
-                onClose={() => setIsInstallModalOpen(false)}
-                onInstall={installMCPServer}
-            />
         </div>
     );
 }

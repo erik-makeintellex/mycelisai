@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { mockFetch } from '../setup';
 
 // Mock child components to isolate MCPToolRegistry
 vi.mock('@/components/settings/MCPServerCard', () => ({
@@ -13,20 +12,6 @@ vi.mock('@/components/settings/MCPServerCard', () => ({
             </button>
         </div>
     ),
-}));
-
-vi.mock('@/components/settings/MCPInstallModal', () => ({
-    __esModule: true,
-    default: ({ isOpen, onClose, onInstall }: any) =>
-        isOpen ? (
-            <div data-testid="install-modal">
-                <span>Install MCP Server</span>
-                <button onClick={onClose}>Close Modal</button>
-                <button onClick={() => onInstall({ name: 'test-server', transport: 'stdio' })}>
-                    Confirm Install
-                </button>
-            </div>
-        ) : null,
 }));
 
 vi.mock('@/components/settings/MCPLibraryBrowser', () => ({
@@ -69,7 +54,6 @@ describe('MCPToolRegistry', () => {
             mcpServers: [],
             isFetchingMCPServers: false,
             fetchMCPServers: vi.fn(),
-            installMCPServer: vi.fn(),
             deleteMCPServer: vi.fn(),
         });
     });
@@ -96,22 +80,16 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('2')).toBeDefined();
     });
 
-    it('install button opens the install modal', () => {
+    it('browse library button switches to the library tab', () => {
         useCortexStore.setState({
             mcpServers: [],
         });
 
         render(<MCPToolRegistry />);
 
-        // No modal initially
-        expect(screen.queryByTestId('install-modal')).toBeNull();
+        fireEvent.click(screen.getByText('BROWSE LIBRARY'));
 
-        // Click the INSTALL button
-        fireEvent.click(screen.getByText('INSTALL'));
-
-        // Modal should now be visible
-        expect(screen.getByTestId('install-modal')).toBeDefined();
-        expect(screen.getByText('Install MCP Server')).toBeDefined();
+        expect(screen.getByTestId('library-browser')).toBeDefined();
     });
 
     it('delete action on a server card calls the store delete action', () => {

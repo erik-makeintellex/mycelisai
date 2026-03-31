@@ -15,7 +15,6 @@ import type {
     CouncilMember,
     CTSEnvelope,
     ExecutionMode,
-    MCPServer,
     MCPServerWithTools,
     MCPLibraryCategory,
     MCPTool,
@@ -167,7 +166,6 @@ export interface CortexState {
     getArtifactDetail: (id: string) => Promise<void>;
     updateArtifactStatus: (id: string, status: string) => Promise<void>;
     fetchMCPServers: () => Promise<void>;
-    installMCPServer: (config: Partial<MCPServer>) => Promise<void>;
     deleteMCPServer: (id: string) => Promise<void>;
     fetchMCPTools: () => Promise<void>;
     fetchMCPLibrary: () => Promise<void>;
