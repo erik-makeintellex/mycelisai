@@ -6,11 +6,11 @@ Current validation contract:
 - feature work is not done until the relevant tests are rerun against the final branch state
 - `uv run inv ci.baseline` is the default branch-readiness gate and now includes Playwright by default
 - use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
-- use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses an already-initialized `cortex` schema when present, and otherwise bootstraps the database before proving the browser contract against the managed built server
+- use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses the `cortex` schema only when it is already compatible with the current runtime, and otherwise bootstraps the database before proving the browser contract against the managed built server
 - when the validation target is the supported home-runtime stack, use `uv run inv compose.up`, `uv run inv compose.status`, and `uv run inv compose.health` before browser proof instead of assuming Kind/bridge is the only real local environment
 - in the supported home-runtime stack, `.env.compose` must keep container-host assumptions separate from `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`
 - use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
-- when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual `core/workspace` root before running the spec
+- when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
 
 ## Target-Action Testing Matrix (Intent -> Manifestation)
@@ -92,7 +92,7 @@ Minimum policy:
 - Verify ports and processes are clear for the services involved in the check. At minimum review the Core API port, NATS, PostgreSQL, and Ollama when the slice depends on them, using repo ops tasks such as `uv run inv lifecycle.status` or OS-level port/process tools.
 - Detect running compiled binaries with process inspection before the test begins. Look for repo-local command lines or binary paths plus any processes bound to declared dev/test ports; if found, terminate them with the lifecycle/task helpers and never assume they belong to the current run.
 - Treat repo-local Interface worker residue as part of the same cleanup surface. On Windows in particular, `next`, `vitest`, `playwright`, and generated `.next/dev/build/postcss.js` workers can survive after the owning command exits unless the task wrapper sweeps them.
-- Merge-readiness browser gates use the managed low-parallelism path: `uv run inv ci.baseline` forces Playwright to `--workers=1` and runs against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays serial at `--workers=1`, restores the local bridge/core stack, and only bootstraps the `cortex` schema when it is missing, so full-stack proof stays repeatable under local host load without turning the baseline into an impractical wall-clock run.
+- Merge-readiness browser gates use the managed low-parallelism path: `uv run inv ci.baseline` forces Playwright to `--workers=1` and runs against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays serial at `--workers=1`, restores the local bridge/core stack, and only skips `db.migrate` when the `cortex` schema is already compatible with the current runtime, so full-stack proof stays repeatable under local host load without turning the baseline into an impractical wall-clock run.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -129,7 +129,8 @@ uv run inv interface.typecheck   # TypeScript typecheck through the managed Inte
 uv run inv interface.e2e         # Playwright E2E tests (defaults to managed dev mode for stable mocked browser proof; use --server-mode=start for built/start-mode or live-backend proof. Invoke manages the server lifecycle, uses serial workers by default, keeps browser cache repo-managed, cleans repo-local UI workers, and fails if it cannot own a clean managed UI server)
 uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts   # Real governed Soma chat + approval contract
 uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real workspace proxy/status continuity contract
-MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts  # Set explicitly when spec checkout != backend checkout
+MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts  # Repo-local Core: set explicitly when spec checkout != backend checkout
+MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts  # Supported compose stack: use the compose workspace root when the spec checkout differs
 uv run inv core.smoke            # Governance smoke tests
 uv run inv ci.test               # Blocking Go + Vitest validation
 uv run inv interface.check       # HTTP smoke test against the running Interface server

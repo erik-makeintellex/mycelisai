@@ -273,7 +273,7 @@ def service_check(c, live_backend=False):
             errors.append("lifecycle up failed")
         print("[1.5/3] db.migrate")
         if db_tasks.schema_bootstrapped():
-            print("  SKIP (cortex schema already initialized)")
+            print("  SKIP (cortex schema already compatible with the current runtime)")
         else:
             try:
                 db_tasks.migrate.body(c)

@@ -73,7 +73,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv db.migrate` | Apply canonical forward SQL migrations (`001_init_memory.sql` + `*.up.sql`) only when the target schema is not already initialized; otherwise skip replay and point to `db.reset` |
+| `uv run inv db.migrate` | Apply canonical forward SQL migrations (`001_init_memory.sql` + `*.up.sql`) only when the target schema is not yet compatible with the current runtime; otherwise skip replay and point to `db.reset` |
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | List tables + row counts |
 | `uv run inv db.create` | Create cortex database (if not exists) |
@@ -161,7 +161,7 @@ Compose runtime guardrails:
 - Detect compiled Go binaries before starting the check. Inspect for repo-local command lines or binary paths plus listeners on declared dev/test ports, terminate them through lifecycle/task helpers when found, and never assume they belong to the current slice.
 - Treat repo-local Interface workers as the same cleanup surface. Build/test/browser runs must not leave `node.exe` helpers from `.next`, Vitest, or Playwright behind after the command exits.
 - Merge-readiness browser gates should bias toward repeatability. The managed readiness tasks now run Playwright with reduced worker counts on the local host path: `uv run inv ci.baseline` uses `--workers=1` against the built `next start` server, while `uv run inv ci.service-check --live-backend` stays at `--workers=1`, restores the local bridge/core stack before the live governed Soma proof when that bridge is absent, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations every run.
-- Live browser specs that assert backend-written files should bind to the backend's real workspace root. When the browser spec runs from a different checkout or worktree than the live Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual `core/workspace` directory before running `soma-governance-live.spec.ts`.
+- Live browser specs that assert backend-written files should bind to the backend's real workspace root. When the browser spec runs from a different checkout or worktree than the live Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace directory before running `soma-governance-live.spec.ts`, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack.
 - Start only the minimal services required for the specific check. Prefer the narrowest path that matches the validation target, such as Helm render only, bootstrap/unit coverage only, Core-only, or a bounded local stack bring-up.
 - Run the test or validation command once the required services are confirmed ready.
 - Shut services down immediately after the check unless the slice explicitly requires them left running for a follow-on validation step.
@@ -329,7 +329,7 @@ uv run inv k8s.up        # Kind + Helm + readiness gates (PostgreSQL -> NATS -> 
 uv run inv k8s.bridge
 
 # 4. Initialize database
-uv run inv db.migrate    # Apply canonical forward migrations if the schema is not already bootstrapped
+uv run inv db.migrate    # Apply canonical forward migrations if the schema is not yet runtime-compatible
 
 # 5. Start backend
 uv run inv core.run

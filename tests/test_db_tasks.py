@@ -148,6 +148,34 @@ def test_migrate_skips_replay_when_schema_is_already_bootstrapped(monkeypatch, c
     db_tasks.migrate.body(None)
 
     captured = capsys.readouterr()
-    assert "already appears bootstrapped" in captured.out
+    assert "already appears compatible with the current runtime" in captured.out
     assert "uv run inv db.reset" in captured.out
     assert migrate_calls == []
+
+
+def test_schema_bootstrapped_requires_all_current_runtime_objects(monkeypatch):
+    responses = iter(
+        [
+            SimpleNamespace(returncode=0, stdout="1\n", stderr=""),
+            SimpleNamespace(returncode=0, stdout="1\n", stderr=""),
+            SimpleNamespace(returncode=0, stdout="1\n", stderr=""),
+            SimpleNamespace(returncode=0, stdout="1\n", stderr=""),
+            SimpleNamespace(returncode=0, stdout="", stderr=""),
+        ]
+    )
+
+    monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
+    monkeypatch.setattr(db_tasks, "_run_psql", lambda sql=None, file=None, dbname=None: next(responses))
+
+    assert db_tasks.schema_bootstrapped() is False
+
+
+def test_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):
+    monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
+    monkeypatch.setattr(
+        db_tasks,
+        "_run_psql",
+        lambda sql=None, file=None, dbname=None: SimpleNamespace(returncode=0, stdout="1\n", stderr=""),
+    )
+
+    assert db_tasks.schema_bootstrapped() is True
