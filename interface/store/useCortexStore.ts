@@ -10,37 +10,51 @@ import { createCortexMissionDraftSlice } from '@/store/cortexStoreMissionDraftSl
 import { createCortexProposalExecutionSlice } from '@/store/cortexStoreProposalExecutionSlice';
 import { createCortexResourceCatalogSlice } from '@/store/cortexStoreResourceCatalogSlice';
 import { createCortexRuntimeSlice } from '@/store/cortexStoreRuntimeSlice';
+import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
 import { createCortexStreamSlice } from '@/store/cortexStoreStreamSlice';
 import { createCortexUserSettingsSlice } from '@/store/cortexStoreUserSettingsSlice';
 import { persistChat } from '@/store/cortexStoreUtils';
 export * from '@/store/cortexStoreTypes';
 
-export const useCortexStore = create<CortexState>((set, get) => ({
-    ...initialCortexState,
-    ...createCortexGraphUiSlice(set, get),
-    ...createCortexStreamSlice(set, get),
+function createCortexComposition(set: CortexSet, get: CortexGet) {
+    return {
+        ...initialCortexState,
 
-    ...createCortexResourceCatalogSlice(set, get),
-    ...createCortexMcpSlice(set, get),
-    ...createCortexUserSettingsSlice(set, get),
+        // Draft / graph + streaming shell
+        ...createCortexGraphUiSlice(set, get),
+        ...createCortexStreamSlice(set, get),
 
-    ...createCortexMissionChatSlice(set, get),
+        // Resources + settings surfaces
+        ...createCortexResourceCatalogSlice(set, get),
+        ...createCortexMcpSlice(set, get),
+        ...createCortexUserSettingsSlice(set, get),
 
-    ...createCortexGovernanceSystemSlice(set, get),
+        // Mission chat + governance contract
+        ...createCortexMissionChatSlice(set, get),
+        ...createCortexGovernanceSystemSlice(set, get),
 
-    ...createCortexMissionDraftSlice(set, get),
-    ...createCortexProposalExecutionSlice(set, get),
+        // Draft execution + proposal lifecycle
+        ...createCortexMissionDraftSlice(set, get),
+        ...createCortexProposalExecutionSlice(set, get),
 
-    ...createCortexRuntimeSlice(set, get),
-    ...createCortexAutomationRuntimeSlice(set, get),
-}));
+        // Runtime automation and runs
+        ...createCortexRuntimeSlice(set, get),
+        ...createCortexAutomationRuntimeSlice(set, get),
+    };
+}
+
+function shouldPersistMissionChat(state: CortexState, prevState: CortexState) {
+    return (
+        state.missionChat !== prevState.missionChat
+        || state.workspaceChatScope !== prevState.workspaceChatScope
+    );
+}
+
+export const useCortexStore = create<CortexState>((set, get) => createCortexComposition(set, get));
 
 // ── Auto-sync missionChat → localStorage ─────────────────────
 useCortexStore.subscribe((state, prevState) => {
-    if (
-        state.missionChat !== prevState.missionChat
-        || state.workspaceChatScope !== prevState.workspaceChatScope
-    ) {
+    if (shouldPersistMissionChat(state, prevState)) {
         persistChat(state.missionChat, state.workspaceChatScope);
     }
 });
