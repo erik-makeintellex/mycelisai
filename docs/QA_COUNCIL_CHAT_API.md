@@ -1,6 +1,6 @@
 # QA Test Plan: Council Chat API + Mission Control Restructure
 
-> **Scope:** Standardized Council Chat API (backend + frontend), OperationsBoard, `/approvals` Team Proposals tab, and regression of existing features.
+> **Scope:** Standardized Council Chat API (backend + frontend), current organization workspace regression, `/approvals` Team Proposals tab, and regression of existing features.
 >
 > **Prerequisites:** All tests require the full stack running unless noted otherwise.
 > ```
@@ -119,18 +119,18 @@ Open `http://localhost:3000` in browser.
 
 ---
 
-## 3. Mission Control — OperationsBoard (Regression)
+## 3. Organization Workspace Support Surfaces (Regression)
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
-| 3.1 | Board renders | Load Mission Control | Center column shows OperationsBoard with 3 sections: Priority Alerts, Standing Workloads, Missions |
-| 3.2 | Priority alerts from SSE | Trigger a governance_halt or error signal | Alert appears in the Priority Alerts section with correct icon and color |
-| 3.3 | Alerts collapsible | Click section header when alerts exist | Section collapses/expands |
-| 3.4 | Standing workloads listed | With core running (teams active) | Standing teams (admin-core, council-core) appear with status dots |
-| 3.5 | Missions listed | With at least one active mission | Mission card shows intent, status badge (active/completed/failed), agent count |
-| 3.6 | Mission click navigates | Click a mission row | Browser navigates to `/missions/{id}/teams` |
-| 3.7 | Empty state | No missions, no alerts | Sections show graceful empty states (not broken/blank) |
-| 3.8 | Polling refreshes | Wait 10-15 seconds | Data auto-refreshes (teamsDetail at 10s, missions at 15s) |
+| 3.1 | Workspace renders | Load `/organizations/{id}` | Soma workspace and support column render together without overlap |
+| 3.2 | Recent activity loads | Open organization workspace with loop activity available | Recent activity section renders current items |
+| 3.3 | Recent activity fallback | Force loop-activity failure | Workspace shows retry guidance instead of breaking the main Soma panel |
+| 3.4 | Memory continuity loads | Open organization workspace with learning insights available | Memory & Continuity section renders highlights |
+| 3.5 | Memory continuity fallback | Force learning-insights failure | Workspace shows unavailable/retry guidance without collapsing the layout |
+| 3.6 | Automations summary loads | Open organization workspace with automation data available | Automations support section renders current definitions or empty state |
+| 3.7 | Quick checks render | Open organization workspace | Recovery/quick-check surfaces render without hiding the primary Soma interaction area |
+| 3.8 | Mission teams navigation | Open a mission detail path | `/missions/{id}/teams` renders roster, artifacts, and summary surfaces |
 
 ---
 
@@ -154,7 +154,7 @@ Open `http://localhost:3000` in browser.
 | 5.2 | Dashboard actions functional | Check dashboard hero and entry surfaces | Create AI Organization, return/open-current-context, and docs review actions remain usable |
 | 5.3 | Organization workspace stable | Open `/organizations/[id]` | Soma workspace, support panels, and details drawer regions render without layout breakage |
 | 5.4 | Workspace quick checks | Check organization support area | Quick checks and support cards render without hiding the primary Soma panel |
-| 5.5 | Telemetry row | Check advanced-enabled dashboard/workspace state | TelemetryRow renders compute metrics when the surface exposes it |
+| 5.5 | System page health surfaces | Navigate to `/system` | Quick checks and diagnostics render without layout breakage |
 | 5.6 | Wiring page loads | Navigate to `/wiring` | ArchitectChat + CircuitBoard + NatsWaterfall render without error |
 | 5.7 | Mission teams page loads | Navigate to `/missions/[id]/teams` | Team actuation view renders roster, artifacts, and summary panels |
 | 5.8 | Settings page loads | Navigate to `/settings` | 3 default tabs: Profile, Mission Profiles, People & Access; advanced mode adds AI Engines and Connected Tools |
@@ -262,7 +262,7 @@ curl -s http://localhost:3000/api/v1/council/members | python -m json.tool
 |---------|-------|------|------|------|-------|
 | 1. Backend API | 20 | | | | |
 | 2. Frontend Chat | 18 | | | | |
-| 3. OperationsBoard | 8 | | | | |
+| 3. Workspace Support | 8 | | | | |
 | 4. Approvals Tabs | 5 | | | | |
 | 5. Layout Regression | 8 | | | | |
 | 6. Cross-Browser | 5 | | | | |
