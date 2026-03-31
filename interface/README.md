@@ -67,8 +67,8 @@ The older graph-centric workflow still exists as an advanced surface rather than
 | `components/organizations/CreateOrganizationEntry.tsx` | AI Organization creation and recent-organization return path |
 | `components/organizations/OrganizationContextShell.tsx` | Main Soma-led organization workspace |
 | `components/dashboard/MissionControlChat.tsx` | Soma-first governed chat, proposal, and execution surface |
-| `components/dashboard/OpsOverview.tsx` | Operational summary widgets and support signals |
 | `components/organizations/TeamLeadInteractionPanel.tsx` | Guided first-run and organization-support actions |
+| `components/system/SystemQuickChecks.tsx` | Recovery-oriented system checks surfaced in the current product |
 | `components/workspace/LaunchCrewModal.tsx` | Governed launch/crew execution modal |
 | `components/workspace/Workspace.tsx` | Advanced wiring workspace host |
 | `components/workspace/ArchitectChat.tsx` | Advanced intent negotiation chat for wiring mode |
