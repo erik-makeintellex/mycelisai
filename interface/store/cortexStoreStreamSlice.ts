@@ -1,5 +1,5 @@
 import type { CortexState } from '@/store/cortexStoreState';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { CTSEnvelope } from '@/store/cortexStoreTypes';
 import { dispatchSignalToNodes } from '@/store/cortexStoreUtils';
 import { normalizeIncomingSignal } from '@/lib/signalNormalize';
@@ -9,7 +9,7 @@ let eventSourceRef: EventSource | null = null;
 export function createCortexStreamSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<CortexState, 'initializeStream' | 'disconnectStream'> {
+): CortexSlice<'initializeStream' | 'disconnectStream'> {
     return {
         initializeStream: (force = false) => {
             if (eventSourceRef) {

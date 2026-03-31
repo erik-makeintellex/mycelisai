@@ -7,7 +7,7 @@ import {
 } from '@/store/cortexStoreChatWorkflow';
 import type { CortexState } from '@/store/cortexStoreState';
 import type { APIResponse, ChatMessage, CTSChatEnvelope } from '@/store/cortexStoreTypes';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import { clearPersistedChat, loadPersistedChat, normalizeProposalData } from '@/store/cortexStoreUtils';
 
 interface ChatRouteConfig {
@@ -109,8 +109,7 @@ function setMissionChatSuccess(set: CortexSet, get: CortexGet, chatMsg: ChatMess
 export function createCortexMissionChatSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<
-    CortexState,
+): CortexSlice<
     'sendMissionChat' | 'clearMissionChat' | 'setMissionChatScope' | 'broadcastToSwarm'
 > {
     return {

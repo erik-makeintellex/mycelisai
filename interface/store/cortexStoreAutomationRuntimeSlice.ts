@@ -1,12 +1,11 @@
 import type { CortexState } from '@/store/cortexStoreState';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { TriggerRule, TriggerRuleCreate } from '@/store/cortexStoreTypes';
 
 export function createCortexAutomationRuntimeSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<
-    CortexState,
+): CortexSlice<
     | 'fetchTriggerRules'
     | 'createTriggerRule'
     | 'updateTriggerRule'

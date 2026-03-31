@@ -6,7 +6,7 @@ import type {
     CatalogueAgent,
     TeamProposal,
 } from '@/store/cortexStoreTypes';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 
 function readArray<T>(value: unknown): T[] {
     return Array.isArray(value) ? value : [];
@@ -53,8 +53,7 @@ function syncArtifactStatus(artifact: Artifact, id: string, status: ArtifactStat
 export function createCortexResourceCatalogSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<
-    CortexState,
+): CortexSlice<
     | 'fetchSensors'
     | 'toggleSensorGroup'
     | 'fetchProposals'

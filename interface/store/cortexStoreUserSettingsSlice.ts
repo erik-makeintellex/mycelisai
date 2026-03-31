@@ -1,6 +1,6 @@
 import { extractApiData } from '@/lib/apiContracts';
 import type { CortexState } from '@/store/cortexStoreState';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { CouncilMember } from '@/store/cortexStoreTypes';
 
 type ThemeSetting = CortexState['theme'];
@@ -15,7 +15,7 @@ function normalizeTheme(value: unknown): ThemeSetting {
 export function createCortexUserSettingsSlice(
     set: CortexSet,
     _get: CortexGet,
-): Pick<CortexState, 'fetchUserSettings' | 'updateAssistantName' | 'updateTheme' | 'setCouncilTarget' | 'fetchCouncilMembers'> {
+): CortexSlice<'fetchUserSettings' | 'updateAssistantName' | 'updateTheme' | 'setCouncilTarget' | 'fetchCouncilMembers'> {
     const settingsEndpoint = '/api/v1/user/settings';
 
     return {

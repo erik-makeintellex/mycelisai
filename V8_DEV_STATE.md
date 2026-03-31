@@ -112,6 +112,7 @@ Review summary:
 21. `IN_REVIEW` the next state-boundary cleanup slice is now locally in flight: `cortexStoreState.ts` no longer presents one undifferentiated store contract block, and is instead grouped into draft/graph, resources, mission chat, governance/ops, automation/runs, and profiles/settings interfaces so future edits can target the right domain boundary without re-scanning the full state surface.
 22. `IN_REVIEW` the next initialization-boundary cleanup slice is now locally in flight: `cortexStoreInitialState.ts` now mirrors the grouped store contract through domain-scoped default-state blocks plus a small `StripActions<>` helper, so initial state no longer maintains a second flat contract blob that drifts away from the grouped `CortexState` structure.
 23. `IN_REVIEW` the next store-composition cleanup slice is now locally in flight: `useCortexStore.ts` now assembles slice groups through an explicit composition helper and a named mission-chat persistence predicate, so the entrypoint reads like the grouped contract it wires together instead of a bare spread list plus inline subscription condition.
+24. `IN_REVIEW` the next slice-typing cleanup is now locally in flight: `cortexStoreSliceTypes.ts` now defines a shared `CortexSlice<>` helper, and the store slice modules now consume that shared return-type contract instead of each repeating their own inline `Pick<CortexState, ...>` declaration header.
 
 ## Current Review (2026-03-29)
 

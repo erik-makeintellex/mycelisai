@@ -1,13 +1,11 @@
 import { extractApiData } from '@/lib/apiContracts';
-import type { CortexState } from '@/store/cortexStoreState';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 import type { MCPServerWithTools, MCPLibraryCategory, MCPTool } from '@/store/cortexStoreTypes';
 
 export function createCortexMcpSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<
-    CortexState,
+): CortexSlice<
     | 'fetchMCPServers'
     | 'deleteMCPServer'
     | 'fetchMCPTools'

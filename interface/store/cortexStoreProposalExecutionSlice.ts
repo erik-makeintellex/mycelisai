@@ -3,14 +3,13 @@ import {
     trimToNonEmpty,
     updateProposalLifecycle,
 } from '@/store/cortexStoreChatWorkflow';
-import type { CortexState } from '@/store/cortexStoreState';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
-import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 
 export function createCortexProposalExecutionSlice(
     set: CortexSet,
     get: CortexGet,
-): Pick<CortexState, 'confirmProposal' | 'cancelProposal'> {
+): CortexSlice<'confirmProposal' | 'cancelProposal'> {
     return {
         confirmProposal: async (): Promise<ConfirmProposalResult> => {
             const { activeConfirmToken, pendingProposal } = get();
