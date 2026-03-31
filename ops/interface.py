@@ -117,6 +117,81 @@ def _run_interface_shell_command(command: list[str], extra_env: dict[str, str] |
     return CommandResult(exited=result.returncode, stdout=result.stdout or "", stderr=result.stderr or "")
 
 
+def _report_command_result(result: CommandResult) -> None:
+    _print_ascii_safe(result.stdout)
+    _print_ascii_safe(result.stderr)
+
+
+def _run_one_shot_interface_task(
+    command: list[str],
+    *,
+    extra_env: dict[str, str] | None = None,
+    cleanup: bool = True,
+) -> CommandResult:
+    if cleanup:
+        _cleanup_repo_local_interface_processes()
+    try:
+        result = _run_interface_shell_command(command, extra_env=extra_env)
+        _report_command_result(result)
+        if result.exited != 0:
+            raise SystemExit(result.exited)
+        return result
+    finally:
+        if cleanup:
+            _cleanup_repo_local_interface_processes()
+
+
+def _build_playwright_command(
+    *,
+    project: str = "",
+    spec: str = "",
+    workers: str = "",
+    headed: bool = False,
+) -> str:
+    cmd = "npx playwright test --reporter=dot"
+    effective_workers = workers or "1"
+    if project:
+        cmd += f" --project={project}"
+    if spec:
+        cmd += f" {spec}"
+    if effective_workers:
+        cmd += f" --workers={effective_workers}"
+    if headed:
+        cmd += " --headed"
+    return cmd
+
+
+def _build_playwright_env(*, live_backend: bool, port: int) -> dict[str, str]:
+    extra_env = {
+        "PLAYWRIGHT_SKIP_WEBSERVER": "1",
+        "INTERFACE_HOST": "127.0.0.1",
+        "INTERFACE_BIND_HOST": INTERFACE_BIND_HOST,
+        "INTERFACE_PORT": str(port),
+    }
+    if live_backend:
+        extra_env["PLAYWRIGHT_LIVE_BACKEND"] = "1"
+    return _task_env(extra_env)
+
+
+def _reconcile_managed_server_endpoint(
+    env: dict[str, str],
+    chosen_port: int,
+    server: subprocess.Popen[str],
+) -> tuple[dict[str, str], int]:
+    actual_port = _detect_playwright_server_port(chosen_port)
+    if actual_port != chosen_port:
+        print(f"  Managed server bound to port {actual_port} instead of requested {chosen_port}")
+        chosen_port = actual_port
+        env["INTERFACE_PORT"] = str(actual_port)
+
+    ready_host = _wait_for_interface_ready(host=env["INTERFACE_HOST"], port=chosen_port, process=server)
+    if ready_host != env["INTERFACE_HOST"]:
+        print(f"  Managed server is reachable via {ready_host}; updating Playwright host from {env['INTERFACE_HOST']}")
+        env["INTERFACE_HOST"] = ready_host
+
+    return env, chosen_port
+
+
 def run_interface_command(c, command: str, cleanup=False, extra_env=None, **run_kwargs):
     """Run an Interface-local command from the interface/ working directory."""
     command_env = run_kwargs.pop("env", None)
@@ -555,16 +630,14 @@ def build(c):
     _cleanup_repo_local_interface_processes()
     try:
         result = _run_interface_shell_command(["npm", "run", "build"])
-        _print_ascii_safe(result.stdout)
-        _print_ascii_safe(result.stderr)
+        _report_command_result(result)
         if result.exited != 0 and _is_next_build_lock_conflict(result):
             print("Detected a stale Next.js build lock. Cleaning repo-local Interface workers and retrying once...")
             _cleanup_repo_local_interface_processes()
             clean(c)
             _cleanup_repo_local_interface_processes()
             result = _run_interface_shell_command(["npm", "run", "build"])
-            _print_ascii_safe(result.stdout)
-            _print_ascii_safe(result.stderr)
+            _report_command_result(result)
         if result.exited != 0:
             raise SystemExit(result.exited)
     finally:
@@ -580,41 +653,21 @@ def lint(c):
 def test(c):
     """Run Interface Unit Tests (Vitest)."""
     print("Running Interface Tests...")
-    _cleanup_repo_local_interface_processes()
-    try:
-        result = _run_interface_shell_command(["npm", "run", "test"])
-        _print_ascii_safe(result.stdout)
-        _print_ascii_safe(result.stderr)
-        if result.exited != 0:
-            raise SystemExit(result.exited)
-    finally:
-        _cleanup_repo_local_interface_processes()
+    _run_one_shot_interface_task(["npm", "run", "test"])
 
 
 @task
 def typecheck(c):
     """Run the Interface TypeScript typecheck."""
     print("Running Interface Type Check...")
-    _cleanup_repo_local_interface_processes()
-    try:
-        result = _run_interface_shell_command(["npx", "tsc", "--noEmit"])
-        _print_ascii_safe(result.stdout)
-        _print_ascii_safe(result.stderr)
-        if result.exited != 0:
-            raise SystemExit(result.exited)
-    finally:
-        _cleanup_repo_local_interface_processes()
+    _run_one_shot_interface_task(["npx", "tsc", "--noEmit"])
 
 
 @task
 def test_coverage(c):
     """Run Interface unit tests with V8 coverage report."""
     print("Running Interface Tests with Coverage...")
-    result = _run_interface_shell_command(["npx", "vitest", "run", "--coverage"])
-    _print_ascii_safe(result.stdout)
-    _print_ascii_safe(result.stderr)
-    if result.exited != 0:
-        raise SystemExit(result.exited)
+    _run_one_shot_interface_task(["npx", "vitest", "run", "--coverage"])
 
 @task(
     help={
@@ -638,26 +691,9 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     the Next.js proxy instead of relying entirely on route stubs.
     """
     print("Running Playwright E2E Tests...")
-    cmd = "npx playwright test --reporter=dot"
-    effective_workers = workers or "1"
-    if project:
-        cmd += f" --project={project}"
-    if spec:
-        cmd += f" {spec}"
-    if effective_workers:
-        cmd += f" --workers={effective_workers}"
-    if headed:
-        cmd += " --headed"
-    extra_env = {
-        "PLAYWRIGHT_SKIP_WEBSERVER": "1",
-        "INTERFACE_HOST": "127.0.0.1",
-        "INTERFACE_BIND_HOST": INTERFACE_BIND_HOST,
-    }
+    cmd = _build_playwright_command(project=project, spec=spec, workers=workers, headed=headed)
     chosen_port = _pick_interface_port(INTERFACE_PORT)
-    extra_env["INTERFACE_PORT"] = str(chosen_port)
-    if live_backend:
-        extra_env["PLAYWRIGHT_LIVE_BACKEND"] = "1"
-    env = _task_env(extra_env)
+    env = _build_playwright_env(live_backend=live_backend, port=chosen_port)
     stop(c)
     if server_mode == "start":
         print("Refreshing built Interface bundle for managed start-mode browser proof...")
@@ -666,15 +702,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     server: subprocess.Popen[str] | None = None
     try:
         server = _start_playwright_server(env, port=chosen_port, server_mode=server_mode)
-        actual_port = _detect_playwright_server_port(chosen_port)
-        if actual_port != chosen_port:
-            print(f"  Managed server bound to port {actual_port} instead of requested {chosen_port}")
-            chosen_port = actual_port
-            env["INTERFACE_PORT"] = str(actual_port)
-        ready_host = _wait_for_interface_ready(host=env["INTERFACE_HOST"], port=chosen_port, process=server)
-        if ready_host != env["INTERFACE_HOST"]:
-            print(f"  Managed server is reachable via {ready_host}; updating Playwright host from {env['INTERFACE_HOST']}")
-            env["INTERFACE_HOST"] = ready_host
+        env, chosen_port = _reconcile_managed_server_endpoint(env, chosen_port, server)
         result = run_interface_command(c, cmd, pty=not is_windows(), env=env, hide=True, warn=True)
         _print_ascii_safe(result.stdout)
         _print_ascii_safe(result.stderr)
@@ -695,7 +723,8 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
 def stop(c, port=INTERFACE_PORT):
     """
     Stop the Interface server.
-    Kills any repo-local Next.js process listening on --port (default 3000).
+    Kills the listener on --port (default 3000) and then sweeps any repo-local
+    Next.js/Vitest/Playwright worker residue that survived outside that port.
     """
     print(f"Stopping Interface (port {port})...")
     if is_windows():
@@ -779,9 +808,9 @@ def restart(c, port=INTERFACE_PORT):
 @task
 def check(c, port=INTERFACE_PORT):
     """
-    Smoke-test the running Interface dev server.
+    Smoke-test a running Interface server.
     Fetches key pages and checks for SSR errors, 404s, and dark-mode leaks.
-    Requires: interface.dev running on --port (default 3000).
+    Requires: any repo-managed Interface server listening on --port (default 3000).
     """
     import urllib.request
 
