@@ -1,12 +1,22 @@
 # Documentation
 
-Primary documentation entry points for the active V8 migration path:
+Primary documentation entry points for active V8 work:
 
 - **Repository Entry Point**: `../README.md`
 - **Active Development State**: `../V8_DEV_STATE.md`
 - **Architecture Library Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
+- **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
+- **V8.1 Living Organization Architecture**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
+- **V8.2 Production Architecture Target**: `../v8-2.md`
+- **Testing Guide**: `./TESTING.md`
+- **Operations**: `./architecture/OPERATIONS.md`
+- **Logging Standard**: `./logging.md`
+- **Repository Standards**: `../AGENTS.md`
+
+Migration inputs and historical references:
+
 - **Target Deliverable V7**: `./architecture-library/TARGET_DELIVERABLE_V7.md`
 - **System Architecture V7**: `./architecture-library/SYSTEM_ARCHITECTURE_V7.md`
 - **Execution And Manifest Library V7**: `./architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md`
@@ -24,26 +34,24 @@ Primary documentation entry points for the active V8 migration path:
 - **Soma-Council Engagement Protocol V7**: `./architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`
 - **Workflow Composer Delivery Plan V7**: `./architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
 - **UI Target + Transaction Contract V7**: `./architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
-- **Logging Standard**: `./logging.md`
 - **Architecture Specs**: `./architecture/` (`OVERVIEW.md`, `BACKEND.md`, `FRONTEND.md`, `OPERATIONS.md`)
 - **Agent Source Instantiation Template**: `./architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md`
 - **Agentry Template Marketplace + Custom Templating**: `./architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md`
-- **Testing Guide**: `./TESTING.md`
-- **Repository Standards**: `../AGENTS.md`
 - **Archive Index (Historical / Non-authoritative)**: `./archive/README.md`
 
 Use this folder as the navigation layer for docs, but treat the following as the top detailed framework memory surfaces:
 1. `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 2. `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 3. `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
-4. `./architecture-library/SYSTEM_ARCHITECTURE_V7.md`
-5. `./architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md`
-6. `./architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
-7. `./architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
-8. `./architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
-9. `./architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
+4. `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
+5. `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
+6. `../V8_DEV_STATE.md`
+7. `./TESTING.md`
+8. `./architecture/OPERATIONS.md`
+9. `./architecture-library/SYSTEM_ARCHITECTURE_V7.md` when migration-era runtime assumptions need cross-checking
 
 User-facing guides live in `./user/`.
 Specialized implementation references remain under `./architecture/`, while the canonical planning library now lives under `./architecture-library/`.
-V7 docs remain migration inputs, but the active grading/state scoreboard is `../V8_DEV_STATE.md` and the active bootstrap contract is `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
+V7 docs remain migration inputs, but they should not displace the active V8 authority set in day-to-day development.
+The active grading/state scoreboard is `../V8_DEV_STATE.md` and the active bootstrap contract is `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
 Use `./archive/README.md` only for historical context that should not drive active implementation.
