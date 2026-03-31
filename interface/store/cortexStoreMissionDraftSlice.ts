@@ -3,6 +3,76 @@ import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
 import type { AgentManifest, MissionBlueprint, TeamsFilter } from '@/store/cortexStoreTypes';
 import { blueprintToGraph, solidifyNodes } from '@/store/cortexStoreUtils';
 
+function buildClosedAgentEditorState() {
+    return {
+        selectedAgentNodeId: null,
+        isAgentEditorOpen: false,
+    } as const;
+}
+
+function buildResetDraftState() {
+    return {
+        blueprint: null,
+        nodes: [],
+        edges: [],
+        missionStatus: 'idle' as const,
+        activeMissionId: null,
+        ...buildClosedAgentEditorState(),
+    };
+}
+
+function applyBlueprintDraftState(set: CortexSet, blueprint: MissionBlueprint, solidify = false) {
+    const { nodes, edges } = blueprintToGraph(blueprint);
+    set({
+        blueprint,
+        nodes: solidify ? solidifyNodes(nodes) : nodes,
+        edges,
+        ...buildClosedAgentEditorState(),
+    });
+}
+
+function mutateDraftBlueprint(
+    get: CortexGet,
+    set: CortexSet,
+    mutate: (blueprint: MissionBlueprint) => boolean,
+    solidify = false,
+) {
+    const blueprint = get().blueprint;
+    if (!blueprint) return false;
+
+    const nextBlueprint: MissionBlueprint = structuredClone(blueprint);
+    if (!mutate(nextBlueprint)) {
+        return false;
+    }
+
+    applyBlueprintDraftState(set, nextBlueprint, solidify);
+    return true;
+}
+
+function removeAgentAt(blueprint: MissionBlueprint, teamIdx: number, agentIdx: number) {
+    const team = blueprint.teams[teamIdx];
+    if (!team || !team.agents[agentIdx]) {
+        return false;
+    }
+
+    team.agents.splice(agentIdx, 1);
+    if (team.agents.length === 0) {
+        blueprint.teams.splice(teamIdx, 1);
+    }
+    return true;
+}
+
+function removeAgentById(blueprint: MissionBlueprint, agentId: string) {
+    for (let teamIdx = 0; teamIdx < blueprint.teams.length; teamIdx += 1) {
+        const agentIdx = blueprint.teams[teamIdx].agents.findIndex((item) => item.id === agentId);
+        if (agentIdx !== -1) {
+            removeAgentAt(blueprint, teamIdx, agentIdx);
+            return true;
+        }
+    }
+    return false;
+}
+
 export function createCortexMissionDraftSlice(
     set: CortexSet,
     get: CortexGet,
@@ -108,40 +178,22 @@ export function createCortexMissionDraftSlice(
         },
 
         updateAgentInDraft: (teamIdx: number, agentIdx: number, updates: Partial<AgentManifest>) => {
-            const bp = get().blueprint;
-            if (!bp) return;
-            const newBp: MissionBlueprint = structuredClone(bp);
-            const agent = newBp.teams[teamIdx]?.agents[agentIdx];
-            if (!agent) return;
-            Object.assign(agent, updates);
-            const { nodes, edges } = blueprintToGraph(newBp);
-            set({ blueprint: newBp, nodes, edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
+            mutateDraftBlueprint(get, set, (blueprint) => {
+                const agent = blueprint.teams[teamIdx]?.agents[agentIdx];
+                if (!agent) {
+                    return false;
+                }
+                Object.assign(agent, updates);
+                return true;
+            });
         },
 
         deleteAgentFromDraft: (teamIdx: number, agentIdx: number) => {
-            const bp = get().blueprint;
-            if (!bp) return;
-            const newBp: MissionBlueprint = structuredClone(bp);
-            const team = newBp.teams[teamIdx];
-            if (!team) return;
-            team.agents.splice(agentIdx, 1);
-            if (team.agents.length === 0) {
-                newBp.teams.splice(teamIdx, 1);
-            }
-            const { nodes, edges } = blueprintToGraph(newBp);
-            set({ blueprint: newBp, nodes, edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
+            mutateDraftBlueprint(get, set, (blueprint) => removeAgentAt(blueprint, teamIdx, agentIdx));
         },
 
         discardDraft: () => {
-            set({
-                blueprint: null,
-                nodes: [],
-                edges: [],
-                missionStatus: 'idle',
-                activeMissionId: null,
-                selectedAgentNodeId: null,
-                isAgentEditorOpen: false,
-            });
+            set(buildResetDraftState());
         },
 
         updateAgentInMission: async (agentName: string, manifest: Partial<AgentManifest>) => {
@@ -161,16 +213,16 @@ export function createCortexMissionDraftSlice(
                 }
 
                 if (blueprint) {
-                    const newBp: MissionBlueprint = structuredClone(blueprint);
-                    for (const team of newBp.teams) {
-                        const agent = team.agents.find((item) => item.id === agentName);
-                        if (agent) {
-                            Object.assign(agent, manifest);
-                            break;
+                    mutateDraftBlueprint(get, set, (draftBlueprint) => {
+                        for (const team of draftBlueprint.teams) {
+                            const agent = team.agents.find((item) => item.id === agentName);
+                            if (agent) {
+                                Object.assign(agent, manifest);
+                                return true;
+                            }
                         }
-                    }
-                    const { nodes, edges } = blueprintToGraph(newBp);
-                    set({ blueprint: newBp, nodes: solidifyNodes(nodes), edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
+                        return false;
+                    }, true);
                 }
             } catch (err) {
                 console.error('updateAgentInMission:', err);
@@ -192,25 +244,10 @@ export function createCortexMissionDraftSlice(
                 }
 
                 if (blueprint) {
-                    const newBp: MissionBlueprint = structuredClone(blueprint);
-                    let spliced = false;
-                    for (let teamIdx = 0; teamIdx < newBp.teams.length; teamIdx += 1) {
-                        const agentIdx = newBp.teams[teamIdx].agents.findIndex((item) => item.id === agentName);
-                        if (agentIdx !== -1) {
-                            newBp.teams[teamIdx].agents.splice(agentIdx, 1);
-                            spliced = true;
-                            if (newBp.teams[teamIdx].agents.length === 0) {
-                                newBp.teams.splice(teamIdx, 1);
-                            }
-                            break;
-                        }
-                    }
-                    if (!spliced) {
+                    const removed = mutateDraftBlueprint(get, set, (draftBlueprint) => removeAgentById(draftBlueprint, agentName), true);
+                    if (!removed) {
                         console.warn('deleteAgentFromMission: active agent not found in local blueprint:', agentName);
                     }
-
-                    const { nodes, edges } = blueprintToGraph(newBp);
-                    set({ blueprint: newBp, nodes: solidifyNodes(nodes), edges, selectedAgentNodeId: null, isAgentEditorOpen: false });
                 }
             } catch (err) {
                 console.error('deleteAgentFromMission:', err);
@@ -228,15 +265,7 @@ export function createCortexMissionDraftSlice(
                     return;
                 }
 
-                set({
-                    blueprint: null,
-                    nodes: [],
-                    edges: [],
-                    missionStatus: 'idle',
-                    activeMissionId: null,
-                    selectedAgentNodeId: null,
-                    isAgentEditorOpen: false,
-                });
+                set(buildResetDraftState());
             } catch (err) {
                 console.error('deleteMission:', err);
             }
