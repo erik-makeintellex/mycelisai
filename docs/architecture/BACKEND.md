@@ -303,7 +303,7 @@ Overseer receives CTSEnvelope
   ├─ TrustScore >= 0.7: advance DAG (auto-execute)
   │
   └─ TrustScore < 0.7:
-       GovernanceCallback → SSE → Zone D (GovernanceModal)
+       GovernanceCallback → SSE/store sync → GovernanceModal
        Human: POST /governance/resolve/{id} → approve/deny
 ```
 
@@ -316,7 +316,7 @@ Axon routes signals → StreamHandler → data: {JSON}\n\n
 Frontend: parse → Zustand streamLogs[] (cap 100)
   ├─ artifact → pendingArtifacts[]
   ├─ governance_halt → GovernanceModal
-  └─ default → NatsWaterfall
+  └─ default → route-local stream inspection (for example `NatsWaterfall`)
 ```
 
 ---

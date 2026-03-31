@@ -28,10 +28,10 @@ The app shell is implemented through `ShellLayout.tsx` and keeps the global prod
 
 - **Zone A** (`ZoneA_Rail.tsx`): workflow-first navigation, advanced toggle, and current-organization return path
 - **Zone B** (`ZoneB_Workspace.tsx`): route content host
-- **Zone D** (`ZoneD_Decision.tsx`): governed decision overlays and approval support
 - **Global degraded/status surfaces**: `DegradedModeBanner.tsx` and `StatusDrawer.tsx`
+- **Governed advanced overlays**: `GovernanceModal.tsx` plus route-local stream/detail surfaces in advanced workspaces
 
-`ZoneC_Stream.tsx` still exists as a route-local surface, but it is not the default global product layout.
+Route-local telemetry and signal inspection now live in advanced workspace surfaces such as `NatsWaterfall.tsx` and `SignalDetailDrawer.tsx`, not in the global shell.
 
 ### Soma-First Flow
 

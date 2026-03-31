@@ -433,7 +433,7 @@ When an agent produces output with `TrustScore < AutoExecuteThreshold`:
 
 #### 6.3 — Review an Envelope
 
-The user clicks a halted envelope in the DeliverablesTray. The GovernanceModal opens (Zone D overlay) showing:
+The user clicks a halted envelope in the DeliverablesTray. The GovernanceModal opens as the governed review overlay showing:
 
 **Left column**: The output content
 - Rendered according to `content_type`: markdown (rendered), JSON (syntax-highlighted), text (monospace), image (rendered)

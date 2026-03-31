@@ -112,7 +112,7 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 
 **Purpose:** The visual cortex — real-time window into organism thoughts, actions, and governance.
 
-- **4-Zone Shell:** Rail (nav) + Workspace (canvas) + Spectrum (telemetry) + Governance (overlay)
+- **Stable shell + advanced workspaces:** Rail (nav) + Workspace host + degraded/status surfaces, with telemetry and governance depth opened inside advanced workspace contexts
 - **15 routes** across marketing and app route groups
 - **93 React components** across 20 folders
 - **Single Zustand store** with ~60 state fields and ~40 actions
@@ -130,7 +130,7 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 | **Agent ReAct** | Trigger → Build context → LLM infer → Parse tool_call/final → Execute tool → Loop or publish | [BACKEND.md §IV.3](BACKEND.md#pipeline-3-agent-react-loop) |
 | **Memory Archival** | Events buffer → Threshold hit → LLM compress → pgvector embed → SitRep stored | [BACKEND.md §IV.4](BACKEND.md#pipeline-4-memory-archival--compression) |
 | **Governance** | CTS envelope → TrustScore check → Auto-execute (≥0.7) or halt → Human approval queue | [BACKEND.md §IV.5](BACKEND.md#pipeline-5-governance--zero-trust-actuation) |
-| **SSE Streaming** | Axon routes signals → StreamHandler → EventSource → Zustand streamLogs[] → NatsWaterfall + node dispatch | [BACKEND.md §IV.6](BACKEND.md#pipeline-6-sse-real-time-streaming) |
+| **SSE Streaming** | Axon routes signals → StreamHandler → EventSource → Zustand streamLogs[] → route-local stream inspection + node dispatch | [BACKEND.md §IV.6](BACKEND.md#pipeline-6-sse-real-time-streaming) |
 
 ---
 

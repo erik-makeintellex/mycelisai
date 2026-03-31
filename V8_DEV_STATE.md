@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-30
+> Updated: 2026-03-31
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -119,6 +119,7 @@ Review summary:
 28. `IN_REVIEW` the next active-doc convergence slice is now locally in flight: `docs/WORKFLOWS.md`, `docs/QA_COUNCIL_CHAT_API.md`, `docs/SWARM_OPERATIONS.md`, and `docs/architecture/OVERVIEW.md` now treat Soma-first dashboard and AI Organization workspace surfaces as the default operator path, while keeping `/wiring` explicitly documented as the advanced graph-and-negotiation surface instead of the old default Mission Control grid model.
 29. `IN_REVIEW` the next dead-dashboard-branch cleanup slice is now locally in flight: the unmounted legacy `MissionControl.tsx` container, its private dashboard-only helpers (`TelemetryRow`, `ModeRibbon`, `FocusModeToggle`, `OpsOverview`, `OperationsBoard`), its unused widget registry helper, and the corresponding isolated dashboard tests have been removed so the repo no longer carries a second unshipped dashboard branch beside the current Soma-first product surfaces.
 30. `IN_REVIEW` the next cleanup-plan synchronization slice is now locally in flight: the active `V8_2_CROSS_REPO_CLEANUP_AND_RELEASE_STRUCTURE_PLAN.md` no longer points theme/readability work at the deleted `TelemetryRow.tsx` surface and now names `CentralSomaHome.tsx` as the current shipped dashboard polish target instead.
+31. `IN_REVIEW` the next legacy signal-shell cleanup slice is now locally validated: the dead `SignalContext` / `ZoneC_Stream` / `ZoneD_Decision` branch and the orphaned `SensorLibrary` component/tests have been removed, `ShellLayout.tsx` now reflects the actual live shell surfaces, and active frontend/backend/testing docs now point to the store-driven `GovernanceModal` plus route-local `NatsWaterfall` / signal-detail inspection path instead of the retired SSE-era shell narrative.
 
 ## Current Review (2026-03-29)
 

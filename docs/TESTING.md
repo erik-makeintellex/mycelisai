@@ -166,7 +166,7 @@ Signal/channel standard:
 - Current focused chart/bootstrap render check: `helm template mycelis-core charts/mycelis-core`
 - Current focused toolship metadata check: `cd core && go test ./internal/swarm -run "TestHandleDelegateTask_PublishesToInternalCommand|TestHandlePublishSignal_WrapsCanonicalStatusSubject|TestHandlePublishSignal_PrivateReferenceAndCheckpoint|TestHandleReadSignals_LatestOnlyReturnsCheckpoint|TestTeam_TriggerLogic_UnwrapsCommandEnvelope|TestAgentPublishToolBusSignal_StatusChannelForMCP|TestAgentPublishToolBusSignal_ResultChannelForMCP|TestAgentPublishToolBusSignal_PersistsLatestCheckpoint" -count=1`
 - Current focused agent parsing/preflight check: `cd core && go test ./internal/swarm -run "TestParseConversationPayload_|TestParseToolCall|TestAutofillToolArguments|TestShouldCouncilPreflight|TestCouncilPreflightMember" -count=1`
-- Current focused UI check: `cd interface && npx vitest run __tests__/dashboard/SignalContext.test.tsx __tests__/lib/signalNormalize.test.ts --reporter=dot`
+- Current focused stream-normalization check: `cd interface && npx vitest run __tests__/lib/signalNormalize.test.ts __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused docs/runs page check: `cd interface && npx vitest run __tests__/pages/DocsPage.test.tsx __tests__/pages/RunsPage.test.tsx __tests__/runs/RunDetailPage.test.tsx --reporter=dot`
 - Current focused docs/runs browser check: `cd interface && npx playwright test e2e/specs/docs-and-runs.spec.ts --project=chromium`
 - Current focused store-utils check: `cd interface && npx vitest run __tests__/store/cortexStoreUtils.test.ts __tests__/store/useCortexStore.test.ts --reporter=dot`
@@ -284,7 +284,7 @@ go test -v -run TestScoped ./internal/swarm/... -count=1
 | Directory | Coverage |
 |-----------|----------|
 | `interface/__tests__/shell/` | ShellLayout, ZoneA_Rail, GovernanceModal |
-| `interface/__tests__/dashboard/` | MissionControlChat, ProposedActionBlock, SensorLibrary, SignalContext, StatusDrawer, ManifestationPanel, CouncilCallErrorCard, and degraded-state support cards |
+| `interface/__tests__/dashboard/` | MissionControlChat, ProposedActionBlock, StatusDrawer, ManifestationPanel, CouncilCallErrorCard, and degraded-state support cards |
 | `interface/__tests__/pages/` | Dashboard, Organization, Automations, Resources, Settings, Docs, System, Runs, and legacy redirect route coverage |
 | `interface/__tests__/store/` | Cortex store contract, helpers, delivery-state transitions |
 | `interface/__tests__/workspace/` | LaunchCrewModal, CircuitBoard, ArchitectChat, DeliverablesTray, BlueprintDrawer, TrustSlider |
