@@ -113,8 +113,8 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 **Purpose:** The visual cortex — real-time window into organism thoughts, actions, and governance.
 
 - **Stable shell + advanced workspaces:** Rail (nav) + Workspace host + degraded/status surfaces, with telemetry and governance depth opened inside advanced workspace contexts
-- **15 routes** across marketing and app route groups
-- **93 React components** across 20 folders
+- **22 routes** across marketing and app route groups
+- **96 React components** across 27 folders
 - **Single Zustand store** with ~60 state fields and ~40 actions
 - **Midnight Cortex theme:** `cortex-bg #09090b`, `cortex-primary #06b6d4` (cyan)
 - **Agent Node Categories:** Cognitive (cyan), Sensory (blue), Actuation (green), Ledger (muted)
@@ -296,8 +296,8 @@ Execution authority:
 | SQL migrations | 21 |
 | Built-in tools | 17 |
 | LLM adapters | 4 |
-| Frontend routes | 15 |
-| React components | 93 |
+| Frontend routes | 22 |
+| React components | 96 |
 | Zustand state fields | ~60 |
 | Zustand actions | ~40 |
 | Invoke task modules | 11 |

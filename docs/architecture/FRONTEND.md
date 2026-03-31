@@ -10,7 +10,7 @@
 
 > Baseline source of truth for this document:
 > code-audited against `interface/app/**`, `interface/components/**`, `interface/store/useCortexStore.ts`,
-> `core/internal/server/admin.go`, and `core/cmd/server/main.go` on 2026-03-30.
+> `core/internal/server/admin.go`, and `core/cmd/server/main.go` on 2026-03-31.
 
 ---
 
@@ -49,7 +49,7 @@ Implementation note:
 
 ## 3. Full GUI Route Set
 
-Current `page.tsx` route count: `21`.
+Current `page.tsx` route count: `22`.
 
 ### 3.1 Primary workflow routes
 
@@ -57,6 +57,7 @@ Current `page.tsx` route count: `21`.
 | --- | --- | --- |
 | `/` | `app/(marketing)/page.tsx` | Product landing |
 | `/dashboard` | `app/(app)/dashboard/page.tsx` | AI Organization entry flow |
+| `/organizations/[id]` | `app/(app)/organizations/[id]/page.tsx` | Soma-primary AI Organization workspace |
 | `/automations` | `app/(app)/automations/page.tsx` | Automation hub + tabs |
 | `/resources` | `app/(app)/resources/page.tsx` | Advanced resources (tools/files/AI engines/roles) |
 | `/memory` | `app/(app)/memory/page.tsx` | Advanced memory explorer |
@@ -99,22 +100,22 @@ Current `page.tsx` route count: `21`.
 
 ## 4. GUI Surface Inventory
 
-Component files under `interface/components`: `112` (`.tsx` and `.ts`).
+Component files under `interface/components`: `96` (`.tsx` and `.ts`) across `27` folders.
 
 | Folder | Count | Primary responsibility |
 | --- | ---: | --- |
-| `dashboard/` | 23 | Workspace mission-control chat, proposal/inspector, operational panels |
+| `dashboard/` | 10 | Workspace mission-control chat, proposal/inspector, and shared support surfaces |
 | `workspace/` | 10 | Wiring/editor and launch workflow surfaces |
-| `settings/` | 10 | Providers, MCP, profiles, users/groups |
+| `settings/` | 9 | Providers, MCP, profiles, users/groups |
 | `automations/` | 6 | Hub, approvals tab, trigger rules, instantiation wizard |
-| `shell/` | 6 | Layout and navigation shell |
-| `wiring/` | 5 | Graph/wiring editor node-edge surfaces |
+| `shell/` | 5 | Layout and navigation shell |
+| `wiring/` | 3 | Graph/wiring editor node-edge surfaces |
 | `runs/` | 4 | Run timeline and conversation components |
 | `teams/` | 4 | Team and group management |
 | `memory/` | 4 | Hot/warm/cold memory panes |
 | `catalogue/` | 3 | Capability cards/editor |
 | `matrix/` | 3 | Cognitive matrix views |
-| Other folders | 34 | Shared, charts, missions, stream, system, command, utility surfaces |
+| Other folders | 35 | Shared, charts, missions, stream, system, command, organization, and utility surfaces |
 
 ---
 
