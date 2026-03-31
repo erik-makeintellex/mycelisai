@@ -284,8 +284,10 @@ go test -v -run TestScoped ./internal/swarm/... -count=1
 | Directory | Coverage |
 |-----------|----------|
 | `interface/__tests__/shell/` | ShellLayout, ZoneA_Rail, GovernanceModal |
-| `interface/__tests__/dashboard/` | TelemetryRow, ActiveMissionsBar, SensorLibrary, ManifestationPanel, Streams, TeamsSummaryCard, SignalContext |
-| `interface/__tests__/` | Forge, Approvals, Console, CommandPage, CommandRail |
+| `interface/__tests__/dashboard/` | MissionControlChat, ProposedActionBlock, OperationsBoard, TelemetryRow, SensorLibrary, SignalContext, StatusDrawer, ManifestationPanel, degraded/focus/runtime support cards |
+| `interface/__tests__/pages/` | Dashboard, Organization, Automations, Resources, Settings, Docs, System, Runs, and legacy redirect route coverage |
+| `interface/__tests__/store/` | Cortex store contract, helpers, delivery-state transitions |
+| `interface/__tests__/workspace/` | LaunchCrewModal, CircuitBoard, ArchitectChat, DeliverablesTray, BlueprintDrawer, TrustSlider |
 
 ### Infrastructure
 

@@ -1,6 +1,6 @@
 # Mycelis Cortex UI
 
-The conscious face of the Mycelis Swarm OS. Built with Next.js 16, React 19, Tailwind v4, ReactFlow 11, and Zustand 5.
+The frontend for the current V8 operator product. Built with Next.js 16, React 19, Tailwind v4, ReactFlow 11, and Zustand 5.
 
 ## Stack
 
@@ -14,95 +14,69 @@ The conscious face of the Mycelis Swarm OS. Built with Next.js 16, React 19, Tai
 
 ## Architecture
 
-### The Shell Layout
+### Product Surfaces
 
-```
-+------+-------------------------------------------+
-| Zone | Zone B (Workspace)                        |
-|  A   | ArchitectChat | CircuitBoard / SquadRoom  |
-| Rail |               |                           |
-|      |---------------|---------------------------|
-|      | Spectrum (NatsWaterfall — collapsible)     |
-+------+-------------------------------------------+
-              Zone D (Governance Overlay)
-```
+The current frontend is organized around three primary operator surfaces:
 
-- **Zone A** (`ZoneA_Rail.tsx`): Navigation rail + system vitals
-- **Zone B** (`ZoneB_Workspace.tsx`): Page content area
-- **Spectrum** (`NatsWaterfall.tsx`): Collapsible bottom panel — real-time SSE signal waterfall
-- **Zone D** (`GovernanceModal.tsx`): Human-in-the-loop governance overlay — z-50 backdrop-blur modal with two-column layout (output + proof-of-work), APPROVE & DISPATCH / REJECT & REWORK controls
-- **Deliverables Tray** (`DeliverablesTray.tsx`): Bottom-docked panel showing pending `CTSEnvelope` artifacts — auto-hides when empty, pulsing green glow signals pending human action
+- **Dashboard** (`/dashboard`): Central Soma home plus AI Organization creation/re-entry
+- **Organization workspace** (`/organizations/[id]`): Soma-led governed interaction inside a chosen AI Organization
+- **Automations advanced workspace** (`/automations?tab=wiring`): wiring, graph editing, launch flow, and deeper execution controls
 
-### Fractal Navigation
+### Shell Layout
 
-Double-click a team group node in CircuitBoard to drill into the **SquadRoom** — a fractal sub-view showing the team's internal debate feed and proof-of-work artifacts. Press Back to return to the circuit board.
+The app shell is implemented through `ShellLayout.tsx` and keeps the global product frame stable while routes swap underneath it.
 
-State managed via `activeSquadRoomId` in Zustand:
-- `enterSquadRoom(teamId)` — swaps CircuitBoard for SquadRoom
-- `exitSquadRoom()` — returns to CircuitBoard
+- **Zone A** (`ZoneA_Rail.tsx`): workflow-first navigation, advanced toggle, and current-organization return path
+- **Zone B** (`ZoneB_Workspace.tsx`): route content host
+- **Zone D** (`ZoneD_Decision.tsx`): governed decision overlays and approval support
+- **Global degraded/status surfaces**: `DegradedModeBanner.tsx` and `StatusDrawer.tsx`
 
-### Human-in-the-Loop Governance
+`ZoneC_Stream.tsx` still exists as a route-local surface, but it is not the default global product layout.
 
-When an agent emits a `signal: artifact` via SSE, the store intercepts it and constructs a `CTSEnvelope` into `pendingArtifacts[]`. The **DeliverablesTray** renders these as clickable cards. Clicking opens the **GovernanceModal** for review.
+### Soma-First Flow
 
-State managed via Zustand:
+The default operator path is no longer a generic architect console. The current delivery model is:
 
-- `pendingArtifacts: CTSEnvelope[]` — auto-populated from SSE artifact signals
-- `selectedArtifact: CTSEnvelope | null` — triggers GovernanceModal when set
-- `approveArtifact(id)` — removes from pending, logs decision
-- `rejectArtifact(id, reason)` — removes from pending, logs decision with reason
+1. **Central Soma home** (`CentralSomaHome.tsx`) teaches one persistent Soma across governed contexts.
+2. **AI Organization entry** (`CreateOrganizationEntry.tsx`) opens or creates the scoped working context.
+3. **Organization workspace** (`OrganizationContextShell.tsx`) keeps the operator in one Soma-led panel while details, support views, and advanced execution remain reachable without taking over the default experience.
 
-### State Flow (Unidirectional)
+### Advanced Wiring Surface
 
-```
-User Intent
-    |
-    v
-ArchitectChat --> submitIntent() --> POST /api/v1/intent/negotiate
-    |
-    v
-Zustand Store (useCortexStore)
-    |
-    +-- chatHistory[] --> ArchitectChat (read-only)
-    +-- nodes[], edges[] --> CircuitBoard (ReactFlow)
-    +-- activeSquadRoomId --> SquadRoom (fractal drill-down)
-    +-- blueprint, missionStatus --> CircuitBoard metadata bar
-    +-- streamLogs[] --> NatsWaterfall (bottom panel)
-    +-- pendingArtifacts[] --> DeliverablesTray (bottom-docked cards)
-    +-- selectedArtifact --> GovernanceModal (z-50 overlay)
-    +-- isThinking per node --> AgentNode activity ring
-```
+The older graph-centric workflow still exists as an advanced surface rather than the primary product story.
 
-### SSE Stream Pipeline
+- `Workspace.tsx` hosts the advanced wiring environment
+- `ArchitectChat.tsx`, `CircuitBoard.tsx`, and `SquadRoom.tsx` still power mission drafting and graph inspection
+- `LaunchCrewModal.tsx` bridges default Soma requests into governed launch/execution flows when crew creation is needed
 
-```
-Backend /api/v1/stream (EventSource)
-    |
-    v
-initializeStream() --> Zustand streamLogs[] (capped at 100)
-    |
-    +-- NatsWaterfall renders signal waterfall
-    +-- dispatchSignalToNodes() matches signal.source to node ID
-        |
-        +-- thought/cognitive --> isThinking=true, cyan ring
-        +-- artifact/output --> isThinking=false, CTSEnvelope → pendingArtifacts[]
-        +-- error --> status='error'
-```
+### State Flow
+
+`useCortexStore` is composed from bounded slices under `interface/store/`. The current hot paths are:
+
+- chat and proposal handling for Soma-led interaction
+- graph and draft state for advanced wiring
+- governance, artifact, and runtime status handling
+- organization settings, AI engine, and response-style surfaces
+- stream/service health feeding degraded and diagnostics surfaces
 
 ## Key Files
 
 | File | Purpose |
 | :--- | :--- |
-| `store/useCortexStore.ts` | Zustand store: all state, actions, SSE consumer |
-| `components/workspace/Workspace.tsx` | Split-pane: ArchitectChat + CircuitBoard/SquadRoom + bottom panel |
-| `components/workspace/ArchitectChat.tsx` | Chat UI + intent submission |
-| `components/workspace/CircuitBoard.tsx` | ReactFlow canvas + Instantiate button + fractal drill-down |
-| `components/workspace/SquadRoom.tsx` | Fractal sub-view: team debate feed + proof-of-work viewer |
-| `components/wiring/AgentNode.tsx` | Custom node: status, role, thought bubble, activity ring |
-| `components/wiring/DataWire.tsx` | Custom animated edge |
-| `components/stream/NatsWaterfall.tsx` | Collapsible bottom panel — real-time signal spectrum |
-| `components/workspace/DeliverablesTray.tsx` | Bottom-docked pending artifact cards (CTSEnvelope[]) |
-| `components/shell/GovernanceModal.tsx` | Zone D — approval overlay: output + proof columns, approve/reject |
+| `components/dashboard/CentralSomaHome.tsx` | Dashboard entry framing for one persistent Soma |
+| `components/organizations/CreateOrganizationEntry.tsx` | AI Organization creation and recent-organization return path |
+| `components/organizations/OrganizationContextShell.tsx` | Main Soma-led organization workspace |
+| `components/dashboard/MissionControlChat.tsx` | Soma-first governed chat, proposal, and execution surface |
+| `components/dashboard/OpsOverview.tsx` | Operational summary widgets and support signals |
+| `components/organizations/TeamLeadInteractionPanel.tsx` | Guided first-run and organization-support actions |
+| `components/workspace/LaunchCrewModal.tsx` | Governed launch/crew execution modal |
+| `components/workspace/Workspace.tsx` | Advanced wiring workspace host |
+| `components/workspace/ArchitectChat.tsx` | Advanced intent negotiation chat for wiring mode |
+| `components/workspace/CircuitBoard.tsx` | Advanced graph canvas and mission draft editor |
+| `components/workspace/SquadRoom.tsx` | Team drill-down for advanced graph workflow |
+| `components/wiring/AgentNode.tsx` | Custom graph node for wiring/editor surfaces |
+| `components/wiring/DataWire.tsx` | Custom graph edge for wiring/editor surfaces |
+| `components/stream/NatsWaterfall.tsx` | Route-local signal waterfall used in advanced surfaces |
 | `components/shell/ShellLayout.tsx` | Shell layout: ZoneA + ZoneB + ZoneD |
 | `app/globals.css` | Midnight Cortex palette (`cortex-*` tokens), animations, ReactFlow overrides |
 
@@ -127,9 +101,9 @@ Open [http://localhost:3000](http://localhost:3000) to see the Cortex UI.
 
 | Route | Component |
 | :--- | :--- |
-| `/dashboard` | AI Organization entry flow |
+| `/dashboard` | Central Soma home + AI Organization entry flow |
 | `/organizations/[id]` | Soma-primary AI Organization workspace |
-| `/automations` | Automation hub with approvals, trigger rules, and advanced orchestration tabs |
+| `/automations` | Automation hub with approvals, trigger rules, teams, and advanced wiring |
 | `/docs` | In-app docs browser |
 | `/settings` | Preferences, mission profiles, people access, and advanced setup |
 | `/resources` | Advanced support hub for connected tools, workspace files, AI engines, and role library |
@@ -157,7 +131,7 @@ Utilities: `.glow-stable`, `.glow-active`, `.glow-critical`, `.glow-primary`, `.
 
 ## Conventions
 
-- **No useState for API/graph state** — all in Zustand store
-- **Dumb components** — read slices from store, never manage their own async state
-- **Ghost draft pattern** — nodes appear at 50% opacity with dashed cyan border, solidify on commit
-- **Activity ring** — pulsing cyan border on agent nodes when `isThinking === true`
+- **Shared app state lives in the composed Cortex store** — keep cross-route behavior in bounded Zustand slices
+- **Default presentation stays Soma-first** — advanced execution detail is reachable, but should not dominate the default operator flow
+- **Advanced graph tooling remains available** — keep wiring/editor depth without making it the default product identity
+- **Route docs and task contracts must stay in sync** — when product surfaces move, update the relevant repo docs in the same slice
