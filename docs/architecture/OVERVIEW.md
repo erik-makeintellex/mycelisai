@@ -248,7 +248,7 @@ Execution authority:
 - **Pages to Migrate:** `/telemetry`, `/marketplace`, `/approvals` — three remaining routes using legacy zinc/slate classes.
 - **Remove Legacy Variables:** Delete `--background`, `--surface`, `--border`, `--border-active` from globals.css.
 - **Automated Audit:** Scan all components for `bg-white`, `bg-zinc-*`, `bg-slate-*`, or Vuexy color references.
-- **Smoke Test Coverage:** Ensure `uv run inv interface.check` validates all 15 routes.
+- **Smoke Test Coverage:** Ensure `uv run inv interface.check` validates the current shipped route inventory rather than an older 15-route assumption.
 
 ### Phase 18: Streaming LLM Responses
 
