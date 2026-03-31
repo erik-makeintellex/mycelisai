@@ -1,10 +1,54 @@
 import type { CortexState } from '@/store/cortexStoreState';
 import type {
+    Artifact,
     ArtifactFilters,
+    ArtifactStatus,
     CatalogueAgent,
     TeamProposal,
 } from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet } from '@/store/cortexStoreSliceTypes';
+
+function readArray<T>(value: unknown): T[] {
+    return Array.isArray(value) ? value : [];
+}
+
+function toggleSubscribedGroup(groups: string[], group: string): string[] {
+    return groups.includes(group)
+        ? groups.filter((item) => item !== group)
+        : [...groups, group];
+}
+
+function updateProposalStatus(
+    proposals: TeamProposal[],
+    id: string,
+    status: TeamProposal['status'],
+): TeamProposal[] {
+    return proposals.map((proposal) => (
+        proposal.id === id ? { ...proposal, status } : proposal
+    ));
+}
+
+function syncSelectedCatalogueAgent(
+    selected: CatalogueAgent | null,
+    id: string,
+    next: CatalogueAgent | null,
+): CatalogueAgent | null {
+    return selected?.id === id ? next : selected;
+}
+
+function buildArtifactQuery(filters?: ArtifactFilters): string {
+    const params = new URLSearchParams();
+    if (filters?.mission_id) params.set('mission_id', filters.mission_id);
+    if (filters?.team_id) params.set('team_id', filters.team_id);
+    if (filters?.agent_id) params.set('agent_id', filters.agent_id);
+    if (filters?.limit) params.set('limit', String(filters.limit));
+    const query = params.toString();
+    return query ? `/api/v1/artifacts?${query}` : '/api/v1/artifacts';
+}
+
+function syncArtifactStatus(artifact: Artifact, id: string, status: ArtifactStatus): Artifact {
+    return artifact.id === id ? { ...artifact, status } : artifact;
+}
 
 export function createCortexResourceCatalogSlice(
     set: CortexSet,
@@ -44,11 +88,7 @@ export function createCortexResourceCatalogSlice(
 
         toggleSensorGroup: (group: string) => {
             set((s) => {
-                const current = s.subscribedSensorGroups;
-                const next = current.includes(group)
-                    ? current.filter((item) => item !== group)
-                    : [...current, group];
-                return { subscribedSensorGroups: next };
+                return { subscribedSensorGroups: toggleSubscribedGroup(s.subscribedSensorGroups, group) };
             });
         },
 
@@ -58,7 +98,7 @@ export function createCortexResourceCatalogSlice(
                 const res = await fetch('/api/v1/proposals');
                 if (res.ok) {
                     const data = await res.json();
-                    set({ teamProposals: data.proposals ?? [], isFetchingProposals: false });
+                    set({ teamProposals: readArray<TeamProposal>(data.proposals), isFetchingProposals: false });
                 } else {
                     set({ teamProposals: [], isFetchingProposals: false });
                 }
@@ -72,9 +112,7 @@ export function createCortexResourceCatalogSlice(
                 const res = await fetch(`/api/v1/proposals/${id}/approve`, { method: 'POST' });
                 if (res.ok) {
                     set((s) => ({
-                        teamProposals: s.teamProposals.map((proposal: TeamProposal) =>
-                            proposal.id === id ? { ...proposal, status: 'approved' } : proposal
-                        ),
+                        teamProposals: updateProposalStatus(s.teamProposals, id, 'approved'),
                     }));
                 }
             } catch {
@@ -87,9 +125,7 @@ export function createCortexResourceCatalogSlice(
                 const res = await fetch(`/api/v1/proposals/${id}/reject`, { method: 'POST' });
                 if (res.ok) {
                     set((s) => ({
-                        teamProposals: s.teamProposals.map((proposal: TeamProposal) =>
-                            proposal.id === id ? { ...proposal, status: 'rejected' } : proposal
-                        ),
+                        teamProposals: updateProposalStatus(s.teamProposals, id, 'rejected'),
                     }));
                 }
             } catch {
@@ -106,7 +142,7 @@ export function createCortexResourceCatalogSlice(
                     return;
                 }
                 const data = await res.json();
-                set({ missions: Array.isArray(data) ? data : [], isFetchingMissions: false });
+                set({ missions: readArray(data), isFetchingMissions: false });
             } catch {
                 set({ missions: [], isFetchingMissions: false });
             }
@@ -118,7 +154,7 @@ export function createCortexResourceCatalogSlice(
                 const res = await fetch('/api/v1/catalogue/agents');
                 if (res.ok) {
                     const data = await res.json();
-                    set({ catalogueAgents: Array.isArray(data) ? data : [], isFetchingCatalogue: false });
+                    set({ catalogueAgents: readArray(data), isFetchingCatalogue: false });
                 } else {
                     set({ catalogueAgents: [], isFetchingCatalogue: false });
                 }
@@ -157,7 +193,7 @@ export function createCortexResourceCatalogSlice(
                     const updated = await res.json();
                     set((s) => ({
                         catalogueAgents: s.catalogueAgents.map((item) => item.id === id ? updated : item),
-                        selectedCatalogueAgent: s.selectedCatalogueAgent?.id === id ? updated : s.selectedCatalogueAgent,
+                        selectedCatalogueAgent: syncSelectedCatalogueAgent(s.selectedCatalogueAgent, id, updated),
                     }));
                 }
             } catch {
@@ -171,7 +207,7 @@ export function createCortexResourceCatalogSlice(
                 if (res.ok) {
                     set((s) => ({
                         catalogueAgents: s.catalogueAgents.filter((item) => item.id !== id),
-                        selectedCatalogueAgent: s.selectedCatalogueAgent?.id === id ? null : s.selectedCatalogueAgent,
+                        selectedCatalogueAgent: syncSelectedCatalogueAgent(s.selectedCatalogueAgent, id, null),
                     }));
                 }
             } catch {
@@ -186,16 +222,10 @@ export function createCortexResourceCatalogSlice(
         fetchArtifacts: async (filters?: ArtifactFilters) => {
             set({ isFetchingArtifacts: true });
             try {
-                const params = new URLSearchParams();
-                if (filters?.mission_id) params.set('mission_id', filters.mission_id);
-                if (filters?.team_id) params.set('team_id', filters.team_id);
-                if (filters?.agent_id) params.set('agent_id', filters.agent_id);
-                if (filters?.limit) params.set('limit', String(filters.limit));
-                const query = params.toString();
-                const res = await fetch(query ? `/api/v1/artifacts?${query}` : '/api/v1/artifacts');
+                const res = await fetch(buildArtifactQuery(filters));
                 if (res.ok) {
                     const data = await res.json();
-                    set({ artifacts: Array.isArray(data) ? data : [], isFetchingArtifacts: false });
+                    set({ artifacts: readArray(data), isFetchingArtifacts: false });
                 } else {
                     set({ artifacts: [], isFetchingArtifacts: false });
                 }
@@ -219,17 +249,15 @@ export function createCortexResourceCatalogSlice(
         updateArtifactStatus: async (id: string, status: string) => {
             try {
                 const res = await fetch(`/api/v1/artifacts/${id}/status`, {
-                    method: 'POST',
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status }),
                 });
                 if (res.ok) {
                     set((s) => ({
-                        artifacts: s.artifacts.map((artifact) =>
-                            artifact.id === id ? { ...artifact, status: status as any } : artifact
-                        ),
+                        artifacts: s.artifacts.map((artifact) => syncArtifactStatus(artifact, id, status as ArtifactStatus)),
                         selectedArtifactDetail: s.selectedArtifactDetail?.id === id
-                            ? { ...s.selectedArtifactDetail, status: status as any }
+                            ? { ...s.selectedArtifactDetail, status: status as ArtifactStatus }
                             : s.selectedArtifactDetail,
                     }));
                 }

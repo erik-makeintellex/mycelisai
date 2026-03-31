@@ -1,13 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCortexStore } from '@/store/useCortexStore';
+import { blueprintToGraph } from '@/store/cortexStoreUtils';
 import { mockFetch } from '../setup';
 
 // Direct store testing — no React rendering needed
 const store = useCortexStore;
+const baseBlueprint = {
+    mission_id: 'mission-1',
+    intent: 'Test mission',
+    teams: [
+        {
+            name: 'Ops',
+            role: 'operators',
+            agents: [
+                {
+                    id: 'alpha',
+                    role: 'cognitive',
+                    system_prompt: 'First agent',
+                    model: 'model-a',
+                    inputs: ['source.topic'],
+                    outputs: ['ops.alpha'],
+                },
+                {
+                    id: 'beta',
+                    role: 'sensory',
+                    system_prompt: 'Second agent',
+                    model: 'model-b',
+                    inputs: ['ops.alpha'],
+                    outputs: ['ops.beta'],
+                },
+            ],
+        },
+    ],
+};
 
 describe('useCortexStore', () => {
     beforeEach(() => {
         localStorage.clear();
+        const { nodes, edges } = blueprintToGraph(baseBlueprint);
         // Reset relevant state between tests
         store.setState({
             missions: [],
@@ -32,6 +62,13 @@ describe('useCortexStore', () => {
             mcpTools: [],
             trustThreshold: 0.7,
             isSyncingThreshold: false,
+            blueprint: null,
+            nodes,
+            edges,
+            missionStatus: 'idle',
+            activeMissionId: null,
+            selectedAgentNodeId: null,
+            isAgentEditorOpen: false,
         });
     });
 
@@ -126,6 +163,34 @@ describe('useCortexStore', () => {
             await store.getState().fetchArtifacts();
 
             expect(store.getState().artifacts).toEqual([]);
+        });
+
+        it('updateArtifactStatus uses the PUT contract and syncs selected detail', async () => {
+            store.setState({
+                artifacts: [
+                    { id: 'a1', agent_id: 'ag1', artifact_type: 'code', title: 'Output', content_type: 'text', metadata: {}, status: 'pending', created_at: '' },
+                ],
+                selectedArtifactDetail: {
+                    id: 'a1',
+                    agent_id: 'ag1',
+                    artifact_type: 'code',
+                    title: 'Output',
+                    content_type: 'text',
+                    metadata: {},
+                    status: 'pending',
+                    created_at: '',
+                },
+            });
+            mockFetch.mockResolvedValue({ ok: true });
+
+            await store.getState().updateArtifactStatus('a1', 'approved');
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                '/api/v1/artifacts/a1/status',
+                expect.objectContaining({ method: 'PUT' }),
+            );
+            expect(store.getState().artifacts[0].status).toBe('approved');
+            expect(store.getState().selectedArtifactDetail?.status).toBe('approved');
         });
     });
 
@@ -223,6 +288,21 @@ describe('useCortexStore', () => {
             await store.getState().createCatalogueAgent({ name: 'New Agent', role: 'cognitive' });
 
             expect(store.getState().catalogueAgents[0]).toEqual(created);
+        });
+
+        it('updateCatalogueAgent keeps the selected agent in sync', async () => {
+            const existing = { id: 'c1', name: 'Scanner', role: 'cognitive', tools: [], inputs: [], outputs: [], verification_rubric: [], created_at: '', updated_at: '' };
+            const updated = { ...existing, name: 'Scanner Prime' };
+            store.setState({
+                catalogueAgents: [existing],
+                selectedCatalogueAgent: existing,
+            });
+            mockFetch.mockResolvedValue({ ok: true, json: async () => updated });
+
+            await store.getState().updateCatalogueAgent('c1', { name: 'Scanner Prime' });
+
+            expect(store.getState().catalogueAgents[0]).toEqual(updated);
+            expect(store.getState().selectedCatalogueAgent).toEqual(updated);
         });
 
         it('deleteCatalogueAgent removes from store', async () => {
@@ -373,6 +453,113 @@ describe('useCortexStore', () => {
 
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/audit?limit=20');
             expect(store.getState().auditLog).toEqual(auditLog);
+        });
+    });
+
+    // ── Mission draft / graph sync ──────────────────────────────
+
+    describe('mission draft graph sync', () => {
+        it('updateAgentInDraft updates the local blueprint and closes the editor', () => {
+            store.setState({
+                blueprint: structuredClone(baseBlueprint),
+                selectedAgentNodeId: 'agent-0-0',
+                isAgentEditorOpen: true,
+            });
+
+            store.getState().updateAgentInDraft(0, 0, { model: 'model-updated' });
+
+            expect(store.getState().blueprint?.teams[0].agents[0].model).toBe('model-updated');
+            expect(store.getState().selectedAgentNodeId).toBeNull();
+            expect(store.getState().isAgentEditorOpen).toBe(false);
+        });
+
+        it('deleteAgentFromDraft removes the last agent team and rebuilds the graph', () => {
+            store.setState({
+                blueprint: {
+                    mission_id: 'mission-2',
+                    intent: 'Single agent mission',
+                    teams: [
+                        {
+                            name: 'Solo',
+                            role: 'operators',
+                            agents: [
+                                {
+                                    id: 'solo-agent',
+                                    role: 'cognitive',
+                                    outputs: ['solo.out'],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                selectedAgentNodeId: 'agent-0-0',
+                isAgentEditorOpen: true,
+            });
+
+            store.getState().deleteAgentFromDraft(0, 0);
+
+            expect(store.getState().blueprint?.teams).toEqual([]);
+            expect(store.getState().nodes).toEqual([]);
+            expect(store.getState().edges).toEqual([]);
+            expect(store.getState().isAgentEditorOpen).toBe(false);
+        });
+
+        it('updateAgentInMission updates the active blueprint and solidifies draft nodes', async () => {
+            const { nodes, edges } = blueprintToGraph(baseBlueprint);
+            store.setState({
+                blueprint: structuredClone(baseBlueprint),
+                nodes,
+                edges,
+                activeMissionId: 'mission-1',
+                selectedAgentNodeId: 'agent-0-0',
+                isAgentEditorOpen: true,
+            });
+            mockFetch.mockResolvedValue({ ok: true });
+
+            await store.getState().updateAgentInMission('alpha', { model: 'model-live' });
+
+            expect(store.getState().blueprint?.teams[0].agents[0].model).toBe('model-live');
+            expect(store.getState().nodes.some((node) => node.type === 'agentNode' && node.className === '')).toBe(true);
+            expect(store.getState().selectedAgentNodeId).toBeNull();
+            expect(store.getState().isAgentEditorOpen).toBe(false);
+        });
+
+        it('discardDraft clears the draft workspace state', () => {
+            store.setState({
+                blueprint: structuredClone(baseBlueprint),
+                missionStatus: 'active',
+                activeMissionId: 'mission-1',
+                selectedAgentNodeId: 'agent-0-0',
+                isAgentEditorOpen: true,
+            });
+
+            store.getState().discardDraft();
+
+            expect(store.getState().blueprint).toBeNull();
+            expect(store.getState().missionStatus).toBe('idle');
+            expect(store.getState().activeMissionId).toBeNull();
+            expect(store.getState().nodes).toEqual([]);
+            expect(store.getState().edges).toEqual([]);
+            expect(store.getState().isAgentEditorOpen).toBe(false);
+        });
+
+        it('deleteMission clears the draft workspace after a successful delete', async () => {
+            store.setState({
+                blueprint: structuredClone(baseBlueprint),
+                missionStatus: 'active',
+                activeMissionId: 'mission-1',
+                selectedAgentNodeId: 'agent-0-0',
+                isAgentEditorOpen: true,
+            });
+            mockFetch.mockResolvedValue({ ok: true });
+
+            await store.getState().deleteMission('mission-1');
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/missions/mission-1', { method: 'DELETE' });
+            expect(store.getState().blueprint).toBeNull();
+            expect(store.getState().missionStatus).toBe('idle');
+            expect(store.getState().activeMissionId).toBeNull();
+            expect(store.getState().isAgentEditorOpen).toBe(false);
         });
     });
 
