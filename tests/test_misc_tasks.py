@@ -206,6 +206,10 @@ def test_worktree_triage_expected_targets_cover_task_contract_docs(capsys):
     misc.worktree_triage.body(ctx)
 
     output = capsys.readouterr().out
+    assert "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md" in output
+    assert "docs/architecture-library/V8_RUNTIME_CONTRACTS.md" in output
+    assert "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md" in output
+    assert "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md" in output
     assert "docs/LOCAL_DEV_WORKFLOW.md" in output
     assert "docs/architecture/OPERATIONS.md" in output
     assert "ops/README.md" in output

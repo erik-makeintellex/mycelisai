@@ -4,10 +4,12 @@ from .config import ROOT_DIR
 WORKTREE_REVIEW_TARGETS = (
     "README.md",
     "V8_DEV_STATE.md",
+    "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
+    "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
+    "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
+    "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
     "docs/LOCAL_DEV_WORKFLOW.md",
     "docs/architecture/OPERATIONS.md",
-    "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
-    "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
     "docs/TESTING.md",
     "ops/README.md",
 )

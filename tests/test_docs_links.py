@@ -139,6 +139,22 @@ def test_readme_has_fresh_agent_review_sequence():
     assert not missing, f"Fresh-agent review sequence is missing required references: {missing}"
 
 
+def test_docs_readme_promotes_v8_navigation_before_legacy_v7_inputs():
+    text = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+
+    required_v8_refs = [
+        "**Active Development State**: `../V8_DEV_STATE.md`",
+        "**V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`",
+        "**V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`",
+        "**V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`",
+    ]
+    missing = [ref for ref in required_v8_refs if ref not in text]
+    assert not missing, f"docs/README is missing required V8 navigation references: {missing}"
+
+    assert "Migration inputs and historical references:" in text
+    assert text.index("**Active Development State**: `../V8_DEV_STATE.md`") < text.index("**Legacy V7 Development State**: `../V7_DEV_STATE.md`")
+
+
 def test_readme_has_feature_status_standard():
     text = README.read_text(encoding="utf-8")
     assert "## Feature Status Standard" in text, "README must define the canonical feature-status markers"
