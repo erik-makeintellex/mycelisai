@@ -70,8 +70,8 @@ Bootstrap reminder:
 - the deployed Core image resolves runtime config from `/core/config`, and the Helm chart mounts the config volume there so bootstrap bundles, cognitive defaults, and policy files line up with the container workdir
 
 Tasking note:
-- `uv run inv db.migrate` is a forward-bootstrap task for schemas that are not already initialized; if the `cortex` schema is already bootstrapped, it now skips replay and points operators to `uv run inv db.reset` for a clean rebuild
-- live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend
+- `uv run inv db.migrate` is a forward-bootstrap task for schemas that are not yet compatible with the current runtime; if the `cortex` schema already has the required runtime tables and columns, it skips replay and points operators to `uv run inv db.reset` for a clean rebuild
+- live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, and point it at a host-reachable endpoint such as `http://host.docker.internal:11434`
 
 ## What Mycelis Is

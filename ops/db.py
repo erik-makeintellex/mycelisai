@@ -8,6 +8,39 @@ from .config import CORE_DIR, ROOT_DIR
 
 MIGRATIONS_DIR = CORE_DIR / "migrations"
 
+SCHEMA_COMPATIBILITY_CHECKS = (
+    (
+        "nodes.type column",
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_schema = 'public' AND table_name = 'nodes' AND column_name = 'type';",
+    ),
+    (
+        "nodes.specs column",
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_schema = 'public' AND table_name = 'nodes' AND column_name = 'specs';",
+    ),
+    (
+        "intent_proofs table",
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'intent_proofs';",
+    ),
+    (
+        "confirm_tokens table",
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'confirm_tokens';",
+    ),
+    (
+        "conversation_turns table",
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'conversation_turns';",
+    ),
+    (
+        "collaboration_groups table",
+        "SELECT 1 FROM information_schema.tables "
+        "WHERE table_schema = 'public' AND table_name = 'collaboration_groups';",
+    ),
+)
+
 
 def _load_env():
     try:
@@ -130,20 +163,19 @@ def _ensure_database_exists():
 
 def schema_bootstrapped() -> bool:
     """
-    Return True when the target application schema already looks initialized.
-    Uses a late-schema sentinel table so repeat service checks do not replay
-    the full forward migration stack against a populated database.
+    Return True when the target application schema looks compatible with the
+    current runtime.
+    Uses a small set of required late-runtime tables/columns so repeat service
+    checks do not skip replay against a partially migrated database.
     """
     _load_env()
-    result = _run_psql(
-        sql=(
-            "SELECT 1 FROM information_schema.tables "
-            "WHERE table_schema = 'public' AND table_name = 'collaboration_groups';"
-        )
-    )
-    if result.returncode != 0:
-        return False
-    return "1" in result.stdout.split()
+    for _label, sql in SCHEMA_COMPATIBILITY_CHECKS:
+        result = _run_psql(sql=sql)
+        if result.returncode != 0:
+            return False
+        if "1" not in result.stdout.split():
+            return False
+    return True
 
 
 def _apply_migrations(strict=False):
@@ -154,7 +186,7 @@ def _apply_migrations(strict=False):
 
     if not strict and schema_bootstrapped():
         print(
-            f"Schema for '{db}' already appears bootstrapped; "
+            f"Schema for '{db}' already appears compatible with the current runtime; "
             "skipping forward migration replay."
         )
         print(

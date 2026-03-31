@@ -2,19 +2,31 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
-function resolveBackendWorkspaceRoot() {
-    // Live backend proof can run from a different checkout/worktree than the
-    // Core server it is validating, so filesystem assertions need an explicit
-    // override instead of assuming the backend workspace lives under this repo.
+const repoRoot = path.resolve(__dirname, '../../..');
+
+function resolveBackendWorkspaceRoots() {
+    // Live backend proof can run against either the repo-local Core workspace
+    // or the supported compose data root, so filesystem assertions need to
+    // probe the real backend workspace instead of assuming one layout.
     const configuredRoot =
         process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT;
     if (configuredRoot && configuredRoot.trim().length > 0) {
-        return path.resolve(configuredRoot);
+        return [path.resolve(configuredRoot)];
     }
-    return path.resolve(__dirname, '../../..', 'core', 'workspace');
+
+    return [
+        path.join(repoRoot, 'workspace', 'docker-compose', 'data', 'workspace'),
+        path.join(repoRoot, 'core', 'workspace'),
+    ];
 }
 
-const workspaceLogsDir = path.join(resolveBackendWorkspaceRoot(), 'workspace', 'logs');
+function resolveBackendLogTargets(filename: string) {
+    return resolveBackendWorkspaceRoots().map((workspaceRoot) => path.join(workspaceRoot, 'workspace', 'logs', filename));
+}
+
+function anyTargetExists(paths: string[]) {
+    return paths.some((candidate) => fs.existsSync(candidate));
+}
 
 type ChatEnvelope = {
     ok?: boolean;
@@ -156,7 +168,7 @@ test.describe('Soma governed mutation live contract', () => {
     test('Scenario C+D: fresh mutation proposal stays side-effect free until confirm, and cancel remains safe + persistent', async ({ page }) => {
         test.slow();
         const stamp = Date.now();
-        const targetFile = path.join(workspaceLogsDir, `qa_browser_cancel_${stamp}.py`);
+        const targetPaths = resolveBackendLogTargets(`qa_browser_cancel_${stamp}.py`);
         const organizationId = await createOrganization(page, `QA Scenario CD ${stamp}`);
         await openWorkspace(page, organizationId);
 
@@ -168,22 +180,22 @@ test.describe('Soma governed mutation live contract', () => {
         expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
         expect(mutation.body?.data?.mode).toBe('proposal');
         await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
-        expect(fs.existsSync(targetFile)).toBeFalsy();
+        expect(anyTargetExists(targetPaths)).toBeFalsy();
 
         await page.getByRole('button', { name: /^Cancel$/i }).click();
         await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
-        expect(fs.existsSync(targetFile)).toBeFalsy();
+        expect(anyTargetExists(targetPaths)).toBeFalsy();
 
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
         await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
-        expect(fs.existsSync(targetFile)).toBeFalsy();
+        expect(anyTargetExists(targetPaths)).toBeFalsy();
     });
 
     test('Scenario E: confirm yields durable proof, executes after approval, and persists on reload', async ({ page }) => {
         test.slow();
         const stamp = Date.now();
-        const targetFile = path.join(workspaceLogsDir, `qa_browser_confirm_${stamp}.py`);
+        const targetPaths = resolveBackendLogTargets(`qa_browser_confirm_${stamp}.py`);
         const organizationId = await createOrganization(page, `QA Scenario E ${stamp}`);
         await openWorkspace(page, organizationId);
 
@@ -195,7 +207,7 @@ test.describe('Soma governed mutation live contract', () => {
         expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
         expect(mutation.body?.data?.mode).toBe('proposal');
         await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
-        expect(fs.existsSync(targetFile)).toBeFalsy();
+        expect(anyTargetExists(targetPaths)).toBeFalsy();
 
         const confirmed = await waitForConfirmAction(page);
 
@@ -206,9 +218,9 @@ test.describe('Soma governed mutation live contract', () => {
         expect(confirmed.body?.data?.execution_state).toBe('verified');
 
         await expect
-            .poll(() => fs.existsSync(targetFile), {
+            .poll(() => anyTargetExists(targetPaths), {
                 timeout: 30_000,
-                message: `expected ${targetFile} to exist only after confirmation`,
+                message: `expected one backend workspace target to exist after confirmation: ${targetPaths.join(', ')}`,
             })
             .toBeTruthy();
 
