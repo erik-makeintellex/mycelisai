@@ -9,7 +9,7 @@ README = ROOT / "README.md"
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
 PRD_INDEX = ROOT / "mycelis-architecture-v7.md"
 NEXT_EXECUTION_SLICES = ROOT / "docs" / "architecture-library" / "NEXT_EXECUTION_SLICES_V7.md"
-DEV_STATE = ROOT / "V7_DEV_STATE.md"
+LEGACY_V7_DEV_STATE = ROOT / "V7_DEV_STATE.md"
 V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
 V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
 V8_UI_API_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"
@@ -561,8 +561,8 @@ def test_next_execution_slices_follow_canonical_priority_order():
     assert not missing, f"Next execution slices doc is missing required queue structure: {missing}"
 
 
-def test_dev_state_uses_delivery_program_snapshot():
-    text = DEV_STATE.read_text(encoding="utf-8")
+def test_legacy_v7_dev_state_uses_delivery_program_snapshot():
+    text = LEGACY_V7_DEV_STATE.read_text(encoding="utf-8")
     required_snippets = [
         "### Delivery Program Snapshot",
         "P0  Operational foundation and gate discipline",
@@ -573,7 +573,7 @@ def test_dev_state_uses_delivery_program_snapshot():
     ]
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
-    assert not missing, f"Dev state is missing delivery-program framing: {missing}"
+    assert not missing, f"Legacy V7 dev state is missing delivery-program framing: {missing}"
 
 
 def test_ui_operator_experience_covers_direct_first_and_theme_simplification_contract():
@@ -606,8 +606,8 @@ def test_soma_council_protocol_defines_consultation_trigger_modes():
     assert not missing, f"Soma-council protocol is missing consultation trigger contract snippets: {missing}"
 
 
-def test_dev_state_tracks_active_slice2_theme_and_routing_priorities():
-    text = DEV_STATE.read_text(encoding="utf-8")
+def test_legacy_v7_dev_state_tracks_active_slice2_theme_and_routing_priorities():
+    text = LEGACY_V7_DEV_STATE.read_text(encoding="utf-8")
     required_snippets = [
         "1. `ACTIVE` Slice 2 sub-track: Workspace theme simplification and conversation-first hierarchy",
         "2. `ACTIVE` Slice 2 sub-track: Soma direct-first routing economy and consultation trigger discipline",
@@ -615,7 +615,7 @@ def test_dev_state_tracks_active_slice2_theme_and_routing_priorities():
     ]
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
-    assert not missing, f"Dev state is missing active Slice 2 theme/routing priorities: {missing}"
+    assert not missing, f"Legacy V7 dev state is missing active Slice 2 theme/routing priorities: {missing}"
 
 
 def test_canonical_surfaces_do_not_expose_purged_planning_docs():
@@ -631,7 +631,7 @@ def test_canonical_surfaces_do_not_expose_purged_planning_docs():
     surfaces = {
         README: README.read_text(encoding="utf-8"),
         DOCS_MANIFEST: DOCS_MANIFEST.read_text(encoding="utf-8"),
-        DEV_STATE: DEV_STATE.read_text(encoding="utf-8"),
+        LEGACY_V7_DEV_STATE: LEGACY_V7_DEV_STATE.read_text(encoding="utf-8"),
         ROOT / "docs" / "README.md": (ROOT / "docs" / "README.md").read_text(encoding="utf-8"),
     }
 

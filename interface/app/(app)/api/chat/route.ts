@@ -1,6 +1,6 @@
 // Proxy to Core backend for chat inference.
-// In local dev, /api/v1/chat is rewritten by next.config.mjs.
-// This route handles /api/chat as a secondary path.
+// In local dev, /api/v1/chat is rewritten by next.config.ts.
+// This route preserves the secondary /api/chat path without duplicating chat logic.
 export async function POST(req: Request) {
     const { messages } = await req.json();
 

@@ -129,8 +129,8 @@ Required state entry fields:
 - next 24-48h actions
 
 Quality rule:
-- if a PR changes execution behavior and does not update `V7_DEV_STATE.md`, it is not review-ready.
-- if a PR changes runtime/API behavior and does not include both a UI target review/test plan reference and NATS coordination note in `V7_DEV_STATE.md`, it is not review-ready.
+- if a PR changes execution behavior and does not update `V8_DEV_STATE.md`, it is not review-ready.
+- if a PR changes runtime/API behavior and does not include both a UI target review/test plan reference and NATS coordination note in `V8_DEV_STATE.md`, it is not review-ready.
 
 ## 5. Deep Testing Architecture
 

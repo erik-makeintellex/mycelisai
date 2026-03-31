@@ -64,7 +64,7 @@ Run these with `curl` or any HTTP client against `http://localhost:8081`.
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
-| 1.5.1 | Legacy chat endpoint works | POST to `/api/v1/chat` with `{ "messages": [{"role":"user","content":"ping"}] }` | `200` — plain text response (NOT APIResponse wrapped — legacy behavior preserved) |
+| 1.5.1 | Legacy chat endpoint works | POST to `/api/v1/chat` with `{ "messages": [{"role":"user","content":"ping"}] }` | `200` — `{ "ok": true, "data": { "meta": {...}, "signal_type": "chat_response", "payload": {...}, "mode": "answer" } }` |
 | 1.5.2 | Broadcast endpoint works | POST to `/api/v1/swarm/broadcast` | `200` — existing broadcast behavior unchanged |
 | 1.5.3 | SSE stream works | GET `/api/v1/stream` (EventSource) | SSE connection established, signals flow |
 

@@ -66,7 +66,7 @@ No single test lane is enough on its own.
 2. Live backend governance proof
    - Purpose: prove the real `/api/v1/chat` and confirm-action contract
    - Command:
-     - `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+     - `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
 3. Manual trust and disruption pass
    - Purpose: verify interruption, recovery feel, wording quality, and operator trust

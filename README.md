@@ -51,8 +51,8 @@ Review these in order before touching code or planning state:
 12. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
 13. [Operations](docs/architecture/OPERATIONS.md)
 14. [Testing](docs/TESTING.md)
-15. [V7 Development State](V7_DEV_STATE.md)
-16. [V8 Development State](V8_DEV_STATE.md)
+15. [V8 Development State](V8_DEV_STATE.md)
+16. [V7 Development State (Historical)](V7_DEV_STATE.md)
 17. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent review rule:
@@ -300,8 +300,8 @@ Agents implementing V8 must review these areas first:
 - `docs/architecture/`
 - `docs/TESTING.md`
 - `docs/logging.md`
-- `V7_DEV_STATE.md`
 - `V8_DEV_STATE.md`
+- `V7_DEV_STATE.md` when historical migration evidence is needed
 
 Particular attention belongs on:
 - release-target alignment between README, V8.1, V8.2, and `V8_DEV_STATE.md`

@@ -461,11 +461,11 @@ Required live spec:
 
 Current known risk:
 
-- fresh-organization direct-answer Scenario A may still return `500 Internal Server Error` in compose even while proposal, cancel, confirm, and persistence scenarios pass
+- the old compose fresh-organization `500` is no longer the active risk; the current compose-sensitive issue was a backend-workspace-root assumption in the live proof helper for file-side-effect assertions
 
 Classification:
 
-- this is `product` or `runtime`, not `environment`, if compose health is green
+- this is now `test` / `docs` contract drift unless a clean compose rerun reproduces a real runtime failure
 
 ## 7. Reporting Format
 
