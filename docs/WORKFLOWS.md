@@ -326,11 +326,10 @@ The user clicks "Activate Mission". The commit flow (Workflow 3.4) executes. The
 
 #### 4.6 — Post-Activation State
 
-On Mission Control (`/`):
-- The ActiveMissionsBar shows the new mission with team/agent counts
-- The PriorityStream begins showing signals from the new teams
-- The live workspace and ops surfaces begin reflecting agent heartbeats, cognitive events, tool calls, and proposal activity
-- The SensorLibrary shows any new sensor agents
+After activation:
+- The operator can return to `/dashboard` and reopen the active AI Organization from the current-context path
+- The organization workspace begins reflecting mission activity through Soma responses, support panels, and recent execution context
+- The advanced wiring surface at `/wiring` remains available when the operator wants graph-level inspection or mission-edit depth
 
 ---
 
@@ -338,7 +337,7 @@ On Mission Control (`/`):
 
 **Purpose**: The user observes running missions in real-time, inspects agent activity, reviews outputs, and intervenes when needed.
 
-**Route**: `/` (Mission Control) and `/wiring` (drill-down)
+**Route**: `/dashboard`, `/organizations/[id]`, `/missions/[id]/teams`, and `/wiring` (advanced drill-down)
 
 **Backend Dependencies**:
 - `GET /api/v1/missions` — list missions (existing)
@@ -350,22 +349,22 @@ On Mission Control (`/`):
 
 ### Step-by-Step User Flow
 
-#### 5.1 — Mission Control Dashboard
+#### 5.1 — Dashboard and Workspace Monitoring
 
-The user lands on `/`. The layout (existing `MissionControl.tsx`) shows:
+The operator lands on `/dashboard` and sees:
 
-**Top**: TelemetryRow — four live sparkline cards (goroutines, heap MB, system MB, tokens/sec) polling `/api/v1/telemetry/compute` every 5 seconds.
+- **Central Soma home**: product framing, persistent-Soma story, and return path into the current AI Organization
+- **AI Organization entry**: create-new flow plus recent-organization recovery
 
-**Below**: ActiveMissionsBar — horizontal scroll of active mission chips showing name, team count, agent count, status color.
+Once inside `/organizations/[id]`, the main workspace shows:
 
-**Main Workspace**:
-- **Primary panel**: MissionControlChat — Soma-first governed interaction surface for direct answers, proposals, and crew launches
-- **Operations panel**: OpsOverview — current widget surface for status, proposals, support signals, and recent activity summaries
-- **Advanced surfaces**: TelemetryRow and related ops widgets remain available without replacing the primary Soma-first workspace
+- **Primary panel**: `MissionControlChat` for direct answers, governed proposals, and launch/crew follow-through
+- **Support and status panels**: organization activity, automations, departments, advisors, AI engine settings, response style, and quick checks
+- **Advanced surfaces**: telemetry and deeper execution details remain reachable without replacing the default Soma-led workspace
 
 #### 5.2 — Inspect a Mission
 
-The user clicks a mission chip in the ActiveMissionsBar. This navigates to `/wiring` with that mission's blueprint loaded on the CircuitBoard. Agent nodes show live status:
+For direct mission inspection, the operator opens `/missions/[id]/teams` or uses the advanced `/wiring` surface when graph-level inspection is needed. In those views, agent and team state show:
 
 | Status | Visual |
 |--------|--------|
@@ -374,7 +373,7 @@ The user clicks a mission chip in the ActiveMissionsBar. This navigates to `/wir
 | `error` | Red left-border, error badge |
 | `offline` | Dim, no accent |
 
-The NatsWaterfall (bottom panel) filters to show only signals from this mission's teams.
+The advanced wiring surface continues to expose `NatsWaterfall` and graph-linked execution detail when the operator explicitly enters that mode.
 
 #### 5.3 — Drill into a Team (Squad Room)
 
@@ -405,7 +404,7 @@ The user types a query in a search bar (top of SitReps panel or a global search)
 
 **Purpose**: The Trust Economy requires human approval for low-trust agent outputs. The user reviews halted envelopes, inspects proof-of-work, and approves or rejects.
 
-**Route**: `/wiring` (Zone D overlay) and `/` (PriorityStream)
+**Route**: `/organizations/[id]`, `/automations?tab=approvals`, and `/wiring` (advanced approval/graph inspection)
 
 **Backend Dependencies**:
 - SSE `governance_halt` signals (existing)
@@ -416,7 +415,7 @@ The user types a query in a search bar (top of SitReps panel or a global search)
 
 #### 6.1 — Trust Threshold Configuration
 
-In the ArchitectChat (`/wiring`), the TrustSlider component shows a 0.0–1.0 range slider. The user adjusts it:
+In the advanced wiring workspace (`/wiring`), the TrustSlider component shows a 0.0–1.0 range slider. The user adjusts it:
 - **High (0.9)**: Almost all agent outputs auto-execute — minimal human review
 - **Low (0.3)**: Most outputs halt for review — maximum human control
 - **Default (0.7)**: Balanced — cognitive agents halt, sensory/actuation pass
@@ -430,7 +429,7 @@ When an agent produces output with `TrustScore < AutoExecuteThreshold`:
 2. A `governance_halt` SSE event broadcasts to all connected clients
 3. The frontend intercepts this in the Zustand SSE handler
 4. The DeliverablesTray (bottom of CircuitBoard) gains a new pulsing green entry
-5. The PriorityStream on Mission Control shows the halt
+5. The current governed workspace and approval surfaces reflect the halt
 
 #### 6.3 — Review an Envelope
 
@@ -464,7 +463,7 @@ The envelope is removed from the DeliverablesTray. The GovernanceModal closes.
 
 **Purpose**: The user has a direct conversational interaction with the system. This is the primary human↔motherbrain interface. Today it's text-only; the API is designed to grow to audio and visual.
 
-**Route**: `/wiring` (ArchitectChat, existing) and `/chat` (new dedicated route)
+**Route**: `/organizations/[id]` (primary Soma workspace) and `/wiring` (advanced contextual negotiation)
 
 **Backend Dependencies**:
 - `POST /api/v1/chat` — general chat endpoint (existing but basic)
@@ -476,9 +475,9 @@ The envelope is removed from the DeliverablesTray. The GovernanceModal closes.
 
 #### 7.1 — Open Chat Interface
 
-**Option A**: The ArchitectChat in `/wiring` — contextual to the current mission. Messages are scoped to intent negotiation and blueprint refinement.
+**Option A**: `MissionControlChat` inside `/organizations/[id]` — the primary Soma-led workspace for direct answers, governed proposals, and context-aware coordination.
 
-**Option B** (new): A dedicated `/chat` route with a full-screen chat interface. This is the general-purpose motherbrain conversation. No mission context unless explicitly loaded.
+**Option B**: `ArchitectChat` inside `/wiring` — the advanced graph/wiring conversation surface for mission negotiation and blueprint refinement.
 
 The chat UI shows:
 - Message history (scrollable, auto-scroll on new messages)
@@ -643,8 +642,8 @@ All live data flows through the existing SSE stream at `/api/v1/stream`. The Zus
 | `tool_call` | Agent MCP tool use | Show tool invocation in NatsWaterfall |
 | `tool_result` | MCP pool response | Show result in NatsWaterfall + SquadRoom |
 | `artifact` | Agent output | Push to DeliverablesTray |
-| `governance_halt` | Overseer | Push to DeliverablesTray + PriorityStream |
-| `sensor_data` | SensorAgent | Update SensorLibrary feed |
+| `governance_halt` | Overseer | Push to governed workspace state, approvals surfaces, and advanced drill-down details |
+| `sensor_data` | SensorAgent | Update sensor-aware support surfaces and advanced diagnostics |
 | `mcp_connected` | MCP Pool | Update server status in Settings |
 | `mcp_disconnected` | MCP Pool | Update server status in Settings |
 
