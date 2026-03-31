@@ -77,4 +77,12 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
         await act(async () => { render(<SystemPage />); });
         expect(screen.getByText(/System diagnostics are hidden until you open Advanced mode/i)).toBeDefined();
     });
+
+    it('shows lifecycle commands through the supported invoke contract', async () => {
+        mockSearchParams.set('tab', 'services');
+        await act(async () => { render(<SystemPage />); });
+        expect(screen.getByText('uv run inv lifecycle.up --build --frontend')).toBeDefined();
+        expect(screen.getByText('uv run inv lifecycle.down')).toBeDefined();
+        expect(screen.queryByText(/uvx inv lifecycle/i)).toBeNull();
+    });
 });

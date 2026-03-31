@@ -419,7 +419,7 @@ function ServicesTab() {
                 </div>
             ) : services.length === 0 ? (
                 <div className="text-center py-10 text-cortex-text-muted text-xs">
-                    Core API unreachable — run <code className="text-cortex-primary">uvx inv lifecycle.up</code> to start.
+                    Core API unreachable — run <code className="text-cortex-primary">uv run inv lifecycle.up</code> to start.
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -431,11 +431,11 @@ function ServicesTab() {
             <div className="rounded-lg border border-cortex-border bg-cortex-surface/50 p-4 space-y-2">
                 <h4 className="text-[10px] uppercase tracking-wider text-cortex-text-muted font-semibold">Lifecycle Commands</h4>
                 {[
-                    { label: "Start all", cmd: "uvx inv lifecycle.up --build --frontend" },
-                    { label: "Stop all", cmd: "uvx inv lifecycle.down" },
-                    { label: "Restart", cmd: "uvx inv lifecycle.restart --build --frontend" },
-                    { label: "Status", cmd: "uvx inv lifecycle.status" },
-                    { label: "Health check", cmd: "uvx inv lifecycle.health" },
+                    { label: "Start all", cmd: "uv run inv lifecycle.up --build --frontend" },
+                    { label: "Stop all", cmd: "uv run inv lifecycle.down" },
+                    { label: "Restart", cmd: "uv run inv lifecycle.restart --build --frontend" },
+                    { label: "Status", cmd: "uv run inv lifecycle.status" },
+                    { label: "Health check", cmd: "uv run inv lifecycle.health" },
                 ].map(({ label, cmd }) => (
                     <div key={cmd} className="flex items-center gap-2">
                         <span className="text-[10px] text-cortex-text-muted w-24 flex-shrink-0">{label}</span>

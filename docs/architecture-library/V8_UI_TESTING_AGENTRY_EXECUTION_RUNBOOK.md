@@ -251,7 +251,7 @@ Purpose:
 
 Command:
 
-- `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+- `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
 If the core workspace lives in a different checkout than the browser spec, set one of:
 

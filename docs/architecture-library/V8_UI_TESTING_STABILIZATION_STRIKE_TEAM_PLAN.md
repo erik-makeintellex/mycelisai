@@ -187,7 +187,7 @@ Stable browser proof:
 
 Live governed-chat proof:
 1. `cd core && go test ./internal/server -run "TestHandleChat_|TestHandleConfirmAction_" -count=1`
-2. `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+2. `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
 ### 5.3 `COMPLETE`
 
