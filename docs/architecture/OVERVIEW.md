@@ -157,7 +157,7 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 | 5.0 | Archivist Daemon | NATS buffer → LLM compress → sitreps table, periodic 5min flush |
 | 5.1 | SquadRoom | Fractal navigation (double-click team → drill-down), Mission Control layout |
 | 5.2 | Sovereign UX & Trust | Trust Economy (CTS TrustScore, Governance Valve, SSE governance_halt), Telemetry API, Trust API, AgentNode iconography (4 categories), TrustSlider, BlueprintDrawer, Panopticon layout |
-| 5.3 | RAG & Sensory UI | EmbedProvider interface, pgvector auto-embed, SemanticSearch, SensorLibrary (grouped subscriptions), ManifestationPanel, NatsWaterfall signal classification (input/output/internal), MissionControl 3-column responsive grid |
+| 5.3 | RAG & Sensory UI | EmbedProvider interface, pgvector auto-embed, SemanticSearch, sensor-aware UI surfaces, ManifestationPanel, NatsWaterfall signal classification (input/output/internal), and the earlier Mission Control layout that later evolved into the current Soma-first workspace |
 | 6.0 | Host Internalization | Activation Bridge (commitAndActivate), SensorAgent (poll-based), Blueprint Converter (mission-scoped IDs), Symbiotic Seed (Gmail+Weather, no LLM), Team.sensorConfigs, Migration 010 |
 | 7.7 | Admin & Council | HandleChat NATS-only (no raw LLM fallback), provider naming (vllm/ollama/lmstudio), dynamic cognitive status, advanced AI Engines settings, 17 internal tools, Council YAML, ToolsPalette drawer |
 | 8.0 | Visualization | Observable Plot (bar/line/area/dot/waffle/tree), Leaflet geo maps, DataTable, ChartRenderer, MycelisChartSpec type system, ArtifactViewer inline chart rendering, SquadRoom ProofCard |
@@ -256,7 +256,7 @@ Execution authority:
 
 - **Streaming Inference:** Modify `cognitive.Router.Infer()` to support streaming mode across all provider adapters.
 - **SSE Token Relay:** Relay tokens from LLM to frontend via SSE in real-time.
-- **ArchitectChat Streaming:** Tokens appear as Meta-Architect generates blueprints.
+- **Advanced Wiring Chat Streaming:** Tokens appear as the advanced ArchitectChat generates blueprints.
 - **Council Chat Streaming:** Council responses stream token-by-token in MissionControlChat.
 - **Tool Call Detection:** Detect `tool_call` JSON fragments mid-stream and trigger tool execution without waiting for full response.
 - **Frontend:** Typing indicator and progressive markdown rendering in chat components.

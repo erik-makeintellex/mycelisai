@@ -115,9 +115,9 @@ Each **AgentTemplate** defines:
 
 ## Negotiate a Mission Blueprint (`/wiring`)
 
-The **ArchitectChat** translates natural-language intent into a structured **MissionBlueprint**.
+The advanced **ArchitectChat** surface translates natural-language intent into a structured **MissionBlueprint**.
 
-1. Navigate to `/wiring` (or `/architect`).
+1. Navigate to `/wiring` (or `/architect`, which redirects there).
 2. Type a mission goal: *"Build a team that monitors weather data and sends email summaries."*
 3. The Meta-Architect decomposes the intent into teams, agents, and constraints.
 4. The blueprint renders as a **ghost-draft DAG** on the CircuitBoard (ReactFlow canvas).

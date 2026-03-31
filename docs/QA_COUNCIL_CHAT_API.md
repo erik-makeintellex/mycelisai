@@ -150,13 +150,13 @@ Open `http://localhost:3000` in browser.
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
-| 5.1 | 3-column grid stable | Resize browser window | Left (CognitiveStatus + Sensors), Center (OperationsBoard), Right (Chat) columns maintain proportions with `minmax` CSS grid |
-| 5.2 | Header functional | Check Mission Control header | "MISSION CONTROL" title, SIGNAL:LIVE/OFFLINE badge, "NEW MISSION" button (→ /wiring), Settings button (→ /settings) |
-| 5.3 | Cognitive status panel | Check left column | CognitiveStatusPanel shows provider status (online/offline) |
-| 5.4 | Sensor library | Check left column below cognitive | SensorLibrary renders with grouped subscriptions |
-| 5.5 | Telemetry row | Check below header | TelemetryRow renders compute metrics |
+| 5.1 | Dashboard home stable | Resize browser window on `/dashboard` | Central Soma home and AI Organization entry flow remain legible without overlap or clipped CTAs |
+| 5.2 | Dashboard actions functional | Check dashboard hero and entry surfaces | Create AI Organization, return/open-current-context, and docs review actions remain usable |
+| 5.3 | Organization workspace stable | Open `/organizations/[id]` | Soma workspace, support panels, and details drawer regions render without layout breakage |
+| 5.4 | Workspace quick checks | Check organization support area | Quick checks and support cards render without hiding the primary Soma panel |
+| 5.5 | Telemetry row | Check advanced-enabled dashboard/workspace state | TelemetryRow renders compute metrics when the surface exposes it |
 | 5.6 | Wiring page loads | Navigate to `/wiring` | ArchitectChat + CircuitBoard + NatsWaterfall render without error |
-| 5.7 | Teams page loads | Navigate to `/teams` | Team cards render with standing + mission teams |
+| 5.7 | Mission teams page loads | Navigate to `/missions/[id]/teams` | Team actuation view renders roster, artifacts, and summary panels |
 | 5.8 | Settings page loads | Navigate to `/settings` | 3 default tabs: Profile, Mission Profiles, People & Access; advanced mode adds AI Engines and Connected Tools |
 
 ---
@@ -167,8 +167,8 @@ Open `http://localhost:3000` in browser.
 |---|------|-------|-----------------|
 | 6.1 | Chrome latest | Full test suite above | All pass |
 | 6.2 | Firefox latest | Core council chat flow (2.1-2.3) | All pass |
-| 6.3 | 1920x1080 | Full layout check | 3-column grid renders properly, no overflow |
-| 6.4 | 1366x768 (laptop) | Full layout check | Grid adapts, columns may narrow but remain usable |
+| 6.3 | 1920x1080 | Full layout check | Dashboard, organization workspace, and advanced pages render properly, no overflow |
+| 6.4 | 1366x768 (laptop) | Full layout check | Layout adapts while keeping the Soma-first panel and key actions usable |
 | 6.5 | Council selector on small screen | Resize to ~1200px width | Dropdown still accessible, not clipped |
 
 ---
