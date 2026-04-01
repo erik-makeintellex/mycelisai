@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-03-31
+> Updated: 2026-04-01
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -86,7 +86,7 @@ State reporting rule:
 - `COMPLETE`: delivered and accepted
 - `BLOCKED`: cannot advance until a dependency or defect is resolved
 
-## Current Review (2026-03-30)
+## Current Review (2026-04-01)
 
 Review summary:
 1. `ACTIVE` the approval and product-trust correction is now a first-class delivery lane: `docs/architecture-library/V8_APPROVAL_AND_PRODUCT_TRUST_STRIKE_TEAM_PLAN.md` defines the team structure, phase order, non-negotiable product rules, and acceptance gates for simplifying approval/auth-style interactions without flattening platform depth.
@@ -121,6 +121,8 @@ Review summary:
 30. `IN_REVIEW` the next cleanup-plan synchronization slice is now locally in flight: the active `V8_2_CROSS_REPO_CLEANUP_AND_RELEASE_STRUCTURE_PLAN.md` no longer points theme/readability work at the deleted `TelemetryRow.tsx` surface and now names `CentralSomaHome.tsx` as the current shipped dashboard polish target instead.
 31. `IN_REVIEW` the next legacy signal-shell cleanup slice is now locally validated: the dead `SignalContext` / `ZoneC_Stream` / `ZoneD_Decision` branch and the orphaned `SensorLibrary` component/tests have been removed, `ShellLayout.tsx` now reflects the actual live shell surfaces, and active frontend/backend/testing docs now point to the store-driven `GovernanceModal` plus route-local `NatsWaterfall` / signal-detail inspection path instead of the retired SSE-era shell narrative.
 32. `IN_REVIEW` the next active-frontend-metrics cleanup slice is now locally validated: `docs/architecture/FRONTEND.md` and `docs/architecture/OVERVIEW.md` are resynchronized to the current audited interface surface, including the real `page.tsx` route count (`22`), the live `/organizations/[id]` primary workflow route, and the current component inventory (`96` files across `27` folders) instead of older pre-cleanup counts.
+33. `COMPLETE` the latest cleanup checkpoints are now packaged in local git history from clean state: `24d6c83` (`Remove dead signal shell branch`), `4174196` (`Sync active frontend architecture metrics`), and `0dc6b24` (`Clarify active overview route coverage`).
+34. `COMPLETE` repo hygiene remains closed after those checkpoints: `git status --short` is clean, and the cleanup lane is now carrying its progress through small committed slices instead of rebuilding another mixed local batch.
 
 ## Current Review (2026-03-29)
 
