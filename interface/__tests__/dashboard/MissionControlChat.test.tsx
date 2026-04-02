@@ -695,6 +695,15 @@ describe('MissionControlChat', () => {
             expect(screen.getByText(/Tell Soma what you want to plan, review, create, or execute/i)).toBeDefined();
         });
 
+        it('turns starter prompts into clickable guided actions in simple mode', async () => {
+            render(<MissionControlChat simpleMode />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            expect(screen.getByText('Choose a starter prompt')).toBeDefined();
+            fireEvent.click(screen.getByRole('button', { name: 'Run a governed change' }));
+            expect(screen.getByDisplayValue('Run a governed change')).toBeDefined();
+        });
+
         it('shows broadcast directive text in broadcast mode', async () => {
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });

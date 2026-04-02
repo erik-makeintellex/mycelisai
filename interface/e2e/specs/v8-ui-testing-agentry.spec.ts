@@ -319,6 +319,9 @@ test.describe("V8 UI testing agentry product contract", () => {
 
         await openOrganization(page);
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
+        await expect(page.getByText("Choose a starter prompt")).toBeVisible();
+        await page.getByRole("button", { name: "Plan the next move" }).click();
+        await expect(page.getByPlaceholder(chatPlaceholder)).toHaveValue("Plan the next move");
 
         await sendWorkspaceMessage(page, "Summarize the current Workspace V8 design objectives.");
         await expect(page.getByText(directAnswer)).toBeVisible({ timeout: 20_000 });

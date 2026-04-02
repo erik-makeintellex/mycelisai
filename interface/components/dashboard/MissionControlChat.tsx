@@ -59,6 +59,13 @@ const COUNCIL_META: Record<string, { label: string; color: string }> = {
     'council-sentry':    { label: 'Sentry',    color: 'text-cortex-danger' },
 };
 
+const STARTER_PROMPTS = [
+    "Plan the next move",
+    "Review current state",
+    "Run a governed change",
+    "Create an artifact",
+] as const;
+
 function artifactIcon(type: string) {
     switch (type) {
         case "code":
@@ -846,6 +853,7 @@ export default function MissionControlChat({
     const [broadcastMode, setBroadcastMode] = useState(false);
     const [fetchedMembers, setFetchedMembers] = useState(false);
     const [directTarget, setDirectTarget] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const showAdvancedRouting = !simpleMode;
 
@@ -903,6 +911,12 @@ export default function MissionControlChat({
         if (!lastUserMessage) return;
         const content = lastUserMessage.content.replace(/^\[BROADCAST\]\s*/i, "");
         if (content.trim()) sendMissionChat(content);
+    };
+
+    const applyStarterPrompt = (prompt: string) => {
+        if (isLoading) return;
+        setInput(prompt);
+        inputRef.current?.focus();
     };
 
     return (
@@ -1025,12 +1039,20 @@ export default function MissionControlChat({
                                     : `Tell ${assistantName} what you want to plan, review, create, or execute.`}
                             </p>
                             {simpleMode ? (
-                                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                                    {["Plan the next move", "Review current state", "Run a governed change", "Create an artifact"].map((hint) => (
-                                        <span key={hint} className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1.5 text-xs text-cortex-text-main">
-                                            {hint}
-                                        </span>
-                                    ))}
+                                <div className="mt-4 space-y-2">
+                                    <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Choose a starter prompt</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {STARTER_PROMPTS.map((hint) => (
+                                            <button
+                                                key={hint}
+                                                type="button"
+                                                onClick={() => applyStarterPrompt(hint)}
+                                                className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1.5 text-xs text-cortex-text-main transition-colors hover:border-cortex-primary/20 hover:text-cortex-primary"
+                                            >
+                                                {hint}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             ) : null}
                         </div>
@@ -1072,6 +1094,7 @@ export default function MissionControlChat({
             <div className="px-3 py-2 border-t border-cortex-border flex-shrink-0">
                 <div className="flex gap-2">
                     <input
+                        ref={inputRef}
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}

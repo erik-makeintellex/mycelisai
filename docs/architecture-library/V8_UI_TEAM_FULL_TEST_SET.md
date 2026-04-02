@@ -222,6 +222,7 @@ Expected:
 
 - the workspace leads with a clear `start here` layer before deeper inspect surfaces
 - the operator can immediately choose between Soma conversation, team design, and setup review
+- guided starter prompts in the Soma lane are actionable, not decorative labels
 - deeper inspect surfaces remain reachable without replacing the guided start path
 
 Terminal state:
