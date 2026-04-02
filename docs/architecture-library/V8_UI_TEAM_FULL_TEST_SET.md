@@ -356,16 +356,20 @@ Surface:
 
 Action:
 
+- inspect the default guided setup path
 - change theme
 - change assistant name
 - reload the app
 
 Expected:
 
+- the page leads with a guided setup path instead of reading like a raw admin panel
+- profile, mission-profile, and people-access actions are obvious before advanced setup
 - theme saves
 - theme persists after reload
 - assistant name saves
 - assistant name persists after reload
+- advanced controls stay intentionally framed as advanced follow-ons, not the default first step
 - no hidden 404 or silent revert
 
 Terminal state:
@@ -374,6 +378,7 @@ Terminal state:
 
 Evidence:
 
+- screenshot of guided setup path
 - screenshot before reload
 - screenshot after reload
 

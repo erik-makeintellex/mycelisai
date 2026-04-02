@@ -13,25 +13,19 @@ test.describe('Settings Page (/settings)', () => {
         await expect(errorOverlay).not.toBeVisible();
     });
 
-    test('settings page has content', async ({ page }) => {
-        // Settings page should have some configuration UI
-        const settingsContent = page.locator('text=/settings|configuration|MCP|tools|cognitive/i');
-        const visible = await settingsContent.first().isVisible().catch(() => false);
-        if (!visible) {
-            test.skip();
-            return;
-        }
-        await expect(settingsContent.first()).toBeVisible();
+    test('settings page leads with a guided setup path', async ({ page }) => {
+        await expect(page.getByText('Guided setup path')).toBeVisible();
+        await expect(page.getByText('Start with the controls most operators actually need.')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Open Profile' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Open Mission Profiles' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Open People & Access' })).toBeVisible();
+        await expect(page.getByText('Advanced setup stays intentional')).toBeVisible();
     });
 
-    test('MCP server registry renders', async ({ page }) => {
-        const mcpSection = page.locator('text=/MCP|server|registry/i');
-        const visible = await mcpSection.first().isVisible().catch(() => false);
-        if (!visible) {
-            test.skip();
-            return;
-        }
-        await expect(mcpSection.first()).toBeVisible();
+    test('guided workflow controls can switch visible sections', async ({ page }) => {
+        await page.getByRole('button', { name: 'Open Mission Profiles' }).click();
+        await expect(page.getByRole('tab', { name: 'Mission Profiles', selected: true })).toBeVisible();
+        await expect(page.getByText(/Mission Profiles/i).first()).toBeVisible();
     });
 
     test('no bg-white leak on settings page', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { mockFetch } from '../setup';
 
 // Mock reactflow (store imports it)
@@ -80,6 +80,8 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             render(<SettingsPage />);
         });
 
+        expect(screen.getByText('Guided setup path')).toBeDefined();
+        expect(screen.getByText('Start with the controls most operators actually need.')).toBeDefined();
         expect(screen.getByText('Profile')).toBeDefined();
         expect(screen.getByText('Mission Profiles')).toBeDefined();
         expect(screen.getByText('People & Access')).toBeDefined();
@@ -95,9 +97,14 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByText('Identity')).toBeDefined();
         expect(screen.getByText('Appearance')).toBeDefined();
         expect(screen.queryByText('Notifications')).toBeNull();
+        expect(screen.getByText('Name Soma and set the workspace look')).toBeDefined();
+        expect(screen.getByText('Shape reusable mission defaults')).toBeDefined();
+        expect(screen.getByText('Review people and access')).toBeDefined();
+        expect(screen.getByText('Advanced controls are open')).toBeDefined();
         expect(screen.getByRole('option', { name: 'Aero Light' })).toBeDefined();
         expect(screen.getByRole('option', { name: 'Midnight Cortex' })).toBeDefined();
         expect(screen.getByRole('option', { name: 'System' })).toBeDefined();
+        expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
     });
 
     it('hides advanced tabs when advanced mode is off', async () => {
@@ -108,11 +115,27 @@ describe('Settings Page (app/settings/page.tsx)', () => {
 
         expect(screen.queryByText('AI Engines')).toBeNull();
         expect(screen.queryByText('Connected Tools')).toBeNull();
+        expect(screen.getByText('Advanced controls unlock when you need them')).toBeDefined();
+        expect(screen.queryByText('Advanced controls are open')).toBeNull();
+    });
+
+    it('lets the guided workflow cards switch the active section', async () => {
+        await act(async () => {
+            render(<SettingsPage />);
+        });
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Open AI Engines' }));
+        });
+        expect(screen.getByRole('tab', { name: 'AI Engines' }).getAttribute('aria-current')).toBe('page');
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Open Profile' }));
+        });
+        expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
     });
 
     it('saves the selected theme', async () => {
-        const { fireEvent } = await import('@testing-library/react');
-
         await act(async () => {
             render(<SettingsPage />);
         });
