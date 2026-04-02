@@ -173,6 +173,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Cross-team execution plan for true-MVP delivery order, UI/browser proof, engagement testing, and committed-slice discipline",
             },
             {
+                slug: "v8-ask-class-agent-output-plan",
+                label: "V8 Ask-Class Agent/Output Plan",
+                path: "docs/architecture-library/V8_ASK_CLASS_AGENT_TYPE_OUTPUT_CONTRACT_PLAN.md",
+                description: "Execution plan for consolidating ask classification, specialist targeting, and output-contract assertion across runtime, UI, docs, and tests",
+            },
+            {
                 slug: "v8-demo-product-plan",
                 label: "V8 Demo Product Plan",
                 path: "docs/architecture-library/V8_DEMO_PRODUCT_STRIKE_TEAM_PLAN.md",

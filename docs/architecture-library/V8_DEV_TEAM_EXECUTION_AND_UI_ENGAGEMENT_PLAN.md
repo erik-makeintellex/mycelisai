@@ -330,6 +330,26 @@ Minimum proof:
 - stable browser proof for answer vs proposal vs artifact result
 - live-backend proof when governed execution behavior changes
 
+### Slice 4: Ask-class, agent-type, and output-contract assertion
+
+Goal:
+
+- introduce one shared runtime contract for mapping ask classes to agent targets and output modes so Soma, council, UI, and tests stop relying on fragmented assumptions
+
+Expected owner set:
+
+- Product Management / Delivery Coordination
+- Runtime and Governance Team
+- Interface and Workflow Team
+- QA / UI Testing Agentry Team
+
+Minimum proof:
+
+- focused runtime contract tests
+- existing answer-vs-proposal proof remains green
+- focused UI/store tests if response meaning changes
+- docs/state sync
+
 ## Acceptance
 
 This plan remains `ACTIVE` until:

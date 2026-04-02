@@ -131,6 +131,7 @@ Review summary:
 40. `IN_REVIEW` the next Soma-chat guided-entry cleanup slice is now locally in flight: the simple-mode empty state no longer stops at passive hint text, starter prompts are becoming clickable guided actions that prefill the Soma lane directly, and the workspace/browser proof is being tightened so guided chat entry remains real interaction rather than decorative copy.
 41. `IN_REVIEW` the MCP settings configuration lane now has an explicit owner-group governance contract: curated library installs inspect before install, root/owner current-group config from the MCP page auto-allows without a second approval loop, remote MCP entries return an approval boundary instead of silently prompting, and MCP toolset mutations now echo the same normalized governance posture in their responses.
 42. `IN_REVIEW` the MCP governance hardening slice now has standard-library contract proof against the shipped `core/config/mcp-library.yaml`: owned-config inspection is covered for canonical entries like `filesystem` and `github`, local-first toolset links remain stable, and the raw `/api/v1/mcp/install` security block still holds even when a request mirrors a real library entry.
+43. `ACTIVE` the ask-class, agent-type, and output-contract assertion lane is now formally opened in `docs/architecture-library/V8_ASK_CLASS_AGENT_TYPE_OUTPUT_CONTRACT_PLAN.md`: local repo truth has been reduced to one highest-value gap, the missing shared machine-readable registry for ask classification and output assertion, and the first execution slice is now defined as a low-risk runtime contract insertion for `direct_answer` vs `governed_mutation` before broader UI/runtime expansion.
 
 ## Current Review (2026-03-29)
 
@@ -636,5 +637,9 @@ Evidence:
    - index any newly canonical doc in `interface/lib/docsManifest.ts` in the same slice
 7. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
 8. `NEXT` extend the same owner-scoped MCP configuration posture into any future MCP settings or toolset-management UI so current-group context stays explicit once those surfaces become operator-visible.
+9. `NEXT` begin Slice 1 of the ask-class / agent-type / output-contract assertion lane.
+   - add the shared machine-readable ask-contract registry in Go
+   - wire Soma chat to resolve `direct_answer` vs `governed_mutation` through that registry without changing the visible terminal-state model
+   - add focused runtime proof before widening the contract to council/UI surfaces
 
 
