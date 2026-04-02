@@ -17,6 +17,7 @@ import type {
     ExecutionMode,
     MCPServerWithTools,
     MCPLibraryCategory,
+    MCPInstallResult,
     MCPTool,
     Mission,
     MissionBlueprint,
@@ -121,7 +122,7 @@ export interface CortexResourcesContract {
     deleteMCPServer: (id: string) => Promise<void>;
     fetchMCPTools: () => Promise<void>;
     fetchMCPLibrary: () => Promise<void>;
-    installFromLibrary: (name: string, env?: Record<string, string>) => Promise<void>;
+    installFromLibrary: (name: string, env?: Record<string, string>) => Promise<MCPInstallResult>;
 }
 
 export interface CortexMissionChatContract {

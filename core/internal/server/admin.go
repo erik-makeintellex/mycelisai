@@ -267,6 +267,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Phase 7.7: MCP Library (curated server registry)
 	mux.HandleFunc("GET /api/v1/mcp/library", s.handleMCPLibrary)
+	mux.HandleFunc("POST /api/v1/mcp/library/inspect", s.handleMCPLibraryInspect)
 	mux.HandleFunc("POST /api/v1/mcp/library/install", s.handleMCPLibraryInstall)
 
 	// Phase 7.7: Governance Policy API

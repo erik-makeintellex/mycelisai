@@ -95,6 +95,7 @@ Rules:
   - `reasons[]` and required remediation if denied
 - If inspection result is `deny`, install is blocked.
 - If inspection result is `require_approval`, installation remains pending until approved.
+- Owner-scoped MCP configuration from the MCP settings page may auto-allow when it is still local-first and tied to the user's own group context.
 
 ### Step 4 - Installation path validation
 - Install through curated library API/UI path.
@@ -203,6 +204,7 @@ Policy requirements:
 - raw arbitrary install remains gated by security phase policy
 - mutations still follow proposal + confirm where applicable
 - policy evaluation must include effective defaults + user overlays before enablement
+- owner/root access does not blanket-bypass MCP policy; the no-extra-approval posture is limited to current-group configuration work initiated from the MCP settings page and still falls back to approval for remote/high-risk entries
 
 ---
 

@@ -9,6 +9,13 @@ import (
 	"github.com/mycelis/core/internal/mcp"
 )
 
+type mcpToolSetRequest struct {
+	Name              string               `json:"name"`
+	Description       string               `json:"description"`
+	ToolRefs          []string             `json:"tool_refs"`
+	GovernanceContext mcpGovernanceContext `json:"governance_context,omitempty"`
+}
+
 // handleListToolSets returns all MCP tool sets.
 // GET /api/v1/mcp/toolsets
 func (s *AdminServer) handleListToolSets(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +46,7 @@ func (s *AdminServer) handleCreateToolSet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var req mcp.ToolSet
+	var req mcpToolSetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
 		return
@@ -49,15 +56,20 @@ func (s *AdminServer) handleCreateToolSet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	created, err := s.MCPToolSets.Create(r.Context(), req)
+	created, err := s.MCPToolSets.Create(r.Context(), mcp.ToolSet{
+		Name:        req.Name,
+		Description: req.Description,
+		ToolRefs:    req.ToolRefs,
+	})
 	if err != nil {
 		respondError(w, "Failed to create tool set: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
 	respondJSON(w, map[string]interface{}{
-		"ok":   true,
-		"data": created,
+		"ok":         true,
+		"data":       created,
+		"governance": buildMCPConfigGovernanceDecision(normalizeMCPGovernanceContext(r, req.GovernanceContext), "local", "low"),
 	})
 }
 
@@ -76,7 +88,7 @@ func (s *AdminServer) handleUpdateToolSet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var req mcp.ToolSet
+	var req mcpToolSetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
 		return
@@ -86,7 +98,11 @@ func (s *AdminServer) handleUpdateToolSet(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	updated, err := s.MCPToolSets.Update(r.Context(), id, req)
+	updated, err := s.MCPToolSets.Update(r.Context(), id, mcp.ToolSet{
+		Name:        req.Name,
+		Description: req.Description,
+		ToolRefs:    req.ToolRefs,
+	})
 	if err != nil {
 		status := http.StatusInternalServerError
 		if strings.Contains(strings.ToLower(err.Error()), "not found") {
@@ -96,8 +112,9 @@ func (s *AdminServer) handleUpdateToolSet(w http.ResponseWriter, r *http.Request
 		return
 	}
 	respondJSON(w, map[string]interface{}{
-		"ok":   true,
-		"data": updated,
+		"ok":         true,
+		"data":       updated,
+		"governance": buildMCPConfigGovernanceDecision(normalizeMCPGovernanceContext(r, req.GovernanceContext), "local", "low"),
 	})
 }
 
@@ -121,7 +138,8 @@ func (s *AdminServer) handleDeleteToolSet(w http.ResponseWriter, r *http.Request
 		return
 	}
 	respondJSON(w, map[string]interface{}{
-		"ok":      true,
-		"deleted": id.String(),
+		"ok":         true,
+		"deleted":    id.String(),
+		"governance": buildOwnedMCPConfigDecision(r),
 	})
 }

@@ -13,6 +13,12 @@ import (
 	"github.com/mycelis/core/internal/mcp"
 )
 
+type mcpLibraryRequest struct {
+	Name              string               `json:"name"`
+	Env               map[string]string    `json:"env,omitempty"`
+	GovernanceContext mcpGovernanceContext `json:"governance_context,omitempty"`
+}
+
 // handleMCPInstall registers and connects a new MCP server.
 // POST /api/v1/mcp/install
 func (s *AdminServer) handleMCPInstall(w http.ResponseWriter, r *http.Request) {
@@ -239,22 +245,15 @@ func (s *AdminServer) handleMCPLibrary(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, s.MCPLibrary.Categories)
 }
 
-// handleMCPLibraryInstall installs an MCP server from the curated library by name.
-// POST /api/v1/mcp/library/install
-func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Request) {
-	if s.MCP == nil || s.MCPPool == nil {
-		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
-		return
-	}
+// handleMCPLibraryInspect previews policy posture for a curated MCP library install.
+// POST /api/v1/mcp/library/inspect
+func (s *AdminServer) handleMCPLibraryInspect(w http.ResponseWriter, r *http.Request) {
 	if s.MCPLibrary == nil {
 		http.Error(w, `{"error":"MCP library not loaded"}`, http.StatusServiceUnavailable)
 		return
 	}
 
-	var req struct {
-		Name string            `json:"name"`
-		Env  map[string]string `json:"env,omitempty"`
-	}
+	var req mcpLibraryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
 		return
@@ -267,6 +266,49 @@ func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Req
 	entry := s.MCPLibrary.FindByName(req.Name)
 	if entry == nil {
 		http.Error(w, fmt.Sprintf(`{"error":"server %q not found in library"}`, req.Name), http.StatusNotFound)
+		return
+	}
+
+	inspectCtx := normalizeMCPGovernanceContext(r, req.GovernanceContext)
+	respondJSON(w, buildMCPLibraryInspectionReport(entry, inspectCtx))
+}
+
+// handleMCPLibraryInstall installs an MCP server from the curated library by name.
+// POST /api/v1/mcp/library/install
+func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Request) {
+	if s.MCP == nil || s.MCPPool == nil {
+		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
+		return
+	}
+	if s.MCPLibrary == nil {
+		http.Error(w, `{"error":"MCP library not loaded"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	var req mcpLibraryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" {
+		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	entry := s.MCPLibrary.FindByName(req.Name)
+	if entry == nil {
+		http.Error(w, fmt.Sprintf(`{"error":"server %q not found in library"}`, req.Name), http.StatusNotFound)
+		return
+	}
+
+	inspectCtx := normalizeMCPGovernanceContext(r, req.GovernanceContext)
+	inspection := buildMCPLibraryInspectionReport(entry, inspectCtx)
+	if decision, _ := inspection["decision"].(string); decision == "require_approval" {
+		w.WriteHeader(http.StatusAccepted)
+		respondJSON(w, map[string]any{
+			"requires_approval": true,
+			"inspection":        inspection,
+		})
 		return
 	}
 
@@ -294,8 +336,9 @@ func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Req
 	}
 
 	respondJSON(w, map[string]interface{}{
-		"server": installed,
-		"tools":  tools,
+		"server":     installed,
+		"tools":      tools,
+		"governance": inspection["governance"],
 	})
 }
 

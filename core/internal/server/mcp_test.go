@@ -146,6 +146,64 @@ func TestHandleMCPLibrary_WithLibrary(t *testing.T) {
 	assertStatus(t, rr, http.StatusOK)
 }
 
+func TestHandleMCPLibraryInspect_LocalOwnedConfigIsAutoAllowed(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.MCPLibrary = &mcp.Library{
+			Categories: []mcp.LibraryCategory{
+				{
+					Name: "Default",
+					Servers: []mcp.LibraryEntry{
+						{Name: "filesystem", Transport: "stdio", Command: "npx", Tags: []string{"local"}},
+					},
+				},
+			},
+		}
+	})
+
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInspect), "POST", "/api/v1/mcp/library/inspect", `{"name":"filesystem"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["decision"] != "allow" {
+		t.Fatalf("decision = %v, want allow", resp["decision"])
+	}
+	governance, ok := resp["governance"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected governance object, got %T", resp["governance"])
+	}
+	if governance["approval_required"] != false {
+		t.Fatalf("approval_required = %v, want false", governance["approval_required"])
+	}
+	if governance["approval_reason"] != "user_owned_mcp_config" {
+		t.Fatalf("approval_reason = %v, want user_owned_mcp_config", governance["approval_reason"])
+	}
+}
+
+func TestHandleMCPLibraryInspect_RemoteConfigRequiresApproval(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.MCPLibrary = &mcp.Library{
+			Categories: []mcp.LibraryCategory{
+				{
+					Name: "Default",
+					Servers: []mcp.LibraryEntry{
+						{Name: "remote-knowledge", Transport: "sse", URL: "https://mcp.example.com/sse", Tags: []string{"remote"}},
+					},
+				},
+			},
+		}
+	})
+
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInspect), "POST", "/api/v1/mcp/library/inspect", `{"name":"remote-knowledge"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["decision"] != "require_approval" {
+		t.Fatalf("decision = %v, want require_approval", resp["decision"])
+	}
+}
+
 // ── POST /api/v1/mcp/library/install ───────────────────────────────
 
 func TestHandleMCPLibraryInstall_NilSubsystem(t *testing.T) {
@@ -168,6 +226,30 @@ func TestHandleMCPLibraryInstall_NotFoundInLibrary(t *testing.T) {
 	})
 	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"nonexistent"}`)
 	assertStatus(t, rr, http.StatusNotFound)
+}
+
+func TestHandleMCPLibraryInstall_RemoteConfigReturnsApprovalBoundary(t *testing.T) {
+	s := newTestServer(withMCPStubs(), func(s *AdminServer) {
+		s.MCPLibrary = &mcp.Library{
+			Categories: []mcp.LibraryCategory{
+				{
+					Name: "Default",
+					Servers: []mcp.LibraryEntry{
+						{Name: "remote-knowledge", Transport: "sse", URL: "https://mcp.example.com/sse", Tags: []string{"remote"}},
+					},
+				},
+			},
+		}
+	})
+
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"remote-knowledge"}`)
+	assertStatus(t, rr, http.StatusAccepted)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["requires_approval"] != true {
+		t.Fatalf("requires_approval = %v, want true", resp["requires_approval"])
+	}
 }
 
 // ── Happy-path DB-backed tests ───────────────────────────────────────
@@ -257,6 +339,9 @@ func TestHandleMCPLibraryInstall_HappyPath(t *testing.T) {
 		WithArgs("fetch", "unsupported", "", sqlmock.AnyArg(), sqlmock.AnyArg(), "", sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
 			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "fetch", "unsupported", "", `[]`, `{}`, "", `{}`, "installed", nil, now, now))
+	mock.ExpectExec("UPDATE mcp_servers").
+		WithArgs("error", sqlmock.AnyArg(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("SELECT .+ FROM mcp_tools").
 		WithArgs("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
 		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))

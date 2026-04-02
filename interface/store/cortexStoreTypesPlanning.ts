@@ -203,10 +203,28 @@ export interface MCPLibraryEntry {
     command: string;
     args: string[];
     env?: Record<string, string>;
+    url?: string;
     tags: string[];
 }
 
 export interface MCPLibraryCategory {
     name: string;
     servers: MCPLibraryEntry[];
+}
+
+export interface MCPGovernanceDecision {
+    decision: 'allow' | 'require_approval' | 'deny';
+    approval_required: boolean;
+    approval_mode?: string;
+    approval_reason?: string;
+    source_surface?: string;
+    config_scope?: string;
+    group_id?: string;
+    reasons?: string[];
+}
+
+export interface MCPInstallResult {
+    ok: boolean;
+    message?: string;
+    governance?: MCPGovernanceDecision;
 }

@@ -1,6 +1,30 @@
 import { extractApiData } from '@/lib/apiContracts';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
-import type { MCPServerWithTools, MCPLibraryCategory, MCPTool } from '@/store/cortexStoreTypes';
+import type { MCPGovernanceDecision, MCPInstallResult, MCPServerWithTools, MCPLibraryCategory, MCPTool } from '@/store/cortexStoreTypes';
+
+interface MCPLibraryInspectionResponse {
+    decision?: string;
+    reasons?: string[];
+    governance?: MCPGovernanceDecision;
+}
+
+const ownedMCPGovernanceContext = {
+    source_surface: 'mcp_settings_page',
+    config_scope: 'user_group',
+} as const;
+
+function inspectionMessage(decision?: string, reasons?: string[], fallback?: string): string {
+    if (Array.isArray(reasons) && reasons.length > 0) {
+        return reasons.join(' ');
+    }
+    if (typeof fallback === 'string' && fallback.trim().length > 0) {
+        return fallback;
+    }
+    if (decision === 'require_approval') {
+        return 'This MCP entry still needs an explicit approval boundary before it can be installed.';
+    }
+    return 'MCP configuration could not be completed.';
+}
 
 export function createCortexMcpSlice(
     set: CortexSet,
@@ -71,20 +95,48 @@ export function createCortexMcpSlice(
             }
         },
 
-        installFromLibrary: async (name: string, env?: Record<string, string>) => {
+        installFromLibrary: async (name: string, env?: Record<string, string>): Promise<MCPInstallResult> => {
             try {
+                const inspectRes = await fetch('/api/v1/mcp/library/inspect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, env, governance_context: ownedMCPGovernanceContext }),
+                });
+                if (!inspectRes.ok) {
+                    const message = await inspectRes.text();
+                    console.error('[MCP Library] Inspect failed:', message);
+                    return { ok: false, message: inspectionMessage(undefined, undefined, message) };
+                }
+
+                const inspection = await inspectRes.json() as MCPLibraryInspectionResponse;
+                if (inspection.decision !== 'allow') {
+                    return {
+                        ok: false,
+                        message: inspectionMessage(inspection.decision, inspection.reasons),
+                        governance: inspection.governance,
+                    };
+                }
+
                 const res = await fetch('/api/v1/mcp/library/install', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, env }),
+                    body: JSON.stringify({ name, env, governance_context: ownedMCPGovernanceContext }),
                 });
                 if (res.ok) {
-                    get().fetchMCPServers();
+                    await get().fetchMCPServers();
+                    return {
+                        ok: true,
+                        message: 'Installed into your current MCP group without an extra approval step.',
+                        governance: inspection.governance,
+                    };
                 } else {
-                    console.error('[MCP Library] Install failed:', await res.text());
+                    const message = await res.text();
+                    console.error('[MCP Library] Install failed:', message);
+                    return { ok: false, message: inspectionMessage(undefined, undefined, message), governance: inspection.governance };
                 }
             } catch (err) {
                 console.error('[MCP Library] Install failed:', err);
+                return { ok: false, message: 'MCP configuration failed before install could complete.' };
             }
         },
     };

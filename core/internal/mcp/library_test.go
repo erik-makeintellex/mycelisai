@@ -129,3 +129,16 @@ func TestLibraryEntry_ToServerConfig_NoEnv(t *testing.T) {
 		t.Errorf("expected empty env, got %d entries", len(cfg.Env))
 	}
 }
+
+func TestLibraryEntry_ToServerConfig_CopiesURL(t *testing.T) {
+	entry := LibraryEntry{
+		Name:      "remote-knowledge",
+		Transport: "sse",
+		URL:       "https://mcp.example.com/sse",
+	}
+
+	cfg := entry.ToServerConfig(nil)
+	if cfg.URL != "https://mcp.example.com/sse" {
+		t.Fatalf("url = %q, want https://mcp.example.com/sse", cfg.URL)
+	}
+}

@@ -74,6 +74,7 @@ export default function MCPLibraryBrowser() {
     const [searchQuery, setSearchQuery] = useState("");
     const [installingName, setInstallingName] = useState<string | null>(null);
     const [envModalEntry, setEnvModalEntry] = useState<MCPLibraryEntry | null>(null);
+    const [installMessage, setInstallMessage] = useState<string | null>(null);
 
     useEffect(() => {
         fetchLibrary();
@@ -92,9 +93,15 @@ export default function MCPLibraryBrowser() {
 
     const doInstall = async (name: string, env?: Record<string, string>) => {
         setInstallingName(name);
-        await installFromLibrary(name, env);
+        setInstallMessage(null);
+        const result = await installFromLibrary(name, env);
+        if (result.message) {
+            setInstallMessage(result.message);
+        }
         setInstallingName(null);
-        setEnvModalEntry(null);
+        if (result.ok) {
+            setEnvModalEntry(null);
+        }
     };
 
     // Filter logic
@@ -118,6 +125,22 @@ export default function MCPLibraryBrowser() {
 
     return (
         <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
+            <div className="rounded-xl border border-cortex-success/25 bg-cortex-success/10 px-4 py-3">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-success">
+                    Current Group MCP Config
+                </p>
+                <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
+                    Installs from this page are treated as MCP configuration for your current user-owned group.
+                    Local-first curated entries install directly without another approval step.
+                </p>
+            </div>
+
+            {installMessage && (
+                <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                    <p className="text-xs font-mono leading-5 text-cortex-text-main">{installMessage}</p>
+                </div>
+            )}
+
             {/* Search */}
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cortex-text-muted/50" />

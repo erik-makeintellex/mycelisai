@@ -129,6 +129,7 @@ Review summary:
 38. `IN_REVIEW` the next guided-settings cleanup slice is now locally in flight: `/settings` leads with a guided setup path for identity, mission defaults, and people access before any advanced controls, the advanced AI Engine / Connected Tools path stays explicitly intentional instead of reading like the default first step, and route/unit/browser tests are being tightened so that guided-workflow posture becomes part of the contract rather than just implementation copy.
 39. `IN_REVIEW` the next organization-workspace guided-flow cleanup slice is now locally in flight: the top of `/organizations/[id]` now distinguishes the first meaningful organization moves from deeper inspect surfaces, the workspace explicitly guides operators into Soma conversation, team design, or setup review before they drop into richer support panels, and the organization page/browser contract is being tightened so that guided-start behavior remains part of the product proof.
 40. `IN_REVIEW` the next Soma-chat guided-entry cleanup slice is now locally in flight: the simple-mode empty state no longer stops at passive hint text, starter prompts are becoming clickable guided actions that prefill the Soma lane directly, and the workspace/browser proof is being tightened so guided chat entry remains real interaction rather than decorative copy.
+41. `IN_REVIEW` the MCP settings configuration lane now has an explicit owner-group governance contract: curated library installs inspect before install, root/owner current-group config from the MCP page auto-allows without a second approval loop, remote MCP entries return an approval boundary instead of silently prompting, and MCP toolset mutations now echo the same normalized governance posture in their responses.
 
 ## Current Review (2026-03-29)
 
@@ -633,5 +634,6 @@ Evidence:
    - avoid letting temporary strike notes float untracked or mixed with product code
    - index any newly canonical doc in `interface/lib/docsManifest.ts` in the same slice
 7. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
+8. `NEXT` extend the same owner-scoped MCP configuration posture into any future MCP settings or toolset-management UI so current-group context stays explicit once those surfaces become operator-visible.
 
 

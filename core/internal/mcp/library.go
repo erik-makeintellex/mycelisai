@@ -15,6 +15,7 @@ type LibraryEntry struct {
 	Command     string            `json:"command" yaml:"command"`
 	Args        []string          `json:"args" yaml:"args"`
 	Env         map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
+	URL         string            `json:"url,omitempty" yaml:"url,omitempty"`
 	Tags        []string          `json:"tags" yaml:"tags"`
 	ToolSet     string            `json:"tool_set,omitempty" yaml:"tool_set,omitempty"` // suggested tool set name
 }
@@ -75,5 +76,6 @@ func (entry *LibraryEntry) ToServerConfig(envOverrides map[string]string) Server
 		Command:   entry.Command,
 		Args:      entry.Args,
 		Env:       env,
+		URL:       entry.URL,
 	}
 }
