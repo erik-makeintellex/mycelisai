@@ -206,6 +206,33 @@ Evidence:
 
 - screenshot of return path
 
+### Workflow 5B: Organization workspace guided start
+
+Surface:
+
+- `/organizations/[id]`
+
+Action:
+
+- load a freshly created or reopened AI Organization
+- inspect the first visible organization-start actions
+- switch into the team-design lane from the guided start surface
+
+Expected:
+
+- the workspace leads with a clear `start here` layer before deeper inspect surfaces
+- the operator can immediately choose between Soma conversation, team design, and setup review
+- deeper inspect surfaces remain reachable without replacing the guided start path
+
+Terminal state:
+
+- `n/a`
+
+Evidence:
+
+- screenshot of guided organization start surface
+- screenshot of team-design lane opened from the start surface
+
 ### Workflow 6: Direct Soma answer
 
 Surface:

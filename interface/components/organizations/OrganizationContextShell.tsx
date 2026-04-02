@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Activity, ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import { rememberLastOrganization } from "@/lib/lastOrganization";
 import type {
@@ -48,6 +48,14 @@ type ConversationOutcomeSummary = {
     teamsEngaged: string[];
     outputsGenerated: string[];
     timestamp: number;
+};
+
+type GuidedWorkspaceCardDefinition = {
+    eyebrow: string;
+    title: string;
+    summary: string;
+    buttonLabel: string;
+    onClick: () => void;
 };
 
 const AI_ENGINE_OPTIONS: Array<{
@@ -838,7 +846,41 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             </div>
 
                             <div className="mt-6">
-                                <p className="text-sm font-medium text-cortex-text-main">What I can help with</p>
+                                <p className="text-sm font-medium text-cortex-text-main">Start here in this organization</p>
+                                <p className="mt-2 max-w-3xl text-sm leading-6 text-cortex-text-muted">
+                                    Choose the first move that matches what you need right now, then use the deeper inspect surfaces only when you want more structure, operating detail, or guided tuning.
+                                </p>
+                                <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                                    {[
+                                        {
+                                            eyebrow: "Primary conversation",
+                                            title: "Plan, review, or create with Soma",
+                                            summary: "Stay in the main Soma conversation for plans, drafts, imagery, governed changes, and broad delivery shaping.",
+                                            buttonLabel: "Open Soma conversation",
+                                            onClick: () => setSomaWorkspaceMode("conversation"),
+                                        },
+                                        {
+                                            eyebrow: "Team design lane",
+                                            title: "Shape the first team or lane",
+                                            summary: "Move into the focused team-design mode when you want roles, delivery lanes, or execution structure to become explicit.",
+                                            buttonLabel: "Open team design lane",
+                                            onClick: () => setSomaWorkspaceMode("team_design"),
+                                        },
+                                        {
+                                            eyebrow: "Setup review",
+                                            title: "Review current organization setup",
+                                            summary: "Inspect the current working structure when you want a clearer read on departments, specialists, and what is ready next.",
+                                            buttonLabel: "Review organization setup",
+                                            onClick: () => setActiveDetailView("departments"),
+                                        },
+                                    ].map((card) => (
+                                        <GuidedWorkspaceCard key={card.title} {...card} />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mt-6">
+                                <p className="text-sm font-medium text-cortex-text-main">Inspect the current organization</p>
                                 <div className="mt-3 flex flex-wrap gap-2">
                                     <HelpPill label="Run a quick strategy check" />
                                     <ActionPill
@@ -860,6 +902,11 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                         label="Review AI Engine Settings"
                                         isActive={activeDetailView === "aiEngine"}
                                         onClick={() => setActiveDetailView("aiEngine")}
+                                    />
+                                    <ActionPill
+                                        label="Review Response Style"
+                                        isActive={activeDetailView === "responseContract"}
+                                        onClick={() => setActiveDetailView("responseContract")}
                                     />
                                 </div>
                             </div>
@@ -3100,6 +3147,30 @@ function CausalFact({ label, value }: { label: string; value: string }) {
         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3">
             <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">{label}</p>
             <p className="mt-2 text-sm leading-6 text-cortex-text-main">{value}</p>
+        </div>
+    );
+}
+
+function GuidedWorkspaceCard({
+    eyebrow,
+    title,
+    summary,
+    buttonLabel,
+    onClick,
+}: GuidedWorkspaceCardDefinition) {
+    return (
+        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">{eyebrow}</p>
+            <p className="mt-2 text-sm font-semibold text-cortex-text-main">{title}</p>
+            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{summary}</p>
+            <button
+                type="button"
+                onClick={onClick}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 hover:text-cortex-primary"
+            >
+                {buttonLabel}
+                <ArrowRight className="h-4 w-4" />
+            </button>
         </div>
     );
 }

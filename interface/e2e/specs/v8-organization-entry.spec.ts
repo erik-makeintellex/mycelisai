@@ -989,6 +989,10 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("AI Organization Home")).toBeVisible();
         await expect(page.getByRole("heading", { name: createdTemplateOrganization.name, exact: true })).toBeVisible();
         await expect(page.getByText("Soma ready")).toBeVisible();
+        await expect(page.getByText("Start here in this organization")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Open Soma conversation" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Open team design lane" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Review organization setup" })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Talk with Soma" })).toBeVisible();
         await expect(page.getByText("Create teams with Soma")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Quick Checks" })).toBeVisible();
@@ -1033,6 +1037,12 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("button", { name: "Review Automations" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Review AI Engine Settings" }).first()).toBeVisible();
         await expect(page.getByRole("button", { name: "Review Response Style" }).first()).toBeVisible();
+
+        await page.getByRole("button", { name: "Open team design lane" }).click();
+        await expect(page.getByText("Choose a guided team-design action")).toBeVisible();
+        await page.getByRole("button", { name: "Review organization setup" }).click();
+        await expect(page.getByRole("heading", { name: "Department details" })).toBeVisible();
+        await page.getByRole("button", { name: "Back to Soma" }).click();
 
         await page.getByRole("button", { name: "Review Automations" }).first().click();
         await expect(page.getByRole("heading", { name: "Automation details" })).toBeVisible();
@@ -1110,7 +1120,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByRole("heading", { name: "Talk with Soma" })).toBeVisible();
         await page.getByRole("button", { name: "Back to Soma" }).click();
 
-        await page.getByRole("button", { name: "Review Response Style" }).click();
+        await page.getByRole("button", { name: "Review Response Style" }).last().click();
         await expect(page.getByRole("heading", { name: "Response Style details" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Change Response Style" })).toBeVisible();
         await expect(page.getByText("Current response style", { exact: true })).toBeVisible();

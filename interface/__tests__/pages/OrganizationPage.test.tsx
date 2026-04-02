@@ -561,7 +561,11 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Soma ready")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeDefined();
         expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
-        expect(screen.getByText("What I can help with")).toBeDefined();
+        expect(screen.getByText("Start here in this organization")).toBeDefined();
+        expect(screen.getByText("Inspect the current organization")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Open Soma conversation" })).toBeDefined();
+        expect(screen.getByRole("button", { name: "Open team design lane" })).toBeDefined();
+        expect(screen.getByRole("button", { name: "Review organization setup" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Talk with Soma" })).toBeDefined();
         expect(screen.getByText("How to read this workspace")).toBeDefined();
         expect(screen.getByText(/Use Soma as the main interface\./)).toBeDefined();
@@ -623,6 +627,22 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.queryByText(/generic chat/i)).toBeNull();
         expect(screen.queryByText(/scheduler/i)).toBeNull();
     }, 15000);
+
+    it("uses the guided workspace start cards to switch into team design and setup review", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByText("Start here in this organization")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Open team design lane" }));
+        expect(await screen.findByText("Choose a guided team-design action")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: "Review organization setup" }));
+        expect(await screen.findByRole("heading", { name: "Department details" })).toBeDefined();
+    });
 
     it("keeps the organization frame visible while moving from home into the Soma interaction flow", async () => {
         setupOrganizationFetch({
@@ -923,7 +943,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByRole("heading", { name: "Response Style" })).toBeDefined();
         expect(screen.getByText("The current Response Style is clear & balanced, which shapes how Soma presents tone, structure, and detail.")).toBeDefined();
-        fireEvent.click(screen.getByRole("button", { name: "Review Response Style" }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Review Response Style" }).at(-1)!);
 
         expect(await screen.findByRole("heading", { name: "Response Style details" })).toBeDefined();
         expect(screen.getByRole("button", { name: "Change Response Style" })).toBeDefined();
@@ -981,7 +1001,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         });
 
         expect(await screen.findByRole("heading", { name: "Response Style" })).toBeDefined();
-        fireEvent.click(screen.getByRole("button", { name: "Review Response Style" }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Review Response Style" }).at(-1)!);
         fireEvent.click(screen.getByRole("button", { name: "Change Response Style" }));
         fireEvent.click(screen.getByRole("button", { name: /Structured & Analytical/i }));
         fireEvent.click(screen.getByRole("button", { name: "Use selected Response Style" }));
@@ -1166,7 +1186,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(await screen.findByText("Type-specific Response Style: Warm & Supportive")).toBeDefined();
 
         fireEvent.click(screen.getByRole("button", { name: "Back to Soma" }));
-        fireEvent.click(screen.getByRole("button", { name: "Review Response Style" }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Review Response Style" }).at(-1)!);
         fireEvent.click(screen.getByRole("button", { name: "Change Response Style" }));
         fireEvent.click(screen.getByRole("button", { name: /Concise & Direct/i }));
         fireEvent.click(screen.getByRole("button", { name: "Use selected Response Style" }));
