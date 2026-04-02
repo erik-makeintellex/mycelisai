@@ -78,6 +78,7 @@ Record:
 - commit SHA
 - local date/time
 - whether this is `mocked`, `live-backend`, or `demo-lane` testing
+- whether the environment is `compose`, `kind`, or `managed-mock`
 
 Recommended commands:
 
@@ -92,6 +93,14 @@ If a fresh-environment proof is required, run and record:
 - `uv run inv k8s.bridge`
 - `uv run inv db.migrate`
 - `uv run inv lifecycle.up --frontend`
+
+If the lane is partner-demo or compose-runtime focused, run and record this compose preflight instead:
+
+- `uv run inv compose.down --volumes`
+- `uv run inv compose.up --build`
+- `uv run inv compose.status`
+- `uv run inv compose.health`
+- `uv run inv interface.check`
 
 ## Step 1: Stable Mocked Browser Proof
 
@@ -243,6 +252,24 @@ Evidence:
 
 - screenshot proving overflow containment
 
+### 1I. Collaboration and media/content posture
+
+Action:
+
+- submit one collaboration-heavy content request where Soma may use specialists/models if policy allows
+- submit one governed media or durable-content request that should end in either a readable inline result or a clearly referenced artifact path
+
+Expected:
+
+- low-risk collaboration can still return as readable inline value when policy allows it
+- higher-risk or durable-output generation lands in a readable `proposal` or `execution_result`
+- Soma explains what was created, or what will be created, in user terms rather than tool-first language
+
+Evidence:
+
+- screenshot of collaboration result or proposal
+- note whether posture matched intent and policy
+
 ## Step 2: Live Backend Governed Browser Proof
 
 Purpose:
@@ -328,6 +355,23 @@ Record:
 - run ID if visible in API/body
 - visible execution proof
 - artifact existence proof
+
+### 2E. Collaboration or durable-result visibility
+
+Action:
+
+- run one live-backend request that should either return inline collaborative value or a durable-result reference
+
+Expected:
+
+- the final visible state makes the result understandable without raw logs
+- if a durable artifact is created, the artifact reference is explicit
+- if collaboration stays inline, the answer remains readable and useful
+
+Record:
+
+- terminal state
+- whether visible value was obvious
 
 ## Step 3: Manual Trust and Disruption Pass
 

@@ -1,7 +1,7 @@
 # Architecture Library Index
 
 > Status: Canonical
-> Last Updated: 2026-03-30
+> Last Updated: 2026-04-02
 > Purpose: Replace monolithic planning with a modular, cross-linked architecture and target-delivery library.
 
 ## Why This Library Exists
@@ -64,6 +64,7 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 | [V8 Partner Demo Verification Checklist](V8_PARTNER_DEMO_VERIFICATION_CHECKLIST.md) | verifying that the partner demo actually proves product value, trust, structure, and retained depth | product-focused QA checklist for the demo lane, distinct from the broader release verification plan |
 | [V8.2 Cross-Repo Cleanup and Release Structure Plan](V8_2_CROSS_REPO_CLEANUP_AND_RELEASE_STRUCTURE_PLAN.md) | coordinating git hygiene, commit-lane packaging, release cleanup, cross-team ownership, and final validation order | prioritized cleanup lanes, commit boundaries, owner assignments, validation gates, and release-structure rules for the current mixed worktree |
 | [V8 Release Platform Review: Security, Monitoring, and Debug](V8_RELEASE_PLATFORM_REVIEW_SECURITY_MONITORING_DEBUG.md) | aligning release truth across governance/security, monitoring/ops, and debug/live-browser proof | canonical shared review surface for platform release readiness, operator checklist, residual risks, and matching-doc requirements |
+| [V8 Dev Team Execution and UI Engagement Plan](V8_DEV_TEAM_EXECUTION_AND_UI_ENGAGEMENT_PLAN.md) | coordinating the dev team around true-MVP execution order, ownership, UI testing expectations, and engagement-testing expectations | canonical cross-team execution plan for active dev lanes, committed-slice discipline, UI/browser proof, and partner-demo engagement validation |
 | [V8.2 Full Production Architecture](../../v8-2.md) | defining the full distributed, learning, capability-enabled, managed-exchange, and actuation target beyond the current release | Full Production Architecture (Canonical Target) for distributed execution, governed learning, managed exchange, permissioned trust boundaries, capability-backed execution, and full actuation scope |
 
 ### V8 migration reminder
@@ -110,7 +111,8 @@ The compatibility PRD entrypoint remains [mycelis-architecture-v7.md](../../myce
 32. Use [V8 Partner Demo Verification Checklist](V8_PARTNER_DEMO_VERIFICATION_CHECKLIST.md) when the UI testing and release teams need to prove that the partner demo shows product value, governed trust, structure, continuity, and preserved advanced depth.
 33. Use [V8.2 Cross-Repo Cleanup and Release Structure Plan](V8_2_CROSS_REPO_CLEANUP_AND_RELEASE_STRUCTURE_PLAN.md) when coordinating git hygiene, commit boundaries, cleanup lanes, release structure, and final validation order across a mixed worktree.
 34. Use [V8 Release Platform Review: Security, Monitoring, and Debug](V8_RELEASE_PLATFORM_REVIEW_SECURITY_MONITORING_DEBUG.md) when aligning release truth across security/governance, monitoring/ops, and debug/live-browser proof.
-35. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production, managed exchange, and actuation target rather than the current release.
+35. Use [V8 Dev Team Execution and UI Engagement Plan](V8_DEV_TEAM_EXECUTION_AND_UI_ENGAGEMENT_PLAN.md) when coordinating cross-team execution order, dev-lane ownership, UI/browser proof, engagement testing, and committed-slice discipline for the active MVP push.
+36. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production, managed exchange, and actuation target rather than the current release.
 
 Execution governance reminder:
 - `NEXT_EXECUTION_SLICES_V7.md`, `DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, and `TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` now describe V8 migration slices; apply the V8 bootstrap pipeline (`docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`) and update `V8_DEV_STATE.md` whenever those docs change.

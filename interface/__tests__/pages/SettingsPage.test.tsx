@@ -92,7 +92,9 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             render(<SettingsPage />);
         });
 
+        expect(screen.getByText('Identity')).toBeDefined();
         expect(screen.getByText('Appearance')).toBeDefined();
+        expect(screen.queryByText('Notifications')).toBeNull();
         expect(screen.getByRole('option', { name: 'Aero Light' })).toBeDefined();
         expect(screen.getByRole('option', { name: 'Midnight Cortex' })).toBeDefined();
         expect(screen.getByRole('option', { name: 'System' })).toBeDefined();

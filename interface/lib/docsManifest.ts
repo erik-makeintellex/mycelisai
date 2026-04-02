@@ -167,6 +167,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Prioritized finish plan for getting Mycelis from release-candidate posture to a true MVP",
             },
             {
+                slug: "v8-dev-team-ui-engagement-plan",
+                label: "V8 Dev Team UI Engagement Plan",
+                path: "docs/architecture-library/V8_DEV_TEAM_EXECUTION_AND_UI_ENGAGEMENT_PLAN.md",
+                description: "Cross-team execution plan for true-MVP delivery order, UI/browser proof, engagement testing, and committed-slice discipline",
+            },
+            {
                 slug: "v8-demo-product-plan",
                 label: "V8 Demo Product Plan",
                 path: "docs/architecture-library/V8_DEMO_PRODUCT_STRIKE_TEAM_PLAN.md",

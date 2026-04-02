@@ -200,15 +200,6 @@ function ProfileSettings() {
                     )}
                 </div>
             </div>
-            <div className="p-6 rounded-lg border border-cortex-border bg-cortex-surface shadow-sm space-y-4">
-                <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Notifications</h3>
-                <div className="flex items-center justify-between">
-                    <span className="text-cortex-text-main text-sm">Task Completion</span>
-                    <div className="w-8 h-4 bg-cortex-success/20 rounded-full relative cursor-pointer border border-cortex-success/30">
-                        <div className="absolute right-0 w-4 h-4 bg-cortex-success rounded-full shadow-sm"></div>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 }

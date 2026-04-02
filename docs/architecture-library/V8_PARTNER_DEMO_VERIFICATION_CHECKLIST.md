@@ -154,7 +154,37 @@ Verify:
 Hard fail if:
 - the workflow feels stateless after refresh or return
 
-## 8. Optional advanced reveal
+## 8. Collaboration or rich-result value
+
+Surface:
+- Soma workspace
+
+User action:
+- ask for a collaboration-friendly content request or a governed rich-result request that should demonstrate visible value beyond plain chat
+
+Verify:
+- Soma returns readable value directly when policy allows inline collaboration
+- if governed durable output is needed, the proposal or result clearly explains what will be created or what was created
+- the experience does not stop at tool or approval theater
+
+Hard fail if:
+- the workflow ends without obvious value delivered or clearly referenced
+
+## 9. Operator settings legitimacy
+
+Surface:
+- `/settings`
+- relevant organization inspectability surfaces
+
+Verify:
+- visible settings such as theme and assistant identity feel real and persistent
+- AI Engine and Memory & Continuity inspectability feel intentional and understandable
+- no visible control feels decorative or misleading in the default path
+
+Hard fail if:
+- a visible default-path control is not actually a working product feature
+
+## 10. Optional advanced reveal
 
 Surface:
 - `/memory`, `/resources`, or `/system`

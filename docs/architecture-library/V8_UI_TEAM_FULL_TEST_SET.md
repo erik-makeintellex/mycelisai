@@ -236,11 +236,15 @@ Action:
 
 - ask for a short reviewable draft
 - ask for a large durable output such as a JSON file or wide data export
+- ask for one collaboration-heavy request where Soma may use specialists/models if policy allows
+- ask for one media or richer generated-content request that should return either a readable inline result or a clearly referenced governed artifact
 
 Expected:
 
 - short reviewable work stays inline
 - durable artifact requests may become proposals
+- low-risk collaboration is not blanket-blocked by approval theater
+- media or richer generated-content requests end in visible value, not only `permission requested` or `tool invoked`
 - the chosen posture matches intent
 
 Terminal state:
@@ -353,12 +357,15 @@ Surface:
 Action:
 
 - change theme
+- change assistant name
 - reload the app
 
 Expected:
 
 - theme saves
 - theme persists after reload
+- assistant name saves
+- assistant name persists after reload
 - no hidden 404 or silent revert
 
 Terminal state:
@@ -369,6 +376,33 @@ Evidence:
 
 - screenshot before reload
 - screenshot after reload
+
+### Workflow 12B: AI Engine and Memory & Continuity inspectability
+
+Surface:
+
+- `/organizations/[id]`
+- `/settings`
+
+Action:
+
+- inspect AI Engine Settings from the organization workspace
+- inspect Memory & Continuity visibility from the organization workspace or advanced reveal path
+
+Expected:
+
+- the operator can understand current AI Engine posture without dropping into raw configuration jargon
+- Memory & Continuity remains visible and understandable as a product surface
+- the inspectability path feels intentional rather than half-wired
+
+Terminal state:
+
+- `n/a`
+
+Evidence:
+
+- screenshot of AI Engine inspectability surface
+- screenshot of Memory & Continuity inspectability surface
 
 ### Workflow 13: Advanced mode boundaries
 

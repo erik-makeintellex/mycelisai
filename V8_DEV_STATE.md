@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-04-01
+> Updated: 2026-04-02
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -86,7 +86,7 @@ State reporting rule:
 - `COMPLETE`: delivered and accepted
 - `BLOCKED`: cannot advance until a dependency or defect is resolved
 
-## Current Review (2026-04-01)
+## Current Review (2026-04-02)
 
 Review summary:
 1. `ACTIVE` the approval and product-trust correction is now a first-class delivery lane: `docs/architecture-library/V8_APPROVAL_AND_PRODUCT_TRUST_STRIKE_TEAM_PLAN.md` defines the team structure, phase order, non-negotiable product rules, and acceptance gates for simplifying approval/auth-style interactions without flattening platform depth.
@@ -123,6 +123,9 @@ Review summary:
 32. `IN_REVIEW` the next active-frontend-metrics cleanup slice is now locally validated: `docs/architecture/FRONTEND.md` and `docs/architecture/OVERVIEW.md` are resynchronized to the current audited interface surface, including the real `page.tsx` route count (`22`), the live `/organizations/[id]` primary workflow route, and the current component inventory (`96` files across `27` folders) instead of older pre-cleanup counts.
 33. `COMPLETE` the latest cleanup checkpoints are now packaged in local git history from clean state: `24d6c83` (`Remove dead signal shell branch`), `4174196` (`Sync active frontend architecture metrics`), and `0dc6b24` (`Clarify active overview route coverage`).
 34. `COMPLETE` repo hygiene remains closed after those checkpoints: `git status --short` is clean, and the cleanup lane is now carrying its progress through small committed slices instead of rebuilding another mixed local batch.
+35. `ACTIVE` the new dev-team execution layer is now formalized in `docs/architecture-library/V8_DEV_TEAM_EXECUTION_AND_UI_ENGAGEMENT_PLAN.md`: the team roster, slice order, UI proof standard, engagement-testing expectation, and clean-commit discipline are now pulled into one canonical execution surface for the true-MVP lane.
+36. `IN_REVIEW` execution has started on the first slice from that plan: the default Settings profile no longer carries a fake Notifications toggle in the visible operator path, and focused settings tests are being aligned to the honest surface so default-path controls are either real, inspect-only, or absent.
+37. `IN_REVIEW` the first testing/docs execution slice under the new dev-team plan is now locally in flight: `V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md`, `V8_UI_TEAM_FULL_TEST_SET.md`, and `V8_PARTNER_DEMO_VERIFICATION_CHECKLIST.md` are being corrected so the active MVP lane explicitly covers compose/demo preflight, collaboration/media visible-value proof, assistant-name persistence, and AI Engine / Memory & Continuity inspectability instead of under-testing those expectations.
 
 ## Current Review (2026-03-29)
 
