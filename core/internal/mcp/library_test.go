@@ -6,14 +6,20 @@ import (
 	"testing"
 )
 
-// ── LoadLibrary ──────────────────────────────────────────────
-
-func TestLoadLibrary_ValidYAML(t *testing.T) {
-	// Load the real config file used in production.
+func loadStandardLibraryForTest(t *testing.T) *Library {
+	t.Helper()
 	lib, err := LoadLibrary(filepath.Join("..", "..", "config", "mcp-library.yaml"))
 	if err != nil {
 		t.Fatalf("LoadLibrary: %v", err)
 	}
+	return lib
+}
+
+// ── LoadLibrary ──────────────────────────────────────────────
+
+func TestLoadLibrary_ValidYAML(t *testing.T) {
+	// Load the real config file used in production.
+	lib := loadStandardLibraryForTest(t)
 	if len(lib.Categories) == 0 {
 		t.Fatal("expected at least one category")
 	}
@@ -24,6 +30,40 @@ func TestLoadLibrary_ValidYAML(t *testing.T) {
 	}
 	if fs.Transport != "stdio" {
 		t.Errorf("filesystem transport = %q, want stdio", fs.Transport)
+	}
+}
+
+func TestLoadLibrary_StandardEntriesRemainLocalFirst(t *testing.T) {
+	lib := loadStandardLibraryForTest(t)
+
+	for _, name := range []string{"filesystem", "fetch", "github"} {
+		entry := lib.FindByName(name)
+		if entry == nil {
+			t.Fatalf("expected to find %q in standard library", name)
+		}
+		if entry.Transport != "stdio" {
+			t.Fatalf("%s transport = %q, want stdio", name, entry.Transport)
+		}
+		if entry.URL != "" {
+			t.Fatalf("%s url = %q, want empty for local-first stdio entry", name, entry.URL)
+		}
+		if entry.Command == "" {
+			t.Fatalf("%s command is empty", name)
+		}
+	}
+}
+
+func TestLoadLibrary_StandardToolSetLinksRemainStable(t *testing.T) {
+	lib := loadStandardLibraryForTest(t)
+
+	filesystem := lib.FindByName("filesystem")
+	if filesystem == nil || filesystem.ToolSet != "workspace" {
+		t.Fatalf("filesystem tool_set = %q, want workspace", filesystem.ToolSet)
+	}
+
+	fetch := lib.FindByName("fetch")
+	if fetch == nil || fetch.ToolSet != "research" {
+		t.Fatalf("fetch tool_set = %q, want research", fetch.ToolSet)
 	}
 }
 

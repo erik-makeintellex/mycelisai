@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -9,6 +10,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/mcp"
 )
+
+func loadStandardMCPLibrary(t *testing.T) *mcp.Library {
+	t.Helper()
+	lib, err := mcp.LoadLibrary(filepath.Join("..", "..", "config", "mcp-library.yaml"))
+	if err != nil {
+		t.Fatalf("LoadLibrary: %v", err)
+	}
+	return lib
+}
 
 // withMCPStubs wires non-nil MCP + MCPPool so handlers pass the nil guard.
 // The stubs have nil DB underneath but validation tests fail before DB calls.
@@ -204,6 +214,47 @@ func TestHandleMCPLibraryInspect_RemoteConfigRequiresApproval(t *testing.T) {
 	}
 }
 
+func TestHandleMCPLibraryInspect_StandardLibraryFilesystemIsAutoAllowed(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.MCPLibrary = loadStandardMCPLibrary(t)
+	})
+
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInspect), "POST", "/api/v1/mcp/library/inspect", `{"name":"filesystem"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["decision"] != "allow" {
+		t.Fatalf("decision = %v, want allow", resp["decision"])
+	}
+
+	governance, ok := resp["governance"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected governance object, got %T", resp["governance"])
+	}
+	if governance["approval_reason"] != "user_owned_mcp_config" {
+		t.Fatalf("approval_reason = %v, want user_owned_mcp_config", governance["approval_reason"])
+	}
+}
+
+func TestHandleMCPLibraryInspect_StandardLibraryGitHubStaysAutoAllowedForOwnedConfig(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.MCPLibrary = loadStandardMCPLibrary(t)
+	})
+
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInspect), "POST", "/api/v1/mcp/library/inspect", `{"name":"github"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["decision"] != "allow" {
+		t.Fatalf("decision = %v, want allow", resp["decision"])
+	}
+	if resp["network_locality"] != "local" {
+		t.Fatalf("network_locality = %v, want local", resp["network_locality"])
+	}
+}
+
 // ── POST /api/v1/mcp/library/install ───────────────────────────────
 
 func TestHandleMCPLibraryInstall_NilSubsystem(t *testing.T) {
@@ -250,6 +301,17 @@ func TestHandleMCPLibraryInstall_RemoteConfigReturnsApprovalBoundary(t *testing.
 	if resp["requires_approval"] != true {
 		t.Fatalf("requires_approval = %v, want true", resp["requires_approval"])
 	}
+}
+
+func TestHandleMCPInstall_ForbiddenForStandardLibraryEntryToo(t *testing.T) {
+	s := newTestServer(func(s *AdminServer) {
+		s.MCPLibrary = loadStandardMCPLibrary(t)
+	})
+	mux := http.NewServeMux()
+	s.RegisterRoutes(mux)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/mcp/install", `{"name":"filesystem","transport":"stdio","command":"npx"}`)
+	assertStatus(t, rr, http.StatusForbidden)
 }
 
 // ── Happy-path DB-backed tests ───────────────────────────────────────
