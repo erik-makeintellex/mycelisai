@@ -276,6 +276,7 @@ Expected:
 - durable artifact requests may become proposals
 - low-risk collaboration is not blanket-blocked by approval theater
 - consultation-shaped answers visibly identify specialist involvement instead of hiding it only in secondary detail
+- consultation-shaped answers also summarize the specialist perspective in plain operator language before the detailed consultation trace
 - media or richer generated-content requests end in visible value, not only `permission requested` or `tool invoked`
 - the chosen posture matches intent
 

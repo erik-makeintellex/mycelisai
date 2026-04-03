@@ -122,6 +122,29 @@ function artifactResultSummary(artifacts?: ChatArtifactRef[]): string | null {
     return `Soma prepared ${labels.length} artifacts for review: ${labels[0]}, ${labels[1]}, and ${labels.length - 2} more.`;
 }
 
+function ensureSentence(text: string): string {
+    const trimmed = text.trim();
+    if (!trimmed) return "";
+    return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function consultationResultSummary(consultations?: ChatConsultation[]): string | null {
+    if (!consultations?.length) return null;
+
+    if (consultations.length === 1) {
+        const consultation = consultations[0];
+        const memberLabel = COUNCIL_META[consultation.member]?.label ?? consultation.member;
+        return `Soma checked with ${memberLabel} while shaping this answer: ${ensureSentence(consultation.summary)}`;
+    }
+
+    const memberLabels = consultations.map((consultation) => COUNCIL_META[consultation.member]?.label ?? consultation.member);
+    if (memberLabels.length === 2) {
+        return `Soma checked with ${memberLabels[0]} and ${memberLabels[1]} while shaping this answer.`;
+    }
+
+    return `Soma checked with ${memberLabels[0]}, ${memberLabels[1]}, and ${memberLabels.length - 2} more specialists while shaping this answer.`;
+}
+
 // ── Copy Button ──────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
@@ -753,6 +776,17 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                         </div>
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">
                             {artifactResultSummary(msg.artifacts)}
+                        </p>
+                    </div>
+                )}
+
+                {!isUser && msg.ask_class === "specialist_consultation" && consultationResultSummary(msg.consultations) && (
+                    <div className="rounded-lg border border-cortex-warning/20 bg-cortex-warning/5 px-3 py-2">
+                        <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-warning">
+                            Specialist context
+                        </div>
+                        <p className="mt-1 text-sm text-cortex-text-main leading-6">
+                            {consultationResultSummary(msg.consultations)}
                         </p>
                     </div>
                 )}

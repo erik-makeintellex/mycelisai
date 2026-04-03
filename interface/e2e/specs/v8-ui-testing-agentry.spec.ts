@@ -414,6 +414,7 @@ test.describe("V8 UI testing agentry product contract", () => {
 
         await sendWorkspaceMessage(page, "Get specialist advice on the architecture tradeoffs.");
         await expect(page.getByText("Specialist support")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Soma checked with Architect while shaping this answer: Recommend the safer route.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText(/Soma consulted/i)).toBeVisible();
         await expect(page.getByTestId("mission-chat").getByText("Architect", { exact: true }).last()).toBeVisible();
     });

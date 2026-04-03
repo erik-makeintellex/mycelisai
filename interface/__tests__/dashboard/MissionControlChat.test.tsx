@@ -318,6 +318,7 @@ describe('MissionControlChat', () => {
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
             expect(screen.getByText('Specialist support')).toBeDefined();
+            expect(screen.getByText('Soma checked with Architect while shaping this answer: Prefer the safer route.')).toBeDefined();
         });
 
         it('uses a readable fallback when Soma returns no text but includes artifacts', async () => {

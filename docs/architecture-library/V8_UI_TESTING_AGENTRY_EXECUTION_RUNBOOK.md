@@ -264,6 +264,7 @@ Expected:
 - artifact-bearing answers show a visible output-class cue such as `Artifact result`, not only an artifact card with no contract clue
 - artifact-bearing answers also summarize what was returned in operator terms before the raw artifact cards
 - consultation-shaped answers show a visible output-class cue such as `Specialist support`, not only buried delegation metadata
+- consultation-shaped answers also summarize the specialist perspective in operator terms before the deeper delegation trace
 - live governed chat proof records the returned `ask_class` on direct-answer and proposal responses so runtime and UI/browser evidence stay aligned
 
 Expected:

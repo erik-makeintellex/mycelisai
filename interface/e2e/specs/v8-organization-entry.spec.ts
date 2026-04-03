@@ -1425,6 +1425,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await sendOrganizationMessage(page, "Get specialist advice on the architecture tradeoffs.");
         await expect(page.getByTestId("mission-chat").getByText("Specialist support")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Soma checked with Architect while shaping this answer: Recommend the safer rollout path.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText(/Soma consulted/i)).toBeVisible();
         await expect(page.getByTestId("mission-chat").getByText("Architect", { exact: true }).last()).toBeVisible();
         await expect(page.getByText("AI Organization Home")).toBeVisible();
