@@ -71,6 +71,7 @@ Bootstrap reminder:
 
 Tasking note:
 - `uv run inv db.migrate` is a forward-bootstrap task for schemas that are not yet compatible with the current runtime; if the `cortex` schema already has the required runtime tables and columns, it skips replay and points operators to `uv run inv db.reset` for a clean rebuild
+- `uv run inv compose.up` and `uv run inv compose.migrate` follow the same compatibility posture for the supported home-runtime stack: they replay canonical forward migrations only when the compose `cortex` schema is not yet compatible with the current runtime, and otherwise keep the existing schema in place until you intentionally use `uv run inv compose.down --volumes` for a fresh rebuild
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, and point it at a host-reachable endpoint such as `http://host.docker.internal:11434`
 

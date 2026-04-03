@@ -141,9 +141,9 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv compose.up` | Managed Docker Compose bring-up: postgres + nats -> canonical migrations -> core + interface, with host readiness checks |
+| `uv run inv compose.up` | Managed Docker Compose bring-up: postgres + nats -> compatibility-aware canonical forward migrations -> core + interface, with host readiness checks |
 | `uv run inv compose.down` | Stop the compose stack (`--volumes` for a truly fresh rebuild) |
-| `uv run inv compose.migrate` | Apply canonical migrations through the PostgreSQL compose service |
+| `uv run inv compose.migrate` | Apply canonical forward migrations through the PostgreSQL compose service when the compose schema is not already compatible with the current runtime |
 | `uv run inv compose.status` | Show compose service state plus host-port reachability |
 | `uv run inv compose.health` | Deep health probe for core, text inference availability, frontend, and NATS monitor |
 | `uv run inv compose.logs` | Tail compose logs for the full stack or a single service |
@@ -152,6 +152,7 @@ Compose runtime guardrails:
 - `.env.compose` is the supported env contract for the home-runtime path; do not reuse Kind/bridge `OLLAMA_HOST` values blindly
 - use `MYCELIS_COMPOSE_OLLAMA_HOST` for the home-runtime AI engine path so host-level `OLLAMA_HOST` bind settings do not override the compose runtime
 - loopback compose Ollama values (`localhost`, `127.0.0.1`, `0.0.0.0`) are invalid for the Core container and are rejected by the compose task layer
+- `compose.up` and `compose.migrate` now follow the same compatibility-aware posture as `db.migrate`: once the compose `cortex` schema already has the required late-runtime tables and columns, the tasks skip forward replay and leave reset/rebuild work to `compose.down --volumes`
 - the slim compose Core image disables default npm-backed MCP auto-bootstrap by default to keep startup logs honest; manual/external MCP connectivity remains supported
 
 ### Clean Run Discipline for Runtime and Integration Checks

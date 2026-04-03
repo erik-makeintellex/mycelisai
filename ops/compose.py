@@ -130,7 +130,48 @@ def _run_compose(args: list[str], check: bool = True) -> subprocess.CompletedPro
     return result
 
 
-def _run_compose_migrations():
+def _compose_query_succeeds(sql: str) -> bool:
+    result = _run_compose(
+        _compose_command(
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-t",
+            "-A",
+            "-h",
+            "127.0.0.1",
+            "-U",
+            "mycelis",
+            "-d",
+            "cortex",
+            "-c",
+            sql,
+        ),
+        check=False,
+    )
+    return result.returncode == 0 and "1" in result.stdout.split()
+
+
+def _compose_schema_bootstrapped() -> bool:
+    for _label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS:
+        if not _compose_query_succeeds(sql):
+            return False
+    return True
+
+
+def _run_compose_migrations(strict: bool = False):
+    if not strict and _compose_schema_bootstrapped():
+        print(
+            "Compose schema already appears compatible with the current runtime; "
+            "skipping forward migration replay."
+        )
+        print(
+            "Use 'uv run inv compose.down --volumes' for a truly fresh compose rebuild "
+            "when you need to replay the canonical migration stack end-to-end."
+        )
+        return
+
     for migration in db_tasks._migration_files():
         result = _run_compose(
             _compose_command(
@@ -239,7 +280,7 @@ def down(c, volumes=False):
 
 @task
 def migrate(c):
-    """Apply canonical migrations through the PostgreSQL compose service."""
+    """Apply canonical forward migrations through the PostgreSQL compose service."""
     del c
     _require_compose_env_file()
     print("=== Mycelis Compose Migrate ===\n")

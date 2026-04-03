@@ -61,6 +61,7 @@ def test_run_compose_migrations_executes_canonical_files(monkeypatch):
     files = [Path("001_init_memory.sql"), Path("002_extra.up.sql")]
 
     monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: files)
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda: False)
     monkeypatch.setattr(
         compose,
         "_run_compose",
@@ -103,6 +104,36 @@ def test_run_compose_migrations_executes_canonical_files(monkeypatch):
             "/migrations/002_extra.up.sql",
         ),
     ]
+
+
+def test_run_compose_migrations_skips_replay_when_schema_is_compatible(monkeypatch, capsys):
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda: True)
+    monkeypatch.setattr(
+        compose.db_tasks,
+        "_migration_files",
+        lambda: pytest.fail("migration files should not be replayed for a compatible schema"),
+    )
+
+    compose._run_compose_migrations()
+
+    out = capsys.readouterr().out
+    assert "skipping forward migration replay" in out
+    assert "compose.down --volumes" in out
+
+
+def test_compose_schema_bootstrapped_requires_all_runtime_objects(monkeypatch):
+    responses = iter([True, True, False])
+    monkeypatch.setattr(compose.db_tasks, "SCHEMA_COMPATIBILITY_CHECKS", [("a", "sql"), ("b", "sql"), ("c", "sql")])
+    monkeypatch.setattr(compose, "_compose_query_succeeds", lambda sql: next(responses))
+
+    assert compose._compose_schema_bootstrapped() is False
+
+
+def test_compose_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):
+    monkeypatch.setattr(compose.db_tasks, "SCHEMA_COMPATIBILITY_CHECKS", [("a", "sql"), ("b", "sql")])
+    monkeypatch.setattr(compose, "_compose_query_succeeds", lambda sql: True)
+
+    assert compose._compose_schema_bootstrapped() is True
 
 
 def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):

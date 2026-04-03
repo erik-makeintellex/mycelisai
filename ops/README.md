@@ -36,6 +36,7 @@ Handles the atomic deployment to Kubernetes (Kind).
 ### `compose.py` (Home Runtime)
 Handles the supported Docker Compose single-host runtime for home-lab and demo use.
 - **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface)
+- Compose `up` and `migrate` now behave like the main `db.migrate` contract: they bootstrap forward only when the compose `cortex` schema is not already compatible with the current runtime, and they point to `uv run inv compose.down --volumes` for a truly fresh replay.
 - **Down**: `uv run inv compose.down`
 - **Health**: `uv run inv compose.health`
 - **Status**: `uv run inv compose.status`
