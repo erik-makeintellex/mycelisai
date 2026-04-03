@@ -270,8 +270,10 @@ Action:
 Expected:
 
 - short reviewable work stays inline
+- inline or durable artifact-returning answers visibly identify themselves as artifact-bearing output rather than looking like plain chat residue
 - durable artifact requests may become proposals
 - low-risk collaboration is not blanket-blocked by approval theater
+- consultation-shaped answers visibly identify specialist involvement instead of hiding it only in secondary detail
 - media or richer generated-content requests end in visible value, not only `permission requested` or `tool invoked`
 - the chosen posture matches intent
 

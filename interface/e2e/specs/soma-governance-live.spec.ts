@@ -34,6 +34,7 @@ type ChatEnvelope = {
         mode?: string;
         payload?: {
             text?: string;
+            ask_class?: string;
             proposal?: {
                 confirm_token?: string;
                 intent_proof_id?: string;
@@ -141,6 +142,7 @@ test.describe('Soma governed mutation live contract', () => {
 
         expect(response.ok(), body ? JSON.stringify(body) : await responseText(response)).toBeTruthy();
         expect(body?.data?.mode).toBe('answer');
+        expect(body?.data?.payload?.ask_class).toBe('direct_answer');
         expect((body?.data?.payload?.text ?? '').trim().length).toBeGreaterThan(0);
         await expect(page.getByText(/could not produce a readable reply/i)).toHaveCount(0);
     });
@@ -161,6 +163,7 @@ test.describe('Soma governed mutation live contract', () => {
 
         expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
         expect(mutation.body?.data?.mode).toBe('proposal');
+        expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
         await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
         await expect(page.getByText(/Awaiting approval/i)).toBeVisible();
     });
@@ -179,6 +182,7 @@ test.describe('Soma governed mutation live contract', () => {
 
         expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
         expect(mutation.body?.data?.mode).toBe('proposal');
+        expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
         await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
         expect(anyTargetExists(targetPaths)).toBeFalsy();
 
@@ -206,6 +210,7 @@ test.describe('Soma governed mutation live contract', () => {
 
         expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
         expect(mutation.body?.data?.mode).toBe('proposal');
+        expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
         await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
         expect(anyTargetExists(targetPaths)).toBeFalsy();
 

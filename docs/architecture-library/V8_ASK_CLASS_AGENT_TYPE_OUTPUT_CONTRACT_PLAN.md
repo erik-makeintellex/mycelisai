@@ -185,10 +185,12 @@ Current checkpoint:
 - chat payloads now carry `ask_class` through the runtime/store contract so UI surfaces no longer have to infer artifact-vs-specialist answers indirectly
 - the first default-visible UI proof is now in place: Mission Control chat labels artifact-bearing answers as `Artifact result` and consultation-shaped answers as `Specialist support`
 - focused proof for this slice is green across protocol/runtime/store/component gates plus the broader managed `core.test` and `interface.test` runs
+- the next browser-proof slice now asserts those cues in the stable mocked spec and asserts live `ask_class` payload values for direct-answer and governed-mutation paths in the compose-backed governed browser spec
+- stable and live browser proof for that browser slice are now green after rebuilding the compose runtime against the current Core image
 
 Immediate next slice:
 
-- carry the same `ask_class` assertion into broader workspace/browser proof so stable and live UI tests verify both the handler route and the returned output class
+- carry the same `ask_class` assertion into broader workspace/browser proof beyond the governed-chat lane so more default-path flows verify both the handler route and the returned output class
 - decide whether `artifact_reference` should remain payload-only or also gain a stronger operator-facing summary contract in the store/UI layer
 
 ### Phase 2: UI and Store Alignment

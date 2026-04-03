@@ -261,6 +261,12 @@ Action:
 
 Expected:
 
+- artifact-bearing answers show a visible output-class cue such as `Artifact result`, not only an artifact card with no contract clue
+- consultation-shaped answers show a visible output-class cue such as `Specialist support`, not only buried delegation metadata
+- live governed chat proof records the returned `ask_class` on direct-answer and proposal responses so runtime and UI/browser evidence stay aligned
+
+Expected:
+
 - low-risk collaboration can still return as readable inline value when policy allows it
 - higher-risk or durable-output generation lands in a readable `proposal` or `execution_result`
 - Soma explains what was created, or what will be created, in user terms rather than tool-first language
