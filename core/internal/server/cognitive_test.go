@@ -315,8 +315,8 @@ func TestHandleChat_RetriesUnexpectedMutationForReadOnlyPrompt(t *testing.T) {
 		var resp []byte
 		if replyCount == 1 {
 			resp, _ = json.Marshal(map[string]any{
-				"text":       `{"tool_call":{"name":"broadcast","arguments":{"message":"ask everyone"}}}`,
-				"tools_used": []string{"broadcast"},
+				"text":        `{"tool_call":{"name":"broadcast","arguments":{"message":"ask everyone"}}}`,
+				"tools_used":  []string{"broadcast"},
 				"provider_id": "mock",
 				"model_used":  "test-model",
 			})
@@ -401,8 +401,8 @@ func TestHandleChat_BlocksUnexpectedMutationForReadOnlyPromptAfterRetry(t *testi
 	_, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
 		replyCount++
 		resp, _ := json.Marshal(map[string]any{
-			"text":       `{"tool_call":{"name":"broadcast","arguments":{"message":"ask everyone"}}}`,
-			"tools_used": []string{"broadcast"},
+			"text":        `{"tool_call":{"name":"broadcast","arguments":{"message":"ask everyone"}}}`,
+			"tools_used":  []string{"broadcast"},
 			"provider_id": "mock",
 			"model_used":  "test-model",
 		})
@@ -611,6 +611,33 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 				}
 			}
 		})
+	}
+}
+
+func TestResolvePrimaryChatAskContract(t *testing.T) {
+	direct := resolvePrimaryChatAskContract(false)
+	if direct.AskClass != protocol.AskClassDirectAnswer {
+		t.Fatalf("direct ask class = %q, want %q", direct.AskClass, protocol.AskClassDirectAnswer)
+	}
+	if direct.TemplateID != protocol.TemplateChatToAnswer {
+		t.Fatalf("direct template = %q, want %q", direct.TemplateID, protocol.TemplateChatToAnswer)
+	}
+	if direct.DefaultExecutionMode != protocol.ModeAnswer {
+		t.Fatalf("direct mode = %q, want %q", direct.DefaultExecutionMode, protocol.ModeAnswer)
+	}
+
+	mutation := resolvePrimaryChatAskContract(true)
+	if mutation.AskClass != protocol.AskClassGovernedMutation {
+		t.Fatalf("mutation ask class = %q, want %q", mutation.AskClass, protocol.AskClassGovernedMutation)
+	}
+	if mutation.TemplateID != protocol.TemplateChatToProposal {
+		t.Fatalf("mutation template = %q, want %q", mutation.TemplateID, protocol.TemplateChatToProposal)
+	}
+	if mutation.DefaultExecutionMode != protocol.ModeProposal {
+		t.Fatalf("mutation mode = %q, want %q", mutation.DefaultExecutionMode, protocol.ModeProposal)
+	}
+	if !mutation.RequiresConfirmation {
+		t.Fatal("mutation contract should require confirmation")
 	}
 }
 

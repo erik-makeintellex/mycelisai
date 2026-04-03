@@ -132,6 +132,8 @@ Review summary:
 41. `IN_REVIEW` the MCP settings configuration lane now has an explicit owner-group governance contract: curated library installs inspect before install, root/owner current-group config from the MCP page auto-allows without a second approval loop, remote MCP entries return an approval boundary instead of silently prompting, and MCP toolset mutations now echo the same normalized governance posture in their responses.
 42. `IN_REVIEW` the MCP governance hardening slice now has standard-library contract proof against the shipped `core/config/mcp-library.yaml`: owned-config inspection is covered for canonical entries like `filesystem` and `github`, local-first toolset links remain stable, and the raw `/api/v1/mcp/install` security block still holds even when a request mirrors a real library entry.
 43. `ACTIVE` the ask-class, agent-type, and output-contract assertion lane is now formally opened in `docs/architecture-library/V8_ASK_CLASS_AGENT_TYPE_OUTPUT_CONTRACT_PLAN.md`: local repo truth has been reduced to one highest-value gap, the missing shared machine-readable registry for ask classification and output assertion, and the first execution slice is now defined as a low-risk runtime contract insertion for `direct_answer` vs `governed_mutation` before broader UI/runtime expansion.
+44. `IN_REVIEW` the first ask-class runtime contract slice is now landed in code: `core/pkg/protocol/ask_contracts.go` defines the first shared machine-readable registry for `direct_answer` and `governed_mutation`, primary Soma chat plus direct council chat now resolve template/mode selection through that registry, and audit context now records `ask_class` on those bounded answer/proposal paths instead of relying only on duplicated branch defaults.
+45. `COMPLETE` current bounded local validation is green from committed state for the non-live gate: `uv run inv core.test`, `uv run inv core.compile`, `uv run inv interface.typecheck`, `uv run inv interface.test`, `uv run inv interface.build`, `cd interface; npm run test`, `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`, and `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts` all pass. The live governed browser gate was not rerun in this slice because the local stack is intentionally down (`Docker`, `PostgreSQL`, `NATS`, `Core API`, and `Frontend` all offline).
 
 ## Current Review (2026-03-29)
 
@@ -637,9 +639,9 @@ Evidence:
    - index any newly canonical doc in `interface/lib/docsManifest.ts` in the same slice
 7. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
 8. `NEXT` extend the same owner-scoped MCP configuration posture into any future MCP settings or toolset-management UI so current-group context stays explicit once those surfaces become operator-visible.
-9. `NEXT` begin Slice 1 of the ask-class / agent-type / output-contract assertion lane.
-   - add the shared machine-readable ask-contract registry in Go
-   - wire Soma chat to resolve `direct_answer` vs `governed_mutation` through that registry without changing the visible terminal-state model
-   - add focused runtime proof before widening the contract to council/UI surfaces
+9. `NEXT` begin Slice 2 of the ask-class / agent-type / output-contract assertion lane.
+   - extend the shared registry to the next bounded ask classes with visible trust impact
+   - add UI/store/browser proof for `ask class -> agent involvement -> output contract`
+   - keep the current four terminal states stable while broadening assertion coverage
 
 

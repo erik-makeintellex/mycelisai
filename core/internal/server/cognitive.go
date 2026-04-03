@@ -194,6 +194,28 @@ func applyDirectAnswerRetryInstruction(messages []chatRequestMessage, latestRequ
 	return normalized
 }
 
+func resolvePrimaryChatAskClass(isMutation bool) protocol.AskClass {
+	if isMutation {
+		return protocol.AskClassGovernedMutation
+	}
+	return protocol.AskClassDirectAnswer
+}
+
+func resolvePrimaryChatAskContract(isMutation bool) protocol.AskContract {
+	class := resolvePrimaryChatAskClass(isMutation)
+	contract, ok := protocol.AskContractForClass(class)
+	if !ok {
+		// The first slice only supports direct answers and governed mutation.
+		return protocol.AskContract{
+			AskClass:             protocol.AskClassDirectAnswer,
+			DefaultAgentTarget:   "soma",
+			DefaultExecutionMode: protocol.ModeAnswer,
+			TemplateID:           protocol.TemplateChatToAnswer,
+		}
+	}
+	return contract
+}
+
 func parsePlannedToolCall(text string) (protocol.PlannedToolCall, bool) {
 	var envelope struct {
 		ToolCall struct {
@@ -871,13 +893,11 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	applyBrainProvenance(s, &chatPayload, agentResult)
 
-	var templateID protocol.TemplateID
-	var mode protocol.ExecutionMode
+	askContract := resolvePrimaryChatAskContract(isMutation)
+	templateID := askContract.TemplateID
+	mode := askContract.DefaultExecutionMode
 
 	if isMutation {
-		templateID = protocol.TemplateChatToProposal
-		mode = protocol.ModeProposal
-
 		plannedToolCalls := buildPlannedToolCalls(agentResult, latestUserText, mutTools)
 		approval := buildApprovalPolicy(profile, plannedToolCalls, mutTools)
 		scope := &protocol.ScopeValidation{
@@ -903,6 +923,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 				"requested_tools": requestMutationTools,
 				"actor":           "Soma",
 				"user":            auditUserLabelFromRequest(r),
+				"ask_class":       string(askContract.AskClass),
 				"action":          "proposal_generated",
 				"result_status":   "pending",
 				"approval_status": approvalStatusValue(approval),
@@ -935,9 +956,6 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 			AuditEventID:    auditEventID,
 		}
 	} else {
-		templateID = protocol.TemplateChatToAnswer
-		mode = protocol.ModeAnswer
-
 		auditEventID, _ := s.createAuditEvent(
 			protocol.TemplateChatToAnswer, "admin",
 			"Admin chat",
@@ -945,6 +963,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 				"tools":         agentResult.ToolsUsed,
 				"actor":         "Soma",
 				"user":          auditUserLabelFromRequest(r),
+				"ask_class":     string(askContract.AskClass),
 				"action":        "answer_delivered",
 				"result_status": "completed",
 			},
@@ -1152,13 +1171,11 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 
 	applyBrainProvenance(s, &chatPayload, agentResult)
 
-	var templateID protocol.TemplateID
-	var mode protocol.ExecutionMode
+	askContract := resolvePrimaryChatAskContract(isMutation)
+	templateID := askContract.TemplateID
+	mode := askContract.DefaultExecutionMode
 
 	if isMutation {
-		templateID = protocol.TemplateChatToProposal
-		mode = protocol.ModeProposal
-
 		plannedToolCalls := buildPlannedToolCalls(agentResult, latestUserText, mutTools)
 		approval := buildApprovalPolicy(profile, plannedToolCalls, mutTools)
 		scope := &protocol.ScopeValidation{
@@ -1186,6 +1203,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 				"team":            teamID,
 				"actor":           "Soma",
 				"user":            auditUserLabelFromRequest(r),
+				"ask_class":       string(askContract.AskClass),
 				"action":          "proposal_generated",
 				"result_status":   "pending",
 				"approval_status": approvalStatusValue(approval),
@@ -1218,9 +1236,6 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 			AuditEventID:    auditEventID,
 		}
 	} else {
-		templateID = protocol.TemplateChatToAnswer
-		mode = protocol.ModeAnswer
-
 		auditEventID, _ := s.createAuditEvent(
 			protocol.TemplateChatToAnswer, memberID,
 			fmt.Sprintf("Council chat with %s", memberID),
@@ -1230,6 +1245,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 				"team":          teamID,
 				"actor":         "Soma",
 				"user":          auditUserLabelFromRequest(r),
+				"ask_class":     string(askContract.AskClass),
 				"action":        "answer_delivered",
 				"result_status": "completed",
 			},

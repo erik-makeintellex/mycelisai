@@ -151,7 +151,7 @@ Required outputs:
 
 ### Phase 1: Shared Runtime Contract
 
-Status target: ACTIVE
+Status target: ACTIVE -> IN_REVIEW
 
 Goals:
 
@@ -174,6 +174,13 @@ Safest first implementation slice:
   - blocker
 - make Soma chat resolution read from that registry before final mode selection
 - keep council chat on the same contract for shared output meaning, without redesigning broader multi-agent orchestration yet
+
+Current checkpoint:
+
+- the shared Go registry now exists for `direct_answer` and `governed_mutation`
+- primary Soma chat and direct council chat now resolve template/mode selection through that shared contract instead of duplicating those defaults inline
+- audit context now records the resolved `ask_class` on those bounded answer/proposal paths
+- focused protocol/runtime tests now prove the registry contract and the existing proposal-integrity behavior remains green
 
 ### Phase 2: UI and Store Alignment
 
@@ -259,11 +266,10 @@ Minimum proof for the first implementation slice:
 
 ## Immediate Next Slice
 
-Slice 1 for this lane is:
+Slice 2 for this lane is:
 
-- create the shared ask-contract registry
-- wire Soma chat to resolve `direct_answer` vs `governed_mutation` through that registry
-- keep current visible terminal states unchanged
-- add targeted runtime tests proving the registry drives those two asks correctly
+- extend the shared contract beyond `direct_answer` and `governed_mutation` into the next bounded ask classes with visible trust impact
+- define how `specialist_consultation` and `governed_artifact` should be asserted without weakening the current terminal-state model
+- add the first UI/store/browser proof that checks both `who handled it` and `what class of output came back`
 
-This is the highest-value, lowest-risk starting point because it improves assertion without forcing an immediate UI redesign.
+This is the highest-value next move because the runtime foundation now exists and the biggest remaining gap is proof and adoption beyond mode-only validation.
