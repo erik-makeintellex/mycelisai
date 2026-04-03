@@ -40,6 +40,41 @@ func TestAskContractForClass_GovernedMutation(t *testing.T) {
 	}
 }
 
+func TestAskContractForClass_GovernedArtifact(t *testing.T) {
+	contract, ok := AskContractForClass(AskClassGovernedArtifact)
+	if !ok {
+		t.Fatal("expected governed_artifact contract")
+	}
+	if contract.TemplateID != TemplateChatToAnswer {
+		t.Fatalf("template = %q, want %q", contract.TemplateID, TemplateChatToAnswer)
+	}
+	if contract.DefaultExecutionMode != ModeAnswer {
+		t.Fatalf("mode = %q, want %q", contract.DefaultExecutionMode, ModeAnswer)
+	}
+	if contract.ArtifactPosture != ArtifactPostureRequired {
+		t.Fatalf("artifact posture = %q, want %q", contract.ArtifactPosture, ArtifactPostureRequired)
+	}
+	if contract.RequiresConfirmation {
+		t.Fatal("governed artifact should not require confirmation")
+	}
+}
+
+func TestAskContractForClass_SpecialistConsultation(t *testing.T) {
+	contract, ok := AskContractForClass(AskClassSpecialist)
+	if !ok {
+		t.Fatal("expected specialist_consultation contract")
+	}
+	if contract.TemplateID != TemplateChatToAnswer {
+		t.Fatalf("template = %q, want %q", contract.TemplateID, TemplateChatToAnswer)
+	}
+	if contract.DefaultAgentTarget != "specialist" {
+		t.Fatalf("default agent target = %q, want specialist", contract.DefaultAgentTarget)
+	}
+	if contract.DefaultExecutionMode != ModeAnswer {
+		t.Fatalf("mode = %q, want %q", contract.DefaultExecutionMode, ModeAnswer)
+	}
+}
+
 func TestAskContractForClass_Unknown(t *testing.T) {
 	if _, ok := AskContractForClass(AskClass("unknown")); ok {
 		t.Fatal("expected unknown ask class lookup to fail")

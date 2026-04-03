@@ -181,6 +181,15 @@ Current checkpoint:
 - primary Soma chat and direct council chat now resolve template/mode selection through that shared contract instead of duplicating those defaults inline
 - audit context now records the resolved `ask_class` on those bounded answer/proposal paths
 - focused protocol/runtime tests now prove the registry contract and the existing proposal-integrity behavior remains green
+- the shared registry now also covers `governed_artifact` and `specialist_consultation`
+- chat payloads now carry `ask_class` through the runtime/store contract so UI surfaces no longer have to infer artifact-vs-specialist answers indirectly
+- the first default-visible UI proof is now in place: Mission Control chat labels artifact-bearing answers as `Artifact result` and consultation-shaped answers as `Specialist support`
+- focused proof for this slice is green across protocol/runtime/store/component gates plus the broader managed `core.test` and `interface.test` runs
+
+Immediate next slice:
+
+- carry the same `ask_class` assertion into broader workspace/browser proof so stable and live UI tests verify both the handler route and the returned output class
+- decide whether `artifact_reference` should remain payload-only or also gain a stronger operator-facing summary contract in the store/UI layer
 
 ### Phase 2: UI and Store Alignment
 

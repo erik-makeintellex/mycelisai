@@ -260,6 +260,7 @@ describe('MissionControlChat', () => {
                             ...CTS_CHAT_RESPONSE.data,
                             payload: {
                                 text: 'I prepared two sample outputs for review.',
+                                ask_class: 'governed_artifact',
                                 artifacts: [
                                     {
                                         id: 'img-1',
@@ -293,7 +294,29 @@ describe('MissionControlChat', () => {
                 expect(screen.getByText('Homepage Moodboard')).toBeDefined();
                 expect(screen.getByText('Creative Brief')).toBeDefined();
                 expect(screen.getByTitle('Save image to workspace/saved-media')).toBeDefined();
+                expect(screen.getByText('Artifact result')).toBeDefined();
             });
+        });
+
+        it('shows a specialist-support badge for consulted answers', async () => {
+            useCortexStore.setState({
+                missionChat: [
+                    {
+                        role: 'council',
+                        content: 'The architect reviewed the tradeoffs and recommends the safer route.',
+                        source_node: 'admin',
+                        ask_class: 'specialist_consultation',
+                        consultations: [
+                            { member: 'council-architect', summary: 'Prefer the safer route.' },
+                        ],
+                    },
+                ],
+            });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            expect(screen.getByText('Specialist support')).toBeDefined();
         });
 
         it('uses a readable fallback when Soma returns no text but includes artifacts', async () => {

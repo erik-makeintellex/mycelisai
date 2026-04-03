@@ -720,6 +720,64 @@ describe('useCortexStore', () => {
             });
         });
 
+        it('stores governed artifact ask-class metadata for artifact-bearing Soma answers', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                        signal_type: 'chat_response',
+                        trust_score: 0.5,
+                        template_id: 'chat-to-answer',
+                        mode: 'answer',
+                        payload: {
+                            text: 'I prepared a brief for review.',
+                            ask_class: 'governed_artifact',
+                            artifacts: [
+                                { id: 'doc-1', type: 'document', title: 'Creative Brief', content_type: 'text/markdown', content: '# Brief' },
+                            ],
+                        },
+                    },
+                }),
+            });
+
+            await store.getState().sendMissionChat('create a brief');
+
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                ask_class: 'governed_artifact',
+            });
+        });
+
+        it('stores specialist consultation ask-class metadata for consulted answers', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                        signal_type: 'chat_response',
+                        trust_score: 0.5,
+                        template_id: 'chat-to-answer',
+                        mode: 'answer',
+                        payload: {
+                            text: 'The architect reviewed the tradeoffs.',
+                            ask_class: 'specialist_consultation',
+                            consultations: [
+                                { member: 'council-architect', summary: 'Recommend the safer option.' },
+                            ],
+                        },
+                    },
+                }),
+            });
+
+            await store.getState().sendMissionChat('review the architecture');
+
+            expect(store.getState().missionChat.at(-1)).toMatchObject({
+                ask_class: 'specialist_consultation',
+            });
+        });
+
         it('stores a structured workspace failure when Soma chat returns 500', async () => {
             vi.useFakeTimers();
             try {

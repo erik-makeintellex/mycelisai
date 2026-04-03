@@ -199,6 +199,7 @@ export function createCortexMissionChatSlice(
                         content: fallbackChatContent(envelope.payload, assistantName),
                         consultations: envelope.payload.consultations,
                         tools_used: envelope.payload.tools_used,
+                        ask_class: envelope.payload.ask_class,
                         source_node: envelope.meta.source_node,
                         trust_score: envelope.trust_score,
                         timestamp: envelope.meta.timestamp,

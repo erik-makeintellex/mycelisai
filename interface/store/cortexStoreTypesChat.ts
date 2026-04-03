@@ -15,6 +15,13 @@ export interface ChatArtifactRef {
     saved_path?: string;
 }
 
+export type AskClass =
+    | 'direct_answer'
+    | 'governed_mutation'
+    | 'governed_artifact'
+    | 'specialist_consultation'
+    | 'execution_blocker';
+
 export type TemplateID = 'chat-to-answer' | 'chat-to-proposal';
 export type ExecutionMode = 'answer' | 'proposal' | 'execution_result' | 'blocker';
 export type ProposalLifecycleStatus =
@@ -92,6 +99,7 @@ export interface ChatMessage {
     trust_score?: number;
     timestamp?: string;
     artifacts?: ChatArtifactRef[];
+    ask_class?: AskClass;
     template_id?: TemplateID;
     mode?: ExecutionMode;
     provenance?: AnswerProvenance;
@@ -121,6 +129,7 @@ export interface CTSChatEnvelope {
     mode?: ExecutionMode;
     payload: {
         text: string;
+        ask_class?: AskClass;
         consultations?: ChatConsultation[];
         tools_used?: string[];
         artifacts?: ChatArtifactRef[];

@@ -17,6 +17,7 @@ type ApprovalPosture string
 
 const (
 	ApprovalPostureAutoAllowed ApprovalPosture = "auto_allowed"
+	ApprovalPostureOptional    ApprovalPosture = "optional"
 	ApprovalPostureRequired    ApprovalPosture = "required"
 )
 
@@ -26,6 +27,7 @@ type ArtifactPosture string
 const (
 	ArtifactPostureNone     ArtifactPosture = "none"
 	ArtifactPostureOptional ArtifactPosture = "optional"
+	ArtifactPostureRequired ArtifactPosture = "required"
 )
 
 // AskContract is the shared machine-readable routing/output contract for a
@@ -67,6 +69,30 @@ var askContractRegistry = map[AskClass]AskContract{
 		ApprovalPosture:       ApprovalPostureRequired,
 		ArtifactPosture:       ArtifactPostureOptional,
 		Description:           "Mutation request that must enter governed proposal posture before execution.",
+	},
+	AskClassGovernedArtifact: {
+		AskClass:              AskClassGovernedArtifact,
+		DefaultAgentTarget:    "soma",
+		AllowedAgentTargets:   []string{"soma", "specialist"},
+		DefaultExecutionMode:  ModeAnswer,
+		AllowedExecutionModes: []ExecutionMode{ModeAnswer},
+		TemplateID:            TemplateChatToAnswer,
+		RequiresConfirmation:  false,
+		ApprovalPosture:       ApprovalPostureAutoAllowed,
+		ArtifactPosture:       ArtifactPostureRequired,
+		Description:           "Readable answer that returns durable or inline artifact output by default.",
+	},
+	AskClassSpecialist: {
+		AskClass:              AskClassSpecialist,
+		DefaultAgentTarget:    "specialist",
+		AllowedAgentTargets:   []string{"soma", "specialist"},
+		DefaultExecutionMode:  ModeAnswer,
+		AllowedExecutionModes: []ExecutionMode{ModeAnswer},
+		TemplateID:            TemplateChatToAnswer,
+		RequiresConfirmation:  false,
+		ApprovalPosture:       ApprovalPostureAutoAllowed,
+		ArtifactPosture:       ArtifactPostureOptional,
+		Description:           "Readable answer shaped by direct specialist routing or consultation.",
 	},
 }
 

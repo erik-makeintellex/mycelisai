@@ -194,21 +194,35 @@ func applyDirectAnswerRetryInstruction(messages []chatRequestMessage, latestRequ
 	return normalized
 }
 
-func resolvePrimaryChatAskClass(isMutation bool) protocol.AskClass {
+func resolveChatAskClass(defaultAgentTarget string, isMutation bool, agentResult chatAgentResult) protocol.AskClass {
 	if isMutation {
 		return protocol.AskClassGovernedMutation
+	}
+	if len(agentResult.Artifacts) > 0 {
+		return protocol.AskClassGovernedArtifact
+	}
+	if defaultAgentTarget == "specialist" || len(agentResult.Consultations) > 0 {
+		return protocol.AskClassSpecialist
 	}
 	return protocol.AskClassDirectAnswer
 }
 
-func resolvePrimaryChatAskContract(isMutation bool) protocol.AskContract {
-	class := resolvePrimaryChatAskClass(isMutation)
+func resolveChatAskContract(defaultAgentTarget string, isMutation bool, agentResult chatAgentResult) protocol.AskContract {
+	class := resolveChatAskClass(defaultAgentTarget, isMutation, agentResult)
 	contract, ok := protocol.AskContractForClass(class)
 	if !ok {
-		// The first slice only supports direct answers and governed mutation.
+		// Keep the direct/mutation fallback safe if the registry is incomplete.
+		if isMutation {
+			return protocol.AskContract{
+				AskClass:             protocol.AskClassGovernedMutation,
+				DefaultAgentTarget:   "soma",
+				DefaultExecutionMode: protocol.ModeProposal,
+				TemplateID:           protocol.TemplateChatToProposal,
+			}
+		}
 		return protocol.AskContract{
 			AskClass:             protocol.AskClassDirectAnswer,
-			DefaultAgentTarget:   "soma",
+			DefaultAgentTarget:   defaultAgentTarget,
 			DefaultExecutionMode: protocol.ModeAnswer,
 			TemplateID:           protocol.TemplateChatToAnswer,
 		}
@@ -893,7 +907,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	applyBrainProvenance(s, &chatPayload, agentResult)
 
-	askContract := resolvePrimaryChatAskContract(isMutation)
+	askContract := resolveChatAskContract("soma", isMutation, agentResult)
+	chatPayload.AskClass = askContract.AskClass
 	templateID := askContract.TemplateID
 	mode := askContract.DefaultExecutionMode
 
@@ -1171,7 +1186,8 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 
 	applyBrainProvenance(s, &chatPayload, agentResult)
 
-	askContract := resolvePrimaryChatAskContract(isMutation)
+	askContract := resolveChatAskContract("specialist", isMutation, agentResult)
+	chatPayload.AskClass = askContract.AskClass
 	templateID := askContract.TemplateID
 	mode := askContract.DefaultExecutionMode
 

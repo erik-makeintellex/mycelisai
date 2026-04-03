@@ -66,6 +66,17 @@ const STARTER_PROMPTS = [
     "Create an artifact",
 ] as const;
 
+const ASK_CLASS_BADGES: Record<string, { label: string; tone: string }> = {
+    governed_artifact: {
+        label: "Artifact result",
+        tone: "bg-cortex-primary/10 text-cortex-primary border-cortex-primary/20",
+    },
+    specialist_consultation: {
+        label: "Specialist support",
+        tone: "bg-cortex-warning/10 text-cortex-warning border-cortex-warning/20",
+    },
+};
+
 function artifactIcon(type: string) {
     switch (type) {
         case "code":
@@ -83,6 +94,11 @@ function artifactIcon(type: string) {
         default:
             return File;
     }
+}
+
+function askClassBadge(askClass?: ChatMessage["ask_class"]) {
+    if (!askClass) return null;
+    return ASK_CLASS_BADGES[askClass] ?? null;
 }
 
 // ── Copy Button ──────────────────────────────────────────────
@@ -638,6 +654,14 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                                     MODE_LABELS[msg.mode]?.color ?? 'text-cortex-text-muted'
                                 }`}>
                                     {MODE_LABELS[msg.mode]?.label ?? msg.mode}
+                                </span>
+                            </>
+                        )}
+                        {askClassBadge(msg.ask_class) && (
+                            <>
+                                <span className="text-[7px] text-cortex-text-muted">&bull;</span>
+                                <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${askClassBadge(msg.ask_class)?.tone}`}>
+                                    {askClassBadge(msg.ask_class)?.label}
                                 </span>
                             </>
                         )}

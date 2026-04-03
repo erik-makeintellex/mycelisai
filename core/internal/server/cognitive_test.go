@@ -381,6 +381,126 @@ func TestHandleChat_RetriesUnexpectedMutationForReadOnlyPrompt(t *testing.T) {
 	}
 }
 
+func TestHandleChat_ClassifiesArtifactAnswerAskClass(t *testing.T) {
+	wireNATS := withNATS(t)
+	s := newTestServer(wireNATS)
+	s.Cognitive = &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"mock": cognitiveTestProvider{},
+		},
+	}
+
+	subject := "swarm.council.admin.request"
+	_, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
+		resp, _ := json.Marshal(map[string]any{
+			"text": "I created a deliverable for review.",
+			"artifacts": []map[string]any{
+				{"type": "document", "title": "Creative Brief", "content": "# Brief"},
+			},
+		})
+		msg.Respond(resp)
+	})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := s.NC.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Create a brief for this launch."}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp protocol.APIResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	data, _ := json.Marshal(resp.Data)
+	var envelope protocol.CTSEnvelope
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		t.Fatalf("decode envelope: %v", err)
+	}
+	var payload protocol.ChatResponsePayload
+	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.AskClass != protocol.AskClassGovernedArtifact {
+		t.Fatalf("payload ask class = %q, want %q", payload.AskClass, protocol.AskClassGovernedArtifact)
+	}
+}
+
+func TestHandleChat_ClassifiesConsultedAnswerAskClass(t *testing.T) {
+	wireNATS := withNATS(t)
+	s := newTestServer(wireNATS)
+	s.Cognitive = &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"mock": cognitiveTestProvider{},
+		},
+	}
+
+	subject := "swarm.council.admin.request"
+	_, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
+		resp, _ := json.Marshal(map[string]any{
+			"text": "The architect reviewed the plan and here is the recommendation.",
+			"consultations": []map[string]any{
+				{"member": "council-architect", "summary": "Recommend the safer route."},
+			},
+		})
+		msg.Respond(resp)
+	})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := s.NC.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Review the architecture tradeoffs."}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp protocol.APIResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	data, _ := json.Marshal(resp.Data)
+	var envelope protocol.CTSEnvelope
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		t.Fatalf("decode envelope: %v", err)
+	}
+	var payload protocol.ChatResponsePayload
+	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.AskClass != protocol.AskClassSpecialist {
+		t.Fatalf("payload ask class = %q, want %q", payload.AskClass, protocol.AskClassSpecialist)
+	}
+}
+
 func TestHandleChat_BlocksUnexpectedMutationForReadOnlyPromptAfterRetry(t *testing.T) {
 	wireNATS := withNATS(t)
 	s := newTestServer(wireNATS)
@@ -614,8 +734,8 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 	}
 }
 
-func TestResolvePrimaryChatAskContract(t *testing.T) {
-	direct := resolvePrimaryChatAskContract(false)
+func TestResolveChatAskContract(t *testing.T) {
+	direct := resolveChatAskContract("soma", false, chatAgentResult{})
 	if direct.AskClass != protocol.AskClassDirectAnswer {
 		t.Fatalf("direct ask class = %q, want %q", direct.AskClass, protocol.AskClassDirectAnswer)
 	}
@@ -626,7 +746,32 @@ func TestResolvePrimaryChatAskContract(t *testing.T) {
 		t.Fatalf("direct mode = %q, want %q", direct.DefaultExecutionMode, protocol.ModeAnswer)
 	}
 
-	mutation := resolvePrimaryChatAskContract(true)
+	artifact := resolveChatAskContract("soma", false, chatAgentResult{
+		Artifacts: []protocol.ChatArtifactRef{{Type: "document", Title: "Brief"}},
+	})
+	if artifact.AskClass != protocol.AskClassGovernedArtifact {
+		t.Fatalf("artifact ask class = %q, want %q", artifact.AskClass, protocol.AskClassGovernedArtifact)
+	}
+	if artifact.DefaultExecutionMode != protocol.ModeAnswer {
+		t.Fatalf("artifact mode = %q, want %q", artifact.DefaultExecutionMode, protocol.ModeAnswer)
+	}
+
+	specialist := resolveChatAskContract("specialist", false, chatAgentResult{})
+	if specialist.AskClass != protocol.AskClassSpecialist {
+		t.Fatalf("specialist ask class = %q, want %q", specialist.AskClass, protocol.AskClassSpecialist)
+	}
+	if specialist.DefaultAgentTarget != "specialist" {
+		t.Fatalf("specialist default target = %q, want specialist", specialist.DefaultAgentTarget)
+	}
+
+	consulted := resolveChatAskContract("soma", false, chatAgentResult{
+		Consultations: []protocol.ConsultationEntry{{Member: "council-architect", Summary: "Reviewed the plan."}},
+	})
+	if consulted.AskClass != protocol.AskClassSpecialist {
+		t.Fatalf("consulted ask class = %q, want %q", consulted.AskClass, protocol.AskClassSpecialist)
+	}
+
+	mutation := resolveChatAskContract("soma", true, chatAgentResult{})
 	if mutation.AskClass != protocol.AskClassGovernedMutation {
 		t.Fatalf("mutation ask class = %q, want %q", mutation.AskClass, protocol.AskClassGovernedMutation)
 	}

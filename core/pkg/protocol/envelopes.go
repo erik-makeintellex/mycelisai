@@ -139,6 +139,7 @@ type ConsultationEntry struct {
 // proposals, consultations, and rich artifacts together.
 type ChatResponsePayload struct {
 	Text          string              `json:"text"`
+	AskClass      AskClass            `json:"ask_class,omitempty"`
 	Consultations []ConsultationEntry `json:"consultations,omitempty"`
 	ToolsUsed     []string            `json:"tools_used,omitempty"`
 	Artifacts     []ChatArtifactRef   `json:"artifacts,omitempty"`
