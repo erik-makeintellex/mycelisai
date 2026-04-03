@@ -11,7 +11,7 @@ function resolveBackendWorkspaceRoots() {
     const configuredRoot =
         process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT;
     if (configuredRoot && configuredRoot.trim().length > 0) {
-        return [path.resolve(configuredRoot)];
+        return [path.isAbsolute(configuredRoot) ? configuredRoot : path.join(repoRoot, configuredRoot)];
     }
 
     return [
