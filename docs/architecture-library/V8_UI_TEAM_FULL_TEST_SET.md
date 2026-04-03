@@ -266,6 +266,7 @@ Action:
 - ask for a large durable output such as a JSON file or wide data export
 - ask for one collaboration-heavy request where Soma may use specialists/models if policy allows
 - ask for one media or richer generated-content request that should return either a readable inline result or a clearly referenced governed artifact
+- repeat one artifact-bearing ask and one specialist-bearing ask from `/organizations/[id]` so the default organization workspace proves the same visible output cues as the standalone chat lane
 
 Expected:
 
@@ -285,6 +286,7 @@ Evidence:
 
 - screenshot of each result
 - note whether posture matched the request
+- when run from the organization workspace, capture that the organization frame stays intact while `Artifact result` and `Specialist support` remain visible
 
 ### Workflow 8: Governed mutation proposal
 

@@ -194,6 +194,55 @@ const learningInsightsByOrganizationId: Record<string, Array<{
     "org-456": [],
 };
 
+const organizationChatPlaceholder = /Tell Soma what you want to plan, review, create, or execute/i;
+
+type ChatRequestBody = {
+    messages?: Array<{
+        role?: string;
+        content?: string;
+    }>;
+};
+
+type RouteResponse = {
+    status: number;
+    body: unknown;
+};
+
+function answerEnvelope(
+    text: string,
+    options?: {
+        askClass?: string;
+        consultations?: Array<{ member: string; summary: string }>;
+        artifacts?: Array<Record<string, unknown>>;
+    },
+): RouteResponse {
+    return {
+        status: 200,
+        body: {
+            ok: true,
+            data: {
+                meta: { source_node: "admin", timestamp: "2026-03-19T18:00:00Z" },
+                signal_type: "chat_response",
+                trust_score: 0.9,
+                template_id: "chat-to-answer",
+                mode: "answer",
+                payload: {
+                    text,
+                    ask_class: options?.askClass,
+                    consultations: options?.consultations ?? [],
+                    tools_used: [],
+                    artifacts: options?.artifacts ?? [],
+                },
+            },
+        },
+    };
+}
+
+function lastUserMessage(requestBody: ChatRequestBody): string {
+    const messages = Array.isArray(requestBody.messages) ? requestBody.messages : [];
+    return messages[messages.length - 1]?.content ?? "";
+}
+
 function applyOrganizationAIEngineToDepartments(home: typeof createdTemplateOrganization, profileId: string | undefined, summary: string) {
     return {
         ...home,
@@ -345,6 +394,12 @@ async function openCreatedOrganization(page: Page, organizationId: string) {
     await page.waitForLoadState("domcontentloaded");
 }
 
+async function sendOrganizationMessage(page: Page, content: string) {
+    const input = page.getByPlaceholder(organizationChatPlaceholder);
+    await input.fill(content);
+    await input.press("Enter");
+}
+
 async function expectNoForbiddenCopy(page: Page) {
     const workspaceText = await page.locator("body").innerText();
     expect(workspaceText).not.toContain("V8 Entry Flow");
@@ -383,6 +438,7 @@ async function mockOrganizationEntryApis(
         automationsById?: Record<string, unknown>;
         loopActivityById?: Record<string, unknown>;
         learningInsightsById?: Record<string, unknown>;
+        chatHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
     },
 ) {
     const {
@@ -407,6 +463,7 @@ async function mockOrganizationEntryApis(
         automationsById = automationsByOrganizationId,
         loopActivityById = recentActivityByOrganizationId,
         learningInsightsById = learningInsightsByOrganizationId,
+        chatHandler,
     } = options ?? {};
 
     const mutableHomeResponsesById = structuredClone(homeResponsesById);
@@ -529,6 +586,38 @@ async function mockOrganizationEntryApis(
                               "Review your organization setup",
                               "Choose the first priority",
                           ],
+                      },
+                  },
+              };
+
+        await route.fulfill({
+            status: response.status,
+            contentType: "application/json",
+            body: JSON.stringify(response.body),
+        });
+    });
+
+    await page.route("**/api/v1/chat", async (route) => {
+        const requestBody = route.request().postDataJSON() as Record<string, unknown>;
+        const response = chatHandler
+            ? chatHandler(requestBody)
+            : {
+                  status: 200,
+                  body: {
+                      ok: true,
+                      data: {
+                          meta: { source_node: "admin", timestamp: "2026-03-19T18:00:00Z" },
+                          signal_type: "chat_response",
+                          trust_score: 0.9,
+                          template_id: "chat-to-answer",
+                          mode: "answer",
+                          payload: {
+                              text: "Soma is ready to help inside this AI Organization.",
+                              ask_class: "direct_answer",
+                              consultations: [],
+                              tools_used: [],
+                              artifacts: [],
+                          },
                       },
                   },
               };
@@ -1286,6 +1375,59 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByLabel("Tell Soma what team or delivery lane you want to create")).toHaveValue("Help me choose the first priority for this launch.");
         await expect(page.getByText("Soma plan for Northstar Labs")).toBeVisible();
         await expect(page.getByText("You asked Soma to help with")).toBeVisible();
+    });
+
+    test("keeps ask-class output cues visible inside the organization workspace chat", async ({ page }) => {
+        await mockOrganizationEntryApis(page, {
+            organizations: [createdTemplateOrganization],
+            chatHandler: (requestBody) => {
+                const content = lastUserMessage(requestBody as ChatRequestBody);
+                if (/artifact/i.test(content)) {
+                    return answerEnvelope("I prepared a launch brief for review inside Northstar Labs.", {
+                        askClass: "governed_artifact",
+                        artifacts: [
+                            {
+                                id: "artifact-launch-brief",
+                                type: "document",
+                                title: "Launch brief",
+                                content_type: "text/markdown",
+                                content: "# Launch brief",
+                            },
+                        ],
+                    });
+                }
+
+                return answerEnvelope("The architect reviewed the tradeoffs and recommends the safer rollout path.", {
+                    askClass: "specialist_consultation",
+                    consultations: [
+                        {
+                            member: "council-architect",
+                            summary: "Recommend the safer rollout path.",
+                        },
+                    ],
+                });
+            },
+        });
+
+        await page.goto("/dashboard");
+        await page.waitForLoadState("domcontentloaded");
+        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await openCreatedOrganization(page, createdTemplateOrganization.id);
+
+        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
+        await expect(page.getByPlaceholder(organizationChatPlaceholder)).toBeVisible();
+
+        await sendOrganizationMessage(page, "Create an artifact brief for this launch.");
+        await expect(page.getByTestId("mission-chat").getByText("Artifact result")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByTestId("mission-chat").getByText("Launch brief").first()).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
+
+        await sendOrganizationMessage(page, "Get specialist advice on the architecture tradeoffs.");
+        await expect(page.getByTestId("mission-chat").getByText("Specialist support")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText(/Soma consulted/i)).toBeVisible();
+        await expect(page.getByTestId("mission-chat").getByText("Architect", { exact: true }).last()).toBeVisible();
+        await expect(page.getByText("AI Organization Home")).toBeVisible();
+        await expectNoForbiddenCopy(page);
     });
 
     test.skip("preserves organization context when a guided Soma action fails and then succeeds on retry", async ({ page }, testInfo) => {

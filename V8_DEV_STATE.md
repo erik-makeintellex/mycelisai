@@ -1,6 +1,6 @@
 # Mycelis V8 - Development State
 
-> Updated: 2026-04-02
+> Updated: 2026-04-03
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -138,6 +138,7 @@ Review summary:
 47. `COMPLETE` the compose-hosted live governed browser lane is green again: `interface/e2e/specs/soma-governance-live.spec.ts` now resolves `MYCELIS_BACKEND_WORKSPACE_ROOT` relative to the repo root instead of the `interface/` working directory, so the documented compose workspace path works for durable file-side-effect assertions, and `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts` passes end to end against the healthy compose stack.
 48. `COMPLETE` the next ask-class assertion slice is now wired across runtime and interface: the shared Go registry now covers `governed_artifact` and `specialist_consultation`, chat payloads now carry `ask_class` through the CTS/store contract, and Mission Control chat now marks artifact-bearing answers as `Artifact result` plus consulted answers as `Specialist support` so output class is no longer only implied by secondary details. Proof is green with `cd core; go test ./pkg/protocol ./internal/server -count=1`, `uv run inv core.test`, `cd interface; npx vitest run __tests__/store/useCortexStore.test.ts __tests__/dashboard/MissionControlChat.test.tsx --reporter=dot`, `cd interface; npx tsc --noEmit`, `uv run inv interface.test`, and `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`.
 49. `COMPLETE` browser-level ask-class proof is now green: the stable mocked browser suite now asserts visible `Artifact result` and `Specialist support` cues, while the live governed compose-backed suite now asserts returned `ask_class` values for direct-answer and governed-mutation responses so browser evidence covers output-class assertion, not only route and terminal mode. Proof is green with `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`, `uv run inv compose.up --build`, and `$env:MYCELIS_BACKEND_WORKSPACE_ROOT='workspace/docker-compose/data/workspace'; uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`.
+50. `COMPLETE` ask-class browser proof now extends into the guided organization workspace itself: `interface/e2e/specs/v8-organization-entry.spec.ts` now proves that `/organizations/[id]` keeps the organization frame intact while artifact-bearing asks show `Artifact result` with the inline artifact surface and specialist-shaped asks show `Specialist support` plus visible consultation trace. Proof is green with `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-organization-entry.spec.ts`, `cd interface; npx tsc --noEmit`, and `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`.
 
 ## Current Review (2026-03-29)
 
@@ -643,9 +644,9 @@ Evidence:
    - index any newly canonical doc in `interface/lib/docsManifest.ts` in the same slice
 7. `REQUIRED` keep all new validation checkpoints and release-shaping blocker transitions recorded here in `V8_DEV_STATE.md` as they happen, rather than leaving them only in chat history or commit messages.
 8. `NEXT` extend the same owner-scoped MCP configuration posture into any future MCP settings or toolset-management UI so current-group context stays explicit once those surfaces become operator-visible.
-9. `NEXT` begin Slice 2 of the ask-class / agent-type / output-contract assertion lane.
-   - extend the shared registry to the next bounded ask classes with visible trust impact
-   - add UI/store/browser proof for `ask class -> agent involvement -> output contract`
+9. `NEXT` continue Slice 2 of the ask-class / agent-type / output-contract assertion lane.
+   - extend browser proof from current guided organization chat into more artifact-heavy and specialist-heavy default-path requests
+   - decide whether `artifact_reference` needs stronger operator-facing summary framing in addition to the existing output-class cue
    - keep the current four terminal states stable while broadening assertion coverage
 
 
