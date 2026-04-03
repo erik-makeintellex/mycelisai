@@ -272,6 +272,7 @@ Expected:
 
 - short reviewable work stays inline
 - inline or durable artifact-returning answers visibly identify themselves as artifact-bearing output rather than looking like plain chat residue
+- artifact-bearing answers also summarize the returned output in plain operator language before the artifact cards
 - durable artifact requests may become proposals
 - low-risk collaboration is not blanket-blocked by approval theater
 - consultation-shaped answers visibly identify specialist involvement instead of hiding it only in secondary detail

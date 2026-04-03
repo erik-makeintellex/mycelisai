@@ -188,11 +188,12 @@ Current checkpoint:
 - the next browser-proof slice now asserts those cues in the stable mocked spec and asserts live `ask_class` payload values for direct-answer and governed-mutation paths in the compose-backed governed browser spec
 - stable and live browser proof for that browser slice are now green after rebuilding the compose runtime against the current Core image
 - the broader organization workspace browser proof now asserts the same artifact and specialist output-class cues inside `/organizations/[id]`, so ask-class evidence is no longer limited to the standalone governed-chat/browser lane
+- governed artifact answers now also have a bounded operator-facing summary contract in the default chat surface, so returned value is legible before the raw artifact cards
 
 Immediate next slice:
 
 - extend the same contract into more organization-default asks so browser proof covers not only output class but also visible artifact/result framing across richer guided workflows
-- decide whether `artifact_reference` should remain payload-only or also gain a stronger operator-facing summary contract in the store/UI layer
+- decide whether specialist-shaped answers also need a stronger default-visible outcome summary beyond the current badge plus consultation trace
 
 ### Phase 2: UI and Store Alignment
 

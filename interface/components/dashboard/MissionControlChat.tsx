@@ -101,6 +101,27 @@ function askClassBadge(askClass?: ChatMessage["ask_class"]) {
     return ASK_CLASS_BADGES[askClass] ?? null;
 }
 
+function artifactDisplayLabel(artifact: ChatArtifactRef): string {
+    const title = artifact.title?.trim();
+    if (title) return title;
+    return artifact.type ? `${artifact.type} artifact` : "artifact";
+}
+
+function artifactResultSummary(artifacts?: ChatArtifactRef[]): string | null {
+    if (!artifacts?.length) return null;
+
+    const labels = artifacts.map(artifactDisplayLabel);
+    if (labels.length === 1) {
+        return `Soma prepared 1 artifact for review: ${labels[0]}.`;
+    }
+
+    if (labels.length === 2) {
+        return `Soma prepared 2 artifacts for review: ${labels[0]} and ${labels[1]}.`;
+    }
+
+    return `Soma prepared ${labels.length} artifacts for review: ${labels[0]}, ${labels[1]}, and ${labels.length - 2} more.`;
+}
+
 // ── Copy Button ──────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
@@ -723,6 +744,17 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                 {/* Proposed action block for governed proposal messages */}
                 {!isUser && msg.proposal && (
                     <ProposedActionBlock message={msg} />
+                )}
+
+                {!isUser && artifactResultSummary(msg.artifacts) && (
+                    <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">
+                        <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-primary">
+                            Returned output
+                        </div>
+                        <p className="mt-1 text-sm text-cortex-text-main leading-6">
+                            {artifactResultSummary(msg.artifacts)}
+                        </p>
+                    </div>
                 )}
 
                 {/* Inline artifacts */}

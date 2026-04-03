@@ -409,6 +409,7 @@ test.describe("V8 UI testing agentry product contract", () => {
 
         await sendWorkspaceMessage(page, "Create an artifact for this launch.");
         await expect(page.getByText("Artifact result")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Soma prepared 1 artifact for review: Creative Brief.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByTestId("mission-chat").getByText("Creative Brief").first()).toBeVisible();
 
         await sendWorkspaceMessage(page, "Get specialist advice on the architecture tradeoffs.");

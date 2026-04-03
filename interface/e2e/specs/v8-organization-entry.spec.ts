@@ -1419,6 +1419,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await sendOrganizationMessage(page, "Create an artifact brief for this launch.");
         await expect(page.getByTestId("mission-chat").getByText("Artifact result")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText("Soma prepared 1 artifact for review: Launch brief.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByTestId("mission-chat").getByText("Launch brief").first()).toBeVisible();
         await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible();
 

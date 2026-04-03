@@ -295,6 +295,7 @@ describe('MissionControlChat', () => {
                 expect(screen.getByText('Creative Brief')).toBeDefined();
                 expect(screen.getByTitle('Save image to workspace/saved-media')).toBeDefined();
                 expect(screen.getByText('Artifact result')).toBeDefined();
+                expect(screen.getByText('Soma prepared 2 artifacts for review: Homepage Moodboard and Creative Brief.')).toBeDefined();
             });
         });
 
@@ -359,6 +360,7 @@ describe('MissionControlChat', () => {
             await waitFor(() => {
                 expect(screen.getByText('Soma prepared output for review below.')).toBeDefined();
                 expect(screen.getByText('System Snapshot')).toBeDefined();
+                expect(screen.getByText('Soma prepared 1 artifact for review: System Snapshot.')).toBeDefined();
             });
         });
 
