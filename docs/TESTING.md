@@ -13,6 +13,9 @@ Current validation contract:
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
 
+Canonical full-gate runbook:
+- use `docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md` when you need one ordered release-style testing pass across repo baseline, stable browser proof, live service/browser proof, and compose-aware runtime proof
+
 ## Target-Action Testing Matrix (Intent -> Manifestation)
 
 The same target actions defined in architecture docs must have matching test actions.

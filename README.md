@@ -17,6 +17,8 @@ Canonical ownership reminder:
 ## README TOC
 
 - [Fresh Agent Start Here](#fresh-agent-start-here)
+- [User Guidance](#user-guidance)
+- [Agent Guidance](#agent-guidance)
 - [What Mycelis Is](#what-mycelis-is)
 - [Final Production Architecture (V8.2)](#final-production-architecture-v82)
 - [Current Release Target (V8.1)](#current-release-target-v81)
@@ -29,6 +31,7 @@ Canonical ownership reminder:
 - [Command Contract](#command-contract)
 - [Development Contract](#development-contract)
 - [Playwright Contract](#playwright-contract)
+- [Full Testing Action Plan](#full-testing-action-plan)
 - [Development Workflow](#development-workflow)
 - [Documentation Responsibilities](#documentation-responsibilities)
 - [Status](#status)
@@ -51,9 +54,10 @@ Review these in order before touching code or planning state:
 12. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
 13. [Operations](docs/architecture/OPERATIONS.md)
 14. [Testing](docs/TESTING.md)
-15. [V8 Development State](V8_DEV_STATE.md)
-16. [V7 Development State (Historical)](V7_DEV_STATE.md)
-17. [Docs Manifest](interface/lib/docsManifest.ts)
+15. [V8 Full Testing Action Plan](docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md)
+16. [V8 Development State](V8_DEV_STATE.md)
+17. [V7 Development State (Historical)](V7_DEV_STATE.md)
+18. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent review rule:
 - README is the primary architecture inception document for active development.
@@ -74,6 +78,39 @@ Tasking note:
 - `uv run inv compose.up` and `uv run inv compose.migrate` follow the same compatibility posture for the supported home-runtime stack: they replay canonical forward migrations only when the compose `cortex` schema is not yet compatible with the current runtime, and otherwise keep the existing schema in place until you intentionally use `uv run inv compose.down --volumes` for a fresh rebuild
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, and point it at a host-reachable endpoint such as `http://host.docker.internal:11434`
+
+## User Guidance
+
+For someone using Mycelis rather than changing the codebase, start here:
+
+1. [Docs Navigation](docs/README.md)
+2. [Core Concepts](docs/user/core-concepts.md)
+3. [Using Soma Chat](docs/user/soma-chat.md)
+4. [Governance & Trust](docs/user/governance-trust.md)
+5. [Automations](docs/user/automations.md)
+6. [Resources](docs/user/resources.md)
+7. [Memory](docs/user/memory.md)
+8. [System Status & Recovery](docs/user/system-status-recovery.md)
+9. [Run Timeline](docs/user/run-timeline.md)
+
+Operator guidance rule:
+- user guidance should explain how to get value from Soma, organizations, approvals, artifacts, and settings without assuming architecture knowledge
+- the in-app `/docs` surface should expose the same canonical operator-facing documents through `interface/lib/docsManifest.ts`
+
+## Agent Guidance
+
+For someone implementing, reviewing, or testing Mycelis, use this authority order:
+
+1. [AGENTS.md](AGENTS.md)
+2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
+3. [V8 Development State](V8_DEV_STATE.md)
+4. [Testing Guide](docs/TESTING.md)
+5. [Operations](docs/architecture/OPERATIONS.md)
+6. [Docs Navigation](docs/README.md)
+
+Agent guidance rule:
+- agent/developer guidance should point contributors to current V8 authority and live implementation truth before historical V7 material
+- user guidance, agent guidance, and testing guidance should stay cross-linked but distinct so the product docs do not read like implementation notes and the implementation docs do not read like operator help
 
 ## What Mycelis Is
 
@@ -411,6 +448,17 @@ Documentation rule:
 - default release-candidate browser coverage is MVP-aligned; legacy V7 or raw-endpoint-only specs should stay outside the default gate unless a slice explicitly revives them
 - live-backend browser checks are still required when proxy/runtime contracts change
 - live service issues belong in the release story too: use `uv run inv ci.service-check` for running-stack verification and `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes service/runtime contracts
+
+## Full Testing Action Plan
+
+The canonical full-testing runbook is [V8 Full Testing Action Plan](docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md).
+
+Use it when you need one release-style pass that ties together:
+- repo baseline proof
+- stable browser workflow proof
+- live service/browser proof
+- compose-aware runtime proof when the home-runtime stack is part of the release story
+- documentation and state synchronization after the gate finishes
 
 ## Development Workflow
 

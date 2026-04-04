@@ -185,6 +185,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical review plan for separating direct asks, native team instantiation, and external workflow-contract instantiation such as n8n while proving target-output delivery",
             },
             {
+                slug: "v8-full-testing-action-plan",
+                label: "V8 Full Testing Action Plan",
+                path: "docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md",
+                description: "Canonical release-style testing runbook for repo baseline, stable browser proof, live governed-browser proof, compose-aware runtime proof, and final docs/state synchronization",
+            },
+            {
                 slug: "v8-ask-class-agent-output-plan",
                 label: "V8 Ask-Class Agent/Output Plan",
                 path: "docs/architecture-library/V8_ASK_CLASS_AGENT_TYPE_OUTPUT_CONTRACT_PLAN.md",

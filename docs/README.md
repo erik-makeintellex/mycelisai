@@ -1,8 +1,27 @@
 # Documentation
 
-Primary documentation entry points for active V8 work:
+Use this page as the clean navigation layer between user guidance, agent/developer guidance, testing guidance, and historical references.
+
+## User Guidance
+
+These are the best entry points for someone using Mycelis through the product:
+
+- **User Docs Home**: `./user/`
+- **Core Concepts**: `./user/core-concepts.md`
+- **Using Soma Chat**: `./user/soma-chat.md`
+- **Governance & Trust**: `./user/governance-trust.md`
+- **Automations**: `./user/automations.md`
+- **Resources**: `./user/resources.md`
+- **Memory**: `./user/memory.md`
+- **System Status & Recovery**: `./user/system-status-recovery.md`
+- **Run Timeline**: `./user/run-timeline.md`
+
+## Agent and Developer Guidance
+
+These are the active V8 authority surfaces for contributors changing or reviewing the repo:
 
 - **Repository Entry Point**: `../README.md`
+- **Repository Standards**: `../AGENTS.md`
 - **Active Development State**: `../V8_DEV_STATE.md`
 - **Architecture Library Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
@@ -10,12 +29,25 @@ Primary documentation entry points for active V8 work:
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - **V8.1 Living Organization Architecture**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 - **V8.2 Production Architecture Target**: `../v8-2.md`
-- **Testing Guide**: `./TESTING.md`
 - **Operations**: `./architecture/OPERATIONS.md`
+- **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
 - **Logging Standard**: `./logging.md`
-- **Repository Standards**: `../AGENTS.md`
+
+## Testing and Release Guidance
+
+Use these when the goal is verification, release proof, or workflow-complete validation:
+
+- **Testing Guide**: `./TESTING.md`
+- **V8 Full Testing Action Plan**: `./architecture-library/V8_FULL_TESTING_ACTION_PLAN.md`
+- **V8 UI Workflow Verification Plan**: `./architecture-library/V8_UI_WORKFLOW_VERIFICATION_PLAN.md`
+- **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
+- **V8 UI Testing Agentry Execution Runbook**: `./architecture-library/V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md`
+
+## Historical and Migration Inputs
 
 Migration inputs and historical references:
+
+Use these only when migration-era assumptions need cross-checking:
 
 - **Target Deliverable V7**: `./architecture-library/TARGET_DELIVERABLE_V7.md`
 - **System Architecture V7**: `./architecture-library/SYSTEM_ARCHITECTURE_V7.md`
@@ -39,7 +71,7 @@ Migration inputs and historical references:
 - **Agentry Template Marketplace + Custom Templating**: `./architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md`
 - **Archive Index (Historical / Non-authoritative)**: `./archive/README.md`
 
-Use this folder as the navigation layer for docs, but treat the following as the top detailed framework memory surfaces:
+Top detailed framework memory surfaces for active V8 work:
 1. `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 2. `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 3. `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
@@ -50,8 +82,8 @@ Use this folder as the navigation layer for docs, but treat the following as the
 8. `./architecture/OPERATIONS.md`
 9. `./architecture-library/SYSTEM_ARCHITECTURE_V7.md` when migration-era runtime assumptions need cross-checking
 
-User-facing guides live in `./user/`.
-Specialized implementation references remain under `./architecture/`, while the canonical planning library now lives under `./architecture-library/`.
-V7 docs remain migration inputs, but they should not displace the active V8 authority set in day-to-day development.
-The active grading/state scoreboard is `../V8_DEV_STATE.md` and the active bootstrap contract is `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
-Use `./archive/README.md` only for historical context that should not drive active implementation.
+Guidance rules:
+- user guidance should stay focused on using the product, not implementation internals
+- agent/developer guidance should point to active V8 authority before V7 migration material
+- testing guidance should make the expected release gate explicit instead of scattering it across multiple notes
+- `./archive/README.md` is historical context only and should not drive active implementation
