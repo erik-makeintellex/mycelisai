@@ -1,7 +1,7 @@
 # V8 Partner Demo Script
 
 > Status: ACTIVE
-> Last Updated: 2026-03-29
+> Last Updated: 2026-04-04
 > Owner: Demo Scenario Team
 > Supporting Teams: Product Narrative Team, Default Experience Team, Memory, Continuity, and Trust Team, Release and Ops Team
 > Source Plan: `V8_DEMO_PRODUCT_STRIKE_TEAM_PLAN.md`
@@ -34,6 +34,7 @@ In under ten minutes, the audience should understand:
 3. Mycelis can plan directly, then switch into governed action when risk or mutation appears.
 4. The product keeps visible structure, activity, and continuity.
 5. The platform has deeper retained power without making the default story overwhelming.
+6. Connected tools and web/external research are useful, governed, and inspectable.
 
 ---
 
@@ -206,7 +207,72 @@ Show:
 Success condition:
 - audience understands this is a product with continuity, not a stateless prompt loop
 
-## Step 8: Optional advanced reveal
+## Step 8: Connected tools and MCP capability expansion
+
+Route:
+- `/resources?tab=tools`
+
+Operator goal:
+- show how the platform grows beyond the initial agent without becoming an uncontrolled tool console
+
+Narration:
+- `Soma starts useful on its own, but Mycelis expands through governed connected tools. MCP is the input/output growth layer, not an unbounded backdoor.`
+
+Show:
+- `Connected Tools`
+- `Current Group MCP Config`
+- curated library posture
+- installed vs library separation
+- local-first install posture for current-group configuration
+- approval boundary messaging for entries that still require review
+
+Success condition:
+- audience understands that integrations are practical, governed, and additive to Soma
+
+## Step 9: Web research and context security
+
+Route:
+- `/resources?tab=exchange`
+- Soma workspace if the environment is prepared for the live research ask
+
+Operator goal:
+- prove that external/research capability can help the product without bypassing security posture
+
+Preferred live prompt:
+- `Using connected research tools, gather a short market note on AI organization workflow products and summarize the top three signals for Northstar Labs.`
+
+Narration:
+- `Web access is useful here, but it is not treated as unrestricted trust. External research lands with security meaning attached.`
+
+Show:
+- research-capable connected tool posture
+- exchange visibility for research-style outputs
+- trust / sensitivity / review posture on external outputs
+- capability-linked context such as `browser.research.results`, `bounded_external`, and `review required` when available
+
+Success condition:
+- audience sees that external context is usable and securable
+
+## Step 10: Policy and approval control reveal
+
+Route:
+- `/automations?tab=approvals`
+
+Operator goal:
+- show that governance is configurable and inspectable, not hidden or fixed
+
+Narration:
+- `Mycelis lets operators control where approvals, policy, and review posture actually apply instead of pretending all external or collaborative behavior is equally risky.`
+
+Show:
+- queue
+- policy
+- audit/activity visibility
+
+Success condition:
+- audience sees real control over capability and review posture
+
+## Step 11: Optional advanced reveal
 
 Only use this step if the audience wants proof of depth.
 
@@ -233,6 +299,9 @@ Primary governed-action prompt:
 
 Continuity follow-up prompt:
 - `What did you retain from the kickoff decision, and what is still temporary working context?`
+
+Connected-research prompt:
+- `Using connected research tools, gather a short market note on AI organization workflow products and summarize the top three signals for Northstar Labs.`
 
 ---
 
@@ -262,7 +331,7 @@ Narration:
 
 If the live environment degrades:
 - show Recent Activity and continuity
-- optionally use one advanced reveal to demonstrate retained depth
+- show Connected Tools and Exchange to demonstrate governed capability depth without depending on a fragile live research call
 - do not pivot into infrastructure debugging unless the audience asks
 
 ---
@@ -286,4 +355,5 @@ This script only passes if it makes clear that Mycelis is:
 - governed when acting
 - structurally deeper than a one-thread assistant
 - able to retain useful context over time
+- able to grow through connected tools and securable external research
 - backed by a broader platform that advanced users can grow into

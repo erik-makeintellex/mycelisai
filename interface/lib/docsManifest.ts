@@ -221,6 +221,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Retention map proving advanced power remains reachable while the default product story stays simple",
             },
             {
+                slug: "v8-mvp-investor-demo-governed-capability-plan",
+                label: "V8 MVP Investor Demo and Governed Capability Plan",
+                path: "docs/architecture-library/V8_MVP_INVESTOR_DEMO_AND_GOVERNED_CAPABILITY_PLAN.md",
+                description: "Canonical investor workflow plan for Soma-first value, governed execution, MCP-powered input/output, securable web research, and inspectable context-security controls",
+            },
+            {
                 slug: "v8-partner-demo-script",
                 label: "V8 Partner Demo Script",
                 path: "docs/architecture-library/V8_PARTNER_DEMO_SCRIPT.md",

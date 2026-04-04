@@ -1,6 +1,6 @@
 # Resources
 
-> Advanced-mode support surface for connected tools, workspace files, AI engine setup, and reusable role definitions.
+> Advanced-mode support surface for connected tools, managed exchange, workspace files, AI engine setup, and reusable role definitions.
 
 ---
 
@@ -13,6 +13,7 @@ Current tabs:
 | Tab | Purpose |
 |-----|---------|
 | Connected Tools | Installed MCP servers and tool capability visibility |
+| Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
@@ -46,6 +47,31 @@ Baseline status (V7):
 
 Key outcome:
 Operators should be able to determine "what the system can access" directly from this tab.
+
+Current posture:
+- curated library installs are the default path
+- local-first current-group configuration can install directly when policy allows
+- remote or higher-risk entries can return an explicit approval boundary instead of silently installing
+- `fetch`/research capability is how governed external context can be added without treating web access as unrestricted trust
+
+## Exchange
+
+Exchange is the inspectable context-security surface for advanced operators.
+
+What you can inspect:
+- normalized channels such as research/result outputs
+- active review threads
+- recent exchange items
+- trust and sensitivity posture on outputs
+
+Typical labels:
+- `sensitivity_class`
+- `trust_class`
+- `review_required`
+- capability-linked output context
+
+Key outcome:
+Operators should be able to answer "what entered the system, how trusted is it, and does it need review?" without reading raw logs.
 
 ---
 
@@ -84,5 +110,6 @@ Typical template fields:
 Use `Resources` to answer these operator questions quickly:
 1. Which AI engines are online?
 2. Which tools are accessible right now?
-3. Are workspace file operations available?
-4. Which role definitions are available for advanced workflow work?
+3. How is external or research context classified and reviewed?
+4. Are workspace file operations available?
+5. Which role definitions are available for advanced workflow work?

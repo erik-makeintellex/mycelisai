@@ -1,7 +1,7 @@
 # V8 Demo Product Execution Brief
 
 > Status: ACTIVE
-> Last Updated: 2026-03-29
+> Last Updated: 2026-04-04
 > Source Plan: `V8_DEMO_PRODUCT_STRIKE_TEAM_PLAN.md`
 > Purpose: Actuate the demo-product strike team with concrete first deliverables for product framing, feature preservation, demo flow, and UI verification.
 
@@ -215,6 +215,7 @@ These remain important platform capabilities, but they should stay out of the de
 - memory and continuity behavior
 - pgvector-backed reusable recall
 - tools, MCP, workspace file, and advanced resource access
+- securable web/external research through governed connected-tool posture
 - system diagnostics and advanced operator recovery
 
 ## Preservation rule by team

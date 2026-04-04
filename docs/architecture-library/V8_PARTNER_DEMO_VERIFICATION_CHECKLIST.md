@@ -1,7 +1,7 @@
 # V8 Partner Demo Verification Checklist
 
 > Status: ACTIVE
-> Last Updated: 2026-03-29
+> Last Updated: 2026-04-04
 > Owner: UI Testing Agentry Team
 > Supporting Teams: Demo Scenario Team, Release and Ops Team, Product Management / Delivery Coordination
 > Source Script: `V8_PARTNER_DEMO_SCRIPT.md`
@@ -170,7 +170,37 @@ Verify:
 Hard fail if:
 - the workflow ends without obvious value delivered or clearly referenced
 
-## 9. Operator settings legitimacy
+## 9. Connected tools and MCP legitimacy
+
+Surface:
+- `/resources?tab=tools`
+
+Verify:
+- Connected Tools is reachable in Advanced mode
+- MCP reads as governed capability expansion, not raw technical clutter
+- current-group local-first install posture is legible
+- approval-boundary messaging is visible for entries that still require review
+
+Hard fail if:
+- MCP only reads as developer plumbing
+- the product cannot explain why some capability can auto-allow while other entries require review
+
+## 10. Web research and context security
+
+Surface:
+- `/resources?tab=exchange`
+- Soma workspace if live research is part of the demo run
+
+Verify:
+- the demo can explain how research/web capability enters through governed tools
+- exchange or result surfaces show trust/sensitivity/review meaning for external outputs
+- the audience can see that external context is usable without being blindly trusted
+
+Hard fail if:
+- web/external capability is presented as unrestricted trust
+- research results have no visible security posture or inspectable boundary
+
+## 11. Operator settings legitimacy
 
 Surface:
 - `/settings`
@@ -184,7 +214,21 @@ Verify:
 Hard fail if:
 - a visible default-path control is not actually a working product feature
 
-## 10. Optional advanced reveal
+## 12. Policy and governance control visibility
+
+Surface:
+- `/automations?tab=approvals`
+
+Verify:
+- approvals, policy, and audit are reachable and legible
+- governance feels configurable and inspectable
+- the product can explain where review posture comes from
+
+Hard fail if:
+- governance is only described verbally and not shown
+- policy and audit feel disconnected from the actual governed workflow story
+
+## 13. Optional advanced reveal
 
 Surface:
 - `/memory`, `/resources`, or `/system`
@@ -207,6 +251,7 @@ Verify:
 - approval feels like control, not bureaucracy
 - cancel path feels safe
 - proposal wording supports trust quickly
+- connected tools and web research do not undermine the trust story
 
 ## Trust Check B: continuity sells long-term value
 
@@ -219,6 +264,13 @@ Verify:
 Verify:
 - the audience can see that the product has teams, specialists, reviews, and ongoing work behind Soma
 - the product does not collapse into one-thread assistant behavior
+
+## Trust Check D: external capability stays governable
+
+Verify:
+- MCP makes the platform feel more capable, not less safe
+- external/research outputs can be explained through trust, sensitivity, and review posture
+- the operator can explain why local-first current-group configuration may flow faster than remote/high-risk configuration
 
 ---
 
@@ -242,4 +294,5 @@ The partner demo lane is ready only if the team can say all of the following are
 2. governed execution is visible and reassuring
 3. the platform feels deeper than a simple assistant
 4. continuity makes the product feel stateful and valuable
-5. advanced power is preserved, not amputated for presentation
+5. MCP and web/external capability feel governed rather than hand-waved
+6. advanced power is preserved, not amputated for presentation
