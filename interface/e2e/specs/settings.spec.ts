@@ -28,21 +28,44 @@ test.describe('Settings Page (/settings)', () => {
         await expect(page.getByText(/Mission Profiles/i).first()).toBeVisible();
     });
 
+    test('People & Access keeps enterprise user management out of the base release path', async ({ page }) => {
+        await page.getByRole('button', { name: 'Open People & Access' }).click();
+        await expect(page.getByRole('tab', { name: 'People & Access', selected: true })).toBeVisible();
+        await expect(page.getByText('Base release layer')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Organization Access' })).toBeVisible();
+        await expect(page.getByText('Enterprise User Directory')).toBeVisible();
+        await expect(page.getByText(/intentionally kept out of the raw release workflow/i)).toBeVisible();
+        await expect(page.getByTestId('users-groups-section')).toBeVisible();
+        await expect(page.getByTestId('users-add-button')).toHaveCount(0);
+    });
+
     test('theme and assistant identity save and persist after reload', async ({ page }) => {
         const assistantInput = page.getByLabel('Assistant Name');
         const themeSelect = page.getByLabel('Theme');
         const saveButtons = page.getByRole('button', { name: 'Save' });
+        const themeSaveButton = saveButtons.nth(1);
+        await expect(assistantInput).toBeVisible();
+        await expect(themeSelect).toBeVisible();
         const originalAssistantName = (await assistantInput.inputValue()).trim();
         const originalTheme = await themeSelect.inputValue();
-        const updatedAssistantName = 'Atlas';
-        const updatedTheme = 'midnight-cortex';
+        const updatedAssistantName = originalAssistantName === 'Atlas' ? 'Soma Prime' : 'Atlas';
 
         await assistantInput.fill(updatedAssistantName);
         await saveButtons.nth(0).click();
         await expect(page.getByText('Saved').first()).toBeVisible();
 
-        await themeSelect.selectOption(updatedTheme);
-        await saveButtons.nth(1).click();
+        const themeCandidates = ['aero-light', 'midnight-cortex', 'system'] as const;
+        let updatedTheme = '';
+        for (const candidate of themeCandidates) {
+            await themeSelect.selectOption(candidate);
+            if (await themeSaveButton.isEnabled()) {
+                updatedTheme = candidate;
+                break;
+            }
+        }
+        expect(updatedTheme).not.toBe('');
+
+        await themeSaveButton.click();
         await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);
 
         await page.reload({ waitUntil: 'domcontentloaded' });
@@ -53,7 +76,9 @@ test.describe('Settings Page (/settings)', () => {
         await page.getByLabel('Assistant Name').fill(originalAssistantName);
         await saveButtons.nth(0).click();
         await page.getByLabel('Theme').selectOption(originalTheme);
-        await saveButtons.nth(1).click();
+        if (await themeSaveButton.isEnabled()) {
+            await themeSaveButton.click();
+        }
     });
 
     test('no bg-white leak on settings page', async ({ page }) => {

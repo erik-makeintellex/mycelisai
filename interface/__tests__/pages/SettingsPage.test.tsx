@@ -55,9 +55,39 @@ import SettingsPage from '@/app/(app)/settings/page';
 
 describe('Settings Page (app/settings/page.tsx)', () => {
     beforeEach(() => {
-        mockFetch.mockResolvedValue({
-            ok: true,
-            json: async () => ({}),
+        mockFetch.mockImplementation(async (input) => {
+            const url = String(input);
+            if (url.includes('/api/v1/user/me')) {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        data: {
+                            id: 'me-1',
+                            email: 'me@local',
+                            role: 'admin',
+                            name: 'Current User',
+                            settings: { access_management_tier: 'release' },
+                        },
+                    }),
+                } as Response;
+            }
+            if (url.includes('/api/v1/groups/monitor')) {
+                return {
+                    ok: true,
+                    json: async () => ({ ok: true, data: { status: 'idle', published_count: 0 } }),
+                } as Response;
+            }
+            if (url.includes('/api/v1/groups')) {
+                return {
+                    ok: true,
+                    json: async () => ({ ok: true, data: [] }),
+                } as Response;
+            }
+            return {
+                ok: true,
+                json: async () => ({}),
+            } as Response;
         });
         mockUpdateAssistantName.mockClear();
         mockUpdateTheme.mockClear();
@@ -133,6 +163,22 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Open Profile' }));
         });
         expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
+    });
+
+    it('keeps People & Access layered so base release does not expose enterprise user management by default', async () => {
+        await act(async () => {
+            render(<SettingsPage />);
+        });
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Open People & Access' }));
+        });
+
+        expect(screen.getByRole('tab', { name: 'People & Access' }).getAttribute('aria-current')).toBe('page');
+        expect(screen.getByText('Base release layer')).toBeDefined();
+        expect(screen.getByText('Enterprise User Directory')).toBeDefined();
+        expect(screen.getByText(/intentionally kept out of the raw release workflow/i)).toBeDefined();
+        expect(screen.queryByTestId('users-management-panel')).toBeNull();
     });
 
     it('saves the selected theme', async () => {

@@ -382,6 +382,19 @@ The workflow is complete only when:
 - the last meaningful result remains legible
 - the user does not have to reconstruct the workflow from scratch
 
+### Workflow J: Manage organization permissions without forcing enterprise IAM into the base release
+
+User goal:
+
+- keep organization access clear in the default product while still enabling enterprise user management where the deployment wants it
+
+The workflow is complete only when:
+
+- base release keeps People & Access centered on organization roles and collaboration groups
+- enterprise user-directory management stays layered instead of becoming the default release surface
+- owner access can manage the enterprise directory when that layer is enabled
+- non-owner enterprise roles do not silently inherit user-directory mutation control
+
 ## Verification Standard
 
 A test is not sufficient if it proves only:

@@ -191,6 +191,26 @@
   - theme saved, applied, and still selected after reload
   - guided setup framing remains intact while performing the workflow
 
+### 10. Layered organization permissions and enterprise user management
+
+- Route: `/settings`
+- Owners: `Stable Browser Owner`, `UX Reviewer`, `API Observer`
+- Expected calls:
+  - `GET /api/v1/user/me`
+  - `GET /api/v1/groups`
+  - `GET /api/v1/groups/monitor`
+  - optional enterprise owner proof may also exercise `POST /api/v1/user/settings` when the access layer is switched in a controlled test fixture
+- Expected UI:
+  - People & Access stays readable as an organization-access workflow, not a raw IAM console
+  - base release keeps visible role/access framing plus collaboration groups in the default path
+  - base release does not expose enterprise user-directory mutation controls by default
+  - enterprise access management can unlock the user-directory layer without replacing the organization-access layer
+  - enterprise non-owner roles do not receive directory mutation controls
+- Acceptance evidence:
+  - base-release proof shows `Base release layer`, organization access framing, collaboration groups, and no user-directory CRUD surface
+  - enterprise-owner proof shows directory controls only when the enterprise layer is enabled
+  - enterprise non-owner proof shows the directory layer as read-only or withheld rather than silently granting control
+
 ## Manual Trust Pass
 
 - Interrupt a streamed or active chat with refresh.

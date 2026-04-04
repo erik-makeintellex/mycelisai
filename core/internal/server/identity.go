@@ -33,14 +33,15 @@ type Team struct {
 
 func defaultUserSettings() map[string]any {
 	return map[string]any{
-		"theme":                 "aero-light",
-		"matrix_view":           "grid",
-		"assistant_name":        defaultAssistantName,
-		"role":                  "owner",
-		"cost_sensitivity":      "balanced",
-		"review_strictness":     "standard",
-		"automation_tolerance":  "balanced",
-		"escalation_preference": "ask",
+		"theme":                  "aero-light",
+		"matrix_view":            "grid",
+		"assistant_name":         defaultAssistantName,
+		"access_management_tier": "release",
+		"role":                   "owner",
+		"cost_sensitivity":       "balanced",
+		"review_strictness":      "standard",
+		"automation_tolerance":   "balanced",
+		"escalation_preference":  "ask",
 	}
 }
 
@@ -58,6 +59,15 @@ func normalizeAssistantName(v any) string {
 		name = string(runes[:48])
 	}
 	return name
+}
+
+func normalizeAccessManagementTier(v any) string {
+	switch strings.TrimSpace(strings.ToLower(fmt.Sprint(v))) {
+	case "enterprise":
+		return "enterprise"
+	default:
+		return "release"
+	}
 }
 
 func userSettingsPath() string {
@@ -95,6 +105,7 @@ func loadUserSettings() map[string]any {
 		settings["matrix_view"] = strings.TrimSpace(matrixView)
 	}
 	settings["assistant_name"] = normalizeAssistantName(raw["assistant_name"])
+	settings["access_management_tier"] = normalizeAccessManagementTier(raw["access_management_tier"])
 	if role, ok := raw["role"]; ok {
 		if normalized := normalizeGovernanceRole(fmt.Sprint(role)); normalized != "" {
 			settings["role"] = normalized
@@ -117,6 +128,9 @@ func mergeUserSettings(input map[string]any) map[string]any {
 	}
 	if _, hasAssistantName := input["assistant_name"]; hasAssistantName {
 		settings["assistant_name"] = normalizeAssistantName(input["assistant_name"])
+	}
+	if _, hasAccessManagementTier := input["access_management_tier"]; hasAccessManagementTier {
+		settings["access_management_tier"] = normalizeAccessManagementTier(input["access_management_tier"])
 	}
 	if _, hasRole := input["role"]; hasRole {
 		if normalized := normalizeGovernanceRole(fmt.Sprint(input["role"])); normalized != "" {

@@ -416,6 +416,38 @@ Evidence:
 - screenshot before reload
 - screenshot after reload
 
+### Workflow 12A: Layered organization permissions
+
+Surface:
+
+- `/settings`
+
+Action:
+
+- open `People & Access`
+- inspect the base-release access layer
+- verify collaboration groups remain visible
+- run one enterprise-layer proof with owner access
+- run one enterprise-layer proof with non-owner access
+
+Expected:
+
+- base release keeps People & Access centered on visible organization roles and collaboration groups
+- base release does not expose enterprise user-directory management by default
+- enterprise can add the user-directory layer without replacing the organization-access layer
+- enterprise owner can reach user-directory controls
+- enterprise operator/viewer does not receive user-directory mutation controls
+
+Terminal state:
+
+- `n/a`
+
+Evidence:
+
+- screenshot of base-release People & Access layer
+- screenshot of enterprise owner user-directory layer
+- screenshot of enterprise non-owner read-only or withheld directory layer
+
 ### Workflow 12B: AI Engine and Memory & Continuity inspectability
 
 Surface:

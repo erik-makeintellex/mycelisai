@@ -31,6 +31,9 @@ func TestHandleMe(t *testing.T) {
 	if settings["assistant_name"] != "Soma" {
 		t.Errorf("Expected assistant_name Soma, got %#v", settings["assistant_name"])
 	}
+	if settings["access_management_tier"] != "release" {
+		t.Errorf("Expected access_management_tier release, got %#v", settings["access_management_tier"])
+	}
 }
 
 func TestHandleMe_Unauthenticated(t *testing.T) {
@@ -69,6 +72,9 @@ func TestHandleUserSettings_GET(t *testing.T) {
 	if settings["assistant_name"] != "Soma" {
 		t.Errorf("Expected assistant_name Soma, got %#v", settings["assistant_name"])
 	}
+	if settings["access_management_tier"] != "release" {
+		t.Errorf("Expected access_management_tier release, got %#v", settings["access_management_tier"])
+	}
 }
 
 func TestHandleUpdateSettings(t *testing.T) {
@@ -103,6 +109,32 @@ func TestHandleUpdateSettings_AssistantNamePersists(t *testing.T) {
 	}
 	if settings["assistant_name"] != "Mycelis Prime" {
 		t.Errorf("Expected assistant_name Mycelis Prime, got %#v", settings["assistant_name"])
+	}
+}
+
+func TestHandleUpdateSettings_AccessManagementTierPersists(t *testing.T) {
+	s := newTestServer()
+	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
+
+	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"access_management_tier":"enterprise"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var settings map[string]any
+	assertJSON(t, rr, &settings)
+	if settings["access_management_tier"] != "enterprise" {
+		t.Fatalf("Expected access_management_tier enterprise, got %#v", settings["access_management_tier"])
+	}
+
+	me := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
+	assertStatus(t, me, http.StatusOK)
+
+	var user User
+	assertJSON(t, me, &user)
+	if err := json.Unmarshal(user.Settings, &settings); err != nil {
+		t.Fatalf("unmarshal settings: %v", err)
+	}
+	if settings["access_management_tier"] != "enterprise" {
+		t.Errorf("Expected access_management_tier enterprise from HandleMe, got %#v", settings["access_management_tier"])
 	}
 }
 
