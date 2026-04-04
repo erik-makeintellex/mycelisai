@@ -44,6 +44,10 @@ vi.mock('@/components/resources/ExchangeInspector', () => ({
     __esModule: true,
     default: () => <div data-testid="exchange-inspector">ExchangeInspector</div>,
 }));
+vi.mock('@/components/resources/DeploymentContextPanel', () => ({
+    __esModule: true,
+    default: () => <div data-testid="deployment-context-panel">DeploymentContextPanel</div>,
+}));
 vi.mock('@/components/catalogue/CataloguePage', () => ({
     __esModule: true,
     default: () => <div data-testid="catalogue-page">CataloguePage</div>,
@@ -82,6 +86,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
         await act(async () => { render(<ResourcesPage />); });
         expect(screen.getByText('Connected Tools')).toBeDefined();
         expect(screen.getByText('Exchange')).toBeDefined();
+        expect(screen.getByText('Deployment Context')).toBeDefined();
         expect(screen.getByText('Workspace Files')).toBeDefined();
         expect(screen.getByText('AI Engines')).toBeDefined();
         expect(screen.getByText('Role Library')).toBeDefined();
@@ -105,6 +110,14 @@ describe('Resources Page (V8.1 advanced support)', () => {
         await act(async () => { render(<ResourcesPage />); });
         await waitFor(() => {
             expect(screen.getByRole('button', { name: 'Exchange' }).className).toContain('border-cortex-primary');
+        });
+    });
+
+    it('deep-links to deployment context tab via search param', async () => {
+        mockSearchParams.set('tab', 'deployment-context');
+        await act(async () => { render(<ResourcesPage />); });
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: 'Deployment Context' }).className).toContain('border-cortex-primary');
         });
     });
 

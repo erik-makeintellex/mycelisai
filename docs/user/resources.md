@@ -1,6 +1,6 @@
 # Resources
 
-> Advanced-mode support surface for connected tools, managed exchange, workspace files, AI engine setup, and reusable role definitions.
+> Advanced-mode support surface for connected tools, deployment context intake, managed exchange, workspace files, AI engine setup, and reusable role definitions.
 
 ---
 
@@ -14,6 +14,7 @@ Current tabs:
 |-----|---------|
 | Connected Tools | Installed MCP servers and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
+| Deployment Context | Load governed customer context and approved company knowledge into a separate vector-backed context store for Soma |
 | Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
@@ -75,6 +76,31 @@ Operators should be able to answer "what entered the system, how trusted is it, 
 
 ---
 
+## Deployment Context
+
+Deployment Context is the governed intake surface for deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory.
+
+Typical inputs:
+- customer deployment notes
+- architecture briefs
+- provider and MCP constraints
+- security policies
+- curated external research or handoff documents
+- approved company-authored playbooks or guidance
+
+Operational behavior:
+- every load creates a durable document artifact plus vector-backed chunks in the governed context store
+- each entry carries `knowledge_class`, visibility, sensitivity, trust, and provenance metadata
+- `knowledge_class=customer_context` is for operator/customer-provided material
+- `knowledge_class=company_knowledge` is for approved company-authored guidance only
+- Soma, Council, and teams can recall this context during planning and answer generation without treating it as raw unrestricted web input
+- use `source_kind=web_research` or a stricter trust/sensitivity class when the content came from external sources
+
+Key outcome:
+Operators should be able to answer "what governed context did we intentionally load into Soma, which store did it enter, and under what trust boundary?" from one surface.
+
+---
+
 ## Workspace Files
 
 Workspace Files uses the `filesystem` MCP server directly from Resources.
@@ -111,5 +137,6 @@ Use `Resources` to answer these operator questions quickly:
 1. Which AI engines are online?
 2. Which tools are accessible right now?
 3. How is external or research context classified and reviewed?
-4. Are workspace file operations available?
-5. Which role definitions are available for advanced workflow work?
+4. What deployment knowledge has been intentionally loaded into long-term context?
+5. Are workspace file operations available?
+6. Which role definitions are available for advanced workflow work?

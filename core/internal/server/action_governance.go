@@ -239,6 +239,8 @@ func capabilityForPlannedTool(name string) string {
 		return "file_output"
 	case "generate_blueprint":
 		return "planning"
+	case "load_deployment_context", "remember", "summarize_conversation":
+		return "learning"
 	case "delegate":
 		return "review"
 	case "publish_signal", "broadcast":
@@ -248,11 +250,16 @@ func capabilityForPlannedTool(name string) string {
 	}
 }
 
-func capabilityRiskForTool(name string) string {
+func capabilityRiskForTool(name string, arguments map[string]any) string {
 	switch strings.TrimSpace(name) {
 	case "publish_signal", "broadcast":
 		return "high"
-	case "write_file", "delegate":
+	case "load_deployment_context":
+		if strings.TrimSpace(fmt.Sprint(arguments["knowledge_class"])) == "company_knowledge" {
+			return "high"
+		}
+		return "medium"
+	case "write_file", "delegate", "remember", "summarize_conversation":
 		return "medium"
 	default:
 		return "low"
@@ -268,6 +275,11 @@ func estimateActionCost(name string, arguments map[string]any) float64 {
 			return 0.75
 		}
 		return 0.35
+	case "load_deployment_context":
+		if content, ok := arguments["content"].(string); ok && len(content) > 2000 {
+			return 0.8
+		}
+		return 0.45
 	case "delegate":
 		return 0.6
 	case "generate_blueprint":
@@ -277,10 +289,17 @@ func estimateActionCost(name string, arguments map[string]any) float64 {
 	}
 }
 
-func externalDataUseForTool(name string) bool {
+func externalDataUseForTool(name string, arguments map[string]any) bool {
 	switch strings.TrimSpace(name) {
 	case "publish_signal", "broadcast":
 		return true
+	case "load_deployment_context":
+		switch strings.TrimSpace(fmt.Sprint(arguments["source_kind"])) {
+		case "web_research":
+			return true
+		default:
+			return false
+		}
 	default:
 		return false
 	}
@@ -311,9 +330,9 @@ func buildApprovalPolicy(profile userGovernanceProfile, planned []protocol.Plann
 				externalDataUse = externalDataUse || capability.Source == "mcp" || capability.Source == "api" || capability.Source == "node"
 			}
 		}
-		risk = maxRisk(risk, capabilityRiskForTool(item.Name))
+		risk = maxRisk(risk, capabilityRiskForTool(item.Name, item.Arguments))
 		estimatedCost += estimateActionCost(item.Name, item.Arguments)
-		externalDataUse = externalDataUse || externalDataUseForTool(item.Name)
+		externalDataUse = externalDataUse || externalDataUseForTool(item.Name, item.Arguments)
 	}
 
 	policy := &protocol.ApprovalPolicy{

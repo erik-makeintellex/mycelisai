@@ -243,6 +243,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Phase 5.3: RAG Memory & Sensory
 	mux.HandleFunc("GET /api/v1/memory/search", s.HandleMemorySearch)
 	mux.HandleFunc("GET /api/v1/memory/sitreps", s.HandleListSitReps)
+	mux.HandleFunc("/api/v1/memory/deployment-context", s.HandleDeploymentContext)
 	mux.HandleFunc("/api/v1/memory/temp", s.HandleTempMemory)
 	mux.HandleFunc("GET /api/v1/sensors", s.HandleSensors)
 	mux.HandleFunc("GET /api/v1/comms/providers", s.HandleCommsProviders)

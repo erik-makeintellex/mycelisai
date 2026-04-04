@@ -14,21 +14,25 @@ WARM  → Structured logs, SitReps, artifacts (recent history)
 COLD  → Semantic vector store (long-term, searchable by meaning)
 ```
 
-All three tiers are populated automatically as agents work. You don't need to manage them manually — but you can query, review, and store information directly.
+All three tiers are populated automatically as agents work. You can also intentionally load governed deployment knowledge through **Resources → Deployment Context** so Soma has durable architectural and policy context to reuse later without mixing it into ordinary remembered facts.
 
 ---
 
 ## Memory Classes
 
-Mycelis now treats memory as three different classes with different purposes:
+Mycelis now treats memory as four different classes with different purposes:
 
 - **Durable semantic memory**: reusable facts, decisions, SitReps, recipes, and intentionally promoted summaries. This is the pgvector-backed recall substrate.
+- **Customer context store**: operator- or customer-provided docs, notes, briefs, and research intentionally loaded into pgvector so Soma, Council, and teams can reason with deployment-specific requirements across future sessions.
+- **Company knowledge store**: approved company-authored guidance or playbooks that Soma or teams are explicitly allowed to treat as durable organizational reference.
 - **Temporary continuity**: restart-safe planning checkpoints and in-flight working context. This stays in temporary memory channels and does **not** automatically become long-term semantic memory.
 - **Trace and audit**: conversation turns, mission events, and operational review logs used for causality, inspection, and governance. These are review surfaces, not default semantic memory.
 
 Rule of thumb:
 
-- if it should be reusable later by meaning, promote it into durable memory
+- if it should be reusable later by meaning as a learned fact, promote it into durable memory
+- if it is customer-provided or deployment-shaping reference material, load it into the customer context store
+- if it is approved company-authored guidance, load it into the company knowledge store
 - if it is only useful for the current planning cycle, keep it in temporary continuity
 - if it exists to explain what happened, treat it as trace or audit
 
@@ -56,11 +60,22 @@ Each result card shows:
 
 Semantic search can also be scoped for teams and planning lanes through the API when a narrower recall boundary is required.
 
+Governed deployment knowledge is stored under dedicated vector types:
+
+- `customer_context` for operator- or customer-provided source material
+- `company_knowledge` for approved company-authored guidance
+
+That lets Soma, Council, and teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed.
+
 ---
 
 ## Storing a Memory
 
-Agents store memories automatically during runs (via the `remember` tool). You can also store directly from the Memory page:
+Agents store memories automatically during runs (via the `remember` tool). For larger operator-provided docs and reference material, use **Resources → Deployment Context** instead of treating them as small facts.
+
+Use the Memory page when you want to query what is already retained, or when a smaller deliberate fact/preference/promotion is the right tool.
+
+For general stored facts:
 
 1. Click **+ Store**
 2. Choose type: `fact`, `preference`, `goal`, or `observation`
@@ -116,12 +131,13 @@ The **Agent State** tab shows the last known state of each active agent:
 
 ```
 Agent calls remember() or store_artifact()
+or operator loads Deployment Context from Resources
     ↓
 Stored in PostgreSQL (log_entries + artifacts tables)
     ↓
 Embedded via nomic-embed-text → context_vectors (pgvector)
     ↓
-Available for semantic search by any agent or user
+Available for semantic search plus governed customer/company context recall
     ↓
 Archivist compresses raw logs into SitReps every 5 minutes
 ```
@@ -132,6 +148,7 @@ Important boundary:
 
 - ordinary chat continuity and draft planning do **not** automatically become durable semantic memory
 - they remain available through temporary continuity and trace surfaces until deliberately promoted
+- governed deployment knowledge does **not** become ordinary Soma memory; it stays in the separate customer/company context store unless deliberately reclassified through an approved workflow
 
 ---
 
@@ -141,3 +158,4 @@ Important boundary:
 - **Check artifacts before re-creating**: Agents and users often store work products here — search before asking Soma to write something from scratch
 - **SitReps as quick history**: The SitReps tab is faster than reading full run timelines when you just need a summary of what happened in a session
 - **Memory persists across sessions**: Everything stored here survives server restarts and is available in future sessions
+- **Use Deployment Context for larger briefs**: architecture docs, MCP constraints, web research summaries, customer requirements, and approved company rollout policies belong in the dedicated governed-context intake lane so provenance and security posture stay explicit
