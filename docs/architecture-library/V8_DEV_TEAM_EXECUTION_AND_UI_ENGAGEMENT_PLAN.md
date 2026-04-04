@@ -1,7 +1,7 @@
 # V8 Dev Team Execution and UI Engagement Plan
 
 > Status: ACTIVE
-> Last Updated: 2026-04-02
+> Last Updated: 2026-04-03
 > Owner: Product Management / Delivery Coordination
 > Purpose: Coordinate the dev team around the true-MVP finish push with explicit execution order, ownership, UI testing expectations, engagement-testing expectations, and committed-slice discipline.
 
@@ -18,6 +18,16 @@ The current challenge is coordinated finish work:
 - partner-demo and engagement testing must confirm that Mycelis feels worth paying for
 
 This plan exists so the dev team can execute those lanes in one order without drifting between runtime, UI, docs, and testing.
+
+## User Workflow Guardrail
+
+Execution must respect one additional product rule:
+
+- users define the delivery teams and working structure the way they want delivery to operate
+- Mycelis protects engine/governance boundaries, not ordinary content intent by default
+- MCP association should follow API/framework compatibility and current policy, not extra paternal friction
+
+Use `V8_USER_WORKFLOW_EXECUTION_AND_VERIFICATION_PLAN.md` whenever a slice touches workflow shape, team-definition posture, MCP usability, or the boundary between governed execution and ordinary user intent.
 
 ## Target Outcome
 

@@ -173,6 +173,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Cross-team execution plan for true-MVP delivery order, UI/browser proof, engagement testing, and committed-slice discipline",
             },
             {
+                slug: "v8-user-workflow-execution-verification-plan",
+                label: "V8 User Workflow Execution Plan",
+                path: "docs/architecture-library/V8_USER_WORKFLOW_EXECUTION_AND_VERIFICATION_PLAN.md",
+                description: "Canonical plan for user-shaped delivery workflows, MCP usability, outcome-based workflow proof, and engine-governed rather than intent-governed product behavior",
+            },
+            {
                 slug: "v8-ask-class-agent-output-plan",
                 label: "V8 Ask-Class Agent/Output Plan",
                 path: "docs/architecture-library/V8_ASK_CLASS_AGENT_TYPE_OUTPUT_CONTRACT_PLAN.md",

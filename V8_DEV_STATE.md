@@ -86,7 +86,7 @@ State reporting rule:
 - `COMPLETE`: delivered and accepted
 - `BLOCKED`: cannot advance until a dependency or defect is resolved
 
-## Current Review (2026-04-02)
+## Current Review (2026-04-03)
 
 Review summary:
 1. `ACTIVE` the approval and product-trust correction is now a first-class delivery lane: `docs/architecture-library/V8_APPROVAL_AND_PRODUCT_TRUST_STRIKE_TEAM_PLAN.md` defines the team structure, phase order, non-negotiable product rules, and acceptance gates for simplifying approval/auth-style interactions without flattening platform depth.
@@ -141,6 +141,7 @@ Review summary:
 50. `COMPLETE` ask-class browser proof now extends into the guided organization workspace itself: `interface/e2e/specs/v8-organization-entry.spec.ts` now proves that `/organizations/[id]` keeps the organization frame intact while artifact-bearing asks show `Artifact result` with the inline artifact surface and specialist-shaped asks show `Specialist support` plus visible consultation trace. Proof is green with `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-organization-entry.spec.ts`, `cd interface; npx tsc --noEmit`, and `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`.
 51. `COMPLETE` governed-artifact answers now lead with an operator-facing returned-output summary in the default chat surface: `MissionControlChat.tsx` derives a concise `Soma prepared ... for review` summary from returned artifact metadata, component proof asserts that summary for single- and multi-artifact answers, and both the stable workspace and guided organization browser suites now verify the summary alongside the existing `Artifact result` cue. Proof is green with `cd interface; npx vitest run __tests__/dashboard/MissionControlChat.test.tsx --reporter=dot`, `cd interface; npx tsc --noEmit`, `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`, `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-organization-entry.spec.ts`, and `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`.
 52. `COMPLETE` specialist-consultation answers now lead with a softer operator-facing specialist-context summary in the default chat surface: `MissionControlChat.tsx` derives a concise `Soma checked with ... while shaping this answer` summary from consultation metadata, component proof asserts that summary for the bounded specialist path, and both the stable workspace and guided organization browser suites now verify the summary alongside the existing `Specialist support` cue and consultation trace. Proof is green with `cd interface; npx vitest run __tests__/dashboard/MissionControlChat.test.tsx --reporter=dot`, `cd interface; npx tsc --noEmit`, `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`, `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-organization-entry.spec.ts`, and `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`.
+53. `ACTIVE` a canonical user-workflow execution lane is now opened in `docs/architecture-library/V8_USER_WORKFLOW_EXECUTION_AND_VERIFICATION_PLAN.md`: the team structure, execution waves, user-shaped delivery rule, MCP/API usability rule, and workflow-complete verification standard now explicitly state that Mycelis governs engine/execution boundaries rather than over-controlling ordinary content intent, team shape, or standards-compliant framework utilization.
 
 ## Current Review (2026-03-29)
 
@@ -650,5 +651,9 @@ Evidence:
    - extend browser proof from current guided organization chat into more artifact-heavy and specialist-heavy default-path requests
    - widen browser proof beyond the current targeted artifact and specialist examples into richer organization-default asks
    - keep the current four terminal states stable while broadening assertion coverage
+10. `NEXT` execute the workflow-complete verification lane from `V8_USER_WORKFLOW_EXECUTION_AND_VERIFICATION_PLAN.md`.
+   - map every primary user workflow to current automated coverage
+   - identify where tests prove only immediate interaction and tighten them to real workflow outcomes
+   - verify team-shaping and MCP-association paths against the user-shaped delivery and framework-usability rules
 
 
