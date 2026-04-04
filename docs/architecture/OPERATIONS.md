@@ -311,23 +311,26 @@ uv run inv compose.health
 
 This is the supported single-host runtime for home-lab and demo use when Kind/Kubernetes is unnecessary.
 
-### Kind / Kubernetes Local Development (3 terminals)
+### Kind / Kubernetes Local Development
 
 ```bash
 # Prerequisite (run once per reboot/reset):
 uv run inv k8s.up       # Kind/namespace -> Helm deploy -> PostgreSQL -> NATS -> Core API
 
-# Terminal 1: Infrastructure bridge
-uv run inv k8s.bridge    # Port-forward NATS, API, Postgres
+# Managed local bridge + backend + frontend
+uv run inv lifecycle.up --frontend
 
-# Terminal 2: Backend
-uv run inv core.run      # Go backend (foreground, local port 8081 by default)
+# Database bootstrap when needed
+uv run inv db.migrate
 
-# Terminal 3: Frontend
-uv run inv interface.dev # Next.js dev (Turbopack, port 3000)
+# Verification
+uv run inv lifecycle.status
+uv run inv lifecycle.health
 ```
 
 Open [http://localhost:3000](http://localhost:3000)
+
+Use `uv run inv k8s.bridge` only when you intentionally need a manual long-running port-forward outside the managed lifecycle path.
 
 ### First-Time Setup
 
@@ -339,18 +342,18 @@ cp .env.example .env
 # 2. Boot infrastructure in dependency order
 uv run inv k8s.up        # Kind + Helm + readiness gates (PostgreSQL -> NATS -> Core API)
 
-# 3. Open bridge (keep running)
-uv run inv k8s.bridge
+# 3. Install frontend deps (first time only)
+uv run inv interface.install  # First time only
 
-# 4. Initialize database
+# 4. Bring up managed local services
+uv run inv lifecycle.up --frontend
+
+# 5. Initialize database
 uv run inv db.migrate    # Apply canonical forward migrations if the schema is not yet runtime-compatible
 
-# 5. Start backend
-uv run inv core.run
-
-# 6. Start frontend
-uv run inv interface.install  # First time only
-uv run inv interface.dev
+# 6. Verify the stack
+uv run inv lifecycle.status
+uv run inv lifecycle.health
 ```
 
 ### Configure Cognitive Engine

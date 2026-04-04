@@ -418,7 +418,7 @@ uv run inv core.restart
 
 **Cause:** Running a dependency-heavy task outside the project invoke environment.
 
-**Fix:** Use `uv run inv` (uses project venv with all dependencies) or `.\.venv\Scripts\inv.exe`.
+**Fix:** Use `uv run inv` so the task runs inside the project-managed environment with the expected dependencies.
 
 ### "STACK UP FAILED: Core did not open its port in time"
 
