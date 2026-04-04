@@ -137,6 +137,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Strike-team plan for scoped pgvector memory, temporary planning continuity, and trace-clean memory boundaries",
             },
             {
+                slug: "v8-governed-deployment-context-rag-plan",
+                label: "V8 Governed Deployment Context Plan",
+                path: "docs/architecture-library/V8_GOVERNED_DEPLOYMENT_CONTEXT_AND_RAG_PLAN.md",
+                description: "Canonical plan for separate customer-context and company-knowledge stores, governed promotion, policy-bound web/MCP ingest, and release proof",
+            },
+            {
                 slug: "v8-content-generation-collaboration-plan",
                 label: "V8 Content Generation & Collaboration Plan",
                 path: "docs/architecture-library/V8_CONTENT_GENERATION_AND_COLLABORATION_STRIKE_TEAM_PLAN.md",

@@ -21,3 +21,21 @@ func TestBuildContext_IncludesMCPTranslationProcedure(t *testing.T) {
 		t.Fatalf("expected standardized team result bus in runtime context, got:\n%s", ctx)
 	}
 }
+
+func TestBuildContext_IncludesGovernedMemoryBoundaries(t *testing.T) {
+	r := NewInternalToolRegistry(InternalToolDeps{})
+	ctx := r.BuildContext("council-architect", "design-core", "architect", nil, nil, "review the customer deployment brief")
+
+	for _, expected := range []string{
+		"### Memory Boundaries",
+		"Soma memory",
+		"Customer context store",
+		"Company knowledge store",
+		"knowledge_class=customer_context",
+		"knowledge_class=company_knowledge",
+	} {
+		if !strings.Contains(ctx, expected) {
+			t.Fatalf("expected %q in runtime context, got:\n%s", expected, ctx)
+		}
+	}
+}
