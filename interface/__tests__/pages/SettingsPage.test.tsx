@@ -147,4 +147,17 @@ describe('Settings Page (app/settings/page.tsx)', () => {
 
         expect(mockUpdateTheme).toHaveBeenCalledWith('midnight-cortex');
     });
+
+    it('saves the assistant name from the guided profile path', async () => {
+        await act(async () => {
+            render(<SettingsPage />);
+        });
+
+        fireEvent.change(screen.getByLabelText('Assistant Name'), { target: { value: 'Atlas' } });
+        await act(async () => {
+            fireEvent.click(screen.getAllByRole('button', { name: 'Save' })[0]);
+        });
+
+        expect(mockUpdateAssistantName).toHaveBeenCalledWith('Atlas');
+    });
 });

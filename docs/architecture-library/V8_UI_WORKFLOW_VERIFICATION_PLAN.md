@@ -174,6 +174,23 @@
 - Acceptance evidence:
   - each route loads without broken navigation or hydration failures
 
+### 9. Settings persistence and guided-default integrity
+
+- Route: `/settings`
+- Owners: `Stable Browser Owner`, `UX Reviewer`, `API Observer`
+- Expected calls:
+  - `GET /api/v1/user/settings`
+  - `PUT /api/v1/user/settings`
+- Expected UI:
+  - settings still lead with a guided setup path instead of a raw admin panel
+  - assistant identity and theme can be updated from the default profile path
+  - saved values persist after reload
+  - advanced sections remain intentional follow-on surfaces rather than the default first step
+- Acceptance evidence:
+  - assistant name saved and visible again after reload
+  - theme saved, applied, and still selected after reload
+  - guided setup framing remains intact while performing the workflow
+
 ## Manual Trust Pass
 
 - Interrupt a streamed or active chat with refresh.

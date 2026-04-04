@@ -28,6 +28,34 @@ test.describe('Settings Page (/settings)', () => {
         await expect(page.getByText(/Mission Profiles/i).first()).toBeVisible();
     });
 
+    test('theme and assistant identity save and persist after reload', async ({ page }) => {
+        const assistantInput = page.getByLabel('Assistant Name');
+        const themeSelect = page.getByLabel('Theme');
+        const saveButtons = page.getByRole('button', { name: 'Save' });
+        const originalAssistantName = (await assistantInput.inputValue()).trim();
+        const originalTheme = await themeSelect.inputValue();
+        const updatedAssistantName = 'Atlas';
+        const updatedTheme = 'midnight-cortex';
+
+        await assistantInput.fill(updatedAssistantName);
+        await saveButtons.nth(0).click();
+        await expect(page.getByText('Saved').first()).toBeVisible();
+
+        await themeSelect.selectOption(updatedTheme);
+        await saveButtons.nth(1).click();
+        await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);
+
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(page.getByLabel('Assistant Name')).toHaveValue(updatedAssistantName);
+        await expect(page.getByLabel('Theme')).toHaveValue(updatedTheme);
+        await expect(page.locator('html')).toHaveAttribute('data-theme', updatedTheme);
+
+        await page.getByLabel('Assistant Name').fill(originalAssistantName);
+        await saveButtons.nth(0).click();
+        await page.getByLabel('Theme').selectOption(originalTheme);
+        await saveButtons.nth(1).click();
+    });
+
     test('no bg-white leak on settings page', async ({ page }) => {
         const body = await page.content();
         expect(body).not.toContain('bg-white');
