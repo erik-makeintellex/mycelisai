@@ -136,9 +136,20 @@ export interface ResponseContractUpdateRequest {
 }
 
 export type TeamLeadGuidedAction = "plan_next_steps" | "focus_first" | "review_setup";
+export type TeamLeadExecutionMode = "guided_review" | "native_team" | "external_workflow_contract";
 
 export interface TeamLeadGuidanceRequest {
     action: TeamLeadGuidedAction;
+    request_context?: string;
+}
+
+export interface TeamLeadExecutionContract {
+    execution_mode: TeamLeadExecutionMode;
+    owner_label: string;
+    summary: string;
+    team_name?: string;
+    external_target?: string;
+    target_outputs: string[];
 }
 
 export interface TeamLeadGuidanceResponse {
@@ -148,4 +159,5 @@ export interface TeamLeadGuidanceResponse {
     summary: string;
     priority_steps: string[];
     suggested_follow_ups: string[];
+    execution_contract?: TeamLeadExecutionContract;
 }

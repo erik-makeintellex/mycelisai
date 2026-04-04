@@ -1234,7 +1234,10 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByLabel("Tell Soma what team or delivery lane you want to create")).toBeVisible();
         await page.getByLabel("Tell Soma what team or delivery lane you want to create").fill("Help me choose the first priority for this launch.");
         await page.getByRole("button", { name: "Start team design" }).click();
-        expect(capturedActionBody).toEqual({ action: "focus_first" });
+        expect(capturedActionBody).toEqual({
+            action: "focus_first",
+            request_context: "Help me choose the first priority for this launch.",
+        });
         await expect(page.getByText("Soma plan for Northstar Labs")).toBeVisible();
         await expect(page.getByText("Help me choose the first priority for this launch.").last()).toBeVisible();
         await expect(page.getByText("Priority steps")).toBeVisible();
@@ -1375,6 +1378,117 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByLabel("Tell Soma what team or delivery lane you want to create")).toHaveValue("Help me choose the first priority for this launch.");
         await expect(page.getByText("Soma plan for Northstar Labs")).toBeVisible();
         await expect(page.getByText("You asked Soma to help with")).toBeVisible();
+    });
+
+    test("keeps native team output and external workflow contract paths visibly separated in team design", async ({ page }) => {
+        const capturedActionBodies: Record<string, unknown>[] = [];
+
+        await mockOrganizationEntryApis(page, {
+            organizations: [createdTemplateOrganization],
+            actionHandler: (requestBody) => {
+                capturedActionBodies.push(requestBody);
+                const requestContext = String(requestBody.request_context ?? "");
+
+                if (/n8n/i.test(requestContext)) {
+                    return {
+                        status: 200,
+                        body: {
+                            ok: true,
+                            data: {
+                                action: requestBody.action ?? "plan_next_steps",
+                                request_label: "Plan next steps for this organization",
+                                headline: "Soma plan for Northstar Labs",
+                                summary: "Soma is ready to keep the external workflow path clear for this organization.",
+                                priority_steps: [
+                                    "Confirm the workflow trigger and expected return shape.",
+                                    "Keep the external automation separate from native team execution.",
+                                ],
+                                suggested_follow_ups: [
+                                    "Review your organization setup",
+                                    "Choose the first priority",
+                                ],
+                                execution_contract: {
+                                    execution_mode: "external_workflow_contract",
+                                    owner_label: "External workflow contract",
+                                    external_target: "n8n workflow contract",
+                                    summary: "Use an external workflow contract here so Mycelis can invoke it cleanly and return a normalized result without treating it like a native team.",
+                                    target_outputs: [
+                                        "Normalized workflow result",
+                                        "Linked artifact or execution note",
+                                    ],
+                                },
+                            },
+                        },
+                    };
+                }
+
+                return {
+                    status: 200,
+                    body: {
+                        ok: true,
+                        data: {
+                            action: requestBody.action ?? "plan_next_steps",
+                            request_label: "Plan next steps for this organization",
+                            headline: "Soma plan for Northstar Labs",
+                            summary: "Soma is ready to shape a native creative delivery path for this organization.",
+                            priority_steps: [
+                                "Align the image goal with the organization purpose.",
+                                "Stand up the creative team inside the organization before generating output.",
+                            ],
+                            suggested_follow_ups: [
+                                "Review your organization setup",
+                                "Choose the first priority",
+                            ],
+                            execution_contract: {
+                                execution_mode: "native_team",
+                                owner_label: "Native Mycelis team",
+                                team_name: "Creative Delivery Team",
+                                summary: "Use a native creative team here so Soma can coordinate the work and return a reviewable image artifact inside the organization.",
+                                target_outputs: [
+                                    "Reviewable image artifact",
+                                    "Short concept note",
+                                ],
+                            },
+                        },
+                    },
+                };
+            },
+        });
+
+        await page.goto("/dashboard");
+        await page.waitForLoadState("domcontentloaded");
+        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await openCreatedOrganization(page, createdTemplateOrganization.id);
+
+        await page.getByRole("button", { name: "Create teams with Soma" }).click();
+        const prompt = page.getByLabel("Tell Soma what team or delivery lane you want to create");
+
+        await prompt.fill("Create a creative team to generate a launch hero image.");
+        await page.getByRole("button", { name: "Start team design" }).click();
+
+        await expect(page.getByText("Execution path")).toBeVisible();
+        await expect(page.getByText("Native Mycelis team").first()).toBeVisible();
+        await expect(page.getByText("Creative Delivery Team")).toBeVisible();
+        await expect(page.getByText("Reviewable image artifact", { exact: true })).toBeVisible();
+
+        await prompt.fill("Create an n8n workflow contract for inbound leads.");
+        await page.getByRole("button", { name: "Start team design" }).click();
+
+        await expect(page.getByText("External workflow contract").first()).toBeVisible();
+        await expect(page.getByText("n8n workflow contract", { exact: true })).toBeVisible();
+        await expect(page.getByText("Normalized workflow result", { exact: true })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
+
+        expect(capturedActionBodies).toEqual([
+            {
+                action: "plan_next_steps",
+                request_context: "Create a creative team to generate a launch hero image.",
+            },
+            {
+                action: "plan_next_steps",
+                request_context: "Create an n8n workflow contract for inbound leads.",
+            },
+        ]);
     });
 
     test("keeps ask-class output cues visible inside the organization workspace chat", async ({ page }) => {

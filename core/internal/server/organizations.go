@@ -140,7 +140,8 @@ type OrganizationCreateRequest struct {
 }
 
 type TeamLeadGuidanceRequest struct {
-	Action TeamLeadGuidedAction `json:"action"`
+	Action         TeamLeadGuidedAction `json:"action"`
+	RequestContext string               `json:"request_context,omitempty"`
 }
 
 type OrganizationAIEngineUpdateRequest struct {
@@ -167,12 +168,30 @@ type ResponseContractUpdateRequest struct {
 }
 
 type TeamLeadGuidanceResponse struct {
-	Action             TeamLeadGuidedAction `json:"action"`
-	RequestLabel       string               `json:"request_label"`
-	Headline           string               `json:"headline"`
-	Summary            string               `json:"summary"`
-	PrioritySteps      []string             `json:"priority_steps"`
-	SuggestedFollowUps []string             `json:"suggested_follow_ups"`
+	Action             TeamLeadGuidedAction       `json:"action"`
+	RequestLabel       string                     `json:"request_label"`
+	Headline           string                     `json:"headline"`
+	Summary            string                     `json:"summary"`
+	PrioritySteps      []string                   `json:"priority_steps"`
+	SuggestedFollowUps []string                   `json:"suggested_follow_ups"`
+	ExecutionContract  *TeamLeadExecutionContract `json:"execution_contract,omitempty"`
+}
+
+type TeamLeadExecutionMode string
+
+const (
+	TeamLeadExecutionModeGuidedReview             TeamLeadExecutionMode = "guided_review"
+	TeamLeadExecutionModeNativeTeam               TeamLeadExecutionMode = "native_team"
+	TeamLeadExecutionModeExternalWorkflowContract TeamLeadExecutionMode = "external_workflow_contract"
+)
+
+type TeamLeadExecutionContract struct {
+	ExecutionMode  TeamLeadExecutionMode `json:"execution_mode"`
+	OwnerLabel     string                `json:"owner_label"`
+	Summary        string                `json:"summary"`
+	TeamName       string                `json:"team_name,omitempty"`
+	ExternalTarget string                `json:"external_target,omitempty"`
+	TargetOutputs  []string              `json:"target_outputs"`
 }
 
 var organizationAIEngineProfiles = []organizationAIEngineProfile{
@@ -1140,7 +1159,7 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 		return
 	}
 
-	response, err := buildTeamLeadGuidance(home, req.Action)
+	response, err := buildTeamLeadGuidance(home, req.Action, req.RequestContext)
 	if err != nil {
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -1150,10 +1169,11 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(response))
 }
 
-func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAction) (TeamLeadGuidanceResponse, error) {
+func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAction, requestContext string) (TeamLeadGuidanceResponse, error) {
 	organizationName := safeOrganizationName(home.Name)
 	teamLeadLabel := safeTeamLeadLabel(home.TeamLeadLabel)
 	purposeText := safePurposeText(home.Purpose)
+	executionContract := buildTeamLeadExecutionContract(home, requestContext)
 
 	switch action {
 	case TeamLeadGuidedActionPlanNextSteps:
@@ -1173,6 +1193,7 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 				"What should I focus on first?",
 				templateSpecificSuggestion(home),
 			},
+			ExecutionContract: executionContract,
 		}, nil
 	case TeamLeadGuidedActionFocusFirst:
 		return TeamLeadGuidanceResponse{
@@ -1190,6 +1211,7 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 				"Review my organization setup",
 				"Review the Team Lead guidance before expanding into deeper structure.",
 			},
+			ExecutionContract: executionContract,
 		}, nil
 	case TeamLeadGuidedActionReviewSetup:
 		return TeamLeadGuidanceResponse{
@@ -1207,6 +1229,7 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 				"What should I focus on first?",
 				fmt.Sprintf("Review the %s summary and confirm the Team Lead has what it needs.", home.startingPointLabel()),
 			},
+			ExecutionContract: executionContract,
 		}, nil
 	default:
 		return TeamLeadGuidanceResponse{}, fmt.Errorf("action must be plan_next_steps, focus_first, or review_setup")
@@ -1239,6 +1262,69 @@ func firstFocusSummary(home OrganizationHomePayload) string {
 		return fmt.Sprintf("Start by using %s as the first working shape, then let the Team Lead confirm which part of the organization should lead.", home.TemplateName)
 	}
 	return fmt.Sprintf("Start by confirming the first outcome this AI Organization should deliver around %s, then let the Team Lead shape the initial structure around that goal.", safePurposeText(home.Purpose))
+}
+
+func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext string) *TeamLeadExecutionContract {
+	normalized := strings.TrimSpace(strings.ToLower(requestContext))
+	if normalized == "" {
+		return nil
+	}
+
+	if referencesExternalWorkflowContract(normalized) {
+		return &TeamLeadExecutionContract{
+			ExecutionMode:  TeamLeadExecutionModeExternalWorkflowContract,
+			OwnerLabel:     "External workflow contract",
+			ExternalTarget: externalWorkflowTarget(normalized),
+			Summary:        "This request is best handled as an external workflow contract so Mycelis can keep invocation posture, governance, and normalized result return clear without pretending the external graph is a native team.",
+			TargetOutputs: []string{
+				"Normalized workflow result",
+				"Linked artifact or execution note",
+			},
+		}
+	}
+
+	if referencesImageTeamOutput(normalized) {
+		return &TeamLeadExecutionContract{
+			ExecutionMode: TeamLeadExecutionModeNativeTeam,
+			OwnerLabel:    "Native Mycelis team",
+			TeamName:      "Creative Delivery Team",
+			Summary:       fmt.Sprintf("Use a bounded creative team inside %s so Soma can shape the work, route it through the right specialists, and return the generated image as a managed artifact.", safeOrganizationName(home.Name)),
+			TargetOutputs: []string{
+				"Reviewable image artifact",
+				"Short concept note",
+			},
+		}
+	}
+
+	return nil
+}
+
+func referencesImageTeamOutput(normalized string) bool {
+	return strings.Contains(normalized, "image") ||
+		strings.Contains(normalized, "hero art") ||
+		strings.Contains(normalized, "hero image") ||
+		strings.Contains(normalized, "visual") ||
+		strings.Contains(normalized, "illustration") ||
+		strings.Contains(normalized, "poster") ||
+		strings.Contains(normalized, "moodboard")
+}
+
+func referencesExternalWorkflowContract(normalized string) bool {
+	return strings.Contains(normalized, "n8n") ||
+		strings.Contains(normalized, "workflow contract") ||
+		strings.Contains(normalized, "external workflow") ||
+		strings.Contains(normalized, "comfyui")
+}
+
+func externalWorkflowTarget(normalized string) string {
+	switch {
+	case strings.Contains(normalized, "n8n"):
+		return "n8n workflow contract"
+	case strings.Contains(normalized, "comfyui"):
+		return "ComfyUI workflow contract"
+	default:
+		return "External workflow contract"
+	}
 }
 
 func templateSpecificSuggestion(home OrganizationHomePayload) string {

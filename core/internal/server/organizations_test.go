@@ -60,6 +60,15 @@ func withTemplateBundlesPath(path string) func(*AdminServer) {
 	}
 }
 
+func mustResolveStarterTemplate(t *testing.T, s *AdminServer, id string) *OrganizationTemplateSummary {
+	t.Helper()
+	template, err := s.resolveStarterTemplate(id)
+	if err != nil {
+		t.Fatalf("resolve starter template %s: %v", id, err)
+	}
+	return template
+}
+
 func TestHandleListTemplates_OrganizationStarters(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
 
@@ -184,6 +193,76 @@ func TestHandleCreateOrganization_FromTemplateAndGetHome(t *testing.T) {
 	steps, ok := actionData["priority_steps"].([]any)
 	if !ok || len(steps) == 0 {
 		t.Fatalf("expected priority steps, got %+v", actionData)
+	}
+}
+
+func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForImageRequests(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+		Name:       "Northstar Labs",
+		Purpose:    "Ship a focused AI engineering organization",
+		StartMode:  OrganizationStartModeTemplate,
+		TemplateID: "engineering-starter",
+	}, mustResolveStarterTemplate(t, s, "engineering-starter")))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"plan_next_steps","request_context":"Create a creative team to generate a launch hero image."}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object action payload, got %T", resp.Data)
+	}
+	executionContract, ok := data["execution_contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution contract, got %+v", data)
+	}
+	if executionContract["execution_mode"] != "native_team" {
+		t.Fatalf("expected native_team execution mode, got %+v", executionContract)
+	}
+	if executionContract["team_name"] != "Creative Delivery Team" {
+		t.Fatalf("expected creative team name, got %+v", executionContract)
+	}
+	outputs, ok := executionContract["target_outputs"].([]any)
+	if !ok || len(outputs) < 1 {
+		t.Fatalf("expected target outputs, got %+v", executionContract)
+	}
+}
+
+func TestHandleTeamLeadGuidedAction_AddsExternalWorkflowContractForN8NRequests(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+		Name:       "Northstar Labs",
+		Purpose:    "Ship a focused AI engineering organization",
+		StartMode:  OrganizationStartModeTemplate,
+		TemplateID: "engineering-starter",
+	}, mustResolveStarterTemplate(t, s, "engineering-starter")))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"plan_next_steps","request_context":"Create an n8n workflow contract for inbound leads."}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object action payload, got %T", resp.Data)
+	}
+	executionContract, ok := data["execution_contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution contract, got %+v", data)
+	}
+	if executionContract["execution_mode"] != "external_workflow_contract" {
+		t.Fatalf("expected external workflow execution mode, got %+v", executionContract)
+	}
+	if executionContract["external_target"] != "n8n workflow contract" {
+		t.Fatalf("expected n8n external target, got %+v", executionContract)
 	}
 }
 
@@ -1105,7 +1184,7 @@ func TestBuildTeamLeadGuidance_UsesReadableFallbacksForPartialHome(t *testing.T)
 			StartMode: OrganizationStartModeEmpty,
 			Status:    "ready",
 		},
-	}, TeamLeadGuidedActionPlanNextSteps)
+	}, TeamLeadGuidedActionPlanNextSteps, "")
 	if err != nil {
 		t.Fatalf("buildTeamLeadGuidance returned error: %v", err)
 	}

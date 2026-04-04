@@ -206,6 +206,25 @@ Do not blur:
 - single-turn content generation
 - long-running external workflow orchestration
 
+## Current Bounded Release Proof
+
+The current initial-release proof is intentionally narrower than the full V8.2 target:
+
+- guided organization team-design flows can now classify a request into a native Mycelis team path or an external workflow-contract path
+- the native managed-team path is currently proven through a bounded image-oriented planning workflow in the organization workspace
+- the external workflow path is currently proven as a clear `n8n`-style contract target with visible ownership separation in the same workflow lane
+
+What is proven now:
+
+- the operator can ask for a bounded image-generation team and see that Mycelis is treating it as a native team path
+- the operator can ask for an `n8n` workflow contract and see that Mycelis is treating it as an external contract path instead of a native team
+- both paths remain readable inside the organization workspace without collapsing into generic automation language
+
+What remains `NEXT`:
+
+- durable runtime activation/commit proof for native team instantiation beyond guided planning posture
+- runnable external workflow invocation plus normalized returned-result proof for the first supported external contract target
+
 ## Workflow Review Steps For Every Intent
 
 Every major user-intent path must be reviewed through the same sequence:

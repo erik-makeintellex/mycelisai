@@ -1,7 +1,7 @@
 # V8 UI Workflow Verification Plan
 
 > Status: ACTIVE
-> Last Updated: 2026-03-28
+> Last Updated: 2026-04-03
 > Purpose: Give the UI testing team a single release-verification plan grounded in the current V8 product surface, expected API calls, and terminal UI states.
 
 ## Current Release Read
@@ -216,15 +216,16 @@
 - Route: `/organizations/[id]`, advanced team-design surface as needed
 - Owners: `Stable Browser Owner`, `Live Backend Owner`, `API Observer`
 - Expected calls:
-  - `POST /api/v1/intent/negotiate`
-  - `POST /api/v1/intent/commit` when the team-instantiation path is confirmed
+  - current bounded release proof may begin with `POST /api/v1/organizations/{id}/workspace/actions`
+  - future deeper proof may extend into `POST /api/v1/intent/negotiate`
+  - `POST /api/v1/intent/commit` applies only when a real instantiation/activation confirmation path is present
   - artifact/result endpoints needed by the target output path
 - Expected UI:
   - the operator can understand that Mycelis is instantiating a native managed team
   - the target output stays explicit in the proposal or activation framing
   - the returned result stays legible as team-owned output rather than generic residue
 - Acceptance evidence:
-  - one bounded release-proof path where a managed team is instantiated for target output
+  - one bounded release-proof path where the team-design workflow makes native managed-team ownership explicit for the target output
   - preferred proof is image-generation delivery with visible artifact/result return
 
 ### 12. External workflow-contract instantiation
@@ -232,6 +233,7 @@
 - Route: `/organizations/[id]`, advanced integration/workflow surface as needed
 - Owners: `Stable Browser Owner`, `Live Backend Owner`, `API Observer`
 - Expected calls:
+  - current bounded release proof may begin with `POST /api/v1/organizations/{id}/workspace/actions`
   - contract-specific integration inspection or invocation route for the supported external workflow surface
   - normalized result/artifact route back into Mycelis
 - Expected UI:
@@ -239,7 +241,7 @@
   - governance, capability, and result posture stay visible
   - normalized output returns into Mycelis without blurring ownership
 - Acceptance evidence:
-  - one bounded contract-level proof for external workflow instantiation posture
+  - one bounded contract-level proof for external workflow instantiation posture in the guided organization workflow
   - when runnable proof exists, one normalized-result path captured as release evidence
 
 ## Manual Trust Pass

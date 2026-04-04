@@ -296,6 +296,7 @@ Action:
 
 - ask Soma to create or activate a bounded delivery team for a concrete target output
 - preferred release proof: ask for an image-generation team or equivalent bounded creative team and follow the path through returned output
+- current bounded release proof may begin in the guided organization team-design lane before deeper instantiation/activation wiring lands
 
 Expected:
 
@@ -319,6 +320,7 @@ Evidence:
 Action:
 
 - target an external workflow surface such as `n8n`, ComfyUI, or comparable supported service through the intended contract path
+- current bounded release proof may begin in the guided organization team-design lane before runnable invocation is available
 
 Expected:
 

@@ -284,6 +284,7 @@ Action:
 
 - submit one bounded request that should instantiate or activate a native managed team for target output
 - prefer one image-generation or other visible creative-output path when the current lane supports it
+- current release proof may start in the guided organization team-design lane so the execution path is visible before deeper commit wiring is exercised
 
 Expected:
 
@@ -302,6 +303,7 @@ Evidence:
 Action:
 
 - review one supported external workflow-contract path such as `n8n`, ComfyUI, or comparable service posture when available in the lane
+- current release proof may start in the guided organization team-design lane so the external contract target is visible even before runnable invocation exists
 
 Expected:
 

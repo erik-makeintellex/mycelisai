@@ -684,6 +684,63 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByRole("heading", { name: "Memory & Continuity" })).toBeDefined();
     }, 15000);
 
+    it("shows native team execution guidance for image-oriented team design requests", async () => {
+        setupOrganizationFetch({
+            actionHandler: (body) => {
+                expect(body).toEqual({
+                    action: "plan_next_steps",
+                    request_context: "Create a creative team to generate a launch hero image.",
+                });
+
+                return jsonResponse({
+                    ok: true,
+                    data: {
+                        action: "plan_next_steps",
+                        request_label: "Plan next steps for this organization",
+                        headline: "Team Lead plan for Northstar Labs",
+                        summary: "Soma is ready to shape a creative delivery path for Northstar Labs.",
+                        priority_steps: [
+                            "Align the first outcome with the AI Organization purpose.",
+                            "Use the first Department as the routing layer for work.",
+                        ],
+                        suggested_follow_ups: [
+                            "Review your organization setup",
+                            "Choose the first priority",
+                        ],
+                        execution_contract: {
+                            execution_mode: "native_team",
+                            owner_label: "Native Mycelis team",
+                            team_name: "Creative Delivery Team",
+                            summary: "Use a bounded creative team inside Northstar Labs so Soma can shape the work and return the generated image as a managed artifact.",
+                            target_outputs: [
+                                "Reviewable image artifact",
+                                "Short concept note",
+                            ],
+                        },
+                    },
+                });
+            },
+        });
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByText("Create teams with Soma")).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Create teams with Soma" }));
+        fireEvent.change(screen.getByLabelText("Tell Soma what team or delivery lane you want to create"), {
+            target: { value: "Create a creative team to generate a launch hero image." },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
+
+        expect(await screen.findByText("Execution path")).toBeDefined();
+        expect(screen.getAllByText("Native Mycelis team").length).toBeGreaterThan(0);
+        expect(screen.getByText("Creative Delivery Team")).toBeDefined();
+        expect(screen.getByText("Reviewable image artifact")).toBeDefined();
+        expect(screen.getByRole("heading", { name: /^Northstar Labs$/ })).toBeDefined();
+        expect(screen.getByText("AI Organization Home")).toBeDefined();
+    });
+
     it("preserves the organization context when a Soma action fails and then succeeds on retry", async () => {
         let attempt = 0;
         setupOrganizationFetch({

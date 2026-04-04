@@ -407,6 +407,7 @@ The workflow is complete only when:
 - the user can understand the target output the team is responsible for
 - the result comes back with visible lineage to the managed team
 - at least one bounded target-output proof exists for the release, preferably image generation
+- current bounded release proof may begin in the guided organization team-design lane before full runtime activation is exercised
 
 ### Workflow L: Instantiate an external workflow contract without blurring it into a native team
 
@@ -420,6 +421,7 @@ The workflow is complete only when:
 - governance and capability posture remain visible
 - returned result or artifact is normalized back into Mycelis cleanly
 - the release contract keeps this path separate from native team manifestation
+- current bounded release proof may begin with visible contract targeting in the guided organization team-design lane before runnable invocation exists
 
 ## Verification Standard
 

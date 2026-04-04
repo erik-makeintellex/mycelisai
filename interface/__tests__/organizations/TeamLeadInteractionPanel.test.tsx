@@ -119,7 +119,10 @@ describe("TeamLeadInteractionPanel", () => {
                 "/api/v1/organizations/org-123/workspace/actions",
                 expect.objectContaining({
                     method: "POST",
-                    body: JSON.stringify({ action: "focus_first" }),
+                    body: JSON.stringify({
+                        action: "focus_first",
+                        request_context: "Help me choose the first priority for this launch.",
+                    }),
                 }),
             );
         });
@@ -127,6 +130,111 @@ describe("TeamLeadInteractionPanel", () => {
         expect(await screen.findByText("You asked Soma to help with")).toBeDefined();
         expect(screen.getAllByText("Help me choose the first priority for this launch.")).toHaveLength(2);
         expect(screen.getByText("First focus for Northstar Labs")).toBeDefined();
+    });
+
+    it("renders a native team execution path for image-oriented team requests", async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            ok: true,
+            data: {
+                action: "plan_next_steps",
+                request_label: "Plan next steps for this organization",
+                headline: "Team Lead plan for Northstar Labs",
+                summary: "Team Lead recommends moving Northstar Labs into a focused first delivery loop.",
+                priority_steps: [
+                    "Align the first outcome with the AI Organization purpose.",
+                ],
+                suggested_follow_ups: [
+                    "Review your organization setup",
+                ],
+                execution_contract: {
+                    execution_mode: "native_team",
+                    owner_label: "Native Mycelis team",
+                    team_name: "Creative Delivery Team",
+                    summary: "Use a bounded creative team inside Northstar Labs so Soma can shape the work and return the generated image as a managed artifact.",
+                    target_outputs: [
+                        "Reviewable image artifact",
+                        "Short concept note",
+                    ],
+                },
+            },
+        }));
+
+        render(
+            <TeamLeadInteractionPanel
+                organizationId="org-123"
+                organizationName="Northstar Labs"
+                somaName="Soma for Northstar Labs"
+                teamLeadName="Team Lead for Northstar Labs"
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText("Tell Soma what team or delivery lane you want to create"), {
+            target: { value: "Create a creative team to generate a launch hero image." },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
+
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/v1/organizations/org-123/workspace/actions",
+                expect.objectContaining({
+                    body: JSON.stringify({
+                        action: "plan_next_steps",
+                        request_context: "Create a creative team to generate a launch hero image.",
+                    }),
+                }),
+            );
+        });
+
+        expect(await screen.findByText("Execution path")).toBeDefined();
+        expect(screen.getAllByText("Native Mycelis team").length).toBeGreaterThan(0);
+        expect(screen.getByText("Creative Delivery Team")).toBeDefined();
+        expect(screen.getByText("Reviewable image artifact")).toBeDefined();
+    });
+
+    it("renders an external workflow contract path without stripping the contract wording", async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            ok: true,
+            data: {
+                action: "plan_next_steps",
+                request_label: "Plan next steps for this organization",
+                headline: "Team Lead plan for Northstar Labs",
+                summary: "Team Lead recommends moving Northstar Labs into a focused first delivery loop.",
+                priority_steps: [
+                    "Align the first outcome with the AI Organization purpose.",
+                ],
+                suggested_follow_ups: [
+                    "Review your organization setup",
+                ],
+                execution_contract: {
+                    execution_mode: "external_workflow_contract",
+                    owner_label: "External workflow contract",
+                    external_target: "n8n workflow contract",
+                    summary: "This request is best handled as an external workflow contract so Mycelis can keep the result return clear.",
+                    target_outputs: [
+                        "Normalized workflow result",
+                        "Linked artifact or execution note",
+                    ],
+                },
+            },
+        }));
+
+        render(
+            <TeamLeadInteractionPanel
+                organizationId="org-123"
+                organizationName="Northstar Labs"
+                somaName="Soma for Northstar Labs"
+                teamLeadName="Team Lead for Northstar Labs"
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText("Tell Soma what team or delivery lane you want to create"), {
+            target: { value: "Create an n8n workflow contract for inbound leads." },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
+
+        expect((await screen.findAllByText("External workflow contract")).length).toBeGreaterThan(0);
+        expect(screen.getByText("n8n workflow contract")).toBeDefined();
+        expect(screen.getByText("Normalized workflow result")).toBeDefined();
     });
 
     it("lets Start with Soma run a quick strategy check even when the prompt is blank", async () => {

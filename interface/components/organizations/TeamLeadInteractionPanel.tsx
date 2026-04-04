@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, RefreshCcw } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
-import type { TeamLeadGuidanceRequest, TeamLeadGuidanceResponse, TeamLeadGuidedAction } from "@/lib/organizations";
+import type { TeamLeadExecutionContract, TeamLeadGuidanceRequest, TeamLeadGuidanceResponse, TeamLeadGuidedAction } from "@/lib/organizations";
 
 type RequestState = "idle" | "loading" | "ready" | "error";
 type PersistedWorkspaceState = {
@@ -152,6 +152,9 @@ export default function TeamLeadInteractionPanel({
         setRequestContext(contextLabel ?? null);
 
         const payload: TeamLeadGuidanceRequest = { action };
+        if (contextLabel && contextLabel.trim().length > 0) {
+            payload.request_context = contextLabel.trim();
+        }
         try {
             const response = await fetch(`/api/v1/organizations/${organizationId}/workspace/actions`, {
                 method: "POST",
@@ -170,7 +173,9 @@ export default function TeamLeadInteractionPanel({
                 requestLabel: normalized.request_label,
                 summary: normalized.summary,
                 teamsEngaged: [teamLeadName],
-                outputs: ["Team design guidance"],
+                outputs: normalized.execution_contract?.target_outputs?.length
+                    ? normalized.execution_contract.target_outputs
+                    : ["Team design guidance"],
                 timestamp: new Date().toISOString(),
             });
         } catch (err) {
@@ -348,6 +353,10 @@ export default function TeamLeadInteractionPanel({
                         </div>
 
                         <div>
+                            {guidance.execution_contract && <ExecutionContractCard contract={guidance.execution_contract} />}
+                        </div>
+
+                        <div>
                             <p className="text-sm font-medium text-cortex-text-main">Priority steps</p>
                             <div className="mt-3 space-y-2">
                                 {guidance.priority_steps.map((step) => (
@@ -396,6 +405,7 @@ function normalizeGuidanceResponse(
         somaName,
         teamLeadName,
     );
+    const executionContract = normalizeExecutionContract(payload?.execution_contract, somaName, teamLeadName);
 
     return {
         action,
@@ -404,6 +414,7 @@ function normalizeGuidanceResponse(
         summary,
         priority_steps: prioritySteps,
         suggested_follow_ups: suggestedFollowUps,
+        execution_contract: executionContract,
     };
 }
 
@@ -413,7 +424,7 @@ function defaultRequestLabel(action: TeamLeadGuidedAction) {
 
 function resolvePromptAction(prompt: string): TeamLeadGuidedAction {
     const normalized = prompt.trim().toLowerCase();
-    if (/(review|check|audit|inspect|understand|setup|structure|team)/i.test(normalized)) {
+    if (/(review|check|audit|inspect|understand|setup|structure)/i.test(normalized)) {
         return "review_setup";
     }
     if (/(first|priority|focus|start with|begin with|most important)/i.test(normalized)) {
@@ -462,6 +473,41 @@ function normalizeGuidanceList(value: unknown, fallback: string[], somaName: str
     return normalized.length > 0 ? normalized : fallback;
 }
 
+function normalizeExecutionContract(
+    value: unknown,
+    somaName: string,
+    teamLeadName: string,
+): TeamLeadGuidanceResponse["execution_contract"] {
+    if (!value || typeof value !== "object") {
+        return undefined;
+    }
+
+    const contract = value as Partial<TeamLeadExecutionContract>;
+    const executionMode = contract.execution_mode;
+    if (
+        executionMode !== "guided_review" &&
+        executionMode !== "native_team" &&
+        executionMode !== "external_workflow_contract"
+    ) {
+        return undefined;
+    }
+
+    const targetOutputs = Array.isArray(contract.target_outputs)
+        ? contract.target_outputs
+            .map((entry) => rewriteGuidanceText(sanitizeExecutionContractText(entry, ""), somaName, teamLeadName))
+            .filter((entry) => entry.length > 0)
+        : [];
+
+    return {
+        execution_mode: executionMode,
+        owner_label: rewriteGuidanceText(sanitizeExecutionContractText(contract.owner_label, "Execution path"), somaName, teamLeadName),
+        summary: rewriteGuidanceText(sanitizeExecutionContractText(contract.summary, "Soma has an execution path ready."), somaName, teamLeadName),
+        team_name: sanitizeExecutionContractText(contract.team_name, ""),
+        external_target: sanitizeExecutionContractText(contract.external_target, ""),
+        target_outputs: targetOutputs,
+    };
+}
+
 function rewriteGuidanceText(value: string, somaName: string, teamLeadName: string) {
     return value
         .replaceAll(teamLeadName, somaName)
@@ -479,6 +525,27 @@ function sanitizeGuidanceText(value: unknown, fallback: string) {
         .filter((line) => line.length > 0)
         .filter((line) => !/^(system|debug|trace|tool|agent_id)\s*:/i.test(line))
         .filter((line) => !containsForbiddenGuidanceCopy(line))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!normalized || normalized.startsWith("{") || normalized.startsWith("[")) {
+        return fallback;
+    }
+
+    return normalized;
+}
+
+function sanitizeExecutionContractText(value: unknown, fallback: string) {
+    if (typeof value !== "string") {
+        return fallback;
+    }
+
+    const normalized = value
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .filter((line) => !/^(system|debug|trace|tool|agent_id)\s*:/i.test(line))
         .join(" ")
         .replace(/\s+/g, " ")
         .trim();
@@ -515,6 +582,53 @@ function GuidanceRow({ children }: { children: React.ReactNode }) {
         <div className="flex items-start gap-3 rounded-2xl border border-cortex-border bg-cortex-surface/60 px-3 py-3 text-sm text-cortex-text-muted">
             <span className="mt-1 h-2 w-2 rounded-full bg-cortex-primary" />
             <span className="leading-6">{children}</span>
+        </div>
+    );
+}
+
+function ExecutionContractCard({ contract }: { contract: TeamLeadExecutionContract }) {
+    const isNativeTeam = contract.execution_mode === "native_team";
+    const title = isNativeTeam ? "Native Mycelis team" : contract.execution_mode === "external_workflow_contract"
+        ? "External workflow contract"
+        : "Guided execution path";
+
+    return (
+        <div className="rounded-2xl border border-cortex-primary/25 bg-cortex-primary/5 px-4 py-4">
+            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Execution path</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-cortex-primary/25 bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-primary">
+                    {title}
+                </span>
+                <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                    {contract.owner_label}
+                </span>
+                {contract.team_name ? (
+                    <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                        {contract.team_name}
+                    </span>
+                ) : null}
+                {contract.external_target ? (
+                    <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                        {contract.external_target}
+                    </span>
+                ) : null}
+            </div>
+            <p className="mt-3 text-sm leading-6 text-cortex-text-muted">{contract.summary}</p>
+            {contract.target_outputs.length > 0 ? (
+                <div className="mt-4">
+                    <p className="text-sm font-medium text-cortex-text-main">Target outputs</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {contract.target_outputs.map((output) => (
+                            <span
+                                key={output}
+                                className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-2 text-sm text-cortex-text-main"
+                            >
+                                {output}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }
