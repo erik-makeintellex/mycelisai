@@ -54,10 +54,11 @@ Review these in order before touching code or planning state:
 12. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
 13. [Operations](docs/architecture/OPERATIONS.md)
 14. [Testing](docs/TESTING.md)
-15. [V8 Full Testing Action Plan](docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md)
-16. [V8 Development State](V8_DEV_STATE.md)
-17. [V7 Development State (Historical)](V7_DEV_STATE.md)
-18. [Docs Manifest](interface/lib/docsManifest.ts)
+15. [Cognitive Architecture](docs/COGNITIVE_ARCHITECTURE.md)
+16. [V8 Full Testing Action Plan](docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md)
+17. [V8 Development State](V8_DEV_STATE.md)
+18. [V7 Development State (Historical)](V7_DEV_STATE.md)
+19. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent review rule:
 - README is the primary architecture inception document for active development.

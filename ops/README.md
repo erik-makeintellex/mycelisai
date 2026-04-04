@@ -3,6 +3,14 @@
 > **Language**: Python (Invoke)
 > **Path**: `ops/`
 
+## TOC
+
+- [Runner Contract](#runner-contract)
+- [Components](#components)
+- [Clean Run Discipline for Runtime and Integration Checks](#clean-run-discipline-for-runtime-and-integration-checks)
+- [Compiled Go Service Cleanup Before Tests](#compiled-go-service-cleanup-before-tests)
+- [Directives](#directives)
+
 ## Runner Contract
 
 - Real task execution uses `uv run inv <namespace>.<task>`.
@@ -10,7 +18,7 @@
 - Do not use bare `uvx inv ...`.
 - App-tied management logic stays in Python task modules; PowerShell is wrapper-only when the host needs it.
 
-## 🛠️ Components
+## Components
 This directory contains the logic for the **Service Release Standard 1.0**.
 
 ### Root `install` Task
@@ -103,6 +111,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Stop**: `uv run inv cognitive.stop`
 - **Status**: `uv run inv cognitive.status`
 - These are optional local helpers for vLLM/Diffusers experimentation, not part of the supported default Core + Interface runtime contract.
+- The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hosts; on Windows, use Ollama locally or point `core/config/cognitive.yaml` at a remote OpenAI-compatible vLLM server instead.
 
 ## Clean Run Discipline for Runtime and Integration Checks
 
@@ -151,7 +160,7 @@ Central architect sync path and utility task surfaces.
 - **Architecture Sync**: `uv run inv team.architecture-sync`
 - **Worktree Triage**: `uv run inv team.worktree-triage`
 
-## ⚡ Directives
+## Directives
 - **Never tag `latest`** for production.
 - **Always pinning** dependencies in `charts/`.
 - **Prefer repo-managed caches** under `workspace/tool-cache` for Invoke-driven work so local validation does not silently refill `C:`.

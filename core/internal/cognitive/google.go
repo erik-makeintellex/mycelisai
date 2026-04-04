@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 const (
@@ -102,15 +103,16 @@ func (g *GoogleAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 		return nil, fmt.Errorf("failed to marshal google request: %w", err)
 	}
 
-	// 2. Build URL (API Key is query param)
-	// https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=...
-	url := fmt.Sprintf("%s/%s:generateContent?key=%s", g.endpoint, g.model, g.apiKey)
+	// 2. Build URL and authenticate with the documented API-key header.
+	endpoint := strings.TrimRight(g.endpoint, "/")
+	url := fmt.Sprintf("%s/%s:generateContent", endpoint, g.model)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-goog-api-key", g.apiKey)
 
 	// 3. Execute
 	client := &http.Client{}

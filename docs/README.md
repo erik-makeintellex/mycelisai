@@ -2,6 +2,13 @@
 
 Use this page as the clean navigation layer between user guidance, agent/developer guidance, testing guidance, and historical references.
 
+## Docs TOC
+
+- [User Guidance](#user-guidance)
+- [Agent and Developer Guidance](#agent-and-developer-guidance)
+- [Testing and Release Guidance](#testing-and-release-guidance)
+- [Historical and Migration Inputs](#historical-and-migration-inputs)
+
 ## User Guidance
 
 These are the best entry points for someone using Mycelis through the product:

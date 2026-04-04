@@ -4,6 +4,18 @@
 >
 > **Related:** [Overview](OVERVIEW.md) | [Backend](BACKEND.md) | [Frontend](FRONTEND.md)
 
+## TOC
+
+- [I. Prerequisites](#i-prerequisites)
+- [II. Task Automation](#ii-task-automation)
+- [III. Development Workflow](#iii-development-workflow)
+- [IV. Configuration System](#iv-configuration-system)
+- [V. Testing Strategy](#v-testing-strategy)
+- [VI. CI/CD](#vi-cicd)
+- [VII. Deployment Architecture](#vii-deployment-architecture)
+- [VIII. Environment Gotchas](#viii-environment-gotchas)
+- [IX. Monitoring & Observability](#ix-monitoring--observability)
+
 ---
 
 ## I. Prerequisites
@@ -218,6 +230,7 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `uv run inv cognitive.status` | HTTP probes to check optional local vLLM + Media health |
 
 These tasks are not part of the supported default Core + Interface runtime path. The default `uv run inv install` path now targets the supported stack only; use `uv run inv install --optional-engines` or `uv run inv cognitive.install` when you explicitly want local engine helpers.
+The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hosts; on Windows, keep Ollama local or point the `vllm` provider at a remote OpenAI-compatible server instead.
 
 ### Test Tasks (`ops/test.py`)
 
@@ -395,6 +408,17 @@ profiles:
 media:
   endpoint: http://127.0.0.1:8001/v1  # Stable Diffusion Diffusers
 ```
+
+Provider auth quick reference:
+- `openai` providers use Bearer auth and should normally use `api_key_env: OPENAI_API_KEY`
+- `anthropic` providers use `x-api-key` plus `anthropic-version` and should use `api_key_env: ANTHROPIC_API_KEY`
+- `google` providers use `x-goog-api-key` and should use `api_key_env: GEMINI_API_KEY`
+- `openai_compatible` providers share the OpenAI-compatible client path; Ollama can ignore the placeholder key, while vLLM can enforce it when started with `--api-key`
+
+Local engine defaults:
+- `ollama` -> `http://127.0.0.1:11434/v1`
+- `vllm` -> `http://127.0.0.1:8000/v1`
+- `lmstudio` -> `http://127.0.0.1:1234/v1`
 
 ### Governance Policy (`policy.yaml`)
 

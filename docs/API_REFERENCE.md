@@ -2,6 +2,11 @@
 
 > Back to [README](../README.md) | See also: [Swarm Operations](SWARM_OPERATIONS.md) | [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md)
 
+## API TOC
+
+- [Endpoints](#endpoints)
+- [Provider Auth Notes](#provider-auth-notes)
+
 ## Endpoints
 
 | Endpoint | Method | Description |
@@ -139,3 +144,19 @@
 | `/api/v1/organizations` | GET | List created AI Organization summaries for the entry flow |
 | `/api/v1/organizations` | POST | Create an AI Organization from template or empty start |
 | `/api/v1/organizations/{id}/home` | GET | Load the minimal AI Organization context shell |
+
+## Provider Auth Notes
+
+Provider inventory and auth contract:
+
+| Provider type | Typical provider IDs | Auth expectation | Config contract |
+| :--- | :--- | :--- | :--- |
+| `openai_compatible` | `ollama`, `vllm`, `lmstudio`, custom local gateways | `Authorization: Bearer <api_key>` when the upstream checks keys. Local tools such as Ollama can ignore the placeholder key while still requiring the client field. | `endpoint`, `model_id`, optional `api_key` or `api_key_env` |
+| `openai` | `production_gpt4` | `Authorization: Bearer $OPENAI_API_KEY` | `endpoint=https://api.openai.com/v1`, `api_key_env=OPENAI_API_KEY` |
+| `anthropic` | `production_claude` | `x-api-key: $ANTHROPIC_API_KEY` plus `anthropic-version` | `api_key_env=ANTHROPIC_API_KEY`, optional custom endpoint |
+| `google` | `production_gemini` | `x-goog-api-key: $GEMINI_API_KEY` | `api_key_env=GEMINI_API_KEY`, endpoint defaults to the Gemini `models` REST root |
+
+Implementation notes:
+- use `/api/v1/brains` and `/api/v1/cognitive/providers/{id}` to manage the provider inventory exposed in the product
+- provider secrets are write-only in API payloads; `api_key` and `api_key_env` never come back in provider reads
+- for local-model switching and profile routing, see [Local Dev Workflow](LOCAL_DEV_WORKFLOW.md) and [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md)

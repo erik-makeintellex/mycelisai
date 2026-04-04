@@ -9,6 +9,18 @@
 > **Lifecycle Teardown:** `uv run inv lifecycle.down` now uses bounded cleanup timeouts and waits for Core/Frontend ports to close before reporting success.
 > **Startup Diagnostics:** Background Core startup output is captured in `workspace/logs/core-startup.log`.
 
+## TOC
+
+- [Prerequisites](#prerequisites)
+- [Configuration Reference](#configuration-reference)
+- [First-Time Setup](#first-time-setup)
+- [Daily Startup Sequence](#daily-startup-sequence)
+- [Port Map](#port-map)
+- [Health Checks](#health-checks)
+- [Troubleshooting](#troubleshooting)
+- [Cognitive Engine Setup](#cognitive-engine-setup)
+- [Full Command Reference](#full-command-reference)
+
 ## Prerequisites
 
 | Tool | Version | Install | Purpose |
@@ -142,6 +154,27 @@ Runtime truth still follows:
 ```text
 Bundle -> Instantiated Organization -> Inheritance -> Routing
 ```
+
+Hosted-provider auth inventory:
+
+| Provider | Auth env | Runtime auth posture |
+| :--- | :--- | :--- |
+| OpenAI | `OPENAI_API_KEY` | Bearer auth against `https://api.openai.com/v1` |
+| Anthropic | `ANTHROPIC_API_KEY` | `x-api-key` plus Anthropic API version header |
+| Gemini | `GEMINI_API_KEY` | `x-goog-api-key` header against Gemini REST endpoints |
+
+Local-provider switching inventory:
+
+| Provider | Default endpoint | Default posture |
+| :--- | :--- | :--- |
+| Ollama | `http://127.0.0.1:11434/v1` | shipped default |
+| vLLM | `http://127.0.0.1:8000/v1` | optional local high-throughput server |
+| LM Studio | `http://127.0.0.1:1234/v1` | optional desktop GUI local server |
+
+If you change local engines:
+- keep `endpoint`, `model_id`, `enabled`, and profile routing aligned together
+- when using repo-local vLLM helpers, keep `cognitive/config/engine.yaml` and `core/config/cognitive.yaml` pointing at the same host, port, and API key
+- use `/settings` -> **AI Engines** for the product-facing inventory, or edit `core/config/cognitive.yaml` directly for file-backed local control
 
 ## Deployment Guidance By Host Architecture
 
@@ -493,6 +526,29 @@ uv run inv cognitive.llm        # Start on port 8000
 ```
 
 Then change profiles in `cognitive.yaml` to `"vllm"`.
+
+vLLM contract notes:
+- the repo-local helper starts the OpenAI-compatible server on `http://127.0.0.1:8000/v1`
+- the helper uses the API key from `cognitive/config/engine.yaml` (`mycelis-local` by default)
+- `core/config/cognitive.yaml` should keep the same key in the `vllm.api_key` field unless you change the helper config too
+- repo-local `cognitive.*` helpers are intended for supported Linux GPU hosts; on Windows, use Ollama locally or target a remote OpenAI-compatible vLLM endpoint instead
+
+Example switch:
+
+```yaml
+providers:
+  vllm:
+    type: "openai_compatible"
+    endpoint: "http://127.0.0.1:8000/v1"
+    model_id: "qwen2.5-coder"
+    api_key: "mycelis-local"
+    enabled: true
+
+profiles:
+  coder: "vllm"
+  architect: "vllm"
+  chat: "ollama"
+```
 
 ## Full Command Reference
 

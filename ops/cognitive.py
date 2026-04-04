@@ -1,4 +1,5 @@
 from invoke import task, Collection
+from invoke.exceptions import Exit
 from pathlib import Path
 import os
 
@@ -13,9 +14,25 @@ def _task_env(extra=None):
     return managed_cache_env(extra=extra)
 
 
+def _require_supported_local_engine_host():
+    if is_windows():
+        raise Exit(
+            "Optional local vLLM/Diffusers helpers are not supported on Windows hosts. "
+            "Use Ollama locally on Windows, or point core/config/cognitive.yaml at a remote "
+            "OpenAI-compatible vLLM endpoint from a supported Linux GPU host."
+        )
+
+
 def _load_engine_config():
     """Load the cognitive engine YAML configuration."""
-    import yaml
+    try:
+        import yaml
+    except ImportError as exc:
+        raise Exit(
+            "Optional cognitive helper dependencies are not installed. "
+            "Run `uv run inv cognitive.install` on a supported Linux GPU host, "
+            "or keep using Ollama / a remote OpenAI-compatible vLLM endpoint."
+        ) from exc
     with open(str(ENGINE_CONFIG)) as f:
         return yaml.safe_load(f)
 
@@ -23,6 +40,7 @@ def _load_engine_config():
 @task
 def install(c):
     """Install optional local cognitive engine dependencies via uv (vLLM + Diffusers)."""
+    _require_supported_local_engine_host()
     print("Installing optional Mycelis cognitive engine dependencies...")
     with c.cd(str(COGNITIVE_DIR)):
         c.run("uv sync", pty=not is_windows(), env=_task_env())
@@ -37,6 +55,7 @@ def llm(c):
     Serves the configured model with OpenAI-compatible API on the configured port.
     Uses AWQ quantization and respects GPU memory partitioning from engine.yaml.
     """
+    _require_supported_local_engine_host()
     cfg = _load_engine_config()
     text = cfg["text"]
 
@@ -79,6 +98,7 @@ def media(c):
 
     Serves an OpenAI-compatible /v1/images/generations endpoint.
     """
+    _require_supported_local_engine_host()
     cfg = _load_engine_config()
     media_cfg = cfg["media"]
 
@@ -106,6 +126,7 @@ def up(c):
     Launches both services. Use Ctrl+C to stop.
     For production, run `cognitive.llm` and `cognitive.media` in separate terminals.
     """
+    _require_supported_local_engine_host()
     import subprocess
     import sys
     import signal
@@ -192,6 +213,7 @@ def stop(c):
 @task
 def status(c):
     """Check the status of the optional local cognitive engine services."""
+    _require_supported_local_engine_host()
     import urllib.request
     import json
 

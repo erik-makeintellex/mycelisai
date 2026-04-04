@@ -1,7 +1,7 @@
 providers:
     lmstudio:
         type: openai_compatible
-        endpoint: http://127.0.0.1:11434/v1
+        endpoint: http://127.0.0.1:1234/v1
         model_id: default
         api_key: lm-studio
         api_key_env: ""
@@ -99,7 +99,7 @@ providers:
         enabled: false
     vllm:
         type: openai_compatible
-        endpoint: http://127.0.0.1:11434/v1
+        endpoint: http://127.0.0.1:8000/v1
         model_id: qwen2.5-coder
         api_key: mycelis-local
         api_key_env: ""
