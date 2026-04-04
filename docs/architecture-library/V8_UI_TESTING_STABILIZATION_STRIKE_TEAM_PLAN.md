@@ -1,7 +1,7 @@
 # V8 UI Testing Stabilization Strike Team Plan
 
-> Status: Active strike plan
-> Last Updated: 2026-03-28
+> Status: ACTIVE
+> Last Updated: 2026-04-04
 > Purpose: Coordinate the current UI-testing stabilization effort across runtime, interface, QA, and release hygiene so mocked browser proof, live governed-chat proof, and release packaging converge on the same trustworthy product contract.
 
 Related:
@@ -201,8 +201,8 @@ Requires:
 ## 6. Immediate Sequence
 
 1. Commit the UI-testing stabilization lane on its own.
-2. Repair the stale live approval selector in `soma-governance-live.spec.ts`.
-3. Reproduce and fix the live `/api/v1/chat` non-JSON 500 path in Runtime/Core.
-4. Add focused confirm-action server tests.
-5. Re-run stable browser proof, then live governed-chat proof.
-6. Advance the stable lane to `IN_REVIEW` and keep the live lane `BLOCKED` until the real backend path is green.
+2. Keep the stable browser proof green as release packaging continues.
+3. Keep the live governed-chat proof green on the committed release-candidate path.
+4. Re-run focused confirm-action and live-browser proof whenever runtime or proposal UX changes.
+5. Package release hygiene and remaining docs/testing cleanup into clean commits.
+6. Advance the lane from active stabilization into committed release-readiness evidence.

@@ -1,7 +1,7 @@
 # Local Development Workflow
 
 > **Quick Start:** Already set up? Jump to [Daily Startup](#daily-startup-sequence).
-> **Invoke Contract:** Run project tasks with `uv run inv ...` (or `.\.venv\Scripts\inv.exe ...`).
+> **Invoke Contract:** Run project tasks with `uv run inv ...`.
 > Use `uvx --from invoke inv -l` only as a lightweight compatibility probe.
 > Do not use bare `uvx inv ...`.
 > **Management Scripting:** App-tied management logic belongs in Python task modules. PowerShell is a host wrapper only when the local platform requires it.
@@ -250,24 +250,18 @@ uv run inv k8s.up
 # Order enforced by task:
 #   Kind/namespace -> Helm deploy -> PostgreSQL ready -> NATS ready -> Core API ready
 
-# 3. Open the development bridge (port-forwards)
-# This needs its own terminal — it stays running
-uv run inv k8s.bridge
-
-# 4. Initialize the database
-uv run inv db.migrate        # Apply canonical forward migrations (001_init_memory.sql + *.up.sql)
-
-# 5. Compile the Go backend
-uv run inv core.compile      # Compile the repo-local binary without building a Docker image
-
-# 6. Start the backend (new terminal — stays running)
-uv run inv core.run
-
-# 7. Install frontend dependencies (first time only)
+# 3. Install frontend dependencies (first time only)
 uv run inv interface.install
 
-# 8. Start the frontend (new terminal — stays running)
-uv run inv interface.dev
+# 4. Bring up the managed local bridge + backend + frontend
+uv run inv lifecycle.up --frontend
+
+# 5. Initialize the database
+uv run inv db.migrate        # Apply canonical forward migrations (001_init_memory.sql + *.up.sql)
+
+# 6. Verify the stack
+uv run inv lifecycle.status
+uv run inv lifecycle.health
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -307,37 +301,17 @@ Shutdown:
 uv run inv compose.down
 ```
 
-Four terminals, in order:
-
-### Prerequisite: Cluster Bring-Up (run once per reboot/reset)
+Kind/Kubernetes daily path:
 
 ```bash
 uv run inv k8s.up
+uv run inv lifecycle.up --frontend
+uv run inv db.migrate
+uv run inv lifecycle.status
+uv run inv lifecycle.health
 ```
 
-### Terminal 1: Development Bridge
-
-Port-forwards NATS, PostgreSQL, and the in-cluster API from Kind to localhost.
-
-```bash
-uv run inv k8s.bridge
-```
-
-> On Windows, this now launches detached `kubectl port-forward` workers without relying on `cmd /c start`; verify readiness with `uv run inv lifecycle.status` if you suspect the bridge did not bind.
-
-### Terminal 2: Go Backend
-
-```bash
-uv run inv core.run     # Foreground, blocking. Ctrl+C to stop.
-```
-
-### Terminal 3: Next.js Frontend
-
-```bash
-uv run inv interface.dev
-```
-
-### Terminal 4: Commands
+Use `uv run inv k8s.bridge` only when you intentionally need a manual long-running port-forward outside the managed lifecycle path.
 
 Free terminal for running tasks:
 

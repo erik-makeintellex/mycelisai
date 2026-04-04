@@ -1,9 +1,9 @@
 # V8 UI Team Full Test Set
 
 > Status: ACTIVE
-> Last Updated: 2026-03-30
+> Last Updated: 2026-04-04
 > Owner: UI Testing Agentry Team
-> Purpose: Provide the full browser and operator-experience test set for the current V8.2 MVP, including Central Soma home, AI Organization context flows, settings persistence, governed execution, and deployed-runtime proof.
+> Purpose: Provide the full browser and operator-experience test set for the current bounded V8.1 release target, including Central Soma home, AI Organization context flows, settings persistence, governed execution, and deployed-runtime proof.
 > Supporting Docs: `V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md`, `V8_UI_WORKFLOW_VERIFICATION_PLAN.md`, `V8_PARTNER_DEMO_VERIFICATION_CHECKLIST.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
 
 ## 1. Test Goal
@@ -50,11 +50,10 @@ Bring-up order:
 
 1. `uv run inv lifecycle.down`
 2. `uv run inv k8s.reset`
-3. `uv run inv k8s.bridge`
+3. `uv run inv lifecycle.up --frontend`
 4. `uv run inv db.migrate`
-5. `uv run inv lifecycle.up --frontend`
-6. `uv run inv lifecycle.status`
-7. `uv run inv lifecycle.health`
+5. `uv run inv lifecycle.status`
+6. `uv run inv lifecycle.health`
 
 ## 3. Required Preflight Record
 

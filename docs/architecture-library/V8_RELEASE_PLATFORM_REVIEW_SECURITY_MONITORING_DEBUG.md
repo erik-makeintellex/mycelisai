@@ -1,7 +1,7 @@
 # V8 Release Platform Review: Security, Monitoring, and Debug
 
 > Status: Canonical
-> Last Updated: 2026-03-28
+> Last Updated: 2026-04-04
 > Purpose: keep the release platform review for security, monitoring, and debug/release proof on one shared channel.
 
 ## Release Posture
@@ -84,9 +84,9 @@ Run this order for platform-facing release proof:
 2. `uv run inv k8s.reset`
 3. `uv run inv lifecycle.up --frontend`
 4. `uv run inv lifecycle.status`
-5. `uv run inv lifecycle.health`
-6. `uv run inv db.migrate`
-7. `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+5. `uv run inv db.migrate`
+6. `uv run inv lifecycle.health`
+7. `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
 If the live browser spec runs from a different checkout than the backend:
 

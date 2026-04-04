@@ -544,7 +544,7 @@ Example widget types:
 - `file`: `{ name: "...", content: "...", mime: "..." }` → file download/preview
 - `action`: `{ label: "...", endpoint: "...", method: "POST" }` → clickable action button
 
-The `UniversalRenderer` component (existing, currently basic) will be the rendering engine for these widgets.
+The shared widget renderer is the intended rendering engine for these structured outputs.
 
 #### 7.5 — Interaction Channels (Growth Path)
 

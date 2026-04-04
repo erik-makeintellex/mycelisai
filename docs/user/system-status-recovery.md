@@ -91,9 +91,10 @@ For normal startup without deleting the cluster, use the canonical cluster seque
 
 ```bash
 uv run inv k8s.up
-uv run inv k8s.bridge
-uv run inv db.migrate
 uv run inv lifecycle.up --frontend
+uv run inv db.migrate
+uv run inv lifecycle.status
+uv run inv lifecycle.health
 ```
 
 Then reload `/dashboard` and re-check:

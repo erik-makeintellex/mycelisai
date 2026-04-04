@@ -165,7 +165,7 @@ To improve blueprint quality for recurring task types, add good reusable role de
 Once you confirm a blueprint proposal:
 
 ```
-Confirm & Execute
+Approve & Execute / Execute
     ↓
 POST /api/v1/intent/confirm-action { confirm_token }
     ↓

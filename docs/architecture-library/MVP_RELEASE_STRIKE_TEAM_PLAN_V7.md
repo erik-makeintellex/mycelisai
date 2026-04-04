@@ -9,7 +9,7 @@ Related:
 - [Target Deliverable V7](TARGET_DELIVERABLE_V7.md)
 - [Next Execution Slices V7](NEXT_EXECUTION_SLICES_V7.md)
 - [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
-- [V7 Development State](../../V7_DEV_STATE.md)
+- [V8 Development State](../../V8_DEV_STATE.md)
 
 ## 1. Most Vital Delivery For MVP
 
@@ -74,12 +74,12 @@ Required touchpoints:
 3. gate sync (end of day): QA publishes `signal.result` pass/fail summary and required carry-forward tasks
 
 Escalation rule:
-- blockers older than one checkpoint cycle must be raised to `Architecture/Governance` and reflected in `V7_DEV_STATE.md` immediately.
+- blockers older than one checkpoint cycle must be raised to `Architecture/Governance` and reflected in `V8_DEV_STATE.md` immediately (`V7_DEV_STATE.md` remains historical only).
 
 ## 4. Global State File Discipline
 
 Canonical state file:
-- `V7_DEV_STATE.md`
+- `V8_DEV_STATE.md` (`V7_DEV_STATE.md` is historical migration evidence only)
 
 Mandatory update triggers:
 1. status marker transition (`NEXT -> ACTIVE`, `ACTIVE -> IN_REVIEW`, etc.)
@@ -147,8 +147,8 @@ Baseline command pack:
 
 Focused UI/recovery pack:
 1. `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v7-operational-ux.spec.ts`
-2. `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
-3. `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts`
+2. `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+3. `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts`
 
 Slice-specific focused tests should be attached in the same state-file update that reports the lane transition.
 
@@ -159,6 +159,6 @@ MVP candidate is `IN_REVIEW` only when:
 2. Slice 3 is no longer blocking canonical team sync
 3. Slice 4 has measurable gate relief and no regressions
 4. release gate command pack is green
-5. `V7_DEV_STATE.md` reflects all current markers, blockers, and evidence
+5. `V8_DEV_STATE.md` reflects all current markers, blockers, and evidence
 
 MVP candidate is `COMPLETE` only when QA and Architecture/Governance both sign off with matching evidence in the state file.

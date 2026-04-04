@@ -289,7 +289,7 @@ Required:
 - focused backend tests for touched handlers
 - `uv run inv interface.typecheck`
 - `uv run inv interface.test`
-- `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+- `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 - `uv run inv ci.service-check --live-backend` once the lane is believed clean
 
 ### Lane D: Theme/Readability

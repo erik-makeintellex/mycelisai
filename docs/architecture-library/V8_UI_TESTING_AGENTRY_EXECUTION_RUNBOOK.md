@@ -90,9 +90,10 @@ If a fresh-environment proof is required, run and record:
 
 - `uv run inv lifecycle.down`
 - `uv run inv k8s.reset`
-- `uv run inv k8s.bridge`
-- `uv run inv db.migrate`
 - `uv run inv lifecycle.up --frontend`
+- `uv run inv db.migrate`
+- `uv run inv lifecycle.status`
+- `uv run inv lifecycle.health`
 
 If the lane is partner-demo or compose-runtime focused, run and record this compose preflight instead:
 

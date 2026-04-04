@@ -108,7 +108,7 @@ Minimum route-slice evidence:
 When backend/API contracts changed:
 
 1. `uv run inv core.test`
-2. `uv run inv interface.e2e --live-backend --project=chromium --spec=<spec>`
+2. `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=<spec>`
 
 ## Immediate Execution Queue
 

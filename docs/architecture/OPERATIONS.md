@@ -41,7 +41,7 @@
 
 **Run from:** `scratch/` (project root where tasks.py lives)
 
-**Invocation:** Always use `uv run inv <namespace>.<task>` (or `.\.venv\Scripts\inv.exe` from the project root) for real task execution.
+**Invocation:** Always use `uv run inv <namespace>.<task>` for real task execution.
 Use `uvx --from invoke inv -l` only as a lightweight compatibility probe.
 Do not use bare `uvx inv ...`.
 Lifecycle tasks must not report success until Core `/healthz` is actually ready; open-port-only checks are insufficient.
@@ -49,7 +49,7 @@ Background Core startup must write to `workspace/logs/core-startup.log` so lifec
 Lifecycle teardown must use bounded cleanup subprocesses, sweep repo-local Interface worker residue, and wait for ports to close before reporting success.
 Interface-focused Invoke and CI tasks must execute from the `interface/` working directory and reuse the same `npm`/`node` entrypoints on Windows and Linux rather than depending on host-shell `cd ... &&` wrappers.
 
-> **Tip:** If you `uv venv && .venv/Scripts/activate` (Windows) or `source .venv/bin/activate` (Linux), you can use `inv` directly.
+> **Tip:** After activating the project virtualenv yourself, `inv` can still be used as a convenience, but the canonical repo contract remains `uv run inv ...`.
 
 ### Core Tasks (`ops/core.py`)
 

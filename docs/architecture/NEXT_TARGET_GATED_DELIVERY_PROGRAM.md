@@ -190,7 +190,7 @@
 - Scoped files:
   - `ops/ci.py`
   - `README.md`
-  - `V7_DEV_STATE.md`
+  - `V8_DEV_STATE.md`
   - `docs/TESTING.md`
   - `docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
 - Branch name: `phase/p4-release-hardening`

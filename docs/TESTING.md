@@ -131,10 +131,10 @@ uv run inv install               # Default Core + Interface dependency install (
 uv run inv interface.test        # Vitest unit tests (jsdom)
 uv run inv interface.typecheck   # TypeScript typecheck through the managed Interface task path
 uv run inv interface.e2e         # Playwright E2E tests (defaults to managed dev mode for stable mocked browser proof; use --server-mode=start for built/start-mode or live-backend proof. Invoke manages the server lifecycle, uses serial workers by default, keeps browser cache repo-managed, cleans repo-local UI workers, and fails if it cannot own a clean managed UI server)
-uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts   # Real governed Soma chat + approval contract
-uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts  # Real workspace proxy/status continuity contract
-MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts  # Repo-local Core: set explicitly when spec checkout != backend checkout
-MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace uv run inv interface.e2e --live-backend --spec=e2e/specs/soma-governance-live.spec.ts  # Supported compose stack: use the compose workspace root when the spec checkout differs
+uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts   # Real governed Soma chat + approval contract
+uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts  # Real workspace proxy/status continuity contract
+MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts  # Repo-local Core: set explicitly when spec checkout != backend checkout
+MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts  # Supported compose stack: use the compose workspace root when the spec checkout differs
 uv run inv core.smoke            # Governance smoke tests
 uv run inv ci.test               # Blocking Go + Vitest validation
 uv run inv interface.check       # HTTP smoke test against the running Interface server
@@ -179,9 +179,9 @@ Signal/channel standard:
 - Current focused Workspace failure-model check: `cd interface && npx vitest run __tests__/lib/missionChatFailure.test.ts __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx __tests__/dashboard/StatusDrawer.test.tsx __tests__/dashboard/MissionControlChat.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused Launch Crew contract check: `cd interface && npx vitest run __tests__/workspace/LaunchCrewModal.test.tsx __tests__/store/useCortexStore.test.ts --reporter=dot`
 - Current focused Launch Crew browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/proposals.spec.ts` (proposal outcome + blocker recovery)
-- Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
+- Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
 - Current focused UI testing agentry browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
-- Current focused UI testing agentry live governance proof: `uv run inv interface.e2e --live-backend --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+- Current focused UI testing agentry live governance proof: `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 - Current focused team-sync contract check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
 - Current focused README navigation check: `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
 - Current docs/task drift rule: canonical docs must not contain executable bare `uvx inv ...` examples outside explicit negative-control guidance.
@@ -362,7 +362,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 - **Server Lifecycle:** `uv run inv interface.e2e` starts/stops the managed Next.js app and now defaults to the managed `dev` server for stable mocked browser proof; use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof. Start-mode runs refresh the production bundle before the managed server launches and retries once after a stale repo-local Next build lock
 - **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run, launches a managed local Next.js server, defaults Playwright to `--workers=1`, sweeps repo-local Next/Vitest/Playwright worker residue, and fails closed if the managed server exits or a stale port prevents it from owning the browser target
 - **Managed Browsers:** default task runs expect Playwright browser binaries under `workspace/tool-cache/playwright`
-- **Live Backend Mode:** `uv run inv interface.e2e --live-backend ...` loads proxy auth env and enables specs that require a real Core backend
+- **Live Backend Mode:** `uv run inv interface.e2e --live-backend --server-mode=start ...` loads proxy auth env and enables specs that require a real Core backend
 - **Accessibility Gate:** `@axe-core/playwright` is a required dev dependency; accessibility specs must fail when violated, not skip because the package is missing
 - **Dark mode compliance:** Every spec includes `no bg-white` assertion
 
@@ -374,7 +374,7 @@ uv run inv core.run          # Optional: start live backend coverage in a separa
 
 # Run E2E tests
 uv run inv interface.e2e                     # All specs
-uv run inv interface.e2e --live-backend --spec=e2e/specs/workspace-live-backend.spec.ts
+uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
 uv run inv interface.e2e --project=firefox
 uv run inv interface.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts
 npx playwright test --project=chromium    # From interface/

@@ -91,7 +91,7 @@ Navigate to `/settings` → **AI Engines** (Advanced mode):
 - **Media engine** (Diffusers/SDXL): probed via HTTP GET to the configured endpoint
 - Status: `online` / `offline` / `error`
 
-The frontend `CognitiveStatusPanel` polls this endpoint every 15 seconds.
+Frontend cognitive-status surfaces can poll this endpoint on a short interval to keep operator-visible engine health current.
 
 ## Configuration File
 

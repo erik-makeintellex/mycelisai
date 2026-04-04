@@ -188,4 +188,4 @@ MVP is `IN_REVIEW` only when all are true:
 2. AI/toolship core journeys are stable with governed outcomes (`answer|proposal|execution_result|blocker`)
 3. toolship actions are auditable via run/team/agent metadata
 4. docs, runbooks, and in-app docs match real command contracts and failure behavior
-5. gate evidence is current in `V7_DEV_STATE.md`
+5. gate evidence is current in `V8_DEV_STATE.md` (`V7_DEV_STATE.md` remains historical only)

@@ -159,7 +159,7 @@ Mandatory command gate baseline:
 
 When execution-facing UI behavior changes:
 - include focused Playwright evidence via `uv run inv interface.e2e ...`
-- when backend/API contracts affecting UI proxy paths change, include live-backend Playwright evidence via `uv run inv interface.e2e --live-backend ...`
+- when backend/API contracts affecting UI proxy paths change, include live-backend Playwright evidence via `uv run inv interface.e2e --live-backend --server-mode=start ...`
 
 ## 6. Weekly Operating Rhythm
 
