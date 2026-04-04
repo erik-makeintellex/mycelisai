@@ -290,6 +290,52 @@ Evidence:
 - note whether posture matched the request
 - when run from the organization workspace, capture that the organization frame stays intact while `Artifact result` and `Specialist support` remain visible
 
+### Workflow 7A: Native team instantiation for target output
+
+Action:
+
+- ask Soma to create or activate a bounded delivery team for a concrete target output
+- preferred release proof: ask for an image-generation team or equivalent bounded creative team and follow the path through returned output
+
+Expected:
+
+- the workflow makes it clear that Mycelis is instantiating a native managed team rather than only calling a direct-generation tool
+- the target output stays explicit
+- the team-owned result returns as visible value with artifact/result framing
+- the operator can tell that the output belongs to managed Mycelis execution
+
+Terminal state:
+
+- `proposal`, `execution_result`, or `answer` depending on the bounded path and policy
+
+Evidence:
+
+- screenshot of the instantiation/proposal surface
+- screenshot of the returned target output
+- note whether team ownership and target output stayed legible
+
+### Workflow 7B: External workflow-contract instantiation
+
+Action:
+
+- target an external workflow surface such as `n8n`, ComfyUI, or comparable supported service through the intended contract path
+
+Expected:
+
+- the workflow makes it clear that this is an external workflow contract, not a native Mycelis team
+- governance and capability posture remain visible
+- normalized output or artifact returns back into Mycelis clearly
+
+Terminal state:
+
+- `proposal`, `execution_result`, `answer`, or `blocker` depending on support level and policy
+
+Evidence:
+
+- screenshot of the external contract target surface
+- screenshot of the normalized returned result when runnable proof exists
+- note whether ownership separation stayed clear
+
 ### Workflow 8: Governed mutation proposal
 
 Action:

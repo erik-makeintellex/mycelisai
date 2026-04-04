@@ -179,6 +179,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical plan for user-shaped delivery workflows, MCP usability, outcome-based workflow proof, and engine-governed rather than intent-governed product behavior",
             },
             {
+                slug: "v8-user-intent-workflow-review-instantiation-plan",
+                label: "V8 User Intent Workflow Review Plan",
+                path: "docs/architecture-library/V8_USER_INTENT_WORKFLOW_REVIEW_AND_INSTANTIATION_PLAN.md",
+                description: "Canonical review plan for separating direct asks, native team instantiation, and external workflow-contract instantiation such as n8n while proving target-output delivery",
+            },
+            {
                 slug: "v8-ask-class-agent-output-plan",
                 label: "V8 Ask-Class Agent/Output Plan",
                 path: "docs/architecture-library/V8_ASK_CLASS_AGENT_TYPE_OUTPUT_CONTRACT_PLAN.md",

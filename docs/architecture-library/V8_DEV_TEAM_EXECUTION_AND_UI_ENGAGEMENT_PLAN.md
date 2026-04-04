@@ -29,6 +29,12 @@ Execution must respect one additional product rule:
 
 Use `V8_USER_WORKFLOW_EXECUTION_AND_VERIFICATION_PLAN.md` whenever a slice touches workflow shape, team-definition posture, MCP usability, or the boundary between governed execution and ordinary user intent.
 
+Use `V8_USER_INTENT_WORKFLOW_REVIEW_AND_INSTANTIATION_PLAN.md` whenever a slice must decide whether an ask should:
+
+- stay direct through Soma
+- instantiate a native Mycelis team to produce target output
+- or instantiate an external workflow contract such as `n8n` or comparable services
+
 ## Target Outcome
 
 This plan is successful when all of the following are true:

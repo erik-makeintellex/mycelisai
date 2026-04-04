@@ -278,6 +278,43 @@ Evidence:
 - screenshot of collaboration result or proposal
 - note whether posture matched intent and policy
 
+### 1J. Native team-instantiation target-output proof
+
+Action:
+
+- submit one bounded request that should instantiate or activate a native managed team for target output
+- prefer one image-generation or other visible creative-output path when the current lane supports it
+
+Expected:
+
+- the workflow makes it clear that Mycelis is instantiating a native team
+- the target output is explicit before or during execution
+- the returned result stays legible as team-owned output instead of collapsing back into generic tool chatter
+
+Evidence:
+
+- screenshot of the team-instantiation/proposal state
+- screenshot of the returned target output
+- note whether team ownership and target-output framing were clear
+
+### 1K. External workflow-contract separation
+
+Action:
+
+- review one supported external workflow-contract path such as `n8n`, ComfyUI, or comparable service posture when available in the lane
+
+Expected:
+
+- the operator can tell this is an external workflow contract, not a native Team Lead/Department path
+- governance and capability posture remain visible
+- normalized output/result return is clear when runnable proof exists
+
+Evidence:
+
+- screenshot of the external workflow contract target surface
+- screenshot of normalized returned result when available
+- note whether the ownership boundary stayed clear
+
 ## Step 2: Live Backend Governed Browser Proof
 
 Purpose:

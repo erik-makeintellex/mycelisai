@@ -211,6 +211,37 @@
   - enterprise-owner proof shows directory controls only when the enterprise layer is enabled
   - enterprise non-owner proof shows the directory layer as read-only or withheld rather than silently granting control
 
+### 11. Native team instantiation for target output
+
+- Route: `/organizations/[id]`, advanced team-design surface as needed
+- Owners: `Stable Browser Owner`, `Live Backend Owner`, `API Observer`
+- Expected calls:
+  - `POST /api/v1/intent/negotiate`
+  - `POST /api/v1/intent/commit` when the team-instantiation path is confirmed
+  - artifact/result endpoints needed by the target output path
+- Expected UI:
+  - the operator can understand that Mycelis is instantiating a native managed team
+  - the target output stays explicit in the proposal or activation framing
+  - the returned result stays legible as team-owned output rather than generic residue
+- Acceptance evidence:
+  - one bounded release-proof path where a managed team is instantiated for target output
+  - preferred proof is image-generation delivery with visible artifact/result return
+
+### 12. External workflow-contract instantiation
+
+- Route: `/organizations/[id]`, advanced integration/workflow surface as needed
+- Owners: `Stable Browser Owner`, `Live Backend Owner`, `API Observer`
+- Expected calls:
+  - contract-specific integration inspection or invocation route for the supported external workflow surface
+  - normalized result/artifact route back into Mycelis
+- Expected UI:
+  - the operator can understand that the target is an external workflow contract such as `n8n`, not a native Mycelis team
+  - governance, capability, and result posture stay visible
+  - normalized output returns into Mycelis without blurring ownership
+- Acceptance evidence:
+  - one bounded contract-level proof for external workflow instantiation posture
+  - when runnable proof exists, one normalized-result path captured as release evidence
+
 ## Manual Trust Pass
 
 - Interrupt a streamed or active chat with refresh.

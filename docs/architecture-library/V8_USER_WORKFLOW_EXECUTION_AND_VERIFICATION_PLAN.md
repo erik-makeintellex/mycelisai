@@ -395,6 +395,32 @@ The workflow is complete only when:
 - owner access can manage the enterprise directory when that layer is enabled
 - non-owner enterprise roles do not silently inherit user-directory mutation control
 
+### Workflow K: Instantiate a native Mycelis team for target output
+
+User goal:
+
+- ask for a meaningful output and have Mycelis manifest a bounded delivery structure to produce it
+
+The workflow is complete only when:
+
+- the product makes it clear that Mycelis is instantiating a native managed team rather than only calling a tool
+- the user can understand the target output the team is responsible for
+- the result comes back with visible lineage to the managed team
+- at least one bounded target-output proof exists for the release, preferably image generation
+
+### Workflow L: Instantiate an external workflow contract without blurring it into a native team
+
+User goal:
+
+- target an external workflow system such as `n8n` or a comparable service without losing governance, readability, or result normalization
+
+The workflow is complete only when:
+
+- the product makes it clear that the target is an external workflow contract, not a native Mycelis team
+- governance and capability posture remain visible
+- returned result or artifact is normalized back into Mycelis cleanly
+- the release contract keeps this path separate from native team manifestation
+
 ## Verification Standard
 
 A test is not sufficient if it proves only:
