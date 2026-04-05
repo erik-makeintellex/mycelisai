@@ -47,8 +47,14 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	if err != nil {
 		return "", err
 	}
-	if teamID == "" || ask.IsZero() {
+	if ask.IsZero() {
 		return "", fmt.Errorf("delegate_task requires 'team_id' and 'task'")
+	}
+	if teamID == "" {
+		teamID, err = r.resolveDelegationTeam(ask)
+		if err != nil {
+			return "", err
+		}
 	}
 	if hint, ok := args["hint"].(map[string]any); ok {
 		log.Printf("DelegationHint [%s]: confidence=%.2f urgency=%v complexity=%v risk=%v", teamID, hint["confidence"], hint["urgency"], hint["complexity"], hint["risk"])
@@ -70,6 +76,38 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	}
 	r.nc.Flush()
 	return fmt.Sprintf("Task delegated to team %s.", teamID), nil
+}
+
+func (r *InternalToolRegistry) resolveDelegationTeam(ask protocol.TeamAsk) (string, error) {
+	if r.somaRef == nil {
+		return "", fmt.Errorf("delegate_task requires 'team_id' unless Soma can resolve a routed team")
+	}
+
+	normalized := ask.Normalize()
+	wantKind := string(normalized.AskKind)
+	wantLane := string(normalized.LaneRole)
+	if wantKind == "" || wantLane == "" {
+		return "", fmt.Errorf("delegate_task requires explicit routing metadata when 'team_id' is omitted")
+	}
+
+	matches := make([]string, 0, 2)
+	for _, manifest := range r.somaRef.ListTeams() {
+		if manifest == nil || len(manifest.AskRouting) == 0 {
+			continue
+		}
+		if strings.TrimSpace(manifest.AskRouting[wantKind]) == wantLane {
+			matches = append(matches, manifest.ID)
+		}
+	}
+
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		return "", fmt.Errorf("delegate_task could not resolve a team for ask_kind=%s lane_role=%s", wantKind, wantLane)
+	default:
+		return "", fmt.Errorf("delegate_task routing is ambiguous for ask_kind=%s lane_role=%s", wantKind, wantLane)
+	}
 }
 
 func (r *InternalToolRegistry) handleCreateTeam(_ context.Context, args map[string]any) (string, error) {

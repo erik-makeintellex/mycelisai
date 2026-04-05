@@ -89,7 +89,7 @@ func TestHandleDelegateTask_MissingRequired(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected validation error")
 	}
-	if !strings.Contains(err.Error(), "requires 'team_id' and 'task'") {
+	if !strings.Contains(err.Error(), "requires 'team_id' unless Soma can resolve a routed team") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -142,5 +142,89 @@ func TestNormalizeDelegateTaskArgs_StructuredAskInput(t *testing.T) {
 	}
 	if ask.LaneRole != protocol.TeamLaneRoleValidator {
 		t.Fatalf("lane_role = %q", ask.LaneRole)
+	}
+}
+
+func TestHandleDelegateTask_ResolvesTargetTeamFromAskRoutingHints(t *testing.T) {
+	r := NewInternalToolRegistry(InternalToolDeps{})
+	r.SetSoma(NewTestSoma([]*TeamManifest{
+		{
+			ID:         "research-team",
+			Name:       "Research Team",
+			Type:       TeamTypeAction,
+			AskRouting: map[string]string{"research": "researcher"},
+		},
+	}))
+
+	_, err := r.handleDelegateTask(context.Background(), map[string]any{
+		"ask": map[string]any{
+			"ask_kind":  "research",
+			"lane_role": "researcher",
+			"goal":      "Find the best supported path.",
+		},
+	})
+	if err == nil {
+		t.Fatal("expected NATS unavailable after route resolution")
+	}
+	if !strings.Contains(err.Error(), "NATS not available") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestHandleDelegateTask_RoutingHintsRejectAmbiguousMatches(t *testing.T) {
+	r := NewInternalToolRegistry(InternalToolDeps{})
+	r.SetSoma(NewTestSoma([]*TeamManifest{
+		{
+			ID:         "research-a",
+			Name:       "Research A",
+			Type:       TeamTypeAction,
+			AskRouting: map[string]string{"research": "researcher"},
+		},
+		{
+			ID:         "research-b",
+			Name:       "Research B",
+			Type:       TeamTypeAction,
+			AskRouting: map[string]string{"research": "researcher"},
+		},
+	}))
+
+	_, err := r.handleDelegateTask(context.Background(), map[string]any{
+		"ask": map[string]any{
+			"ask_kind":  "research",
+			"lane_role": "researcher",
+			"goal":      "Find the best supported path.",
+		},
+	})
+	if err == nil {
+		t.Fatal("expected routing ambiguity error")
+	}
+	if !strings.Contains(err.Error(), "routing is ambiguous") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestHandleDelegateTask_RoutingHintsRejectNoMatch(t *testing.T) {
+	r := NewInternalToolRegistry(InternalToolDeps{})
+	r.SetSoma(NewTestSoma([]*TeamManifest{
+		{
+			ID:         "review-team",
+			Name:       "Review Team",
+			Type:       TeamTypeAction,
+			AskRouting: map[string]string{"review": "reviewer"},
+		},
+	}))
+
+	_, err := r.handleDelegateTask(context.Background(), map[string]any{
+		"ask": map[string]any{
+			"ask_kind":  "validation",
+			"lane_role": "validator",
+			"goal":      "Run focused proof.",
+		},
+	})
+	if err == nil {
+		t.Fatal("expected no-match routing error")
+	}
+	if !strings.Contains(err.Error(), "could not resolve a team") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
