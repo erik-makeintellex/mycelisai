@@ -37,7 +37,7 @@
 
 ### Master Registry
 
-**File:** `tasks.py` — 12 collections, 60+ @task functions
+**File:** `tasks.py` — 18 namespaces, 78 exported tasks in the root invoke surface
 
 **Run from:** `scratch/` (project root where tasks.py lives)
 
