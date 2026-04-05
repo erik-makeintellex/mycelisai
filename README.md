@@ -31,7 +31,7 @@ Canonical ownership reminder:
 - [Command Contract](#command-contract)
 - [Development Contract](#development-contract)
 - [Playwright Contract](#playwright-contract)
-- [Full Testing Action Plan](#full-testing-action-plan)
+- [Testing Gate](#testing-gate)
 - [Development Workflow](#development-workflow)
 - [Documentation Responsibilities](#documentation-responsibilities)
 - [Status](#status)
@@ -55,10 +55,11 @@ Review these in order before touching code or planning state:
 13. [Operations](docs/architecture/OPERATIONS.md)
 14. [Testing](docs/TESTING.md)
 15. [Cognitive Architecture](docs/COGNITIVE_ARCHITECTURE.md)
-16. [V8 Full Testing Action Plan](docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md)
-17. [V8 Development State](V8_DEV_STATE.md)
-18. [V7 Development State (Historical)](V7_DEV_STATE.md)
-19. [Docs Manifest](interface/lib/docsManifest.ts)
+16. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
+17. [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md)
+18. [V8 Development State](V8_DEV_STATE.md)
+19. [V7 Development State (Historical)](V7_DEV_STATE.md)
+20. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent review rule:
 - README is the primary architecture inception document for active development.
@@ -353,7 +354,7 @@ Particular attention belongs on:
 - UI operator experience contracts
 - runtime orchestration assumptions
 - provider routing and hybrid deployment posture
-- when working in the execution/gov docs (`docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`, `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`), treat all V7 content as migration input: translate assets through `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, keep `Template ≠ instantiated organization`, and record slice state in `V8_DEV_STATE.md`
+- when working in the execution/gov docs (`docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`), treat all V7 content as migration input: translate assets through `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, keep `Template ≠ instantiated organization`, and record slice state in `V8_DEV_STATE.md`
 
 ## Command Contract
 
@@ -452,11 +453,11 @@ Documentation rule:
 - live-backend browser checks are still required when proxy/runtime contracts change
 - live service issues belong in the release story too: use `uv run inv ci.service-check` for running-stack verification and `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes service/runtime contracts
 
-## Full Testing Action Plan
+## Testing Gate
 
-The canonical full-testing runbook is [V8 Full Testing Action Plan](docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md).
+The canonical testing guidance lives in [Testing](docs/TESTING.md), with browser proof boundaries captured in [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md).
 
-Use it when you need one release-style pass that ties together:
+Use those when you need one release-style pass that ties together:
 - repo baseline proof
 - stable browser workflow proof
 - live service/browser proof
@@ -484,7 +485,7 @@ Agents implementing V8 should follow this process:
 Every implementation slice must update:
 - `README.md`
 - `V8_DEV_STATE.md`
-- architecture-library planning documents when target, execution, UI, or delivery rules change
+- architecture-library authority documents when target, execution, UI, or delivery rules change
 - documentation manifest when a canonical doc should be visible in the in-app docs page
 - docs tests when the contract they enforce changes
 
@@ -496,7 +497,7 @@ Synchronization rule:
 - slices that change architecture, release posture, operator wording, or documentation authority must keep README, the owning docs, `docsManifest.ts`, and `tests/test_docs_links.py` synchronized in the same change
 - slice close-out should explicitly report tests run, docs updated, and docs reviewed unchanged for the touched scope
 
-The architecture-library remains the authoritative detailed planning surface until the V8 library replaces the remaining V7 migration inputs.
+The architecture-library remains the authoritative detailed documentation surface until the V8 library replaces the remaining V7 migration inputs.
 
 ## Status
 

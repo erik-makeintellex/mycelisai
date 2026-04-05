@@ -13,8 +13,10 @@ Current validation contract:
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
 
-Canonical full-gate runbook:
-- use `docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md` when you need one ordered release-style testing pass across repo baseline, stable browser proof, live service/browser proof, and compose-aware runtime proof
+Canonical full-gate references:
+- use this document for the ordered release-style testing pass across repo baseline, stable browser proof, live service/browser proof, and compose-aware runtime proof
+- use `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md` for the Soma-first browser contract
+- use `docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md` for the full UI/browser validation set
 
 ## Target-Action Testing Matrix (Intent -> Manifestation)
 
@@ -29,7 +31,7 @@ The same target actions defined in architecture docs must have matching test act
 
 Cross-reference:
 - `docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md`
-- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
+- `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
 - `docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md`
 
 ## Full GUI Coverage Matrix

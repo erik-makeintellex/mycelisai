@@ -13,8 +13,9 @@ Active implementation sources are:
 3. `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 4. `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`
 5. `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
-6. `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
-7. `docs/architecture/OPERATIONS.md`
+6. `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
+7. `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
+8. `docs/architecture/OPERATIONS.md`
 
 Migration rule:
 - V7 assets may still be useful as migration inputs, but archived docs should not shape active implementation unless they are intentionally re-promoted through the current V8 documentation chain.

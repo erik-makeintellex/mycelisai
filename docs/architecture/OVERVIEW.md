@@ -182,7 +182,8 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 Execution authority:
 - `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
 - `docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
-- `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md`
+- `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
+- `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
 
 ### Phase 12: Persistent Agent Memory & Long-Term Learning
 

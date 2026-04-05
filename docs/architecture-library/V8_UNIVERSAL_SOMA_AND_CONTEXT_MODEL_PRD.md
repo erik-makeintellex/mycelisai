@@ -4,7 +4,7 @@
 > Last Updated: 2026-03-29
 > Owner: Product Management / Delivery Coordination
 > Purpose: Define the canonical product target where Soma and Council are universal operating entities, while AI Organizations, deployments, teams, and projects remain governed working contexts.
-> Depends On: `docs/architecture-library/V8_TRUE_MVP_FINISH_PLAN.md`, `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/architecture-library/V8_MEMORY_CONTINUITY_AND_RAG_STRIKE_TEAM_PLAN.md`, `docs/architecture-library/V8_CONTENT_GENERATION_AND_COLLABORATION_STRIKE_TEAM_PLAN.md`
+> Depends On: `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/user/memory.md`, `docs/user/resources.md`
 
 ## 1. Why this PRD exists
 

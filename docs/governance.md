@@ -87,4 +87,4 @@ not only as a raw allow/deny/intercept subsystem.
 Related references:
 - `docs/user/governance-trust.md`
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-- `docs/architecture-library/V8_RELEASE_PLATFORM_REVIEW_SECURITY_MONITORING_DEBUG.md`
+- `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`

@@ -18,7 +18,7 @@ This plan is implementation-facing and designed for Team A/C/Q/T/D parallel exec
 Immediate alignment:
 - the active operator-facing slice is Launch Crew and workflow onboarding
 - onboarding must prove execution-facing outcomes before deeper workflow-composer expansion proceeds
-- use [Next Execution Slices V7](../architecture-library/NEXT_EXECUTION_SLICES_V7.md) as the current queue authority
+- use [Delivery Governance And Testing V7](../architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md) and [Team Execution And Global State Protocol V7](../architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) as the current delivery-discipline authority
 
 ## 1.1 Prerequisite Gate: Logging Standardization
 

@@ -7,8 +7,8 @@
 Related:
 - [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 - [Target Deliverable V7](TARGET_DELIVERABLE_V7.md)
-- [Next Execution Slices V7](NEXT_EXECUTION_SLICES_V7.md)
-- [MVP Release Strike Team Plan V7](MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md)
+- [Execution And Manifest Library V7](EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+- [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 - [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [V8 Development State](../../V8_DEV_STATE.md)

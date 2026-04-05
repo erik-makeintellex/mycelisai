@@ -8,7 +8,6 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
 PRD_INDEX = ROOT / "mycelis-architecture-v7.md"
-NEXT_EXECUTION_SLICES = ROOT / "docs" / "architecture-library" / "NEXT_EXECUTION_SLICES_V7.md"
 LEGACY_V7_DEV_STATE = ROOT / "V7_DEV_STATE.md"
 V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
 V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
@@ -62,7 +61,7 @@ def test_docs_manifest_exposes_required_canonical_docs():
         "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
         "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
         "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
-        "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
+        "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
         "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
@@ -553,28 +552,30 @@ def test_prd_index_points_to_modular_architecture_library():
         "docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md",
         "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
         "docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md",
-        "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
+        "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
     ]
 
     missing = [link for link in required_links if link not in text]
     assert not missing, f"PRD index is missing modular architecture links: {missing}"
 
 
-def test_next_execution_slices_follow_canonical_priority_order():
-    text = NEXT_EXECUTION_SLICES.read_text(encoding="utf-8")
-    required_snippets = [
-        "## Commitment Logic For This Queue",
-        "## Slice 1: Launch Crew And Workflow Onboarding",
-        "## Slice 2: P1 Logging, Error Handling, And Execution Feedback",
-        "## Slice 3: Prime-Development Reply Reliability",
-        "## Slice 4: P1 Hot-Path Cleanup",
-        "## Slice 5: Manifest Pipeline Preparation",
-        "1. operator-facing execution clarity",
-        "2. operator-facing error and recovery clarity",
+def test_architecture_library_index_omits_temporary_plan_docs():
+    text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
+    forbidden_refs = [
+        "NEXT_EXECUTION_SLICES_V7.md",
+        "MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md",
+        "MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md",
+        "UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md",
+        "V8_FULL_TESTING_ACTION_PLAN.md",
+        "V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md",
+        "V8_UI_WORKFLOW_VERIFICATION_PLAN.md",
+        "V8_STRUCTURED_TEAM_ASKS_AND_LANE_ROUTING_PLAN.md",
+        "V8_GOVERNED_DEPLOYMENT_CONTEXT_AND_RAG_PLAN.md",
+        "V8_RELEASE_PLATFORM_REVIEW_SECURITY_MONITORING_DEBUG.md",
     ]
 
-    missing = [snippet for snippet in required_snippets if snippet not in text]
-    assert not missing, f"Next execution slices doc is missing required queue structure: {missing}"
+    present = [ref for ref in forbidden_refs if ref in text]
+    assert not present, f"Architecture library index still references temporary plan docs: {present}"
 
 
 def test_legacy_v7_dev_state_uses_delivery_program_snapshot():
@@ -795,14 +796,10 @@ def test_v8_bootstrap_model_defines_v7_to_v8_migration_contract():
 
 
 def test_execution_governance_docs_reference_v8_migration_contract():
-    next_text = (ROOT / "docs" / "architecture-library" / "NEXT_EXECUTION_SLICES_V7.md").read_text(encoding="utf-8")
     governance_text = (ROOT / "docs" / "architecture-library" / "DELIVERY_GOVERNANCE_AND_TESTING_V7.md").read_text(encoding="utf-8")
     team_text = (ROOT / "docs" / "architecture-library" / "TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md").read_text(encoding="utf-8")
 
     required = [
-        (next_text, "## V8 Migration Alignment"),
-        (next_text, "template -> instantiation -> inheritance -> precedence"),
-        (next_text, "V8_DEV_STATE.md"),
         (governance_text, "## V8 Migration Alignment"),
         (governance_text, "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md"),
         (governance_text, "Template ≠ instantiated organization"),

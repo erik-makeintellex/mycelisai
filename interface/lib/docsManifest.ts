@@ -8,10 +8,9 @@
  * Security: the API route validates slugs against this manifest before
  * touching the filesystem — no arbitrary path traversal is possible.
  *
- * Adding a new doc:
- *   1. Add a DocEntry to the appropriate DocSection below.
- *   2. The slug becomes the URL: /docs?doc={slug}
- *   3. The path is relative to the scratch/ project root.
+ * This manifest intentionally exposes precise, durable documentation only.
+ * Temporary planning notes, strike-team plans, runbooks, and execution briefs
+ * do not belong in the canonical in-app documentation surface.
  */
 
 export interface DocEntry {
@@ -29,7 +28,6 @@ export interface DocSection {
 }
 
 export const DOC_MANIFEST: DocSection[] = [
-    // ── User Guides ───────────────────────────────────────────────────────────
     {
         section: "User Guides",
         docs: [
@@ -37,31 +35,31 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "core-concepts",
                 label: "Core Concepts",
                 path: "docs/user/core-concepts.md",
-                description: "Soma, Council, Mission, Run, Brain, Event, Trust — plain-language glossary",
+                description: "Soma, Council, Mission, Run, Brain, Event, and Trust in operator language",
             },
             {
                 slug: "system-status-recovery",
                 label: "System Status & Recovery",
                 path: "docs/user/system-status-recovery.md",
-                description: "Global health signals, degraded recovery actions, and Quick Checks workflow",
+                description: "Health signals, degraded recovery actions, and Quick Checks workflow",
             },
             {
                 slug: "soma-chat",
                 label: "Using Soma Chat",
                 path: "docs/user/soma-chat.md",
-                description: "Step-by-step: send messages, read delegation traces, confirm proposals",
+                description: "Send messages, read delegation traces, and confirm governed proposals",
             },
             {
                 slug: "meta-agent-blueprint",
                 label: "Meta-Agent & Blueprints",
                 path: "docs/user/meta-agent-blueprint.md",
-                description: "How Architect generates mission blueprints — teams, agents, tools, I/O contracts",
+                description: "How Architect generates mission blueprints across teams, tools, and I/O contracts",
             },
             {
                 slug: "run-timeline",
                 label: "Run Timeline",
                 path: "docs/user/run-timeline.md",
-                description: "Reading execution timelines — event types, status, navigation",
+                description: "Reading execution timelines, status changes, and navigation paths",
             },
             {
                 slug: "automations-guide",
@@ -73,24 +71,22 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "resources-guide",
                 label: "Resources",
                 path: "docs/user/resources.md",
-                description: "Advanced tools, workspace files, AI engines, and reusable role definitions",
+                description: "Advanced tools, workspace files, AI engines, and governed deployment context",
             },
             {
                 slug: "memory-guide",
                 label: "Memory",
                 path: "docs/user/memory.md",
-                description: "Semantic search, SitReps, artifacts, hot/warm/cold tiers",
+                description: "Semantic search, retained knowledge, deployment context, and continuity rules",
             },
             {
                 slug: "governance-trust",
                 label: "Governance & Trust",
                 path: "docs/user/governance-trust.md",
-                description: "Trust scores, approval flows, policy rules, propose vs execute modes",
+                description: "Approval posture, risk classes, audit visibility, and operator control",
             },
         ],
     },
-
-    // ── Getting Started ───────────────────────────────────────────────────────
     {
         section: "Getting Started",
         docs: [
@@ -98,13 +94,13 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "readme",
                 label: "Overview",
                 path: "README.md",
-                description: "Architecture, stack, commands, and current phase",
+                description: "Primary development-swarm inception document and layered truth summary",
             },
             {
                 slug: "local-dev",
                 label: "Local Dev Workflow",
                 path: "docs/LOCAL_DEV_WORKFLOW.md",
-                description: "Setup, config reference, port map, troubleshooting",
+                description: "Setup, config reference, port map, and troubleshooting guidance",
             },
             {
                 slug: "v8-dev-state",
@@ -113,159 +109,13 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Live implementation scoreboard for current V8 delivery status, blockers, and evidence",
             },
             {
-                slug: "v8-ui-workflow-verification",
-                label: "V8 UI Workflow Verification",
-                path: "docs/architecture-library/V8_UI_WORKFLOW_VERIFICATION_PLAN.md",
-                description: "Release verification plan for the UI testing team, including workflows, expected API calls, and terminal states",
-            },
-            {
-                slug: "v8-ui-team-full-test-set",
-                label: "V8 UI Team Full Test Set",
-                path: "docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md",
-                description: "Full UI team test matrix for Central Soma, AI Organization flows, settings persistence, governed execution, and deployed runtime proof",
-            },
-            {
-                slug: "v8-ui-testing-agentry-runbook",
-                label: "V8 UI Testing Agentry Runbook",
-                path: "docs/architecture-library/V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md",
-                description: "Step-by-step execution runbook for the UI testing agentry, including lane order, prompts, evidence packaging, and triage rules",
-            },
-            {
-                slug: "v8-memory-continuity-rag-plan",
-                label: "V8 Memory Continuity & RAG Plan",
-                path: "docs/architecture-library/V8_MEMORY_CONTINUITY_AND_RAG_STRIKE_TEAM_PLAN.md",
-                description: "Strike-team plan for scoped pgvector memory, temporary planning continuity, and trace-clean memory boundaries",
-            },
-            {
-                slug: "v8-governed-deployment-context-rag-plan",
-                label: "V8 Governed Deployment Context Plan",
-                path: "docs/architecture-library/V8_GOVERNED_DEPLOYMENT_CONTEXT_AND_RAG_PLAN.md",
-                description: "Canonical plan for separate customer-context and company-knowledge stores, governed promotion, policy-bound web/MCP ingest, and release proof",
-            },
-            {
-                slug: "v8-structured-team-asks-plan",
-                label: "V8 Structured Team Asks Plan",
-                path: "docs/architecture-library/V8_STRUCTURED_TEAM_ASKS_AND_LANE_ROUTING_PLAN.md",
-                description: "Canonical plan for typed Soma-to-team asks, lane-role routing, backward-compatible delegate_task normalization, and phased team-runtime follow-through",
-            },
-            {
-                slug: "v8-content-generation-collaboration-plan",
-                label: "V8 Content Generation & Collaboration Plan",
-                path: "docs/architecture-library/V8_CONTENT_GENERATION_AND_COLLABORATION_STRIKE_TEAM_PLAN.md",
-                description: "Strike-team plan for inline content delivery, governed artifact generation, and policy-configurable specialist/model collaboration",
-            },
-            {
-                slug: "v8-approval-product-trust-plan",
-                label: "V8 Approval & Product Trust Plan",
-                path: "docs/architecture-library/V8_APPROVAL_AND_PRODUCT_TRUST_STRIKE_TEAM_PLAN.md",
-                description: "Strike-team plan for simplifying approval/auth-style interactions, clarifying content/artifact delivery, and preserving governed depth behind inspectable details",
-            },
-            {
-                slug: "v8-universal-soma-context-model",
-                label: "V8 Universal Soma Context Model",
-                path: "docs/architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md",
-                description: "Canonical PRD for one persistent Soma/Council pair, Central Soma home, context switching, and scoped execution across organizations and deployments",
-            },
-            {
-                slug: "v8-home-docker-compose-runtime",
-                label: "V8 Home Docker Compose Runtime",
-                path: "docs/architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md",
-                description: "Canonical single-host Docker Compose runtime for home-lab, demo, and partner-review use with managed env, health, and logging expectations",
-            },
-            {
-                slug: "v8-true-mvp-finish-plan",
-                label: "V8 True MVP Finish Plan",
-                path: "docs/architecture-library/V8_TRUE_MVP_FINISH_PLAN.md",
-                description: "Prioritized finish plan for getting Mycelis from release-candidate posture to a true MVP",
-            },
-            {
-                slug: "v8-dev-team-ui-engagement-plan",
-                label: "V8 Dev Team UI Engagement Plan",
-                path: "docs/architecture-library/V8_DEV_TEAM_EXECUTION_AND_UI_ENGAGEMENT_PLAN.md",
-                description: "Cross-team execution plan for true-MVP delivery order, UI/browser proof, engagement testing, and committed-slice discipline",
-            },
-            {
-                slug: "v8-user-workflow-execution-verification-plan",
-                label: "V8 User Workflow Execution Plan",
-                path: "docs/architecture-library/V8_USER_WORKFLOW_EXECUTION_AND_VERIFICATION_PLAN.md",
-                description: "Canonical plan for user-shaped delivery workflows, MCP usability, outcome-based workflow proof, and engine-governed rather than intent-governed product behavior",
-            },
-            {
-                slug: "v8-user-intent-workflow-review-instantiation-plan",
-                label: "V8 User Intent Workflow Review Plan",
-                path: "docs/architecture-library/V8_USER_INTENT_WORKFLOW_REVIEW_AND_INSTANTIATION_PLAN.md",
-                description: "Canonical review plan for separating direct asks, native team instantiation, and external workflow-contract instantiation such as n8n while proving target-output delivery",
-            },
-            {
-                slug: "v8-full-testing-action-plan",
-                label: "V8 Full Testing Action Plan",
-                path: "docs/architecture-library/V8_FULL_TESTING_ACTION_PLAN.md",
-                description: "Canonical release-style testing runbook for repo baseline, stable browser proof, live governed-browser proof, compose-aware runtime proof, and final docs/state synchronization",
-            },
-            {
-                slug: "v8-ask-class-agent-output-plan",
-                label: "V8 Ask-Class Agent/Output Plan",
-                path: "docs/architecture-library/V8_ASK_CLASS_AGENT_TYPE_OUTPUT_CONTRACT_PLAN.md",
-                description: "Execution plan for consolidating ask classification, specialist targeting, and output-contract assertion across runtime, UI, docs, and tests",
-            },
-            {
-                slug: "v8-structured-team-asks-plan",
-                label: "V8 Structured Team Asks Plan",
-                path: "docs/architecture-library/V8_STRUCTURED_TEAM_ASKS_AND_LANE_ROUTING_PLAN.md",
-                description: "Canonical plan for typed Soma-to-team asks, lane-role vocabulary, command-lane preservation, and future team-instantiation defaults",
-            },
-            {
-                slug: "v8-demo-product-plan",
-                label: "V8 Demo Product Plan",
-                path: "docs/architecture-library/V8_DEMO_PRODUCT_STRIKE_TEAM_PLAN.md",
-                description: "Strike-team plan for making Mycelis feel like an obvious product for partner demos without removing advanced power",
-            },
-            {
-                slug: "v8-demo-product-execution-brief",
-                label: "V8 Demo Product Execution Brief",
-                path: "docs/architecture-library/V8_DEMO_PRODUCT_EXECUTION_BRIEF.md",
-                description: "First engaged-team deliverables for default surfaces, advanced preservation, golden-path demo, and UI verification",
-            },
-            {
-                slug: "v8-demo-product-wording-drift",
-                label: "V8 Demo Product Wording Drift",
-                path: "docs/architecture-library/V8_DEMO_PRODUCT_WORDING_DRIFT_INVENTORY.md",
-                description: "Prioritized wording-drift inventory for README, landing, organization entry, organization home, and continuity language",
-            },
-            {
-                slug: "v8-demo-product-feature-retention",
-                label: "V8 Demo Product Feature Retention",
-                path: "docs/architecture-library/V8_DEMO_PRODUCT_FEATURE_RETENTION_MAP.md",
-                description: "Retention map proving advanced power remains reachable while the default product story stays simple",
-            },
-            {
-                slug: "v8-mvp-investor-demo-governed-capability-plan",
-                label: "V8 MVP Investor Demo and Governed Capability Plan",
-                path: "docs/architecture-library/V8_MVP_INVESTOR_DEMO_AND_GOVERNED_CAPABILITY_PLAN.md",
-                description: "Canonical investor workflow plan for Soma-first value, governed execution, MCP-powered input/output, securable web research, and inspectable context-security controls",
-            },
-            {
-                slug: "v8-partner-demo-script",
-                label: "V8 Partner Demo Script",
-                path: "docs/architecture-library/V8_PARTNER_DEMO_SCRIPT.md",
-                description: "Canonical partner/funder demo story proving product value, governance, continuity, and retained platform depth",
-            },
-            {
-                slug: "v8-partner-demo-verification",
-                label: "V8 Partner Demo Verification",
-                path: "docs/architecture-library/V8_PARTNER_DEMO_VERIFICATION_CHECKLIST.md",
-                description: "UI testing and release checklist for validating the partner demo as a product story rather than a narrow technical path",
-            },
-            {
                 slug: "v7-dev-state",
                 label: "V7 Dev State (Historical)",
                 path: "V7_DEV_STATE.md",
-                description: "Historical migration checkpoint retained as V8 input, not the live implementation scoreboard",
+                description: "Historical migration checkpoint retained as legacy input, not live authority",
             },
         ],
     },
-
-    // ── Soma Workflow Reference ───────────────────────────────────────────────
     {
         section: "Soma Workflow",
         docs: [
@@ -273,13 +123,13 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "workflows",
                 label: "Workflow Spec",
                 path: "docs/WORKFLOWS.md",
-                description: "10 user-facing workflow specifications (implementation authority)",
+                description: "User-facing workflow specifications and implementation authority",
             },
             {
                 slug: "swarm-operations",
                 label: "Swarm Operations",
                 path: "docs/SWARM_OPERATIONS.md",
-                description: "Hierarchy, blueprints, activation, teams, tools, governance",
+                description: "Hierarchy, blueprints, activation, teams, tools, and governance surfaces",
             },
             {
                 slug: "council-chat-qa",
@@ -289,51 +139,6 @@ export const DOC_MANIFEST: DocSection[] = [
             },
         ],
     },
-
-    // ── Archive (Historical / Non-authoritative) ────────────────────────────
-    {
-        section: "Archive",
-        docs: [
-            {
-                slug: "archive-index",
-                label: "Archive Index",
-                path: "docs/archive/README.md",
-                description: "Historical documents only — not implementation authority",
-            },
-            {
-                slug: "mvp-agentry",
-                label: "MVP Agentry Plan (Archive)",
-                path: "docs/archive/MVP_AGENTRY_PLAN.md",
-                description: "Historical agentry chain map retained for context",
-            },
-            {
-                slug: "v7-ui-verification",
-                label: "V7 UI Verification (Archive)",
-                path: "docs/archive/v7-step-01-ui.md",
-                description: "Historical manual UI verification checklist for V7 Step 01 navigation",
-            },
-            {
-                slug: "v7-ia-step01",
-                label: "IA Step 01 (Archive)",
-                path: "docs/archive/ia-v7-step-01.md",
-                description: "Historical workflow-first navigation PRD for Step 01 implementation",
-            },
-            {
-                slug: "v7-ui-optimal-workflow-prds",
-                label: "UI Optimal Workflow PRDs (Archive)",
-                path: "docs/archive/UI_OPTIMAL_WORKFLOW_PRDS_V7.md",
-                description: "Historical planning PRDs superseded by current execution authority docs",
-            },
-            {
-                slug: "v7-ui-engagement-actuation-review",
-                label: "UI Engagement & Actuation Review (Archive)",
-                path: "docs/archive/UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md",
-                description: "Historical UI engagement/actuation review retained for context",
-            },
-        ],
-    },
-
-    // ── API Reference ─────────────────────────────────────────────────────────
     {
         section: "API Reference",
         docs: [
@@ -341,24 +146,22 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "api-reference",
                 label: "API Reference",
                 path: "docs/API_REFERENCE.md",
-                description: "Full endpoint table — 80+ routes with request/response shapes",
+                description: "Endpoint table with request and response shapes",
             },
             {
                 slug: "cognitive-architecture",
                 label: "Cognitive Architecture",
                 path: "docs/COGNITIVE_ARCHITECTURE.md",
-                description: "Providers, profiles, matrix UI, embedding",
+                description: "Providers, profiles, embeddings, and AI engine architecture",
             },
             {
                 slug: "logging-schema",
                 label: "Logging Standard (V7)",
                 path: "docs/logging.md",
-                description: "Authoritative mission-events and memory-stream logging contract, taxonomy, and onboarding checklist",
+                description: "Mission-events and memory-stream logging contract and taxonomy",
             },
         ],
     },
-
-    // ── Architecture ──────────────────────────────────────────────────────────
     {
         section: "Architecture",
         docs: [
@@ -366,19 +169,19 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "architecture-library-index",
                 label: "Architecture Library Index",
                 path: "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
-                description: "Canonical modular index for target delivery, architecture, execution, UI, and testing guidance",
+                description: "Canonical modular index for target delivery, architecture, UI, and testing authority",
             },
             {
                 slug: "target-deliverable-v7",
                 label: "Target Deliverable V7",
                 path: "docs/architecture-library/TARGET_DELIVERABLE_V7.md",
-                description: "Full product end state, recurring-plan modes, phase framing, and success criteria",
+                description: "Product end state, phase framing, and success criteria",
             },
             {
                 slug: "system-architecture-v7",
                 label: "System Architecture V7",
                 path: "docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md",
-                description: "Canonical runtime layers, persistence model, deployment posture, and bus/storage rules",
+                description: "Runtime layers, persistence model, deployment posture, and bus/storage rules",
             },
             {
                 slug: "execution-manifest-library-v7",
@@ -390,13 +193,13 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "intent-manifestation-team-interaction-v7",
                 label: "Intent To Manifestation + Team Interaction V7",
                 path: "docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md",
-                description: "Canonical intent-to-manifestation flow, module abstraction, and created-team interaction model",
+                description: "Intent-to-manifestation flow, module abstraction, and created-team interaction model",
             },
             {
                 slug: "ui-operator-experience-v7",
                 label: "UI And Operator Experience V7",
                 path: "docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md",
-                description: "Operator journeys, anti-information-swarm design rules, and intuitive UI targets",
+                description: "Operator journeys, anti-information-swarm rules, and intuitive UI targets",
             },
             {
                 slug: "delivery-governance-testing-v7",
@@ -405,34 +208,10 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Delivery proof model, evidence requirements, and product-aligned testing expectations",
             },
             {
-                slug: "next-execution-slices-v7",
-                label: "Next Execution Slices V7",
-                path: "docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md",
-                description: "Current working queue with scoped next slices and linked development/testing references",
-            },
-            {
                 slug: "team-execution-global-state-protocol-v7",
                 label: "Team Execution + Global State Protocol V7",
                 path: "docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md",
-                description: "Multi-lane execution architecture, global-state maintenance rules, and deep-testing obligations",
-            },
-            {
-                slug: "mvp-release-strike-team-plan-v7",
-                label: "MVP Release Strike Team Plan V7",
-                path: "docs/architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md",
-                description: "Active MVP lane ownership, communication cadence, and state-file update discipline",
-            },
-            {
-                slug: "mvp-integration-toolship-execution-plan-v7",
-                label: "MVP Integration + Toolship Plan V7",
-                path: "docs/architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md",
-                description: "Canonical plan for AI interaction, internal toolship, and service-connection hardening to reach non-test-team MVP",
-            },
-            {
-                slug: "ui-generation-testing-execution-plan-v7",
-                label: "UI Generation + Testing Plan V7",
-                path: "docs/architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md",
-                description: "Deterministic UI generation contract, route-priority testing depth, and MVP UX gate criteria",
+                description: "Multi-lane execution discipline, state maintenance rules, and deep-testing obligations",
             },
             {
                 slug: "v8-runtime-contracts",
@@ -444,55 +223,61 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-config-bootstrap-model",
                 label: "V8 Config and Bootstrap Model",
                 path: "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
-                description: "Canonical V8 bootstrap + V7->V8 migration contract covering templates vs instantiated orgs, entry points, inheritance, and precedence",
+                description: "Canonical V7-to-V8 bootstrap, template, instantiation, inheritance, and precedence contract",
             },
             {
                 slug: "v8-ui-api-operator-experience-contract",
                 label: "V8 UI/API/Operator Contract",
                 path: "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
-                description: "Canonical V8 PRD for first-run, Soma-primary operator flow, advanced architecture/runtime boundaries, and screen-to-API mapping",
+                description: "Canonical operator workflow contract for AI Organization creation and Soma-first runtime behavior",
             },
             {
                 slug: "v8-1-living-organization-architecture",
                 label: "Current Release Architecture (V8.1)",
                 path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
-                description: "Current bounded release architecture for Loop Profiles, Learning Loops, semantic continuity, Procedure / Skill Sets, promoted Agent Type/Response Contract inheritance, and bounded Automations visibility",
+                description: "Current bounded release architecture for loops, continuity, capabilities, and bounded automations",
             },
             {
-                slug: "v8-2-cross-repo-cleanup-release-plan",
-                label: "V8.2 Cleanup + Release Structure Plan",
-                path: "docs/architecture-library/V8_2_CROSS_REPO_CLEANUP_AND_RELEASE_STRUCTURE_PLAN.md",
-                description: "Prioritized cleanup lanes, commit boundaries, owner roles, and release validation order for the current mixed worktree",
+                slug: "v8-universal-soma-context-model",
+                label: "V8 Universal Soma Context Model",
+                path: "docs/architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md",
+                description: "Canonical PRD for one persistent Soma/Council pair with scoped execution across contexts",
+            },
+            {
+                slug: "v8-home-docker-compose-runtime",
+                label: "V8 Home Docker Compose Runtime",
+                path: "docs/architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md",
+                description: "Single-host Docker Compose runtime for home-lab, demo, and partner review",
             },
             {
                 slug: "v8-2-full-production-architecture",
                 label: "Full Architecture (V8.2)",
                 path: "v8-2.md",
-                description: "Canonical full production architecture for distributed execution, governed learning, capability-backed execution, and full actuation scope",
+                description: "Canonical full production architecture for distributed execution, governed learning, and actuation",
             },
             {
                 slug: "arch-overview",
                 label: "Overview",
                 path: "docs/architecture/OVERVIEW.md",
-                description: "Philosophy, 4-layer anatomy, phases, roadmap",
+                description: "Philosophy, 4-layer anatomy, phases, and roadmap",
             },
             {
                 slug: "arch-backend",
                 label: "Backend",
                 path: "docs/architecture/BACKEND.md",
-                description: "Go packages, APIs, DB schema, NATS, execution pipelines",
+                description: "Go packages, APIs, DB schema, NATS, and execution pipelines",
             },
             {
                 slug: "arch-frontend",
                 label: "Frontend",
                 path: "docs/architecture/FRONTEND.md",
-                description: "Routes, components, Zustand, design system",
+                description: "Routes, components, Zustand, and design system",
             },
             {
                 slug: "arch-operations",
                 label: "Operations",
                 path: "docs/architecture/OPERATIONS.md",
-                description: "Deployment, config, testing, CI/CD",
+                description: "Deployment, config, testing, and CI/CD guidance",
             },
             {
                 slug: "arch-ui-target-transaction-contract-v7",
@@ -504,7 +289,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "arch-memory-service",
                 label: "Memory Service",
                 path: "docs/architecture/DIRECTIVE_MEMORY_SERVICE.md",
-                description: "State Engine design — event projection, pgvector, log_entries schema",
+                description: "State engine design, pgvector usage, and directive-memory schema",
             },
             {
                 slug: "v7-architecture-prd",
@@ -516,31 +301,31 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v7-mcp-baseline",
                 label: "V7 MCP Baseline",
                 path: "docs/V7_MCP_BASELINE.md",
-                description: "MVOS: filesystem, memory, artifact-renderer, fetch servers",
+                description: "Filesystem, memory, artifact-renderer, and fetch servers baseline",
             },
             {
                 slug: "arch-mcp-service-config-local-first",
                 label: "MCP Service Config (Local-First)",
                 path: "docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md",
-                description: "Canonical process and configuration standard for adding MCP services with local-default posture",
+                description: "Local-default standard for adding MCP services with governed configuration",
             },
             {
                 slug: "arch-universal-action-interface-v7",
                 label: "Universal Action Interface V7",
                 path: "docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md",
-                description: "Canonical universal action contracts, dynamic service API, and Python management interface",
+                description: "Universal action contracts, dynamic service API, and Python management interface",
             },
             {
                 slug: "arch-agentry-template-marketplace-v7",
                 label: "Template Marketplace + Custom",
                 path: "docs/architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md",
-                description: "API and governance model for marketplace template acquisition (ClawHub-style) and tenant custom template publishing",
+                description: "Marketplace acquisition and tenant-owned custom template publishing model",
             },
             {
                 slug: "arch-actualization-beyond-mcp-v7",
                 label: "Actualization Beyond MCP V7",
                 path: "docs/architecture/ACTUALIZATION_ARCHITECTURE_BEYOND_MCP_V7.md",
-                description: "Multi-protocol actualization strategy across MCP, OpenAPI, A2A, ACP, and Python action management",
+                description: "Multi-protocol architecture across MCP, OpenAPI, A2A, ACP, and Python action management",
             },
             {
                 slug: "arch-secure-gateway-remote-actuation-v7",
@@ -552,48 +337,46 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "arch-hardware-interface-api-v7",
                 label: "Hardware Interface API + Channels",
                 path: "docs/architecture/HARDWARE_INTERFACE_API_AND_CHANNELS_V7.md",
-                description: "Hardware interface control-plane APIs and direct channel support standards",
+                description: "Hardware control-plane APIs and direct channel support standards",
             },
             {
                 slug: "arch-soma-symbiote-growth-host-actuation-v7",
                 label: "Soma Symbiote + Host Actuation",
                 path: "docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md",
-                description: "Soma thought-profile contracts, learning-growth loop, and localhost host actuation model",
+                description: "Soma thought-profile contracts, learning-growth loop, and localhost actuation model",
             },
             {
                 slug: "arch-soma-team-channels",
                 label: "Soma Team + Channel Architecture",
                 path: "docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md",
-                description: "Canonical inter-team/process/MCP channel contracts and shared memory boundaries",
+                description: "Inter-team and MCP channel contracts plus shared memory boundaries",
             },
             {
                 slug: "arch-nats-signal-standard-v7",
                 label: "NATS Signal Standard V7",
                 path: "docs/architecture/NATS_SIGNAL_STANDARD_V7.md",
-                description: "Canonical NATS subject families, source normalization, and product-vs-dev channel boundaries",
+                description: "Canonical subject families, source normalization, and product-vs-dev channel boundaries",
             },
             {
                 slug: "arch-workflow-composer-delivery-v7",
                 label: "Workflow Composer Delivery Plan V7",
                 path: "docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md",
-                description: "Airflow-style DAG workflow composer plan with team lanes, release gates, git discipline, and invoke task strategy",
+                description: "DAG workflow composer delivery contract, release gates, and invoke task strategy",
             },
             {
                 slug: "arch-soma-council-engagement-protocol-v7",
                 label: "Soma-Council Engagement Protocol V7",
                 path: "docs/architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md",
-                description: "Deterministic path-selection contract for internal tools, MCP, external APIs, and code-to-execution loops",
+                description: "Path-selection contract for internal tools, MCP, external APIs, and code-to-execution loops",
             },
             {
                 slug: "arch-agent-source-instantiation-template-v7",
                 label: "Agent Source Template V7",
                 path: "docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md",
-                description: "Standardized provider instantiation template with Ollama as default and governed overrides for OpenAI, Claude, Gemini, vLLM, and LM Studio",
+                description: "Provider instantiation template with Ollama default and governed overrides",
             },
         ],
     },
-
-    // ── Governance & Testing ──────────────────────────────────────────────────
     {
         section: "Governance & Testing",
         docs: [
@@ -601,35 +384,39 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "governance",
                 label: "Governance System",
                 path: "docs/governance.md",
-                description: "Policy enforcement, ALLOW/DENY/REQUIRE_APPROVAL, scenario configs",
+                description: "Policy enforcement, approval posture, and audit-linked governance model",
             },
             {
                 slug: "testing",
                 label: "Testing",
                 path: "docs/TESTING.md",
-                description: "Unit, integration, smoke test protocols",
+                description: "Unit, integration, browser, and release validation guidance",
             },
             {
                 slug: "v8-ui-testing-agentry-contract",
                 label: "V8 UI Testing Agentry",
                 path: "docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md",
-                description: "Canonical product-contract proof for Soma-first browser testing, governed actions, continuity, audit visibility, and trust recovery",
+                description: "Canonical browser proof contract for Soma-first flows, governed actions, and trust recovery",
             },
             {
-                slug: "v8-ui-testing-stabilization-strike-plan",
-                label: "V8 UI Testing Strike Plan",
-                path: "docs/architecture-library/V8_UI_TESTING_STABILIZATION_STRIKE_TEAM_PLAN.md",
-                description: "Active strike-team ownership plan for stabilizing mocked browser proof, live governed-chat proof, and release hygiene",
-            },
-            {
-                slug: "v8-release-platform-review",
-                label: "V8 Release Platform Review",
-                path: "docs/architecture-library/V8_RELEASE_PLATFORM_REVIEW_SECURITY_MONITORING_DEBUG.md",
-                description: "Shared release-readiness review across governance/security, monitoring/ops, and debug/live-browser proof",
+                slug: "v8-ui-team-full-test-set",
+                label: "V8 UI Team Full Test Set",
+                path: "docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md",
+                description: "Full UI validation set for browser workflows, runtime proof, and final verdict rules",
             },
         ],
     },
-
+    {
+        section: "Archive",
+        docs: [
+            {
+                slug: "archive-index",
+                label: "Archive Index",
+                path: "docs/archive/README.md",
+                description: "Historical documents only and not active implementation authority",
+            },
+        ],
+    },
 ];
 
 /** Flat lookup map: slug → DocEntry. Used by the API route for validation. */

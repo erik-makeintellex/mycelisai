@@ -365,6 +365,6 @@ MVP is complete only when all items below are true:
 Anything less than this set is pre-MVP for the full intent-to-manifestation architecture target.
 
 Next:
-- [Next Execution Slices V7](NEXT_EXECUTION_SLICES_V7.md)
+- [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 - [Workflow Composer Delivery Plan V7](../architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md)
 - [UI Target And Transaction Contract V7](../architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)

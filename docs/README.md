@@ -1,6 +1,6 @@
 # Documentation
 
-Use this page as the clean navigation layer between user guidance, agent/developer guidance, testing guidance, and historical references.
+Use this page as the clean navigation layer between user guidance, developer guidance, testing guidance, and historical references.
 
 ## Docs TOC
 
@@ -25,7 +25,7 @@ These are the best entry points for someone using Mycelis through the product:
 
 ## Agent and Developer Guidance
 
-These are the active V8 authority surfaces for contributors changing or reviewing the repo:
+These are the active authority surfaces for contributors changing or reviewing the repo:
 
 - **Repository Entry Point**: `../README.md`
 - **Repository Standards**: `../AGENTS.md`
@@ -35,6 +35,8 @@ These are the active V8 authority surfaces for contributors changing or reviewin
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - **V8.1 Living Organization Architecture**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
+- **V8 Universal Soma And Context Model PRD**: `./architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`
+- **V8 Home Docker Compose Runtime**: `./architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
 - **V8.2 Production Architecture Target**: `../v8-2.md`
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
@@ -45,10 +47,9 @@ These are the active V8 authority surfaces for contributors changing or reviewin
 Use these when the goal is verification, release proof, or workflow-complete validation:
 
 - **Testing Guide**: `./TESTING.md`
-- **V8 Full Testing Action Plan**: `./architecture-library/V8_FULL_TESTING_ACTION_PLAN.md`
-- **V8 UI Workflow Verification Plan**: `./architecture-library/V8_UI_WORKFLOW_VERIFICATION_PLAN.md`
+- **V8 UI Testing Agentry Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
-- **V8 UI Testing Agentry Execution Runbook**: `./architecture-library/V8_UI_TESTING_AGENTRY_EXECUTION_RUNBOOK.md`
+- **Governance System**: `./governance.md`
 
 ## Historical and Migration Inputs
 
@@ -62,11 +63,7 @@ Use these only when migration-era assumptions need cross-checking:
 - **Intent To Manifestation And Team Interaction V7**: `./architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md`
 - **UI And Operator Experience V7**: `./architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
 - **Delivery Governance And Testing V7**: `./architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
-- **Next Execution Slices V7**: `./architecture-library/NEXT_EXECUTION_SLICES_V7.md`
 - **Team Execution And Global State Protocol V7**: `./architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
-- **MVP Release Strike Team Plan V7**: `./architecture-library/MVP_RELEASE_STRIKE_TEAM_PLAN_V7.md`
-- **MVP Integration And Toolship Execution Plan V7**: `./architecture-library/MVP_INTEGRATION_AND_TOOLSHIP_EXECUTION_PLAN_V7.md`
-- **UI Generation And Testing Execution Plan V7**: `./architecture-library/UI_GENERATION_AND_TESTING_EXECUTION_PLAN_V7.md`
 - **V7 Architecture PRD Index**: `../mycelis-architecture-v7.md`
 - **Legacy V7 Development State**: `../V7_DEV_STATE.md`
 - **NATS Signal Standard V7**: `./architecture/NATS_SIGNAL_STANDARD_V7.md`
@@ -92,5 +89,5 @@ Top detailed framework memory surfaces for active V8 work:
 Guidance rules:
 - user guidance should stay focused on using the product, not implementation internals
 - agent/developer guidance should point to active V8 authority before V7 migration material
-- testing guidance should make the expected release gate explicit instead of scattering it across multiple notes
+- testing guidance should point to durable verification contracts rather than temporary execution notes
 - `./archive/README.md` is historical context only and should not drive active implementation
