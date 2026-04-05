@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func (r *InternalToolRegistry) writeTeamRoster(sb *strings.Builder) {
@@ -24,6 +26,9 @@ func (r *InternalToolRegistry) writeTeamRoster(sb *strings.Builder) {
 			desc = fmt.Sprintf("%d agent(s)", len(m.Members))
 		}
 		sb.WriteString(fmt.Sprintf("- **%s** (`%s`, %s): %s\n", m.Name, m.ID, m.Type, desc))
+		if len(m.AskRouting) > 0 {
+			sb.WriteString(fmt.Sprintf("  - ask routing: %s\n", formatAskRoutingHints(m.AskRouting)))
+		}
 		for _, a := range m.Members {
 			tools := ""
 			if len(a.Tools) > 0 {
@@ -33,6 +38,28 @@ func (r *InternalToolRegistry) writeTeamRoster(sb *strings.Builder) {
 		}
 	}
 	sb.WriteString("\n")
+}
+
+func formatAskRoutingHints(routing map[string]string) string {
+	order := []string{
+		string(protocol.TeamAskKindCoordination),
+		string(protocol.TeamAskKindResearch),
+		string(protocol.TeamAskKindImplementation),
+		string(protocol.TeamAskKindValidation),
+		string(protocol.TeamAskKindReview),
+	}
+	parts := make([]string, 0, len(routing))
+	for _, key := range order {
+		value := strings.TrimSpace(routing[key])
+		if value == "" {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s→%s", key, value))
+	}
+	if len(parts) == 0 {
+		return "none declared"
+	}
+	return strings.Join(parts, ", ")
 }
 
 func (r *InternalToolRegistry) writeAgentTopology(sb *strings.Builder, agentID, teamID string, inputs, deliveries []string) {

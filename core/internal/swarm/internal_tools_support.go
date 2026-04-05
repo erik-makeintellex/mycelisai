@@ -84,12 +84,17 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 		}
 	}
 	tools := stringSlice(merged["tools"])
+	askRouting := parseTeamAskRouting(merged["ask_routing"])
+	if len(askRouting) == 0 {
+		askRouting = defaultTeamAskRouting()
+	}
 
 	return &TeamManifest{
 		ID:          teamID,
 		Name:        name,
 		Type:        teamType,
 		Description: "Runtime-created team",
+		AskRouting:  askRouting,
 		Members: []protocol.AgentManifest{{
 			ID:            agentID,
 			Role:          role,
@@ -99,6 +104,36 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 		}},
 		Inputs:     inputs,
 		Deliveries: deliveries,
+	}
+}
+
+func parseTeamAskRouting(raw any) map[string]string {
+	source, ok := raw.(map[string]any)
+	if !ok {
+		return nil
+	}
+	resolved := map[string]string{}
+	for key, value := range source {
+		askKind := strings.TrimSpace(key)
+		laneRole := strings.TrimSpace(stringValue(value))
+		if askKind == "" || laneRole == "" {
+			continue
+		}
+		resolved[askKind] = laneRole
+	}
+	if len(resolved) == 0 {
+		return nil
+	}
+	return resolved
+}
+
+func defaultTeamAskRouting() map[string]string {
+	return map[string]string{
+		string(protocol.TeamAskKindCoordination):   string(protocol.TeamLaneRoleCoordinator),
+		string(protocol.TeamAskKindResearch):       string(protocol.TeamLaneRoleResearcher),
+		string(protocol.TeamAskKindImplementation): string(protocol.TeamLaneRoleImplementer),
+		string(protocol.TeamAskKindValidation):     string(protocol.TeamLaneRoleValidator),
+		string(protocol.TeamAskKindReview):         string(protocol.TeamLaneRoleReviewer),
 	}
 }
 

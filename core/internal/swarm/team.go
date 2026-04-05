@@ -24,6 +24,7 @@ type TeamManifest struct {
 	Type        TeamType                 `yaml:"type"`
 	Description string                   `yaml:"description"`
 	Provider    string                   `yaml:"provider,omitempty"`
+	AskRouting  map[string]string        `yaml:"ask_routing,omitempty"`
 	Members     []protocol.AgentManifest `yaml:"members"`
 	Inputs      []string                 `yaml:"inputs"`
 	Deliveries  []string                 `yaml:"deliveries"`

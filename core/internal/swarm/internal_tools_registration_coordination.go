@@ -69,6 +69,11 @@ func (r *InternalToolRegistry) registerCoordinationTools() {
 				"tools":         map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional first agent tools"},
 				"inputs":        map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional team input subjects"},
 				"deliveries":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional team delivery subjects"},
+				"ask_routing": map[string]any{
+					"type":                 "object",
+					"description":          "Optional per-team ask-kind to lane-role routing hints.",
+					"additionalProperties": map[string]any{"type": "string"},
+				},
 			},
 			"required": []string{"team_id"},
 		},
