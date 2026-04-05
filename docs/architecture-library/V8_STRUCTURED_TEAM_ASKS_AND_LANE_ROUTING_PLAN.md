@@ -160,7 +160,7 @@ Goals:
 
 ### Phase 3: UI/operator exposure
 
-Status target: NEXT
+Status target: ACTIVE
 
 Goals:
 

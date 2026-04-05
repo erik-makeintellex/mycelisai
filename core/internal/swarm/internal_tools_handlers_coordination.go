@@ -141,7 +141,7 @@ func normalizeDelegateTaskArgs(args map[string]any) (teamID string, ask protocol
 		}
 	}
 	if askRaw, ok := args["ask"].(map[string]any); ok {
-		ask = teamAskFromMap(askRaw)
+		ask = protocol.TeamAskFromMap(askRaw)
 		return teamID, ask.Normalize(), nil
 	}
 	switch t := args["task"].(type) {
@@ -149,7 +149,7 @@ func normalizeDelegateTaskArgs(args map[string]any) (teamID string, ask protocol
 		ask = protocol.TeamAsk{Goal: strings.TrimSpace(t)}
 	case map[string]any, []any:
 		if taskMap, ok := t.(map[string]any); ok {
-			ask = teamAskFromMap(taskMap)
+			ask = protocol.TeamAskFromMap(taskMap)
 		} else {
 			ask = protocol.TeamAsk{Goal: string(mustJSON(t))}
 		}
@@ -180,27 +180,6 @@ func normalizeDelegateTaskArgs(args map[string]any) (teamID string, ask protocol
 		}
 	}
 	return teamID, ask.Normalize(), nil
-}
-
-func teamAskFromMap(raw map[string]any) protocol.TeamAsk {
-	ask := protocol.TeamAsk{
-		SchemaVersion:        pickFirstString(raw, "schema_version", "version"),
-		AskKind:              protocol.TeamAskKind(pickFirstString(raw, "ask_kind", "kind")),
-		LaneRole:             protocol.TeamLaneRole(pickFirstString(raw, "lane_role", "role", "lane")),
-		Goal:                 firstNonEmptyString(pickFirstString(raw, "goal"), pickFirstString(raw, "intent"), pickFirstString(raw, "message"), pickFirstString(raw, "task")),
-		OwnedScope:           stringSlice(raw["owned_scope"]),
-		Constraints:          stringSlice(raw["constraints"]),
-		RequiredCapabilities: stringSlice(raw["required_capabilities"]),
-		ApprovalPosture:      protocol.ApprovalPosture(pickFirstString(raw, "approval_posture")),
-		ExitCriteria:         stringSlice(raw["exit_criteria"]),
-		EvidenceRequired:     stringSlice(raw["evidence_required"]),
-	}
-	if ctxRaw, ok := raw["context"]; ok {
-		if ctxMap, ok := ctxRaw.(map[string]any); ok {
-			ask.Context = ctxMap
-		}
-	}
-	return ask
 }
 
 func firstNonEmptyString(values ...string) string {

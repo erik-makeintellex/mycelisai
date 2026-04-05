@@ -2,9 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"net/http"
 	"os"
 	"path/filepath"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -326,6 +326,33 @@ func TestCreateAuditEvent_NilDB(t *testing.T) {
 	}
 	if eventID != "" {
 		t.Error("Expected empty event ID when DB is nil")
+	}
+}
+
+func TestBuildExecutionAuditDetailsForTool_DelegateTaskIncludesStructuredSummary(t *testing.T) {
+	details := buildExecutionAuditDetailsForTool(protocol.PlannedToolCall{
+		Name: "delegate_task",
+		Arguments: map[string]any{
+			"team_id": "research-team",
+			"ask": map[string]any{
+				"ask_kind":  "research",
+				"lane_role": "researcher",
+				"goal":      "Map the provider authentication drift.",
+			},
+		},
+	}, "delegate_task")
+
+	if details["tool"] != "delegate_task" {
+		t.Fatalf("tool = %v", details["tool"])
+	}
+	if details["team_id"] != "research-team" {
+		t.Fatalf("team_id = %v", details["team_id"])
+	}
+	if details["ask_kind"] != "research" {
+		t.Fatalf("ask_kind = %v", details["ask_kind"])
+	}
+	if details["operator_summary"] != "Researcher ask: Map the provider authentication drift." {
+		t.Fatalf("operator_summary = %v", details["operator_summary"])
 	}
 }
 

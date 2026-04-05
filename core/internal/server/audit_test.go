@@ -113,7 +113,7 @@ func TestBuildAuditRecord(t *testing.T) {
 		"admin",
 		"Chat mutation detected",
 		time.Date(2026, 3, 26, 12, 0, 0, 0, time.UTC),
-		[]byte(`{"actor":"Soma","user":"local-user","action":"capability_usage","result_status":"completed","capability_used":"planning","details":{"channel":"workspace"}}`),
+		[]byte(`{"actor":"Soma","user":"local-user","action":"capability_usage","result_status":"completed","capability_used":"planning","details":{"channel":"workspace","operator_summary":"Researcher ask: Map the governed release proof.","team_id":"research-team"}}`),
 	)
 
 	if record.Action != "capability_usage" {
@@ -124,6 +124,9 @@ func TestBuildAuditRecord(t *testing.T) {
 	}
 	if record.Details["channel"] != "workspace" {
 		t.Fatalf("expected details to include channel, got %+v", record.Details)
+	}
+	if record.Details["operator_summary"] != "Researcher ask: Map the governed release proof." {
+		t.Fatalf("expected operator summary in details, got %+v", record.Details)
 	}
 }
 

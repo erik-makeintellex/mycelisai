@@ -64,6 +64,7 @@ Release posture:
 - `IN_REVIEW` the first follow-through slice beyond protocol preservation is now landed locally: receiving agents normalize structured `TeamAsk` payloads into role-aware prompts so research, validation, and implementation asks no longer collapse into the same raw trigger text before inference.
 - `IN_REVIEW` team instantiation now has the first explicit ask-routing hint model in the local slice: runtime-created team manifests can carry `ask_routing` defaults and the live team roster context now exposes those hints so routing intent is visible before deeper lane-runtime specialization lands.
 - `IN_REVIEW` structured delegation can now resolve a target team from manifest `ask_routing` hints when Soma emits a typed ask without an explicit `team_id`, but only when the routing decision is uniquely declared; ambiguous or missing matches fail closed instead of guessing.
+- `IN_REVIEW` inspect-only governance activity now renders structured delegation summaries from the same `TeamAsk` contract: confirmed `delegate_task` execution records can surface the routed team, ask kind, lane role, and operator-readable ask summary in Audit without exposing raw command payloads in the default workflow.
 - `NEXT` enterprise identity, approval workflows, and multi-user access management remain deferred beyond the free-node governance foundation; the current release now has enterprise-capable governance foundations, not full enterprise identity management.
 
 ## Architecture Synchronization Rule
