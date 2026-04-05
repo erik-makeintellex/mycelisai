@@ -24,6 +24,9 @@ func TestNormalizeTeamTriggerInput_StructuredAskRendersPrompt(t *testing.T) {
 
 	for _, want := range []string{
 		"You have received a structured team ask.",
+		"Use the ask to stay aligned on mission, scope, and proof needs.",
+		"Do not force your response into a rigid template unless the ask explicitly requires one.",
+		"Deliver the best output for the job while making sure it satisfies the ask goal, constraints, and required evidence.",
 		"Ask kind: research",
 		"Lane role: researcher",
 		"Goal: Find the best documented approach.",
@@ -33,6 +36,7 @@ func TestNormalizeTeamTriggerInput_StructuredAskRendersPrompt(t *testing.T) {
 		"- Return one recommended path.",
 		"Evidence required:",
 		"- source_links",
+		"Complete the ask within scope, match the mission, and report the outcome clearly.",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("rendered prompt missing %q:\n%s", want, got)

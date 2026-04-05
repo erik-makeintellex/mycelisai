@@ -114,6 +114,9 @@ func normalizeTeamTriggerInput(data []byte) string {
 func renderTeamAskPrompt(ask protocol.TeamAsk) string {
 	var sb strings.Builder
 	sb.WriteString("You have received a structured team ask.\n")
+	sb.WriteString("Use the ask to stay aligned on mission, scope, and proof needs.\n")
+	sb.WriteString("Do not force your response into a rigid template unless the ask explicitly requires one.\n")
+	sb.WriteString("Deliver the best output for the job while making sure it satisfies the ask goal, constraints, and required evidence.\n")
 	sb.WriteString(fmt.Sprintf("Ask kind: %s\n", ask.AskKind))
 	sb.WriteString(fmt.Sprintf("Lane role: %s\n", ask.LaneRole))
 	sb.WriteString(fmt.Sprintf("Goal: %s\n", ask.Goal))
@@ -152,7 +155,7 @@ func renderTeamAskPrompt(ask protocol.TeamAsk) string {
 			sb.WriteString(fmt.Sprintf("Context: %s\n", string(raw)))
 		}
 	}
-	sb.WriteString("Complete the ask within scope and report the outcome clearly.")
+	sb.WriteString("Complete the ask within scope, match the mission, and report the outcome clearly.")
 	return sb.String()
 }
 

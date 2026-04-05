@@ -24,6 +24,11 @@ Right now, team delegation is still too string-heavy. That makes it harder to:
 - instantiate reusable team lane roles
 - explain delegation cleanly in UI and audit surfaces
 
+Important boundary:
+
+- structured asks should constrain mission fit, owned scope, and proof expectations
+- they should not over-constrain the engaged model into one rigid response format unless the mission explicitly requires that format
+
 ## Target Outcome
 
 This lane is successful when:
