@@ -9,6 +9,7 @@ export const TOOL_LABELS: Record<string, string> = {
   delegate_task: "Assign to Team",
   search_memory: "Search Memory",
   load_deployment_context: "Load Governed Context",
+  promote_deployment_context: "Promote Company Knowledge",
   list_teams: "View Teams",
   list_missions: "View Missions",
   get_system_status: "System Status",
@@ -152,6 +153,7 @@ export const GOVERNANCE_TOOLS = new Set([
   "generate_blueprint",
   "write_file",
   "load_deployment_context",
+  "promote_deployment_context",
   "publish_signal",
 ]);
 
@@ -164,6 +166,7 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   delegate_task: "Assigns work to an active team (governance-gated)",
   search_memory: "Semantic search over situation reports",
   load_deployment_context: "Stores governed customer context or approved company knowledge in the separate vector-backed context store",
+  promote_deployment_context: "Promotes a customer-context entry into approved company knowledge with lineage preserved",
   generate_blueprint: "Creates mission blueprint via MetaArchitect (governance-gated)",
   write_file: "Writes file to sandboxed workspace (governance-gated)",
   publish_signal: "Publishes signal to NATS bus (governance-gated)",
@@ -192,6 +195,7 @@ export function toolDescription(name: string): string {
 export const MEMORY_LABELS: Record<string, string> = {
   search_memory: "Semantic search",
   load_deployment_context: "Governed context ingest",
+  promote_deployment_context: "Governed context promotion",
   recall: "Context recall",
 };
 

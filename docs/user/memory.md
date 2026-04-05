@@ -33,6 +33,7 @@ Rule of thumb:
 - if it should be reusable later by meaning as a learned fact, promote it into durable memory
 - if it is customer-provided or deployment-shaping reference material, load it into the customer context store
 - if it is approved company-authored guidance, load it into the company knowledge store
+- if customer context needs to become durable company reference, promote it through a governed approval path instead of silently reclassifying the original entry
 - if it is only useful for the current planning cycle, keep it in temporary continuity
 - if it exists to explain what happened, treat it as trace or audit
 

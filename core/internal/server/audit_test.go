@@ -51,6 +51,27 @@ func TestBuildApprovalPolicy_RequiresApprovalForHighRiskCapability(t *testing.T)
 	}
 }
 
+func TestBuildApprovalPolicy_RequiresApprovalForCompanyKnowledgePromotion(t *testing.T) {
+	profile := userGovernanceProfile{
+		Role:                 "owner",
+		CostSensitivity:      "balanced",
+		ReviewStrictness:     "standard",
+		AutomationTolerance:  "balanced",
+		EscalationPreference: "ask",
+	}
+
+	policy := buildApprovalPolicy(profile, []protocol.PlannedToolCall{{Name: "promote_deployment_context", Arguments: map[string]any{"source_artifact_id": "ctx-1"}}}, nil)
+	if policy == nil {
+		t.Fatal("expected approval policy")
+	}
+	if !policy.ApprovalRequired {
+		t.Fatalf("expected approval to be required, got %+v", policy)
+	}
+	if policy.CapabilityRisk != "high" {
+		t.Fatalf("expected high capability risk, got %+v", policy)
+	}
+}
+
 func TestHandleListAuditLog(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)

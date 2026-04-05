@@ -17,11 +17,12 @@ import (
 // mutationTools are tools that trigger proposal mode when used in chat.
 // If an agent uses any of these, the response switches from answer → proposal.
 var mutationTools = map[string]bool{
-	"generate_blueprint": true,
-	"delegate":           true,
-	"write_file":         true,
-	"publish_signal":     true,
-	"broadcast":          true,
+	"generate_blueprint":         true,
+	"delegate":                   true,
+	"write_file":                 true,
+	"publish_signal":             true,
+	"broadcast":                  true,
+	"promote_deployment_context": true,
 }
 
 const emptyProviderOutputCode = "empty_provider_output"
@@ -69,6 +70,9 @@ func chatToolRisk(tools []string) string {
 		}
 		if t == "generate_blueprint" || t == "delegate" || t == "write_file" {
 			return "medium"
+		}
+		if t == "promote_deployment_context" {
+			return "high"
 		}
 	}
 	return "low"
@@ -335,6 +339,11 @@ func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []stri
 				resources = append(resources, strings.TrimSpace(subject))
 				continue
 			}
+		case "promote_deployment_context":
+			if artifactID, ok := call.Arguments["source_artifact_id"].(string); ok && strings.TrimSpace(artifactID) != "" {
+				resources = append(resources, fmt.Sprintf("company knowledge from %s", strings.TrimSpace(artifactID)))
+				continue
+			}
 		}
 		resources = append(resources, "state")
 	}
@@ -473,6 +482,22 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 			display.OperatorSummary = "Broadcast the requested update to connected teams."
 			display.ExpectedResult = "The approved broadcast will be sent and logged with execution proof."
 			return display
+		case "promote_deployment_context":
+			title := firstStringArgument(planned[0].Arguments, "title")
+			if title != "" {
+				display.OperatorSummary = fmt.Sprintf("Promote %q into approved company knowledge.", title)
+				display.ExpectedResult = fmt.Sprintf("%q will be stored as approved company knowledge with lineage back to the original customer context entry.", title)
+				return display
+			}
+			sourceArtifactID := firstStringArgument(planned[0].Arguments, "source_artifact_id")
+			if sourceArtifactID != "" {
+				display.OperatorSummary = "Promote an existing customer context entry into approved company knowledge."
+				display.ExpectedResult = fmt.Sprintf("The customer context entry %q will be converted into a new company knowledge record with preserved lineage.", sourceArtifactID)
+				return display
+			}
+			display.OperatorSummary = "Promote an existing customer context entry into approved company knowledge."
+			display.ExpectedResult = "A new approved company knowledge record will be created with lineage back to the original customer context entry."
+			return display
 		}
 	}
 
@@ -493,6 +518,9 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 		case "broadcast":
 			display.OperatorSummary = "Broadcast the requested update to connected teams."
 			display.ExpectedResult = "The approved broadcast will be sent and logged with execution proof."
+		case "promote_deployment_context":
+			display.OperatorSummary = "Promote an existing customer context entry into approved company knowledge."
+			display.ExpectedResult = "A new approved company knowledge record will be created with lineage back to the original customer context entry."
 		}
 	}
 

@@ -239,7 +239,7 @@ func capabilityForPlannedTool(name string) string {
 		return "file_output"
 	case "generate_blueprint":
 		return "planning"
-	case "load_deployment_context", "remember", "summarize_conversation":
+	case "load_deployment_context", "promote_deployment_context", "remember", "summarize_conversation":
 		return "learning"
 	case "delegate":
 		return "review"
@@ -253,6 +253,8 @@ func capabilityForPlannedTool(name string) string {
 func capabilityRiskForTool(name string, arguments map[string]any) string {
 	switch strings.TrimSpace(name) {
 	case "publish_signal", "broadcast":
+		return "high"
+	case "promote_deployment_context":
 		return "high"
 	case "load_deployment_context":
 		if strings.TrimSpace(fmt.Sprint(arguments["knowledge_class"])) == "company_knowledge" {
@@ -280,6 +282,11 @@ func estimateActionCost(name string, arguments map[string]any) float64 {
 			return 0.8
 		}
 		return 0.45
+	case "promote_deployment_context":
+		if content, ok := arguments["content"].(string); ok && len(content) > 2000 {
+			return 0.9
+		}
+		return 0.55
 	case "delegate":
 		return 0.6
 	case "generate_blueprint":
@@ -294,6 +301,13 @@ func externalDataUseForTool(name string, arguments map[string]any) bool {
 	case "publish_signal", "broadcast":
 		return true
 	case "load_deployment_context":
+		switch strings.TrimSpace(fmt.Sprint(arguments["source_kind"])) {
+		case "web_research":
+			return true
+		default:
+			return false
+		}
+	case "promote_deployment_context":
 		switch strings.TrimSpace(fmt.Sprint(arguments["source_kind"])) {
 		case "web_research":
 			return true

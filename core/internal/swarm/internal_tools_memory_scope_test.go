@@ -203,6 +203,58 @@ func TestHandleLoadDeploymentContext_PersistsArtifactAndVectors(t *testing.T) {
 	}
 }
 
+func TestHandlePromoteDeploymentContext_PromotesCustomerContextToCompanyKnowledge(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	mem := memory.NewServiceWithDB(db)
+	sourceMeta := `{"knowledge_class":"customer_context","source_label":"customer brief","source_kind":"user_document","visibility":"global","sensitivity_class":"role_scoped","trust_class":"user_provided","tags":["deployment","security"]}`
+	mock.ExpectQuery("SELECT title, content, metadata FROM artifacts WHERE id::text = \\$1").
+		WithArgs("ctx-1").
+		WillReturnRows(sqlmock.NewRows([]string{"title", "content", "metadata"}).
+			AddRow("Customer Deployment Brief", "Use reviewed MCP web access only.", []byte(sourceMeta)))
+	mock.ExpectQuery("INSERT INTO artifacts").
+		WithArgs(
+			sqlmock.AnyArg(), sqlmock.AnyArg(),
+			"lead-alpha", sqlmock.AnyArg(),
+			sqlmock.AnyArg(), "Approved Deployment Guidance", "text/markdown",
+			"Use reviewed MCP web access only.", sqlmock.AnyArg(), sqlmock.AnyArg(),
+			sqlmock.AnyArg(), sqlmock.AnyArg(), "approved",
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).AddRow("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", time.Now()))
+	mock.ExpectExec("INSERT INTO context_vectors").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	registry := NewInternalToolRegistry(InternalToolDeps{
+		Brain: newFakeBrain(fakeMemoryProvider{embedVec: []float64{0.1, 0.2}}),
+		Mem:   mem,
+		DB:    db,
+	})
+	ctx := WithToolInvocationContext(context.Background(), ToolInvocationContext{
+		TeamID:    "alpha",
+		AgentID:   "lead-alpha",
+		UserLabel: "owner-user",
+	})
+
+	out, err := registry.handlePromoteDeploymentContext(ctx, map[string]any{
+		"source_artifact_id": "ctx-1",
+		"title":              "Approved Deployment Guidance",
+	})
+	if err != nil {
+		t.Fatalf("handlePromoteDeploymentContext: %v", err)
+	}
+	if !strings.Contains(out, "company_knowledge") || !strings.Contains(out, "source_artifact_id") {
+		t.Fatalf("expected promotion payload, got %s", out)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("expectations: %v", err)
+	}
+}
+
 func TestBuildContext_IncludesDeploymentContextRecall(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

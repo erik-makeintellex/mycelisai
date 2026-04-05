@@ -96,6 +96,12 @@ Required:
   - Soma-authored synthesis
   - approved company reference
 
+Current state:
+- first minimal governed promotion path is implemented
+- promotion runs through the stored confirm-action plan, not a side-channel bypass
+- promotion creates a new `company_knowledge` artifact/vector record and preserves lineage back to the source `customer_context` artifact
+- operator-facing dedicated promotion UI is still future work
+
 Implementation target:
 - add a promotion workflow such as `promote_context_to_company_knowledge`
 - require proposal + approval for promotion

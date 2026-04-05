@@ -11,6 +11,13 @@ import (
 	"github.com/mycelis/core/internal/deploymentcontext"
 )
 
+func currentToolUserLabel(ctx context.Context) string {
+	if inv, ok := ToolInvocationContextFromContext(ctx); ok && strings.TrimSpace(inv.UserLabel) != "" {
+		return strings.TrimSpace(inv.UserLabel)
+	}
+	return "soma"
+}
+
 func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map[string]any) (string, error) {
 	artType := stringValue(args["type"])
 	title := stringValue(args["title"])
@@ -92,7 +99,7 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		Tags:             stringSlice(args["tags"]),
 		AgentID:          scope.AgentID,
 		TeamID:           scope.TeamID,
-		UserLabel:        "soma",
+		UserLabel:        currentToolUserLabel(ctx),
 	})
 	if err != nil {
 		return "", err
@@ -110,6 +117,56 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		"trust_class":     result.TrustClass,
 		"context_kind":    "governed_knowledge",
 		"description":     "Stored in the governed context store for later Soma recall, separate from Soma memory.",
+	}), nil
+}
+
+func (r *InternalToolRegistry) handlePromoteDeploymentContext(ctx context.Context, args map[string]any) (string, error) {
+	var artifactService *artifacts.Service
+	if r.db != nil {
+		artifactService = &artifacts.Service{DB: r.db}
+	}
+	svc := deploymentcontext.NewService(artifactService, r.mem, r.brain)
+	if err := svc.Ready(); err != nil {
+		return "", err
+	}
+
+	sourceArtifactID := stringValue(args["source_artifact_id"])
+	if sourceArtifactID == "" {
+		return "", fmt.Errorf("promote_deployment_context requires 'source_artifact_id'")
+	}
+
+	scope := resolveMemoryScope(ctx, args)
+	result, err := svc.Promote(ctx, deploymentcontext.PromoteRequest{
+		SourceArtifactID: sourceArtifactID,
+		Title:            stringValue(args["title"]),
+		Content:          stringValue(args["content"]),
+		ContentType:      stringValue(args["content_type"]),
+		SourceLabel:      stringValue(args["source_label"]),
+		SourceKind:       stringValue(args["source_kind"]),
+		Visibility:       stringValue(args["visibility"]),
+		SensitivityClass: stringValue(args["sensitivity_class"]),
+		TrustClass:       stringValue(args["trust_class"]),
+		Tags:             stringSlice(args["tags"]),
+		AgentID:          scope.AgentID,
+		TeamID:           scope.TeamID,
+		UserLabel:        currentToolUserLabel(ctx),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return mustJSON(map[string]any{
+		"message":            fmt.Sprintf("Knowledge entry '%s' promoted into approved company knowledge.", result.Title),
+		"artifact":           map[string]any{"id": result.ArtifactID, "type": "document", "title": result.Title, "content_type": "text/markdown"},
+		"knowledge_class":    result.KnowledgeClass,
+		"chunk_count":        result.ChunkCount,
+		"vector_count":       result.VectorCount,
+		"source_artifact_id": sourceArtifactID,
+		"source_kind":        result.SourceKind,
+		"visibility":         result.Visibility,
+		"trust_class":        result.TrustClass,
+		"context_kind":       "governed_knowledge",
+		"description":        "Stored as approved company knowledge with lineage back to the original customer context entry.",
 	}), nil
 }
 

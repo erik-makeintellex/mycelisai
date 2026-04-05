@@ -666,6 +666,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		SourceChannel: "api.intent.confirm-action",
 		PayloadKind:   protocol.PayloadKindCommand,
 		Timestamp:     time.Now(),
+		UserLabel:     auditUser,
 		PlanningOnly:  false,
 	})
 
@@ -710,7 +711,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 				},
 			)
 		}
-		if resolvedToolName == "write_file" {
+		if resolvedToolName == "write_file" || resolvedToolName == "promote_deployment_context" {
 			_, _ = s.createAuditEvent(
 				protocol.TemplateChatToProposal, "confirm-action",
 				"Governed artifact created",

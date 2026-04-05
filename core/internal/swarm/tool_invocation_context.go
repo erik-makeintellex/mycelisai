@@ -16,6 +16,7 @@ type ToolInvocationContext struct {
 	RunID         string
 	TeamID        string
 	AgentID       string
+	UserLabel     string
 	SourceKind    protocol.SignalSourceKind
 	SourceChannel string
 	PayloadKind   protocol.SignalPayloadKind

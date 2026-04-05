@@ -35,6 +35,23 @@ type IngestRequest struct {
 	AgentID          string
 	TeamID           string
 	UserLabel        string
+	ExtraMetadata    map[string]any
+}
+
+type PromoteRequest struct {
+	SourceArtifactID string
+	Title            string
+	Content          string
+	ContentType      string
+	SourceLabel      string
+	SourceKind       string
+	Visibility       string
+	SensitivityClass string
+	TrustClass       string
+	Tags             []string
+	AgentID          string
+	TeamID           string
+	UserLabel        string
 }
 
 type IngestResult struct {
@@ -153,6 +170,12 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		"loaded_by":          userLabel,
 		"team_id":            teamID,
 	}
+	for key, value := range req.ExtraMetadata {
+		if _, exists := metadataMap[key]; exists {
+			continue
+		}
+		metadataMap[key] = value
+	}
 	metadataJSON, _ := json.Marshal(metadataMap)
 
 	stored, err := s.Artifacts.Store(ctx, artifacts.Artifact{
@@ -197,6 +220,12 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 			"chunk_count":       len(chunks),
 			"loaded_by":         userLabel,
 		}
+		for key, value := range req.ExtraMetadata {
+			if _, exists := vectorMeta[key]; exists {
+				continue
+			}
+			vectorMeta[key] = value
+		}
 
 		if err := s.Memory.StoreVector(ctx, embeddingText, vec, vectorMeta); err != nil {
 			return nil, fmt.Errorf("store deployment context vector %d: %w", idx+1, err)
@@ -218,6 +247,108 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		ContentLength:    utf8.RuneCountInString(content),
 		CreatedAt:        stored.CreatedAt,
 	}, nil
+}
+
+func (s *Service) Promote(ctx context.Context, req PromoteRequest) (*IngestResult, error) {
+	if err := s.Ready(); err != nil {
+		return nil, err
+	}
+	if s.Artifacts == nil || s.Artifacts.DB == nil {
+		return nil, fmt.Errorf("deployment context store unavailable")
+	}
+
+	sourceArtifactID := strings.TrimSpace(req.SourceArtifactID)
+	if sourceArtifactID == "" {
+		return nil, fmt.Errorf("source_artifact_id is required")
+	}
+
+	var (
+		sourceTitle   string
+		sourceContent sql.NullString
+		sourceMetaRaw []byte
+	)
+	err := s.Artifacts.DB.QueryRowContext(ctx, `
+		SELECT title, content, metadata
+		FROM artifacts
+		WHERE id::text = $1
+	`, sourceArtifactID).Scan(&sourceTitle, &sourceContent, &sourceMetaRaw)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("source deployment context entry not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load source deployment context entry: %w", err)
+	}
+
+	sourceMeta := map[string]any{}
+	if len(sourceMetaRaw) > 0 {
+		_ = json.Unmarshal(sourceMetaRaw, &sourceMeta)
+	}
+	sourceKnowledgeClass := stringMeta(sourceMeta, "knowledge_class", KnowledgeClassCustomerContext)
+	if sourceKnowledgeClass != KnowledgeClassCustomerContext {
+		return nil, fmt.Errorf("only customer_context entries can be promoted into company_knowledge")
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		title = strings.TrimSpace(sourceTitle)
+	}
+	content := strings.TrimSpace(req.Content)
+	if content == "" {
+		content = strings.TrimSpace(sourceContent.String)
+	}
+	if strings.TrimSpace(content) == "" {
+		return nil, fmt.Errorf("promotion content is required")
+	}
+
+	sourceLabel := strings.TrimSpace(req.SourceLabel)
+	if sourceLabel == "" {
+		sourceLabel = fmt.Sprintf("promoted from %s", strings.TrimSpace(sourceTitle))
+	}
+	sourceKind := strings.TrimSpace(req.SourceKind)
+	if sourceKind == "" {
+		sourceKind = stringMeta(sourceMeta, "source_kind", "user_document")
+	}
+	visibility := strings.TrimSpace(req.Visibility)
+	if visibility == "" {
+		visibility = stringMeta(sourceMeta, "visibility", "global")
+	}
+	sensitivityClass := strings.TrimSpace(req.SensitivityClass)
+	if sensitivityClass == "" {
+		sensitivityClass = stringMeta(sourceMeta, "sensitivity_class", "role_scoped")
+	}
+	trustClass := strings.TrimSpace(req.TrustClass)
+	if trustClass == "" {
+		trustClass = "trusted_internal"
+	}
+	tags := req.Tags
+	if len(tags) == 0 {
+		tags = append(tags, stringSliceMeta(sourceMeta, "tags")...)
+	}
+	tags = append(tags, "promoted-company-knowledge")
+
+	return s.Ingest(ctx, IngestRequest{
+		KnowledgeClass:   KnowledgeClassCompanyKnowledge,
+		Title:            title,
+		Content:          content,
+		ContentType:      req.ContentType,
+		SourceLabel:      sourceLabel,
+		SourceKind:       sourceKind,
+		Visibility:       visibility,
+		SensitivityClass: sensitivityClass,
+		TrustClass:       trustClass,
+		Tags:             tags,
+		AgentID:          req.AgentID,
+		TeamID:           req.TeamID,
+		UserLabel:        req.UserLabel,
+		ExtraMetadata: map[string]any{
+			"promotion_kind":                "customer_to_company",
+			"promoted_from_artifact_id":     sourceArtifactID,
+			"promoted_from_knowledge_class": sourceKnowledgeClass,
+			"promotion_source_title":        strings.TrimSpace(sourceTitle),
+			"promotion_source_label":        stringMeta(sourceMeta, "source_label", "operator provided"),
+			"promoted_by":                   strings.TrimSpace(req.UserLabel),
+		},
+	})
 }
 
 func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
@@ -488,5 +619,29 @@ func intMeta(meta map[string]any, key string, fallback int) int {
 		return value
 	default:
 		return fallback
+	}
+}
+
+func stringSliceMeta(meta map[string]any, key string) []string {
+	if meta == nil {
+		return nil
+	}
+	raw, ok := meta[key]
+	if !ok {
+		return nil
+	}
+	switch value := raw.(type) {
+	case []any:
+		out := make([]string, 0, len(value))
+		for _, item := range value {
+			if text, ok := item.(string); ok && strings.TrimSpace(text) != "" {
+				out = append(out, strings.TrimSpace(text))
+			}
+		}
+		return out
+	case []string:
+		return normalizeTags(value)
+	default:
+		return nil
 	}
 }
