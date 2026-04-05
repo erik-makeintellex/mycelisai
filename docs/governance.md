@@ -26,6 +26,11 @@ Mycelis now governs actions through three linked layers:
    - artifact created
    - channel write recorded
 
+This governance model also applies to durable context loading:
+- customer-provided deployment material belongs in the separate `customer_context` pgvector lane
+- approved company-authored guidance belongs in `company_knowledge`
+- external research loaded into either lane must stay explicitly classified by source kind, trust class, and sensitivity posture
+
 The normal operator-facing outcomes are:
 - `answer`
 - `proposal`
@@ -47,6 +52,7 @@ Current release posture:
 - user governance profile shapes how strict the approval policy becomes
 - confirm/cancel is explicit and inspectable
 - approval and execution decisions are audit-linked
+- `company_knowledge` loading is stricter than `customer_context` loading because it promotes durable company reference material
 
 ## Audit Model
 

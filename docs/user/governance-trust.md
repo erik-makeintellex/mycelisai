@@ -31,6 +31,11 @@ Current profile inputs include:
 
 That profile is read when Soma plans work, chooses an execution path, and decides whether approval is required.
 
+This same model also applies to governed deployment knowledge:
+- loading customer-provided deployment material into the separate context store is a governed action
+- loading approved company-authored knowledge is stricter than loading customer context
+- external/web research used as future context should stay explicitly classified and reviewable
+
 ## Capability Risk
 
 Current release behavior:
@@ -42,6 +47,12 @@ Current release behavior:
 | High | approval required |
 
 This keeps low-risk answer work lightweight while forcing higher-risk mutations and external actions through explicit review.
+
+Examples:
+- ordinary direct explanation -> usually stays `answer`
+- load customer deployment brief into `customer_context` -> governed, medium-risk by default
+- load approved company-authored rollout playbook into `company_knowledge` -> governed, higher-risk and more likely to require approval
+- web-fed research promoted into durable context -> governed and shaped by external-data rules
 
 ## Reviewing Proposals
 
