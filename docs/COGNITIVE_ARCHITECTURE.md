@@ -1,4 +1,5 @@
 # Cognitive Architecture
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > Back to [README](../README.md) | See also: [Swarm Operations](SWARM_OPERATIONS.md) | [API Reference](API_REFERENCE.md) | [Agent Source Instantiation Template](architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md)
 

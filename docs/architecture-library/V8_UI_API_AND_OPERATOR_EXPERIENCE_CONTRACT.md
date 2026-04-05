@@ -1,4 +1,5 @@
 # V8 UI API and Operator Experience Contract
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical V8 PRD
 > Last Updated: 2026-03-29

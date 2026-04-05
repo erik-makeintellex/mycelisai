@@ -1,4 +1,5 @@
 # Intent To Manifestation And Team Interaction V7
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
 > Last Updated: 2026-03-10

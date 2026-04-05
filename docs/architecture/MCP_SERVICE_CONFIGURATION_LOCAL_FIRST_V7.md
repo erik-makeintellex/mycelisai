@@ -1,4 +1,5 @@
 # MCP Service Configuration (Local-First) V7
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 Version: `1.1`
 Status: `Authoritative`

@@ -1,4 +1,5 @@
 # Meta-Agent & Blueprint Planning
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > How Mycelis translates natural language intent into a structured mission — agents, teams, tools, and I/O contracts.
 

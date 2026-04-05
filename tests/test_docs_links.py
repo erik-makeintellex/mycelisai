@@ -52,6 +52,27 @@ def test_docs_manifest_paths_resolve():
     assert not missing, f"docsManifest contains broken paths: {missing}"
 
 
+def test_active_docs_expose_project_readme_navigation():
+    manifest_text = DOCS_MANIFEST.read_text(encoding="utf-8")
+    manifest_paths = re.findall(r'path:\s*"([^"]+\.md)"', manifest_text)
+    required_paths = sorted(set(manifest_paths + ["docs/README.md", "ops/README.md"]))
+
+    missing_navigation: list[str] = []
+    for relative_path in required_paths:
+        if relative_path == "README.md":
+            continue
+        path = ROOT / relative_path
+        text = path.read_text(encoding="utf-8")
+        top = "\n".join(text.splitlines()[:8])
+        if "Project README" not in top or "Navigation:" not in top:
+            missing_navigation.append(relative_path)
+
+    assert not missing_navigation, (
+        "Active docs are missing return navigation to the project README: "
+        f"{missing_navigation}"
+    )
+
+
 def test_docs_manifest_exposes_required_canonical_docs():
     text = DOCS_MANIFEST.read_text(encoding="utf-8")
     required_paths = [
@@ -114,6 +135,52 @@ def test_readme_has_structured_toc_with_live_heading_targets():
 
     missing = [anchor for anchor in toc_links if anchor not in heading_slugs]
     assert not missing, f"README TOC contains anchors without matching headings: {missing}"
+
+
+def test_readme_style_pages_expose_tocs():
+    required_tocs = {
+        README: "## README TOC",
+        ROOT / "docs" / "README.md": "## Docs TOC",
+        ROOT / "ops" / "README.md": "## TOC",
+        ROOT / "docs" / "archive" / "README.md": "## TOC",
+        ROOT / "core" / "README.md": "## TOC",
+        ROOT / "interface" / "README.md": "## TOC",
+        ROOT / "cli" / "README.md": "## TOC",
+        ROOT / "core" / "internal" / "registry" / "README.md": "## TOC",
+        PRD_INDEX: "## TOC",
+        ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md": "## TOC",
+    }
+
+    missing: list[str] = []
+    for path, heading in required_tocs.items():
+        text = path.read_text(encoding="utf-8")
+        if heading not in text:
+            missing.append(f"{path.relative_to(ROOT)} missing `{heading}`")
+
+    assert not missing, "README-style pages are missing TOC blocks:\n" + "\n".join(missing)
+
+
+def test_repo_readmes_expose_project_navigation():
+    readmes = [
+        ROOT / "docs" / "README.md",
+        ROOT / "ops" / "README.md",
+        ROOT / "docs" / "archive" / "README.md",
+        ROOT / "core" / "README.md",
+        ROOT / "interface" / "README.md",
+        ROOT / "cli" / "README.md",
+        ROOT / "core" / "internal" / "registry" / "README.md",
+        PRD_INDEX,
+        ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md",
+    ]
+
+    missing: list[str] = []
+    for path in readmes:
+        text = path.read_text(encoding="utf-8")
+        top = "\n".join(text.splitlines()[:8])
+        if "Project README" not in top or "Navigation:" not in top:
+            missing.append(str(path.relative_to(ROOT)))
+
+    assert not missing, "README-style pages are missing project navigation:\n" + "\n".join(missing)
 
 
 def test_readme_has_fresh_agent_review_sequence():

@@ -1,4 +1,5 @@
 # V8 Universal Soma and Context Model PRD
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: ACTIVE
 > Last Updated: 2026-03-29

@@ -1,6 +1,17 @@
 # Mycelis Cortex UI
+> Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
 The frontend for the current V8 operator product. Built with Next.js 16, React 19, Tailwind v4, ReactFlow 11, and Zustand 5.
+
+## TOC
+
+- [Stack](#stack)
+- [Architecture](#architecture)
+- [Key Files](#key-files)
+- [Development](#development)
+- [Pages](#pages)
+- [Design Tokens](#design-tokens)
+- [Conventions](#conventions)
 
 ## Stack
 

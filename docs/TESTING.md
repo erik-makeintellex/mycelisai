@@ -1,4 +1,5 @@
 # Verification & Testing Protocol
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, frontend components, end-to-end flows, integration tests, and governance smoke tests.
 

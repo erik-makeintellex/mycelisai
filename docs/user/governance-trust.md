@@ -1,4 +1,5 @@
 # Governance & Trust
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > How Mycelis keeps operators in control of actions that could change files, trigger execution, or use higher-risk capabilities.
 

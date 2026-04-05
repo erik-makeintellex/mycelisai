@@ -1,4 +1,5 @@
 # Mycelis Cortex - Frontend Specification
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Load this doc when: working on Next.js routes, React components, Zustand state, UI/API integration, or frontend delivery gates.
 >

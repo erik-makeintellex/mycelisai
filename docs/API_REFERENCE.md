@@ -1,4 +1,5 @@
 # API Reference
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > Back to [README](../README.md) | See also: [Swarm Operations](SWARM_OPERATIONS.md) | [Cognitive Architecture](COGNITIVE_ARCHITECTURE.md)
 

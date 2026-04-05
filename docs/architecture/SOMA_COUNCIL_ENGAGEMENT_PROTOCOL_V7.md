@@ -1,7 +1,8 @@
 # Soma-Council Engagement Protocol V7
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-Version: `1.0`  
-Status: `Authoritative`  
+Version: `1.0`
+Status: `Authoritative`
 Last Updated: `2026-03-10`
 
 This document defines the canonical execution-path selection contract for Soma, council members, and the meta-agent (Architect). It ensures consistent behavior when choosing between:

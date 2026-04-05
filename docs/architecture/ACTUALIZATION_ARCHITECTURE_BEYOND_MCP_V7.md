@@ -1,4 +1,5 @@
 # Actualization Architecture Beyond MCP V7
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 Version: `1.0`
 Status: `Authoritative`

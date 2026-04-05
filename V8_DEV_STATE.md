@@ -1,4 +1,5 @@
 # Mycelis V8 - Development State
+> Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
 > Updated: 2026-04-05
 > Canonical state file for active V8 grading and delivery tracking

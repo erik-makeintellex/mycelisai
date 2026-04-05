@@ -1,4 +1,6 @@
 # V7 MCP Baseline Operating Profile
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
+
 ## Default, Configured, and Immediately Usable Capability Set
 
 **Version:** V7.0

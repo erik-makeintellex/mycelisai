@@ -1,4 +1,5 @@
 # Mycelis Cortex — Backend Specification
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > **Load this doc when:** Working on Go code, APIs, database, NATS, or agent orchestration.
 >

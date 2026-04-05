@@ -1,4 +1,5 @@
 # V8.1 Living Organization Architecture
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical V8.1 PRD
 > Last Updated: 2026-03-21

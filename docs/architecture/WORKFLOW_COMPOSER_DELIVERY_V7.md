@@ -1,4 +1,5 @@
 # Workflow Composer Delivery Plan V7
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Active supporting plan
 > Last Updated: 2026-03-09

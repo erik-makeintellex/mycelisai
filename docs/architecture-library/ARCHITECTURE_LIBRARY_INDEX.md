@@ -1,8 +1,19 @@
 # Architecture Library Index
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
 > Last Updated: 2026-04-05
 > Purpose: Maintain one precise, durable documentation surface for product target, runtime structure, UI contract, and delivery proof.
+
+## TOC
+
+- [Why This Library Exists](#why-this-library-exists)
+- [Layered Truth](#layered-truth)
+- [Canonical Documents](#canonical-documents)
+- [How To Use This Library](#how-to-use-this-library)
+- [Supporting Specialized Docs](#supporting-specialized-docs)
+- [Library Principles](#library-principles)
+- [Canonical Outcome](#canonical-outcome)
 
 ## Why This Library Exists
 

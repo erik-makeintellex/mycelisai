@@ -1,4 +1,5 @@
 # Team Execution And Global State Protocol V7
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical working protocol
 > Last Updated: 2026-03-10

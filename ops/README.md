@@ -1,4 +1,6 @@
 # Operations & Build System
+> Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
+
 > **Role**: The Builder
 > **Language**: Python (Invoke)
 > **Path**: `ops/`

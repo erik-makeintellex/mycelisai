@@ -1,4 +1,6 @@
 # Implementation Directive: Memory Service (Phase 2B)
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
+
 **Target:** `mycelis-core` (Go)
 **Goal:** Transform the Core from a stateless router into a "State Engine" by projecting NATS events into PostgreSQL.
 **Security Level:** High (No raw SQL strings, usage of Env Vars).
@@ -73,7 +75,7 @@ func NewService(dbUrl string) (*Service, error) {
     if err != nil {
         return nil, err
     }
-    
+
     // Validate connection
     if err := db.Ping(); err != nil {
         return nil, err
@@ -115,8 +117,8 @@ func (s *Service) persist(entry *pb.LogEntry) {
 
     contextJSON, _ := json.Marshal(entry.Context)
 
-    _, err := s.db.ExecContext(ctx, 
-        `INSERT INTO log_entries (trace_id, timestamp, level, source, intent, message, context) 
+    _, err := s.db.ExecContext(ctx,
+        `INSERT INTO log_entries (trace_id, timestamp, level, source, intent, message, context)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         entry.TraceId, time.Now(), entry.Level, entry.Source, entry.Intent, entry.Message, contextJSON,
     )
@@ -129,7 +131,7 @@ func (s *Service) persist(entry *pb.LogEntry) {
     _, err = s.db.ExecContext(ctx,
         `INSERT INTO agent_registry (agent_id, team_id, status, last_seen)
          VALUES ($1, $2, $3, NOW())
-         ON CONFLICT (agent_id) DO UPDATE 
+         ON CONFLICT (agent_id) DO UPDATE
          SET last_seen = NOW(), status = EXCLUDED.status`,
          entry.Source, "default", "ACTIVE", // You might parse TeamID from Source string
     )
@@ -151,7 +153,7 @@ func (s *Server) GetMemoryStream(w http.ResponseWriter, r *http.Request) {
         return
     }
     defer rows.Close()
-    
+
     // Marshal rows to JSON and return...
 }
 ```
@@ -173,7 +175,7 @@ func main() {
         os.Getenv("DB_PORT"),
         os.Getenv("DB_NAME"),
     )
-    
+
     memService, err := memory.NewService(dbURL)
     if err != nil {
         log.Fatalf("❌ Memory Corruption: %v", err)
@@ -185,14 +187,14 @@ func main() {
     // 3. Start NATS Subscriber
     nc.Subscribe("swarm.>", func(msg *nats.Msg) {
         // ... unmarshal logic ...
-        
+
         // A. The Reflex (Router)
         router.Dispatch(entry)
 
         // B. The Memory (Service)
         memService.Push(entry)
     })
-    
+
     // ... start HTTP server ...
 }
 ```

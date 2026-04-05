@@ -1,4 +1,5 @@
 # Mycelis Cortex V7.0 — Architecture Overview
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 **Codename:** "The Mycelian Lattice"
 **Classification:** Recursive Swarm Operating System / Multi-Agent Cybernetic OS

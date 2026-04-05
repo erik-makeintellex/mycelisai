@@ -1,4 +1,5 @@
 # Local Development Workflow
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > **Quick Start:** Already set up? Jump to [Daily Startup](#daily-startup-sequence).
 > **Invoke Contract:** Run project tasks with `uv run inv ...`.

@@ -1,4 +1,5 @@
 # Governance & Policy System
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > 🔙 **Navigation**: [Back to README](../README.md)
 

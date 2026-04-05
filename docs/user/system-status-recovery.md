@@ -1,4 +1,5 @@
 # System Status & Recovery
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > How to read system health and recover quickly without leaving your workflow.
 

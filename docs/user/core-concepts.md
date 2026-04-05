@@ -1,4 +1,5 @@
 # Core Concepts
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Plain-language glossary for the terms you see in Workspace, Automations, Resources, and System.
 

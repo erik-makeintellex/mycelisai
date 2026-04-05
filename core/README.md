@@ -1,7 +1,14 @@
 # Mycelis Core (Tier 1)
+> Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 > **Role**: The Cognitive & State Engine
 > **Language**: Go
 > **Path**: `core/`
+
+## TOC
+
+- [Responsibilities](#-responsibilities)
+- [Structure](#-structure)
+- [Development](#-development)
 
 ## 🧠 Responsibilities
 1.  **Routing**: Delivers `MsgEnvelope` between Agents (NATS).
@@ -18,8 +25,8 @@
 ## 🚀 Development
 ```bash
 # Run Unit Tests
-inv core.test
+uv run inv core.test
 
 # Build Binary (local)
-inv core.build
+uv run inv core.compile
 ```

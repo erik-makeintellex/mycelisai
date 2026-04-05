@@ -1,4 +1,5 @@
 # Mycelis V7 — Development State
+> Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
 > **Updated:** 2026-03-10
 > **References:** `mycelis-architecture-v7.md` (PRD index), `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md` (canonical planning library), `docs/architecture-library/NEXT_EXECUTION_SLICES_V7.md` (execution queue), `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md` (team protocol)

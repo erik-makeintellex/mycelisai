@@ -1,8 +1,8 @@
 # Mycelis MVP Agentry Plan
 ## Agent Partner -> Meta -> Council -> Plan -> Execute
 
-> **Date:** 2026-02-22  
-> **Owner:** Principal Architect  
+> **Date:** 2026-02-22
+> **Owner:** Principal Architect
 > **Goal:** Get the full agentry chain working end-to-end, then grow features from that verified foundation.
 
 ---
@@ -29,7 +29,7 @@ User
                                          +-- Soma.ActivateBlueprint() -> spawn team -> agents execute
 ```
 
-**Provider chain:**  
+**Provider chain:**
 All agents -> `cognitive.Router` -> profile lookup -> `ollama` adapter -> `http://127.0.0.1:11434/v1` -> model inference
 
 ---
@@ -55,9 +55,9 @@ inv lifecycle.status
 
 ### 0.2 Auth Chain Verified
 
-Auth middleware (`interface/middleware.ts`) injects `Authorization: Bearer` from `MYCELIS_API_KEY`.  
-`interface/.env.local` provides the key to the Next.js process.  
-`ops/interface.py dev()` now loads `.env` before starting.  
+Auth middleware (`interface/middleware.ts`) injects `Authorization: Bearer` from `MYCELIS_API_KEY`.
+`interface/.env.local` provides the key to the Next.js process.
+`ops/interface.py dev()` now loads `.env` before starting.
 **Status: FIXED.**
 
 ### 0.3 Ollama Model Verification WARNING CRITICAL
@@ -79,7 +79,7 @@ ollama pull qwen2.5-coder:7b
 
 ### 0.4 MCP Bootstrap Verification
 
-On first `inv core.run`, `BootstrapDefaults()` auto-installs `filesystem` and `fetch` MCP servers.  
+On first `inv core.run`, `BootstrapDefaults()` auto-installs `filesystem` and `fetch` MCP servers.
 Check core startup logs for:
 ```
 [mcp] bootstrap: installing filesystem
@@ -91,7 +91,7 @@ Check core startup logs for:
 
 ### 0.5 First Chat Test
 
-Open `http://localhost:3000` -> Workspace -> type:  
+Open `http://localhost:3000` -> Workspace -> type:
 `"Hello Soma, who are you and what tools do you have?"`
 
 Expected: Soma introduces itself and calls `list_available_tools`.
@@ -136,7 +136,7 @@ Expected: Soma calls `read_file path="trends.md"` -> returns content.
 
 ### 1.4 Memory Round-Trip
 
-Test: `"Remember that I prefer concise bullet-point summaries."`  
+Test: `"Remember that I prefer concise bullet-point summaries."`
 Then: `"What are my formatting preferences?"`
 
 Expected: Soma calls `remember`, then `recall` on second query.
@@ -204,7 +204,7 @@ creative   ollama            qwen2.5-coder:7b
 sentry     ollama            qwen2.5-coder:7b
 ```
 
-Dropdown per row: select provider. Calls `PUT /api/v1/cognitive/profiles`.  
+Dropdown per row: select provider. Calls `PUT /api/v1/cognitive/profiles`.
 Already implemented on backend. **Frontend: add profile assignment UI to BrainsPage.**
 
 ### 2.5 Multi-Provider Routing (Advanced)
@@ -295,7 +295,7 @@ If NATS offline: persist event to DB, log warning, skip CTS publish. No panic.
 ```
 workspace/
   projects/    <- user project files
-  research/    <- fetched research outputs  
+  research/    <- fetched research outputs
   artifacts/   <- generated artifacts
   reports/     <- structured reports
   exports/     <- exported data files
@@ -410,7 +410,7 @@ After Sprint 3 APIs are live.
 4. Select which profiles/agents use it
 
 **API Key Storage Decision (to implement):**
-- Option A: In-memory only (session, more secure, lost on restart) 
+- Option A: In-memory only (session, more secure, lost on restart)
 - Option B: Write to `.env` file via Go handler (persists, needs file write permission)
 - Option C: Store encrypted in DB (best, requires encryption key)
 
@@ -423,7 +423,7 @@ After Sprint 3 APIs are live.
 ```
 Sprint 0: Services verified, auth working, Ollama model confirmed
     |
-Sprint 1: Full agentry chain smoke-tested (Soma <-> Council <-> Tools)  
+Sprint 1: Full agentry chain smoke-tested (Soma <-> Council <-> Tools)
     |
 Sprint 2: Provider selection visible and switchable
     |

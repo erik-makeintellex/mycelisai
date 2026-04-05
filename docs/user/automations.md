@@ -1,4 +1,5 @@
 # Automations
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Workflow control surface for trigger rules, approvals, and advanced workflow tools.
 

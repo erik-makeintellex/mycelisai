@@ -1,4 +1,5 @@
 # Logging Standard (V8.2)
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > Status: Authoritative
 > Last Updated: 2026-03-22

@@ -1,4 +1,5 @@
 # Mycelis Cortex — Operations Manual
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > **Load this doc when:** Deploying, configuring, testing, running CI, or managing infrastructure.
 >

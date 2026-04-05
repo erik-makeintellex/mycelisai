@@ -1,4 +1,5 @@
 # Resources
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Advanced-mode support surface for connected tools, deployment context intake, managed exchange, workspace files, AI engine setup, and reusable role definitions.
 

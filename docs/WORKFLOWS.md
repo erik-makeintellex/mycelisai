@@ -1,4 +1,5 @@
 # Mycelis User Workflows
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > **Authority**: This document defines the precise user-facing workflows for the Mycelis platform.
 > Every UI component, API call, and state transition described here is the specification

@@ -1,4 +1,5 @@
 # Using Soma Chat
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Workspace-first interaction model: you send intent, Soma orchestrates execution.
 

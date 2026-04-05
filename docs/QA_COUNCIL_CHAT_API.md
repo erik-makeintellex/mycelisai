@@ -1,4 +1,5 @@
 # QA Test Plan: Council Chat API + Mission Control Restructure
+> Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > **Scope:** Standardized Council Chat API (backend + frontend), current organization workspace regression, `/approvals` Team Proposals tab, and regression of existing features.
 >

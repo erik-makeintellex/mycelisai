@@ -1,8 +1,17 @@
 # Mycelis V7 PRD Index
+> Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
 > Status: Canonical compatibility entrypoint
 > Last Updated: 2026-03-07
 > Purpose: Preserve the stable root PRD path while moving detailed planning authority into the modular architecture library.
+
+## TOC
+
+- [Why This File Changed](#why-this-file-changed)
+- [Canonical Planning Surface](#canonical-planning-surface)
+- [Core Product Position](#core-product-position)
+- [Supporting Detailed Authorities](#supporting-detailed-authorities)
+- [Current Delivery Framing](#current-delivery-framing)
 
 ## Why This File Changed
 
