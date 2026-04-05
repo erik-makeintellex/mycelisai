@@ -3,6 +3,7 @@ package swarm
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -156,7 +157,7 @@ func TestTeam_TriggerLogic_UnwrapsCommandEnvelope(t *testing.T) {
 		"run-9",
 		"test-core",
 		"soma-admin",
-		[]byte("inspect gate state"),
+		[]byte(`{"ask_kind":"implementation","lane_role":"implementer","goal":"inspect gate state"}`),
 	)
 	if err != nil {
 		t.Fatalf("wrap command payload: %v", err)
@@ -167,11 +168,46 @@ func TestTeam_TriggerLogic_UnwrapsCommandEnvelope(t *testing.T) {
 
 	select {
 	case got := <-done:
-		if got != "inspect gate state" {
-			t.Fatalf("internal trigger payload = %q", got)
+		var ask protocol.TeamAsk
+		if err := json.Unmarshal([]byte(got), &ask); err != nil {
+			t.Fatalf("decode team ask: %v", err)
+		}
+		if ask.Goal != "inspect gate state" {
+			t.Fatalf("goal = %q", ask.Goal)
+		}
+		if ask.AskKind != protocol.TeamAskKindImplementation {
+			t.Fatalf("ask_kind = %q", ask.AskKind)
 		}
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for internal trigger payload")
+	}
+}
+
+func TestNormalizeCommandPayload_PreservesStructuredTeamAsk(t *testing.T) {
+	payload, err := protocol.WrapSignalPayloadWithMeta(
+		protocol.SourceKindInternalTool,
+		"internal_tool.delegate_task",
+		protocol.PayloadKindCommand,
+		"run-9",
+		"alpha",
+		"soma-admin",
+		[]byte(`{"ask_kind":"research","lane_role":"researcher","goal":"Find the best documented approach."}`),
+	)
+	if err != nil {
+		t.Fatalf("wrap command payload: %v", err)
+	}
+
+	got := normalizeCommandPayload(payload)
+	if !strings.Contains(string(got), `"goal":"Find the best documented approach."`) {
+		t.Fatalf("normalized payload = %s", string(got))
+	}
+
+	var ask protocol.TeamAsk
+	if err := json.Unmarshal(got, &ask); err != nil {
+		t.Fatalf("decode normalized team ask: %v", err)
+	}
+	if ask.AskKind != protocol.TeamAskKindResearch {
+		t.Fatalf("ask_kind = %q", ask.AskKind)
 	}
 }
 

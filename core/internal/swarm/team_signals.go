@@ -34,6 +34,10 @@ func normalizeCommandPayload(data []byte) []byte {
 	}
 
 	trimmed := bytes.TrimSpace(env.Payload)
+	var ask protocol.TeamAsk
+	if err := json.Unmarshal(trimmed, &ask); err == nil && !ask.IsZero() {
+		return append([]byte(nil), trimmed...)
+	}
 	var asString string
 	if err := json.Unmarshal(trimmed, &asString); err == nil {
 		return []byte(asString)

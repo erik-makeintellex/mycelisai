@@ -16,12 +16,29 @@ func (r *InternalToolRegistry) registerCoordinationTools() {
 	}
 	r.tools["delegate_task"] = &InternalTool{
 		Name:        "delegate_task",
-		Description: "Publish a task to a specific team's command topic for processing.",
+		Description: "Publish a structured ask to a specific team's command topic for processing.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"team_id": map[string]any{"type": "string", "description": "The target team ID"},
-				"task":    map[string]any{"type": "string", "description": "The task description to send"},
+				"task":    map[string]any{"type": "string", "description": "Legacy plain-text task description. Prefer the structured ask object when possible."},
+				"ask": map[string]any{
+					"type":        "object",
+					"description": "Structured team ask carrying goal, lane posture, and proof expectations.",
+					"properties": map[string]any{
+						"schema_version":        map[string]any{"type": "string"},
+						"ask_kind":              map[string]any{"type": "string", "enum": []string{"coordination", "research", "implementation", "validation", "review"}},
+						"lane_role":             map[string]any{"type": "string", "enum": []string{"coordinator", "researcher", "implementer", "validator", "reviewer"}},
+						"goal":                  map[string]any{"type": "string"},
+						"owned_scope":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+						"constraints":           map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+						"required_capabilities": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+						"approval_posture":      map[string]any{"type": "string", "enum": []string{"auto_allowed", "optional", "required"}},
+						"exit_criteria":         map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+						"evidence_required":     map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+						"context":               map[string]any{"type": "object"},
+					},
+				},
 				"hint": map[string]any{
 					"type":        "object",
 					"description": "Optional scoring hints for delegation priority",
@@ -33,7 +50,7 @@ func (r *InternalToolRegistry) registerCoordinationTools() {
 					},
 				},
 			},
-			"required": []string{"team_id", "task"},
+			"required": []string{"team_id"},
 		},
 		Handler: r.handleDelegateTask,
 	}

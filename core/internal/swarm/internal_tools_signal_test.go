@@ -71,8 +71,18 @@ func TestHandleDelegateTask_PublishesToInternalCommand(t *testing.T) {
 		if env.Meta.AgentID != "soma-admin" {
 			t.Fatalf("agent_id = %q, want soma-admin", env.Meta.AgentID)
 		}
-		if env.Text != "inspect gate state" {
-			t.Fatalf("command text = %q", env.Text)
+		if env.Text != "" {
+			t.Fatalf("expected structured payload instead of text, got %q", env.Text)
+		}
+		var ask protocol.TeamAsk
+		if err := json.Unmarshal(env.Payload, &ask); err != nil {
+			t.Fatalf("decode team ask: %v", err)
+		}
+		if ask.Goal != "inspect gate state" {
+			t.Fatalf("goal = %q", ask.Goal)
+		}
+		if ask.AskKind != protocol.TeamAskKindImplementation {
+			t.Fatalf("ask_kind = %q", ask.AskKind)
 		}
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for delegated task")

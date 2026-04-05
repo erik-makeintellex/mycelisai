@@ -43,8 +43,11 @@ func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args ma
 }
 
 func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[string]any) (string, error) {
-	teamID, task := normalizeDelegateTaskArgs(args)
-	if teamID == "" || task == "" {
+	teamID, ask, err := normalizeDelegateTaskArgs(args)
+	if err != nil {
+		return "", err
+	}
+	if teamID == "" || ask.IsZero() {
 		return "", fmt.Errorf("delegate_task requires 'team_id' and 'task'")
 	}
 	if hint, ok := args["hint"].(map[string]any); ok {
@@ -54,7 +57,11 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 		return "", fmt.Errorf("NATS not available — cannot delegate task")
 	}
 
-	payload, err := r.wrapGovernedSignalPayload(ctx, "internal_tool.delegate_task", teamID, protocol.PayloadKindCommand, []byte(task))
+	task, err := json.Marshal(ask)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal delegated task payload: %w", err)
+	}
+	payload, err := r.wrapGovernedSignalPayload(ctx, "internal_tool.delegate_task", teamID, protocol.PayloadKindCommand, task)
 	if err != nil {
 		return "", fmt.Errorf("failed to wrap delegated task payload: %w", err)
 	}
@@ -86,7 +93,7 @@ func (r *InternalToolRegistry) handleCreateTeam(_ context.Context, args map[stri
 	return string(out), nil
 }
 
-func normalizeDelegateTaskArgs(args map[string]any) (teamID string, task string) {
+func normalizeDelegateTaskArgs(args map[string]any) (teamID string, ask protocol.TeamAsk, err error) {
 	teamID = pickFirstString(args, "team_id", "teamId", "target_team")
 	if teamID == "" {
 		if teamMap, ok := args["team"].(map[string]any); ok {
@@ -95,28 +102,76 @@ func normalizeDelegateTaskArgs(args map[string]any) (teamID string, task string)
 			teamID = stringValue(args["team"])
 		}
 	}
+	if askRaw, ok := args["ask"].(map[string]any); ok {
+		ask = teamAskFromMap(askRaw)
+		return teamID, ask.Normalize(), nil
+	}
 	switch t := args["task"].(type) {
 	case string:
-		task = strings.TrimSpace(t)
+		ask = protocol.TeamAsk{Goal: strings.TrimSpace(t)}
 	case map[string]any, []any:
-		task = mustJSON(t)
-	}
-	if task != "" {
-		return teamID, task
-	}
-	payload := map[string]any{}
-	for _, key := range []string{"operation", "intent", "message"} {
-		if v := stringValue(args[key]); v != "" {
-			payload[key] = v
+		if taskMap, ok := t.(map[string]any); ok {
+			ask = teamAskFromMap(taskMap)
+		} else {
+			ask = protocol.TeamAsk{Goal: string(mustJSON(t))}
 		}
 	}
+	if !ask.IsZero() {
+		return teamID, ask.Normalize(), nil
+	}
+
+	ask = protocol.TeamAsk{
+		AskKind:  protocol.TeamAskKind(stringValue(args["ask_kind"])),
+		LaneRole: protocol.TeamLaneRole(stringValue(args["lane_role"])),
+		Goal: firstNonEmptyString(
+			stringValue(args["goal"]),
+			stringValue(args["intent"]),
+			stringValue(args["message"]),
+			stringValue(args["operation"]),
+		),
+		OwnedScope:           stringSlice(args["owned_scope"]),
+		Constraints:          stringSlice(args["constraints"]),
+		RequiredCapabilities: stringSlice(args["required_capabilities"]),
+		ApprovalPosture:      protocol.ApprovalPosture(stringValue(args["approval_posture"])),
+		ExitCriteria:         stringSlice(args["exit_criteria"]),
+		EvidenceRequired:     stringSlice(args["evidence_required"]),
+	}
 	if ctxRaw, ok := args["context"]; ok {
-		payload["context"] = ctxRaw
+		if ctxMap, ok := ctxRaw.(map[string]any); ok {
+			ask.Context = ctxMap
+		}
 	}
-	if len(payload) > 0 {
-		task = mustJSON(payload)
+	return teamID, ask.Normalize(), nil
+}
+
+func teamAskFromMap(raw map[string]any) protocol.TeamAsk {
+	ask := protocol.TeamAsk{
+		SchemaVersion:        pickFirstString(raw, "schema_version", "version"),
+		AskKind:              protocol.TeamAskKind(pickFirstString(raw, "ask_kind", "kind")),
+		LaneRole:             protocol.TeamLaneRole(pickFirstString(raw, "lane_role", "role", "lane")),
+		Goal:                 firstNonEmptyString(pickFirstString(raw, "goal"), pickFirstString(raw, "intent"), pickFirstString(raw, "message"), pickFirstString(raw, "task")),
+		OwnedScope:           stringSlice(raw["owned_scope"]),
+		Constraints:          stringSlice(raw["constraints"]),
+		RequiredCapabilities: stringSlice(raw["required_capabilities"]),
+		ApprovalPosture:      protocol.ApprovalPosture(pickFirstString(raw, "approval_posture")),
+		ExitCriteria:         stringSlice(raw["exit_criteria"]),
+		EvidenceRequired:     stringSlice(raw["evidence_required"]),
 	}
-	return teamID, task
+	if ctxRaw, ok := raw["context"]; ok {
+		if ctxMap, ok := ctxRaw.(map[string]any); ok {
+			ask.Context = ctxMap
+		}
+	}
+	return ask
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[string]any) (string, error) {

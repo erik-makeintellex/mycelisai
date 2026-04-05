@@ -143,6 +143,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical plan for separate customer-context and company-knowledge stores, governed promotion, policy-bound web/MCP ingest, and release proof",
             },
             {
+                slug: "v8-structured-team-asks-plan",
+                label: "V8 Structured Team Asks Plan",
+                path: "docs/architecture-library/V8_STRUCTURED_TEAM_ASKS_AND_LANE_ROUTING_PLAN.md",
+                description: "Canonical plan for typed Soma-to-team asks, lane-role routing, backward-compatible delegate_task normalization, and phased team-runtime follow-through",
+            },
+            {
                 slug: "v8-content-generation-collaboration-plan",
                 label: "V8 Content Generation & Collaboration Plan",
                 path: "docs/architecture-library/V8_CONTENT_GENERATION_AND_COLLABORATION_STRIKE_TEAM_PLAN.md",
@@ -201,6 +207,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "V8 Ask-Class Agent/Output Plan",
                 path: "docs/architecture-library/V8_ASK_CLASS_AGENT_TYPE_OUTPUT_CONTRACT_PLAN.md",
                 description: "Execution plan for consolidating ask classification, specialist targeting, and output-contract assertion across runtime, UI, docs, and tests",
+            },
+            {
+                slug: "v8-structured-team-asks-plan",
+                label: "V8 Structured Team Asks Plan",
+                path: "docs/architecture-library/V8_STRUCTURED_TEAM_ASKS_AND_LANE_ROUTING_PLAN.md",
+                description: "Canonical plan for typed Soma-to-team asks, lane-role vocabulary, command-lane preservation, and future team-instantiation defaults",
             },
             {
                 slug: "v8-demo-product-plan",
