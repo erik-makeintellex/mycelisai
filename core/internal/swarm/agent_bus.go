@@ -1,6 +1,7 @@
 package swarm
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -81,8 +82,9 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 		return
 	default:
 	}
-	log.Printf("Agent [%s] thinking about: %s", a.Manifest.ID, string(msg.Data))
-	responseText := a.processMessage(string(msg.Data), nil)
+	input := normalizeTeamTriggerInput(msg.Data)
+	log.Printf("Agent [%s] thinking about: %s", a.Manifest.ID, input)
+	responseText := a.processMessage(input, nil)
 	if responseText == "" {
 		if msg.Reply != "" {
 			msg.Respond([]byte(fmt.Sprintf("[%s] No response — LLM may be unavailable.", a.Manifest.ID)))
@@ -94,6 +96,64 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 	}
 	a.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalRespond, a.TeamID), []byte(responseText))
 	log.Printf("Agent [%s] replied.", a.Manifest.ID)
+}
+
+func normalizeTeamTriggerInput(data []byte) string {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 {
+		return ""
+	}
+
+	var ask protocol.TeamAsk
+	if err := json.Unmarshal(trimmed, &ask); err == nil && !ask.IsZero() {
+		return renderTeamAskPrompt(ask.Normalize())
+	}
+	return string(data)
+}
+
+func renderTeamAskPrompt(ask protocol.TeamAsk) string {
+	var sb strings.Builder
+	sb.WriteString("You have received a structured team ask.\n")
+	sb.WriteString(fmt.Sprintf("Ask kind: %s\n", ask.AskKind))
+	sb.WriteString(fmt.Sprintf("Lane role: %s\n", ask.LaneRole))
+	sb.WriteString(fmt.Sprintf("Goal: %s\n", ask.Goal))
+	if len(ask.OwnedScope) > 0 {
+		sb.WriteString("Owned scope:\n")
+		for _, item := range ask.OwnedScope {
+			sb.WriteString(fmt.Sprintf("- %s\n", item))
+		}
+	}
+	if len(ask.Constraints) > 0 {
+		sb.WriteString("Constraints:\n")
+		for _, item := range ask.Constraints {
+			sb.WriteString(fmt.Sprintf("- %s\n", item))
+		}
+	}
+	if len(ask.RequiredCapabilities) > 0 {
+		sb.WriteString("Required capabilities:\n")
+		for _, item := range ask.RequiredCapabilities {
+			sb.WriteString(fmt.Sprintf("- %s\n", item))
+		}
+	}
+	if len(ask.ExitCriteria) > 0 {
+		sb.WriteString("Exit criteria:\n")
+		for _, item := range ask.ExitCriteria {
+			sb.WriteString(fmt.Sprintf("- %s\n", item))
+		}
+	}
+	if len(ask.EvidenceRequired) > 0 {
+		sb.WriteString("Evidence required:\n")
+		for _, item := range ask.EvidenceRequired {
+			sb.WriteString(fmt.Sprintf("- %s\n", item))
+		}
+	}
+	if ask.Context != nil {
+		if raw, err := json.Marshal(ask.Context); err == nil {
+			sb.WriteString(fmt.Sprintf("Context: %s\n", string(raw)))
+		}
+	}
+	sb.WriteString("Complete the ask within scope and report the outcome clearly.")
+	return sb.String()
 }
 
 func (a *Agent) handleDirectRequest(msg *nats.Msg) {
