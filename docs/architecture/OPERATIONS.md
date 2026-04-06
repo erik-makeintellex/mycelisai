@@ -311,6 +311,7 @@ uv run inv compose.health
 ```
 
 This is the supported single-host runtime for home-lab and demo use when Kind/Kubernetes is unnecessary.
+It is also the recommended easiest full-stack bring-up path on WSL2, Linux, and macOS.
 
 ### Kind / Kubernetes Local Development
 
@@ -332,6 +333,18 @@ uv run inv lifecycle.health
 Open [http://localhost:3000](http://localhost:3000)
 
 Use `uv run inv k8s.bridge` only when you intentionally need a manual long-running port-forward outside the managed lifecycle path.
+
+### Cross-Host Working Copy Rule
+
+Do not treat one generated repo environment as portable across Windows and WSL/Linux/macOS.
+
+If you switch host environment for the same checkout, recreate:
+- `.venv`
+- `interface/node_modules`
+- `interface/.next`
+
+Safest posture:
+- keep a separate clone or worktree per host environment when you regularly use both Windows and WSL
 
 ### First-Time Setup
 

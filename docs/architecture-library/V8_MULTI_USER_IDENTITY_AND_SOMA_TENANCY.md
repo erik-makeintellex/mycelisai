@@ -116,6 +116,7 @@ The shared Soma persona is not value-neutral. It is shaped by the root admin or 
 This admin-shaped layer defines:
 - Soma's configured name
 - baseline operating stance and organization tone
+- the agent/output specificity Soma and engaged specialists should follow for organization-facing work
 - approved company guidance Soma may treat as durable organizational reference
 - deployment-specific constraints, policies, and context posture
 - organization-level memory and retrieval boundaries
@@ -135,7 +136,13 @@ This creates a strict separation between:
 
 Product rule:
 - admin interaction may shape Soma's durable organization-level operating context
+- only the root admin or explicitly delegated environment owner may assign or change durable agent/output specificity for shared organizational behavior
 - ordinary user interaction should remain scoped unless explicitly reviewed and promoted
+
+Output-specificity rule:
+- per-user requests can ask for temporary output preferences inside the current scoped interaction
+- those temporary preferences must not rewrite shared agent specificity, shared specialist output posture, or Soma's organization-level output contract
+- durable output-specificity changes for shared Soma/team behavior must go through a governed root-admin path with audit and lineage
 
 Implementation implication:
 - Mycelis likely needs one explicit admin-owned foundational layer in addition to ordinary Soma memory, `customer_context`, and `company_knowledge`
@@ -226,6 +233,7 @@ The clean implementation path should be:
    - introduce an explicit governed store for admin-authored Soma-shaping context
    - keep it separate from ordinary Soma memory, `customer_context`, and `company_knowledge`
    - require audit, lineage, and governed promotion/update paths
+   - make root-admin control of shared agent/output specificity explicit instead of allowing it to emerge from general chat
 
 4. Scoped user interaction rules
    - ensure ordinary user chats remain private or audience-scoped by policy

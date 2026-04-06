@@ -23,6 +23,12 @@
 ## Components
 This directory contains the logic for the **Service Release Standard 1.0**.
 
+Recommended host posture:
+- WSL2/Linux/macOS: prefer `uv run inv compose.up --build` as the easiest supported full-stack bring-up
+- Windows native: use the Kind + lifecycle path when you want the main desktop development flow
+- Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
+- if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
+
 ### Root `install` Task
 `uv run inv install` now installs the supported default Core + Interface stack only.
 

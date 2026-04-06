@@ -14,6 +14,7 @@
 
 - [Prerequisites](#prerequisites)
 - [Configuration Reference](#configuration-reference)
+- [Recommended Host Paths](#recommended-host-paths)
 - [First-Time Setup](#first-time-setup)
 - [Daily Startup Sequence](#daily-startup-sequence)
 - [Port Map](#port-map)
@@ -35,6 +36,11 @@
 | uv | Latest | `pip install uv` / `pipx install uv` | Python environment + task runner |
 | psql | 16+ | Comes with PostgreSQL or standalone | Database migrations |
 | Ollama | Latest | [ollama.com](https://ollama.com/) | Local LLM inference |
+
+Platform-first guidance:
+- WSL2/Linux/macOS should usually start with the Docker Compose path because it is the easiest full-stack bring-up and avoids the extra Kind/bridge layer.
+- Windows native is still a supported main local-development path, especially when desktop Ollama and Docker Desktop are already part of the workflow.
+- Optional repo-local `cognitive.*` helpers are for supported Linux GPU hosts; they are not the default setup path on Windows or macOS.
 
 ## Configuration Reference
 
@@ -195,6 +201,53 @@ If you change local engines:
   - build binaries/images for the target architecture instead of reusing desktop-local artifacts blindly
   - keep deployment concerns in env/files/config, while runtime behavior still comes from `Bundle -> Instantiated Organization -> Inheritance -> Routing`
   - use `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` to stamp environment-specific provider wiring without changing organizational routing rules
+
+## Recommended Host Paths
+
+### WSL2 / Linux / macOS
+
+This is the recommended easiest path for a fresh full-stack setup:
+
+```bash
+cp .env.compose.example .env.compose
+uv run inv install
+uv run inv compose.up --build
+uv run inv compose.health
+```
+
+Use this path when you want:
+- the easiest supported full-stack bring-up
+- a single-host runtime for development, demos, or home-lab use
+- to avoid local Kind/bridge complexity unless you are specifically working on Kubernetes behavior
+
+### Windows Native
+
+This remains a supported main development path:
+
+```powershell
+Copy-Item .env.example .env
+uv run inv install
+uv run inv k8s.up
+uv run inv lifecycle.up --frontend
+uv run inv lifecycle.health
+```
+
+Use this path when you want:
+- the normal Windows desktop development experience
+- local Ollama on the same host
+- direct validation of the Kind/Kubernetes local path
+
+### Cross-Host Working Copy Rule
+
+Do not share one long-lived generated environment across Windows and WSL/Linux/macOS toolchains.
+
+If you switch host environments:
+- recreate `.venv`
+- recreate `interface/node_modules`
+- recreate `interface/.next`
+
+Safest posture:
+- use a separate clone or worktree per host environment when you actively move between Windows and WSL
 
 ### `core/config/templates/*.yaml` — Bootstrap Template Bundles
 

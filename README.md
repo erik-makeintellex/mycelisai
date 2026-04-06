@@ -32,6 +32,7 @@ Canonical ownership reminder:
 - [Development Contract](#development-contract)
 - [Playwright Contract](#playwright-contract)
 - [Testing Gate](#testing-gate)
+- [Cross-Platform Setup](#cross-platform-setup)
 - [Development Workflow](#development-workflow)
 - [Documentation Responsibilities](#documentation-responsibilities)
 - [Status](#status)
@@ -465,6 +466,35 @@ Use those when you need one release-style pass that ties together:
 - live service/browser proof
 - compose-aware runtime proof when the home-runtime stack is part of the release story
 - documentation and state synchronization after the gate finishes
+
+## Cross-Platform Setup
+
+Recommended host posture:
+- Windows native: best for desktop-first local development and operator workflow work; use Ollama locally or point at remote providers
+- WSL2, Linux, and macOS: prefer the Docker Compose path first for the easiest full-stack bring-up
+- Linux GPU hosts: optional `cognitive.*` helpers are appropriate there when you intentionally want local vLLM/Diffusers
+
+Recommended easiest setup path by host:
+- WSL2/Linux/macOS:
+  1. `cp .env.compose.example .env.compose`
+  2. `uv run inv install`
+  3. `uv run inv compose.up --build`
+  4. `uv run inv compose.health`
+- Windows native:
+  1. `copy .env.example .env`
+  2. `uv run inv install`
+  3. `uv run inv k8s.up`
+  4. `uv run inv lifecycle.up --frontend`
+  5. `uv run inv lifecycle.health`
+
+Cross-host artifact rule:
+- do not bounce the same working copy back and forth between Windows Python/Node artifacts and WSL/Linux/macOS artifacts
+- if you switch host environment, recreate repo-local generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
+- safest posture is one clone or worktree per host environment when you regularly use both Windows and WSL
+
+Local engine rule:
+- Windows and macOS should treat Ollama or a remote OpenAI-compatible provider as the normal local-engine story
+- repo-local `cognitive.*` helpers are intended for supported Linux GPU hosts, not as the default path on Windows or macOS
 
 ## Development Workflow
 

@@ -37,6 +37,7 @@ Current release boundary note:
 - the target multi-user contract is one shared organization-owned Soma persona plus many governed human principals, not one unrelated Soma per end user
 - future enterprise identity should support federation and local break-glass admins without bypassing governance or audit
 - future shared-Soma governance must also distinguish admin-shaped organization-level Soma context from ordinary user interaction context
+- future shared-Soma governance must reserve durable agent/output-specificity assignment to the root admin or explicitly delegated environment owner rather than letting ordinary user chats redefine shared behavior
 
 The normal operator-facing outcomes are:
 - `answer`

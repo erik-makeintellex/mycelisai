@@ -100,6 +100,7 @@ What is still future work:
 - richer enterprise policy administration
 - one shared organization-owned Soma persona across many users with scoped privacy, audit, and memory/RAG access rules
 - explicit admin-owned Soma-shaping context so root/admin guidance can shape durable organization behavior without letting ordinary user chat silently redefine Soma
+- root-admin control over durable shared agent/output specificity so user-local preferences do not silently redefine organization-wide output behavior
 
 Related references:
 - `docs/governance.md`
