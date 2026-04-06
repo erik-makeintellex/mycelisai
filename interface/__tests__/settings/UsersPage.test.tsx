@@ -11,9 +11,15 @@ vi.mock("@/components/teams/GroupManagementPanel", () => ({
 function mockMeResponse({
     role = "owner",
     accessManagementTier = "release",
+    productEdition = "self_hosted_release",
+    identityMode = "local_only",
+    sharedAgentSpecificityOwner = "root_admin",
 }: {
     role?: string;
     accessManagementTier?: "release" | "enterprise";
+    productEdition?: "self_hosted_release" | "self_hosted_enterprise" | "hosted_control_plane";
+    identityMode?: "local_only" | "hybrid" | "federated";
+    sharedAgentSpecificityOwner?: "root_admin" | "delegated_owner";
 } = {}) {
     mockFetch.mockResolvedValue({
         ok: true,
@@ -26,6 +32,9 @@ function mockMeResponse({
                 name: "Current User",
                 settings: {
                     access_management_tier: accessManagementTier,
+                    product_edition: productEdition,
+                    identity_mode: identityMode,
+                    shared_agent_specificity_owner: sharedAgentSpecificityOwner,
                 },
             },
         }),
@@ -45,11 +54,76 @@ describe("UsersPage", () => {
             expect(screen.getByTestId("organization-access-layer")).toBeDefined();
         });
 
+        expect(screen.getByTestId("deployment-access-model")).toBeDefined();
+        expect(screen.getByText("Self-hosted release")).toBeDefined();
         expect(screen.getByText("Base release layer")).toBeDefined();
         expect(screen.getByTestId("enterprise-directory-locked")).toBeDefined();
         expect(screen.queryByTestId("users-management-panel")).toBeNull();
         expect(screen.getByTestId("users-groups-section")).toBeDefined();
         expect(screen.getByTestId("group-management-panel")).toBeDefined();
+    });
+
+    it("lets an owner save the review edition, identity mode, and shared Soma output owner", async () => {
+        mockMeResponse({ role: "admin", accessManagementTier: "release" });
+        mockFetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        id: "me-1",
+                        email: "me@local",
+                        role: "admin",
+                        name: "Current User",
+                        settings: {
+                            access_management_tier: "release",
+                            product_edition: "self_hosted_release",
+                            identity_mode: "local_only",
+                            shared_agent_specificity_owner: "root_admin",
+                        },
+                    },
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        access_management_tier: "enterprise",
+                        product_edition: "hosted_control_plane",
+                        identity_mode: "federated",
+                        shared_agent_specificity_owner: "delegated_owner",
+                    },
+                }),
+            });
+
+        render(<UsersPage />);
+
+        await waitFor(() => {
+            expect(screen.getByTestId("deployment-access-model")).toBeDefined();
+        });
+
+        fireEvent.click(screen.getByText("Hosted control plane"));
+        fireEvent.change(screen.getByLabelText("Identity Mode"), { target: { value: "federated" } });
+        fireEvent.change(screen.getByLabelText("Shared Agent Specificity Owner"), { target: { value: "delegated_owner" } });
+        fireEvent.click(screen.getByTestId("save-access-model"));
+
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenLastCalledWith(
+                "/api/v1/user/settings",
+                expect.objectContaining({
+                    method: "PUT",
+                    body: JSON.stringify({
+                        access_management_tier: "enterprise",
+                        product_edition: "hosted_control_plane",
+                        identity_mode: "federated",
+                        shared_agent_specificity_owner: "delegated_owner",
+                    }),
+                }),
+            );
+        });
+
+        expect(screen.getByText(/Deployment access model saved/i)).toBeDefined();
     });
 
     it("maps backend admin identity to owner access", async () => {
@@ -91,5 +165,7 @@ describe("UsersPage", () => {
 
         expect(screen.queryByTestId("users-management-panel")).toBeNull();
         expect(screen.queryByTestId("users-add-button")).toBeNull();
+        expect(screen.getByLabelText("Identity Mode")).toHaveProperty("disabled", true);
+        expect(screen.getByTestId("save-access-model")).toHaveProperty("disabled", true);
     });
 });

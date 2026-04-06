@@ -6,6 +6,9 @@ import GroupManagementPanel from "@/components/teams/GroupManagementPanel";
 
 type UserRole = "owner" | "operator" | "viewer";
 type AccessManagementTier = "release" | "enterprise";
+type ProductEdition = "self_hosted_release" | "self_hosted_enterprise" | "hosted_control_plane";
+type IdentityMode = "local_only" | "hybrid" | "federated";
+type SharedAgentSpecificityOwner = "root_admin" | "delegated_owner";
 
 type ManagedUser = {
     id: string;
@@ -21,6 +24,27 @@ const STARTER_DIRECTORY_USERS: ManagedUser[] = [
     { id: "operator", name: "Operator", email: "operator@local", role: "operator", remoteAllowed: false, status: "active" },
     { id: "viewer", name: "Viewer", email: "viewer@local", role: "viewer", remoteAllowed: false, status: "active" },
 ];
+
+const EDITION_COPY: Record<ProductEdition, { label: string; summary: string }> = {
+    self_hosted_release: {
+        label: "Self-hosted release",
+        summary: "Base self-hosted posture with organization access, groups, and governed Soma workflows.",
+    },
+    self_hosted_enterprise: {
+        label: "Self-hosted enterprise",
+        summary: "Adds enterprise user-directory posture and hybrid identity expectations without requiring a hosted control plane.",
+    },
+    hosted_control_plane: {
+        label: "Hosted control plane",
+        summary: "Separates advanced access management into a paid hosted layer while the runtime and Soma stay governed by the organization.",
+    },
+};
+
+const IDENTITY_COPY: Record<IdentityMode, string> = {
+    local_only: "Local credentials for self-hosted environments without external identity.",
+    hybrid: "Enterprise sign-in with local break-glass admins preserved for self-hosted recovery.",
+    federated: "Standard SAML/OIDC-style federation with enterprise-managed sign-in.",
+};
 
 function toRole(value: string): UserRole {
     switch (value.trim().toLowerCase()) {
@@ -41,6 +65,34 @@ function toAccessManagementTier(value: unknown): AccessManagementTier {
     return String(value).trim().toLowerCase() === "enterprise" ? "enterprise" : "release";
 }
 
+function toProductEdition(value: unknown): ProductEdition {
+    switch (String(value).trim().toLowerCase()) {
+        case "self_hosted_enterprise":
+        case "enterprise":
+            return "self_hosted_enterprise";
+        case "hosted_control_plane":
+        case "hosted":
+            return "hosted_control_plane";
+        default:
+            return "self_hosted_release";
+    }
+}
+
+function toIdentityMode(value: unknown): IdentityMode {
+    switch (String(value).trim().toLowerCase()) {
+        case "hybrid":
+            return "hybrid";
+        case "federated":
+            return "federated";
+        default:
+            return "local_only";
+    }
+}
+
+function toSharedAgentSpecificityOwner(value: unknown): SharedAgentSpecificityOwner {
+    return String(value).trim().toLowerCase() === "delegated_owner" ? "delegated_owner" : "root_admin";
+}
+
 function extractData<T>(payload: unknown): T {
     if (payload && typeof payload === "object" && "data" in payload) {
         return (payload as { data: T }).data;
@@ -58,11 +110,16 @@ export default function UsersPage() {
     const [notice, setNotice] = useState<string | null>(null);
     const [currentUser, setCurrentUser] = useState<ManagedUser | null>(null);
     const [accessManagementTier, setAccessManagementTier] = useState<AccessManagementTier>("release");
+    const [productEdition, setProductEdition] = useState<ProductEdition>("self_hosted_release");
+    const [identityMode, setIdentityMode] = useState<IdentityMode>("local_only");
+    const [sharedAgentSpecificityOwner, setSharedAgentSpecificityOwner] = useState<SharedAgentSpecificityOwner>("root_admin");
+    const [savingAccessModel, setSavingAccessModel] = useState(false);
 
     const activeCount = useMemo(() => users.filter((u) => u.status === "active").length, [users]);
     const currentUserRole = currentUser?.role ?? "owner";
     const showsEnterpriseDirectory = accessManagementTier === "enterprise";
     const canManageEnterpriseDirectory = showsEnterpriseDirectory && currentUserRole === "owner";
+    const canManageAccessModel = currentUserRole === "owner";
 
     const refreshCurrentUser = async () => {
         setSyncing(true);
@@ -70,13 +127,28 @@ export default function UsersPage() {
             const res = await fetch("/api/v1/user/me", { cache: "no-store" });
             if (!res.ok) return;
             const payload = await res.json();
-            const me = extractData<{ id?: string; email?: string; role?: string; name?: string; settings?: { access_management_tier?: string } }>(payload);
+            const me = extractData<{
+                id?: string;
+                email?: string;
+                role?: string;
+                name?: string;
+                settings?: {
+                    access_management_tier?: string;
+                    product_edition?: string;
+                    identity_mode?: string;
+                    shared_agent_specificity_owner?: string;
+                };
+            }>(payload);
             const meID = me?.id || "me";
             const meName = me?.name || me?.email || "Current User";
             const meEmail = me?.email || "me@local";
             const meRole = toRole(me?.role || "owner");
             const meRemoteAllowed = meRole === "owner";
-            setAccessManagementTier(toAccessManagementTier(me?.settings?.access_management_tier));
+            const settings = me?.settings || {};
+            setAccessManagementTier(toAccessManagementTier(settings.access_management_tier));
+            setProductEdition(toProductEdition(settings.product_edition));
+            setIdentityMode(toIdentityMode(settings.identity_mode));
+            setSharedAgentSpecificityOwner(toSharedAgentSpecificityOwner(settings.shared_agent_specificity_owner));
             setCurrentUser({ id: meID, name: meName, email: meEmail, role: meRole, remoteAllowed: meRemoteAllowed, status: "active" });
             setUsers((prev) => {
                 const existing = prev.find((u) => u.id === meID);
@@ -127,8 +199,128 @@ export default function UsersPage() {
         setUsers((prev) => prev.filter((u) => u.id !== id));
     };
 
+    const saveAccessModel = async () => {
+        if (!canManageAccessModel) return;
+        const nextTier: AccessManagementTier = productEdition === "self_hosted_release" ? "release" : "enterprise";
+        setSavingAccessModel(true);
+        setNotice(null);
+        try {
+            const res = await fetch("/api/v1/user/settings", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    access_management_tier: nextTier,
+                    product_edition: productEdition,
+                    identity_mode: identityMode,
+                    shared_agent_specificity_owner: sharedAgentSpecificityOwner,
+                }),
+            });
+            if (!res.ok) {
+                throw new Error("save failed");
+            }
+            setAccessManagementTier(nextTier);
+            setNotice("Deployment access model saved for this environment owner view.");
+        } catch {
+            setNotice("Could not save the deployment access model. Keep using the current review posture until the backend is reachable.");
+        } finally {
+            setSavingAccessModel(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
+            <section className="rounded-xl border border-cortex-border bg-cortex-surface/60 p-4 space-y-4" data-testid="deployment-access-model">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-cortex-primary" />
+                        <h3 className="text-sm font-semibold text-cortex-text-main uppercase tracking-wider">Deployment Access Model</h3>
+                    </div>
+                    <p className="text-sm leading-6 text-cortex-text-muted">
+                        Investor review and future rollout should show one clear layered story: base self-hosting, self-hosted enterprise add-on, and a hosted control-plane layer that can sit on top without replacing the governed runtime.
+                    </p>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-3">
+                    {(Object.keys(EDITION_COPY) as ProductEdition[]).map((edition) => (
+                        <button
+                            key={edition}
+                            type="button"
+                            onClick={() => canManageAccessModel && setProductEdition(edition)}
+                            disabled={!canManageAccessModel}
+                            className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                                productEdition === edition ? "border-cortex-primary/40 bg-cortex-primary/10" : "border-cortex-border bg-cortex-bg"
+                            } ${!canManageAccessModel ? "cursor-default" : "hover:border-cortex-primary/30"}`}
+                        >
+                            <p className="text-sm font-semibold text-cortex-text-main">{EDITION_COPY[edition].label}</p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{EDITION_COPY[edition].summary}</p>
+                        </button>
+                    ))}
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-cortex-text-main font-semibold">Identity Mode</span>
+                        <select
+                            aria-label="Identity Mode"
+                            value={identityMode}
+                            onChange={(e) => setIdentityMode(toIdentityMode(e.target.value))}
+                            disabled={!canManageAccessModel}
+                            className="px-3 py-2 rounded bg-cortex-bg border border-cortex-border text-cortex-text-main"
+                        >
+                            <option value="local_only">Local only</option>
+                            <option value="hybrid">Hybrid</option>
+                            <option value="federated">Federated</option>
+                        </select>
+                        <span className="text-xs leading-5 text-cortex-text-muted">{IDENTITY_COPY[identityMode]}</span>
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-cortex-text-main font-semibold">Shared Agent Specificity Owner</span>
+                        <select
+                            aria-label="Shared Agent Specificity Owner"
+                            value={sharedAgentSpecificityOwner}
+                            onChange={(e) => setSharedAgentSpecificityOwner(toSharedAgentSpecificityOwner(e.target.value))}
+                            disabled={!canManageAccessModel}
+                            className="px-3 py-2 rounded bg-cortex-bg border border-cortex-border text-cortex-text-main"
+                        >
+                            <option value="root_admin">Root admin only</option>
+                            <option value="delegated_owner">Delegated owner</option>
+                        </select>
+                        <span className="text-xs leading-5 text-cortex-text-muted">
+                            Shared Soma and specialist output specificity stays organization-owned. Ordinary user chats can request temporary formatting, but they do not redefine shared output posture.
+                        </span>
+                    </label>
+                </div>
+
+                <div className="rounded-lg border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted space-y-2">
+                    <p className="font-medium text-cortex-text-main">Shared Soma ownership</p>
+                    <p className="leading-6">
+                        <span className="font-medium text-cortex-text-main">Soma is one organization-owned persona.</span> Root-admin or delegated-owner interaction can shape durable organization-level Soma context, while ordinary user conversations remain private or audience-scoped unless explicitly promoted.
+                    </p>
+                    <p className="leading-6">
+                        {identityMode === "hybrid"
+                            ? "Hybrid mode keeps enterprise sign-in for everyday use and preserves local break-glass admins for self-hosted recovery."
+                            : identityMode === "federated"
+                              ? "Federated mode represents the enterprise SAML/OIDC path. Break-glass local admins should still exist in self-hosted environments even when not exposed in the default workflow."
+                              : "Local-only mode keeps the environment self-contained for smaller self-hosted deployments and early-stage review environments."}
+                    </p>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs leading-5 text-cortex-text-muted">
+                        Current access layer resolves to <span className="font-mono text-cortex-text-main">{productEdition === "self_hosted_release" ? "release" : "enterprise"}</span> based on the selected product edition.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={saveAccessModel}
+                        disabled={!canManageAccessModel || savingAccessModel}
+                        className="px-3 py-2 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10 disabled:opacity-50"
+                        data-testid="save-access-model"
+                    >
+                        {savingAccessModel ? "Saving..." : "Save access model"}
+                    </button>
+                </div>
+            </section>
+
             <section className="rounded-xl border border-cortex-border bg-cortex-surface/60 p-4 space-y-4" data-testid="organization-access-layer">
                 <div className="flex items-center justify-between gap-3">
                     <div className="space-y-1">

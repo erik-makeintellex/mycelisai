@@ -642,7 +642,7 @@ type Proof struct {
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/v1/user/me` | Current user profile |
-| PUT | `/api/v1/user/settings` | Update preferences |
+| GET/PUT | `/api/v1/user/settings` | Read/update persisted user preferences, including assistant name and People & Access review posture (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`) |
 
 ### Chat & Council
 | Method | Path | Purpose |

@@ -103,8 +103,8 @@
 | `/api/v1/teams/{id}/connectors` | POST | Install connector on team |
 | `/api/v1/teams/{id}/wiring` | GET | Get team wiring graph |
 | **Identity** | | |
-| `/api/v1/user/me` | GET | Current user identity |
-| `/api/v1/user/settings` | PUT | Update user settings |
+| `/api/v1/user/me` | GET | Current user identity, including persisted People & Access posture such as `access_management_tier`, `product_edition`, `identity_mode`, and `shared_agent_specificity_owner` |
+| `/api/v1/user/settings` | GET/PUT | Read or update persisted user settings, including assistant name, People & Access layer, investor-review edition posture, identity mode, and shared Soma output-specificity control |
 | `/api/v1/groups` | GET/POST | List/create root-admin collaboration groups (DB-backed, tenant scoped) |
 | `/api/v1/groups/{id}` | PUT | Update root-admin collaboration group |
 | `/api/v1/groups/{id}/broadcast` | POST | Publish group coordination message to group + team NATS channels |

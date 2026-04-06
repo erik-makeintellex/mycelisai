@@ -67,7 +67,12 @@ describe('Settings Page (app/settings/page.tsx)', () => {
                             email: 'me@local',
                             role: 'admin',
                             name: 'Current User',
-                            settings: { access_management_tier: 'release' },
+                            settings: {
+                                access_management_tier: 'release',
+                                product_edition: 'self_hosted_release',
+                                identity_mode: 'local_only',
+                                shared_agent_specificity_owner: 'root_admin',
+                            },
                         },
                     }),
                 } as Response;
@@ -175,6 +180,8 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
 
         expect(screen.getByRole('tab', { name: 'People & Access' }).getAttribute('aria-current')).toBe('page');
+        expect(screen.getByText('Deployment Access Model')).toBeDefined();
+        expect(screen.getByText('Self-hosted release')).toBeDefined();
         expect(screen.getByText('Base release layer')).toBeDefined();
         expect(screen.getByText('Enterprise User Directory')).toBeDefined();
         expect(screen.getByText(/intentionally kept out of the raw release workflow/i)).toBeDefined();

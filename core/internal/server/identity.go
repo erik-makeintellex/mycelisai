@@ -33,15 +33,20 @@ type Team struct {
 
 func defaultUserSettings() map[string]any {
 	return map[string]any{
-		"theme":                  "aero-light",
-		"matrix_view":            "grid",
-		"assistant_name":         defaultAssistantName,
-		"access_management_tier": "release",
-		"role":                   "owner",
-		"cost_sensitivity":       "balanced",
-		"review_strictness":      "standard",
-		"automation_tolerance":   "balanced",
-		"escalation_preference":  "ask",
+		// These fields let the current product expose the intended edition/identity
+		// layering for review even before full enterprise IAM adapters ship.
+		"theme":                          "aero-light",
+		"matrix_view":                    "grid",
+		"assistant_name":                 defaultAssistantName,
+		"access_management_tier":         "release",
+		"product_edition":                "self_hosted_release",
+		"identity_mode":                  "local_only",
+		"shared_agent_specificity_owner": "root_admin",
+		"role":                           "owner",
+		"cost_sensitivity":               "balanced",
+		"review_strictness":              "standard",
+		"automation_tolerance":           "balanced",
+		"escalation_preference":          "ask",
 	}
 }
 
@@ -67,6 +72,37 @@ func normalizeAccessManagementTier(v any) string {
 		return "enterprise"
 	default:
 		return "release"
+	}
+}
+
+func normalizeProductEdition(v any) string {
+	switch strings.TrimSpace(strings.ToLower(fmt.Sprint(v))) {
+	case "enterprise", "self_hosted_enterprise":
+		return "self_hosted_enterprise"
+	case "hosted", "hosted_control_plane":
+		return "hosted_control_plane"
+	default:
+		return "self_hosted_release"
+	}
+}
+
+func normalizeIdentityMode(v any) string {
+	switch strings.TrimSpace(strings.ToLower(fmt.Sprint(v))) {
+	case "federated":
+		return "federated"
+	case "hybrid":
+		return "hybrid"
+	default:
+		return "local_only"
+	}
+}
+
+func normalizeSharedAgentSpecificityOwner(v any) string {
+	switch strings.TrimSpace(strings.ToLower(fmt.Sprint(v))) {
+	case "delegated_owner":
+		return "delegated_owner"
+	default:
+		return "root_admin"
 	}
 }
 
@@ -106,6 +142,9 @@ func loadUserSettings() map[string]any {
 	}
 	settings["assistant_name"] = normalizeAssistantName(raw["assistant_name"])
 	settings["access_management_tier"] = normalizeAccessManagementTier(raw["access_management_tier"])
+	settings["product_edition"] = normalizeProductEdition(raw["product_edition"])
+	settings["identity_mode"] = normalizeIdentityMode(raw["identity_mode"])
+	settings["shared_agent_specificity_owner"] = normalizeSharedAgentSpecificityOwner(raw["shared_agent_specificity_owner"])
 	if role, ok := raw["role"]; ok {
 		if normalized := normalizeGovernanceRole(fmt.Sprint(role)); normalized != "" {
 			settings["role"] = normalized
@@ -131,6 +170,15 @@ func mergeUserSettings(input map[string]any) map[string]any {
 	}
 	if _, hasAccessManagementTier := input["access_management_tier"]; hasAccessManagementTier {
 		settings["access_management_tier"] = normalizeAccessManagementTier(input["access_management_tier"])
+	}
+	if _, hasProductEdition := input["product_edition"]; hasProductEdition {
+		settings["product_edition"] = normalizeProductEdition(input["product_edition"])
+	}
+	if _, hasIdentityMode := input["identity_mode"]; hasIdentityMode {
+		settings["identity_mode"] = normalizeIdentityMode(input["identity_mode"])
+	}
+	if _, hasSharedSpecificityOwner := input["shared_agent_specificity_owner"]; hasSharedSpecificityOwner {
+		settings["shared_agent_specificity_owner"] = normalizeSharedAgentSpecificityOwner(input["shared_agent_specificity_owner"])
 	}
 	if _, hasRole := input["role"]; hasRole {
 		if normalized := normalizeGovernanceRole(fmt.Sprint(input["role"])); normalized != "" {

@@ -218,6 +218,7 @@ Current operator experience summary:
 - Team Leads remain visible as the operational leaders Soma works through
 - a visible `Soma just did this` strip now ties the last action to engaged teams, generated outputs, and updated support panels
 - Departments now show visible specialist-role summaries instead of only counts in the default workspace
+- People & Access now also exposes a reviewable deployment-access model so investors and operators can see the layered product story clearly: self-hosted release, self-hosted enterprise, or hosted control plane, plus the intended identity mode and who controls shared Soma output specificity
 - basic system confidence checks remain visible in the default workspace; operators do not need Advanced mode just to verify core service state
 - the Soma workspace keeps the in-progress request draft and the last guided outcome visible when the operator leaves and returns to the same AI Organization
 - the organization-wide AI Engine and Response Style chosen during setup shape Soma's initial working posture, while the assistant name remains operator-configurable

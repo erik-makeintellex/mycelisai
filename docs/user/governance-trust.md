@@ -93,6 +93,7 @@ What exists now:
 - capability-aware approval posture
 - user-level governance profile
 - base audit trail and inspect-only activity view
+- a reviewable People & Access model that shows the layered product story for self-hosted release, self-hosted enterprise, and hosted control plane, plus identity posture and who controls shared Soma output specificity
 
 What is still future work:
 - full multi-user IAM with SAML/OIDC federation, optional lifecycle sync, and local break-glass admin recovery for self-hosted environments
