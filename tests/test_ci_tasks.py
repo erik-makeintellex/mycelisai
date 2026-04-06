@@ -90,6 +90,36 @@ def test_baseline_runs_playwright_when_e2e_enabled(monkeypatch):
     assert typecheck_calls == ["typecheck"]
 
 
+def test_baseline_skips_playwright_when_prior_steps_failed(monkeypatch):
+    monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.quality.max_lines, "body", lambda _ctx, **_kwargs: None)
+    build_calls: list[str] = []
+    test_calls: list[str] = []
+    typecheck_calls: list[str] = []
+    e2e_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(ci.interface_tasks.build, "body", lambda _ctx: build_calls.append("build"))
+    monkeypatch.setattr(ci.interface_tasks.stop, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.clean, "body", lambda _ctx: None)
+    monkeypatch.setattr(ci.interface_tasks.test, "body", lambda _ctx: test_calls.append("test"))
+    monkeypatch.setattr(ci.interface_tasks.typecheck, "body", lambda _ctx: typecheck_calls.append("typecheck"))
+    monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **kwargs: e2e_calls.append(kwargs))
+
+    ctx = FakeContext(
+        {
+            "go test ./... -count=1": FakeResult(exited=1, stderr="core tests failed"),
+        }
+    )
+
+    with pytest.raises(SystemExit):
+        ci.baseline.body(ctx)
+
+    assert e2e_calls == []
+    assert build_calls == ["build"]
+    assert test_calls == ["test"]
+    assert typecheck_calls == ["typecheck"]
+
+
 def test_baseline_runs_playwright_by_default(monkeypatch):
     monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
@@ -194,6 +224,34 @@ def test_service_check_runs_live_backend_browser_proof_when_requested(monkeypatc
             "server_mode": "start",
         }
     ]
+
+
+def test_service_check_skips_live_backend_browser_proof_when_prereqs_fail(monkeypatch):
+    health_calls: list[str] = []
+    up_calls: list[tuple[bool, bool]] = []
+    migrate_calls: list[str] = []
+    build_calls: list[str] = []
+    e2e_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(ci.lifecycle.up, "body", lambda _ctx, **kwargs: up_calls.append((kwargs["frontend"], kwargs["build"])))
+    monkeypatch.setattr(ci.db_tasks, "schema_bootstrapped", lambda: False)
+    monkeypatch.setattr(ci.db_tasks.migrate, "body", lambda _ctx: migrate_calls.append("migrate") or (_ for _ in ()).throw(SystemExit(1)))
+    monkeypatch.setattr(ci.lifecycle.health, "body", lambda _ctx, **_kwargs: health_calls.append("health"))
+    monkeypatch.setattr(ci.interface_tasks.build, "body", lambda _ctx: build_calls.append("build"))
+    monkeypatch.setattr(
+        ci.interface_tasks.e2e,
+        "body",
+        lambda _ctx, **kwargs: e2e_calls.append(kwargs),
+    )
+
+    with pytest.raises(SystemExit):
+        ci.service_check.body(FakeContext({}), live_backend=True)
+
+    assert up_calls == [(False, False)]
+    assert migrate_calls == ["migrate"]
+    assert health_calls == ["health"]
+    assert build_calls == []
+    assert e2e_calls == []
 
 
 def test_service_check_skips_migrate_when_schema_is_already_initialized(monkeypatch):

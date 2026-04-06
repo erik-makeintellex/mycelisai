@@ -235,13 +235,16 @@ def baseline(c, e2e=True):
 
     if e2e:
         print("[E2E] interface playwright run")
-        try:
-            interface_tasks.build.body(c)
-            interface_tasks.e2e.body(c, workers="1", server_mode="start")
-        except SystemExit:
-            errors.append("interface playwright failed")
+        if errors:
+            print("  SKIP (prerequisites failed)")
         else:
-            print("  OK")
+            try:
+                interface_tasks.build.body(c)
+                interface_tasks.e2e.body(c, workers="1", server_mode="start")
+            except SystemExit:
+                errors.append("interface playwright failed")
+            else:
+                print("  OK")
     else:
         print("[E2E] interface playwright run")
         print("  SKIP (--no-e2e)")
@@ -289,21 +292,24 @@ def service_check(c, live_backend=False):
             errors.append("lifecycle health failed")
 
         print("[3/3] interface live-backend governed playwright")
-        try:
-            interface_tasks.build.body(c)
-            time.sleep(3)
-            interface_tasks.e2e.body(
-                c,
-                project="chromium",
-                spec="e2e/specs/soma-governance-live.spec.ts",
-                live_backend=True,
-                workers="1",
-                server_mode="start",
-            )
-        except SystemExit:
-            errors.append("interface live-backend governed playwright failed")
+        if errors:
+            print("  SKIP (prerequisites failed)")
         else:
-            print("  OK")
+            try:
+                interface_tasks.build.body(c)
+                time.sleep(3)
+                interface_tasks.e2e.body(
+                    c,
+                    project="chromium",
+                    spec="e2e/specs/soma-governance-live.spec.ts",
+                    live_backend=True,
+                    workers="1",
+                    server_mode="start",
+                )
+            except SystemExit:
+                errors.append("interface live-backend governed playwright failed")
+            else:
+                print("  OK")
     else:
         print("[1/2] lifecycle.health")
         try:
