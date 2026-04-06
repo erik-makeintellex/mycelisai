@@ -17,6 +17,12 @@ vi.mock('@/components/settings/MCPServerCard', () => ({
 vi.mock('@/components/settings/MCPLibraryBrowser', () => ({
     __esModule: true,
     default: () => <div data-testid="library-browser">Library Browser</div>,
+    MCPLibraryBrowserBody: ({ onInstalled }: any) => (
+        <div data-testid="library-browser">
+            <button onClick={() => onInstalled?.('filesystem')}>Mock Install</button>
+            Library Browser
+        </div>
+    ),
 }));
 
 import MCPToolRegistry from '@/components/settings/MCPToolRegistry';
@@ -55,12 +61,17 @@ describe('MCPToolRegistry', () => {
             isFetchingMCPServers: false,
             fetchMCPServers: vi.fn(),
             deleteMCPServer: vi.fn(),
+            streamLogs: [],
+            isStreamConnected: false,
+            initializeStream: vi.fn(),
         });
     });
 
     it('renders the installed server list', () => {
+        const initializeStream = vi.fn();
         useCortexStore.setState({
             mcpServers: mockServers,
+            initializeStream,
         });
 
         render(<MCPToolRegistry />);
@@ -75,6 +86,8 @@ describe('MCPToolRegistry', () => {
         // Server names should be visible
         expect(screen.getByText('filesystem-server')).toBeDefined();
         expect(screen.getByText('web-scraper')).toBeDefined();
+        expect(screen.getByText(/Connected Tools Workflow/i)).toBeDefined();
+        expect(initializeStream).toHaveBeenCalledTimes(1);
 
         // "Installed" tab should be active by default, showing server count badge
         expect(screen.getByText('2')).toBeDefined();
@@ -90,6 +103,40 @@ describe('MCPToolRegistry', () => {
         fireEvent.click(screen.getByText('BROWSE LIBRARY'));
 
         expect(screen.getByTestId('library-browser')).toBeDefined();
+    });
+
+    it('surfaces recent MCP activity from the live stream', () => {
+        useCortexStore.setState({
+            mcpServers: mockServers,
+            streamLogs: [
+                {
+                    type: 'status',
+                    timestamp: '2026-04-06T12:00:00Z',
+                    source_kind: 'mcp',
+                    payload: {
+                        server_id: 'srv-001',
+                        tool: 'read_file',
+                        state: 'completed',
+                        result_preview: 'Read workspace brief successfully.',
+                    },
+                },
+            ],
+        });
+
+        render(<MCPToolRegistry />);
+
+        expect(screen.getByText(/Recent MCP Activity/i)).toBeDefined();
+        expect(screen.getByText(/filesystem-server · read_file/i)).toBeDefined();
+        expect(screen.getByText(/Read workspace brief successfully/i)).toBeDefined();
+    });
+
+    it('returns to installed view with guidance after library install', () => {
+        render(<MCPToolRegistry />);
+
+        fireEvent.click(screen.getByText('BROWSE LIBRARY'));
+        fireEvent.click(screen.getByText('Mock Install'));
+
+        expect(screen.getByText(/Installed filesystem/i)).toBeDefined();
     });
 
     it('delete action on a server card calls the store delete action', () => {

@@ -17,13 +17,25 @@ function statusDotClass(status: string, error?: string): string {
 interface MCPServerCardProps {
     server: MCPServerWithTools;
     onDelete: (id: string) => void;
+    recentActivity?: MCPRecentActivity[];
 }
 
-export default function MCPServerCard({ server, onDelete }: MCPServerCardProps) {
+export interface MCPRecentActivity {
+    id: string;
+    serverId?: string;
+    serverName: string;
+    toolName: string;
+    state: string;
+    message: string;
+    timestamp: string;
+}
+
+export default function MCPServerCard({ server, onDelete, recentActivity = [] }: MCPServerCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
     const toolCount = server.tools?.length ?? 0;
+    const latestActivity = recentActivity[0] ?? null;
 
     function handleDelete(e: React.MouseEvent) {
         e.stopPropagation();
@@ -97,9 +109,55 @@ export default function MCPServerCard({ server, onDelete }: MCPServerCardProps) 
                 </div>
             )}
 
+            {!server.error && latestActivity && (
+                <div className="px-4 pb-3 -mt-1">
+                    <div className="rounded-md border border-cortex-info/20 bg-cortex-info/5 px-2.5 py-2">
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-info">
+                            Recent Agent Use
+                        </p>
+                        <p className="mt-1 text-[11px] text-cortex-text-main">
+                            {latestActivity.toolName} · {latestActivity.state}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-cortex-text-muted">
+                            {latestActivity.message}
+                        </p>
+                        <p className="mt-1 text-[10px] font-mono text-cortex-text-muted">
+                            {formatTimestamp(latestActivity.timestamp)}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Expanded: Tool List */}
             {isExpanded && (
                 <div className="px-4 pb-4 border-t border-cortex-border/50">
+                    {recentActivity.length > 0 && (
+                        <div className="pt-3 pb-3 border-b border-cortex-border/50">
+                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                                Live Usage
+                            </p>
+                            <div className="mt-2 space-y-2">
+                                {recentActivity.slice(0, 3).map((activity) => (
+                                    <div key={activity.id} className="rounded-lg border border-cortex-border bg-cortex-bg/60 px-2.5 py-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-[11px] font-semibold text-cortex-text-main">
+                                                {activity.toolName}
+                                            </span>
+                                            <span className="text-[9px] font-mono uppercase text-cortex-info">
+                                                {activity.state}
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 text-[10px] text-cortex-text-muted">
+                                            {activity.message}
+                                        </p>
+                                        <p className="mt-1 text-[10px] font-mono text-cortex-text-muted">
+                                            {formatTimestamp(activity.timestamp)}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {toolCount === 0 ? (
                         <div className="flex flex-col items-center justify-center py-6 text-cortex-text-muted">
                             <Wrench className="w-6 h-6 mb-1.5 opacity-20" />
@@ -135,4 +193,12 @@ export default function MCPServerCard({ server, onDelete }: MCPServerCardProps) 
             )}
         </div>
     );
+}
+
+function formatTimestamp(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+    return date.toLocaleString();
 }

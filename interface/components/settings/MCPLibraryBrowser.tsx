@@ -65,6 +65,14 @@ function EnvConfigModal({ entry, onInstall, onClose }: EnvModalProps) {
 }
 
 export default function MCPLibraryBrowser() {
+    return <MCPLibraryBrowserBody />;
+}
+
+interface MCPLibraryBrowserProps {
+    onInstalled?: (name: string) => void;
+}
+
+export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = {}) {
     const library = useCortexStore((s) => s.mcpLibrary);
     const isFetching = useCortexStore((s) => s.isFetchingMCPLibrary);
     const fetchLibrary = useCortexStore((s) => s.fetchMCPLibrary);
@@ -101,6 +109,7 @@ export default function MCPLibraryBrowser() {
         setInstallingName(null);
         if (result.ok) {
             setEnvModalEntry(null);
+            onInstalled?.(name);
         }
     };
 

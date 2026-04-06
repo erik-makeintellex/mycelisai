@@ -55,6 +55,7 @@ Current posture:
 - local-first current-group configuration can install directly when policy allows
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
 - `fetch`/research capability is how governed external context can be added without treating web access as unrestricted trust
+- the same Connected Tools surface should make the workflow legible end to end: add from the curated library, confirm the server is connected, and inspect recent live MCP activity showing which server/tool agents are using
 
 ## Exchange
 
