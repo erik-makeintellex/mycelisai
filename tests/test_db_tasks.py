@@ -153,6 +153,55 @@ def test_migrate_skips_replay_when_schema_is_already_bootstrapped(monkeypatch, c
     assert migrate_calls == []
 
 
+def test_migrate_raises_when_any_migration_errors(monkeypatch, capsys):
+    monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
+    monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
+    monkeypatch.setattr(db_tasks, "schema_bootstrapped", lambda: False)
+    monkeypatch.setattr(
+        db_tasks,
+        "_migration_files",
+        lambda: [db_tasks.MIGRATIONS_DIR / "001_init_memory.sql", db_tasks.MIGRATIONS_DIR / "019_agent_memories.up.sql"],
+    )
+
+    def fake_psql(sql=None, file=None, dbname=None):
+        return 1 if file and file.name == "019_agent_memories.up.sql" else 0
+
+    monkeypatch.setattr(db_tasks, "_psql", fake_psql)
+    monkeypatch.setenv("DB_NAME", "cortex")
+
+    with pytest.raises(SystemExit):
+        db_tasks.migrate.body(None)
+
+    out = capsys.readouterr().out
+    assert "Migrations with errors" in out
+    assert "Fix the failing migration or reset the database before retrying." in out
+
+
+def test_reset_terminates_and_recreates_database_before_migrations(monkeypatch):
+    calls: list[tuple[str, str | None]] = []
+
+    monkeypatch.setattr(db_tasks, "_load_env", lambda: None)
+    monkeypatch.setattr(db_tasks, "_require_postgres", lambda dbname="postgres": calls.append(("require", dbname)))
+    monkeypatch.setenv("DB_NAME", "cortex")
+    monkeypatch.setattr(
+        db_tasks,
+        "_psql",
+        lambda sql=None, file=None, dbname=None: calls.append((dbname or "", sql or (file.name if file else ""))) or 0,
+    )
+    monkeypatch.setattr(db_tasks, "_ensure_database_exists", lambda: None)
+    monkeypatch.setattr(db_tasks, "_apply_migrations", lambda strict=False: calls.append(("apply", str(strict))))
+
+    db_tasks.reset.body(None)
+
+    assert calls == [
+        ("require", "postgres"),
+        ("postgres", "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'cortex' AND pid <> pg_backend_pid();"),
+        ("postgres", "DROP DATABASE IF EXISTS cortex;"),
+        ("postgres", "CREATE DATABASE cortex OWNER mycelis;"),
+        ("apply", "True"),
+    ]
+
+
 def test_schema_bootstrapped_requires_all_current_runtime_objects(monkeypatch):
     responses = iter(
         [

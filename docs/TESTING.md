@@ -134,6 +134,7 @@ uv run inv install               # Default Core + Interface dependency install (
 uv run inv interface.test        # Vitest unit tests (jsdom)
 uv run inv interface.typecheck   # TypeScript typecheck through the managed Interface task path
 uv run inv interface.e2e         # Playwright E2E tests (defaults to managed dev mode for stable mocked browser proof; use --server-mode=start for built/start-mode or live-backend proof. Invoke manages the server lifecycle, uses serial workers by default, keeps browser cache repo-managed, cleans repo-local UI workers, and fails if it cannot own a clean managed UI server)
+uv run inv test.e2e              # Root alias for interface.e2e with the same --workers / --server-mode controls
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts   # Real governed Soma chat + approval contract
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts  # Real workspace proxy/status continuity contract
 MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts  # Repo-local Core: set explicitly when spec checkout != backend checkout

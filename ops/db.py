@@ -216,8 +216,9 @@ def _apply_migrations(strict=False):
     if failures:
         print(f"\nMigrations with errors: {', '.join(failures)}")
         print("Fix the failing migration or reset the database before retrying.")
-    else:
-        print("\nAll migrations applied cleanly.")
+        raise SystemExit(1)
+
+    print("\nAll migrations applied cleanly.")
 
 
 @task

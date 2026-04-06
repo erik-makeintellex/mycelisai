@@ -13,9 +13,9 @@ def all(c):
         core.test.body(c)
         interface.test.body(c)
         print("All Tests Passed.")
-    except Exception as e:
-        print(f"Test Failure: {e}")
-        exit(1)
+    except SystemExit:
+        print("Test Failure: see task output above.")
+        raise SystemExit(1)
 
 @task
 def coverage(c):
@@ -40,16 +40,27 @@ def coverage(c):
         "project": "Optional Playwright project (chromium, firefox, webkit, mobile-chromium).",
         "spec": "Optional Playwright spec path or glob.",
         "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
+        "workers": "Optional Playwright worker count override.",
+        "server_mode": "Server mode for the managed UI server (dev or start).",
     }
 )
-def e2e(c, headed=False, project="", spec="", live_backend=False):
+def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev"):
     """
     Run Playwright E2E tests (alias for interface.e2e).
-    Playwright owns the Interface dev server lifecycle. Start Core separately
-    only when the spec needs a live backend instead of route stubs. The task
-    clears stale Interface listeners before and after the browser run.
+    The alias mirrors the managed Interface browser contract, including worker
+    and server-mode controls used for stable mocked proof or stricter built
+    bundle proof. Start Core separately only when the spec needs a live backend
+    instead of route stubs.
     """
-    interface.e2e.body(c, headed=headed, project=project, spec=spec, live_backend=live_backend)
+    interface.e2e.body(
+        c,
+        headed=headed,
+        project=project,
+        spec=spec,
+        live_backend=live_backend,
+        workers=workers,
+        server_mode=server_mode,
+    )
 
 ns = Collection("test")
 ns.add_task(all)

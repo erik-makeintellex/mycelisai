@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from invoke import Context
 
 import tasks
+from ops import test as test_tasks
 
 
 @dataclass
@@ -164,3 +165,52 @@ def test_install_can_include_optional_engines():
         "uv sync",
     ]
     assert ctx.cd_paths == ["core", "cognitive"]
+
+
+def test_test_all_normalizes_failures_to_system_exit(monkeypatch, capsys):
+    monkeypatch.setattr(test_tasks.core.test, "body", lambda c: None)
+    monkeypatch.setattr(test_tasks.interface.test, "body", lambda c: (_ for _ in ()).throw(SystemExit(3)))
+
+    with __import__("pytest").raises(SystemExit) as excinfo:
+        test_tasks.all.body(FakeContext())
+
+    assert excinfo.value.code == 1
+    assert "Test Failure: see task output above." in capsys.readouterr().out
+
+
+def test_test_e2e_alias_forwards_workers_and_server_mode(monkeypatch):
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        test_tasks.interface.e2e,
+        "body",
+        lambda c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev": captured.update(
+            {
+                "headed": headed,
+                "project": project,
+                "spec": spec,
+                "live_backend": live_backend,
+                "workers": workers,
+                "server_mode": server_mode,
+            }
+        ),
+    )
+
+    test_tasks.e2e.body(
+        FakeContext(),
+        headed=True,
+        project="chromium",
+        spec="e2e/specs/navigation.spec.ts",
+        live_backend=True,
+        workers="1",
+        server_mode="start",
+    )
+
+    assert captured == {
+        "headed": True,
+        "project": "chromium",
+        "spec": "e2e/specs/navigation.spec.ts",
+        "live_backend": True,
+        "workers": "1",
+        "server_mode": "start",
+    }

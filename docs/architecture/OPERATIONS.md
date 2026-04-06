@@ -237,9 +237,9 @@ The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hos
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv test.all` | Run ALL unit tests (Core + Interface) |
+| `uv run inv test.all` | Run ALL unit tests (Core + Interface), normalizing task failures to a single nonzero exit for scripting/CI use |
 | `uv run inv test.coverage` | Go coverage + Vitest V8 coverage |
-| `uv run inv test.e2e` | Alias for interface.e2e |
+| `uv run inv test.e2e` | Alias for `interface.e2e`, including `--workers` and `--server-mode` controls |
 
 ### CI Tasks (`ops/ci.py`)
 

@@ -443,6 +443,8 @@ Completion rule:
 
 `uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the managed `dev` server and `--workers=1` for stable mocked browser proof. Use `--server-mode=start` when you need the built production Interface server path for stricter or live-backend proof; start-mode runs still refresh the production bundle first, retry once after a stale repo-local Next build lock or incomplete built-server packaging, and must successfully hold the managed server before the browser run continues.
 
+`uv run inv test.e2e` is the root alias for that same managed browser contract and forwards the same `--workers` and `--server-mode` controls when a caller prefers the generic `test.*` surface.
+
 `uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=1`) and the built production Interface server path so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves the current live governed Soma browser contract, restores the local bridge/core stack before the browser proof when needed, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run.
 
 Browser matrix baseline:

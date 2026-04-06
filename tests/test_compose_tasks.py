@@ -175,6 +175,17 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
     ]
 
 
+def test_compose_down_forwards_volumes_flag(monkeypatch):
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_run_compose", lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})())
+
+    compose.down.body(None, volumes=True)
+
+    assert commands == [compose._compose_command("down", "--volumes")]
+
+
 def test_validate_compose_env_rejects_loopback_ollama_host():
     with pytest.raises(SystemExit) as excinfo:
         compose._validate_compose_env({"MYCELIS_COMPOSE_OLLAMA_HOST": "http://127.0.0.1:11434"})
