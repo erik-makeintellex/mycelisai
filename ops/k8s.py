@@ -8,13 +8,10 @@ from .core import build as core_build
 
 
 def _cluster_exists(c) -> bool:
-    cmd = (
-        f"kind get clusters | findstr {CLUSTER_NAME}"
-        if is_windows()
-        else f"kind get clusters | grep {CLUSTER_NAME}"
-    )
-    result = c.run(cmd, hide=True, warn=True)
-    return bool(result and result.ok and CLUSTER_NAME in result.stdout)
+    result = c.run("kind get clusters", hide=True, warn=True)
+    if not result or not result.ok:
+        return False
+    return any(line.strip() == CLUSTER_NAME for line in result.stdout.splitlines())
 
 
 def _resource_exists(c, resource: str) -> bool:
@@ -274,11 +271,14 @@ def status(c):
         print("Docker: Running")
     except:
         print("Docker: NOT Running.")
+        print("Kind Cluster: SKIPPED (Docker down)")
+        print("Pod Status: SKIPPED")
+        print("Persistence (PVC) Status: SKIPPED")
         return
 
     try:
-        cluster_info = c.run(f"kind get clusters | findstr {CLUSTER_NAME}" if is_windows() else f"kind get clusters | grep {CLUSTER_NAME}", hide=True)
-        if CLUSTER_NAME in cluster_info.stdout:
+        cluster_info = c.run("kind get clusters", hide=True, warn=True)
+        if cluster_info and cluster_info.ok and any(line.strip() == CLUSTER_NAME for line in cluster_info.stdout.splitlines()):
             print(f"Kind Cluster ({CLUSTER_NAME}): Active")
         else:
             print(f"Kind Cluster: Not Found")
@@ -303,16 +303,29 @@ def recover(c, timeout=180):
             "K8S RECOVER FAILED: kubectl cannot reach the cluster. "
             "Start Docker Desktop / Kind first, then retry."
         )
+    restart_failures: list[str] = []
+
+    def _restart_rollout(resource: str) -> None:
+        result = c.run(f"kubectl rollout restart {resource} -n {NAMESPACE}", warn=True, hide=True)
+        if not result.ok:
+            restart_failures.append(resource)
+
     # Core API
-    c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}", warn=True)
+    _restart_rollout("deployment/mycelis-core")
     # NATS can be statefulset or deployment depending on chart version
     if _resource_exists(c, "statefulset/mycelis-core-nats"):
-        c.run(f"kubectl rollout restart statefulset/mycelis-core-nats -n {NAMESPACE}", warn=True)
+        _restart_rollout("statefulset/mycelis-core-nats")
     elif _resource_exists(c, "deployment/mycelis-core-nats"):
-        c.run(f"kubectl rollout restart deployment/mycelis-core-nats -n {NAMESPACE}", warn=True)
+        _restart_rollout("deployment/mycelis-core-nats")
     # PostgreSQL (statefulset)
     if _resource_exists(c, "statefulset/mycelis-core-postgresql"):
-        c.run(f"kubectl rollout restart statefulset/mycelis-core-postgresql -n {NAMESPACE}", warn=True)
+        _restart_rollout("statefulset/mycelis-core-postgresql")
+    if restart_failures:
+        raise SystemExit(
+            "K8S RECOVER FAILED: unable to send restart signal(s) for "
+            + ", ".join(restart_failures)
+            + ". Inspect kubectl access and cluster resources before retrying."
+        )
     print("Restart signals sent. Waiting for readiness...")
     wait(c, timeout=timeout)
     print("Recovery complete.")

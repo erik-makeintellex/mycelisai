@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from invoke import Context
+import pytest
 
 from ops import k8s
 
@@ -81,3 +82,42 @@ def test_reset_prints_managed_status_command(monkeypatch, capsys):
     output = capsys.readouterr().out
     assert "uv run inv k8s.status" in output
     assert "Run 'inv k8s.status' to verify." not in output
+
+
+def test_cluster_exists_parses_kind_get_clusters_directly():
+    ctx = FakeContext({"kind get clusters": FakeResult(stdout="other\nmycelis-cluster\n")})
+
+    assert k8s._cluster_exists(ctx)
+    assert ctx.commands == ["kind get clusters"]
+
+
+def test_status_skips_cluster_checks_when_docker_is_down(capsys):
+    class DownContext(FakeContext):
+        def run(self, command: str, **_kwargs):
+            self.commands.append(command)
+            if command == "docker info":
+                raise RuntimeError("docker unavailable")
+            return FakeResult()
+
+    ctx = DownContext()
+
+    k8s.status.body(ctx)
+
+    output = capsys.readouterr().out
+    assert "Docker: NOT Running." in output
+    assert "Kind Cluster: SKIPPED (Docker down)" in output
+    assert "Pod Status: SKIPPED" in output
+    assert "Persistence (PVC) Status: SKIPPED" in output
+    assert ctx.commands == ["docker info"]
+
+
+def test_recover_fails_when_restart_signal_cannot_be_sent(monkeypatch):
+    ctx = FakeContext({
+        "kubectl cluster-info": FakeResult(),
+        "kubectl rollout restart deployment/mycelis-core -n mycelis": FakeResult(exited=1, stderr="boom"),
+    })
+    monkeypatch.setattr(k8s, "_resource_exists", lambda _c, _resource: True)
+    monkeypatch.setattr(k8s, "wait", lambda *_args, **_kwargs: None)
+
+    with pytest.raises(SystemExit, match="unable to send restart signal"):
+        k8s.recover.body(ctx)
