@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -12,6 +13,15 @@ type databaseRuntimeConfig struct {
 	User     string
 	Password string
 	Name     string
+}
+
+type localAuthRuntimeConfig struct {
+	PrimaryAPIKey      string
+	PrimaryUsername    string
+	PrimaryUserID      string
+	BreakGlassAPIKey   string
+	BreakGlassUsername string
+	BreakGlassUserID   string
 }
 
 func resolveDatabaseConfig() databaseRuntimeConfig {
@@ -49,5 +59,46 @@ func defaultMCPBootstrapEnabled() bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func resolveLocalAuthRuntimeConfig() localAuthRuntimeConfig {
+	return localAuthRuntimeConfig{
+		PrimaryAPIKey:      envOrDefault("MYCELIS_API_KEY", ""),
+		PrimaryUsername:    envOrDefault("MYCELIS_LOCAL_ADMIN_USERNAME", "admin"),
+		PrimaryUserID:      envOrDefault("MYCELIS_LOCAL_ADMIN_USER_ID", "00000000-0000-0000-0000-000000000000"),
+		BreakGlassAPIKey:   envOrDefault("MYCELIS_BREAK_GLASS_API_KEY", ""),
+		BreakGlassUsername: envOrDefault("MYCELIS_BREAK_GLASS_USERNAME", "recovery-admin"),
+		BreakGlassUserID:   envOrDefault("MYCELIS_BREAK_GLASS_USER_ID", "00000000-0000-0000-0000-000000000001"),
+	}
+}
+
+func (cfg localAuthRuntimeConfig) breakGlassWarnings() []string {
+	warnings := make([]string, 0, 3)
+	if strings.TrimSpace(cfg.BreakGlassAPIKey) != "" {
+		keyConfigured := true
+		usernameConfigured := strings.TrimSpace(os.Getenv("MYCELIS_BREAK_GLASS_USERNAME")) != ""
+		userIDConfigured := strings.TrimSpace(os.Getenv("MYCELIS_BREAK_GLASS_USER_ID")) != ""
+		if !(keyConfigured && usernameConfigured && userIDConfigured) {
+			warnings = append(warnings, "partial break-glass config detected; set MYCELIS_BREAK_GLASS_API_KEY, MYCELIS_BREAK_GLASS_USERNAME, and MYCELIS_BREAK_GLASS_USER_ID together")
+		}
+		if cfg.BreakGlassAPIKey == cfg.PrimaryAPIKey && cfg.PrimaryAPIKey != "" {
+			warnings = append(warnings, "break-glass API key matches MYCELIS_API_KEY; use a distinct recovery credential")
+		}
+	}
+	if strings.TrimSpace(os.Getenv("MYCELIS_BREAK_GLASS_USERNAME")) != "" || strings.TrimSpace(os.Getenv("MYCELIS_BREAK_GLASS_USER_ID")) != "" {
+		if strings.TrimSpace(cfg.BreakGlassAPIKey) == "" {
+			warnings = append(warnings, "break-glass metadata is set without MYCELIS_BREAK_GLASS_API_KEY")
+		}
+	}
+	if cfg.BreakGlassAPIKey != "" && cfg.BreakGlassUsername == cfg.PrimaryUsername && cfg.BreakGlassUserID == cfg.PrimaryUserID {
+		warnings = append(warnings, "break-glass principal duplicates the primary local admin identity")
+	}
+	return warnings
+}
+
+func init() {
+	for _, warning := range resolveLocalAuthRuntimeConfig().breakGlassWarnings() {
+		log.Printf("WARN: auth posture: %s", warning)
 	}
 }

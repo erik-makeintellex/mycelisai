@@ -72,6 +72,8 @@ Handles Go compilation and Docker image building.
 ### `auth.py` (Local Operator Auth)
 Keeps local API-key development access aligned.
 - **Dev Key**: `uv run inv auth.dev-key`
+- **Break-Glass Key**: `uv run inv auth.break-glass-key`
+- **Posture**: `uv run inv auth.posture`
 
 ### `cache.py` (Cache Hygiene)
 Keeps project and user-level tool caches off the system drive hot path and easy to prune.

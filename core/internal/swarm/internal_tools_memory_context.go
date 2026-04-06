@@ -78,7 +78,7 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, teamI
 		Limit:               3,
 		TenantID:            "default",
 		TeamID:              strings.TrimSpace(teamID),
-		Types:               []string{"customer_context", "company_knowledge"},
+		Types:               []string{"customer_context", "company_knowledge", "soma_operating_context"},
 		AllowGlobal:         true,
 		AllowLegacyUnscoped: false,
 	})
@@ -88,10 +88,13 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, teamI
 
 	customerResults := make([]memory.VectorResult, 0, len(results))
 	companyResults := make([]memory.VectorResult, 0, len(results))
+	somaResults := make([]memory.VectorResult, 0, len(results))
 	for _, result := range results {
 		switch strings.TrimSpace(stringMeta(result.Metadata, "knowledge_class")) {
 		case "company_knowledge":
 			companyResults = append(companyResults, result)
+		case "soma_operating_context":
+			somaResults = append(somaResults, result)
 		default:
 			customerResults = append(customerResults, result)
 		}
@@ -108,6 +111,13 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, teamI
 		sb.WriteString("### Company Knowledge Store (approved Soma/company content)\n")
 		for _, result := range companyResults {
 			writeKnowledgeResult(sb, result, "approved company knowledge")
+		}
+		sb.WriteString("\n")
+	}
+	if len(somaResults) > 0 {
+		sb.WriteString("### Admin-Shaped Soma Context (organization-owned Soma operating guidance)\n")
+		for _, result := range somaResults {
+			writeKnowledgeResult(sb, result, "admin-shaped Soma context")
 		}
 		sb.WriteString("\n")
 	}

@@ -131,6 +131,9 @@ Stopping containers or port-forwards alone is not enough. The pre-test cleanup p
 # Unsupported bare alias: uvx inv ...
 uv run inv core.test             # Go unit tests (all packages)
 uv run inv install               # Default Core + Interface dependency install (add --optional-engines only when local vLLM/Diffusers helpers are needed)
+uv run inv auth.dev-key          # Ensure the primary local-admin credential exists in .env
+uv run inv auth.break-glass-key  # Stamp a separate break-glass recovery credential when self-hosted recovery is part of the slice
+uv run inv auth.posture          # Inspect local-admin vs break-glass auth posture before runtime/browser proof
 uv run inv core.package          # Versioned Core binary archive for release handoff (not part of the default validation gate)
 uv run inv interface.test        # Vitest unit tests (jsdom)
 uv run inv interface.typecheck   # TypeScript typecheck through the managed Interface task path

@@ -57,7 +57,9 @@ def test_root_collection_registers_expected_namespaces():
 
 def test_root_collection_exports_expected_task_surface():
     assert sorted(tasks.ns.task_names.keys()) == [
+        "auth.break-glass-key",
         "auth.dev-key",
+        "auth.posture",
         "cache.apply-user-policy",
         "cache.clean",
         "cache.status",

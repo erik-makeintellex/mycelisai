@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
-> Updated: 2026-04-05
+> Updated: 2026-04-06
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -68,6 +68,7 @@ Release posture:
 - `IN_REVIEW` structured delegation can now resolve a target team from manifest `ask_routing` hints when Soma emits a typed ask without an explicit `team_id`, but only when the routing decision is uniquely declared; ambiguous or missing matches fail closed instead of guessing.
 - `IN_REVIEW` inspect-only governance activity now renders structured delegation summaries from the same `TeamAsk` contract: confirmed `delegate_task` execution records can surface the routed team, ask kind, lane role, and operator-readable ask summary in Audit without exposing raw command payloads in the default workflow.
 - `NEXT` enterprise identity, approval workflows, and multi-user access management remain deferred beyond the free-node governance foundation; that deferred lane now has a sharper target contract: support SAML/OIDC-style federation and optional SCIM lifecycle sync, preserve local break-glass admins for self-hosted recovery, keep user management modular so it can be self-hosted or provided as a paid control layer, treat Soma as one organization-owned persona serving many authorized users through scoped privacy, audit, memory, and RAG access rules, and give the root admin an explicitly governed way to shape Soma's durable organization-level operating context and shared agent/output specificity without letting ordinary user chat silently redefine either. The current Settings -> People & Access contract now exposes the investor-review version of that layered story through persisted `product_edition`, `identity_mode`, and `shared_agent_specificity_owner` fields, and `/api/v1/user/me` now carries explicit principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`) plus a real self-hosted credential split between the named primary local admin and the optional break-glass recovery principal, without claiming the full enterprise runtime is finished.
+- `IN_REVIEW` the first admin-owned shared-Soma context lane now exists inside the governed deployment-context system: `soma_operating_context` is separate from ordinary Soma memory, `customer_context`, and `company_knowledge`, carries stricter governance defaults, can encode shared output-specificity guidance, and is intended to preserve root-admin ownership over durable organization-level Soma behavior without letting ordinary user chat redefine it.
 
 ## Architecture Synchronization Rule
 

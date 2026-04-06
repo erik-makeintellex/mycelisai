@@ -66,3 +66,68 @@ func TestDefaultMCPBootstrapEnabledHonorsDisableFlag(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveLocalAuthRuntimeConfigDefaults(t *testing.T) {
+	t.Setenv("MYCELIS_API_KEY", "primary")
+	t.Setenv("MYCELIS_LOCAL_ADMIN_USERNAME", "")
+	t.Setenv("MYCELIS_LOCAL_ADMIN_USER_ID", "")
+	t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", "")
+	t.Setenv("MYCELIS_BREAK_GLASS_USERNAME", "")
+	t.Setenv("MYCELIS_BREAK_GLASS_USER_ID", "")
+
+	cfg := resolveLocalAuthRuntimeConfig()
+
+	if cfg.PrimaryAPIKey != "primary" {
+		t.Fatalf("PrimaryAPIKey = %q, want primary", cfg.PrimaryAPIKey)
+	}
+	if cfg.PrimaryUsername != "admin" {
+		t.Fatalf("PrimaryUsername = %q, want default admin", cfg.PrimaryUsername)
+	}
+	if cfg.PrimaryUserID != "00000000-0000-0000-0000-000000000000" {
+		t.Fatalf("PrimaryUserID = %q, want default", cfg.PrimaryUserID)
+	}
+	if cfg.BreakGlassAPIKey != "" {
+		t.Fatalf("BreakGlassAPIKey = %q, want empty", cfg.BreakGlassAPIKey)
+	}
+	if cfg.BreakGlassUsername != "recovery-admin" {
+		t.Fatalf("BreakGlassUsername = %q, want default recovery-admin", cfg.BreakGlassUsername)
+	}
+	if cfg.BreakGlassUserID != "00000000-0000-0000-0000-000000000001" {
+		t.Fatalf("BreakGlassUserID = %q, want default", cfg.BreakGlassUserID)
+	}
+}
+
+func TestLocalAuthRuntimeConfigWarnsOnPartialBreakGlassConfig(t *testing.T) {
+	t.Setenv("MYCELIS_API_KEY", "primary")
+	t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", "break")
+	t.Setenv("MYCELIS_BREAK_GLASS_USERNAME", "recovery-admin")
+	t.Setenv("MYCELIS_BREAK_GLASS_USER_ID", "")
+
+	cfg := resolveLocalAuthRuntimeConfig()
+	warnings := cfg.breakGlassWarnings()
+
+	if len(warnings) == 0 {
+		t.Fatal("expected warnings for partial break-glass config")
+	}
+}
+
+func TestLocalAuthRuntimeConfigWarnsOnDuplicateBreakGlassKey(t *testing.T) {
+	t.Setenv("MYCELIS_API_KEY", "same-key")
+	t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", "same-key")
+	t.Setenv("MYCELIS_BREAK_GLASS_USERNAME", "recovery-admin")
+	t.Setenv("MYCELIS_BREAK_GLASS_USER_ID", "00000000-0000-0000-0000-000000000001")
+
+	cfg := resolveLocalAuthRuntimeConfig()
+	warnings := cfg.breakGlassWarnings()
+
+	found := false
+	for _, warning := range warnings {
+		if warning == "break-glass API key matches MYCELIS_API_KEY; use a distinct recovery credential" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected duplicate-key warning, got %#v", warnings)
+	}
+}

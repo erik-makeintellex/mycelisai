@@ -97,6 +97,8 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | Command | Description |
 |---------|-------------|
 | `uv run inv auth.dev-key` | Ensure a local `MYCELIS_API_KEY` exists and keep `.env.example` on a sample value |
+| `uv run inv auth.break-glass-key` | Ensure a dedicated `MYCELIS_BREAK_GLASS_API_KEY` exists for explicit self-hosted recovery posture |
+| `uv run inv auth.posture` | Print the current local-admin and break-glass auth posture from `.env` or `.env.compose` |
 
 ### Cache Tasks (`ops/cache.py`)
 

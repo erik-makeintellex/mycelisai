@@ -366,6 +366,9 @@ Particular attention belongs on:
 
 Required command references for active V8 work:
 - `uv run inv install`
+- `uv run inv auth.dev-key`
+- `uv run inv auth.break-glass-key`
+- `uv run inv auth.posture`
 - `uv run inv ci.entrypoint-check`
 - `uv run inv ci.service-check`
 - `uv run inv cache.status`
@@ -478,17 +481,21 @@ For a new user who wants the quickest supported path to a running service:
 
 - WSL2/Linux/macOS:
   1. `cp .env.compose.example .env.compose`
-  2. `uv run inv install`
-  3. `uv run inv compose.up --build`
-  4. `uv run inv compose.health`
-  5. open `http://localhost:3000`
+  2. `uv run inv auth.posture --compose`
+  3. `uv run inv install`
+  4. `uv run inv compose.up --build`
+  5. `uv run inv compose.health`
+  6. open `http://localhost:3000`
 - Windows native:
   1. `copy .env.example .env`
-  2. `uv run inv install`
-  3. `uv run inv k8s.up`
-  4. `uv run inv lifecycle.up --frontend`
-  5. `uv run inv lifecycle.health`
-  6. open `http://localhost:3000`
+  2. `uv run inv auth.dev-key`
+  3. `uv run inv auth.break-glass-key`
+  4. `uv run inv auth.posture`
+  5. `uv run inv install`
+  6. `uv run inv k8s.up`
+  7. `uv run inv lifecycle.up --frontend`
+  8. `uv run inv lifecycle.health`
+  9. open `http://localhost:3000`
 
 What the user still needs on the host:
 - Docker

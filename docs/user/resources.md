@@ -94,7 +94,9 @@ Operational behavior:
 - each entry carries `knowledge_class`, visibility, sensitivity, trust, and provenance metadata
 - `knowledge_class=customer_context` is for operator/customer-provided material
 - `knowledge_class=company_knowledge` is for approved company-authored guidance only
+- `knowledge_class=soma_operating_context` is for root-admin or delegated-owner guidance that shapes shared Soma behavior across users
 - promotion from customer context into company knowledge should happen through a governed approval path with lineage preserved, not by rewriting the original entry in place
+- Soma operating context is stricter than ordinary deployment intake: it is normalized into admin guidance, stays globally scoped, and is intended for durable shared output/identity/stance shaping rather than personal chat preferences
 - Soma, Council, and teams can recall this context during planning and answer generation without treating it as raw unrestricted web input
 - use `source_kind=web_research` or a stricter trust/sensitivity class when the content came from external sources
 

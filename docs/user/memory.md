@@ -66,6 +66,7 @@ Governed deployment knowledge is stored under dedicated vector types:
 
 - `customer_context` for operator- or customer-provided source material
 - `company_knowledge` for approved company-authored guidance
+- `soma_operating_context` for admin-owned guidance that shapes shared Soma posture and output specificity
 
 That lets Soma, Council, and teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed.
 

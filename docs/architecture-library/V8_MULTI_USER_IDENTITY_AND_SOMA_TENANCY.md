@@ -211,6 +211,7 @@ Current release truth:
 - the current Settings -> People & Access surface now exposes the intended product layering for review: `product_edition`, `identity_mode`, and `shared_agent_specificity_owner` can be persisted as a visible contract even though the underlying enterprise adapters and hosted control-plane services are still future implementation work
 - the runtime now also normalizes the authenticated caller into explicit principal metadata on `/api/v1/user/me`: `principal_type`, `auth_source`, `effective_role`, and `break_glass` distinguish ordinary local admin posture from the self-hosted hybrid/federated recovery path
 - current self-hosted recovery posture is now explicit instead of inferred: `MYCELIS_API_KEY` maps to the named primary local admin, while optional `MYCELIS_BREAK_GLASS_API_KEY` maps to a separate break-glass recovery principal
+- the first admin-shaped Soma context lane now exists in the governed deployment-context store as `soma_operating_context`: it is separate from ordinary Soma memory, `customer_context`, and `company_knowledge`, and it is intended for durable organization-level Soma behavior such as shared output specificity
 
 Required next target:
 - formalize principal, auth-source, and role mapping contracts
@@ -237,6 +238,10 @@ The clean implementation path should be:
    - keep it separate from ordinary Soma memory, `customer_context`, and `company_knowledge`
    - require audit, lineage, and governed promotion/update paths
    - make root-admin control of shared agent/output specificity explicit instead of allowing it to emerge from general chat
+
+Current progress:
+- `IN_REVIEW` the first governed admin-shaped context lane now exists as `soma_operating_context`
+- `NEXT` add explicit update/promotion UX and role/delegation enforcement around who may change that shared Soma layer
 
 4. Scoped user interaction rules
    - ensure ordinary user chats remain private or audience-scoped by policy

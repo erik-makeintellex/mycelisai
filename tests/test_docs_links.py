@@ -538,6 +538,8 @@ def test_canonical_task_docs_cover_required_invoke_commands():
         ],
         ROOT / "docs" / "architecture" / "OPERATIONS.md": [
             "uv run inv auth.dev-key",
+            "uv run inv auth.break-glass-key",
+            "uv run inv auth.posture",
             "uv run inv core.compile",
             "uv run inv interface.typecheck",
             "uv run inv lifecycle.memory-restart",
@@ -553,6 +555,8 @@ def test_canonical_task_docs_cover_required_invoke_commands():
             "uv run inv core.compile",
             "uv run inv interface.typecheck",
             "uv run inv auth.dev-key",
+            "uv run inv auth.break-glass-key",
+            "uv run inv auth.posture",
             "uv run inv lifecycle.health",
             "uv run inv ci.service-check",
             "uv run inv ci.entrypoint-check",

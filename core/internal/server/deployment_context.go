@@ -51,18 +51,20 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 		}
 
 		var req struct {
-			KnowledgeClass   string   `json:"knowledge_class,omitempty"`
-			Title            string   `json:"title"`
-			Content          string   `json:"content"`
-			ContentType      string   `json:"content_type,omitempty"`
-			SourceLabel      string   `json:"source_label,omitempty"`
-			SourceKind       string   `json:"source_kind,omitempty"`
-			Visibility       string   `json:"visibility,omitempty"`
-			SensitivityClass string   `json:"sensitivity_class,omitempty"`
-			TrustClass       string   `json:"trust_class,omitempty"`
-			Tags             []string `json:"tags,omitempty"`
-			AgentID          string   `json:"agent_id,omitempty"`
-			TeamID           string   `json:"team_id,omitempty"`
+			KnowledgeClass    string   `json:"knowledge_class,omitempty"`
+			Title             string   `json:"title"`
+			Content           string   `json:"content"`
+			ContentType       string   `json:"content_type,omitempty"`
+			SourceLabel       string   `json:"source_label,omitempty"`
+			SourceKind        string   `json:"source_kind,omitempty"`
+			Visibility        string   `json:"visibility,omitempty"`
+			SensitivityClass  string   `json:"sensitivity_class,omitempty"`
+			TrustClass        string   `json:"trust_class,omitempty"`
+			Tags              []string `json:"tags,omitempty"`
+			AgentID           string   `json:"agent_id,omitempty"`
+			TeamID            string   `json:"team_id,omitempty"`
+			SomaContextKind   string   `json:"soma_context_kind,omitempty"`
+			OutputSpecificity string   `json:"output_specificity,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			respondError(w, "invalid JSON body", http.StatusBadRequest)
@@ -70,19 +72,21 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 		}
 
 		result, err := svc.Ingest(r.Context(), deploymentcontext.IngestRequest{
-			KnowledgeClass:   req.KnowledgeClass,
-			Title:            req.Title,
-			Content:          req.Content,
-			ContentType:      req.ContentType,
-			SourceLabel:      req.SourceLabel,
-			SourceKind:       req.SourceKind,
-			Visibility:       req.Visibility,
-			SensitivityClass: req.SensitivityClass,
-			TrustClass:       req.TrustClass,
-			Tags:             req.Tags,
-			AgentID:          req.AgentID,
-			TeamID:           req.TeamID,
-			UserLabel:        auditUserLabelFromRequest(r),
+			KnowledgeClass:    req.KnowledgeClass,
+			Title:             req.Title,
+			Content:           req.Content,
+			ContentType:       req.ContentType,
+			SourceLabel:       req.SourceLabel,
+			SourceKind:        req.SourceKind,
+			Visibility:        req.Visibility,
+			SensitivityClass:  req.SensitivityClass,
+			TrustClass:        req.TrustClass,
+			Tags:              req.Tags,
+			AgentID:           req.AgentID,
+			TeamID:            req.TeamID,
+			UserLabel:         auditUserLabelFromRequest(r),
+			SomaContextKind:   req.SomaContextKind,
+			OutputSpecificity: req.OutputSpecificity,
 		})
 		if err != nil {
 			respondError(w, err.Error(), http.StatusBadRequest)

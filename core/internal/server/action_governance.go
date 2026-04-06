@@ -257,10 +257,12 @@ func capabilityRiskForTool(name string, arguments map[string]any) string {
 	case "promote_deployment_context":
 		return "high"
 	case "load_deployment_context":
-		if strings.TrimSpace(fmt.Sprint(arguments["knowledge_class"])) == "company_knowledge" {
+		switch strings.TrimSpace(fmt.Sprint(arguments["knowledge_class"])) {
+		case "company_knowledge", "soma_operating_context":
 			return "high"
+		default:
+			return "medium"
 		}
-		return "medium"
 	case "write_file", "delegate", "remember", "summarize_conversation":
 		return "medium"
 	default:
@@ -278,6 +280,9 @@ func estimateActionCost(name string, arguments map[string]any) float64 {
 		}
 		return 0.35
 	case "load_deployment_context":
+		if strings.TrimSpace(fmt.Sprint(arguments["knowledge_class"])) == "soma_operating_context" {
+			return 0.95
+		}
 		if content, ok := arguments["content"].(string); ok && len(content) > 2000 {
 			return 0.8
 		}

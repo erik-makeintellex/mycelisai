@@ -19,23 +19,26 @@ const (
 	defaultChunkOverlap            = 160
 	KnowledgeClassCustomerContext  = "customer_context"
 	KnowledgeClassCompanyKnowledge = "company_knowledge"
+	KnowledgeClassSomaOperating    = "soma_operating_context"
 )
 
 type IngestRequest struct {
-	KnowledgeClass   string
-	Title            string
-	Content          string
-	ContentType      string
-	SourceLabel      string
-	SourceKind       string
-	Visibility       string
-	SensitivityClass string
-	TrustClass       string
-	Tags             []string
-	AgentID          string
-	TeamID           string
-	UserLabel        string
-	ExtraMetadata    map[string]any
+	KnowledgeClass    string
+	Title             string
+	Content           string
+	ContentType       string
+	SourceLabel       string
+	SourceKind        string
+	Visibility        string
+	SensitivityClass  string
+	TrustClass        string
+	Tags              []string
+	AgentID           string
+	TeamID            string
+	UserLabel         string
+	SomaContextKind   string
+	OutputSpecificity string
+	ExtraMetadata     map[string]any
 }
 
 type PromoteRequest struct {
@@ -146,6 +149,30 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		userLabel = "local-user"
 	}
 	tags := normalizeTags(req.Tags)
+	somaContextKind := normalizeSomaContextKind(req.SomaContextKind)
+	outputSpecificity := normalizeOutputSpecificity(req.OutputSpecificity)
+	if knowledgeClass == KnowledgeClassSomaOperating {
+		if sourceLabel == "operator provided" {
+			sourceLabel = "admin guidance"
+		}
+		if sourceKind == "user_document" {
+			sourceKind = "user_note"
+		}
+		if trustClass == "user_provided" {
+			trustClass = "trusted_internal"
+		}
+		if sensitivityClass == "role_scoped" {
+			sensitivityClass = "restricted"
+		}
+		if visibility == "private" {
+			visibility = "global"
+		}
+		tags = append(tags, "soma-operating-context")
+		if outputSpecificity != "" {
+			tags = append(tags, "shared-output-specificity")
+		}
+		tags = normalizeTags(tags)
+	}
 	chunks := chunkText(content, defaultChunkSize, defaultChunkOverlap)
 	if len(chunks) == 0 {
 		return nil, fmt.Errorf("content is required")
@@ -169,6 +196,8 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		"content_length":     utf8.RuneCountInString(content),
 		"loaded_by":          userLabel,
 		"team_id":            teamID,
+		"soma_context_kind":  somaContextKind,
+		"output_specificity": outputSpecificity,
 	}
 	for key, value := range req.ExtraMetadata {
 		if _, exists := metadataMap[key]; exists {
@@ -201,24 +230,26 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		// The vector type is the knowledge class itself so recall can keep
 		// customer-provided context separate from approved company knowledge.
 		vectorMeta := map[string]any{
-			"type":              knowledgeClass,
-			"source":            "governed_context_store",
-			"knowledge_store":   "governed_context_store",
-			"knowledge_class":   knowledgeClass,
-			"artifact_id":       stored.ID.String(),
-			"artifact_title":    title,
-			"tenant_id":         "default",
-			"team_id":           teamID,
-			"agent_id":          agentID,
-			"visibility":        visibility,
-			"sensitivity_class": sensitivityClass,
-			"trust_class":       trustClass,
-			"source_kind":       sourceKind,
-			"source_label":      sourceLabel,
-			"tags":              tags,
-			"chunk_index":       idx,
-			"chunk_count":       len(chunks),
-			"loaded_by":         userLabel,
+			"type":               knowledgeClass,
+			"source":             "governed_context_store",
+			"knowledge_store":    "governed_context_store",
+			"knowledge_class":    knowledgeClass,
+			"artifact_id":        stored.ID.String(),
+			"artifact_title":     title,
+			"tenant_id":          "default",
+			"team_id":            teamID,
+			"agent_id":           agentID,
+			"visibility":         visibility,
+			"sensitivity_class":  sensitivityClass,
+			"trust_class":        trustClass,
+			"source_kind":        sourceKind,
+			"source_label":       sourceLabel,
+			"tags":               tags,
+			"soma_context_kind":  somaContextKind,
+			"output_specificity": outputSpecificity,
+			"chunk_index":        idx,
+			"chunk_count":        len(chunks),
+			"loaded_by":          userLabel,
 		}
 		for key, value := range req.ExtraMetadata {
 			if _, exists := vectorMeta[key]; exists {
@@ -443,8 +474,35 @@ func normalizeKnowledgeClass(raw string) string {
 	switch strings.TrimSpace(strings.ToLower(raw)) {
 	case KnowledgeClassCompanyKnowledge:
 		return KnowledgeClassCompanyKnowledge
+	case KnowledgeClassSomaOperating:
+		return KnowledgeClassSomaOperating
 	default:
 		return KnowledgeClassCustomerContext
+	}
+}
+
+func normalizeSomaContextKind(raw string) string {
+	switch strings.TrimSpace(strings.ToLower(raw)) {
+	case "output_specificity":
+		return "output_specificity"
+	case "operating_stance":
+		return "operating_stance"
+	case "identity":
+		return "identity"
+	case "policy":
+		return "policy"
+	default:
+		return ""
+	}
+}
+
+func normalizeOutputSpecificity(raw string) string {
+	value := strings.TrimSpace(strings.ToLower(raw))
+	switch value {
+	case "concise", "balanced", "detailed", "executive":
+		return value
+	default:
+		return ""
 	}
 }
 

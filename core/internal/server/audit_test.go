@@ -72,6 +72,30 @@ func TestBuildApprovalPolicy_RequiresApprovalForCompanyKnowledgePromotion(t *tes
 	}
 }
 
+func TestBuildApprovalPolicy_RequiresApprovalForAdminShapedSomaContext(t *testing.T) {
+	profile := userGovernanceProfile{
+		Role:                 "owner",
+		CostSensitivity:      "balanced",
+		ReviewStrictness:     "standard",
+		AutomationTolerance:  "balanced",
+		EscalationPreference: "ask",
+	}
+
+	policy := buildApprovalPolicy(profile, []protocol.PlannedToolCall{{
+		Name:      "load_deployment_context",
+		Arguments: map[string]any{"knowledge_class": "soma_operating_context", "soma_context_kind": "output_specificity"},
+	}}, nil)
+	if policy == nil {
+		t.Fatal("expected approval policy")
+	}
+	if !policy.ApprovalRequired {
+		t.Fatalf("expected approval to be required, got %+v", policy)
+	}
+	if policy.CapabilityRisk != "high" {
+		t.Fatalf("expected high capability risk, got %+v", policy)
+	}
+}
+
 func TestHandleListAuditLog(t *testing.T) {
 	dbOpt, mock := withDB(t)
 	s := newTestServer(dbOpt)

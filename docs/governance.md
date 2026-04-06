@@ -30,6 +30,7 @@ Mycelis now governs actions through three linked layers:
 This governance model also applies to durable context loading:
 - customer-provided deployment material belongs in the separate `customer_context` pgvector lane
 - approved company-authored guidance belongs in `company_knowledge`
+- admin-authored shared Soma guidance belongs in `soma_operating_context`
 - external research loaded into either lane must stay explicitly classified by source kind, trust class, and sensitivity posture
 
 Current release boundary note:
@@ -62,6 +63,7 @@ Current release posture:
 - confirm/cancel is explicit and inspectable
 - approval and execution decisions are audit-linked
 - `company_knowledge` loading is stricter than `customer_context` loading because it promotes durable company reference material
+- `soma_operating_context` loading is stricter again because it can shape shared Soma identity, stance, and output specificity across users
 
 ## Audit Model
 
