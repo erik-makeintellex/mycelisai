@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -16,10 +17,44 @@ const ctxKeyIdentity contextKey = "identity"
 // RequestIdentity represents the authenticated caller.
 // Phase 0: single root user. Phase 1+ will resolve from JWT/session.
 type RequestIdentity struct {
-	UserID   string   `json:"user_id"`
-	Username string   `json:"username"`
-	Role     string   `json:"role"`
-	Scopes   []string `json:"scopes,omitempty"`
+	UserID        string   `json:"user_id"`
+	Username      string   `json:"username"`
+	Role          string   `json:"role"`
+	EffectiveRole string   `json:"effective_role,omitempty"`
+	PrincipalType string   `json:"principal_type,omitempty"`
+	AuthSource    string   `json:"auth_source,omitempty"`
+	BreakGlass    bool     `json:"break_glass,omitempty"`
+	Scopes        []string `json:"scopes,omitempty"`
+}
+
+func normalizeIdentityModeSetting(v string) string {
+	switch strings.TrimSpace(strings.ToLower(v)) {
+	case "hybrid":
+		return "hybrid"
+	case "federated":
+		return "federated"
+	default:
+		return "local_only"
+	}
+}
+
+func rootIdentityFromEnvironment() *RequestIdentity {
+	mode := normalizeIdentityModeSetting(os.Getenv("MYCELIS_IDENTITY_MODE"))
+	identity := &RequestIdentity{
+		UserID:        "00000000-0000-0000-0000-000000000000",
+		Username:      "admin",
+		Role:          "admin",
+		EffectiveRole: "owner",
+		PrincipalType: "local_admin",
+		AuthSource:    "local_api_key",
+		Scopes:        []string{"*"},
+	}
+	if mode == "hybrid" || mode == "federated" {
+		identity.PrincipalType = "break_glass_admin"
+		identity.AuthSource = "local_break_glass"
+		identity.BreakGlass = true
+	}
+	return identity
 }
 
 // IdentityFromContext extracts the RequestIdentity from the request context.
@@ -72,12 +107,7 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 		}
 
 		// Phase 0: hardcoded root identity. Phase 1+ resolves from DB/JWT.
-		identity := &RequestIdentity{
-			UserID:   "00000000-0000-0000-0000-000000000000",
-			Username: "admin",
-			Role:     "admin",
-			Scopes:   []string{"*"},
-		}
+		identity := rootIdentityFromEnvironment()
 
 		ctx := context.WithValue(r.Context(), ctxKeyIdentity, identity)
 		next.ServeHTTP(w, r.WithContext(ctx))

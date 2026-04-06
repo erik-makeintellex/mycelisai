@@ -9,6 +9,7 @@ type AccessManagementTier = "release" | "enterprise";
 type ProductEdition = "self_hosted_release" | "self_hosted_enterprise" | "hosted_control_plane";
 type IdentityMode = "local_only" | "hybrid" | "federated";
 type SharedAgentSpecificityOwner = "root_admin" | "delegated_owner";
+type PrincipalType = "local_admin" | "break_glass_admin" | "federated_user" | "service_principal" | "user";
 
 type ManagedUser = {
     id: string;
@@ -93,6 +94,21 @@ function toSharedAgentSpecificityOwner(value: unknown): SharedAgentSpecificityOw
     return String(value).trim().toLowerCase() === "delegated_owner" ? "delegated_owner" : "root_admin";
 }
 
+function toPrincipalType(value: unknown): PrincipalType {
+    switch (String(value).trim().toLowerCase()) {
+        case "break_glass_admin":
+            return "break_glass_admin";
+        case "federated_user":
+            return "federated_user";
+        case "service_principal":
+            return "service_principal";
+        case "user":
+            return "user";
+        default:
+            return "local_admin";
+    }
+}
+
 function extractData<T>(payload: unknown): T {
     if (payload && typeof payload === "object" && "data" in payload) {
         return (payload as { data: T }).data;
@@ -113,6 +129,10 @@ export default function UsersPage() {
     const [productEdition, setProductEdition] = useState<ProductEdition>("self_hosted_release");
     const [identityMode, setIdentityMode] = useState<IdentityMode>("local_only");
     const [sharedAgentSpecificityOwner, setSharedAgentSpecificityOwner] = useState<SharedAgentSpecificityOwner>("root_admin");
+    const [principalType, setPrincipalType] = useState<PrincipalType>("local_admin");
+    const [authSource, setAuthSource] = useState("local_api_key");
+    const [effectiveRole, setEffectiveRole] = useState<UserRole>("owner");
+    const [breakGlass, setBreakGlass] = useState(false);
     const [savingAccessModel, setSavingAccessModel] = useState(false);
 
     const activeCount = useMemo(() => users.filter((u) => u.status === "active").length, [users]);
@@ -132,6 +152,10 @@ export default function UsersPage() {
                 email?: string;
                 role?: string;
                 name?: string;
+                effective_role?: string;
+                principal_type?: string;
+                auth_source?: string;
+                break_glass?: boolean;
                 settings?: {
                     access_management_tier?: string;
                     product_edition?: string;
@@ -144,6 +168,10 @@ export default function UsersPage() {
             const meEmail = me?.email || "me@local";
             const meRole = toRole(me?.role || "owner");
             const meRemoteAllowed = meRole === "owner";
+            setEffectiveRole(toRole(me?.effective_role || me?.role || "owner"));
+            setPrincipalType(toPrincipalType(me?.principal_type));
+            setAuthSource(String(me?.auth_source || "local_api_key").trim().toLowerCase() || "local_api_key");
+            setBreakGlass(Boolean(me?.break_glass));
             const settings = me?.settings || {};
             setAccessManagementTier(toAccessManagementTier(settings.access_management_tier));
             setProductEdition(toProductEdition(settings.product_edition));
@@ -295,6 +323,9 @@ export default function UsersPage() {
                     <p className="font-medium text-cortex-text-main">Shared Soma ownership</p>
                     <p className="leading-6">
                         <span className="font-medium text-cortex-text-main">Soma is one organization-owned persona.</span> Root-admin or delegated-owner interaction can shape durable organization-level Soma context, while ordinary user conversations remain private or audience-scoped unless explicitly promoted.
+                    </p>
+                    <p className="leading-6">
+                        Current principal contract: <span className="font-mono text-cortex-text-main">{principalType}</span> via <span className="font-mono text-cortex-text-main">{authSource}</span>, effective role <span className="font-mono text-cortex-text-main">{effectiveRole}</span>{breakGlass ? " with break-glass recovery active." : "."}
                     </p>
                     <p className="leading-6">
                         {identityMode === "hybrid"

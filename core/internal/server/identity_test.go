@@ -21,6 +21,18 @@ func TestHandleMe(t *testing.T) {
 	if user.Role != "admin" {
 		t.Errorf("Expected role 'admin', got %q", user.Role)
 	}
+	if user.EffectiveRole != "owner" {
+		t.Errorf("Expected effective_role 'owner', got %q", user.EffectiveRole)
+	}
+	if user.PrincipalType != "local_admin" {
+		t.Errorf("Expected principal_type 'local_admin', got %q", user.PrincipalType)
+	}
+	if user.AuthSource != "local_api_key" {
+		t.Errorf("Expected auth_source 'local_api_key', got %q", user.AuthSource)
+	}
+	if user.BreakGlass {
+		t.Error("Expected break_glass false")
+	}
 	if user.ID == "" {
 		t.Error("Expected non-empty user ID")
 	}
@@ -42,6 +54,27 @@ func TestHandleMe(t *testing.T) {
 	}
 	if settings["shared_agent_specificity_owner"] != "root_admin" {
 		t.Errorf("Expected shared_agent_specificity_owner root_admin, got %#v", settings["shared_agent_specificity_owner"])
+	}
+}
+
+func TestHandleMe_HybridModeReportsBreakGlassPrincipal(t *testing.T) {
+	s := newTestServer()
+	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "", rootIdentityFromEnvironmentForTest("hybrid"))
+	assertStatus(t, rr, http.StatusOK)
+
+	var user User
+	assertJSON(t, rr, &user)
+	if user.PrincipalType != "break_glass_admin" {
+		t.Errorf("Expected principal_type break_glass_admin, got %q", user.PrincipalType)
+	}
+	if user.AuthSource != "local_break_glass" {
+		t.Errorf("Expected auth_source local_break_glass, got %q", user.AuthSource)
+	}
+	if !user.BreakGlass {
+		t.Error("Expected break_glass true")
+	}
+	if user.EffectiveRole != "owner" {
+		t.Errorf("Expected effective_role owner, got %q", user.EffectiveRole)
 	}
 }
 

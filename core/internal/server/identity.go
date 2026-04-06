@@ -17,11 +17,15 @@ const defaultAssistantName = "Soma"
 
 // User represents the logged-in user
 type User struct {
-	ID        string          `json:"id"`
-	Username  string          `json:"username"`
-	Role      string          `json:"role"`
-	Settings  json.RawMessage `json:"settings"`
-	CreatedAt time.Time       `json:"created_at"`
+	ID            string          `json:"id"`
+	Username      string          `json:"username"`
+	Role          string          `json:"role"`
+	EffectiveRole string          `json:"effective_role,omitempty"`
+	PrincipalType string          `json:"principal_type,omitempty"`
+	AuthSource    string          `json:"auth_source,omitempty"`
+	BreakGlass    bool            `json:"break_glass,omitempty"`
+	Settings      json.RawMessage `json:"settings"`
+	CreatedAt     time.Time       `json:"created_at"`
 }
 
 // Team represents a team context
@@ -226,11 +230,15 @@ func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := User{
-		ID:        identity.UserID,
-		Username:  identity.Username,
-		Role:      identity.Role,
-		Settings:  mustJSON(loadUserSettings()),
-		CreatedAt: time.Now(),
+		ID:            identity.UserID,
+		Username:      identity.Username,
+		Role:          identity.Role,
+		EffectiveRole: identity.EffectiveRole,
+		PrincipalType: identity.PrincipalType,
+		AuthSource:    identity.AuthSource,
+		BreakGlass:    identity.BreakGlass,
+		Settings:      mustJSON(loadUserSettings()),
+		CreatedAt:     time.Now(),
 	}
 	respondJSON(w, user)
 }

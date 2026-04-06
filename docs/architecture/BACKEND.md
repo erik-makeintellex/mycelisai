@@ -641,7 +641,7 @@ type Proof struct {
 ### Identity & Users
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/v1/user/me` | Current user profile |
+| GET | `/api/v1/user/me` | Current user profile, including normalized principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`) |
 | GET/PUT | `/api/v1/user/settings` | Read/update persisted user preferences, including assistant name and People & Access review posture (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`) |
 
 ### Chat & Council

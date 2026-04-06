@@ -66,7 +66,11 @@ describe('Settings Page (app/settings/page.tsx)', () => {
                             id: 'me-1',
                             email: 'me@local',
                             role: 'admin',
+                            effective_role: 'owner',
                             name: 'Current User',
+                            principal_type: 'local_admin',
+                            auth_source: 'local_api_key',
+                            break_glass: false,
                             settings: {
                                 access_management_tier: 'release',
                                 product_edition: 'self_hosted_release',

@@ -209,6 +209,7 @@ Current release truth:
 - the free-node release ships user-level governance foundations, not full enterprise IAM
 - the current auth/runtime is still closer to single-user local operation than multi-user enterprise identity
 - the current Settings -> People & Access surface now exposes the intended product layering for review: `product_edition`, `identity_mode`, and `shared_agent_specificity_owner` can be persisted as a visible contract even though the underlying enterprise adapters and hosted control-plane services are still future implementation work
+- the runtime now also normalizes the authenticated caller into explicit principal metadata on `/api/v1/user/me`: `principal_type`, `auth_source`, `effective_role`, and `break_glass` distinguish ordinary local admin posture from the self-hosted hybrid/federated recovery path
 
 Required next target:
 - formalize principal, auth-source, and role mapping contracts

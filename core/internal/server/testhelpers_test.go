@@ -100,10 +100,13 @@ func doAuthenticatedRequest(t *testing.T, handler http.Handler, method, path, bo
 		req, _ = http.NewRequest(method, path, nil)
 	}
 	identity := &RequestIdentity{
-		UserID:   "test-user-001",
-		Username: "admin",
-		Role:     "admin",
-		Scopes:   []string{"*"},
+		UserID:        "test-user-001",
+		Username:      "admin",
+		Role:          "admin",
+		EffectiveRole: "owner",
+		PrincipalType: "local_admin",
+		AuthSource:    "local_api_key",
+		Scopes:        []string{"*"},
 	}
 	ctx := context.WithValue(req.Context(), ctxKeyIdentity, identity)
 	req = req.WithContext(ctx)
@@ -126,6 +129,24 @@ func doAuthenticatedRequestAs(t *testing.T, handler http.Handler, method, path, 
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	return rr
+}
+
+func rootIdentityFromEnvironmentForTest(mode string) *RequestIdentity {
+	identity := &RequestIdentity{
+		UserID:        "test-user-001",
+		Username:      "admin",
+		Role:          "admin",
+		EffectiveRole: "owner",
+		PrincipalType: "local_admin",
+		AuthSource:    "local_api_key",
+		Scopes:        []string{"*"},
+	}
+	if normalizeIdentityModeSetting(mode) == "hybrid" || normalizeIdentityModeSetting(mode) == "federated" {
+		identity.PrincipalType = "break_glass_admin"
+		identity.AuthSource = "local_break_glass"
+		identity.BreakGlass = true
+	}
+	return identity
 }
 
 // assertStatus verifies the HTTP status code in the response.
