@@ -288,33 +288,55 @@ def _list_repo_local_interface_processes() -> list[dict[str, str | int]]:
     processes: list[dict[str, str | int]] = []
     try:
         if is_windows():
+            candidate_pids: list[int] = []
+            for image_name in ("node.exe", "cmd.exe"):
+                tasklist_result = subprocess.run(
+                    ["tasklist", "/FO", "CSV", "/NH", "/FI", f"IMAGENAME eq {image_name}"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if tasklist_result.returncode != 0:
+                    raise RuntimeError(tasklist_result.stderr.strip() or "process query failed")
+                for row in csv.reader(tasklist_result.stdout.splitlines()):
+                    if len(row) < 2:
+                        continue
+                    listed_name = (row[0] or "").strip().lower()
+                    pid_text = (row[1] or "").strip()
+                    if listed_name != image_name or not pid_text.isdigit():
+                        continue
+                    candidate_pids.append(int(pid_text))
+            if not candidate_pids:
+                return []
+
+            filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in candidate_pids)
             result = subprocess.run(
                 [
-                    "wmic",
-                    "process",
-                    "where",
-                    "name='node.exe' or name='cmd.exe'",
-                    "get",
-                    "ProcessId,Name,CommandLine",
-                    "/format:csv",
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
+                    "Select-Object ProcessId,Name,CommandLine | "
+                    "ConvertTo-Json -Compress",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=45,
+                timeout=8,
             )
             if result.returncode != 0:
                 raise RuntimeError(result.stderr.strip() or "process query failed")
-            raw = result.stdout.replace("\ufeff", "").strip()
+            raw = result.stdout.strip()
             if not raw:
                 return []
-            rows = csv.DictReader(raw.splitlines())
+            payload = json.loads(raw)
+            rows = payload if isinstance(payload, list) else [payload]
             for row in rows:
-                pid_text = row.get("ProcessId") or ""
+                pid_text = row.get("ProcessId")
                 name = row.get("Name") or ""
                 command_line = row.get("CommandLine") or ""
-                if not pid_text.isdigit():
+                if not isinstance(pid_text, int):
                     continue
-                pid = int(pid_text)
+                pid = pid_text
                 if _matches_repo_local_interface_process(name, command_line):
                     processes.append({"pid": pid, "name": name, "command": command_line})
             return processes
@@ -376,7 +398,8 @@ def _cleanup_repo_local_interface_processes() -> list[dict[str, str | int]]:
     try:
         processes = _list_repo_local_interface_processes()
     except RuntimeError as exc:
-        print(f"  WARN: unable to inspect repo-local Interface residuals ({exc})")
+        if "timed out" not in str(exc).lower():
+            print(f"  WARN: unable to inspect repo-local Interface residuals ({exc})")
         return []
     if not processes:
         return []
@@ -390,7 +413,8 @@ def _cleanup_repo_local_interface_processes() -> list[dict[str, str | int]]:
     try:
         remaining = _list_repo_local_interface_processes()
     except RuntimeError as exc:
-        print(f"  WARN: unable to re-check repo-local Interface residuals ({exc})")
+        if "timed out" not in str(exc).lower():
+            print(f"  WARN: unable to re-check repo-local Interface residuals ({exc})")
         return []
     if remaining:
         for proc in remaining:
@@ -409,7 +433,7 @@ def _playwright_server_log_path() -> str:
     return str(log_dir / "interface-playwright-webserver.log")
 
 
-def _cleanup_playwright_server_log(max_attempts: int = 10, retry_delay_seconds: float = 0.2) -> None:
+def _cleanup_playwright_server_log(max_attempts: int = 20, retry_delay_seconds: float = 0.25) -> None:
     log_path = Path(_playwright_server_log_path())
     for attempt in range(max_attempts):
         try:
@@ -419,7 +443,6 @@ def _cleanup_playwright_server_log(max_attempts: int = 10, retry_delay_seconds: 
             return
         except PermissionError:
             if attempt == max_attempts - 1:
-                print("  WARN: managed Playwright server log is still busy; leaving it in place.")
                 return
             time.sleep(retry_delay_seconds)
 

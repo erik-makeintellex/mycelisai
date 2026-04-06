@@ -62,7 +62,20 @@ def test_cleanup_repo_local_interface_processes_kills_detected_workers(monkeypat
     assert remaining == []
 
 
-def test_list_repo_local_interface_processes_windows_queries_wmic_directly(monkeypatch):
+def test_cleanup_repo_local_interface_processes_suppresses_timeout_warnings(monkeypatch, capsys):
+    monkeypatch.setattr(
+        interface,
+        "_list_repo_local_interface_processes",
+        lambda: (_ for _ in ()).throw(RuntimeError("process query failed: timed out after 5 seconds")),
+    )
+
+    remaining = interface._cleanup_repo_local_interface_processes()
+
+    assert remaining == []
+    assert "unable to inspect repo-local Interface residuals" not in capsys.readouterr().out
+
+
+def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(monkeypatch):
     commands: list[list[str]] = []
     timeouts: list[int] = []
 
@@ -75,12 +88,24 @@ def test_list_repo_local_interface_processes_windows_queries_wmic_directly(monke
     def fake_run(command, capture_output=True, text=True, timeout=0):
         commands.append(command)
         timeouts.append(timeout)
+        if command[:4] == ["tasklist", "/FO", "CSV", "/NH"]:
+            image_name = command[-1].removeprefix("IMAGENAME eq ")
+            if image_name == "node.exe":
+                return Result(
+                    stdout='"node.exe","101","Console","1","12,000 K"\n'
+                    '"node.exe","103","Console","1","12,000 K"\n'
+                    '"node.exe","104","Console","1","12,000 K"\n'
+                    '"node.exe","102","Console","1","12,000 K"',
+                )
+            return Result(
+                stdout='"cmd.exe","201","Console","1","12,000 K"',
+            )
         return Result(
-            stdout="Node,CommandLine,Name,ProcessId\n"
-            "HOST,D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/dev/build/postcss.js,node.exe,101\n"
-            "HOST,D:/MakeIntellex/Projects/mycelisai/scratch/interface/scripts/playwright-webserver.mjs,node.exe,103\n"
-            "HOST,D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/standalone/server.js,node.exe,104\n"
-            "HOST,C:/other-app/node_modules/vite/bin/vite.js,node.exe,102\n"
+            stdout='[{"ProcessId":101,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/dev/build/postcss.js"},'
+            '{"ProcessId":103,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/scripts/playwright-webserver.mjs"},'
+            '{"ProcessId":104,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/standalone/server.js"},'
+            '{"ProcessId":102,"Name":"node.exe","CommandLine":"C:/other-app/node_modules/vite/bin/vite.js"},'
+            '{"ProcessId":201,"Name":"cmd.exe","CommandLine":"C:/Windows/System32/cmd.exe /d /c echo unrelated"}]',
         )
 
     monkeypatch.setattr(interface, "is_windows", lambda: True)
@@ -106,17 +131,18 @@ def test_list_repo_local_interface_processes_windows_queries_wmic_directly(monke
         },
     ]
     assert commands == [
+        ["tasklist", "/FO", "CSV", "/NH", "/FI", "IMAGENAME eq node.exe"],
+        ["tasklist", "/FO", "CSV", "/NH", "/FI", "IMAGENAME eq cmd.exe"],
         [
-            "wmic",
-            "process",
-            "where",
-            "name='node.exe' or name='cmd.exe'",
-            "get",
-            "ProcessId,Name,CommandLine",
-            "/format:csv",
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "Get-CimInstance Win32_Process -Filter \"ProcessId = 101 OR ProcessId = 103 OR ProcessId = 104 OR ProcessId = 102 OR ProcessId = 201\" | "
+            "Select-Object ProcessId,Name,CommandLine | "
+            "ConvertTo-Json -Compress",
         ]
     ]
-    assert timeouts == [45]
+    assert timeouts == [5, 5, 8]
 
 
 def test_build_cleans_residual_interface_workers(monkeypatch):
@@ -128,6 +154,7 @@ def test_build_cleans_residual_interface_workers(monkeypatch):
     monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: stopped.append(f"stop:{port}"))
     monkeypatch.setattr(interface, "clean", lambda _c: cleaned.append("clean") or None)
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_wait_for_complete_next_build_output", lambda timeout_seconds=20: None)
     monkeypatch.setattr(
         interface,
         "_run_interface_shell_command",
@@ -160,6 +187,7 @@ def test_build_retries_once_after_next_lock_conflict(monkeypatch):
     monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: stopped.append(f"stop:{port}"))
     monkeypatch.setattr(interface, "clean", lambda _c: cleaned.append("clean") or None)
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_wait_for_complete_next_build_output", lambda timeout_seconds=20: None)
     monkeypatch.setattr(
         interface,
         "_run_interface_shell_command",
@@ -192,6 +220,7 @@ def test_build_retries_once_after_incomplete_next_build_output(monkeypatch):
     monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: stopped.append(f"stop:{port}"))
     monkeypatch.setattr(interface, "clean", lambda _c: cleaned.append("clean") or None)
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_wait_for_complete_next_build_output", lambda timeout_seconds=20: None)
     monkeypatch.setattr(
         interface,
         "_run_interface_shell_command",
