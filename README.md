@@ -32,8 +32,10 @@ Canonical ownership reminder:
 - [Development Contract](#development-contract)
 - [Playwright Contract](#playwright-contract)
 - [Testing Gate](#testing-gate)
+- [Fastest Start](#fastest-start)
 - [Cross-Platform Setup](#cross-platform-setup)
 - [Development Workflow](#development-workflow)
+- [Binary Releases](#binary-releases)
 - [Documentation Responsibilities](#documentation-responsibilities)
 - [Status](#status)
 
@@ -469,6 +471,32 @@ Use those when you need one release-style pass that ties together:
 - compose-aware runtime proof when the home-runtime stack is part of the release story
 - documentation and state synchronization after the gate finishes
 
+## Fastest Start
+
+For a new user who wants the quickest supported path to a running service:
+
+- WSL2/Linux/macOS:
+  1. `cp .env.compose.example .env.compose`
+  2. `uv run inv install`
+  3. `uv run inv compose.up --build`
+  4. `uv run inv compose.health`
+  5. open `http://localhost:3000`
+- Windows native:
+  1. `copy .env.example .env`
+  2. `uv run inv install`
+  3. `uv run inv k8s.up`
+  4. `uv run inv lifecycle.up --frontend`
+  5. `uv run inv lifecycle.health`
+  6. open `http://localhost:3000`
+
+What the user still needs on the host:
+- Docker
+- Node.js
+- Go
+- `uv`
+- PostgreSQL tooling (`psql`)
+- an available AI provider endpoint such as local Ollama
+
 ## Cross-Platform Setup
 
 Recommended host posture:
@@ -513,6 +541,25 @@ Agents implementing V8 should follow this process:
    - if the machine is low on free space, prefer the repo task path in this order: `uv run inv lifecycle.down`, `uv run inv cache.status`, then `uv run inv cache.clean`
    - if you are setting up a new development machine, treat cache placement as part of the build config, not an afterthought: Windows should stamp user-level cache vars early, and Linux/macOS should point project/user cache roots at the volume you actually want repeated builds and browser runs to consume
 7. update `V8_DEV_STATE.md` with current status and evidence
+
+## Binary Releases
+
+There is one canonical Core binary-release path now:
+
+- repo-local binary only:
+  - `uv run inv core.compile`
+- Docker image build:
+  - `uv run inv core.build`
+- versioned binary archive:
+  - `uv run inv core.package`
+  - example cross-target packaging:
+    - `uv run inv core.package --target-os=windows --target-arch=amd64 --version-tag=v0.1.0`
+
+Release automation:
+- `.github/workflows/release-binaries.yaml`
+- runs on `v*` tag pushes
+- also supports manual `workflow_dispatch`
+- publishes versioned archives from `dist/` as GitHub release assets
 
 ## Documentation Responsibilities
 

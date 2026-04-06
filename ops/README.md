@@ -66,6 +66,7 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
 - **Compile**: `uv run inv core.compile` (repo-local binary only).
+- **Package**: `uv run inv core.package` (versioned cross-target binary archive under `dist/`).
 - **Build**: `uv run inv core.build` (Returns immutable image tag; no `latest` aliasing).
 
 ### `auth.py` (Local Operator Auth)

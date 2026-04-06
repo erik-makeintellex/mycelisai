@@ -63,6 +63,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | `uv run inv core.stop` | Kill running Core process (taskkill on Windows, pkill on Linux) |
 | `uv run inv core.restart` | stop + run |
 | `uv run inv core.smoke` | `go run ./cmd/smoke/main.go` (governance smoke tests) |
+| `uv run inv core.package` | Cross-compile and package a versioned Core binary archive under `dist/` |
 | `uv run inv core.clean` | `go clean`, remove bin/ |
 
 ### Interface Tasks (`ops/interface.py`)
@@ -565,6 +566,7 @@ Deployment automation rule:
 | **Core CI** | `core-ci.yaml` | `core/**`, `ops/core.py`, `ops/config.py`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, direct coverage capture, GolangCI-Lint v1.64.5, `uv run inv core.compile` |
 | **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
 | **E2E CI** | `e2e-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed Chromium/Firefox/WebKit + mobile smoke browser matrix via `uv run inv interface.e2e` |
+| **Release Binaries** | `release-binaries.yaml` | tag push `v*` or manual dispatch | workflow-native Python/uv + Go bootstrap, then matrix packaging through `uv run inv core.package` and GitHub release asset upload |
 
 **Trigger:** `pull_request` to `main` and `develop`; push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens. Container/image workflows are manual-only via `workflow_dispatch`.
 

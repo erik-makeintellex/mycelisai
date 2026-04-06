@@ -43,3 +43,12 @@ def test_active_architecture_docs_use_managed_interface_build_command():
     for text in (mcp_doc, action_doc):
         assert "uv run inv interface.build" in text
         assert "cd interface && npm run build" not in text
+
+
+def test_release_binaries_workflow_uses_core_package_task():
+    workflow = _read(".github/workflows/release-binaries.yaml")
+
+    assert "workflow_dispatch" in workflow
+    assert 'tags: ["v*"]' in workflow
+    assert "uv run inv core.package" in workflow
+    assert "softprops/action-gh-release" in workflow

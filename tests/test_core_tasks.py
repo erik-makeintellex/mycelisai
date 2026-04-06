@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+import tarfile
+import zipfile
 
 from invoke import Context
 
@@ -53,3 +55,46 @@ def test_build_uses_compile_and_never_tags_latest(monkeypatch):
     assert compile_calls == ["compile"]
     assert ctx.commands == ["docker build -t mycelis/core:v0.1.0-deadbee -f core/Dockerfile ."]
     assert not any("latest" in command for command in ctx.commands)
+
+
+def test_package_builds_versioned_linux_archive(monkeypatch, tmp_path):
+    ctx = FakeContext()
+
+    monkeypatch.setattr(core, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(core, "CORE_DIR", tmp_path / "core")
+    monkeypatch.setattr(core, "get_version", lambda _c: "v0.1.0-deadbee")
+
+    core.package.body(ctx, target_os="linux", target_arch="amd64")
+
+    expected_staging = tmp_path / "dist" / "mycelis-core-v0.1.0-deadbee-linux-amd64"
+    expected_archive = tmp_path / "dist" / "mycelis-core-v0.1.0-deadbee-linux-amd64.tar.gz"
+
+    assert ctx.cd_paths == [str(tmp_path / "core")]
+    assert ctx.commands == [f"go build -v -o {expected_staging / 'server'} ./cmd/server"]
+    assert expected_archive.exists()
+    with tarfile.open(expected_archive, "r:gz") as bundle:
+        names = bundle.getnames()
+    assert f"{expected_staging.name}/README.txt" in names
+
+
+def test_package_builds_versioned_windows_zip(monkeypatch, tmp_path):
+    ctx = FakeContext()
+
+    monkeypatch.setattr(core, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(core, "CORE_DIR", tmp_path / "core")
+
+    core.package.body(ctx, target_os="windows", target_arch="amd64", version_tag="v9.9.9-test")
+
+    expected_staging = tmp_path / "dist" / "mycelis-core-v9.9.9-test-windows-amd64"
+    expected_archive = tmp_path / "dist" / "mycelis-core-v9.9.9-test-windows-amd64.zip"
+
+    assert ctx.commands == [f"go build -v -o {expected_staging / 'server.exe'} ./cmd/server"]
+    assert expected_archive.exists()
+    with zipfile.ZipFile(expected_archive) as bundle:
+        names = bundle.namelist()
+    assert f"{expected_staging.name}/README.txt" in names
+
+
+def test_default_target_os_maps_platform_names(monkeypatch):
+    monkeypatch.setattr(core.platform, "system", lambda: "Darwin")
+    assert core._default_target_os() == "darwin"

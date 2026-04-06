@@ -1,3 +1,9 @@
+import shutil
+import tarfile
+import platform
+import zipfile
+from pathlib import Path
+
 from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR, ensure_managed_cache_dirs, is_windows, managed_cache_env
 
@@ -9,6 +15,44 @@ def _task_env(extra=None):
 
 def _binary_output_path() -> str:
     return "bin/server.exe" if is_windows() else "bin/server"
+
+
+def _target_binary_name(target_os: str) -> str:
+    return "server.exe" if target_os == "windows" else "server"
+
+
+def _default_target_os() -> str:
+    system_name = platform.system().lower()
+    if system_name.startswith("win"):
+        return "windows"
+    if system_name == "darwin":
+        return "darwin"
+    return "linux"
+
+
+def _release_staging_dir(version_tag: str, target_os: str, target_arch: str) -> Path:
+    return ROOT_DIR / "dist" / f"mycelis-core-{version_tag}-{target_os}-{target_arch}"
+
+
+def _release_archive_path(version_tag: str, target_os: str, target_arch: str) -> Path:
+    suffix = "zip" if target_os == "windows" else "tar.gz"
+    return ROOT_DIR / "dist" / f"mycelis-core-{version_tag}-{target_os}-{target_arch}.{suffix}"
+
+
+def _package_release_archive(staging_dir: Path, archive_path: Path, target_os: str) -> None:
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    if archive_path.exists():
+        archive_path.unlink()
+
+    if target_os == "windows":
+        with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+            for path in staging_dir.rglob("*"):
+                if path.is_file():
+                    bundle.write(path, path.relative_to(staging_dir.parent))
+        return
+
+    with tarfile.open(archive_path, "w:gz") as bundle:
+        bundle.add(staging_dir, arcname=staging_dir.name)
 
 @task
 def test(c):
@@ -26,6 +70,62 @@ def compile(c):
             f"go build -v -o {_binary_output_path()} ./cmd/server",
             env=_task_env(),
         )
+
+
+@task(
+    help={
+        "target_os": "Target OS for the packaged binary (linux, darwin, windows). Defaults to the local OS.",
+        "target_arch": "Target CPU architecture (amd64, arm64). Defaults to amd64.",
+        "version_tag": "Version label to embed in the release artifact name. Defaults to the computed repo version.",
+    }
+)
+def package(c, target_os="", target_arch="amd64", version_tag=""):
+    """
+    Cross-compile and package a versioned Core binary archive under dist/.
+    """
+    effective_target_os = target_os or _default_target_os()
+    effective_version_tag = version_tag or get_version(c)
+    binary_name = _target_binary_name(effective_target_os)
+    staging_dir = _release_staging_dir(effective_version_tag, effective_target_os, target_arch)
+    archive_path = _release_archive_path(effective_version_tag, effective_target_os, target_arch)
+    binary_path = staging_dir / binary_name
+
+    print(f"Packaging Core binary release for {effective_target_os}/{target_arch} as {effective_version_tag}...")
+
+    if staging_dir.exists():
+        shutil.rmtree(staging_dir)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+
+    with c.cd(str(CORE_DIR)):
+        env = _task_env(
+            {
+                "GOOS": effective_target_os,
+                "GOARCH": target_arch,
+                "CGO_ENABLED": "0",
+            }
+        )
+        c.run(f"go build -v -o {binary_path} ./cmd/server", env=env)
+
+    readme = staging_dir / "README.txt"
+    readme.write_text(
+        "\n".join(
+            [
+                "Mycelis Core Binary",
+                f"Version: {effective_version_tag}",
+                f"Target: {effective_target_os}/{target_arch}",
+                "",
+                "Quick start:",
+                "1. Copy .env.example to .env and set required values.",
+                "2. Ensure PostgreSQL, NATS, and an AI provider endpoint are reachable.",
+                f"3. Run {binary_name} from this folder or configure your service manager to point at it.",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    _package_release_archive(staging_dir, archive_path, effective_target_os)
+    print(f"Packaged release archive: {archive_path}")
 
 @task
 def clean(c):
@@ -123,6 +223,7 @@ def smoke(c):
 ns = Collection("core")
 ns.add_task(test)
 ns.add_task(compile)
+ns.add_task(package)
 ns.add_task(clean)
 ns.add_task(build)
 ns.add_task(run)

@@ -87,6 +87,7 @@ def test_root_collection_exports_expected_task_surface():
         "core.build",
         "core.clean",
         "core.compile",
+        "core.package",
         "core.restart",
         "core.run",
         "core.smoke",

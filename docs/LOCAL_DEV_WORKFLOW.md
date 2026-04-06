@@ -15,12 +15,14 @@
 - [Prerequisites](#prerequisites)
 - [Configuration Reference](#configuration-reference)
 - [Recommended Host Paths](#recommended-host-paths)
+- [Quick Start Paths](#quick-start-paths)
 - [First-Time Setup](#first-time-setup)
 - [Daily Startup Sequence](#daily-startup-sequence)
 - [Port Map](#port-map)
 - [Health Checks](#health-checks)
 - [Troubleshooting](#troubleshooting)
 - [Cognitive Engine Setup](#cognitive-engine-setup)
+- [Binary Release Process](#binary-release-process)
 - [Full Command Reference](#full-command-reference)
 
 ## Prerequisites
@@ -279,6 +281,24 @@ Canonical bus signal conventions for these teams live in `docs/architecture/NATS
 
 Defines approval thresholds, deny rules, and safety constraints.
 
+## Quick Start Paths
+
+Use the shortest path that matches your host:
+
+- WSL2/Linux/macOS:
+  1. `cp .env.compose.example .env.compose`
+  2. `uv run inv install`
+  3. `uv run inv compose.up --build`
+  4. `uv run inv compose.health`
+  5. open `http://localhost:3000`
+- Windows native:
+  1. `copy .env.example .env`
+  2. `uv run inv install`
+  3. `uv run inv k8s.up`
+  4. `uv run inv lifecycle.up --frontend`
+  5. `uv run inv lifecycle.health`
+  6. open `http://localhost:3000`
+
 ## First-Time Setup
 
 Run all commands from `scratch/` (project root where `tasks.py` lives).
@@ -336,6 +356,25 @@ Compose bring-up order is managed for you:
 - canonical migrations through the PostgreSQL container
 - Core + Interface second
 - host health verification last
+
+## Binary Release Process
+
+Use these commands when you need a distributable Core binary instead of a local dev build:
+
+```bash
+uv run inv core.package
+uv run inv core.package --target-os=windows --target-arch=amd64 --version-tag=v0.1.0
+```
+
+What it does:
+- cross-compiles a versioned Core binary
+- writes a versioned archive under `dist/`
+- includes a small release `README.txt` beside the binary
+
+Canonical automation:
+- `.github/workflows/release-binaries.yaml`
+- runs on `v*` tag pushes
+- supports manual dispatch for one-off packaging
 
 ## Daily Startup Sequence
 
@@ -584,6 +623,7 @@ profiles:
 |:--|:--|
 | **Core** | |
 | `uv run inv core.compile` | Compile Go binary only |
+| `uv run inv core.package` | Package a versioned Core binary archive under `dist/` |
 | `uv run inv core.build` | Compile Go binary + Docker image |
 | `uv run inv core.test` | Go unit tests (`go test ./...`) |
 | `uv run inv core.run` | Start backend (foreground) |
