@@ -500,6 +500,11 @@ defaults:
 | `MYCELIS_PROFILE_<PROFILE>_PROVIDER` | — | Route a profile to a provider via env |
 | `MYCELIS_MEDIA_ENDPOINT` | — | Override media/image endpoint |
 | `MYCELIS_MEDIA_MODEL_ID` | — | Override media/image model id |
+| `MYCELIS_LOCAL_ADMIN_USERNAME` | `admin` | Primary self-hosted local-admin principal name behind `MYCELIS_API_KEY` |
+| `MYCELIS_LOCAL_ADMIN_USER_ID` | `00000000-0000-0000-0000-000000000000` | Stable internal id for the primary self-hosted local-admin principal |
+| `MYCELIS_BREAK_GLASS_API_KEY` | — | Optional dedicated break-glass credential for self-hosted hybrid/federated recovery |
+| `MYCELIS_BREAK_GLASS_USERNAME` | `recovery-admin` | Break-glass recovery principal name |
+| `MYCELIS_BREAK_GLASS_USER_ID` | `00000000-0000-0000-0000-000000000001` | Stable internal id for the break-glass recovery principal |
 | `OPENAI_API_KEY` | — | OpenAI API key |
 | `ANTHROPIC_API_KEY` | — | Anthropic API key |
 | `GEMINI_API_KEY` | — | Gemini API key |
@@ -510,6 +515,7 @@ Deployment automation rule:
 - treat env overrides as deployment-time infrastructure configuration only: provider definitions, profile defaults, and environment-specific endpoint/model wiring
 - token consumption must stay configuration-owned: set `token_budget_profile` and `max_output_tokens` in `core/config/cognitive.yaml`, override them with `MYCELIS_PROVIDER_<PROVIDER_ID>_TOKEN_BUDGET_PROFILE` / `MYCELIS_PROVIDER_<PROVIDER_ID>_MAX_OUTPUT_TOKENS` during deployment automation, or manage them in `/settings` -> `AI Engines` (Advanced mode)
 - safe preset ranges are `conservative=512`, `standard=1024`, `extended=2048`, and `deep=4096`; treat `standard` as the normal local default and opt into larger budgets intentionally
+- `MYCELIS_API_KEY` remains the normal local-admin credential for current self-hosted operation; use `MYCELIS_BREAK_GLASS_API_KEY` only for an explicit recovery path, not as a second everyday token
 - do not treat env overrides as runtime organization behavior or team/role routing control
 - runtime truth remains `Bundle -> Instantiated Organization -> Inheritance -> Routing`
 

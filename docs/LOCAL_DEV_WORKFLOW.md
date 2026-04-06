@@ -87,6 +87,11 @@ cp .env.example .env
 | `CORS_ORIGIN` | `http://localhost:3000` | Allowed CORS origin (Next.js dev server) |
 | `DATA_DIR` | `/data/artifacts` | Agent artifact storage path |
 | `MYCELIS_WORKSPACE` | `./workspace` | Workspace sandbox root for manifested files and file tools. In Kubernetes use `/data/workspace`. |
+| `MYCELIS_LOCAL_ADMIN_USERNAME` | `admin` | Display/identity name for the primary self-hosted local admin principal behind `MYCELIS_API_KEY` |
+| `MYCELIS_LOCAL_ADMIN_USER_ID` | `00000000-0000-0000-0000-000000000000` | Stable internal id for the primary self-hosted local admin principal |
+| `MYCELIS_BREAK_GLASS_API_KEY` | — | Optional dedicated break-glass API key for self-hosted recovery when using hybrid or federated posture |
+| `MYCELIS_BREAK_GLASS_USERNAME` | `recovery-admin` | Display/identity name for the break-glass recovery principal |
+| `MYCELIS_BREAK_GLASS_USER_ID` | `00000000-0000-0000-0000-000000000001` | Stable internal id for the break-glass recovery principal |
 | **Next.js Proxy** | | |
 | `MYCELIS_API_HOST` | `localhost` | Backend host for Next.js rewrite proxy |
 | `MYCELIS_API_PORT` | `8081` | Backend port for Next.js rewrite proxy |
@@ -105,6 +110,8 @@ cp .env.example .env
 > **Deployment automation rule:** Prefer `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PROFILE>_PROVIDER`, and `MYCELIS_MEDIA_*` for automation-driven cognitive config overrides. Do not rely on the retired `MYCELIS_TEAM_PROVIDER_MAP` / `MYCELIS_AGENT_PROVIDER_MAP` env maps.
 >
 > **Architecture boundary:** These env overrides are for deployment-time provider definition, environment-specific endpoint/model configuration, and profile default wiring only. They are not runtime organization behavior, do not control team/role routing directly, and do not replace bundle-defined truth.
+>
+> **Identity boundary:** `MYCELIS_API_KEY` remains the primary local-admin credential. `MYCELIS_BREAK_GLASS_API_KEY` is optional and should be used only for explicit self-hosted recovery posture, not as the normal everyday token.
 
 ### `core/config/cognitive.yaml` — LLM Provider Routing
 

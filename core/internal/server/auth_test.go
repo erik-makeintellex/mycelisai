@@ -61,7 +61,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 }
 
 func TestAuthMiddleware_HybridModeUsesBreakGlassAdminIdentity(t *testing.T) {
-	t.Setenv("MYCELIS_IDENTITY_MODE", "hybrid")
+	t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", "break-glass-key")
 	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		identity := IdentityFromContext(r.Context())
 		if identity == nil {
@@ -78,6 +78,33 @@ func TestAuthMiddleware_HybridModeUsesBreakGlassAdminIdentity(t *testing.T) {
 		}
 		if identity.EffectiveRole != "owner" {
 			t.Errorf("Expected effective_role owner, got %q", identity.EffectiveRole)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
+	req.Header.Set("Authorization", "Bearer break-glass-key")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assertStatus(t, rr, http.StatusOK)
+}
+
+func TestAuthMiddleware_CustomLocalAdminIdentityFromEnvironment(t *testing.T) {
+	t.Setenv("MYCELIS_LOCAL_ADMIN_USERNAME", "owner-erik")
+	t.Setenv("MYCELIS_LOCAL_ADMIN_USER_ID", "user-123")
+	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		identity := IdentityFromContext(r.Context())
+		if identity == nil {
+			t.Error("Expected identity in context")
+		}
+		if identity.Username != "owner-erik" {
+			t.Errorf("Expected custom username owner-erik, got %q", identity.Username)
+		}
+		if identity.UserID != "user-123" {
+			t.Errorf("Expected custom user ID user-123, got %q", identity.UserID)
+		}
+		if identity.PrincipalType != "local_admin" {
+			t.Errorf("Expected local_admin principal type, got %q", identity.PrincipalType)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))

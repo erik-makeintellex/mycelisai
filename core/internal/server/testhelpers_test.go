@@ -99,15 +99,7 @@ func doAuthenticatedRequest(t *testing.T, handler http.Handler, method, path, bo
 	} else {
 		req, _ = http.NewRequest(method, path, nil)
 	}
-	identity := &RequestIdentity{
-		UserID:        "test-user-001",
-		Username:      "admin",
-		Role:          "admin",
-		EffectiveRole: "owner",
-		PrincipalType: "local_admin",
-		AuthSource:    "local_api_key",
-		Scopes:        []string{"*"},
-	}
+	identity := localAdminIdentityForTest()
 	ctx := context.WithValue(req.Context(), ctxKeyIdentity, identity)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -131,8 +123,8 @@ func doAuthenticatedRequestAs(t *testing.T, handler http.Handler, method, path, 
 	return rr
 }
 
-func rootIdentityFromEnvironmentForTest(mode string) *RequestIdentity {
-	identity := &RequestIdentity{
+func localAdminIdentityForTest() *RequestIdentity {
+	return &RequestIdentity{
 		UserID:        "test-user-001",
 		Username:      "admin",
 		Role:          "admin",
@@ -141,11 +133,13 @@ func rootIdentityFromEnvironmentForTest(mode string) *RequestIdentity {
 		AuthSource:    "local_api_key",
 		Scopes:        []string{"*"},
 	}
-	if normalizeIdentityModeSetting(mode) == "hybrid" || normalizeIdentityModeSetting(mode) == "federated" {
-		identity.PrincipalType = "break_glass_admin"
-		identity.AuthSource = "local_break_glass"
-		identity.BreakGlass = true
-	}
+}
+
+func breakGlassIdentityForTest() *RequestIdentity {
+	identity := localAdminIdentityForTest()
+	identity.PrincipalType = "break_glass_admin"
+	identity.AuthSource = "local_break_glass"
+	identity.BreakGlass = true
 	return identity
 }
 

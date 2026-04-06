@@ -59,7 +59,7 @@ func TestHandleMe(t *testing.T) {
 
 func TestHandleMe_HybridModeReportsBreakGlassPrincipal(t *testing.T) {
 	s := newTestServer()
-	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "", rootIdentityFromEnvironmentForTest("hybrid"))
+	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "", breakGlassIdentityForTest())
 	assertStatus(t, rr, http.StatusOK)
 
 	var user User
