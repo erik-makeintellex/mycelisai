@@ -279,7 +279,7 @@ function DocsContent() {
 
     // Load manifest on mount — honour ?doc= query param for deep-links
     useEffect(() => {
-        const requestedSlug = searchParams.get("doc");
+        const requestedSlug = searchParams?.get("doc") ?? null;
         fetch("/docs-api")
             .then((r) => r.json())
             .then((data: ManifestResponse) => {

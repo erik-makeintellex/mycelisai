@@ -574,14 +574,14 @@ def test_playwright_docs_reflect_owned_server_and_browser_matrix():
     expectations = {
         README: [
             "owns the local Next.js server lifecycle",
-            "built `next start` server",
+            "built production Interface server path",
             "chromium firefox webkit",
             "uv run inv ci.baseline` now includes Playwright by default",
             "uv run inv ci.service-check",
         ],
         ROOT / "docs" / "TESTING.md": [
             "starts/stops the managed Next.js app",
-            "built `next start` server",
+            "built production Interface server path",
             "mobile-chromium",
             "@axe-core/playwright",
             "workspace-live-backend.spec.ts",
@@ -591,7 +591,7 @@ def test_playwright_docs_reflect_owned_server_and_browser_matrix():
         ],
         ROOT / "docs" / "architecture" / "OPERATIONS.md": [
             "Invoke manages the Next.js server lifecycle",
-            "built `next start` server",
+            "built production Interface server path",
             "Chromium/Firefox/WebKit + mobile smoke",
             "uv run inv ci.service-check",
         ],

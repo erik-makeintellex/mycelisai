@@ -2,22 +2,17 @@ import { defineConfig, devices } from '@playwright/test';
 
 const configDir = typeof __dirname === 'string' ? __dirname : process.cwd();
 const interfaceHost = process.env.INTERFACE_HOST ?? process.env.MYCELIS_INTERFACE_HOST ?? '127.0.0.1';
-const interfaceBindHost =
-    process.env.INTERFACE_BIND_HOST ??
-    process.env.MYCELIS_INTERFACE_BIND_HOST ??
-    process.env.MYCELIS_INTERFACE_HOST ??
-    '127.0.0.1';
 const interfacePort = process.env.PLAYWRIGHT_PORT ?? process.env.INTERFACE_PORT ?? '3100';
 const baseUrlHost = interfaceHost.includes(':') && !interfaceHost.startsWith('[') ? `[${interfaceHost}]` : interfaceHost;
 const baseURL = `http://${baseUrlHost}:${interfacePort}`;
 const shouldManageWebServer = !process.env.PLAYWRIGHT_SKIP_WEBSERVER;
-const defaultWebServerCommand = `node ./node_modules/next/dist/bin/next start --hostname ${interfaceBindHost} --port ${interfacePort}`;
+const defaultWebServerCommand = `node ./scripts/playwright-webserver.mjs`;
 const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultWebServerCommand;
 
 /**
  * Playwright E2E configuration for Mycelis Interface.
  *
- * Direct Playwright runs own a built Next.js server lifecycle by default,
+ * Direct Playwright runs own a built Interface server lifecycle by default,
  * while `uv run inv interface.e2e` may pre-start a known-good local server and
  * opt out via PLAYWRIGHT_SKIP_WEBSERVER when Windows shell startup is flaky.
  */

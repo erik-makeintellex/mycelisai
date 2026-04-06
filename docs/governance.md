@@ -32,6 +32,12 @@ This governance model also applies to durable context loading:
 - approved company-authored guidance belongs in `company_knowledge`
 - external research loaded into either lane must stay explicitly classified by source kind, trust class, and sensitivity posture
 
+Current release boundary note:
+- this is still a free-node governance foundation, not a full multi-user IAM system
+- the target multi-user contract is one shared organization-owned Soma persona plus many governed human principals, not one unrelated Soma per end user
+- future enterprise identity should support federation and local break-glass admins without bypassing governance or audit
+- future shared-Soma governance must also distinguish admin-shaped organization-level Soma context from ordinary user interaction context
+
 The normal operator-facing outcomes are:
 - `answer`
 - `proposal`
@@ -87,5 +93,6 @@ not only as a raw allow/deny/intercept subsystem.
 
 Related references:
 - `docs/user/governance-trust.md`
+- `docs/architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md`
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`

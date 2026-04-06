@@ -81,7 +81,7 @@ function SettingsContent() {
     const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const validTabs: TabId[] = ["profile", "profiles", "users", "engines", "tools"];
-    const requestedTab = searchParams.get("tab") as TabId | null;
+    const requestedTab = (searchParams?.get("tab") as TabId | null) ?? null;
     const initialTab =
         requestedTab && validTabs.includes(requestedTab) && (advancedMode || (requestedTab !== "engines" && requestedTab !== "tools"))
             ? requestedTab

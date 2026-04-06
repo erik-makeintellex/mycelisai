@@ -145,6 +145,7 @@ V8.2 summary:
 - the learning system turns reviewed outcomes into governed memory, reusable procedures, and safer organization improvement
 - the capability system keeps action surfaces allowlisted, scoped, auditable, and policy-checked
 - user-level governance profiles, approval thresholds, and audit trails make enterprise-style traceability available even in the single-user free-node posture
+- multi-user enterprise identity grows from that foundation: federated users, local break-glass admins, and one shared organization-owned Soma persona must coexist without fragmenting memory, RAG, privacy, or audit
 
 Explicit distinction:
 - V8.1 is the current release target
@@ -182,6 +183,7 @@ Excluded from the V8.1 release target:
 - unrestricted capability controls
 - autonomous memory mutation or silent self-rewrite
 - advanced raw architecture/configuration panels in the default operator flow
+- full enterprise multi-user IAM, SAML/SSO, and break-glass admin recovery
 
 Release rule:
 - if a surface belongs to V8.2 but not the V8.1 MVP, it should remain out of the default release surface until explicitly promoted
@@ -438,9 +440,9 @@ Completion rule:
 
 ## Playwright Contract
 
-`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the managed `dev` server and `--workers=1` for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; start-mode runs still refresh the production bundle first, retry once after a stale repo-local Next build lock, and must successfully hold the managed server before the browser run continues.
+`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the managed `dev` server and `--workers=1` for stable mocked browser proof. Use `--server-mode=start` when you need the built production Interface server path for stricter or live-backend proof; start-mode runs still refresh the production bundle first, retry once after a stale repo-local Next build lock or incomplete built-server packaging, and must successfully hold the managed server before the browser run continues.
 
-`uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=1`) and the built `next start` server so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves the current live governed Soma browser contract, restores the local bridge/core stack before the browser proof when needed, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run.
+`uv run inv ci.baseline` uses a reduced Playwright worker count (`--workers=1`) and the built production Interface server path so merge-readiness browser proof stays repeatable without stretching the gate into an impractical wall-clock run on local Windows hosts. `uv run inv ci.service-check --live-backend` stays serial (`--workers=1`) because it proves the current live governed Soma browser contract, restores the local bridge/core stack before the browser proof when needed, and reuses an already-initialized `cortex` schema instead of replaying non-idempotent migrations on every run.
 
 Browser matrix baseline:
 - `chromium firefox webkit`

@@ -46,7 +46,7 @@ function AutomationsContent() {
         setIsHydrated(true);
     }, []);
     const effectiveAdvancedMode = isHydrated ? advancedMode : false;
-    const tabParam = searchParams.get("tab") as TabId | null;
+    const tabParam = (searchParams?.get("tab") as TabId | null) ?? null;
     const initialTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : "active";
     const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 

@@ -62,6 +62,63 @@ def test_cleanup_repo_local_interface_processes_kills_detected_workers(monkeypat
     assert remaining == []
 
 
+def test_list_repo_local_interface_processes_windows_queries_wmic_directly(monkeypatch):
+    commands: list[list[str]] = []
+    timeouts: list[int] = []
+
+    class Result:
+        def __init__(self, stdout="", returncode=0, stderr=""):
+            self.stdout = stdout
+            self.returncode = returncode
+            self.stderr = stderr
+
+    def fake_run(command, capture_output=True, text=True, timeout=0):
+        commands.append(command)
+        timeouts.append(timeout)
+        return Result(
+            stdout="Node,CommandLine,Name,ProcessId\n"
+            "HOST,D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/dev/build/postcss.js,node.exe,101\n"
+            "HOST,D:/MakeIntellex/Projects/mycelisai/scratch/interface/scripts/playwright-webserver.mjs,node.exe,103\n"
+            "HOST,D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/standalone/server.js,node.exe,104\n"
+            "HOST,C:/other-app/node_modules/vite/bin/vite.js,node.exe,102\n"
+        )
+
+    monkeypatch.setattr(interface, "is_windows", lambda: True)
+    monkeypatch.setattr(interface.subprocess, "run", fake_run)
+
+    processes = interface._list_repo_local_interface_processes()
+
+    assert processes == [
+        {
+            "pid": 101,
+            "name": "node.exe",
+            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/dev/build/postcss.js",
+        },
+        {
+            "pid": 103,
+            "name": "node.exe",
+            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/scripts/playwright-webserver.mjs",
+        },
+        {
+            "pid": 104,
+            "name": "node.exe",
+            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/standalone/server.js",
+        },
+    ]
+    assert commands == [
+        [
+            "wmic",
+            "process",
+            "where",
+            "name='node.exe' or name='cmd.exe'",
+            "get",
+            "ProcessId,Name,CommandLine",
+            "/format:csv",
+        ]
+    ]
+    assert timeouts == [45]
+
+
 def test_build_cleans_residual_interface_workers(monkeypatch):
     cleaned: list[str] = []
     stopped: list[str] = []
@@ -80,7 +137,7 @@ def test_build_cleans_residual_interface_workers(monkeypatch):
     interface.build.body(ctx)
 
     assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
-    assert cleaned == ["clean", "cleanup", "cleanup"]
+    assert cleaned == ["clean", "cleanup"]
     assert shell_calls == [["npm", "run", "build"]]
 
 
@@ -112,7 +169,39 @@ def test_build_retries_once_after_next_lock_conflict(monkeypatch):
     interface.build.body(ctx)
 
     assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
-    assert cleaned == ["clean", "cleanup", "cleanup", "clean", "cleanup", "cleanup"]
+    assert cleaned == ["clean", "cleanup", "cleanup", "clean", "cleanup"]
+    assert shell_calls == [["npm", "run", "build"], ["npm", "run", "build"]]
+
+
+def test_build_retries_once_after_incomplete_next_build_output(monkeypatch):
+    cleaned: list[str] = []
+    stopped: list[str] = []
+    shell_calls: list[list[str]] = []
+    shell_results = iter(
+        [
+            interface.CommandResult(
+                exited=1,
+                stdout="",
+                stderr="Error: ENOENT: no such file or directory, open 'D:\\repo\\interface\\.next\\build-manifest.json'",
+            ),
+            interface.CommandResult(exited=0, stdout="", stderr=""),
+        ]
+    )
+    ctx = FakeContext()
+
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: stopped.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "clean", lambda _c: cleaned.append("clean") or None)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: shell_calls.append(command) or next(shell_results),
+    )
+
+    interface.build.body(ctx)
+
+    assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
+    assert cleaned == ["clean", "cleanup", "cleanup", "clean", "cleanup"]
     assert shell_calls == [["npm", "run", "build"], ["npm", "run", "build"]]
 
 
@@ -200,6 +289,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
 
@@ -224,6 +314,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
         "kill:4242",
         f"stop:{port}",
         "cleanup",
+        "cleanup-log",
     ]
 
 
@@ -260,6 +351,7 @@ def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_ho
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
 
     def fake_start(env, port=interface.INTERFACE_PORT, server_mode="start"):
@@ -286,7 +378,36 @@ def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_ho
         "kill:5252",
         f"stop:{port}",
         "cleanup",
+        "cleanup-log",
     ]
+
+
+def test_start_playwright_server_sets_standalone_host_and_port(monkeypatch, tmp_path):
+    captured: dict[str, object] = {}
+
+    class FakeProcess:
+        pass
+
+    monkeypatch.setattr(interface, "_playwright_server_log_path", lambda: str(tmp_path / "playwright.log"))
+    monkeypatch.setattr(
+        interface,
+        "_spawn_interface_process",
+        lambda command, env, stdout, stderr, detached, text=True: captured.update(
+            {
+                "command": command,
+                "env": dict(env),
+                "detached": detached,
+                "text": text,
+            }
+        ) or FakeProcess(),
+    )
+
+    interface._start_playwright_server({"INTERFACE_BIND_HOST": "::1"}, port=4314, server_mode="start")
+
+    assert captured["command"] == ["node", str((interface.INTERFACE_DIR / "scripts" / "playwright-webserver.mjs").resolve())]
+    assert captured["env"]["HOSTNAME"] == "::1"
+    assert captured["env"]["PORT"] == "4314"
+    assert captured["detached"] is True
 
 
 def test_e2e_dev_mode_skips_build(monkeypatch):
@@ -320,6 +441,7 @@ def test_e2e_dev_mode_skips_build(monkeypatch):
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
     monkeypatch.setattr(interface, "_start_playwright_server", lambda env, port=interface.INTERFACE_PORT, server_mode="start": events.append(f"start:{port}:{server_mode}") or FakeServer())
 
@@ -333,7 +455,76 @@ def test_e2e_dev_mode_skips_build(monkeypatch):
         "kill:6262",
         "stop:4313",
         "cleanup",
+        "cleanup-log",
     ]
+
+
+def test_e2e_keeps_playwright_server_log_on_failure(monkeypatch):
+    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult(exited=1)})
+    events: list[str] = []
+
+    class FakeServer:
+        pid = 7171
+
+        @staticmethod
+        def poll():
+            return None
+
+    monkeypatch.setattr(
+        interface,
+        "_task_env",
+        lambda extra=None: {
+            "PLAYWRIGHT_SKIP_WEBSERVER": extra["PLAYWRIGHT_SKIP_WEBSERVER"],
+            "INTERFACE_HOST": extra["INTERFACE_HOST"],
+            "INTERFACE_BIND_HOST": extra["INTERFACE_BIND_HOST"],
+        },
+    )
+    monkeypatch.setattr(interface, "INTERFACE_PORT", 4314)
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: events.append(f"stop:{port}"))
+    monkeypatch.setattr(
+        interface,
+        "_wait_for_interface_ready",
+        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120, process=None: "127.0.0.1",
+    )
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+    monkeypatch.setattr(interface, "_start_playwright_server", lambda env, port=interface.INTERFACE_PORT, server_mode="start": FakeServer())
+    monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
+
+    try:
+        interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts")
+    except SystemExit as exc:
+        assert exc.code == 1
+    else:
+        raise AssertionError("expected playwright failure")
+
+    assert "cleanup-log" not in events
+
+
+def test_cleanup_playwright_server_log_retries_permission_error(monkeypatch):
+    events: list[str] = []
+
+    class FakePath:
+        def __init__(self):
+            self.calls = 0
+
+        def unlink(self):
+            self.calls += 1
+            events.append(f"unlink:{self.calls}")
+            if self.calls < 3:
+                raise PermissionError("busy")
+
+    fake_path = FakePath()
+
+    monkeypatch.setattr(interface, "_playwright_server_log_path", lambda: "workspace/logs/interface-playwright-webserver.log")
+    monkeypatch.setattr(interface, "Path", lambda _value: fake_path)
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: events.append("sleep"))
+
+    interface._cleanup_playwright_server_log()
+
+    assert events == ["unlink:1", "sleep", "unlink:2", "sleep", "unlink:3"]
 
 
 def test_test_uses_direct_shell_command(monkeypatch):

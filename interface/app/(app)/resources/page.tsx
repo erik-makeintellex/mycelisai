@@ -47,7 +47,7 @@ export default function ResourcesPage() {
 function ResourcesContent() {
     const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);
-    const tabParam = searchParams.get("tab") as TabId | null;
+    const tabParam = (searchParams?.get("tab") as TabId | null) ?? null;
     const [activeTab, setActiveTab] = useState<TabId>(
         tabParam && VALID_TABS.includes(tabParam) ? tabParam : "tools"
     );

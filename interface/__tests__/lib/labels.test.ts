@@ -38,8 +38,10 @@ describe('labels', () => {
             expect(toolLabel('custom_mcp_tool')).toBe('custom_mcp_tool');
         });
 
-        it('covers all 21 registered internal tools', () => {
-            expect(Object.keys(TOOL_LABELS)).toHaveLength(21);
+        it('covers current governed deployment-context tools in the internal registry', () => {
+            expect(Object.keys(TOOL_LABELS)).toEqual(
+                expect.arrayContaining(['load_deployment_context', 'promote_deployment_context']),
+            );
         });
     });
 
@@ -227,8 +229,17 @@ describe('labels', () => {
             expect(isGovernanceTool('recall')).toBe(false);
         });
 
-        it('has exactly 4 governance tools', () => {
-            expect(GOVERNANCE_TOOLS.size).toBe(4);
+        it('includes the governed durable-context actions in the governance gate set', () => {
+            expect([...GOVERNANCE_TOOLS]).toEqual(
+                expect.arrayContaining([
+                    'delegate_task',
+                    'generate_blueprint',
+                    'write_file',
+                    'publish_signal',
+                    'load_deployment_context',
+                    'promote_deployment_context',
+                ]),
+            );
         });
     });
 

@@ -29,7 +29,9 @@ export function ZoneA() {
 
     const effectiveAdvancedMode = isHydrated ? advancedMode : false;
     const currentOrganizationHref = lastOrganization ? `/organizations/${lastOrganization.id}` : null;
-    const isCurrentOrganizationRoute = !!currentOrganizationHref && (pathname === currentOrganizationHref || pathname.startsWith(currentOrganizationHref + '/'));
+    const isCurrentOrganizationRoute =
+        !!currentOrganizationHref &&
+        (pathname === currentOrganizationHref || pathname?.startsWith(currentOrganizationHref + '/') === true);
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'Soma', description: 'Home', testId: 'nav-dashboard' },
         ...(lastOrganization ? [{
@@ -110,7 +112,7 @@ export function ZoneA() {
 
 function NavItem({ icon: Icon, label, href, title, description, onClick, testId }: { icon: any; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string }) {
     const pathname = usePathname();
-    const isActive = pathname === href || pathname.startsWith(href + '/');
+    const isActive = pathname === href || pathname?.startsWith(href + '/') === true;
     const classes = `
         flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200
         ${isActive

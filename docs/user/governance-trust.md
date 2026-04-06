@@ -95,9 +95,11 @@ What exists now:
 - base audit trail and inspect-only activity view
 
 What is still future work:
-- full multi-user IAM
+- full multi-user IAM with SAML/OIDC federation, optional lifecycle sync, and local break-glass admin recovery for self-hosted environments
 - delegated approval chains
 - richer enterprise policy administration
+- one shared organization-owned Soma persona across many users with scoped privacy, audit, and memory/RAG access rules
+- explicit admin-owned Soma-shaping context so root/admin guidance can shape durable organization behavior without letting ordinary user chat silently redefine Soma
 
 Related references:
 - `docs/governance.md`

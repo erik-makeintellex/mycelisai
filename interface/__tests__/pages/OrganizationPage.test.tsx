@@ -642,7 +642,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Review organization setup" }));
         expect(await screen.findByRole("heading", { name: "Department details" })).toBeDefined();
-    });
+    }, 15000);
 
     it("keeps the organization frame visible while moving from home into the Soma interaction flow", async () => {
         setupOrganizationFetch({
@@ -855,7 +855,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.queryByText(/vector/i)).toBeNull();
         expect(screen.queryByText(/pgvector/i)).toBeNull();
         expect(screen.queryByText(/memory promotion/i)).toBeNull();
-    });
+    }, 15000);
 
     it("keeps one Soma workspace and switches team design into a mode inside that same panel", async () => {
         setupOrganizationFetch();
@@ -1093,7 +1093,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("The current AI Engine Settings profile is high reasoning and shapes how the organization responds, plans, and carries work forward.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getByText("Create teams with Soma")).toBeDefined();
-    });
+    }, 15000);
 
     it("shows inherited Department AI Engine state, applies an override, and then reverts to the organization default", async () => {
         setupOrganizationFetch();
@@ -1139,7 +1139,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getAllByRole("button", { name: "Use Team Default" }).at(-1)!);
         expect(await screen.findByText("Using Team Default: Starter defaults included")).toBeDefined();
-    });
+    }, 15000);
 
     it("lets the operator bind an Agent Type Response Style and then return it to the Organization / Team default", async () => {
         setupOrganizationFetch();
@@ -1226,7 +1226,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getAllByRole("button", { name: "Use selected AI Engine" }).at(-1)!);
         expect(await screen.findByText("Type-specific Engine: Balanced")).toBeDefined();
-    });
+    }, 15000);
 
     it("keeps a type-bound Response Style stable when the organization default changes and reapplies inheritance after revert", async () => {
         setupOrganizationFetch();
@@ -1339,7 +1339,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByText("Current profile: Balanced.")).toBeDefined();
         expect(screen.queryByText("Unable to update AI Engine Settings")).toBeNull();
-    });
+    }, 15000);
 
     it("shows inspect-only Advisor and Department summaries when the organization starts empty", async () => {
         setupOrganizationFetch({

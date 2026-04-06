@@ -28,6 +28,14 @@ function anyTargetExists(paths: string[]) {
     return paths.some((candidate) => fs.existsSync(candidate));
 }
 
+function removeExistingTargets(paths: string[]) {
+    for (const candidate of paths) {
+        if (fs.existsSync(candidate)) {
+            fs.rmSync(candidate, { force: true });
+        }
+    }
+}
+
 type ChatEnvelope = {
     ok?: boolean;
     data?: {
@@ -174,26 +182,29 @@ test.describe('Soma governed mutation live contract', () => {
         const targetPaths = resolveBackendLogTargets(`qa_browser_cancel_${stamp}.py`);
         const organizationId = await createOrganization(page, `QA Scenario CD ${stamp}`);
         await openWorkspace(page, organizationId);
+        try {
+            const mutation = await submitWorkspaceChat(
+                page,
+                `Create a simple python file named workspace/logs/qa_browser_cancel_${stamp}.py that prints hello world.`,
+            );
 
-        const mutation = await submitWorkspaceChat(
-            page,
-            `Create a simple python file named workspace/logs/qa_browser_cancel_${stamp}.py that prints hello world.`,
-        );
+            expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
+            expect(mutation.body?.data?.mode).toBe('proposal');
+            expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
+            await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
+            expect(anyTargetExists(targetPaths)).toBeFalsy();
 
-        expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
-        expect(mutation.body?.data?.mode).toBe('proposal');
-        expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
-        await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
-        expect(anyTargetExists(targetPaths)).toBeFalsy();
+            await page.getByRole('button', { name: /^Cancel$/i }).click();
+            await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
+            expect(anyTargetExists(targetPaths)).toBeFalsy();
 
-        await page.getByRole('button', { name: /^Cancel$/i }).click();
-        await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
-        expect(anyTargetExists(targetPaths)).toBeFalsy();
-
-        await page.reload({ waitUntil: 'domcontentloaded' });
-        await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
-        await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
-        expect(anyTargetExists(targetPaths)).toBeFalsy();
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+            await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
+            expect(anyTargetExists(targetPaths)).toBeFalsy();
+        } finally {
+            removeExistingTargets(targetPaths);
+        }
     });
 
     test('Scenario E: confirm yields durable proof, executes after approval, and persists on reload', async ({ page }) => {
@@ -202,39 +213,42 @@ test.describe('Soma governed mutation live contract', () => {
         const targetPaths = resolveBackendLogTargets(`qa_browser_confirm_${stamp}.py`);
         const organizationId = await createOrganization(page, `QA Scenario E ${stamp}`);
         await openWorkspace(page, organizationId);
+        try {
+            const mutation = await submitWorkspaceChat(
+                page,
+                `Create a simple python file named workspace/logs/qa_browser_confirm_${stamp}.py that prints hello world.`,
+            );
 
-        const mutation = await submitWorkspaceChat(
-            page,
-            `Create a simple python file named workspace/logs/qa_browser_confirm_${stamp}.py that prints hello world.`,
-        );
+            expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
+            expect(mutation.body?.data?.mode).toBe('proposal');
+            expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
+            await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
+            expect(anyTargetExists(targetPaths)).toBeFalsy();
 
-        expect(mutation.response.ok(), mutation.body ? JSON.stringify(mutation.body) : mutation.raw).toBeTruthy();
-        expect(mutation.body?.data?.mode).toBe('proposal');
-        expect(mutation.body?.data?.payload?.ask_class).toBe('governed_mutation');
-        await expect(page.getByText('PROPOSED ACTION')).toBeVisible({ timeout: 30_000 });
-        expect(anyTargetExists(targetPaths)).toBeFalsy();
+            const confirmed = await waitForConfirmAction(page);
 
-        const confirmed = await waitForConfirmAction(page);
+            expect(confirmed.response.ok(), confirmed.body ? JSON.stringify(confirmed.body) : confirmed.raw).toBeTruthy();
+            expect(typeof confirmed.body?.data?.run_id).toBe('string');
+            expect((confirmed.body?.data?.run_id ?? '').trim().length).toBeGreaterThan(0);
+            expect(confirmed.body?.data?.verified).toBeTruthy();
+            expect(confirmed.body?.data?.execution_state).toBe('verified');
 
-        expect(confirmed.response.ok(), confirmed.body ? JSON.stringify(confirmed.body) : confirmed.raw).toBeTruthy();
-        expect(typeof confirmed.body?.data?.run_id).toBe('string');
-        expect((confirmed.body?.data?.run_id ?? '').trim().length).toBeGreaterThan(0);
-        expect(confirmed.body?.data?.verified).toBeTruthy();
-        expect(confirmed.body?.data?.execution_state).toBe('verified');
+            await expect
+                .poll(() => anyTargetExists(targetPaths), {
+                    timeout: 30_000,
+                    message: `expected one backend workspace target to exist after confirmation: ${targetPaths.join(', ')}`,
+                })
+                .toBeTruthy();
 
-        await expect
-            .poll(() => anyTargetExists(targetPaths), {
-                timeout: 30_000,
-                message: `expected one backend workspace target to exist after confirmation: ${targetPaths.join(', ')}`,
-            })
-            .toBeTruthy();
+            await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
 
-        await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
-        await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
-
-        await page.reload({ waitUntil: 'domcontentloaded' });
-        await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
-        await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
-        await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+            await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
+        } finally {
+            removeExistingTargets(targetPaths);
+        }
     });
 });

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import os
+import stat
 import shutil
+import time
+from contextlib import suppress
 from pathlib import Path
 
 from invoke import Collection, task
@@ -92,13 +95,39 @@ def _format_size(num_bytes: int) -> str:
 
 
 def _delete_path(path: Path) -> int:
+    def _handle_remove_error(function, target, excinfo):
+        error = excinfo[1] if isinstance(excinfo, tuple) else excinfo
+        if isinstance(error, FileNotFoundError):
+            return
+        if isinstance(error, PermissionError):
+            with suppress(OSError):
+                os.chmod(target, stat.S_IWRITE | stat.S_IREAD)
+            function(target)
+            return
+        raise error
+
     reclaimed = _path_size_bytes(path)
     if not path.exists():
         return reclaimed
     if path.is_file():
-        path.unlink()
+        try:
+            path.unlink()
+        except PermissionError:
+            with suppress(OSError):
+                os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+            path.unlink()
     else:
-        shutil.rmtree(path, ignore_errors=False)
+        attempts = 0
+        while True:
+            try:
+                shutil.rmtree(path, ignore_errors=False, onexc=_handle_remove_error)
+                break
+            except OSError as error:
+                if getattr(error, "winerror", None) == 145 and attempts < 2:
+                    attempts += 1
+                    time.sleep(0.2)
+                    continue
+                raise
     return reclaimed
 
 

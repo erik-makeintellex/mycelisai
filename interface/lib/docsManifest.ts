@@ -244,6 +244,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Canonical PRD for one persistent Soma/Council pair with scoped execution across contexts",
             },
             {
+                slug: "v8-multi-user-identity-soma-tenancy",
+                label: "V8 Multi-User Identity + Soma Tenancy",
+                path: "docs/architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md",
+                description: "Target contract for SAML/SSO, break-glass admins, modular IAM, and one shared Soma persona",
+            },
+            {
                 slug: "v8-home-docker-compose-runtime",
                 label: "V8 Home Docker Compose Runtime",
                 path: "docs/architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md",

@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: isStaticExport,
   },
+  experimental: {
+    cpus: 1,
+    staticGenerationMaxConcurrency: 1,
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost", "::1"],
   // Proxy /api/* and legacy admin paths to the Go backend.
   // Rewrites are not supported in static export mode.

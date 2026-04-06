@@ -1,4 +1,4 @@
-import json
+import csv
 import os
 import re
 import shutil
@@ -30,14 +30,20 @@ _INTERFACE_PROCESS_PATH_HINTS = tuple(
     for path in {
         INTERFACE_DIR / ".next",
         INTERFACE_DIR / "node_modules",
+        INTERFACE_DIR / "scripts",
         INTERFACE_DIR / "playwright-report",
         INTERFACE_DIR / "test-results",
     }
 )
 _INTERFACE_PROCESS_COMMAND_HINTS = (
     "/.next/dev/build/postcss.js",
+    "/.next/standalone/server.js",
     "/next/dist/bin/next",
+    "/next/dist/server/lib/start-server.js",
+    "/dist/server/lib/start-server.js",
     "./node_modules/next/dist/bin/next",
+    "/scripts/playwright-webserver.mjs",
+    "./scripts/playwright-webserver.mjs",
     "/node_modules/.bin/vitest",
     "./node_modules/.bin/vitest",
     "/node_modules/vitest/",
@@ -78,6 +84,19 @@ class CommandResult:
 def _is_next_build_lock_conflict(result: CommandResult) -> bool:
     text = _normalize_process_text(f"{result.stdout}\n{result.stderr}")
     return "unable to acquire lock at" in text and ".next/lock" in text
+
+
+def _is_incomplete_next_build_output(result: CommandResult) -> bool:
+    text = _normalize_process_text(f"{result.stdout}\n{result.stderr}")
+    if ".next/" not in text:
+        return False
+    incomplete_outputs = (
+        "required-server-files.json",
+        "build-manifest.json",
+        "pages-manifest.json",
+        ".nft.json",
+    )
+    return "enoent" in text and any(name in text for name in incomplete_outputs)
 
 
 def interface_task_env(extra=None):
@@ -231,29 +250,32 @@ def _list_repo_local_interface_processes() -> list[dict[str, str | int]]:
         if is_windows():
             result = subprocess.run(
                 [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    "Get-CimInstance Win32_Process -Filter \"Name = 'node.exe' OR Name = 'cmd.exe'\" | "
-                    "Select-Object ProcessId,Name,CommandLine | "
-                    "ConvertTo-Json -Compress",
+                    "wmic",
+                    "process",
+                    "where",
+                    "name='node.exe' or name='cmd.exe'",
+                    "get",
+                    "ProcessId,Name,CommandLine",
+                    "/format:csv",
                 ],
                 capture_output=True,
                 text=True,
-                timeout=20,
+                timeout=45,
             )
             if result.returncode != 0:
                 raise RuntimeError(result.stderr.strip() or "process query failed")
-            raw = result.stdout.strip()
+            raw = result.stdout.replace("\ufeff", "").strip()
             if not raw:
                 return []
-            payload = json.loads(raw)
-            rows = payload if isinstance(payload, list) else [payload]
+            rows = csv.DictReader(raw.splitlines())
             for row in rows:
-                pid = row.get("ProcessId")
+                pid_text = row.get("ProcessId") or ""
                 name = row.get("Name") or ""
                 command_line = row.get("CommandLine") or ""
-                if isinstance(pid, int) and _matches_repo_local_interface_process(name, command_line):
+                if not pid_text.isdigit():
+                    continue
+                pid = int(pid_text)
+                if _matches_repo_local_interface_process(name, command_line):
                     processes.append({"pid": pid, "name": name, "command": command_line})
             return processes
 
@@ -345,6 +367,21 @@ def _playwright_server_log_path() -> str:
     log_dir = ROOT_DIR / "workspace" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     return str(log_dir / "interface-playwright-webserver.log")
+
+
+def _cleanup_playwright_server_log(max_attempts: int = 10, retry_delay_seconds: float = 0.2) -> None:
+    log_path = Path(_playwright_server_log_path())
+    for attempt in range(max_attempts):
+        try:
+            log_path.unlink()
+            return
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            if attempt == max_attempts - 1:
+                print("  WARN: managed Playwright server log is still busy; leaving it in place.")
+                return
+            time.sleep(retry_delay_seconds)
 
 
 def _detect_playwright_server_port(expected_port: int, timeout_seconds: int = 30) -> int:
@@ -449,7 +486,6 @@ def _next_dev_command(bind_host: str, port: int) -> list[str]:
         "node",
         str((INTERFACE_DIR / "node_modules" / "next" / "dist" / "bin" / "next").resolve()),
         "dev",
-        "--webpack",
         "--hostname",
         bind_host,
         "--port",
@@ -458,15 +494,8 @@ def _next_dev_command(bind_host: str, port: int) -> list[str]:
 
 
 def _next_start_command(bind_host: str, port: int) -> list[str]:
-    return [
-        "node",
-        str((INTERFACE_DIR / "node_modules" / "next" / "dist" / "bin" / "next").resolve()),
-        "start",
-        "--hostname",
-        bind_host,
-        "--port",
-        str(port),
-    ]
+    del bind_host, port
+    return ["node", str((INTERFACE_DIR / "scripts" / "playwright-webserver.mjs").resolve())]
 
 
 def _spawn_interface_process(
@@ -507,15 +536,17 @@ def _start_playwright_server(
     log_path = _playwright_server_log_path()
     log_handle = open(log_path, "w", encoding="utf-8")
     bind_host = env.get("INTERFACE_BIND_HOST", INTERFACE_BIND_HOST)
-    command = (
-        _next_start_command(bind_host, port)
-        if server_mode == "start"
-        else _next_dev_command(bind_host, port)
-    )
+    command_env = dict(env)
+    if server_mode == "start":
+        command_env["PORT"] = str(port)
+        command_env["HOSTNAME"] = bind_host
+        command = _next_start_command(bind_host, port)
+    else:
+        command = _next_dev_command(bind_host, port)
     try:
         process = _spawn_interface_process(
             command,
-            env,
+            command_env,
             stdout=log_handle,
             stderr=subprocess.STDOUT,
             detached=True,
@@ -628,6 +659,7 @@ def build(c):
     stop(c)
     clean(c)
     _cleanup_repo_local_interface_processes()
+    build_succeeded = False
     try:
         result = _run_interface_shell_command(["npm", "run", "build"])
         _report_command_result(result)
@@ -638,10 +670,22 @@ def build(c):
             _cleanup_repo_local_interface_processes()
             result = _run_interface_shell_command(["npm", "run", "build"])
             _report_command_result(result)
+        if result.exited != 0 and _is_incomplete_next_build_output(result):
+            print("Detected incomplete built-server output during Next.js packaging. Cleaning repo-local Interface workers and retrying once...")
+            _cleanup_repo_local_interface_processes()
+            clean(c)
+            _cleanup_repo_local_interface_processes()
+            result = _run_interface_shell_command(["npm", "run", "build"])
+            _report_command_result(result)
         if result.exited != 0:
             raise SystemExit(result.exited)
+        build_succeeded = True
     finally:
-        _cleanup_repo_local_interface_processes()
+        # On Windows, successful Next builds can still finalize the static asset
+        # tree after the main command exits. Sweeping repo-local node helpers
+        # immediately here can leave a partial `.next/static` tree behind.
+        if not build_succeeded:
+            _cleanup_repo_local_interface_processes()
 
 @task
 def lint(c):
@@ -700,6 +744,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
         build(c)
     print(f"Using managed Interface port {chosen_port}")
     server: subprocess.Popen[str] | None = None
+    keep_server_log = False
     try:
         server = _start_playwright_server(env, port=chosen_port, server_mode=server_mode)
         env, chosen_port = _reconcile_managed_server_endpoint(env, chosen_port, server)
@@ -708,6 +753,9 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
         _print_ascii_safe(result.stderr)
         if result.exited != 0:
             raise SystemExit(result.exited)
+    except BaseException:
+        keep_server_log = True
+        raise
     finally:
         if server is not None and server.poll() is None:
             _kill_pid_tree(server.pid)
@@ -716,6 +764,8 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
                 server.wait(timeout=5)
         stop(c)
         _cleanup_repo_local_interface_processes()
+        if not keep_server_log:
+            _cleanup_playwright_server_log()
 
 # ── Process Management ───────────────────────────────────────
 
