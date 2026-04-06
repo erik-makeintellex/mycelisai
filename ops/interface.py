@@ -739,6 +739,8 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     chosen_port = _pick_interface_port(INTERFACE_PORT)
     env = _build_playwright_env(live_backend=live_backend, port=chosen_port)
     stop(c)
+    if chosen_port != INTERFACE_PORT:
+        stop(c, port=chosen_port)
     if server_mode == "start":
         print("Refreshing built Interface bundle for managed start-mode browser proof...")
         build(c)
@@ -762,7 +764,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
             time.sleep(0.5)
             with suppress(Exception):
                 server.wait(timeout=5)
-        stop(c)
+        stop(c, port=chosen_port)
         _cleanup_repo_local_interface_processes()
         if not keep_server_log:
             _cleanup_playwright_server_log()

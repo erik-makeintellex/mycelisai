@@ -459,6 +459,58 @@ def test_e2e_dev_mode_skips_build(monkeypatch):
     ]
 
 
+def test_e2e_cleans_dynamic_managed_port_before_and_after_run(monkeypatch):
+    ctx = FakeContext()
+    events: list[str] = []
+
+    class FakeServer:
+        pid = 8181
+
+        @staticmethod
+        def poll():
+            return None
+
+    monkeypatch.setattr(interface, "INTERFACE_PORT", 3000)
+    monkeypatch.setattr(interface, "_pick_interface_port", lambda preferred=interface.INTERFACE_PORT: 4316)
+    monkeypatch.setattr(
+        interface,
+        "_task_env",
+        lambda extra=None: {
+            "PLAYWRIGHT_SKIP_WEBSERVER": extra["PLAYWRIGHT_SKIP_WEBSERVER"],
+            "INTERFACE_HOST": extra["INTERFACE_HOST"],
+            "INTERFACE_BIND_HOST": extra["INTERFACE_BIND_HOST"],
+        },
+    )
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: events.append(f"stop:{port}"))
+    monkeypatch.setattr(
+        interface,
+        "_wait_for_interface_ready",
+        lambda host="127.0.0.1", port=interface.INTERFACE_PORT, timeout_seconds=120, process=None: "127.0.0.1",
+    )
+    monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+    monkeypatch.setattr(interface, "_start_playwright_server", lambda env, port=interface.INTERFACE_PORT, server_mode="start": FakeServer())
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: interface.CommandResult(exited=0, stdout="", stderr=""),
+    )
+
+    interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts", server_mode="dev")
+
+    assert events == [
+        "stop:3000",
+        "stop:4316",
+        "kill:8181",
+        "stop:4316",
+        "cleanup",
+        "cleanup-log",
+    ]
+
+
 def test_e2e_keeps_playwright_server_log_on_failure(monkeypatch):
     ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult(exited=1)})
     events: list[str] = []
