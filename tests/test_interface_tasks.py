@@ -205,6 +205,46 @@ def test_build_retries_once_after_incomplete_next_build_output(monkeypatch):
     assert shell_calls == [["npm", "run", "build"], ["npm", "run", "build"]]
 
 
+def test_wait_for_complete_next_build_output_accepts_present_manifest_artifacts(monkeypatch, tmp_path):
+    next_dir = tmp_path / ".next"
+    static_dir = next_dir / "static" / "chunks"
+    static_dir.mkdir(parents=True)
+    (next_dir / "required-server-files.json").write_text("{}", encoding="utf-8")
+    (next_dir / "build-manifest.json").write_text(
+        '{"polyfillFiles":["static/chunks/polyfills.js"],"lowPriorityFiles":["static/build/_buildManifest.js"],"rootMainFiles":["static/chunks/main.js"],"pages":{"/_app":["static/chunks/app.js"]}}',
+        encoding="utf-8",
+    )
+    (next_dir / "static" / "chunks" / "polyfills.js").write_text("", encoding="utf-8")
+    (next_dir / "static" / "chunks" / "main.js").write_text("", encoding="utf-8")
+    (next_dir / "static" / "chunks" / "app.js").write_text("", encoding="utf-8")
+    (next_dir / "static" / "build").mkdir(parents=True)
+    (next_dir / "static" / "build" / "_buildManifest.js").write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(interface, "INTERFACE_DIR", tmp_path)
+
+    interface._wait_for_complete_next_build_output(timeout_seconds=1)
+
+
+def test_wait_for_complete_next_build_output_reports_missing_manifest_artifacts(monkeypatch, tmp_path):
+    next_dir = tmp_path / ".next"
+    next_dir.mkdir(parents=True)
+    (next_dir / "required-server-files.json").write_text("{}", encoding="utf-8")
+    (next_dir / "build-manifest.json").write_text(
+        '{"rootMainFiles":["static/chunks/main.js"]}',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(interface, "INTERFACE_DIR", tmp_path)
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+
+    try:
+        interface._wait_for_complete_next_build_output(timeout_seconds=1)
+    except RuntimeError as exc:
+        assert "main.js" in str(exc)
+    else:
+        raise AssertionError("expected incomplete build output failure")
+
+
 def test_clean_ignores_missing_files_during_rmtree(monkeypatch):
     removed: list[str] = []
 
@@ -407,7 +447,7 @@ def test_start_playwright_server_sets_standalone_host_and_port(monkeypatch, tmp_
     assert captured["command"] == ["node", str((interface.INTERFACE_DIR / "scripts" / "playwright-webserver.mjs").resolve())]
     assert captured["env"]["HOSTNAME"] == "::1"
     assert captured["env"]["PORT"] == "4314"
-    assert captured["detached"] is True
+    assert captured["detached"] is False
 
 
 def test_e2e_dev_mode_skips_build(monkeypatch):
@@ -690,6 +730,27 @@ def test_wait_for_interface_ready_fails_when_managed_server_exits(monkeypatch):
         assert "4310" in str(exc)
     else:
         raise AssertionError("expected managed server startup failure")
+
+
+def test_wait_for_interface_ready_prefers_reachable_port_over_exited_parent(monkeypatch):
+    class FakeServer:
+        @staticmethod
+        def poll():
+            return 1
+
+    class FakeHTTPResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+    monkeypatch.setattr(interface.urllib.request, "urlopen", lambda url, timeout=5: FakeHTTPResponse())
+
+    assert interface._wait_for_interface_ready("127.0.0.1", 4310, timeout_seconds=1, process=FakeServer()) == "127.0.0.1"
 
 
 def test_check_does_not_treat_plain_html_words_as_hydration_failure(monkeypatch, capsys):

@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import re
 import shutil
@@ -97,6 +98,45 @@ def _is_incomplete_next_build_output(result: CommandResult) -> bool:
         ".nft.json",
     )
     return "enoent" in text and any(name in text for name in incomplete_outputs)
+
+
+def _expected_next_build_artifacts() -> list[Path]:
+    next_dir = INTERFACE_DIR / ".next"
+    build_manifest_path = next_dir / "build-manifest.json"
+    required_server_files_path = next_dir / "required-server-files.json"
+    artifacts = [build_manifest_path, required_server_files_path]
+    if not build_manifest_path.exists():
+        return artifacts
+
+    payload = json.loads(build_manifest_path.read_text(encoding="utf-8"))
+    manifest_entries: list[str] = []
+    manifest_entries.extend(payload.get("polyfillFiles", []))
+    manifest_entries.extend(payload.get("lowPriorityFiles", []))
+    manifest_entries.extend(payload.get("rootMainFiles", []))
+    for page_entries in payload.get("pages", {}).values():
+        manifest_entries.extend(page_entries or [])
+
+    seen: set[Path] = set()
+    for relative_path in manifest_entries:
+        artifact_path = next_dir / str(relative_path).replace("/", os.sep)
+        if artifact_path not in seen:
+            artifacts.append(artifact_path)
+            seen.add(artifact_path)
+
+    return artifacts
+
+
+def _wait_for_complete_next_build_output(timeout_seconds: int = 20) -> None:
+    deadline = time.time() + timeout_seconds
+    missing: list[Path] = []
+    while time.time() < deadline:
+        missing = [path for path in _expected_next_build_artifacts() if not path.exists()]
+        if not missing:
+            return
+        time.sleep(0.5)
+
+    missing_preview = ", ".join(str(path.relative_to(INTERFACE_DIR)) for path in missing[:6])
+    raise RuntimeError(f"Incomplete Next.js build output after successful build command: {missing_preview}")
 
 
 def interface_task_env(extra=None):
@@ -549,7 +589,7 @@ def _start_playwright_server(
             command_env,
             stdout=log_handle,
             stderr=subprocess.STDOUT,
-            detached=True,
+            detached=False,
         )
         log_handle.close()
         return process
@@ -607,12 +647,10 @@ def _wait_for_interface_ready(
     urls = _interface_ready_urls(host, port)
     deadline = time.time() + timeout_seconds
     last_error = "server did not respond"
+    process_exited_early = False
     while time.time() < deadline:
         if process is not None and process.poll() is not None:
-            raise RuntimeError(
-                f"Managed Interface server exited before it became ready on port {port}. "
-                f"See {_playwright_server_log_path()} for server output."
-            )
+            process_exited_early = True
         for url in urls:
             try:
                 with urllib.request.urlopen(url, timeout=5) as response:
@@ -626,6 +664,12 @@ def _wait_for_interface_ready(
             except Exception as exc:  # pragma: no cover - exercised via timeout path in task flow
                 last_error = f"{url}: {exc}"
         time.sleep(1)
+
+    if process_exited_early:
+        raise RuntimeError(
+            f"Managed Interface server exited before it became ready on port {port}. "
+            f"See {_playwright_server_log_path()} for server output."
+        )
 
     raise RuntimeError(
         f"Interface did not become ready at any of {', '.join(urls)} within {timeout_seconds}s. "
@@ -679,6 +723,18 @@ def build(c):
             _report_command_result(result)
         if result.exited != 0:
             raise SystemExit(result.exited)
+        try:
+            _wait_for_complete_next_build_output()
+        except RuntimeError:
+            print("Detected incomplete built-server output after the build command exited. Cleaning and retrying once...")
+            _cleanup_repo_local_interface_processes()
+            clean(c)
+            _cleanup_repo_local_interface_processes()
+            result = _run_interface_shell_command(["npm", "run", "build"])
+            _report_command_result(result)
+            if result.exited != 0:
+                raise SystemExit(result.exited)
+            _wait_for_complete_next_build_output()
         build_succeeded = True
     finally:
         # On Windows, successful Next builds can still finalize the static asset
