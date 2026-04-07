@@ -3,6 +3,7 @@ import subprocess
 import time
 import json
 from pathlib import Path
+from typing import Callable
 
 from invoke import task, Collection
 
@@ -84,13 +85,27 @@ def _validate_compose_env(env_values: dict[str, str]):
         )
 
 
+def _print_step(step: int, total: int, title: str, expectation: str | None = None):
+    print(f"[{step}/{total}] {title}")
+    if expectation:
+        print(f"  Expect: {expectation}")
+
+
+def _failure_guidance(message: str, *next_steps: str) -> str:
+    lines = [message]
+    if next_steps:
+        lines.append("Next steps:")
+        lines.extend(f"- {step}" for step in next_steps)
+    return "\n".join(lines)
+
+
 def _wait_for_port(port: int, label: str, timeout_seconds: int = 60) -> bool:
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         if _port_open(port):
             return True
         time.sleep(1)
-    print(f"  TIMEOUT waiting for {label} on localhost:{port}")
+    print(f"  TIMEOUT waiting for {label} on localhost:{port} after {timeout_seconds}s")
     return False
 
 
@@ -115,7 +130,7 @@ def _wait_for_http_ok(url: str, label: str, timeout_seconds: int = 60, headers: 
         if status == 200:
             return True
         time.sleep(1)
-    print(f"  TIMEOUT waiting for {label} at {url}")
+    print(f"  TIMEOUT waiting for {label} at {url} after {timeout_seconds}s")
     return False
 
 
@@ -128,6 +143,18 @@ def _run_compose(args: list[str], check: bool = True) -> subprocess.CompletedPro
     if check and result.returncode != 0:
         raise SystemExit(f"Compose command failed: {' '.join(args)}")
     return result
+
+
+def _expect_stage(
+    check: Callable[..., bool],
+    *args,
+    failure: str,
+    next_steps: list[str],
+    **kwargs,
+):
+    if check(*args, **kwargs):
+        return
+    raise SystemExit(_failure_guidance(failure, *next_steps))
 
 
 def _compose_query_succeeds(sql: str) -> bool:
@@ -220,49 +247,148 @@ def _wait_for_postgres_ready(timeout_seconds: int = 90) -> bool:
     return False
 
 
-@task(help={"build": "Build the core/interface images during bring-up (default: False)."})
-def up(c, build=False):
+@task(
+    help={
+        "build": "Build the core/interface images during bring-up (default: False).",
+        "wait_timeout": "Seconds to wait for each bring-up readiness phase (default: 180).",
+    }
+)
+def up(c, build=False, wait_timeout=180):
     """Bring up the home-runtime Docker Compose stack with managed ordering."""
     del c
     _require_compose_env_file()
     env_values = _load_compose_env()
     _validate_compose_env(env_values)
+    wait_timeout = int(wait_timeout)
+    if wait_timeout < 30:
+        raise SystemExit("Compose up wait timeout must be at least 30 seconds.")
 
     print("=== Mycelis Compose Up ===\n")
-    print("[1/4] Starting PostgreSQL and NATS...")
+    _print_step(
+        1,
+        4,
+        "Starting PostgreSQL and NATS...",
+        (
+            "Docker should start the infra containers first. With --build, image preparation can take "
+            "several minutes before readiness checks begin."
+        ),
+    )
     infra_cmd = _compose_command("up", "-d")
     if build:
         infra_cmd.append("--build")
     infra_cmd.extend(["postgres", "nats"])
     _run_compose(infra_cmd)
 
-    if not _wait_for_port(5432, "PostgreSQL"):
-        raise SystemExit("Compose up failed: PostgreSQL did not become reachable.")
-    if not _wait_for_postgres_ready():
-        raise SystemExit("Compose up failed: PostgreSQL did not become query-ready.")
-    if not _wait_for_port(4222, "NATS"):
-        raise SystemExit("Compose up failed: NATS did not become reachable.")
+    _expect_stage(
+        _wait_for_port,
+        5432,
+        "PostgreSQL",
+        timeout_seconds=wait_timeout,
+        failure=f"Compose up failed: PostgreSQL did not become reachable within {wait_timeout}s.",
+        next_steps=[
+            "Run 'uv run inv compose.status' to inspect container state and host ports.",
+            "Run 'uv run inv compose.logs postgres' for PostgreSQL startup logs.",
+            "Use 'uv run inv compose.down --volumes' if you need a fully fresh rebuild.",
+        ],
+    )
+    _expect_stage(
+        _wait_for_postgres_ready,
+        timeout_seconds=max(wait_timeout, 90),
+        failure=f"Compose up failed: PostgreSQL did not become query-ready within {max(wait_timeout, 90)}s.",
+        next_steps=[
+            "Run 'uv run inv compose.logs postgres' to inspect readiness or migration errors.",
+            "Verify the local PostgreSQL port is not already occupied by another service.",
+        ],
+    )
+    _expect_stage(
+        _wait_for_port,
+        4222,
+        "NATS",
+        timeout_seconds=wait_timeout,
+        failure=f"Compose up failed: NATS did not become reachable within {wait_timeout}s.",
+        next_steps=[
+            "Run 'uv run inv compose.status' to confirm the NATS container is up.",
+            "Run 'uv run inv compose.logs nats' for broker startup details.",
+        ],
+    )
 
-    print("\n[2/4] Applying canonical migrations through the PostgreSQL container...")
+    print()
+    _print_step(
+        2,
+        4,
+        "Applying canonical migrations through the PostgreSQL container...",
+        "Schema bootstrap may skip replay when the compose database is already compatible with the current runtime.",
+    )
     _run_compose_migrations()
 
-    print("\n[3/4] Starting Core and Interface...")
+    print()
+    _print_step(
+        3,
+        4,
+        "Starting Core and Interface...",
+        (
+            "Core should answer /healthz and the frontend root should load. With --build, app image creation can "
+            "take several additional minutes before the HTTP checks pass."
+        ),
+    )
     app_cmd = _compose_command("up", "-d")
     if build:
         app_cmd.append("--build")
     app_cmd.extend(["core", "interface"])
     _run_compose(app_cmd)
 
-    if not _wait_for_port(API_PORT, "Core API"):
-        raise SystemExit("Compose up failed: Core API port did not open.")
-    if not _wait_for_http_ok(f"http://{API_HOST}:{API_PORT}/healthz", "Core health"):
-        raise SystemExit("Compose up failed: Core /healthz did not become ready.")
-    if not _wait_for_port(INTERFACE_PORT, "Frontend"):
-        raise SystemExit("Compose up failed: Frontend port did not open.")
-    if not _wait_for_http_ok(f"http://{INTERFACE_HOST}:{INTERFACE_PORT}/", "Frontend"):
-        raise SystemExit("Compose up failed: Frontend root did not become ready.")
+    _expect_stage(
+        _wait_for_port,
+        API_PORT,
+        "Core API",
+        timeout_seconds=wait_timeout,
+        failure=f"Compose up failed: Core API port did not open within {wait_timeout}s.",
+        next_steps=[
+            "Run 'uv run inv compose.logs core' to inspect backend startup output.",
+            "Run 'uv run inv compose.health' after fixing backend readiness to verify the runtime contract.",
+        ],
+    )
+    _expect_stage(
+        _wait_for_http_ok,
+        f"http://{API_HOST}:{API_PORT}/healthz",
+        "Core health",
+        timeout_seconds=wait_timeout,
+        failure=f"Compose up failed: Core /healthz did not become ready within {wait_timeout}s.",
+        next_steps=[
+            "Run 'uv run inv compose.logs core' to inspect healthz startup failures.",
+            "Check provider and database configuration in '.env.compose' if Core stays unhealthy.",
+        ],
+    )
+    _expect_stage(
+        _wait_for_port,
+        INTERFACE_PORT,
+        "Frontend",
+        timeout_seconds=wait_timeout,
+        failure=f"Compose up failed: Frontend port did not open within {wait_timeout}s.",
+        next_steps=[
+            "Run 'uv run inv compose.logs interface' to inspect frontend startup output.",
+            "Verify the host port is not already in use by another local UI server.",
+        ],
+    )
+    _expect_stage(
+        _wait_for_http_ok,
+        f"http://{INTERFACE_HOST}:{INTERFACE_PORT}/",
+        "Frontend",
+        timeout_seconds=wait_timeout,
+        failure=f"Compose up failed: Frontend root did not become ready within {wait_timeout}s.",
+        next_steps=[
+            "Run 'uv run inv compose.logs interface' for frontend build or startup failures.",
+            "Run 'uv run inv compose.status' to confirm the UI container is still running.",
+        ],
+    )
 
-    print("\n[4/4] Compose stack ready.")
+    print()
+    _print_step(
+        4,
+        4,
+        "Compose stack ready.",
+        "Next expected checks: 'uv run inv compose.health' for deep runtime proof, then open http://localhost:3000.",
+    )
     status.body(None)
 
 

@@ -156,7 +156,7 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
     )
     monkeypatch.setattr(compose.status, "body", lambda _c=None: waits.append(("status", 0)))
 
-    compose.up.body(None, build=False)
+    compose.up.body(None, build=False, wait_timeout=180)
 
     assert commands == [
         compose._compose_command("up", "-d", "postgres", "nats"),
@@ -164,7 +164,7 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
     ]
     assert waits == [
         ("PostgreSQL", 5432),
-        ("PostgreSQL ready", 90),
+        ("PostgreSQL ready", 180),
         ("NATS", 4222),
         ("migrate", 0),
         ("Core API", compose.API_PORT),
@@ -173,6 +173,61 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
         ("Frontend", f"http://{compose.INTERFACE_HOST}:{compose.INTERFACE_PORT}/"),
         ("status", 0),
     ]
+
+
+def test_compose_up_rejects_tiny_wait_timeout(monkeypatch):
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+
+    with pytest.raises(SystemExit) as excinfo:
+        compose.up.body(None, wait_timeout=29)
+
+    assert "at least 30 seconds" in str(excinfo.value)
+
+
+def test_compose_up_postgres_timeout_has_guidance(monkeypatch):
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(
+        compose,
+        "_run_compose",
+        lambda args, check=True: type("Result", (), {"returncode": 0})(),
+    )
+    monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: False)
+
+    with pytest.raises(SystemExit) as excinfo:
+        compose.up.body(None, wait_timeout=120)
+
+    message = str(excinfo.value)
+    assert "PostgreSQL did not become reachable within 120s" in message
+    assert "compose.logs postgres" in message
+    assert "compose.down --volumes" in message
+
+
+def test_compose_up_prints_expectations(monkeypatch, capsys):
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(
+        compose,
+        "_run_compose",
+        lambda args, check=True: type("Result", (), {"returncode": 0})(),
+    )
+    monkeypatch.setattr(compose, "_run_compose_migrations", lambda: None)
+    monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: True)
+    monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90: True)
+    monkeypatch.setattr(compose, "_wait_for_http_ok", lambda url, label, timeout_seconds=60, headers=None: True)
+    monkeypatch.setattr(compose.status, "body", lambda _c=None: None)
+
+    compose.up.body(None, build=True, wait_timeout=240)
+
+    out = capsys.readouterr().out
+    assert "[1/4] Starting PostgreSQL and NATS..." in out
+    assert "With --build, image preparation can take several minutes" in out
+    assert "[4/4] Compose stack ready." in out
+    assert "uv run inv compose.health" in out
 
 
 def test_compose_down_forwards_volumes_flag(monkeypatch):

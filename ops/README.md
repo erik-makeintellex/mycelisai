@@ -51,7 +51,7 @@ Handles the atomic deployment to Kubernetes (Kind).
 
 ### `compose.py` (Home Runtime)
 Handles the supported Docker Compose single-host runtime for home-lab and demo use.
-- **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface)
+- **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface, with numbered stage output and optional `--wait-timeout=<seconds>`)
 - Compose `up` and `migrate` now behave like the main `db.migrate` contract: they bootstrap forward only when the compose `cortex` schema is not already compatible with the current runtime, and they point to `uv run inv compose.down --volumes` for a truly fresh replay.
 - **Down**: `uv run inv compose.down`
 - **Health**: `uv run inv compose.health`
@@ -60,6 +60,8 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 - Compose uses `.env.compose` so host/container assumptions stay separate from the Kind/bridge `.env` path.
 - Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally.
 - Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.
+- Compose now emits deterministic stage expectations and timeout guidance so humans and agent-run callers can tell what should happen next and which recovery command to run if a stage stalls.
+- Use `uv run inv compose.up --build --wait-timeout=240` on a fresh or slower machine when image build and first readiness can legitimately take longer than the default window.
 - `compose.health` is a usable-product gate for the home runtime, so it fails when text inference is offline even if the API still responds.
 - The slim compose Core image disables default npm-backed MCP auto-bootstrap by default to keep startup logs honest; manual/external MCP connectivity remains supported.
 
