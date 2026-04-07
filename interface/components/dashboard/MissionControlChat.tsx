@@ -938,6 +938,8 @@ export default function MissionControlChat({
     const councilMembers = useCortexStore((s) => s.councilMembers);
     const setCouncilTarget = useCortexStore((s) => s.setCouncilTarget);
     const fetchCouncilMembers = useCortexStore((s) => s.fetchCouncilMembers);
+    const selectedTeamId = useCortexStore((s) => s.selectedTeamId);
+    const teamsDetail = useCortexStore((s) => s.teamsDetail);
 
     const [input, setInput] = useState("");
     const [broadcastMode, setBroadcastMode] = useState(false);
@@ -946,6 +948,17 @@ export default function MissionControlChat({
     const inputRef = useRef<HTMLInputElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const showAdvancedRouting = !simpleMode;
+    const currentTeam = selectedTeamId
+        ? teamsDetail.find((team) => team.id === selectedTeamId) ?? null
+        : null;
+    const starterPrompts = currentTeam
+        ? [
+            `Plan the next move for ${currentTeam.name}`,
+            `Review the current state of ${currentTeam.name}`,
+            `Run a governed change for ${currentTeam.name}`,
+            `Summarize ${currentTeam.name} in one sentence`,
+        ]
+        : [...STARTER_PROMPTS];
 
     const isLoading = isMissionChatting || isBroadcasting;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
@@ -1126,13 +1139,15 @@ export default function MissionControlChat({
                                     ? "Broadcast directives to all active teams"
                                     : showAdvancedRouting && directTarget
                                     ? `Direct message to ${councilLabel(directTarget, assistantName).name}...`
+                                    : currentTeam
+                                    ? `Tell ${assistantName} what you want to plan, review, create, or execute for ${currentTeam.name}.`
                                     : `Tell ${assistantName} what you want to plan, review, create, or execute.`}
                             </p>
                             {simpleMode ? (
                                 <div className="mt-4 space-y-2">
                                     <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Choose a starter prompt</p>
                                     <div className="flex flex-wrap justify-center gap-2">
-                                        {STARTER_PROMPTS.map((hint) => (
+                                        {starterPrompts.map((hint) => (
                                             <button
                                                 key={hint}
                                                 type="button"
@@ -1195,6 +1210,8 @@ export default function MissionControlChat({
                                 ? "Broadcast to all teams..."
                                 : showAdvancedRouting && directTarget
                                 ? `Direct to ${councilLabel(directTarget, assistantName).name}... (or /all to broadcast)`
+                                : currentTeam
+                                ? `Ask ${assistantName} about ${currentTeam.name}...`
                                 : simpleMode
                                 ? `Tell ${assistantName} what you want to plan, review, create, or execute`
                                 : `Ask ${assistantName}... (or /all to broadcast)`

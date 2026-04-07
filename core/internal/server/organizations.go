@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 	"unicode"
 
 	"github.com/google/uuid"
@@ -26,6 +27,8 @@ const (
 
 type OrganizationAIEngineProfileID string
 type ResponseContractProfileID string
+type OrganizationOutputModelRoutingMode string
+type OrganizationOutputTypeID string
 
 const (
 	OrganizationAIEngineProfileStarterDefaults OrganizationAIEngineProfileID = "starter_defaults"
@@ -33,6 +36,18 @@ const (
 	OrganizationAIEngineProfileHighReasoning   OrganizationAIEngineProfileID = "high_reasoning"
 	OrganizationAIEngineProfileFastLightweight OrganizationAIEngineProfileID = "fast_lightweight"
 	OrganizationAIEngineProfileDeepPlanning    OrganizationAIEngineProfileID = "deep_planning"
+)
+
+const (
+	OrganizationOutputModelRoutingModeSingleModel         OrganizationOutputModelRoutingMode = "single_model"
+	OrganizationOutputModelRoutingModeDetectedOutputTypes OrganizationOutputModelRoutingMode = "detected_output_types"
+)
+
+const (
+	OrganizationOutputTypeGeneralText       OrganizationOutputTypeID = "general_text"
+	OrganizationOutputTypeResearchReasoning OrganizationOutputTypeID = "research_reasoning"
+	OrganizationOutputTypeCodeGeneration    OrganizationOutputTypeID = "code_generation"
+	OrganizationOutputTypeVisionAnalysis    OrganizationOutputTypeID = "vision_analysis"
 )
 
 const (
@@ -70,6 +85,42 @@ type OrganizationAgentTypeProfileSummary struct {
 	ResponseContractEffectiveProfileID string `json:"response_contract_effective_profile_id,omitempty"`
 	ResponseContractEffectiveSummary   string `json:"response_contract_effective_summary"`
 	InheritsDefaultResponseContract    bool   `json:"inherits_default_response_contract"`
+	OutputTypeID                       string `json:"output_type_id,omitempty"`
+	OutputTypeLabel                    string `json:"output_type_label,omitempty"`
+	OutputModelEffectiveID             string `json:"output_model_effective_id,omitempty"`
+	OutputModelEffectiveSummary        string `json:"output_model_effective_summary,omitempty"`
+	InheritsDefaultOutputModel         bool   `json:"inherits_default_output_model"`
+}
+
+type OrganizationOutputModelBinding struct {
+	OutputTypeID    string `json:"output_type_id"`
+	OutputTypeLabel string `json:"output_type_label"`
+	ModelID         string `json:"model_id,omitempty"`
+	ModelSummary    string `json:"model_summary"`
+}
+
+type OrganizationOutputModelCatalogEntry struct {
+	ModelID        string   `json:"model_id"`
+	Label          string   `json:"label"`
+	Summary        string   `json:"summary"`
+	OutputTypeIDs  []string `json:"output_type_ids,omitempty"`
+	ProviderID     string   `json:"provider_id,omitempty"`
+	Installed      bool     `json:"installed"`
+	Popular        bool     `json:"popular"`
+	SelfHostable   bool     `json:"self_hostable"`
+	HostingFit     string   `json:"hosting_fit,omitempty"`
+	PopularityNote string   `json:"popularity_note,omitempty"`
+	Source         string   `json:"source,omitempty"`
+}
+
+type OrganizationOutputModelRoutingPayload struct {
+	RoutingMode         string                                `json:"routing_mode"`
+	DefaultModelID      string                                `json:"default_model_id,omitempty"`
+	DefaultModelSummary string                                `json:"default_model_summary"`
+	Bindings            []OrganizationOutputModelBinding      `json:"bindings,omitempty"`
+	AvailableModels     []OrganizationOutputModelCatalogEntry `json:"available_models,omitempty"`
+	RecommendedModels   []OrganizationOutputModelCatalogEntry `json:"recommended_models,omitempty"`
+	HardwareSummary     string                                `json:"hardware_summary"`
 }
 
 type OrganizationDepartmentSummary struct {
@@ -115,13 +166,17 @@ type OrganizationSummary struct {
 	ResponseContractProfileID string                `json:"response_contract_profile_id,omitempty"`
 	ResponseContractSummary   string                `json:"response_contract_summary"`
 	MemoryPersonalitySummary  string                `json:"memory_personality_summary"`
+	OutputModelRoutingMode    string                `json:"output_model_routing_mode,omitempty"`
+	DefaultOutputModelID      string                `json:"default_output_model_id,omitempty"`
+	DefaultOutputModelSummary string                `json:"default_output_model_summary,omitempty"`
 	Status                    string                `json:"status"`
 }
 
 type OrganizationHomePayload struct {
 	OrganizationSummary
-	Description string                          `json:"description,omitempty"`
-	Departments []OrganizationDepartmentSummary `json:"departments,omitempty"`
+	Description         string                           `json:"description,omitempty"`
+	Departments         []OrganizationDepartmentSummary  `json:"departments,omitempty"`
+	OutputModelBindings []OrganizationOutputModelBinding `json:"output_model_bindings,omitempty"`
 }
 
 type TeamLeadGuidedAction string
@@ -163,6 +218,18 @@ type AgentTypeResponseContractUpdateRequest struct {
 	UseOrganizationOrTeamDefault bool   `json:"use_organization_or_team_default,omitempty"`
 }
 
+type OrganizationOutputModelRoutingUpdateRequest struct {
+	RoutingMode    string                                        `json:"routing_mode"`
+	DefaultModelID string                                        `json:"default_model_id,omitempty"`
+	Bindings       []OrganizationOutputModelBindingUpdateRequest `json:"bindings,omitempty"`
+}
+
+type OrganizationOutputModelBindingUpdateRequest struct {
+	OutputTypeID           string `json:"output_type_id"`
+	ModelID                string `json:"model_id,omitempty"`
+	UseOrganizationDefault bool   `json:"use_organization_default,omitempty"`
+}
+
 type ResponseContractUpdateRequest struct {
 	ProfileID string `json:"profile_id"`
 }
@@ -175,6 +242,60 @@ type TeamLeadGuidanceResponse struct {
 	PrioritySteps      []string                   `json:"priority_steps"`
 	SuggestedFollowUps []string                   `json:"suggested_follow_ups"`
 	ExecutionContract  *TeamLeadExecutionContract `json:"execution_contract,omitempty"`
+}
+
+type outputModelCatalogSeed struct {
+	ModelID        string
+	Label          string
+	Summary        string
+	OutputTypeIDs  []OrganizationOutputTypeID
+	Popular        bool
+	HostingFit     string
+	PopularityNote string
+}
+
+var defaultOrganizationOutputModelBindings = []OrganizationOutputModelBinding{
+	{OutputTypeID: string(OrganizationOutputTypeGeneralText), OutputTypeLabel: "General text", ModelID: "qwen3:8b"},
+	{OutputTypeID: string(OrganizationOutputTypeResearchReasoning), OutputTypeLabel: "Research & reasoning", ModelID: "llama3.1:8b"},
+	{OutputTypeID: string(OrganizationOutputTypeCodeGeneration), OutputTypeLabel: "Code generation", ModelID: "qwen2.5-coder:7b"},
+	{OutputTypeID: string(OrganizationOutputTypeVisionAnalysis), OutputTypeLabel: "Vision analysis", ModelID: "llava:7b"},
+}
+
+var curatedOutputModelCatalog = []outputModelCatalogSeed{
+	{
+		ModelID:        "qwen3:8b",
+		Label:          "Qwen3 8B",
+		Summary:        "Strong local-first default for general text, agent planning, and multi-step reasoning.",
+		OutputTypeIDs:  []OrganizationOutputTypeID{OrganizationOutputTypeGeneralText, OrganizationOutputTypeResearchReasoning},
+		Popular:        true,
+		HostingFit:     "Fits well on the current self-hosted GPU class and is already a common local-first general model.",
+		PopularityNote: "Official Ollama library surfaces Qwen3 as a heavily used local model family.",
+	},
+	{
+		ModelID:        "llama3.1:8b",
+		Label:          "Llama 3.1 8B",
+		Summary:        "Popular local general model with long context and strong multilingual/research-oriented posture.",
+		OutputTypeIDs:  []OrganizationOutputTypeID{OrganizationOutputTypeGeneralText, OrganizationOutputTypeResearchReasoning},
+		Popular:        true,
+		HostingFit:     "Fits well on the current self-hosted GPU class and gives a strong second general-purpose local option.",
+		PopularityNote: "Official Ollama library shows Llama 3.1 as one of the most widely downloaded local families.",
+	},
+	{
+		ModelID:       "qwen2.5-coder:7b",
+		Label:         "Qwen2.5 Coder 7B",
+		Summary:       "Focused local model for code generation, code repair, and implementation-heavy team lanes.",
+		OutputTypeIDs: []OrganizationOutputTypeID{OrganizationOutputTypeCodeGeneration},
+		Popular:       false,
+		HostingFit:    "Fits well on the current self-hosted GPU class and aligns with the current local coding default.",
+	},
+	{
+		ModelID:       "llava:7b",
+		Label:         "LLaVA 7B",
+		Summary:       "Local multimodal model for image understanding, OCR, and visual review work.",
+		OutputTypeIDs: []OrganizationOutputTypeID{OrganizationOutputTypeVisionAnalysis},
+		Popular:       false,
+		HostingFit:    "Fits the current self-hosted GPU class for vision analysis without requiring a separate cloud path.",
+	},
 }
 
 type TeamLeadExecutionMode string
@@ -327,6 +448,53 @@ func (s *AdminServer) organizationStore() *OrganizationStore {
 	return s.Organizations
 }
 
+func (s *AdminServer) listLocalOllamaModelIDs() []string {
+	if s.Cognitive == nil || s.Cognitive.Config == nil {
+		return nil
+	}
+	provider, ok := s.Cognitive.Config.Providers["ollama"]
+	if !ok {
+		return nil
+	}
+	baseURL := trimOllamaBaseURL(provider.Endpoint)
+	if baseURL == "" {
+		return nil
+	}
+
+	req, err := http.NewRequest(http.MethodGet, baseURL+"/api/tags", nil)
+	if err != nil {
+		return nil
+	}
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	var payload struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil
+	}
+
+	modelIDs := make([]string, 0, len(payload.Models))
+	for _, model := range payload.Models {
+		if name := strings.TrimSpace(model.Name); name != "" {
+			modelIDs = append(modelIDs, name)
+		}
+	}
+	sort.Strings(modelIDs)
+	return modelIDs
+}
+
 func (s *AdminServer) loadOrganizationStarterTemplates() ([]OrganizationTemplateSummary, error) {
 	loader := bootstrap.NewTemplateLoader(s.templateBundlesPath())
 	bundles, err := loader.LoadBundles()
@@ -417,6 +585,215 @@ func organizationAIEngineSummaryForProfile(id string) string {
 	return profile.Summary
 }
 
+func defaultOrganizationOutputModelID() string {
+	return "qwen2.5-coder:7b-instruct"
+}
+
+func normalizeOrganizationOutputModelRoutingMode(value string) OrganizationOutputModelRoutingMode {
+	switch OrganizationOutputModelRoutingMode(strings.TrimSpace(value)) {
+	case OrganizationOutputModelRoutingModeDetectedOutputTypes:
+		return OrganizationOutputModelRoutingModeDetectedOutputTypes
+	default:
+		return OrganizationOutputModelRoutingModeSingleModel
+	}
+}
+
+func outputTypeLabel(id string) string {
+	switch OrganizationOutputTypeID(strings.TrimSpace(id)) {
+	case OrganizationOutputTypeResearchReasoning:
+		return "Research & reasoning"
+	case OrganizationOutputTypeCodeGeneration:
+		return "Code generation"
+	case OrganizationOutputTypeVisionAnalysis:
+		return "Vision analysis"
+	default:
+		return "General text"
+	}
+}
+
+func canonicalOutputTypeIDs() []OrganizationOutputTypeID {
+	return []OrganizationOutputTypeID{
+		OrganizationOutputTypeGeneralText,
+		OrganizationOutputTypeResearchReasoning,
+		OrganizationOutputTypeCodeGeneration,
+		OrganizationOutputTypeVisionAnalysis,
+	}
+}
+
+func outputModelLabel(modelID string) string {
+	normalized := strings.TrimSpace(modelID)
+	if normalized == "" {
+		return "Set up later in Advanced mode"
+	}
+	for _, entry := range curatedOutputModelCatalog {
+		if matchesCatalogModel(normalized, entry.ModelID) {
+			return entry.Label
+		}
+	}
+	return normalized
+}
+
+func outputModelBindingsMap(bindings []OrganizationOutputModelBinding) map[string]OrganizationOutputModelBinding {
+	result := make(map[string]OrganizationOutputModelBinding, len(bindings))
+	for _, binding := range bindings {
+		outputTypeID := strings.TrimSpace(binding.OutputTypeID)
+		if outputTypeID == "" {
+			continue
+		}
+		result[outputTypeID] = binding
+	}
+	return result
+}
+
+func normalizedOrganizationOutputModelBindings(existing []OrganizationOutputModelBinding, defaultModelID string) []OrganizationOutputModelBinding {
+	byType := outputModelBindingsMap(existing)
+	normalized := make([]OrganizationOutputModelBinding, 0, len(defaultOrganizationOutputModelBindings))
+	for _, canonical := range defaultOrganizationOutputModelBindings {
+		outputTypeID := strings.TrimSpace(canonical.OutputTypeID)
+		binding := canonical
+		if existingBinding, ok := byType[outputTypeID]; ok {
+			if modelID := strings.TrimSpace(existingBinding.ModelID); modelID != "" {
+				binding.ModelID = modelID
+			}
+		}
+		if strings.TrimSpace(binding.ModelID) == "" {
+			binding.ModelID = defaultModelID
+		}
+		binding.OutputTypeLabel = outputTypeLabel(outputTypeID)
+		binding.ModelSummary = outputModelLabel(binding.ModelID)
+		normalized = append(normalized, binding)
+	}
+	return normalized
+}
+
+func inferAgentTypeOutputType(member protocol.AgentManifest) OrganizationOutputTypeID {
+	switch strings.TrimSpace(strings.ToLower(member.Role)) {
+	case "research", "researcher", "lead", "planner", "review", "reviewer", "qa", "quality":
+		return OrganizationOutputTypeResearchReasoning
+	case "builder", "implementer", "delivery", "coder", "developer":
+		return OrganizationOutputTypeCodeGeneration
+	case "vision", "image", "visualizer", "data_visualizer":
+		return OrganizationOutputTypeVisionAnalysis
+	default:
+		return OrganizationOutputTypeGeneralText
+	}
+}
+
+func inferAgentTypeOutputTypeFromProfile(profile OrganizationAgentTypeProfileSummary) OrganizationOutputTypeID {
+	switch strings.TrimSpace(profile.ID) {
+	case "planner", "reviewer", "research-specialist":
+		return OrganizationOutputTypeResearchReasoning
+	case "delivery-specialist":
+		return OrganizationOutputTypeCodeGeneration
+	default:
+		return OrganizationOutputTypeGeneralText
+	}
+}
+
+func matchesCatalogModel(candidate, catalogModelID string) bool {
+	candidate = strings.TrimSpace(strings.ToLower(candidate))
+	catalogModelID = strings.TrimSpace(strings.ToLower(catalogModelID))
+	if candidate == "" || catalogModelID == "" {
+		return false
+	}
+	if candidate == catalogModelID {
+		return true
+	}
+	return strings.HasPrefix(candidate, catalogModelID) || strings.HasPrefix(catalogModelID, candidate)
+}
+
+func synthesizeOutputModelCatalog(installedModelIDs []string) []OrganizationOutputModelCatalogEntry {
+	installedSet := make(map[string]struct{}, len(installedModelIDs))
+	for _, id := range installedModelIDs {
+		normalized := strings.TrimSpace(id)
+		if normalized == "" {
+			continue
+		}
+		installedSet[normalized] = struct{}{}
+	}
+
+	out := make([]OrganizationOutputModelCatalogEntry, 0, len(curatedOutputModelCatalog)+len(installedSet))
+	for _, seed := range curatedOutputModelCatalog {
+		entry := OrganizationOutputModelCatalogEntry{
+			ModelID:        seed.ModelID,
+			Label:          seed.Label,
+			Summary:        seed.Summary,
+			ProviderID:     "ollama",
+			Popular:        seed.Popular,
+			SelfHostable:   true,
+			HostingFit:     seed.HostingFit,
+			PopularityNote: seed.PopularityNote,
+			Source:         "curated_ollama",
+		}
+		for _, outputTypeID := range seed.OutputTypeIDs {
+			entry.OutputTypeIDs = append(entry.OutputTypeIDs, string(outputTypeID))
+		}
+		for installedID := range installedSet {
+			if matchesCatalogModel(installedID, seed.ModelID) {
+				entry.Installed = true
+				break
+			}
+		}
+		out = append(out, entry)
+	}
+
+	for installedID := range installedSet {
+		matched := false
+		for _, entry := range out {
+			if matchesCatalogModel(installedID, entry.ModelID) {
+				matched = true
+				break
+			}
+		}
+		if matched {
+			continue
+		}
+		out = append(out, OrganizationOutputModelCatalogEntry{
+			ModelID:      installedID,
+			Label:        installedID,
+			Summary:      "Installed in the local Ollama inventory and available for self-hosted routing.",
+			ProviderID:   "ollama",
+			Installed:    true,
+			SelfHostable: true,
+			HostingFit:   "Already present in the current local Ollama inventory.",
+			Source:       "installed_ollama",
+		})
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Popular != out[j].Popular {
+			return out[i].Popular
+		}
+		if out[i].Installed != out[j].Installed {
+			return out[i].Installed
+		}
+		return out[i].Label < out[j].Label
+	})
+	return out
+}
+
+func recommendedOutputModels(catalog []OrganizationOutputModelCatalogEntry) []OrganizationOutputModelCatalogEntry {
+	recommended := make([]OrganizationOutputModelCatalogEntry, 0, len(catalog))
+	for _, entry := range catalog {
+		if entry.Popular {
+			recommended = append(recommended, entry)
+		}
+	}
+	return recommended
+}
+
+func trimOllamaBaseURL(endpoint string) string {
+	base := strings.TrimSpace(endpoint)
+	if base == "" {
+		return ""
+	}
+	base = strings.TrimRight(base, "/")
+	if strings.HasSuffix(base, "/v1") {
+		return strings.TrimSuffix(base, "/v1")
+	}
+	return base
+}
+
 func lookupResponseContractProfile(id string) (responseContractProfile, bool) {
 	for _, profile := range responseContractProfiles {
 		if string(profile.ID) == strings.TrimSpace(id) {
@@ -456,6 +833,8 @@ func buildAgentTypeProfileSummary(member protocol.AgentManifest, fallbackIndex i
 		HelpsWith:                        helpsWith,
 		AIEngineBindingProfileID:         inferAgentTypeAIEngineBinding(member),
 		ResponseContractBindingProfileID: inferAgentTypeResponseBinding(member),
+		OutputTypeID:                     string(inferAgentTypeOutputType(member)),
+		OutputTypeLabel:                  outputTypeLabel(string(inferAgentTypeOutputType(member))),
 	}
 }
 
@@ -533,6 +912,13 @@ func normalizeDepartmentName(name string, fallbackIndex int) string {
 }
 
 func normalizeOrganizationHome(home OrganizationHomePayload) OrganizationHomePayload {
+	home.OutputModelRoutingMode = string(normalizeOrganizationOutputModelRoutingMode(home.OutputModelRoutingMode))
+	if strings.TrimSpace(home.DefaultOutputModelID) == "" {
+		home.DefaultOutputModelID = defaultOrganizationOutputModelID()
+	}
+	home.DefaultOutputModelSummary = outputModelLabel(home.DefaultOutputModelID)
+	home.OutputModelBindings = normalizedOrganizationOutputModelBindings(home.OutputModelBindings, home.DefaultOutputModelID)
+
 	if len(home.Departments) == 0 && home.DepartmentCount > 0 {
 		home.Departments = generateFallbackDepartments(home.DepartmentCount, home.SpecialistCount)
 	}
@@ -581,6 +967,10 @@ func normalizeOrganizationHome(home OrganizationHomePayload) OrganizationHomePay
 				department.AIEngineEffectiveSummary,
 				home.ResponseContractProfileID,
 				home.ResponseContractSummary,
+				home.OutputModelRoutingMode,
+				home.DefaultOutputModelID,
+				home.DefaultOutputModelSummary,
+				home.OutputModelBindings,
 			)
 
 			home.Departments[index] = department
@@ -598,12 +988,17 @@ func normalizeAgentTypeProfiles(
 	departmentAIEngineSummary string,
 	responseContractProfileID string,
 	responseContractSummary string,
+	outputModelRoutingMode string,
+	defaultOutputModelID string,
+	defaultOutputModelSummary string,
+	outputModelBindings []OrganizationOutputModelBinding,
 ) []OrganizationAgentTypeProfileSummary {
 	if len(profiles) == 0 {
 		return nil
 	}
 
 	normalized := make([]OrganizationAgentTypeProfileSummary, 0, len(profiles))
+	bindingsByType := outputModelBindingsMap(outputModelBindings)
 	for index, profile := range profiles {
 		profile.Name = strings.TrimSpace(profile.Name)
 		if profile.Name == "" {
@@ -646,6 +1041,27 @@ func normalizeAgentTypeProfiles(
 		if strings.TrimSpace(profile.ResponseContractEffectiveSummary) == "" {
 			profile.ResponseContractEffectiveProfileID = string(defaultResponseContractProfile().ID)
 			profile.ResponseContractEffectiveSummary = defaultResponseContractProfile().Summary
+		}
+
+		outputTypeID := strings.TrimSpace(profile.OutputTypeID)
+		if outputTypeID == "" {
+			outputTypeID = string(inferAgentTypeOutputTypeFromProfile(profile))
+		}
+		profile.OutputTypeID = outputTypeID
+		profile.OutputTypeLabel = outputTypeLabel(outputTypeID)
+
+		profile.OutputModelEffectiveID = defaultOutputModelID
+		profile.OutputModelEffectiveSummary = defaultOutputModelSummary
+		profile.InheritsDefaultOutputModel = true
+		if normalizeOrganizationOutputModelRoutingMode(outputModelRoutingMode) == OrganizationOutputModelRoutingModeDetectedOutputTypes {
+			if binding, ok := bindingsByType[outputTypeID]; ok && strings.TrimSpace(binding.ModelID) != "" {
+				profile.OutputModelEffectiveID = binding.ModelID
+				profile.OutputModelEffectiveSummary = binding.ModelSummary
+				profile.InheritsDefaultOutputModel = strings.EqualFold(strings.TrimSpace(binding.ModelID), strings.TrimSpace(defaultOutputModelID))
+			}
+		}
+		if strings.TrimSpace(profile.OutputModelEffectiveSummary) == "" {
+			profile.OutputModelEffectiveSummary = outputModelLabel(profile.OutputModelEffectiveID)
 		}
 
 		normalized = append(normalized, profile)
@@ -774,7 +1190,10 @@ func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, templ
 			ResponseContractSummary:   responseContract.Summary,
 			MemoryPersonalitySummary:  "Set up later in Advanced mode",
 			AIEngineProfileID:         defaultAIEngineProfileID(req.StartMode, template),
+			OutputModelRoutingMode:    string(OrganizationOutputModelRoutingModeSingleModel),
+			DefaultOutputModelID:      defaultOrganizationOutputModelID(),
 		},
+		OutputModelBindings: append([]OrganizationOutputModelBinding(nil), defaultOrganizationOutputModelBindings...),
 	}
 
 	if template != nil {
@@ -929,6 +1348,98 @@ func (s *AdminServer) handleUpdateResponseContract(w http.ResponseWriter, r *htt
 	}
 
 	s.emitReviewLoopEvent(updated.ID, ReviewLoopEventResponseContractChanged)
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
+}
+
+func (s *AdminServer) handleGetOrganizationOutputModelRouting(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		respondAPIError(w, "organization id is required", http.StatusBadRequest)
+		return
+	}
+
+	home, ok := s.organizationStore().Get(id)
+	if !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+	home = normalizeOrganizationHome(home)
+
+	catalog := synthesizeOutputModelCatalog(s.listLocalOllamaModelIDs())
+	payload := OrganizationOutputModelRoutingPayload{
+		RoutingMode:         home.OutputModelRoutingMode,
+		DefaultModelID:      home.DefaultOutputModelID,
+		DefaultModelSummary: home.DefaultOutputModelSummary,
+		Bindings:            append([]OrganizationOutputModelBinding(nil), home.OutputModelBindings...),
+		AvailableModels:     catalog,
+		RecommendedModels:   recommendedOutputModels(catalog),
+		HardwareSummary:     "Local-first self-hosted posture tuned for the current Ollama inventory and a 16GB-class GPU host.",
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(payload))
+}
+
+func (s *AdminServer) handleUpdateOrganizationOutputModelRouting(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		respondAPIError(w, "organization id is required", http.StatusBadRequest)
+		return
+	}
+
+	var req OrganizationOutputModelRoutingUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "invalid output model routing update request", http.StatusBadRequest)
+		return
+	}
+
+	routingMode := normalizeOrganizationOutputModelRoutingMode(req.RoutingMode)
+	defaultModelID := strings.TrimSpace(req.DefaultModelID)
+	if defaultModelID == "" {
+		respondAPIError(w, "default_model_id is required", http.StatusBadRequest)
+		return
+	}
+
+	validOutputTypes := make(map[string]struct{}, len(canonicalOutputTypeIDs()))
+	for _, outputTypeID := range canonicalOutputTypeIDs() {
+		validOutputTypes[string(outputTypeID)] = struct{}{}
+	}
+
+	normalizedBindings := make([]OrganizationOutputModelBinding, 0, len(req.Bindings))
+	for _, binding := range req.Bindings {
+		outputTypeID := strings.TrimSpace(binding.OutputTypeID)
+		if _, ok := validOutputTypes[outputTypeID]; !ok {
+			respondAPIError(w, "bindings contain an unknown output_type_id", http.StatusBadRequest)
+			return
+		}
+		modelID := strings.TrimSpace(binding.ModelID)
+		if binding.UseOrganizationDefault {
+			modelID = defaultModelID
+		}
+		if modelID == "" {
+			respondAPIError(w, "bindings require a model_id unless they use the organization default", http.StatusBadRequest)
+			return
+		}
+		normalizedBindings = append(normalizedBindings, OrganizationOutputModelBinding{
+			OutputTypeID:    outputTypeID,
+			OutputTypeLabel: outputTypeLabel(outputTypeID),
+			ModelID:         modelID,
+			ModelSummary:    outputModelLabel(modelID),
+		})
+	}
+
+	updated, ok := s.organizationStore().Update(id, func(home OrganizationHomePayload) OrganizationHomePayload {
+		home = normalizeOrganizationHome(home)
+		home.OutputModelRoutingMode = string(routingMode)
+		home.DefaultOutputModelID = defaultModelID
+		home.DefaultOutputModelSummary = outputModelLabel(defaultModelID)
+		home.OutputModelBindings = normalizedOrganizationOutputModelBindings(normalizedBindings, defaultModelID)
+		return normalizeOrganizationHome(home)
+	})
+	if !ok {
+		respondAPIError(w, "organization not found", http.StatusNotFound)
+		return
+	}
+
+	s.emitReviewLoopEvent(updated.ID, ReviewLoopEventOrganizationAIEngineChanged)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(updated))
 }
 

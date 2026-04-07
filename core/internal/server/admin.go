@@ -221,6 +221,8 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/organizations", s.handleCreateOrganization)
 	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/ai-engine", s.handleUpdateOrganizationAIEngine)
+	mux.HandleFunc("GET /api/v1/organizations/{id}/output-model-routing", s.handleGetOrganizationOutputModelRouting)
+	mux.HandleFunc("PATCH /api/v1/organizations/{id}/output-model-routing", s.handleUpdateOrganizationOutputModelRouting)
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/response-contract", s.handleUpdateResponseContract)
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/ai-engine", s.handleUpdateDepartmentAIEngine)
 	mux.HandleFunc("PATCH /api/v1/organizations/{id}/departments/{departmentId}/agent-types/{agentTypeId}/ai-engine", s.handleUpdateAgentTypeAIEngine)

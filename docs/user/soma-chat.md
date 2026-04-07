@@ -37,8 +37,38 @@ Live activity text indicates current steps (thinking, consulting, searching memo
 AI Organization home adds a guided Soma entrypoint:
 - type a team or delivery request and choose `Start team design`, or
 - leave the field blank and use `Run a quick strategy check` to trigger an immediate first-pass review
+- ask Soma to create or reshape teams from the root organization workspace before dropping into a narrower lane
+- use `AI Engine Settings` from the same root workspace when an admin needs to set one shared model for everyone or detected output-type models for planning, research, code, and vision work
 
 If you leave the organization workspace and come back later, the current guided Soma draft and the last successful guidance for that organization should still be there.
+
+Team workspaces are different from the root Soma workspace:
+- the root workspace is Soma-first and organization-wide
+- entering a created team should center the team's focused lead entity first
+- that team lead can still coordinate back through Soma using scoped memory, RAG retrieval, and broader organization context when needed
+- the team's lead and specialists inherit the organization output-model policy unless an admin changes it
+
+---
+
+## Output Model Routing
+
+Admins can configure how output models are assigned inside an AI Organization.
+
+Available modes:
+- `One model for everyone`: all team members use the same default model
+- `Detected by output type`: team leads and specialists inherit the best-fit model for the kind of work they are doing
+
+Current self-hosted starting points shown in product:
+- `Qwen3 8B`
+- `Llama 3.1 8B`
+
+Current detected output-type defaults:
+- general text -> `Qwen3 8B`
+- research and reasoning -> `Llama 3.1 8B`
+- code generation -> `Qwen2.5 Coder 7B`
+- vision analysis -> `LLaVA 7B`
+
+This routing is durable organization policy, so ordinary user chats should not silently rewrite it.
 
 ---
 
@@ -149,6 +179,12 @@ When crew creation is needed, Soma should build a lean team oriented to:
 2. develop
 3. verify
 4. deliver
+
+When specialized output is needed, Soma should prefer to:
+1. plan the need at the root workspace
+2. shape the right team or specialist lane
+3. let the team's lead inherit the configured output model policy
+4. only override delivery routing through governed admin configuration, not ad hoc user chat
 
 ---
 

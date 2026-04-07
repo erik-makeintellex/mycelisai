@@ -69,7 +69,8 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
         .map((a) => a.last_heartbeat)
         .filter(Boolean)
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
-    const summary = team.mission_intent || `${team.role} team handling ${team.type} workflows`;
+    const leadLabel = `${team.name} lead`;
+    const summary = team.mission_intent || `${leadLabel} handles this ${team.type} lane while coordinating back through Soma when broader context is needed.`;
 
     const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -155,7 +156,7 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
             <div className="pt-2 mt-2 border-t border-cortex-border/40 grid grid-cols-2 gap-1">
                 <a href="/dashboard" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-open-chat`}>
                     <MessageSquare className="w-3 h-3" />
-                    Open chat
+                    Open lead workspace
                 </a>
                 <a href="/runs" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-view-runs`}>
                     <Route className="w-3 h-3" />

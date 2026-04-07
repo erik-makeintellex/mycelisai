@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -196,6 +197,110 @@ func applyDirectAnswerRetryInstruction(messages []chatRequestMessage, latestRequ
 		"Answer the latest request directly in readable text. Do not call tools. Do not emit tool_call JSON. If more context is needed, ask one concise clarifying question.\n\n" +
 		"Original request:\n" + strings.TrimSpace(latestRequest)
 	return normalized
+}
+
+func normalizeChatWorkspaceName(value string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+}
+
+func resolveChatWorkspaceTeamLabel(teamID, teamName string, home OrganizationHomePayload, manifests []*swarm.TeamManifest) string {
+	if normalized := normalizeChatWorkspaceName(teamName); normalized != "" {
+		return normalized
+	}
+	targetID := strings.TrimSpace(teamID)
+	if targetID != "" {
+		for _, department := range home.Departments {
+			if strings.TrimSpace(department.ID) == targetID {
+				if name := normalizeChatWorkspaceName(department.Name); name != "" {
+					return name
+				}
+			}
+		}
+		for _, manifest := range manifests {
+			if manifest != nil && strings.TrimSpace(manifest.ID) == targetID {
+				if name := normalizeChatWorkspaceName(manifest.Name); name != "" {
+					return name
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func summarizeDepartmentNames(departments []OrganizationDepartmentSummary) string {
+	names := make([]string, 0, len(departments))
+	for _, department := range departments {
+		if name := normalizeChatWorkspaceName(department.Name); name != "" {
+			names = append(names, name)
+		}
+	}
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return names[0]
+	case 2:
+		return names[0] + " and " + names[1]
+	default:
+		return names[0] + ", " + names[1] + fmt.Sprintf(", and %d more", len(names)-2)
+	}
+}
+
+func (s *AdminServer) buildChatWorkspaceContext(organizationID, teamID, teamName string) string {
+	organizationID = strings.TrimSpace(organizationID)
+	teamID = strings.TrimSpace(teamID)
+	teamName = normalizeChatWorkspaceName(teamName)
+	if organizationID == "" && teamID == "" && teamName == "" {
+		return ""
+	}
+
+	home, hasOrganization := OrganizationHomePayload{}, false
+	if organizationID != "" {
+		home, hasOrganization = s.organizationStore().Get(organizationID)
+	}
+
+	manifests := []*swarm.TeamManifest(nil)
+	if s.Soma != nil {
+		manifests = s.Soma.ListTeams()
+	}
+
+	currentTeamLabel := resolveChatWorkspaceTeamLabel(teamID, teamName, home, manifests)
+	var lines []string
+	lines = append(lines, "[WORKSPACE CONTEXT]")
+	if hasOrganization {
+		lines = append(lines, fmt.Sprintf("Organization: %s.", normalizeChatWorkspaceName(home.Name)))
+		if purpose := normalizeChatWorkspaceName(home.Purpose); purpose != "" {
+			lines = append(lines, fmt.Sprintf("Organization purpose: %s.", purpose))
+		}
+		if departmentSummary := summarizeDepartmentNames(home.Departments); departmentSummary != "" {
+			lines = append(lines, fmt.Sprintf("Visible departments/teams in this organization: %s.", departmentSummary))
+		}
+	}
+	if currentTeamLabel != "" {
+		if teamID != "" {
+			lines = append(lines, fmt.Sprintf("Current team focus: %s (id: %s).", currentTeamLabel, teamID))
+		} else {
+			lines = append(lines, fmt.Sprintf("Current team focus: %s.", currentTeamLabel))
+		}
+	} else if teamID != "" {
+		lines = append(lines, fmt.Sprintf("Current team focus id: %s.", teamID))
+	}
+	lines = append(lines, "Treat phrases like 'the team', 'this team', or 'do you see it' as referring to the current team focus above when one is present. Use this workspace context before falling back to a broader runtime roster check.")
+	return strings.Join(lines, "\n")
+}
+
+func prependChatWorkspaceContext(messages []chatRequestMessage, context string) []chatRequestMessage {
+	trimmed := strings.TrimSpace(context)
+	if trimmed == "" {
+		return messages
+	}
+	out := make([]chatRequestMessage, 0, len(messages)+1)
+	out = append(out, chatRequestMessage{
+		Role:    "user",
+		Content: trimmed,
+	})
+	out = append(out, messages...)
+	return out
 }
 
 func resolveChatAskClass(defaultAgentTarget string, isMutation bool, agentResult chatAgentResult) protocol.AskClass {
@@ -857,7 +962,10 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Messages []chatRequestMessage `json:"messages"`
+		Messages       []chatRequestMessage `json:"messages"`
+		OrganizationID string               `json:"organization_id,omitempty"`
+		TeamID         string               `json:"team_id,omitempty"`
+		TeamName       string               `json:"team_name,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
@@ -868,6 +976,11 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty conversation", http.StatusBadRequest)
 		return
 	}
+
+	req.Messages = prependChatWorkspaceContext(
+		req.Messages,
+		s.buildChatWorkspaceContext(req.OrganizationID, req.TeamID, req.TeamName),
+	)
 
 	if availability := s.chatExecutionAvailability(); !availability.Available {
 		respondAPIJSON(w, http.StatusServiceUnavailable, protocol.APIResponse{

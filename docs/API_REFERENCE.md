@@ -147,6 +147,8 @@
 | `/api/v1/organizations` | GET | List created AI Organization summaries for the entry flow |
 | `/api/v1/organizations` | POST | Create an AI Organization from template or empty start |
 | `/api/v1/organizations/{id}/home` | GET | Load the minimal AI Organization context shell |
+| `/api/v1/organizations/{id}/output-model-routing` | GET | Read admin-configurable output-model routing for the organization, including detected output-type bindings, locally installed models, and recommended self-hosted starting points |
+| `/api/v1/organizations/{id}/output-model-routing` | PATCH | Update the organization default model or detected output-type model bindings for team and specialist output delivery |
 
 ## Provider Auth Notes
 

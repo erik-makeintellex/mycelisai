@@ -17,6 +17,12 @@ import type {
     OrganizationHomePayload,
     OrganizationLearningInsightItem,
     OrganizationLoopActivityItem,
+    OrganizationOutputModelBinding,
+    OrganizationOutputModelCatalogEntry,
+    OrganizationOutputModelRoutingMode,
+    OrganizationOutputModelRoutingPayload,
+    OrganizationOutputModelRoutingUpdateRequest,
+    OrganizationOutputTypeId,
     ResponseContractProfileId,
     ResponseContractUpdateRequest,
 } from "@/lib/organizations";
@@ -138,6 +144,13 @@ const RESPONSE_CONTRACT_OPTIONS: Array<{
     },
 ];
 
+const OUTPUT_TYPE_OPTIONS: Array<{ id: OrganizationOutputTypeId; label: string; description: string }> = [
+    { id: "general_text", label: "General text", description: "Default chat, writing, and broad team communication outputs." },
+    { id: "research_reasoning", label: "Research & reasoning", description: "Planning, review, synthesis, and deeper reasoning-heavy outputs." },
+    { id: "code_generation", label: "Code generation", description: "Implementation, code repair, and execution-heavy output lanes." },
+    { id: "vision_analysis", label: "Vision analysis", description: "Image understanding, OCR, and visual review support." },
+];
+
 export default function OrganizationContextShell({ organizationId }: { organizationId: string }) {
     const [organization, setOrganization] = useState<OrganizationHomePayload | null>(null);
     const [loading, setLoading] = useState(true);
@@ -164,6 +177,14 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [selectedResponseContractProfile, setSelectedResponseContractProfile] = useState<ResponseContractProfileId | null>(null);
     const [responseContractUpdatePending, setResponseContractUpdatePending] = useState(false);
     const [responseContractUpdateError, setResponseContractUpdateError] = useState<string | null>(null);
+    const [outputModelRouting, setOutputModelRouting] = useState<OrganizationOutputModelRoutingPayload | null>(null);
+    const [outputModelRoutingLoading, setOutputModelRoutingLoading] = useState(true);
+    const [outputModelRoutingError, setOutputModelRoutingError] = useState<string | null>(null);
+    const [selectedOutputModelRoutingMode, setSelectedOutputModelRoutingMode] = useState<OrganizationOutputModelRoutingMode>("single_model");
+    const [selectedDefaultOutputModelId, setSelectedDefaultOutputModelId] = useState<string>("");
+    const [selectedOutputModelBindings, setSelectedOutputModelBindings] = useState<Record<string, string>>({});
+    const [outputModelRoutingUpdatePending, setOutputModelRoutingUpdatePending] = useState(false);
+    const [outputModelRoutingUpdateError, setOutputModelRoutingUpdateError] = useState<string | null>(null);
     const [recentActivity, setRecentActivity] = useState<OrganizationLoopActivityItem[]>([]);
     const [activityLoading, setActivityLoading] = useState(true);
     const [activityError, setActivityError] = useState<string | null>(null);
@@ -210,6 +231,46 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         };
 
         void load();
+        return () => {
+            cancelled = true;
+        };
+    }, [organizationId, retryToken]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadOutputModelRouting = async () => {
+            setOutputModelRoutingLoading(true);
+            setOutputModelRoutingError(null);
+            try {
+                const response = await fetch(`/api/v1/organizations/${organizationId}/output-model-routing`, { cache: "no-store" });
+                const payload = await readJson(response);
+                if (!response.ok) {
+                    throw new Error(extractApiError(payload) || "Unable to load output model routing.");
+                }
+                if (cancelled) {
+                    return;
+                }
+                const data = extractApiData<OrganizationOutputModelRoutingPayload>(payload);
+                setOutputModelRouting(data);
+                setSelectedOutputModelRoutingMode((data.routing_mode ?? "single_model") as OrganizationOutputModelRoutingMode);
+                setSelectedDefaultOutputModelId(data.default_model_id ?? "");
+                setSelectedOutputModelBindings(
+                    Object.fromEntries((data.bindings ?? []).map((binding) => [binding.output_type_id, binding.model_id ?? data.default_model_id ?? ""])),
+                );
+            } catch (err) {
+                if (cancelled) {
+                    return;
+                }
+                setOutputModelRoutingError(err instanceof Error ? err.message : "Unable to load output model routing.");
+            } finally {
+                if (!cancelled) {
+                    setOutputModelRoutingLoading(false);
+                }
+            }
+        };
+
+        void loadOutputModelRouting();
         return () => {
             cancelled = true;
         };
@@ -367,6 +428,10 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             setResponseContractUpdatePending(false);
             setResponseContractUpdateError(null);
         }
+        if (activeDetailView !== "aiEngine") {
+            setOutputModelRoutingUpdatePending(false);
+            setOutputModelRoutingUpdateError(null);
+        }
     }, [activeDetailView]);
 
     const openAIEngineSelector = () => {
@@ -376,6 +441,14 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         setActiveDetailView("aiEngine");
         setSelectedAIEngineProfile((organization.ai_engine_profile_id as OrganizationAIEngineProfileId | undefined) ?? null);
         setAIEngineUpdateError(null);
+        if (outputModelRouting) {
+            setSelectedOutputModelRoutingMode(outputModelRouting.routing_mode);
+            setSelectedDefaultOutputModelId(outputModelRouting.default_model_id ?? "");
+            setSelectedOutputModelBindings(
+                Object.fromEntries((outputModelRouting.bindings ?? []).map((binding) => [binding.output_type_id, binding.model_id ?? outputModelRouting.default_model_id ?? ""])),
+            );
+        }
+        setOutputModelRoutingUpdateError(null);
         setIsAIEngineSelectorOpen(true);
     };
 
@@ -407,6 +480,70 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         } finally {
             setAIEngineUpdatePending(false);
         }
+    };
+
+    const submitOutputModelRouting = async () => {
+        if (!organization || !selectedDefaultOutputModelId || outputModelRoutingUpdatePending) {
+            return;
+        }
+
+        setOutputModelRoutingUpdatePending(true);
+        setOutputModelRoutingUpdateError(null);
+
+        const bindings = OUTPUT_TYPE_OPTIONS.map((option) => {
+            const modelId = selectedOutputModelBindings[option.id] || selectedDefaultOutputModelId;
+            return {
+                output_type_id: option.id,
+                model_id: modelId,
+                use_organization_default: modelId === selectedDefaultOutputModelId,
+            };
+        });
+
+        try {
+            const response = await fetch(`/api/v1/organizations/${organization.id}/output-model-routing`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    routing_mode: selectedOutputModelRoutingMode,
+                    default_model_id: selectedDefaultOutputModelId,
+                    bindings,
+                } satisfies OrganizationOutputModelRoutingUpdateRequest),
+            });
+            const payload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(payload) || "Unable to update output model routing.");
+            }
+
+            const updated = extractApiData<OrganizationHomePayload>(payload);
+            setOrganization(updated);
+            setOutputModelRouting((current) =>
+                current
+                    ? {
+                          ...current,
+                          routing_mode: selectedOutputModelRoutingMode,
+                          default_model_id: updated.default_output_model_id,
+                          default_model_summary: updated.default_output_model_summary ?? current.default_model_summary,
+                          bindings: updated.output_model_bindings ?? current.bindings,
+                      }
+                    : current,
+            );
+        } catch (err) {
+            setOutputModelRoutingUpdateError(err instanceof Error ? err.message : "Unable to update output model routing.");
+        } finally {
+            setOutputModelRoutingUpdatePending(false);
+        }
+    };
+
+    const handleDefaultOutputModelChange = (modelId: string) => {
+        setSelectedOutputModelBindings((current) => {
+            const next: Record<string, string> = {};
+            for (const option of OUTPUT_TYPE_OPTIONS) {
+                const currentValue = current[option.id];
+                next[option.id] = currentValue === selectedDefaultOutputModelId || !currentValue ? modelId : currentValue;
+            }
+            return next;
+        });
+        setSelectedDefaultOutputModelId(modelId);
     };
 
     const openResponseContractSelector = () => {
@@ -925,13 +1062,27 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 selectedAIEngineProfile={selectedAIEngineProfile}
                                 aiEngineUpdatePending={aiEngineUpdatePending}
                                 aiEngineUpdateError={aiEngineUpdateError}
+                                outputModelRouting={outputModelRouting}
+                                outputModelRoutingLoading={outputModelRoutingLoading}
+                                outputModelRoutingError={outputModelRoutingError}
+                                selectedOutputModelRoutingMode={selectedOutputModelRoutingMode}
+                                selectedDefaultOutputModelId={selectedDefaultOutputModelId}
+                                selectedOutputModelBindings={selectedOutputModelBindings}
+                                outputModelRoutingUpdatePending={outputModelRoutingUpdatePending}
+                                outputModelRoutingUpdateError={outputModelRoutingUpdateError}
                                 onAIEngineProfileSelect={setSelectedAIEngineProfile}
+                                onOutputModelRoutingModeChange={setSelectedOutputModelRoutingMode}
+                                onDefaultOutputModelChange={handleDefaultOutputModelChange}
+                                onOutputModelBindingChange={(outputTypeId, modelId) =>
+                                    setSelectedOutputModelBindings((current) => ({ ...current, [outputTypeId]: modelId }))
+                                }
                                 onOpenAIEngineSelector={openAIEngineSelector}
                                 onCloseAIEngineSelector={() => {
                                     setIsAIEngineSelectorOpen(false);
                                     setAIEngineUpdateError(null);
                                 }}
                                 onSubmitAIEngineSelection={submitAIEngineSelection}
+                                onSubmitOutputModelRouting={submitOutputModelRouting}
                                 isResponseContractSelectorOpen={isResponseContractSelectorOpen}
                                 selectedResponseContractProfile={selectedResponseContractProfile}
                                 responseContractUpdatePending={responseContractUpdatePending}
@@ -996,14 +1147,14 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                     <div>
                                         <h2 className="text-2xl font-semibold text-cortex-text-main">Talk with Soma</h2>
                                         <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
-                                            Use Soma as the primary conversation surface for plans, concepts, imagery, drafts, and delivery shaping. Soma can bring in the right advisor support before guidance is handed to Team Leads, Departments, and Specialists.
+                                            Use Soma as the primary root workspace for plans, concepts, imagery, drafts, and delivery shaping. Admins can ask Soma to create teams, structure new lanes, and coordinate the right advisor support before work is handed to focused Team Leads, Departments, and Specialists.
                                         </p>
                                     </div>
                                 </div>
                                 <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
                                     <p className="font-medium text-cortex-text-main">How to read this workspace</p>
                                     <p className="mt-1 leading-6">
-                                        Use Soma as the main interface. The overview and quick checks alongside it explain the current organization state so you can understand what is healthy, what is active, and what may need attention while you refine work with Soma.
+                                        Use Soma as the main interface. The overview and quick checks alongside it explain what is healthy, what is active, and what may need attention while you shape teams with Soma and then move into a focused Team Lead workspace when a specific lane is selected.
                                     </p>
                                 </div>
                             </div>
@@ -1054,7 +1205,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 </div>
                                 <span className="inline-flex items-center rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm text-cortex-text-muted">
                                     {somaWorkspaceMode === "conversation"
-                                        ? "Stay in general conversation for plans, concepts, imagery, and broad delivery shaping."
+                                        ? "Stay in Soma's root workspace for planning, team creation, concepts, imagery, and broad delivery shaping."
                                         : "Use team design mode when you want Soma to turn the current conversation into roles, lanes, and execution structure."}
                                 </span>
                             </div>
@@ -1382,6 +1533,11 @@ function agentTypeResponseStyleSourceLabel(profile: OrganizationAgentTypeProfile
     return profile.inherits_default_response_contract
         ? `Using Organization or Team Default: ${profile.response_contract_effective_summary}`
         : `Type-specific Response Style: ${profile.response_contract_effective_summary}`;
+}
+
+function agentTypeOutputModelSourceLabel(profile: OrganizationAgentTypeProfileSummary) {
+    const summary = profile.output_model_effective_summary?.trim() || "Set up later in Advanced mode";
+    return profile.inherits_default_output_model ? `Using Organization Default: ${summary}` : `Detected for this role: ${summary}`;
 }
 
 function agentTypeSelectionKey(departmentId: string, agentTypeId: string) {
@@ -1862,10 +2018,22 @@ function WorkspaceDetailView({
     selectedAIEngineProfile,
     aiEngineUpdatePending,
     aiEngineUpdateError,
+    outputModelRouting,
+    outputModelRoutingLoading,
+    outputModelRoutingError,
+    selectedOutputModelRoutingMode,
+    selectedDefaultOutputModelId,
+    selectedOutputModelBindings,
+    outputModelRoutingUpdatePending,
+    outputModelRoutingUpdateError,
     onAIEngineProfileSelect,
+    onOutputModelRoutingModeChange,
+    onDefaultOutputModelChange,
+    onOutputModelBindingChange,
     onOpenAIEngineSelector,
     onCloseAIEngineSelector,
     onSubmitAIEngineSelection,
+    onSubmitOutputModelRouting,
     isResponseContractSelectorOpen,
     selectedResponseContractProfile,
     responseContractUpdatePending,
@@ -1914,10 +2082,22 @@ function WorkspaceDetailView({
     selectedAIEngineProfile: OrganizationAIEngineProfileId | null;
     aiEngineUpdatePending: boolean;
     aiEngineUpdateError: string | null;
+    outputModelRouting: OrganizationOutputModelRoutingPayload | null;
+    outputModelRoutingLoading: boolean;
+    outputModelRoutingError: string | null;
+    selectedOutputModelRoutingMode: OrganizationOutputModelRoutingMode;
+    selectedDefaultOutputModelId: string;
+    selectedOutputModelBindings: Record<string, string>;
+    outputModelRoutingUpdatePending: boolean;
+    outputModelRoutingUpdateError: string | null;
     onAIEngineProfileSelect: (profile: OrganizationAIEngineProfileId) => void;
+    onOutputModelRoutingModeChange: (mode: OrganizationOutputModelRoutingMode) => void;
+    onDefaultOutputModelChange: (modelId: string) => void;
+    onOutputModelBindingChange: (outputTypeId: OrganizationOutputTypeId, modelId: string) => void;
     onOpenAIEngineSelector: () => void;
     onCloseAIEngineSelector: () => void;
     onSubmitAIEngineSelection: () => void;
+    onSubmitOutputModelRouting: () => void;
     isResponseContractSelectorOpen: boolean;
     selectedResponseContractProfile: ResponseContractProfileId | null;
     responseContractUpdatePending: boolean;
@@ -2156,7 +2336,7 @@ function WorkspaceDetailView({
                                                                     </p>
                                                                 </div>
                                                             </div>
-                                                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                                            <div className="mt-4 grid gap-3 lg:grid-cols-3">
                                                                 <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
                                                                     <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">AI Engine</p>
                                                                     <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeAIEngineSourceLabel(profile)}</p>
@@ -2164,6 +2344,15 @@ function WorkspaceDetailView({
                                                                 <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
                                                                     <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Response Style</p>
                                                                     <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeResponseStyleSourceLabel(profile)}</p>
+                                                                </div>
+                                                                <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                                                                    <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Detected output model</p>
+                                                                    <p className="mt-2 text-sm font-medium text-cortex-text-main">{agentTypeOutputModelSourceLabel(profile)}</p>
+                                                                    {profile.output_type_label && (
+                                                                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                                                            Output type: <span className="font-medium text-cortex-text-main">{profile.output_type_label}</span>
+                                                                        </p>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                             <div className="mt-4 flex flex-wrap gap-3">
@@ -2289,6 +2478,23 @@ function WorkspaceDetailView({
                 />
             )}
 
+            {view === "aiEngine" && (
+                <OutputModelRoutingPanel
+                    routing={outputModelRouting}
+                    loading={outputModelRoutingLoading}
+                    error={outputModelRoutingError}
+                    selectedRoutingMode={selectedOutputModelRoutingMode}
+                    selectedDefaultModelId={selectedDefaultOutputModelId}
+                    selectedBindings={selectedOutputModelBindings}
+                    updatePending={outputModelRoutingUpdatePending}
+                    updateError={outputModelRoutingUpdateError}
+                    onRoutingModeChange={onOutputModelRoutingModeChange}
+                    onDefaultModelChange={onDefaultOutputModelChange}
+                    onBindingChange={onOutputModelBindingChange}
+                    onSubmit={onSubmitOutputModelRouting}
+                />
+            )}
+
             {view === "responseContract" && isResponseContractSelectorOpen && (
                 <ResponseContractSelectionPanel
                     selectedResponseContractProfile={selectedResponseContractProfile}
@@ -2298,6 +2504,190 @@ function WorkspaceDetailView({
                     onClose={onCloseResponseContractSelector}
                     onSubmit={onSubmitResponseContractSelection}
                 />
+            )}
+        </div>
+    );
+}
+
+function outputModelOptions(routing: OrganizationOutputModelRoutingPayload | null) {
+    const options = routing?.available_models ?? [];
+    return options.length > 0 ? options : [];
+}
+
+function OutputModelRoutingPanel({
+    routing,
+    loading,
+    error,
+    selectedRoutingMode,
+    selectedDefaultModelId,
+    selectedBindings,
+    updatePending,
+    updateError,
+    onRoutingModeChange,
+    onDefaultModelChange,
+    onBindingChange,
+    onSubmit,
+}: {
+    routing: OrganizationOutputModelRoutingPayload | null;
+    loading: boolean;
+    error: string | null;
+    selectedRoutingMode: OrganizationOutputModelRoutingMode;
+    selectedDefaultModelId: string;
+    selectedBindings: Record<string, string>;
+    updatePending: boolean;
+    updateError: string | null;
+    onRoutingModeChange: (mode: OrganizationOutputModelRoutingMode) => void;
+    onDefaultModelChange: (modelId: string) => void;
+    onBindingChange: (outputTypeId: OrganizationOutputTypeId, modelId: string) => void;
+    onSubmit: () => void;
+}) {
+    const modelOptions = outputModelOptions(routing);
+
+    return (
+        <div className="mt-5 rounded-3xl border border-cortex-primary/20 bg-cortex-bg p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h4 className="text-lg font-semibold text-cortex-text-main">Output model routing</h4>
+                    <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
+                        Admins can keep every Team Lead and Specialist on one concrete model by default, or let Soma route detected output types like research, code, and vision to more appropriate self-hosted models.
+                    </p>
+                </div>
+                <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Local-first routing</p>
+                    <p className="mt-1">{routing?.hardware_summary ?? "Model routing data is still loading."}</p>
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4 text-sm text-cortex-text-muted">
+                    Loading local model inventory...
+                </div>
+            ) : error ? (
+                <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-surface px-4 py-4 text-sm text-cortex-text-muted">
+                    <p className="font-medium text-cortex-text-main">Unable to load output model routing</p>
+                    <p className="mt-2 leading-6">{error}</p>
+                </div>
+            ) : (
+                <>
+                    <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                        <button
+                            type="button"
+                            onClick={() => onRoutingModeChange("single_model")}
+                            disabled={updatePending}
+                            className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                                selectedRoutingMode === "single_model"
+                                    ? "border-cortex-primary/40 bg-cortex-primary/10"
+                                    : "border-cortex-border bg-cortex-surface hover:border-cortex-primary/20"
+                            }`}
+                        >
+                            <p className="text-sm font-semibold text-cortex-text-main">Use one model for everyone</p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                Keeps every Team Lead and Specialist on the same concrete model until you intentionally split by detected output type.
+                            </p>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onRoutingModeChange("detected_output_types")}
+                            disabled={updatePending}
+                            className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                                selectedRoutingMode === "detected_output_types"
+                                    ? "border-cortex-primary/40 bg-cortex-primary/10"
+                                    : "border-cortex-border bg-cortex-surface hover:border-cortex-primary/20"
+                            }`}
+                        >
+                            <p className="text-sm font-semibold text-cortex-text-main">Use detected models by output type</p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                Lets Soma keep the team simple while routing research, code, and vision-heavy work to more appropriate local models.
+                            </p>
+                        </button>
+                    </div>
+
+                    <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                        <label className="text-sm font-semibold text-cortex-text-main" htmlFor="organization-default-output-model">
+                            Organization default model
+                        </label>
+                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                            This is the fallback model all roles use by default. In detected mode, output types only diverge where you explicitly bind a different model.
+                        </p>
+                        <select
+                            id="organization-default-output-model"
+                            value={selectedDefaultModelId}
+                            onChange={(event) => onDefaultModelChange(event.target.value)}
+                            disabled={updatePending}
+                            className="mt-3 w-full rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-main"
+                        >
+                            {modelOptions.map((option) => (
+                                <option key={option.model_id} value={option.model_id}>
+                                    {option.label} ({option.model_id})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {selectedRoutingMode === "detected_output_types" && (
+                        <div className="mt-5 grid gap-3">
+                            {OUTPUT_TYPE_OPTIONS.map((option) => (
+                                <div key={option.id} className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                                    <p className="text-sm font-semibold text-cortex-text-main">{option.label}</p>
+                                    <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{option.description}</p>
+                                    <select
+                                        value={selectedBindings[option.id] ?? selectedDefaultModelId}
+                                        onChange={(event) => onBindingChange(option.id, event.target.value)}
+                                        disabled={updatePending}
+                                        className="mt-3 w-full rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-main"
+                                    >
+                                        {modelOptions.map((entry) => (
+                                            <option key={`${option.id}-${entry.model_id}`} value={entry.model_id}>
+                                                {entry.label} ({entry.model_id})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {(routing?.recommended_models?.length ?? 0) > 0 && (
+                        <div className="mt-5">
+                            <p className="text-sm font-semibold text-cortex-text-main">Popular self-hosted starting points</p>
+                            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                                {(routing?.recommended_models ?? []).map((entry) => (
+                                    <div key={entry.model_id} className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-sm font-semibold text-cortex-text-main">{entry.label}</p>
+                                            {entry.installed && (
+                                                <span className="inline-flex rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cortex-primary">
+                                                    Installed
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{entry.summary}</p>
+                                        {entry.hosting_fit && <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{entry.hosting_fit}</p>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {updateError && (
+                        <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-surface px-4 py-4 text-sm text-cortex-text-muted">
+                            <p className="font-medium text-cortex-text-main">Unable to update output model routing</p>
+                            <p className="mt-2 leading-6">{updateError}</p>
+                        </div>
+                    )}
+
+                    <div className="mt-5 flex flex-wrap gap-3">
+                        <button
+                            type="button"
+                            onClick={onSubmit}
+                            disabled={!selectedDefaultModelId || updatePending}
+                            className="inline-flex items-center gap-2 rounded-xl bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {updatePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            {updatePending ? "Updating output model routing..." : "Use output model routing"}
+                        </button>
+                    </div>
+                </>
             )}
         </div>
     );

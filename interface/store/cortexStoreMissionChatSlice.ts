@@ -47,6 +47,21 @@ function buildRecentMissionMessages(messages: ChatMessage[]) {
         }));
 }
 
+function resolveSelectedTeamContext(get: CortexGet): { id: string; name: string } | null {
+    const { selectedTeamId, teamsDetail } = get();
+    if (!selectedTeamId) {
+        return null;
+    }
+    const team = teamsDetail.find((entry) => entry.id === selectedTeamId);
+    if (!team) {
+        return { id: selectedTeamId, name: selectedTeamId };
+    }
+    return {
+        id: team.id,
+        name: team.name || team.id,
+    };
+}
+
 function resolveGovernanceMode(trustThreshold: number): CortexState['governanceMode'] {
     if (trustThreshold >= 0.8) return 'strict';
     if (trustThreshold >= 0.5) return 'active';
@@ -136,11 +151,17 @@ export function createCortexMissionChatSlice(
                 const isRetryAttempt = attempt > 0;
                 try {
                     const messages = buildRecentMissionMessages(get().missionChat);
+                    const teamContext = resolveSelectedTeamContext(get);
 
                     const res = await fetch(chatRoute, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ messages }),
+                        body: JSON.stringify({
+                            messages,
+                            organization_id: get().workspaceChatScope ?? undefined,
+                            team_id: teamContext?.id,
+                            team_name: teamContext?.name,
+                        }),
                     });
 
                     if (!res.ok) {

@@ -27,9 +27,12 @@ It is a product walkthrough, not a raw engineering soak test.
 
 This runbook should prove the current shipped posture:
 - Soma-first operator workflow
+- Soma as the root admin workspace for creating and shaping teams
+- team-specific follow-through through a focused Team Lead workspace once a lane is selected
 - governed mutation through proposal -> approve/cancel -> execution
 - audit/activity visibility
 - deployment-context loading into governed vector-backed stores
+- admin-visible output-model routing for team delivery types
 - MCP visibility and recent persisted tool activity
 - optional governed external/web research when the environment has that path enabled
 
@@ -111,6 +114,7 @@ Steps:
 Expected outcome:
 - the workspace loads
 - Soma is the primary interaction surface
+- the root workspace makes it clear that admin can ask Soma to shape or create teams from here
 - no hydration crash or immediate degraded state appears on first view
 
 ### 2. Direct Soma Answer
@@ -126,7 +130,62 @@ Expected outcome:
 - response starts quickly
 - no mutation proposal is shown for this informational ask
 
-### 3. Governed Mutation: Cancel Path
+### 3. Soma Creates Or Refines A Team
+
+Goal:
+- prove that the root Soma workspace can be used to create or reshape a team without forcing the user into a low-level infrastructure view
+
+Suggested prompt:
+- `Create a marketing team focused on campaign planning, launch messaging, and asset review.`
+
+Expected outcome:
+- Soma responds in a team-shaping posture
+- the result clearly frames the requested team as a governed working lane, not just a loose chat answer
+- the user can move from Soma's root workspace into a more focused team view afterward
+
+### 4. Team Lead Focus
+
+Goal:
+- prove that once a team is selected, the user is no longer talking to a generic global surface
+
+Steps:
+1. Open the team list or team-focused view.
+2. Select the created or existing team.
+3. Confirm the page frames that lane around a focused Team Lead counterpart.
+4. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
+
+Expected outcome:
+- the workspace or drawer clearly identifies a focused Team Lead / lead counterpart
+- team-specific prompts refer to the selected team first
+- the answer is scoped to that team, not the full global roster
+
+### 4a. Output Model Routing
+
+Goal:
+- prove that an admin can set a shared default model or detected output-type models for team delivery without editing backend config files
+
+Steps:
+1. Return to the root AI Organization workspace.
+2. Open `AI Engine Settings`.
+3. Confirm the output-model routing panel loads.
+4. Review the recommended self-hosted starting points.
+5. Switch between:
+   - one shared model for everyone
+   - detected output-type routing
+6. Save a detected routing example such as:
+   - general text -> `Qwen3 8B`
+   - research and reasoning -> `Llama 3.1 8B`
+   - code generation -> `Qwen2.5 Coder 7B`
+   - vision analysis -> `LLaVA 7B`
+7. Return to the team view and confirm the team summary shows the detected effective model for that lane.
+
+Expected outcome:
+- the panel lists installed local models and recommended self-hosted starting points
+- the admin can save either routing mode without touching YAML directly
+- team-facing summaries reflect the detected effective model after save
+- ordinary non-admin interaction is not framed as the place to rewrite shared output-model policy
+
+### 5. Governed Mutation: Cancel Path
 
 Goal:
 - prove that a mutating action is governed and can be stopped safely
@@ -142,7 +201,7 @@ Expected outcome:
 Pass condition:
 - no file should be created after cancellation
 
-### 4. Governed Mutation: Execute Path
+### 6. Governed Mutation: Execute Path
 
 Goal:
 - prove that the same actuation path works once approved
@@ -158,7 +217,7 @@ Expected outcome:
 Optional host-side verification:
 - inspect the workspace directory on the host machine and confirm the file exists
 
-### 5. Deployment Context Intake
+### 7. Deployment Context Intake
 
 Goal:
 - prove that user-provided documentation can be loaded into governed long-term context instead of being treated as ordinary chat
@@ -176,8 +235,9 @@ Expected outcome:
 - the entry is accepted as governed context
 - it appears in recent Deployment Context history
 - the UI makes clear this is deployment context, not ordinary Soma memory
+- it is clear that this context can support Soma and team leads without becoming ungoverned shared chat history
 
-### 6. MCP Visibility And Tool Activity
+### 8. MCP Visibility And Tool Activity
 
 Goal:
 - prove that the operator can understand what tools are available and what agents have actually used
@@ -196,7 +256,7 @@ If the environment allows low-risk curated install testing:
 - install only a known local-first, policy-compliant library entry
 - do not treat a remote/high-risk MCP install rejection as a failure; it is a valid governance result
 
-### 7. Optional Web/External Research
+### 9. Optional Web/External Research
 
 Goal:
 - prove that web/external research is governed rather than silently trusted
@@ -215,7 +275,7 @@ Pass condition:
 - external access is visible and governed
 - the system does not behave like unrestricted open browsing
 
-### 8. Audit / Activity Review
+### 10. Audit / Activity Review
 
 Goal:
 - prove that the remote user can inspect what happened after the flow
@@ -232,7 +292,7 @@ Expected outcome:
   - MCP activity if used
   - approval posture
 
-### 9. Failure Recovery Check
+### 11. Failure Recovery Check
 
 Goal:
 - prove that the system fails into a clear blocker or tool error, not silent breakage
@@ -251,14 +311,17 @@ This remote user test should be considered successful when all of these are true
 
 1. The remote machine can reach and use the UI over the network.
 2. Soma-first workspace entry works.
-3. Informational prompts return `answer`.
-4. Mutating prompts enter governed `proposal` flow.
-5. Cancel and approve paths both behave correctly.
-6. Deployment context can be loaded with visible governance posture.
-7. Connected Tools makes MCP availability and recent usage understandable.
-8. Optional web research, if enabled, behaves as a governed capability.
-9. Audit/activity surfaces reconstruct the session clearly.
-10. Failure cases degrade safely into blocker/error states instead of UI collapse.
+3. Soma can be used from the root workspace to shape or create a team.
+4. Selecting a team shifts the interaction into a clearly team-focused lead workspace.
+5. Admins can configure organization output-model routing from the root Soma workspace.
+6. Informational prompts return `answer`.
+7. Mutating prompts enter governed `proposal` flow.
+8. Cancel and approve paths both behave correctly.
+9. Deployment context can be loaded with visible governance posture.
+10. Connected Tools makes MCP availability and recent usage understandable.
+11. Optional web research, if enabled, behaves as a governed capability.
+12. Audit/activity surfaces reconstruct the session clearly.
+13. Failure cases degrade safely into blocker/error states instead of UI collapse.
 
 ## Failure Notes To Capture
 

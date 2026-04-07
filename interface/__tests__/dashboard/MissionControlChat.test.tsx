@@ -32,6 +32,39 @@ const CTS_CHAT_RESPONSE = {
     },
 };
 
+function requestUrl(input: unknown): string {
+    if (typeof input === 'string') {
+        return input;
+    }
+    if (typeof Request !== 'undefined' && input instanceof Request) {
+        return input.url;
+    }
+    if (typeof URL !== 'undefined' && input instanceof URL) {
+        return input.toString();
+    }
+    if (input && typeof input === 'object' && 'url' in input && typeof (input as { url?: unknown }).url === 'string') {
+        return (input as { url: string }).url;
+    }
+    return String(input ?? '');
+}
+
+function okJson(body: unknown) {
+    return {
+        ok: true,
+        status: 200,
+        json: async () => body,
+        text: async () => JSON.stringify(body),
+    } as any;
+}
+
+function errorText(status: number, text: string) {
+    return {
+        ok: false,
+        status,
+        text: async () => text,
+    } as any;
+}
+
 function resetStore() {
     useCortexStore.setState({
         missionChat: [],
@@ -49,6 +82,8 @@ function resetStore() {
         isBroadcasting: false,
         lastBroadcastResult: null,
         streamLogs: [],
+        selectedTeamId: null,
+        teamsDetail: [],
     });
 }
 
@@ -148,18 +183,22 @@ describe('MissionControlChat', () => {
                 councilTarget: 'admin',
             });
 
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: async () => ({
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return okJson({ ok: true, data: COUNCIL_MEMBERS });
+                }
+                if (url.includes('/api/v1/chat')) {
+                    return okJson({
                         ok: true,
                         data: {
                             ...CTS_CHAT_RESPONSE.data,
                             meta: { ...CTS_CHAT_RESPONSE.data.meta, source_node: 'admin' },
                         },
-                    }),
-                });
+                    });
+                }
+                return errorText(404, 'not found');
+            });
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -171,9 +210,55 @@ describe('MissionControlChat', () => {
             await waitFor(() => {
                 const calls = mockFetch.mock.calls;
                 const chatCall = calls.find((c: any[]) =>
-                    typeof c[0] === 'string' && c[0].includes('/api/v1/chat')
+                    requestUrl(c[0]).includes('/api/v1/chat')
                 );
                 expect(chatCall).toBeDefined();
+            });
+        });
+
+        it('includes organization and selected team context in Soma chat requests', async () => {
+            useCortexStore.setState({
+                councilMembers: COUNCIL_MEMBERS,
+                councilTarget: 'admin',
+                selectedTeamId: 'marketing-team',
+                teamsDetail: [
+                    {
+                        id: 'marketing-team',
+                        name: 'Marketing',
+                        role: 'campaigns',
+                        type: 'standing',
+                        mission_id: null,
+                        mission_intent: null,
+                        inputs: [],
+                        deliveries: [],
+                        agents: [],
+                    },
+                ],
+            });
+
+            mockFetch.mockImplementation(async () => okJson({
+                ok: true,
+                data: {
+                    ...CTS_CHAT_RESPONSE.data,
+                    meta: { ...CTS_CHAT_RESPONSE.data.meta, source_node: 'admin' },
+                },
+            }));
+
+            render(<MissionControlChat simpleMode organizationId="org-123" />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const input = screen.getByPlaceholderText(/Ask Soma about Marketing/i);
+            fireEvent.change(input, { target: { value: 'Plan the next move' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                const chatCall = mockFetch.mock.calls.at(-1);
+                expect(chatCall).toBeDefined();
+
+                const body = JSON.parse(String(chatCall?.[1]?.body ?? '{}'));
+                expect(body.organization_id).toBe('org-123');
+                expect(body.team_id).toBe('marketing-team');
+                expect(body.team_name).toBe('Marketing');
             });
         });
 
@@ -182,18 +267,22 @@ describe('MissionControlChat', () => {
                 councilMembers: COUNCIL_MEMBERS,
             });
 
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: async () => ({
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return okJson({ ok: true, data: COUNCIL_MEMBERS });
+                }
+                if (url.includes('/api/v1/council/council-architect/chat')) {
+                    return okJson({
                         ok: true,
                         data: {
                             ...CTS_CHAT_RESPONSE.data,
                             meta: { ...CTS_CHAT_RESPONSE.data.meta, source_node: 'council-architect' },
                         },
-                    }),
-                });
+                    });
+                }
+                return errorText(404, 'not found');
+            });
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -208,7 +297,7 @@ describe('MissionControlChat', () => {
             await waitFor(() => {
                 const calls = mockFetch.mock.calls;
                 const chatCall = calls.find((c: any[]) =>
-                    typeof c[0] === 'string' && c[0].includes('/api/v1/council/council-architect/chat')
+                    requestUrl(c[0]).includes('/api/v1/council/council-architect/chat')
                 );
                 expect(chatCall).toBeDefined();
             });
@@ -250,11 +339,13 @@ describe('MissionControlChat', () => {
                 councilTarget: 'admin',
             });
 
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: async () => ({
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return okJson({ ok: true, data: COUNCIL_MEMBERS });
+                }
+                if (url.includes('/api/v1/chat')) {
+                    return okJson({
                         ok: true,
                         data: {
                             ...CTS_CHAT_RESPONSE.data,
@@ -280,8 +371,10 @@ describe('MissionControlChat', () => {
                                 ],
                             },
                         },
-                    }),
-                });
+                    });
+                }
+                return errorText(404, 'not found');
+            });
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -327,11 +420,13 @@ describe('MissionControlChat', () => {
                 councilTarget: 'admin',
             });
 
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: async () => ({
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return okJson({ ok: true, data: COUNCIL_MEMBERS });
+                }
+                if (url.includes('/api/v1/chat')) {
+                    return okJson({
                         ok: true,
                         data: {
                             ...CTS_CHAT_RESPONSE.data,
@@ -348,8 +443,10 @@ describe('MissionControlChat', () => {
                                 ],
                             },
                         },
-                    }),
-                });
+                    });
+                }
+                return errorText(404, 'not found');
+            });
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -371,11 +468,13 @@ describe('MissionControlChat', () => {
                 councilTarget: 'admin',
             });
 
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: async () => ({
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return okJson({ ok: true, data: COUNCIL_MEMBERS });
+                }
+                if (url.includes('/api/v1/chat')) {
+                    return okJson({
                         ok: true,
                         data: {
                             ...CTS_CHAT_RESPONSE.data,
@@ -383,8 +482,10 @@ describe('MissionControlChat', () => {
                                 text: '',
                             },
                         },
-                    }),
-                });
+                    });
+                }
+                return errorText(404, 'not found');
+            });
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -514,6 +615,29 @@ describe('MissionControlChat', () => {
             expect(screen.getByPlaceholderText(/Ask Soma/i)).toBeDefined();
         });
 
+        it('shows a selected team placeholder in simple Soma mode', async () => {
+            useCortexStore.setState({
+                selectedTeamId: 'marketing-team',
+                teamsDetail: [
+                    {
+                        id: 'marketing-team',
+                        name: 'Marketing',
+                        role: 'campaigns',
+                        type: 'standing',
+                        mission_id: null,
+                        mission_intent: null,
+                        inputs: [],
+                        deliveries: [],
+                        agents: [],
+                    },
+                ],
+            });
+
+            render(<MissionControlChat simpleMode />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+            expect(screen.getByPlaceholderText(/Ask Soma about Marketing/i)).toBeDefined();
+        });
+
         it('shows broadcast placeholder in broadcast mode', async () => {
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -588,13 +712,16 @@ describe('MissionControlChat', () => {
         });
 
         it('records Soma blocker mode when council roster is unavailable', async () => {
-            mockFetch
-                .mockResolvedValueOnce({ ok: false })
-                .mockResolvedValueOnce({
-                    ok: false,
-                    status: 500,
-                    text: async () => '{"error":"Soma chat blocked (500)"}',
-                });
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return { ok: false, status: 503, text: async () => 'unavailable' } as any;
+                }
+                if (url.includes('/api/v1/chat')) {
+                    return errorText(500, '{"error":"Soma chat blocked (500)"}');
+                }
+                return errorText(404, 'not found');
+            });
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -609,18 +736,21 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
             expect(screen.queryByText('Switch to Soma')).toBeNull();
             expect(
-                mockFetch.mock.calls.some((c: any[]) => typeof c[0] === 'string' && c[0].includes('/api/v1/chat'))
+                mockFetch.mock.calls.some((c: any[]) => requestUrl(c[0]).includes('/api/v1/chat'))
             ).toBe(true);
         });
 
         it('records council blocker mode and shows Soma fallback actions when direct council chat fails', async () => {
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: COUNCIL_MEMBERS }) })
-                .mockResolvedValueOnce({
-                    ok: false,
-                    status: 500,
-                    text: async () => '{"error":"Council member failed"}',
-                });
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return okJson({ ok: true, data: COUNCIL_MEMBERS });
+                }
+                if (url.includes('/api/v1/council/council-sentry/chat')) {
+                    return errorText(500, '{"error":"Council member failed"}');
+                }
+                return errorText(404, 'not found');
+            });
 
             render(<MissionControlChat />);
             await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
@@ -639,7 +769,7 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Switch to Soma')).toBeDefined();
             expect(screen.getByText('Continue with Soma Only')).toBeDefined();
             expect(
-                mockFetch.mock.calls.some((c: any[]) => typeof c[0] === 'string' && c[0].includes('/api/v1/council/council-sentry/chat'))
+                mockFetch.mock.calls.some((c: any[]) => requestUrl(c[0]).includes('/api/v1/council/council-sentry/chat'))
             ).toBe(true);
         });
 
@@ -728,6 +858,32 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Choose a starter prompt')).toBeDefined();
             fireEvent.click(screen.getByRole('button', { name: 'Run a governed change' }));
             expect(screen.getByDisplayValue('Run a governed change')).toBeDefined();
+        });
+
+        it('shows team-specific starter prompts in simple mode when a team is selected', async () => {
+            useCortexStore.setState({
+                selectedTeamId: 'marketing-team',
+                teamsDetail: [
+                    {
+                        id: 'marketing-team',
+                        name: 'Marketing',
+                        role: 'campaigns',
+                        type: 'standing',
+                        mission_id: null,
+                        mission_intent: null,
+                        inputs: [],
+                        deliveries: [],
+                        agents: [],
+                    },
+                ],
+            });
+
+            render(<MissionControlChat simpleMode />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            expect(screen.getByRole('button', { name: 'Plan the next move for Marketing' })).toBeDefined();
+            fireEvent.click(screen.getByRole('button', { name: 'Summarize Marketing in one sentence' }));
+            expect(screen.getByDisplayValue('Summarize Marketing in one sentence')).toBeDefined();
         });
 
         it('shows broadcast directive text in broadcast mode', async () => {

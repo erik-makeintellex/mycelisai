@@ -76,6 +76,9 @@ describe('TeamsPage', () => {
         expect(screen.getByText('Alpha Squad')).toBeDefined();
         expect(screen.getByText('Bravo Ops')).toBeDefined();
 
+        expect(screen.getByText('Team Lead Workspaces')).toBeDefined();
+        expect(screen.getByText(/Soma is the root workspace/i)).toBeDefined();
+
         // Header should show team count
         expect(screen.getByText(/2 teams/)).toBeDefined();
 
@@ -131,6 +134,7 @@ describe('TeamsPage', () => {
 
         render(<TeamsPage />);
 
+        expect(screen.getAllByText('Open lead workspace').length).toBeGreaterThan(0);
         expect(screen.getByTestId('team-team-alpha-open-chat')).toBeDefined();
         expect(screen.getByTestId('team-team-alpha-view-runs')).toBeDefined();
         expect(screen.getByTestId('team-team-alpha-view-wiring')).toBeDefined();

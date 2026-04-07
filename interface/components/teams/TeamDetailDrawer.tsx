@@ -27,6 +27,7 @@ interface TeamDetailDrawerProps {
 
 export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProps) {
     const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+    const leadLabel = `${team.name} lead`;
 
     return (
         <div className="absolute right-0 top-0 bottom-0 w-[480px] z-40 bg-cortex-surface border-l border-cortex-border shadow-2xl flex flex-col">
@@ -59,6 +60,18 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
 
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="rounded-lg bg-cortex-bg border border-cortex-border p-3 space-y-2">
+                    <div className="text-[10px] font-mono uppercase text-cortex-text-muted">
+                        Primary counterpart
+                    </div>
+                    <div className="text-sm font-mono text-cortex-text-main">
+                        {leadLabel}
+                    </div>
+                    <div className="text-xs text-cortex-text-muted leading-5">
+                        This team opens around a focused lead entity first. That lead can work from team context and coordinate back through Soma when broader organization memory, RAG context, or cross-team direction is needed.
+                    </div>
+                </div>
+
                 {/* Mission context */}
                 {team.type === 'mission' && team.mission_id && (
                     <div className="rounded-lg bg-cortex-bg border border-cortex-border p-3 space-y-1">

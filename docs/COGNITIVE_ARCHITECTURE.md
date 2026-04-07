@@ -84,6 +84,12 @@ Navigate to `/settings` → **AI Engines** (Advanced mode):
 - Click a **provider** to configure endpoint, model ID, and API keys
 - Changes persist to `cognitive.yaml` via `PUT /api/v1/cognitive/profiles` and `PUT /api/v1/cognitive/providers/{id}`
 
+AI Organizations also expose an operator-facing output-model routing layer from the organization workspace. That layer does not replace provider configuration; it selects which configured local models are used for delivery types such as general text, research and reasoning, code generation, and vision analysis.
+
+Current self-hosted starting points surfaced in product:
+- `Qwen3 8B`
+- `Llama 3.1 8B`
+
 ## Live Health Probing
 
 `GET /api/v1/cognitive/status` returns real-time health for all providers:

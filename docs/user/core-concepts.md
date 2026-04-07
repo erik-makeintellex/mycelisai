@@ -20,7 +20,31 @@ Soma can:
 You do not need to manually pick Soma. It is the default route in Workspace chat.
 On normal startup, Workspace opens with Soma already selected and starts the live stream automatically, so you should not need a recovery click just to begin.
 For AI Organizations, the organization-wide AI Engine, Response Style, and Memory & Continuity posture chosen during setup become Soma's starting posture until you intentionally change them.
+At the root organization workspace, admins should ask Soma to create, reshape, and coordinate teams rather than bypassing Soma to manually assemble the operating structure first.
 You can rename Soma from `Settings -> Profile -> Assistant Name`; the updated name appears across chat and operational UI labels.
+Root admins can also configure output-model routing for the organization so all team members either share one default model or inherit detected models by output type.
+
+---
+
+## Team Leads
+
+Created teams are entered through a focused lead counterpart, not through a generic shared chat bucket.
+
+Team Leads:
+- own the immediate lane context for that team
+- work from scoped team memory and delivery context first
+- can coordinate back through Soma when broader organization context, RAG retrieval, or cross-team direction is needed
+- inherit the organization's default output model unless the admin has enabled detected output-type routing for planning, research, code, or vision work
+
+Use Soma at the root workspace when you want to:
+- create or manage teams
+- reshape organization structure
+- coordinate across multiple teams
+
+Use a Team Lead workspace when you want to:
+- work inside one team lane
+- review that lane's inputs, deliveries, and agent roster
+- keep interaction focused before escalating back to Soma
 
 ---
 
@@ -78,9 +102,20 @@ No mutation executes until confirmation.
 An AI engine is a curated model-provider posture used by the product.
 Role routing is managed through AI engines and mission profiles.
 
+For AI Organizations, admins can also assign output models by delivery type:
+- `single_model`: one default model for all team members
+- `detected_output_types`: a shared default plus specialized models for general text, research and reasoning, code generation, and vision analysis
+
+Current self-hosted starting points in the product:
+- `Qwen3 8B` for strong general text delivery
+- `Llama 3.1 8B` for research and reasoning
+- `Qwen2.5 Coder 7B` for code generation
+- `LLaVA 7B` for vision analysis
+
 Primary management surfaces:
 - `Resources -> AI Engines` (Advanced mode)
 - `Settings -> Profiles`
+- `AI Organization -> AI Engine Settings`
 
 ---
 

@@ -7,6 +7,8 @@ import type {
     OrganizationAutomationItem,
     OrganizationHomePayload,
     OrganizationLearningInsightItem,
+    OrganizationOutputModelRoutingPayload,
+    OrganizationOutputTypeId,
     ResponseContractProfileId,
 } from "@/lib/organizations";
 
@@ -33,8 +35,17 @@ const organizationHome: OrganizationHomePayload = {
     response_contract_profile_id: "clear_balanced",
     response_contract_summary: "Clear & Balanced",
     memory_personality_summary: "Prepared for Adaptive Delivery work",
+    output_model_routing_mode: "single_model",
+    default_output_model_id: "qwen2.5-coder:7b-instruct",
+    default_output_model_summary: "Qwen2.5 Coder 7B",
     status: "ready",
     description: "Guided AI Organization for engineering work",
+    output_model_bindings: [
+        { output_type_id: "general_text", output_type_label: "General text", model_id: "qwen3:8b", model_summary: "Qwen3 8B" },
+        { output_type_id: "research_reasoning", output_type_label: "Research & reasoning", model_id: "llama3.1:8b", model_summary: "Llama 3.1 8B" },
+        { output_type_id: "code_generation", output_type_label: "Code generation", model_id: "qwen2.5-coder:7b", model_summary: "Qwen2.5 Coder 7B" },
+        { output_type_id: "vision_analysis", output_type_label: "Vision analysis", model_id: "llava:7b", model_summary: "LLaVA 7B" },
+    ],
     departments: [
         {
             id: "platform",
@@ -56,6 +67,11 @@ const organizationHome: OrganizationHomePayload = {
                     response_contract_effective_profile_id: "structured_analytical",
                     response_contract_effective_summary: "Structured & Analytical",
                     inherits_default_response_contract: false,
+                    output_type_id: "research_reasoning",
+                    output_type_label: "Research & reasoning",
+                    output_model_effective_id: "qwen2.5-coder:7b-instruct",
+                    output_model_effective_summary: "Qwen2.5 Coder 7B",
+                    inherits_default_output_model: true,
                 },
                 {
                     id: "delivery-specialist",
@@ -67,8 +83,75 @@ const organizationHome: OrganizationHomePayload = {
                     response_contract_effective_profile_id: "clear_balanced",
                     response_contract_effective_summary: "Clear & Balanced",
                     inherits_default_response_contract: true,
+                    output_type_id: "code_generation",
+                    output_type_label: "Code generation",
+                    output_model_effective_id: "qwen2.5-coder:7b-instruct",
+                    output_model_effective_summary: "Qwen2.5 Coder 7B",
+                    inherits_default_output_model: true,
                 },
             ],
+        },
+    ],
+};
+
+const outputModelRouting: OrganizationOutputModelRoutingPayload = {
+    routing_mode: "single_model",
+    default_model_id: "qwen2.5-coder:7b-instruct",
+    default_model_summary: "Qwen2.5 Coder 7B",
+    hardware_summary: "Local-first self-hosted posture tuned for the current Ollama inventory and a 16GB-class GPU host.",
+    bindings: organizationHome.output_model_bindings,
+    recommended_models: [
+        {
+            model_id: "qwen3:8b",
+            label: "Qwen3 8B",
+            summary: "Strong local-first default for general text, agent planning, and multi-step reasoning.",
+            installed: true,
+            popular: true,
+            self_hostable: true,
+            hosting_fit: "Fits well on the current self-hosted GPU class and is already a common local-first general model.",
+        },
+        {
+            model_id: "llama3.1:8b",
+            label: "Llama 3.1 8B",
+            summary: "Popular local general model with long context and strong multilingual/research-oriented posture.",
+            installed: true,
+            popular: true,
+            self_hostable: true,
+            hosting_fit: "Fits well on the current self-hosted GPU class and gives a strong second general-purpose local option.",
+        },
+    ],
+    available_models: [
+        {
+            model_id: "qwen3:8b",
+            label: "Qwen3 8B",
+            summary: "Strong local-first default for general text, agent planning, and multi-step reasoning.",
+            installed: true,
+            popular: true,
+            self_hostable: true,
+        },
+        {
+            model_id: "llama3.1:8b",
+            label: "Llama 3.1 8B",
+            summary: "Popular local general model with long context and strong multilingual/research-oriented posture.",
+            installed: true,
+            popular: true,
+            self_hostable: true,
+        },
+        {
+            model_id: "qwen2.5-coder:7b",
+            label: "Qwen2.5 Coder 7B",
+            summary: "Focused local model for code generation, code repair, and implementation-heavy team lanes.",
+            installed: true,
+            popular: false,
+            self_hostable: true,
+        },
+        {
+            model_id: "llava:7b",
+            label: "LLaVA 7B",
+            summary: "Local multimodal model for image understanding, OCR, and visual review work.",
+            installed: true,
+            popular: false,
+            self_hostable: true,
         },
     ],
 };
@@ -260,6 +343,61 @@ function applyAgentTypeResponseContract(
     };
 }
 
+function applyOutputModelRouting(
+    home: OrganizationHomePayload,
+    routingMode: "single_model" | "detected_output_types",
+    defaultModelId: string,
+    bindings: Array<{ output_type_id: OrganizationOutputTypeId; model_id?: string }>,
+): OrganizationHomePayload {
+    const bindingMap = new Map(bindings.map((binding) => [binding.output_type_id, binding.model_id ?? defaultModelId]));
+    const summaryForModel = (modelId: string) => {
+        const summaries: Record<string, string> = {
+            "qwen3:8b": "Qwen3 8B",
+            "llama3.1:8b": "Llama 3.1 8B",
+            "qwen2.5-coder:7b": "Qwen2.5 Coder 7B",
+            "qwen2.5-coder:7b-instruct": "Qwen2.5 Coder 7B",
+            "llava:7b": "LLaVA 7B",
+        };
+        return summaries[modelId] ?? modelId;
+    };
+
+    return {
+        ...home,
+        output_model_routing_mode: routingMode,
+        default_output_model_id: defaultModelId,
+        default_output_model_summary: summaryForModel(defaultModelId),
+        output_model_bindings: OUTPUT_TYPE_BINDINGS.map((binding) => {
+            const modelId = bindingMap.get(binding.output_type_id) ?? defaultModelId;
+            return {
+                ...binding,
+                model_id: modelId,
+                model_summary: summaryForModel(modelId),
+            };
+        }),
+        departments: (home.departments ?? []).map((department) => ({
+            ...department,
+            agent_type_profiles: department.agent_type_profiles?.map((profile) => {
+                const outputTypeId = profile.output_type_id ?? "general_text";
+                const effectiveModelId =
+                    routingMode === "detected_output_types" ? (bindingMap.get(outputTypeId) ?? defaultModelId) : defaultModelId;
+                return {
+                    ...profile,
+                    output_model_effective_id: effectiveModelId,
+                    output_model_effective_summary: summaryForModel(effectiveModelId),
+                    inherits_default_output_model: effectiveModelId === defaultModelId,
+                };
+            }),
+        })),
+    };
+}
+
+const OUTPUT_TYPE_BINDINGS: Array<{ output_type_id: OrganizationOutputTypeId; output_type_label: string }> = [
+    { output_type_id: "general_text", output_type_label: "General text" },
+    { output_type_id: "research_reasoning", output_type_label: "Research & reasoning" },
+    { output_type_id: "code_generation", output_type_label: "Code generation" },
+    { output_type_id: "vision_analysis", output_type_label: "Vision analysis" },
+];
+
 function setupOrganizationFetch(options?: {
     homeHandler?: () => Promise<Response>;
     automationsHandler?: () => Promise<Response>;
@@ -271,6 +409,7 @@ function setupOrganizationFetch(options?: {
     agentTypeAIEngineUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     agentTypeResponseContractUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
     responseContractUpdateHandler?: (body: Record<string, unknown>) => Promise<Response>;
+    outputModelRoutingHandler?: (body: Record<string, unknown>) => Promise<Response>;
 }) {
     let currentOrganizationHome: OrganizationHomePayload = structuredClone(organizationHome);
     const councilMembers = [
@@ -299,6 +438,25 @@ function setupOrganizationFetch(options?: {
 
         if (url.includes("/api/v1/organizations/org-123/learning-insights")) {
             return options?.learningInsightsHandler?.() ?? jsonResponse({ ok: true, data: learningInsights });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/output-model-routing") && method === "GET") {
+            return jsonResponse({ ok: true, data: outputModelRouting });
+        }
+
+        if (url.includes("/api/v1/organizations/org-123/output-model-routing") && method === "PATCH") {
+            const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
+            if (options?.outputModelRoutingHandler) {
+                return options.outputModelRoutingHandler(body);
+            }
+
+            currentOrganizationHome = applyOutputModelRouting(
+                currentOrganizationHome,
+                String(body.routing_mode ?? "single_model") as "single_model" | "detected_output_types",
+                String(body.default_model_id ?? currentOrganizationHome.default_output_model_id ?? ""),
+                Array.isArray(body.bindings) ? (body.bindings as Array<{ output_type_id: OrganizationOutputTypeId; model_id?: string }>) : [],
+            );
+            return jsonResponse({ ok: true, data: currentOrganizationHome });
         }
 
         if (url.includes("/api/v1/organizations/org-123/ai-engine") && method === "PATCH") {
@@ -1093,6 +1251,35 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("The current AI Engine Settings profile is high reasoning and shapes how the organization responds, plans, and carries work forward.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getByText("Create teams with Soma")).toBeDefined();
+    }, 15000);
+
+    it("lets the operator configure output model routing and shows detected role models", async () => {
+        setupOrganizationFetch();
+
+        await act(async () => {
+            render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
+        });
+
+        expect(await screen.findByRole("heading", { name: "AI Engine Settings" })).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Review AI Engine Settings" })[0]);
+
+        expect(await screen.findByText("Output model routing")).toBeDefined();
+        expect(screen.getByText("Popular self-hosted starting points")).toBeDefined();
+        expect(screen.getByText("Qwen3 8B")).toBeDefined();
+        expect(screen.getByText("Llama 3.1 8B")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: /Use detected models by output type/i }));
+        fireEvent.change(screen.getByLabelText("Organization default model"), { target: { value: "qwen3:8b" } });
+
+        const selects = screen.getAllByRole("combobox");
+        fireEvent.change(selects[2], { target: { value: "llama3.1:8b" } });
+        fireEvent.change(selects[3], { target: { value: "qwen2.5-coder:7b" } });
+        fireEvent.click(screen.getByRole("button", { name: "Use output model routing" }));
+
+        expect(await screen.findByText("AI Organization Home")).toBeDefined();
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
+        expect(await screen.findByText("Detected for this role: Llama 3.1 8B")).toBeDefined();
+        expect(screen.getByText("Detected for this role: Qwen2.5 Coder 7B")).toBeDefined();
     }, 15000);
 
     it("shows inherited Department AI Engine state, applies an override, and then reverts to the organization default", async () => {

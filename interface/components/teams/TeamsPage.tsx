@@ -64,17 +64,24 @@ export default function TeamsPage() {
         <div className="h-full flex flex-col bg-cortex-bg relative">
             {/* Header */}
             <div className="px-6 py-4 border-b border-cortex-border bg-cortex-surface/50 flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-3">
-                    <Users className="w-5 h-5 text-cortex-primary" />
-                    <h1 className="text-sm font-mono font-bold text-cortex-text-main uppercase tracking-wider">
-                        Shared Teams
-                    </h1>
-                    <span className="text-[10px] font-mono text-cortex-text-muted">
-                        {filteredTeams.length} team{filteredTeams.length !== 1 ? 's' : ''}
-                    </span>
-                    <span className="text-[10px] font-mono text-cortex-success">
-                        {onlineAgents}/{totalAgents} agents online
-                    </span>
+                <div className="flex items-start gap-3">
+                    <Users className="w-5 h-5 text-cortex-primary mt-0.5" />
+                    <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h1 className="text-sm font-mono font-bold text-cortex-text-main uppercase tracking-wider">
+                                Team Lead Workspaces
+                            </h1>
+                            <span className="text-[10px] font-mono text-cortex-text-muted">
+                                {filteredTeams.length} team{filteredTeams.length !== 1 ? 's' : ''}
+                            </span>
+                            <span className="text-[10px] font-mono text-cortex-success">
+                                {onlineAgents}/{totalAgents} agents online
+                            </span>
+                        </div>
+                        <p className="mt-1 text-xs text-cortex-text-muted">
+                            Soma is the root workspace. Open a team when you want a focused lead counterpart for that lane.
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -130,7 +137,7 @@ export default function TeamsPage() {
                                 Refresh
                             </button>
                             <a href="/dashboard" className="px-2.5 py-1.5 rounded border border-cortex-border text-cortex-text-main text-[10px] font-mono hover:bg-cortex-border">
-                                Open AI Organization
+                                Open Soma workspace
                             </a>
                         </div>
                     </div>

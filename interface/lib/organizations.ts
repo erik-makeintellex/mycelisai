@@ -1,6 +1,8 @@
 export type OrganizationStartMode = "template" | "empty";
 export type OrganizationAIEngineProfileId = "starter_defaults" | "balanced" | "high_reasoning" | "fast_lightweight" | "deep_planning";
 export type ResponseContractProfileId = "clear_balanced" | "structured_analytical" | "concise_direct" | "warm_supportive";
+export type OrganizationOutputModelRoutingMode = "single_model" | "detected_output_types";
+export type OrganizationOutputTypeId = "general_text" | "research_reasoning" | "code_generation" | "vision_analysis";
 export type LoopActivityStatus = "success" | "warning" | "failed";
 
 export interface OrganizationLoopActivityItem {
@@ -51,6 +53,42 @@ export interface OrganizationAgentTypeProfileSummary {
     response_contract_effective_profile_id?: ResponseContractProfileId;
     response_contract_effective_summary: string;
     inherits_default_response_contract: boolean;
+    output_type_id?: OrganizationOutputTypeId;
+    output_type_label?: string;
+    output_model_effective_id?: string;
+    output_model_effective_summary?: string;
+    inherits_default_output_model: boolean;
+}
+
+export interface OrganizationOutputModelBinding {
+    output_type_id: OrganizationOutputTypeId;
+    output_type_label: string;
+    model_id?: string;
+    model_summary: string;
+}
+
+export interface OrganizationOutputModelCatalogEntry {
+    model_id: string;
+    label: string;
+    summary: string;
+    output_type_ids?: OrganizationOutputTypeId[];
+    provider_id?: string;
+    installed: boolean;
+    popular: boolean;
+    self_hostable: boolean;
+    hosting_fit?: string;
+    popularity_note?: string;
+    source?: string;
+}
+
+export interface OrganizationOutputModelRoutingPayload {
+    routing_mode: OrganizationOutputModelRoutingMode;
+    default_model_id?: string;
+    default_model_summary: string;
+    bindings?: OrganizationOutputModelBinding[];
+    available_models?: OrganizationOutputModelCatalogEntry[];
+    recommended_models?: OrganizationOutputModelCatalogEntry[];
+    hardware_summary: string;
 }
 
 export interface OrganizationDepartmentSummary {
@@ -97,12 +135,16 @@ export interface OrganizationSummary {
     response_contract_profile_id?: ResponseContractProfileId;
     response_contract_summary: string;
     memory_personality_summary: string;
+    output_model_routing_mode?: OrganizationOutputModelRoutingMode;
+    default_output_model_id?: string;
+    default_output_model_summary?: string;
     status: string;
 }
 
 export interface OrganizationHomePayload extends OrganizationSummary {
     description?: string;
     departments?: OrganizationDepartmentSummary[];
+    output_model_bindings?: OrganizationOutputModelBinding[];
 }
 
 export interface OrganizationCreateRequest {
@@ -133,6 +175,18 @@ export interface AgentTypeResponseContractUpdateRequest {
 
 export interface ResponseContractUpdateRequest {
     profile_id: ResponseContractProfileId;
+}
+
+export interface OrganizationOutputModelBindingUpdateRequest {
+    output_type_id: OrganizationOutputTypeId;
+    model_id?: string;
+    use_organization_default?: boolean;
+}
+
+export interface OrganizationOutputModelRoutingUpdateRequest {
+    routing_mode: OrganizationOutputModelRoutingMode;
+    default_model_id: string;
+    bindings: OrganizationOutputModelBindingUpdateRequest[];
 }
 
 export type TeamLeadGuidedAction = "plan_next_steps" | "focus_first" | "review_setup";
