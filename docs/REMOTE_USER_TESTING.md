@@ -28,6 +28,7 @@ It is a product walkthrough, not a raw engineering soak test.
 This runbook should prove the current shipped posture:
 - Soma-first operator workflow
 - Soma as the root admin workspace for creating and shaping teams
+- a dedicated Groups workspace for temporary and standing collaboration lanes
 - team-specific follow-through through a focused Team Lead workspace once a lane is selected
 - governed mutation through proposal -> approve/cancel -> execution
 - audit/activity visibility
@@ -142,6 +143,26 @@ Expected outcome:
 - Soma responds in a team-shaping posture
 - the result clearly frames the requested team as a governed working lane, not just a loose chat answer
 - the user can move from Soma's root workspace into a more focused team view afterward
+
+### 3a. Groups Workspace
+
+Goal:
+- prove that collaboration groups have a dedicated workflow lane instead of crowding the root admin home
+
+Steps:
+1. Open `Groups`.
+2. Confirm the page clearly separates standing and temporary groups.
+3. Create or review a temporary group.
+4. Confirm the selected group shows:
+   - focused lead/work mode
+   - recent outputs
+   - broadcast controls
+   - quick links back to Soma home and attached team leads
+
+Expected outcome:
+- groups are managed in their own graceful interface
+- temporary groups read as time-bounded working lanes, not permanent teams
+- outputs are reviewable from the group lane without dropping into raw logs by default
 
 ### 4. Team Lead Focus
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2 } from 'lucide-react';
+import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users } from 'lucide-react';
 import { readLastOrganization, subscribeLastOrganizationChange } from '@/lib/lastOrganization';
 import { useCortexStore } from '@/store/useCortexStore';
 
@@ -34,6 +34,7 @@ export function ZoneA() {
         (pathname === currentOrganizationHref || pathname?.startsWith(currentOrganizationHref + '/') === true);
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'Soma', description: 'Home', testId: 'nav-dashboard' },
+        { href: '/groups', icon: Users, label: 'Groups', description: 'Focused lanes', testId: 'nav-groups' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,

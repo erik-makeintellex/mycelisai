@@ -169,9 +169,12 @@ Typical unlocks:
 
 `Settings -> People & Access` provides:
 - user management elements (role, remote-provider allowance, active/disabled state)
-- collaboration group management (goal/work-mode/team membership + group broadcast)
+- environment ownership, identity posture, and shared-Soma governance posture
 
-Group management is also available in `Automations -> Shared Teams`.
+Collaboration groups now have their own dedicated workflow surface:
+- `Groups` for standing and temporary group creation
+- focused group review, broadcast, and recent output visibility
+- quick entry into the attached team-lead lanes
 
 ---
 

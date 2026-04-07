@@ -154,7 +154,7 @@ export default function TeamCard({ team, onClick, isSelected }: TeamCardProps) {
             )}
 
             <div className="pt-2 mt-2 border-t border-cortex-border/40 grid grid-cols-2 gap-1">
-                <a href="/dashboard" onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-open-chat`}>
+                <a href={`/dashboard?team_id=${encodeURIComponent(team.id)}`} onClick={(e) => e.stopPropagation()} className="text-[9px] font-mono px-1.5 py-1 rounded border border-cortex-border text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg inline-flex items-center gap-1" data-testid={`team-${team.id}-open-chat`}>
                     <MessageSquare className="w-3 h-3" />
                     Open lead workspace
                 </a>

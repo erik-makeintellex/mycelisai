@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Shield, User, UserPlus, Trash2, RefreshCw, Users } from "lucide-react";
-import GroupManagementPanel from "@/components/teams/GroupManagementPanel";
 
 type UserRole = "owner" | "operator" | "viewer";
 type AccessManagementTier = "release" | "enterprise";
@@ -567,7 +567,17 @@ export default function UsersPage() {
                     <Users className="w-4 h-4 text-cortex-primary" />
                     <h3 className="text-sm font-semibold text-cortex-text-main uppercase tracking-wider">User Group Management</h3>
                 </div>
-                <GroupManagementPanel />
+                <div className="rounded-xl border border-cortex-border bg-cortex-surface/60 p-4 space-y-3">
+                    <p className="text-sm leading-6 text-cortex-text-muted">
+                        Collaboration groups now live in a dedicated workspace so this page can stay centered on identity, access posture, and environment ownership.
+                    </p>
+                    <Link
+                        href="/groups"
+                        className="inline-flex items-center rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
+                    >
+                        Open groups workspace
+                    </Link>
+                </div>
             </section>
         </div>
     );

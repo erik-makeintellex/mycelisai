@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
 // Mock child components to isolate TeamsPage logic
@@ -10,11 +10,6 @@ vi.mock('@/components/teams/TeamDetailDrawer', () => ({
             <button onClick={onClose}>Close</button>
         </div>
     ),
-}));
-
-vi.mock('@/components/teams/GroupManagementPanel', () => ({
-    __esModule: true,
-    default: () => <div data-testid="group-management-panel" />,
 }));
 
 import TeamsPage from '@/components/teams/TeamsPage';
@@ -52,7 +47,12 @@ const mockTeams = [
 ];
 
 describe('TeamsPage', () => {
+    const originalSetInterval = global.setInterval;
+    const originalClearInterval = global.clearInterval;
+
     beforeEach(() => {
+        global.setInterval = vi.fn(() => 1) as any;
+        global.clearInterval = vi.fn() as any;
         // Reset store state before each test
         useCortexStore.setState({
             teamsDetail: [],
@@ -63,6 +63,11 @@ describe('TeamsPage', () => {
             // Override fetchTeamsDetail to prevent actual fetching
             fetchTeamsDetail: vi.fn(),
         });
+    });
+
+    afterEach(() => {
+        global.setInterval = originalSetInterval;
+        global.clearInterval = originalClearInterval;
     });
 
     it('renders card grid of teams', () => {
@@ -78,6 +83,8 @@ describe('TeamsPage', () => {
 
         expect(screen.getByText('Team Lead Workspaces')).toBeDefined();
         expect(screen.getByText(/Soma is the root workspace/i)).toBeDefined();
+        expect(screen.getByText(/Groups have their own workspace now/i)).toBeDefined();
+        expect(screen.getByRole('link', { name: /Open groups workspace/i }).getAttribute('href')).toBe('/groups');
 
         // Header should show team count
         expect(screen.getByText(/2 teams/)).toBeDefined();
@@ -136,6 +143,7 @@ describe('TeamsPage', () => {
 
         expect(screen.getAllByText('Open lead workspace').length).toBeGreaterThan(0);
         expect(screen.getByTestId('team-team-alpha-open-chat')).toBeDefined();
+        expect(screen.getByTestId('team-team-alpha-open-chat').getAttribute('href')).toBe('/dashboard?team_id=team-alpha');
         expect(screen.getByTestId('team-team-alpha-view-runs')).toBeDefined();
         expect(screen.getByTestId('team-team-alpha-view-wiring')).toBeDefined();
         expect(screen.getByTestId('team-team-alpha-view-logs')).toBeDefined();

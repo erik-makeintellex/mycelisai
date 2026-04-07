@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { Users, RefreshCw } from 'lucide-react';
 import { useCortexStore, type TeamsFilter, type TeamDetailEntry } from '@/store/useCortexStore';
 import TeamCard from './TeamCard';
 import TeamDetailDrawer from './TeamDetailDrawer';
-import GroupManagementPanel from './GroupManagementPanel';
 
 const FILTERS: { value: TeamsFilter; label: string }[] = [
     { value: 'all', label: 'All Teams' },
@@ -111,7 +111,19 @@ export default function TeamsPage() {
 
             {/* Grid */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                <GroupManagementPanel />
+                <div className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p className="text-sm font-semibold text-cortex-text-main">Groups have their own workspace now.</p>
+                            <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
+                                Keep this page focused on team leads. Open Groups when you want temporary or standing collaboration lanes, output review, and broadcast coordination.
+                            </p>
+                        </div>
+                        <Link href="/groups" className="inline-flex items-center justify-center rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10">
+                            Open groups workspace
+                        </Link>
+                    </div>
+                </div>
                 {filteredTeams.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {filteredTeams.map((team) => (

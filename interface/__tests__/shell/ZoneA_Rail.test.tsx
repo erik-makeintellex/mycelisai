@@ -30,6 +30,7 @@ import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'Soma' },
+    { href: '/groups', label: 'Groups' },
     { href: '/docs', label: 'Docs' },
 ];
 

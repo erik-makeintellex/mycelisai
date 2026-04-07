@@ -3,11 +3,6 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { mockFetch } from "../setup";
 import UsersPage from "@/components/settings/UsersPage";
 
-vi.mock("@/components/teams/GroupManagementPanel", () => ({
-    __esModule: true,
-    default: () => <div data-testid="group-management-panel">GroupManagementPanel</div>,
-}));
-
 function mockMeResponse({
     role = "owner",
     accessManagementTier = "release",
@@ -74,7 +69,7 @@ describe("UsersPage", () => {
         expect(screen.getByTestId("enterprise-directory-locked")).toBeDefined();
         expect(screen.queryByTestId("users-management-panel")).toBeNull();
         expect(screen.getByTestId("users-groups-section")).toBeDefined();
-        expect(screen.getByTestId("group-management-panel")).toBeDefined();
+        expect(screen.getByRole("link", { name: /Open groups workspace/i }).getAttribute("href")).toBe("/groups");
     });
 
     it("lets an owner save the review edition, identity mode, and shared Soma output owner", async () => {

@@ -48,6 +48,11 @@ Team workspaces are different from the root Soma workspace:
 - that team lead can still coordinate back through Soma using scoped memory, RAG retrieval, and broader organization context when needed
 - the team's lead and specialists inherit the organization output-model policy unless an admin changes it
 
+Groups are a separate workflow surface:
+- use `Groups` when you want a temporary or standing collaboration lane without cluttering the root Soma home
+- each group should expose the focused lead context, recent outputs, and broadcast/review workflow for that lane
+- Soma remains the root reviewer that can summarize groups, pull forward outputs, and route you into the right team lead when needed
+
 ---
 
 ## Output Model Routing
