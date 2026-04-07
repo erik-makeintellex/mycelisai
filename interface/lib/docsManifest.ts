@@ -85,6 +85,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/user/governance-trust.md",
                 description: "Approval posture, risk classes, audit visibility, and operator control",
             },
+            {
+                slug: "licensing-editions",
+                label: "Licensing & Editions",
+                path: "docs/licensing.md",
+                description: "Product-edition posture for self-hosted release, enterprise add-ons, and hosted control-plane layering",
+            },
         ],
     },
     {

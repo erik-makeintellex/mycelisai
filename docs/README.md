@@ -7,6 +7,7 @@ Use this page as the clean navigation layer between user guidance, developer gui
 
 - [User Guidance](#user-guidance)
 - [Agent and Developer Guidance](#agent-and-developer-guidance)
+- [Product and Licensing Guidance](#product-and-licensing-guidance)
 - [Testing and Release Guidance](#testing-and-release-guidance)
 - [Historical and Migration Inputs](#historical-and-migration-inputs)
 
@@ -42,6 +43,15 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
 - **Logging Standard**: `./logging.md`
+
+## Product and Licensing Guidance
+
+Use these when the goal is product packaging, edition posture, or the paid-vs-self-hosted boundary:
+
+- **Licensing & Editions**: `./licensing.md`
+- **Governance System**: `./governance.md`
+- **Governance & Trust**: `./user/governance-trust.md`
+- **V8 Multi-User Identity + Soma Tenancy**: `./architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md`
 
 ## Testing and Release Guidance
 

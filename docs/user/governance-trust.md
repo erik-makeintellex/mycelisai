@@ -105,5 +105,6 @@ What is still future work:
 
 Related references:
 - `docs/governance.md`
+- `docs/licensing.md`
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`

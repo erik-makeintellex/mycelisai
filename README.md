@@ -35,6 +35,7 @@ Canonical ownership reminder:
 - [Fastest Start](#fastest-start)
 - [Cross-Platform Setup](#cross-platform-setup)
 - [Development Workflow](#development-workflow)
+- [Licensing & Editions](#licensing-editions)
 - [Binary Releases](#binary-releases)
 - [Documentation Responsibilities](#documentation-responsibilities)
 - [Status](#status)
@@ -549,6 +550,21 @@ Agents implementing V8 should follow this process:
    - if the machine is low on free space, prefer the repo task path in this order: `uv run inv lifecycle.down`, `uv run inv cache.status`, then `uv run inv cache.clean`
    - if you are setting up a new development machine, treat cache placement as part of the build config, not an afterthought: Windows should stamp user-level cache vars early, and Linux/macOS should point project/user cache roots at the volume you actually want repeated builds and browser runs to consume
 7. update `V8_DEV_STATE.md` with current status and evidence
+
+## Licensing & Editions
+
+The canonical product-layer and licensing posture now lives in [docs/licensing.md](docs/licensing.md).
+
+Use that document when you need the precise edition story for:
+- self-hosted release
+- self-hosted enterprise
+- hosted control plane
+- modular user-management and identity packaging
+- shared Soma governance boundaries that must stay consistent across paid variants
+
+Rule:
+- edition or licensing documentation should describe packaging, control-plane layering, and governance boundaries
+- it should not silently redefine the technical behavior owned by governance, identity, or runtime contracts
 
 ## Binary Releases
 
