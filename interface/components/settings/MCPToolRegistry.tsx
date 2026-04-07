@@ -11,7 +11,10 @@ type Tab = "installed" | "library";
 export default function MCPToolRegistry() {
     const mcpServers = useCortexStore((s) => s.mcpServers);
     const isFetching = useCortexStore((s) => s.isFetchingMCPServers);
+    const mcpActivity = useCortexStore((s) => s.mcpActivity);
+    const isFetchingActivity = useCortexStore((s) => s.isFetchingMCPActivity);
     const fetchMCPServers = useCortexStore((s) => s.fetchMCPServers);
+    const fetchMCPActivity = useCortexStore((s) => s.fetchMCPActivity);
     const deleteMCPServer = useCortexStore((s) => s.deleteMCPServer);
     const streamLogs = useCortexStore((s) => s.streamLogs);
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
@@ -22,7 +25,8 @@ export default function MCPToolRegistry() {
 
     useEffect(() => {
         fetchMCPServers();
-    }, [fetchMCPServers]);
+        fetchMCPActivity();
+    }, [fetchMCPActivity, fetchMCPServers]);
 
     useEffect(() => {
         initializeStream();
@@ -30,7 +34,16 @@ export default function MCPToolRegistry() {
 
     const recentActivity = useMemo<MCPRecentActivity[]>(() => {
         const serverNames = new Map(mcpServers.map((server) => [server.id, server.name]));
-        return streamLogs
+        const persistedActivity = mcpActivity.map((entry) => ({
+            id: entry.id,
+            serverId: entry.server_id,
+            serverName: entry.server_id ? (serverNames.get(entry.server_id) ?? entry.server_name) : entry.server_name,
+            toolName: entry.tool_name,
+            state: entry.state,
+            message: entry.message || entry.summary,
+            timestamp: entry.timestamp,
+        }));
+        const liveActivity = streamLogs
             .filter((signal) => signal.source_kind === "mcp")
             .map((signal, index) => {
                 const serverId = typeof signal.payload?.server_id === "string" ? signal.payload.server_id : undefined;
@@ -50,9 +63,19 @@ export default function MCPToolRegistry() {
                     message: preview,
                     timestamp: signal.timestamp ?? new Date().toISOString(),
                 };
-            })
+            });
+        const merged = [...liveActivity, ...persistedActivity];
+        const deduped = new Map<string, MCPRecentActivity>();
+        for (const activity of merged) {
+            const key = `${activity.timestamp}|${activity.serverId ?? activity.serverName}|${activity.toolName}|${activity.state}|${activity.message}`;
+            if (!deduped.has(key)) {
+                deduped.set(key, activity);
+            }
+        }
+        return Array.from(deduped.values())
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
             .slice(0, 12);
-    }, [mcpServers, streamLogs]);
+    }, [mcpActivity, mcpServers, streamLogs]);
 
     const recentActivityByServer = useMemo(() => {
         const grouped = new Map<string, MCPRecentActivity[]>();
@@ -143,7 +166,7 @@ export default function MCPToolRegistry() {
                                     Confirm the server is connected and that its discovered tools match what agents should use.
                                 </WorkflowStep>
                                 <WorkflowStep title="3. Watch">
-                                    Live MCP activity below shows which server and tool agents are using right now.
+                                    Persisted recent MCP usage stays visible here, and the live stream adds in-session activity while agents are actively using tools.
                                 </WorkflowStep>
                             </div>
                             <div className="mt-3 flex items-center gap-2 text-[11px] text-cortex-text-muted">
@@ -167,7 +190,7 @@ export default function MCPToolRegistry() {
                                         Recent MCP Activity
                                     </p>
                                     <p className="mt-1 text-xs text-cortex-text-muted">
-                                        Agent-visible MCP invocations and outcomes from the live runtime signal bus.
+                                        Persisted recent MCP usage from Managed Exchange, plus live in-session runtime signals when connected.
                                     </p>
                                 </div>
                                 <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-1 text-[10px] font-mono text-cortex-text-muted">
@@ -176,7 +199,9 @@ export default function MCPToolRegistry() {
                             </div>
                             {recentActivity.length === 0 ? (
                                 <p className="mt-3 text-xs text-cortex-text-muted">
-                                    No live MCP activity yet. Install a tool server, ask Soma to use it, and recent tool use will appear here.
+                                    {isFetchingActivity
+                                        ? "Loading recent MCP activity..."
+                                        : "No recent MCP activity yet. Install a tool server, ask Soma to use it, and recent tool use will appear here."}
                                 </p>
                             ) : (
                                 <div className="mt-3 space-y-2">

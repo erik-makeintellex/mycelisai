@@ -18,3 +18,19 @@ func TestClassifyMCPOutput(t *testing.T) {
 		t.Fatalf("default classification = %s/%s", channel, schema)
 	}
 }
+
+func TestMCPNormalizationInput_CarriesPersistentIdentityFields(t *testing.T) {
+	input := MCPNormalizationInput{
+		ServerID:      "srv-123",
+		ServerName:    "filesystem",
+		ToolName:      "read_file",
+		ResultPreview: "Loaded workspace brief.",
+		SourceTeam:    "alpha",
+		AgentID:       "soma-admin",
+		RunID:         "run-42",
+	}
+
+	if input.ServerID != "srv-123" || input.SourceTeam != "alpha" || input.AgentID != "soma-admin" || input.RunID != "run-42" {
+		t.Fatalf("normalization input lost persistent fields: %+v", input)
+	}
+}

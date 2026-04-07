@@ -24,12 +24,17 @@ type ArtifactNormalizationInput struct {
 }
 
 type MCPNormalizationInput struct {
+	ServerID      string
 	ServerName    string
 	ToolName      string
 	Summary       string
+	ResultPreview string
 	TargetRole    string
 	Status        string
 	Result        map[string]any
+	SourceTeam    string
+	AgentID       string
+	RunID         string
 	ContinuityKey string
 	ThreadID      *uuid.UUID
 }
@@ -72,16 +77,16 @@ func (s *Service) PublishArtifact(ctx context.Context, input ArtifactNormalizati
 		payload["confidence"] = *input.Confidence
 	}
 	return s.Publish(ctx, PublishInput{
-		ChannelName: channelName,
-		SchemaID:    schemaID,
-		Payload:     payload,
-		CreatedBy:   input.AgentID,
-		AddressedTo: defaultTarget(input.TargetRole),
-		ThreadID:    input.ThreadID,
-		Visibility:  "advanced",
+		ChannelName:      channelName,
+		SchemaID:         schemaID,
+		Payload:          payload,
+		CreatedBy:        input.AgentID,
+		AddressedTo:      defaultTarget(input.TargetRole),
+		ThreadID:         input.ThreadID,
+		Visibility:       "advanced",
 		SensitivityClass: "team_scoped",
-		SourceRole:  defaultActorRoleForAgent(input.AgentID),
-		TargetRole:  defaultTarget(input.TargetRole),
+		SourceRole:       defaultActorRoleForAgent(input.AgentID),
+		TargetRole:       defaultTarget(input.TargetRole),
 		CapabilityID: map[string]string{
 			"MediaResult": "media_generation",
 			"FileResult":  "file_output",
@@ -93,7 +98,7 @@ func (s *Service) PublishArtifact(ctx context.Context, input ArtifactNormalizati
 			"TextResult":  "trusted_internal",
 		}[schemaID],
 		ReviewRequired: schemaID != "TextResult",
-		Summary:     summary,
+		Summary:        summary,
 	})
 }
 
@@ -101,39 +106,82 @@ func (s *Service) PublishMCPResult(ctx context.Context, input MCPNormalizationIn
 	if ActorFromContext(ctx).Role == "" {
 		ctx = WithActor(ctx, Actor{Role: "mcp"})
 	}
-	channelName, schemaID, tags := classifyMCPOutput(input.ServerName, input.ToolName)
+	serverName := strings.TrimSpace(input.ServerName)
+	serverID := strings.TrimSpace(input.ServerID)
+	if serverName == "" {
+		serverName = serverID
+	}
+	if serverName == "" {
+		serverName = "mcp"
+	}
+	channelName, schemaID, tags := classifyMCPOutput(serverName, input.ToolName)
 	summary := strings.TrimSpace(input.Summary)
 	if summary == "" {
-		summary = fmt.Sprintf("%s returned output via %s.", input.ToolName, input.ServerName)
+		summary = fmt.Sprintf("%s returned output via %s.", input.ToolName, serverName)
+	}
+	state := defaultStatus(input.Status)
+	preview := strings.TrimSpace(input.ResultPreview)
+	if preview == "" {
+		preview = summary
 	}
 	payload := map[string]any{
-		"summary":     summary,
-		"status":      defaultStatus(input.Status),
-		"source_role": "mcp:" + strings.TrimSpace(input.ServerName),
-		"target_role": defaultTarget(input.TargetRole),
-		"created_at":  time.Now().UTC().Format(time.RFC3339),
-		"updated_at":  time.Now().UTC().Format(time.RFC3339),
-		"tags":        toAnySlice(tags),
-		"tool_result": input.Result,
+		"summary":        summary,
+		"status":         state,
+		"state":          state,
+		"source_role":    "mcp:" + serverName,
+		"target_role":    defaultTarget(input.TargetRole),
+		"created_at":     time.Now().UTC().Format(time.RFC3339),
+		"updated_at":     time.Now().UTC().Format(time.RFC3339),
+		"tags":           toAnySlice(tags),
+		"tool_result":    input.Result,
+		"tool_name":      strings.TrimSpace(input.ToolName),
+		"server_name":    serverName,
+		"result_preview": preview,
+	}
+	if serverID != "" {
+		payload["server_id"] = serverID
+	}
+	if sourceTeam := strings.TrimSpace(input.SourceTeam); sourceTeam != "" {
+		payload["source_team"] = sourceTeam
+	}
+	if agentID := strings.TrimSpace(input.AgentID); agentID != "" {
+		payload["agent_id"] = agentID
+	}
+	if runID := strings.TrimSpace(input.RunID); runID != "" {
+		payload["run_id"] = runID
 	}
 	if input.ContinuityKey != "" {
 		payload["continuity_key"] = input.ContinuityKey
 	}
 	return s.Publish(ctx, PublishInput{
-		ChannelName: channelName,
-		SchemaID:    schemaID,
-		Payload:     payload,
-		CreatedBy:   "mcp:" + strings.TrimSpace(input.ServerName),
-		AddressedTo: defaultTarget(input.TargetRole),
-		ThreadID:    input.ThreadID,
-		Visibility:  "advanced",
+		ChannelName:      channelName,
+		SchemaID:         schemaID,
+		Payload:          payload,
+		CreatedBy:        "mcp:" + serverName,
+		AddressedTo:      defaultTarget(input.TargetRole),
+		ThreadID:         input.ThreadID,
+		Visibility:       "advanced",
 		SensitivityClass: "team_scoped",
-		SourceRole:  "mcp",
-		TargetRole:  defaultTarget(input.TargetRole),
-		CapabilityID: capabilityForToolChannel(channelName),
-		TrustClass:  "bounded_external",
-		ReviewRequired: true,
-		Summary:     summary,
+		SourceRole:       "mcp",
+		SourceTeam:       strings.TrimSpace(input.SourceTeam),
+		TargetRole:       defaultTarget(input.TargetRole),
+		CapabilityID:     capabilityForToolChannel(channelName),
+		TrustClass:       "bounded_external",
+		ReviewRequired:   true,
+		Metadata: map[string]any{
+			"source_kind": "mcp",
+			"mcp": map[string]any{
+				"server_id":      serverID,
+				"server_name":    serverName,
+				"tool_name":      strings.TrimSpace(input.ToolName),
+				"state":          state,
+				"agent_id":       strings.TrimSpace(input.AgentID),
+				"source_team":    strings.TrimSpace(input.SourceTeam),
+				"run_id":         strings.TrimSpace(input.RunID),
+				"continuity_key": strings.TrimSpace(input.ContinuityKey),
+			},
+		},
+		Summary: summary,
 	})
 }
 

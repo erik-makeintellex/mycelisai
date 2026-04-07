@@ -5,7 +5,9 @@ import (
 	"log"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -82,6 +84,7 @@ func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCal
 		}
 		reinfer(toolCall.Name, fmt.Sprintf("Tool %s failed: %v", toolCall.Name, err))
 		if isMCPTool {
+			a.persistMCPExchangeResult(serverID, toolCall.Name, "failed", err.Error(), map[string]any{"arguments": toolCall.Arguments, "error": err.Error()})
 			a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{"state": "failed", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "error": err.Error(), "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
 		}
 		return false
@@ -110,6 +113,8 @@ func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCal
 		}
 	}
 	if isMCPTool {
+		preview := truncateLog(toolResult, 500)
+		a.persistMCPExchangeResult(serverID, toolCall.Name, "completed", preview, map[string]any{"arguments": toolCall.Arguments, "result_preview": preview})
 		a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{"state": "completed", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "result_preview": truncateLog(toolResult, 500), "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
 	}
 	req.Messages = append(req.Messages,
@@ -124,4 +129,35 @@ func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCal
 	result.resp = updated
 	result.responseText = updated.Text
 	return true
+}
+
+func (a *Agent) persistMCPExchangeResult(serverID uuid.UUID, toolName, state, preview string, result map[string]any) {
+	if a == nil || a.internalTools == nil || a.internalTools.exchange == nil {
+		return
+	}
+	summary := strings.TrimSpace(preview)
+	if summary == "" {
+		summary = fmt.Sprintf("%s %s via MCP.", toolName, state)
+	}
+	targetRole := strings.TrimSpace(a.Manifest.Role)
+	if targetRole == "" {
+		targetRole = "soma"
+	}
+	_, err := a.internalTools.exchange.PublishMCPResult(a.ctx, exchange.MCPNormalizationInput{
+		ServerID:      serverID.String(),
+		ServerName:    serverID.String(),
+		ToolName:      toolName,
+		Summary:       summary,
+		ResultPreview: summary,
+		TargetRole:    targetRole,
+		Status:        state,
+		Result:        result,
+		SourceTeam:    a.TeamID,
+		AgentID:       a.Manifest.ID,
+		RunID:         a.runID,
+		ContinuityKey: a.runID,
+	})
+	if err != nil {
+		log.Printf("Agent [%s] MCP exchange publish failed: %v", a.Manifest.ID, err)
+	}
 }

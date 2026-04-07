@@ -265,6 +265,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
 	mux.HandleFunc("POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
 	mux.HandleFunc("GET /api/v1/mcp/tools", s.handleMCPToolsList)
+	mux.HandleFunc("GET /api/v1/mcp/activity", s.handleMCPActivity)
 
 	// Phase 7.7: MCP Library (curated server registry)
 	mux.HandleFunc("GET /api/v1/mcp/library", s.handleMCPLibrary)

@@ -15,6 +15,7 @@ import type {
     CouncilMember,
     CTSEnvelope,
     ExecutionMode,
+    MCPActivityEntry,
     MCPServerWithTools,
     MCPLibraryCategory,
     MCPInstallResult,
@@ -95,6 +96,8 @@ export interface CortexResourcesContract {
     selectedArtifactDetail: Artifact | null;
     mcpServers: MCPServerWithTools[];
     isFetchingMCPServers: boolean;
+    mcpActivity: MCPActivityEntry[];
+    isFetchingMCPActivity: boolean;
     mcpTools: MCPTool[];
     mcpLibrary: MCPLibraryCategory[];
     isFetchingMCPLibrary: boolean;
@@ -119,6 +122,7 @@ export interface CortexResourcesContract {
     getArtifactDetail: (id: string) => Promise<void>;
     updateArtifactStatus: (id: string, status: string) => Promise<void>;
     fetchMCPServers: () => Promise<void>;
+    fetchMCPActivity: () => Promise<void>;
     deleteMCPServer: (id: string) => Promise<void>;
     fetchMCPTools: () => Promise<void>;
     fetchMCPLibrary: () => Promise<void>;

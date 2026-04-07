@@ -648,6 +648,78 @@ def test_cleanup_playwright_server_log_retries_permission_error(monkeypatch):
     assert events == ["unlink:1", "sleep", "unlink:2", "sleep", "unlink:3"]
 
 
+def test_cleanup_stale_next_dev_lock_removes_orphaned_lock(monkeypatch, tmp_path, capsys):
+    lock_path = tmp_path / ".next" / "dev" / "lock"
+    lock_path.parent.mkdir(parents=True)
+    lock_path.write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(interface, "INTERFACE_DIR", tmp_path)
+    monkeypatch.setattr(interface, "_list_repo_local_interface_processes", lambda: [])
+
+    removed = interface._cleanup_stale_next_dev_lock()
+
+    assert removed is True
+    assert not lock_path.exists()
+    assert "Cleared stale Next.js dev lock" in capsys.readouterr().out
+
+
+def test_cleanup_stale_next_dev_lock_keeps_lock_when_workers_exist(monkeypatch, tmp_path, capsys):
+    lock_path = tmp_path / ".next" / "dev" / "lock"
+    lock_path.parent.mkdir(parents=True)
+    lock_path.write_text("", encoding="utf-8")
+
+    monkeypatch.setattr(interface, "INTERFACE_DIR", tmp_path)
+    monkeypatch.setattr(
+        interface,
+        "_list_repo_local_interface_processes",
+        lambda: [{"pid": 404, "name": "node.exe", "command": "interface/.next/dev/build/postcss.js"}],
+    )
+
+    removed = interface._cleanup_stale_next_dev_lock()
+
+    assert removed is False
+    assert lock_path.exists()
+    assert "Cleared stale Next.js dev lock" not in capsys.readouterr().out
+
+
+def test_start_playwright_server_dev_mode_clears_stale_next_lock(monkeypatch, tmp_path):
+    events: list[str] = []
+
+    class FakeProcess:
+        pass
+
+    monkeypatch.setattr(interface, "_playwright_server_log_path", lambda: str(tmp_path / "playwright.log"))
+    monkeypatch.setattr(interface, "_cleanup_stale_next_dev_lock", lambda: events.append("cleanup-dev-lock") or True)
+    monkeypatch.setattr(
+        interface,
+        "_spawn_interface_process",
+        lambda command, env, stdout, stderr, detached, text=True: events.append(f"spawn:{command[-1]}") or FakeProcess(),
+    )
+
+    interface._start_playwright_server({"INTERFACE_BIND_HOST": "127.0.0.1"}, port=4315, server_mode="dev")
+
+    assert events == ["cleanup-dev-lock", "spawn:4315"]
+
+
+def test_start_playwright_server_start_mode_skips_dev_lock_cleanup(monkeypatch, tmp_path):
+    events: list[str] = []
+
+    class FakeProcess:
+        pass
+
+    monkeypatch.setattr(interface, "_playwright_server_log_path", lambda: str(tmp_path / "playwright.log"))
+    monkeypatch.setattr(interface, "_cleanup_stale_next_dev_lock", lambda: events.append("cleanup-dev-lock") or True)
+    monkeypatch.setattr(
+        interface,
+        "_spawn_interface_process",
+        lambda command, env, stdout, stderr, detached, text=True: events.append(f"spawn:{command[-1]}") or FakeProcess(),
+    )
+
+    interface._start_playwright_server({"INTERFACE_BIND_HOST": "127.0.0.1"}, port=4315, server_mode="start")
+
+    assert events == [f"spawn:{str((interface.INTERFACE_DIR / 'scripts' / 'playwright-webserver.mjs').resolve())}"]
+
+
 def test_test_uses_direct_shell_command(monkeypatch):
     shell_calls: list[list[str]] = []
     ctx = FakeContext()

@@ -1,6 +1,6 @@
 import { extractApiData } from '@/lib/apiContracts';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
-import type { MCPGovernanceDecision, MCPInstallResult, MCPServerWithTools, MCPLibraryCategory, MCPTool } from '@/store/cortexStoreTypes';
+import type { MCPActivityEntry, MCPGovernanceDecision, MCPInstallResult, MCPServerWithTools, MCPLibraryCategory, MCPTool } from '@/store/cortexStoreTypes';
 
 interface MCPLibraryInspectionResponse {
     decision?: string;
@@ -31,6 +31,7 @@ export function createCortexMcpSlice(
     get: CortexGet,
 ): CortexSlice<
     | 'fetchMCPServers'
+    | 'fetchMCPActivity'
     | 'deleteMCPServer'
     | 'fetchMCPTools'
     | 'fetchMCPLibrary'
@@ -50,6 +51,22 @@ export function createCortexMcpSlice(
                 }
             } catch {
                 set({ mcpServers: [], isFetchingMCPServers: false });
+            }
+        },
+
+        fetchMCPActivity: async () => {
+            set({ isFetchingMCPActivity: true });
+            try {
+                const res = await fetch('/api/v1/mcp/activity?limit=12');
+                if (res.ok) {
+                    const payload = await res.json();
+                    const data = extractApiData<MCPActivityEntry[] | unknown>(payload);
+                    set({ mcpActivity: Array.isArray(data) ? data : [], isFetchingMCPActivity: false });
+                } else {
+                    set({ mcpActivity: [], isFetchingMCPActivity: false });
+                }
+            } catch {
+                set({ mcpActivity: [], isFetchingMCPActivity: false });
             }
         },
 
@@ -124,6 +141,7 @@ export function createCortexMcpSlice(
                 });
                 if (res.ok) {
                     await get().fetchMCPServers();
+                    await get().fetchMCPActivity();
                     return {
                         ok: true,
                         message: 'Installed into your current MCP group without an extra approval step.',

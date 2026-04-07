@@ -447,7 +447,7 @@ Completion rule:
 
 ## Playwright Contract
 
-`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the managed `dev` server and `--workers=1` for stable mocked browser proof. Use `--server-mode=start` when you need the built production Interface server path for stricter or live-backend proof; start-mode runs still refresh the production bundle first, retry once after a stale repo-local Next build lock or incomplete built-server packaging, and must successfully hold the managed server before the browser run continues.
+`uv run inv interface.e2e` owns the local Next.js server lifecycle for browser test runs, routes Playwright browsers through the managed project cache, and leaves no repo-local UI workers behind when it exits. The managed task now defaults to the managed `dev` server and `--workers=1` for stable mocked browser proof. Use `--server-mode=start` when you need the built production Interface server path for stricter or live-backend proof; start-mode runs still refresh the production bundle first, retry once after a stale repo-local Next build lock or incomplete built-server packaging, and must successfully hold the managed server before the browser run continues. Managed `dev` runs also clear an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains, so stale local lock files do not block browser proof.
 
 `uv run inv test.e2e` is the root alias for that same managed browser contract and forwards the same `--workers` and `--server-mode` controls when a caller prefers the generic `test.*` surface.
 

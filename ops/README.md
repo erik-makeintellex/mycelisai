@@ -111,7 +111,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Build**: `uv run inv interface.build`
 - **Test**: `uv run inv interface.test`
 - **E2E**: `uv run inv interface.e2e`
-- `uv run inv interface.e2e` now defaults to managed `dev` mode for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; `uv run inv interface.build` still retries once after a stale repo-local Next build lock before failing, and start-mode E2E inherits that same recovery behavior.
+- `uv run inv interface.e2e` now defaults to managed `dev` mode for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; `uv run inv interface.build` still retries once after a stale repo-local Next build lock before failing, start-mode E2E inherits that same recovery behavior, and managed `dev` runs clear an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains.
 - Live backend browser specs that assert filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the spec checkout and the running Core checkout differ; use the backend's actual workspace root, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack.
 
 ### `test.py` (Root Test Aliases)

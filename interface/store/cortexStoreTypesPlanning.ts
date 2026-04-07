@@ -196,6 +196,21 @@ export interface MCPServerWithTools extends MCPServer {
     tools: MCPTool[];
 }
 
+export interface MCPActivityEntry {
+    id: string;
+    server_id?: string;
+    server_name: string;
+    tool_name: string;
+    state: string;
+    summary: string;
+    message: string;
+    channel_name: string;
+    run_id?: string;
+    team_id?: string;
+    agent_id?: string;
+    timestamp: string;
+}
+
 export interface MCPLibraryEntry {
     name: string;
     description: string;

@@ -433,6 +433,33 @@ def _playwright_server_log_path() -> str:
     return str(log_dir / "interface-playwright-webserver.log")
 
 
+def _next_dev_lock_path() -> Path:
+    return INTERFACE_DIR / ".next" / "dev" / "lock"
+
+
+def _cleanup_stale_next_dev_lock() -> bool:
+    lock_path = _next_dev_lock_path()
+    if not lock_path.exists():
+        return False
+    try:
+        processes = _list_repo_local_interface_processes()
+    except RuntimeError as exc:
+        if "timed out" not in str(exc).lower():
+            print(f"  WARN: unable to inspect repo-local Interface workers before clearing Next dev lock ({exc})")
+        return False
+    if processes:
+        return False
+    try:
+        lock_path.unlink()
+        print("  Cleared stale Next.js dev lock before managed Interface startup.")
+        return True
+    except FileNotFoundError:
+        return False
+    except PermissionError as exc:
+        print(f"  WARN: unable to remove stale Next.js dev lock ({exc})")
+        return False
+
+
 def _cleanup_playwright_server_log(max_attempts: int = 20, retry_delay_seconds: float = 0.25) -> None:
     log_path = Path(_playwright_server_log_path())
     for attempt in range(max_attempts):
@@ -605,6 +632,7 @@ def _start_playwright_server(
         command_env["HOSTNAME"] = bind_host
         command = _next_start_command(bind_host, port)
     else:
+        _cleanup_stale_next_dev_lock()
         command = _next_dev_command(bind_host, port)
     try:
         process = _spawn_interface_process(
@@ -632,6 +660,7 @@ def start_dev_server_detached(
         process_env.update(env)
     process_env.setdefault("INTERFACE_HOST", INTERFACE_HOST)
     process_env.setdefault("INTERFACE_BIND_HOST", host)
+    _cleanup_stale_next_dev_lock()
     command = _next_dev_command(process_env["INTERFACE_BIND_HOST"], port)
     return _spawn_interface_process(
         command,

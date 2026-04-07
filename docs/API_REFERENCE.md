@@ -84,6 +84,7 @@
 | `/api/v1/mcp/servers` | GET | List installed MCP servers |
 | `/api/v1/mcp/servers/{id}` | DELETE | Remove MCP server |
 | `/api/v1/mcp/tools` | GET | List all MCP tools across servers |
+| `/api/v1/mcp/activity` | GET | List recent persisted MCP activity from Managed Exchange, including server/tool/state visibility for operator review |
 | `/api/v1/mcp/servers/{id}/tools/{tool}/call` | POST | Invoke a specific MCP tool |
 | `/api/v1/mcp/library` | GET | Browse curated MCP server library (categorized) |
 | `/api/v1/mcp/library/inspect` | POST | Policy inspection preview for a library candidate (`allow|require_approval|deny`) before install. MCP settings installs may send `governance_context` so owner-scoped current-group config can auto-allow without a second approval loop |

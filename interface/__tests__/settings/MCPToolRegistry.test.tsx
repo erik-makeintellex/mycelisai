@@ -59,7 +59,10 @@ describe('MCPToolRegistry', () => {
         useCortexStore.setState({
             mcpServers: [],
             isFetchingMCPServers: false,
+            mcpActivity: [],
+            isFetchingMCPActivity: false,
             fetchMCPServers: vi.fn(),
+            fetchMCPActivity: vi.fn(),
             deleteMCPServer: vi.fn(),
             streamLogs: [],
             isStreamConnected: false,
@@ -69,9 +72,11 @@ describe('MCPToolRegistry', () => {
 
     it('renders the installed server list', () => {
         const initializeStream = vi.fn();
+        const fetchMCPActivity = vi.fn();
         useCortexStore.setState({
             mcpServers: mockServers,
             initializeStream,
+            fetchMCPActivity,
         });
 
         render(<MCPToolRegistry />);
@@ -88,6 +93,7 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('web-scraper')).toBeDefined();
         expect(screen.getByText(/Connected Tools Workflow/i)).toBeDefined();
         expect(initializeStream).toHaveBeenCalledTimes(1);
+        expect(fetchMCPActivity).toHaveBeenCalledTimes(1);
 
         // "Installed" tab should be active by default, showing server count badge
         expect(screen.getByText('2')).toBeDefined();
@@ -105,20 +111,23 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByTestId('library-browser')).toBeDefined();
     });
 
-    it('surfaces recent MCP activity from the live stream', () => {
+    it('surfaces recent MCP activity from persisted history', () => {
         useCortexStore.setState({
             mcpServers: mockServers,
-            streamLogs: [
+            mcpActivity: [
                 {
-                    type: 'status',
+                    id: 'activity-1',
+                    server_id: 'srv-001',
+                    server_name: 'filesystem-server',
+                    tool_name: 'read_file',
+                    state: 'completed',
+                    summary: 'Read workspace brief successfully.',
+                    message: 'Read workspace brief successfully.',
+                    channel_name: 'browser.research.results',
+                    run_id: 'run-1',
+                    team_id: 'alpha',
+                    agent_id: 'soma-admin',
                     timestamp: '2026-04-06T12:00:00Z',
-                    source_kind: 'mcp',
-                    payload: {
-                        server_id: 'srv-001',
-                        tool: 'read_file',
-                        state: 'completed',
-                        result_preview: 'Read workspace brief successfully.',
-                    },
                 },
             ],
         });

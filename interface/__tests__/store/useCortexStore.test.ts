@@ -59,6 +59,8 @@ describe('useCortexStore', () => {
             assistantName: 'Soma',
             mcpServers: [],
             isFetchingMCPServers: false,
+            mcpActivity: [],
+            isFetchingMCPActivity: false,
             mcpTools: [],
             trustThreshold: 0.7,
             isSyncingThreshold: false,
@@ -346,6 +348,28 @@ describe('useCortexStore', () => {
             await store.getState().deleteMCPServer('srv1');
 
             expect(store.getState().mcpServers).toHaveLength(0);
+        });
+
+        it('stores persisted MCP activity from API', async () => {
+            const activity = [
+                {
+                    id: 'mcp-1',
+                    server_id: 'srv1',
+                    server_name: 'filesystem',
+                    tool_name: 'read_file',
+                    state: 'completed',
+                    summary: 'Read workspace brief successfully.',
+                    message: 'Read workspace brief successfully.',
+                    channel_name: 'browser.research.results',
+                    timestamp: '2026-04-06T12:00:00Z',
+                },
+            ];
+            mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true, data: activity }) });
+
+            await store.getState().fetchMCPActivity();
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/mcp/activity?limit=12');
+            expect(store.getState().mcpActivity).toEqual(activity);
         });
     });
 
