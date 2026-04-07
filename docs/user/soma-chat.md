@@ -44,6 +44,8 @@ If you leave the organization workspace and come back later, the current guided 
 
 Team workspaces are different from the root Soma workspace:
 - the root workspace is Soma-first and organization-wide
+- the root Soma home also carries a live interaction stream so an admin can review active team output without leaving the main chat surface
+- that stream can be filtered by multiple teams and by available output aspects such as status, results, artifacts, tools, governance, and errors
 - entering a created team should center the team's focused lead entity first
 - that team lead can still coordinate back through Soma using scoped memory, RAG retrieval, and broader organization context when needed
 - the team's lead and specialists inherit the organization output-model policy unless an admin changes it

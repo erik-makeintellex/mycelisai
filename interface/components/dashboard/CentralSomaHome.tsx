@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, Bot, Building2, FolderPlus, Layers3, MessageSquare, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Bot, Building2, FolderPlus, Layers3, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
+import CentralActivityStream from "@/components/dashboard/CentralActivityStream";
 import { useCortexStore } from "@/store/useCortexStore";
 
 type LastOrganization = {
@@ -108,6 +109,8 @@ export default function CentralSomaHome() {
                             ))}
                         </div>
                     </div>
+
+                    <CentralActivityStream />
 
                     <div className="rounded-3xl border border-cortex-border bg-cortex-bg p-5">
                         <div className="flex items-center gap-2 text-cortex-primary">

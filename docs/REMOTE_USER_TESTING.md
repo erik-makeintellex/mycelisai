@@ -116,6 +116,7 @@ Expected outcome:
 - the workspace loads
 - Soma is the primary interaction surface
 - the root workspace makes it clear that admin can ask Soma to shape or create teams from here
+- a live interaction stream is visible on the Soma home and can be filtered by multiple teams and output aspects
 - no hydration crash or immediate degraded state appears on first view
 
 ### 2. Direct Soma Answer

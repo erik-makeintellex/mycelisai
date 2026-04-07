@@ -176,6 +176,11 @@ Collaboration groups now have their own dedicated workflow surface:
 - focused group review, broadcast, and recent output visibility
 - quick entry into the attached team-lead lanes
 
+The root Soma home also includes a filtered live interaction stream:
+- review active team output from the admin surface
+- filter by multiple teams
+- filter by available activity aspects such as status, results, artifacts, tools, governance, and errors
+
 ---
 
 ## Trust Score and Governance
