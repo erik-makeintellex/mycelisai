@@ -77,6 +77,7 @@
 | **Artifacts** | | |
 | `/api/v1/artifacts` | GET/POST | List/store artifacts (filterable) |
 | `/api/v1/artifacts/{id}` | GET | Artifact detail |
+| `/api/v1/artifacts/{id}/download` | GET | Download a stored or inline artifact as a file attachment for chat/operator review |
 | `/api/v1/artifacts/{id}/status` | PUT | Update artifact status |
 | `/api/v1/artifacts/{id}/save` | POST | Persist cached image artifact to workspace folder (`saved-media` default) |
 | **MCP Ingress** | | |

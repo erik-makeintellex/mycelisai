@@ -107,6 +107,21 @@ function artifactDisplayLabel(artifact: ChatArtifactRef): string {
     return artifact.type ? `${artifact.type} artifact` : "artifact";
 }
 
+function artifactDownloadHref(artifact: ChatArtifactRef): string | null {
+    const artifactId = artifact.id?.trim();
+    if (!artifactId) {
+        return artifact.url?.trim() || null;
+    }
+    return `/api/v1/artifacts/${encodeURIComponent(artifactId)}/download`;
+}
+
+function binaryArtifactLabel(artifact: ChatArtifactRef): string {
+    if (artifact.saved_path?.trim()) {
+        return artifact.saved_path.trim();
+    }
+    return artifactDisplayLabel(artifact);
+}
+
 function artifactResultSummary(artifacts?: ChatArtifactRef[]): string | null {
     if (!artifacts?.length) return null;
 
@@ -176,6 +191,7 @@ function InlineArtifact({ artifact }: { artifact: ChatArtifactRef }) {
     const [saveError, setSaveError] = useState("");
     const Icon = artifactIcon(artifact.type);
     const isCachedImage = artifact.type === "image" && (artifact.cached || !!artifact.expires_at);
+    const downloadHref = artifactDownloadHref(artifact);
 
     const handleSave = async () => {
         if (!artifact.id || saving) return;
@@ -274,7 +290,20 @@ function InlineArtifact({ artifact }: { artifact: ChatArtifactRef }) {
                 {(savedPath || saveError) && (
                     <div className="px-3 py-1.5 border-t border-cortex-border/60 text-[9px] font-mono">
                         {savedPath ? (
-                            <span className="text-cortex-success">Saved to: {savedPath}</span>
+                            <span className="text-cortex-success">
+                                Saved to:{" "}
+                                {downloadHref ? (
+                                    <a
+                                        href={downloadHref}
+                                        download
+                                        className="underline underline-offset-2 hover:text-cortex-success/80"
+                                    >
+                                        {savedPath}
+                                    </a>
+                                ) : (
+                                    savedPath
+                                )}
+                            </span>
                         ) : (
                             <span className="text-cortex-danger">Save failed: {saveError}</span>
                         )}
@@ -368,13 +397,49 @@ function InlineArtifact({ artifact }: { artifact: ChatArtifactRef }) {
                 <span className="text-[8px] font-mono text-cortex-text-muted uppercase">
                     {artifact.type}
                 </span>
-                {artifact.url && (
-                    <a href={artifact.url} target="_blank" rel="noopener noreferrer"
-                       className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors">
+                {downloadHref && (
+                    <a href={downloadHref} download target="_blank" rel="noopener noreferrer"
+                       className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors"
+                       title={`Download ${binaryArtifactLabel(artifact)}`}>
                         <ExternalLink className="w-3 h-3" />
                     </a>
                 )}
             </div>
+            {(artifact.saved_path || downloadHref) && (
+                <div className="border-t border-cortex-border/60 px-3 py-2 text-[9px] font-mono">
+                    {artifact.saved_path ? (
+                        <span className="text-cortex-success">
+                            Saved object:{" "}
+                            {downloadHref ? (
+                                <a
+                                    href={downloadHref}
+                                    download
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline underline-offset-2 hover:text-cortex-success/80"
+                                >
+                                    {artifact.saved_path}
+                                </a>
+                            ) : (
+                                artifact.saved_path
+                            )}
+                        </span>
+                    ) : (
+                        <span className="text-cortex-text-muted">
+                            Download artifact:{" "}
+                            <a
+                                href={downloadHref ?? "#"}
+                                download
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline underline-offset-2 hover:text-cortex-primary"
+                            >
+                                {binaryArtifactLabel(artifact)}
+                            </a>
+                        </span>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

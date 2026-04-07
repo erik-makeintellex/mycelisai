@@ -289,6 +289,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Phase 7.5: Artifacts API (Agent Outputs)
 	mux.HandleFunc("GET /api/v1/artifacts", s.handleListArtifacts)
 	mux.HandleFunc("GET /api/v1/artifacts/{id}", s.handleGetArtifact)
+	mux.HandleFunc("GET /api/v1/artifacts/{id}/download", s.handleDownloadArtifact)
 	mux.HandleFunc("POST /api/v1/artifacts", s.handleStoreArtifact)
 	mux.HandleFunc("PUT /api/v1/artifacts/{id}/status", s.handleUpdateArtifactStatus)
 	mux.HandleFunc("POST /api/v1/artifacts/{id}/save", s.handleSaveArtifactToFolder)

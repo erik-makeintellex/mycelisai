@@ -598,6 +598,37 @@ describe('MissionControlChat', () => {
             await waitFor(() => {
                 expect(screen.getByText(/Saved to:/i)).toBeDefined();
             });
+
+            const savedLink = screen.getByRole('link', { name: 'saved-media/test.png' });
+            expect(savedLink.getAttribute('href')).toBe('/api/v1/artifacts/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/download');
+        });
+
+        it('shows a clickable saved path for binary file artifacts', async () => {
+            useCortexStore.setState({
+                missionChat: [
+                    {
+                        role: 'council',
+                        content: 'The packaged audio file is ready for download.',
+                        source_node: 'admin',
+                        artifacts: [
+                            {
+                                id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                                type: 'file',
+                                title: 'campaign-voiceover.wav',
+                                content_type: 'audio/wav',
+                                saved_path: 'saved-media/campaign-voiceover.wav',
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const savedObjectLink = screen.getByRole('link', { name: 'saved-media/campaign-voiceover.wav' });
+            expect(savedObjectLink.getAttribute('href')).toBe('/api/v1/artifacts/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/download');
+            expect(screen.getByText(/Saved object:/i)).toBeDefined();
         });
     });
 
