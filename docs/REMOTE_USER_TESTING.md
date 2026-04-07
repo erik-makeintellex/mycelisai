@@ -171,12 +171,18 @@ Goal:
 - prove that once a team is selected, the user is no longer talking to a generic global surface
 
 Steps:
-1. Open the team list or team-focused view.
-2. Select the created or existing team.
-3. Confirm the page frames that lane around a focused Team Lead counterpart.
-4. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
+1. Open `Teams`.
+2. Confirm the page shows both:
+   - the available team roster and lead-entry surface
+   - the reusable team-member templates Soma can use when specializing new teams
+3. Review or edit one team-member template if template defaults are part of the session goal.
+4. Open the team list or team-focused view.
+5. Select the created or existing team.
+6. Confirm the page frames that lane around a focused Team Lead counterpart.
+7. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
 
 Expected outcome:
+- the Teams page reads as the admin surface for team specialization defaults, not only a passive roster
 - the workspace or drawer clearly identifies a focused Team Lead / lead counterpart
 - team-specific prompts refer to the selected team first
 - the answer is scoped to that team, not the full global roster

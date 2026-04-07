@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
-// Mock child components to isolate TeamsPage logic
 vi.mock('@/components/teams/TeamDetailDrawer', () => ({
     __esModule: true,
     default: ({ team, onClose }: any) => (
@@ -12,10 +11,19 @@ vi.mock('@/components/teams/TeamDetailDrawer', () => ({
     ),
 }));
 
+vi.mock('@/components/catalogue/AgentEditorDrawer', () => ({
+    __esModule: true,
+    default: ({ agent, onClose }: any) => (
+        <div data-testid="agent-editor-drawer">
+            <span>{agent ? `Editing: ${agent.name}` : 'Creating new template'}</span>
+            <button onClick={onClose}>Close template drawer</button>
+        </div>
+    ),
+}));
+
 import TeamsPage from '@/components/teams/TeamsPage';
 import { useCortexStore } from '@/store/useCortexStore';
 
-// Sample team data matching TeamDetailEntry
 const mockTeams = [
     {
         id: 'team-alpha',
@@ -46,6 +54,39 @@ const mockTeams = [
     },
 ];
 
+const mockTemplates = [
+    {
+        id: 'template-marketing-writer',
+        name: 'Marketing Writer',
+        role: 'cognitive',
+        system_prompt: 'Write and refine launch copy.',
+        model: 'qwen3:8b',
+        tools: ['recall'],
+        inputs: ['briefs'],
+        outputs: ['campaign copy', 'launch messaging'],
+        verification_strategy: 'semantic',
+        verification_rubric: ['clear', 'on-brand'],
+        validation_command: '',
+        created_at: new Date('2026-04-07T10:00:00Z').toISOString(),
+        updated_at: new Date('2026-04-07T12:00:00Z').toISOString(),
+    },
+    {
+        id: 'template-researcher',
+        name: 'Audience Researcher',
+        role: 'cognitive',
+        system_prompt: 'Research campaigns and audience insight.',
+        model: 'llama3.1:8b',
+        tools: ['fetch'],
+        inputs: ['requests'],
+        outputs: ['research briefs'],
+        verification_strategy: 'semantic',
+        verification_rubric: ['grounded'],
+        validation_command: '',
+        created_at: new Date('2026-04-07T09:00:00Z').toISOString(),
+        updated_at: new Date('2026-04-07T11:00:00Z').toISOString(),
+    },
+];
+
 describe('TeamsPage', () => {
     const originalSetInterval = global.setInterval;
     const originalClearInterval = global.clearInterval;
@@ -53,15 +94,18 @@ describe('TeamsPage', () => {
     beforeEach(() => {
         global.setInterval = vi.fn(() => 1) as any;
         global.clearInterval = vi.fn() as any;
-        // Reset store state before each test
         useCortexStore.setState({
             teamsDetail: [],
             isFetchingTeamsDetail: false,
+            catalogueAgents: [],
+            isFetchingCatalogue: false,
             selectedTeamId: null,
             isTeamDrawerOpen: false,
             teamsFilter: 'all',
-            // Override fetchTeamsDetail to prevent actual fetching
             fetchTeamsDetail: vi.fn(),
+            fetchCatalogue: vi.fn(),
+            createCatalogueAgent: vi.fn(),
+            updateCatalogueAgent: vi.fn(),
         });
     });
 
@@ -70,45 +114,44 @@ describe('TeamsPage', () => {
         global.clearInterval = originalClearInterval;
     });
 
-    it('renders card grid of teams', () => {
+    it('renders the team roster plus Soma team-specialization controls', () => {
         useCortexStore.setState({
             teamsDetail: mockTeams,
+            catalogueAgents: mockTemplates,
         });
 
         render(<TeamsPage />);
 
-        // Both team cards should be rendered
         expect(screen.getByText('Alpha Squad')).toBeDefined();
         expect(screen.getByText('Bravo Ops')).toBeDefined();
-
         expect(screen.getByText('Team Lead Workspaces')).toBeDefined();
-        expect(screen.getByText(/Soma is the root workspace/i)).toBeDefined();
+        expect(screen.getByText(/Review live teams here/i)).toBeDefined();
+        expect(screen.getByText(/Specialize new teams through Soma/i)).toBeDefined();
+        expect(screen.getByText(/Soma team-member templates/i)).toBeDefined();
+        expect(screen.getAllByText('Marketing Writer').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Audience Researcher').length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/campaign copy/i).length).toBeGreaterThan(0);
         expect(screen.getByText(/Groups have their own workspace now/i)).toBeDefined();
-        expect(screen.getByRole('link', { name: /Open groups workspace/i }).getAttribute('href')).toBe('/groups');
-
-        // Header should show team count
+        expect(screen.getAllByRole('link', { name: /Open groups workspace/i })[0].getAttribute('href')).toBe('/groups');
+        expect(screen.getByRole('link', { name: /Open Soma workspace/i }).getAttribute('href')).toBe('/dashboard');
+        expect(screen.getByRole('link', { name: /Open full role library/i }).getAttribute('href')).toBe('/resources?tab=roles');
         expect(screen.getByText(/2 teams/)).toBeDefined();
-
-        // Should show agent online stats (agent-1 is online=1, agent-3 is busy=2 → 2 online out of 3)
         expect(screen.getByText('2/3 agents online')).toBeDefined();
     });
 
     it('filter dropdown filters teams by type', () => {
         useCortexStore.setState({
             teamsDetail: mockTeams,
+            catalogueAgents: mockTemplates,
         });
 
         render(<TeamsPage />);
 
-        // Initially shows all teams
         expect(screen.getByText('Alpha Squad')).toBeDefined();
         expect(screen.getByText('Bravo Ops')).toBeDefined();
 
-        // Change filter to "standing"
-        const filterSelect = screen.getByDisplayValue('All Teams');
-        fireEvent.change(filterSelect, { target: { value: 'standing' } });
+        fireEvent.change(screen.getByDisplayValue('All Teams'), { target: { value: 'standing' } });
 
-        // Only standing team should remain
         expect(screen.getByText('Alpha Squad')).toBeDefined();
         expect(screen.queryByText('Bravo Ops')).toBeNull();
     });
@@ -116,20 +159,15 @@ describe('TeamsPage', () => {
     it('clicking a team card opens the detail drawer', () => {
         useCortexStore.setState({
             teamsDetail: mockTeams,
+            catalogueAgents: mockTemplates,
             selectedTeamId: null,
             isTeamDrawerOpen: false,
         });
 
         render(<TeamsPage />);
 
-        // No drawer initially
         expect(screen.queryByTestId('team-detail-drawer')).toBeNull();
-
-        // Click on team-alpha card
         fireEvent.click(screen.getByRole('button', { name: /Alpha Squad/i }));
-
-        // The store's selectTeam should set the selectedTeamId + open the drawer
-        // Since we're using real store actions, check that the drawer opens
         expect(screen.getByTestId('team-detail-drawer')).toBeDefined();
         expect(screen.getByText('Drawer: Alpha Squad')).toBeDefined();
     });
@@ -137,15 +175,31 @@ describe('TeamsPage', () => {
     it('renders team quick action links', () => {
         useCortexStore.setState({
             teamsDetail: mockTeams,
+            catalogueAgents: mockTemplates,
         });
 
         render(<TeamsPage />);
 
         expect(screen.getAllByText('Open lead workspace').length).toBeGreaterThan(0);
-        expect(screen.getByTestId('team-team-alpha-open-chat')).toBeDefined();
         expect(screen.getByTestId('team-team-alpha-open-chat').getAttribute('href')).toBe('/dashboard?team_id=team-alpha');
         expect(screen.getByTestId('team-team-alpha-view-runs')).toBeDefined();
         expect(screen.getByTestId('team-team-alpha-view-wiring')).toBeDefined();
         expect(screen.getByTestId('team-team-alpha-view-logs')).toBeDefined();
+    });
+
+    it('opens the team-member template drawer from the teams page', () => {
+        useCortexStore.setState({
+            teamsDetail: mockTeams,
+            catalogueAgents: mockTemplates,
+        });
+
+        render(<TeamsPage />);
+
+        fireEvent.click(screen.getByRole('button', { name: /new template/i }));
+        expect(screen.getByTestId('agent-editor-drawer')).toBeDefined();
+        expect(screen.getByText('Creating new template')).toBeDefined();
+
+        fireEvent.click(screen.getByRole('button', { name: /Marketing Writer/i }));
+        expect(screen.getByText('Editing: Marketing Writer')).toBeDefined();
     });
 });

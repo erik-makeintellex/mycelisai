@@ -46,6 +46,12 @@ Use a Team Lead workspace when you want to:
 - review that lane's inputs, deliveries, and agent roster
 - keep interaction focused before escalating back to Soma
 
+Use `Teams` when you want to:
+- review which teams currently exist
+- open a specific lead workspace
+- define or edit the reusable member templates Soma should use when specializing future teams
+- decide when a certain kind of work should prefer a specific specialist role, model, toolset, or output contract
+
 ---
 
 ## Council
