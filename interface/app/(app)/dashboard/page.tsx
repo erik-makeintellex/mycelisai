@@ -3,8 +3,8 @@ import CreateOrganizationEntry from "@/components/organizations/CreateOrganizati
 
 export default function DashboardPage() {
     return (
-        <div className="h-full overflow-auto bg-cortex-bg px-6 py-8">
-            <div className="mx-auto max-w-7xl space-y-6">
+        <div className="h-full overflow-auto bg-cortex-bg px-4 py-4 lg:px-5 lg:py-5">
+            <div className="mx-auto max-w-[1400px] space-y-4">
                 <CentralSomaHome />
                 <details id="dashboard-organization-setup" className="rounded-3xl border border-cortex-border bg-cortex-surface px-5 py-4">
                     <summary className="cursor-pointer list-none text-sm font-semibold text-cortex-text-main">
