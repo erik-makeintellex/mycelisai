@@ -109,6 +109,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Setup, config reference, port map, and troubleshooting guidance",
             },
             {
+                slug: "remote-user-testing",
+                label: "Remote User Testing",
+                path: "docs/REMOTE_USER_TESTING.md",
+                description: "Walkthrough for networked user testing of Soma, governance, MCP visibility, and safe actuation paths",
+            },
+            {
                 slug: "v8-dev-state",
                 label: "V8 Dev State",
                 path: "V8_DEV_STATE.md",

@@ -58,6 +58,7 @@ Use these when the goal is product packaging, edition posture, or the paid-vs-se
 Use these when the goal is verification, release proof, or workflow-complete validation:
 
 - **Testing Guide**: `./TESTING.md`
+- **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
 - **V8 UI Testing Agentry Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
 - **Governance System**: `./governance.md`
