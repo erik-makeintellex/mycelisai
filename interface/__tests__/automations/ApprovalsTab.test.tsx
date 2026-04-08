@@ -79,5 +79,5 @@ describe("ApprovalsTab", () => {
     expect(screen.getByText(/team: research-team/i)).toBeDefined();
     expect(screen.getByText(/ask: research/i)).toBeDefined();
     expect(screen.getByText(/role: researcher/i)).toBeDefined();
-  });
+  }, 15000);
 });

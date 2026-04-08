@@ -27,7 +27,14 @@ func startTestNATS(t *testing.T) (*natsserver.Server, *nats.Conn) {
 	if !srv.ReadyForConnections(3 * time.Second) {
 		t.Fatal("nats server not ready")
 	}
-	nc, err := nats.Connect(srv.ClientURL())
+	nc, err := nats.Connect(
+		srv.ClientURL(),
+		nats.Name("reactive-engine-test"),
+		nats.Timeout(5*time.Second),
+		nats.RetryOnFailedConnect(true),
+		nats.MaxReconnects(3),
+		nats.ReconnectWait(100*time.Millisecond),
+	)
 	if err != nil {
 		t.Fatalf("nats connect: %v", err)
 	}

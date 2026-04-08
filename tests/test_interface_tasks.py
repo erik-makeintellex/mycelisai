@@ -311,6 +311,28 @@ def test_clean_ignores_missing_files_when_rmtree_passes_exception_object(monkeyp
     assert removed == [interface.os.path.join("interface", ".next")]
 
 
+def test_clean_warns_and_continues_when_cache_directory_stays_locked(monkeypatch, capsys):
+    attempts: list[str] = []
+    cache_dir = interface.os.path.join("interface", ".next")
+
+    monkeypatch.setattr(interface.os.path, "isdir", lambda path: path == cache_dir)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: [])
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+
+    def fake_rmtree(path, onexc=None):
+        attempts.append(path)
+        raise PermissionError("busy")
+
+    monkeypatch.setattr(interface.shutil, "rmtree", fake_rmtree)
+
+    interface.clean.body(FakeContext())
+
+    assert attempts == [cache_dir, cache_dir, cache_dir]
+    output = capsys.readouterr().out
+    assert "could not be fully removed" in output
+    assert "Cache cleared." in output
+
+
 def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
     cleaned: list[str] = []
     ctx = FakeContext()

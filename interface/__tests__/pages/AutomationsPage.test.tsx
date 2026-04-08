@@ -123,7 +123,7 @@ describe('Automations Page (V7)', () => {
     it('deep-links to approvals tab via search param', async () => {
         mockSearchParams.set('tab', 'approvals');
         await act(async () => { render(<AutomationsPage />); });
-        expect(await screen.findByText(/Loading approvals/i)).toBeDefined();
+        expect(await screen.findByTestId('approvals-tab')).toBeDefined();
         expect(screen.getByRole('button', { name: 'Approvals' })).toBeDefined();
     });
 });

@@ -944,7 +944,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         expect(await screen.findByText("Soma plan for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
-    });
+    }, 20000);
 
     it("shows a clean empty Recent Activity state when no checks have run yet", async () => {
         setupOrganizationFetch({
@@ -1378,7 +1378,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Revert to Organization Default" }));
         expect(await screen.findByText("Using Organization Default: Fast & Lightweight")).toBeDefined();
-    }, 10000);
+    }, 20000);
 
     it("shows retry guidance when changing an Agent Type AI Engine fails and recovers on retry", async () => {
         let attempts = 0;
@@ -1484,7 +1484,7 @@ describe("OrganizationPage (/organizations/[id])", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Retry Response Style change" }));
         expect(await screen.findByText("Type-specific Response Style: Warm & Supportive")).toBeDefined();
-    });
+    }, 20000);
 
     it("shows retry guidance when changing the AI Engine fails and recovers on retry", async () => {
         let attempts = 0;

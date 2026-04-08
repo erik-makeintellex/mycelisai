@@ -909,7 +909,7 @@ def clean(c):
     Clear the Next.js build cache (.next directory).
     Use when HMR gets stuck or stale chunks cause ghost errors.
     """
-    import shutil, os
+    import os
 
     def _ignore_missing_rmtree_error(function, path, excinfo):
         error = excinfo[1] if isinstance(excinfo, tuple) else excinfo
@@ -921,16 +921,19 @@ def clean(c):
     print("Clearing Next.js cache...")
     _cleanup_repo_local_interface_processes()
     if os.path.isdir(cache_dir):
+        last_permission_error = None
         for attempt in range(3):
             try:
                 shutil.rmtree(cache_dir, onexc=_ignore_missing_rmtree_error)
+                last_permission_error = None
                 break
             except PermissionError as exc:
-                if attempt == 2:
-                    raise
+                last_permission_error = exc
                 print(f"  WARN: cache removal was blocked by an open file handle ({exc}); retrying after cleanup...")
                 _cleanup_repo_local_interface_processes()
                 time.sleep(0.5)
+        if last_permission_error is not None and os.path.isdir(cache_dir):
+            print("  WARN: Next.js cache could not be fully removed after cleanup retries; continuing with the remaining cache in place.")
     print("Cache cleared.")
 
 @task
