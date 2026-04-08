@@ -175,6 +175,24 @@ func shouldSkipMemoryLogBridge(subject string) bool {
 	return trimmed == protocol.TopicGlobalHeartbeat || strings.Contains(strings.ToLower(trimmed), "heartbeat")
 }
 
+func connectNATSWithRetry(url, connectionName string) (*mycelis_nats.Client, error) {
+	var (
+		client *mycelis_nats.Client
+		err    error
+	)
+	for i := 1; i <= 45; i++ {
+		client, err = mycelis_nats.ConnectAs(url, connectionName)
+		if err == nil {
+			return client, nil
+		}
+		if i == 1 || i%10 == 0 {
+			log.Printf("[nats] waiting for %s at %s (attempt %d/45): %v", connectionName, url, i, err)
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return nil, err
+}
+
 func main() {
 	// Action CLI mode: use the same binary to call Mycelis API endpoints.
 	// Example: server action GET /api/v1/services/status
@@ -268,37 +286,38 @@ func main() {
 	}
 
 	// 2. Connect to NATS
-	var ncWrapper *mycelis_nats.Client
-	var connErr error
-
-	// Retry up to 90s to let NATS come up in parallel with Core during lifecycle.up.
-	// After startup, the nats.go client retries indefinitely on transient drops.
-	for i := 1; i <= 45; i++ {
-		ncWrapper, connErr = mycelis_nats.Connect(natsURL)
-		if connErr == nil {
-			break
-		}
-		if i == 1 || i%10 == 0 {
-			log.Printf("[nats] waiting for NATS at %s (attempt %d/45): %v", natsURL, i, connErr)
-		}
-		time.Sleep(2 * time.Second)
-	}
+	ncWrapper, connErr := connectNATSWithRetry(natsURL, "Mycelis Core")
 
 	// Graceful degradation: if NATS is still unreachable after 90s, run in degraded mode.
 	// Real-time features (Soma, Reactive Engine, Overseer) are disabled until NATS is available.
-	var nc *nats.Conn
+	var (
+		nc               *nats.Conn
+		observerNC       *nats.Conn
+		observerNCSource string
+	)
 	if connErr != nil {
 		log.Printf("WARN: NATS unreachable after 90s: %v. Running in DEGRADED mode (no messaging).", connErr)
 	} else {
 		defer ncWrapper.Drain()
 		nc = ncWrapper.Conn
 		log.Printf("[nats] connected to %s", nc.ConnectedUrl())
+
+		if observerWrapper, observerErr := connectNATSWithRetry(natsURL, "Mycelis Observer"); observerErr != nil {
+			log.Printf("WARN: observer NATS lane unavailable: %v. Falling back to the primary NATS connection for router and memory fanout.", observerErr)
+			observerNC = nc
+			observerNCSource = "primary"
+		} else {
+			defer observerWrapper.Drain()
+			observerNC = observerWrapper.Conn
+			observerNCSource = "observer"
+			log.Printf("[nats] observer lane connected to %s", observerNC.ConnectedUrl())
+		}
 	}
 
 	// 3. Start Router (requires NATS)
 	var r *router.Router
-	if nc != nil {
-		r = router.NewRouter(nc, guard)
+	if observerNC != nil {
+		r = router.NewRouter(observerNC, guard)
 		if err := r.Start(); err != nil {
 			log.Printf("WARN: Failed to start Router: %v", err)
 		}
@@ -307,14 +326,16 @@ func main() {
 	}
 
 	// 4. Start Memory Subscriber (The Memory Service — requires NATS)
-	if memService != nil && nc != nil {
-		_, err := nc.Subscribe(protocol.TopicSwarmWild, func(msg *nats.Msg) {
+	if memService != nil && observerNC != nil {
+		_, err := observerNC.Subscribe(protocol.TopicSwarmWild, func(msg *nats.Msg) {
 			if logEntry := buildMemoryLogEntryFromMessage(msg.Subject, msg.Data); logEntry != nil {
 				memService.Push(logEntry)
 			}
 		})
 		if err != nil {
 			log.Printf("Failed to subscribe Memory Service: %v", err)
+		} else {
+			log.Printf("[nats] memory subscriber attached to %s lane", observerNCSource)
 		}
 	}
 
@@ -590,8 +611,8 @@ func main() {
 	}
 
 	// Start Archivist Daemon (NATS-based sliding window buffer — requires NATS)
-	if archivist != nil && nc != nil {
-		go archivist.StartDaemon(ctx, nc, "22222222-2222-2222-2222-222222222222")
+	if archivist != nil && observerNC != nil {
+		go archivist.StartDaemon(ctx, observerNC, "22222222-2222-2222-2222-222222222222")
 	}
 
 	// Phase 5.2: Initialize Overseer (Trust Economy Governance Valve)

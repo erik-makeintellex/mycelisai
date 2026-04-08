@@ -17,8 +17,19 @@ type Client struct {
 // so that transient infrastructure drops (k8s pod restart, bridge flap) are healed
 // without requiring a Core restart.
 func Connect(url string) (*Client, error) {
+	return ConnectAs(url, "Mycelis Core")
+}
+
+// ConnectAs establishes a named connection to the NATS server.
+// Distinct names make it easier to separate chat-critical traffic from
+// background observer/fanout lanes while retaining the same retry posture.
+func ConnectAs(url, connectionName string) (*Client, error) {
+	name := connectionName
+	if name == "" {
+		name = "Mycelis Core"
+	}
 	opts := []nats.Option{
-		nats.Name("Mycelis Core"),
+		nats.Name(name),
 		nats.ReconnectWait(2 * time.Second),
 		nats.MaxReconnects(-1), // unlimited — heal automatically
 		nats.PingInterval(20 * time.Second),
