@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { use, useEffect, useMemo, useState } from "react";
 import { Building2, FolderPlus, Layers3, Sparkles, Users } from "lucide-react";
 import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
@@ -14,14 +13,21 @@ type LastOrganization = {
     name: string;
 };
 
-export default function CentralSomaHome() {
-    const searchParams = useSearchParams();
+export default function CentralSomaHome({
+    requestedTeamIdPromise,
+}: {
+    requestedTeamIdPromise?: Promise<{ team_id?: string | string[] }>;
+}) {
     const [lastOrganization, setLastOrganization] = useState<LastOrganization | null>(null);
     const fetchTeamsDetail = useCortexStore((s) => s.fetchTeamsDetail);
     const selectTeam = useCortexStore((s) => s.selectTeam);
     const teamsDetail = useCortexStore((s) => s.teamsDetail);
     const assistantName = useCortexStore((s) => s.assistantName);
-    const requestedTeamId = searchParams?.get("team_id")?.trim() ?? "";
+    const resolvedSearchParams = requestedTeamIdPromise ? use(requestedTeamIdPromise) : undefined;
+    const requestedTeamIdValue = resolvedSearchParams?.team_id;
+    const requestedTeamId = Array.isArray(requestedTeamIdValue)
+        ? requestedTeamIdValue[0]?.trim() ?? ""
+        : requestedTeamIdValue?.trim() ?? "";
 
     useEffect(() => {
         setLastOrganization(readLastOrganization());

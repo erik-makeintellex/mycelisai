@@ -1,14 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-vi.mock("next/navigation", () => ({
-    useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
-    useSearchParams: () => new URLSearchParams(),
-}));
-
 vi.mock("@/components/dashboard/CentralSomaHome", () => ({
     __esModule: true,
-    default: () => <div data-testid="central-soma-home">Central Soma Home</div>,
+    default: ({ requestedTeamIdPromise }: { requestedTeamIdPromise?: Promise<{ team_id?: string | string[] }> }) => (
+        <div data-testid="central-soma-home" data-has-team-promise={requestedTeamIdPromise ? "yes" : "no"}>
+            Central Soma Home
+        </div>
+    ),
 }));
 
 vi.mock("@/components/organizations/CreateOrganizationEntry", () => ({
@@ -23,6 +22,7 @@ describe("DashboardPage", () => {
         render(<DashboardPage />);
 
         expect(screen.getByTestId("central-soma-home")).toBeDefined();
+        expect(screen.getByTestId("central-soma-home").getAttribute("data-has-team-promise")).toBe("no");
         expect(screen.getByText("Create or open AI Organizations")).toBeDefined();
         expect(screen.getByText(/Keep the main admin home centered on Soma/i)).toBeDefined();
         expect(screen.getByTestId("create-organization-entry")).toBeDefined();
@@ -33,5 +33,10 @@ describe("DashboardPage", () => {
         const details = container.querySelector("details#dashboard-organization-setup");
         expect(details).not.toBeNull();
         expect(details?.querySelector("[data-testid='create-organization-entry']")).not.toBeNull();
+    });
+
+    it("passes route team context through to the central Soma home", () => {
+        render(<DashboardPage searchParams={Promise.resolve({ team_id: "team-alpha" })} />);
+        expect(screen.getByTestId("central-soma-home").getAttribute("data-has-team-promise")).toBe("yes");
     });
 });

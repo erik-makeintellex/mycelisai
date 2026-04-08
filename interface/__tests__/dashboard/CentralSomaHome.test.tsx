@@ -2,10 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { useCortexStore } from "@/store/useCortexStore";
 
-vi.mock("next/navigation", () => ({
-    useSearchParams: () => new URLSearchParams(),
-}));
-
 vi.mock("@/lib/lastOrganization", () => ({
     readLastOrganization: () => ({ id: "org-1", name: "Northstar Labs" }),
     subscribeLastOrganizationChange: () => () => undefined,
