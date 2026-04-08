@@ -23,6 +23,17 @@ func Connect(url string) (*Client, error) {
 		nats.MaxReconnects(-1), // unlimited — heal automatically
 		nats.PingInterval(20 * time.Second),
 		nats.MaxPingsOutstanding(3),
+		nats.ErrorHandler(func(_ *nats.Conn, sub *nats.Subscription, err error) {
+			subject := ""
+			if sub != nil {
+				subject = sub.Subject
+			}
+			if subject != "" {
+				log.Printf("[nats] async error on %s: %v", subject, err)
+				return
+			}
+			log.Printf("[nats] async error: %v", err)
+		}),
 		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
 			if err != nil {
 				log.Printf("[nats] disconnected: %v — will retry", err)

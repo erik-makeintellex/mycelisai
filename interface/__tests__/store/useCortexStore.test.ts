@@ -817,7 +817,7 @@ describe('useCortexStore', () => {
 
                 expect(mockFetch).toHaveBeenCalledTimes(2);
                 expect(store.getState().activeMode).toBe('blocker');
-                expect(store.getState().missionChatError).toBe('Soma chat blocked (500)');
+                expect(store.getState().missionChatError).toBe('Soma hit a server-side failure while handling the request.');
                 expect(store.getState().missionChatFailure).toMatchObject({
                     routeKind: 'workspace',
                     type: 'server_error',
@@ -869,7 +869,7 @@ describe('useCortexStore', () => {
                 method: 'POST',
             }));
             expect(store.getState().activeMode).toBe('blocker');
-            expect(store.getState().missionChatError).toBe('deadline exceeded');
+            expect(store.getState().missionChatError).toBe('Soma did not return a response before the request deadline.');
             expect(store.getState().missionChatFailure).toMatchObject({
                 routeKind: 'workspace',
                 targetId: 'admin',
@@ -906,13 +906,39 @@ describe('useCortexStore', () => {
                 method: 'POST',
             }));
             expect(store.getState().activeMode).toBe('blocker');
-            expect(store.getState().missionChatError).toBe('Council agent unreachable (503)');
+            expect(store.getState().missionChatError).toBe('The council member service returned an internal error while handling the request.');
             expect(store.getState().missionChatFailure).toMatchObject({
                 routeKind: 'council',
                 targetId: 'council-coder',
                 type: 'server_error',
                 title: 'Council Call Failed',
             });
+        });
+
+        it('does not store raw JSON response text as the final Soma answer', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                        signal_type: 'chat_response',
+                        trust_score: 0.5,
+                        template_id: 'chat-to-answer',
+                        mode: 'answer',
+                        payload: {
+                            text: '{"tool":"consult_council","status":"ok"}',
+                            ask_class: 'direct_answer',
+                        },
+                    },
+                }),
+            });
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(store.getState().missionChat.at(-1)?.content).toBe(
+                'Soma could not produce a readable reply for that request. Retry or ask Soma to summarize the result directly.',
+            );
         });
     });
 
@@ -1056,14 +1082,23 @@ describe('useCortexStore', () => {
             });
             mockFetch.mockResolvedValue({
                 ok: false,
+                status: 500,
                 text: async () => JSON.stringify({ error: 'confirmation denied' }),
             });
 
             const result = await store.getState().confirmProposal();
 
-            expect(result).toEqual({ ok: false, runId: null, error: 'confirmation denied' });
+            expect(result).toEqual({
+                ok: false,
+                runId: null,
+                error: 'Soma hit a server-side failure while handling the request.',
+            });
             expect(store.getState().activeMode).toBe('blocker');
-            expect(store.getState().missionChatError).toBe('confirmation denied');
+            expect(store.getState().missionChatError).toBe('Soma hit a server-side failure while handling the request.');
+            expect(store.getState().missionChatFailure).toMatchObject({
+                routeKind: 'workspace',
+                type: 'server_error',
+            });
             expect(store.getState().pendingProposal).toBeNull();
             expect(store.getState().missionChat[0]).toMatchObject({
                 proposal_status: 'failed',
@@ -1072,7 +1107,7 @@ describe('useCortexStore', () => {
             expect(store.getState().missionChat.at(-1)).toMatchObject({
                 role: 'council',
                 mode: 'blocker',
-                content: 'confirmation denied',
+                content: 'Soma hit a server-side failure while handling the request.',
             });
         });
 

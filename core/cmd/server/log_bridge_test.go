@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mycelis/core/pkg/protocol"
 	pb "github.com/mycelis/core/pkg/pb/swarm"
+	"github.com/mycelis/core/pkg/protocol"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -104,5 +104,24 @@ func TestBuildMemoryLogEntryFromMessageUsesLegacyEnvelopeReviewContract(t *testi
 	}
 	if entry.Context["source_kind"] != string(protocol.SourceKindSystem) {
 		t.Fatalf("source_kind = %v, want system", entry.Context["source_kind"])
+	}
+}
+
+func TestBuildMemoryLogEntryFromMessageSkipsHeartbeatSubjects(t *testing.T) {
+	data, err := proto.Marshal(&pb.MsgEnvelope{
+		SourceAgentId: "admin",
+		TeamId:        "admin-core",
+		Timestamp:     timestamppb.New(time.Now().UTC()),
+		Payload: &pb.MsgEnvelope_Event{
+			Event: &pb.EventPayload{EventType: "agent.heartbeat"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal heartbeat envelope: %v", err)
+	}
+
+	entry := buildMemoryLogEntryFromMessage(protocol.TopicGlobalHeartbeat, data)
+	if entry != nil {
+		t.Fatalf("expected nil heartbeat log entry, got %#v", entry)
 	}
 }

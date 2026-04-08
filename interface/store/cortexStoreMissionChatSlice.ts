@@ -78,19 +78,20 @@ function setMissionChatBlocker({
     availability,
     content,
 }: MissionChatBlockerOptions) {
+    const failure = buildMissionChatFailure({
+        assistantName,
+        targetId,
+        message,
+        statusCode,
+        availability,
+    });
     set((s) => ({
         isMissionChatting: false,
-        missionChatError: message,
-        missionChatFailure: buildMissionChatFailure({
-            assistantName,
-            targetId,
-            message,
-            statusCode,
-            availability,
-        }),
+        missionChatError: failure.summary,
+        missionChatFailure: failure,
         missionChat: [...s.missionChat, {
             role: 'council',
-            content: content ?? message,
+            content: content ?? failure.summary,
             source_node: targetId,
             mode: 'blocker',
         }],

@@ -249,6 +249,18 @@ func TestShouldAvoidToolsForDirectDraft(t *testing.T) {
 	if !shouldAvoidToolsForDirectDraft("write_file") {
 		t.Fatal("expected write_file to be blocked for direct draft requests")
 	}
+	if shouldAvoidToolsForDirectDraft("get_system_status") {
+		t.Fatal("did not expect get_system_status to be blocked for direct draft requests")
+	}
+	if shouldAvoidToolsForDirectDraft("list_teams") {
+		t.Fatal("did not expect list_teams to be blocked for direct draft requests")
+	}
+	if shouldAvoidToolsForDirectDraft("read_signals") {
+		t.Fatal("did not expect read_signals to be blocked for direct draft requests")
+	}
+	if shouldAvoidToolsForDirectDraft("consult_council") {
+		t.Fatal("did not expect consult_council to be blocked for direct draft requests")
+	}
 	if shouldAvoidToolsForDirectDraft("generate_image") {
 		t.Fatal("did not expect generate_image to be blocked by direct draft guard")
 	}

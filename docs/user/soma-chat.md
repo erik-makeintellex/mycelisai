@@ -145,6 +145,10 @@ Root-admin configuration behavior:
 ## Council Failure Recovery
 
 If a council call fails, Workspace shows a structured error card instead of a raw error.
+The same rule applies to the central Soma path:
+- no raw `500` strings as the visible answer
+- no raw `tool_call` JSON
+- no raw structured runtime envelopes in the main conversation body
 
 The card includes:
 - what failed

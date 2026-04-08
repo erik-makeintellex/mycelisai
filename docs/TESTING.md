@@ -235,6 +235,7 @@ For operator-facing blocker work, a passing test set must prove:
 - the store preserves raw diagnostics
 - the shared failure model classifies the error once
 - Workspace blocker card, degraded banner, and status drawer all render from that shared model
+- the final chat surface never exposes raw tool-call JSON, raw structured runtime envelopes, or raw admin/council transport strings as the visible answer
 
 Disallowed testing posture:
 - proving only that a button renders

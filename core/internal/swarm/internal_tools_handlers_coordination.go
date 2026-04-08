@@ -74,7 +74,6 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	if err := r.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID), payload); err != nil {
 		return "", fmt.Errorf("failed to publish task to team %s: %w", teamID, err)
 	}
-	r.nc.Flush()
 	return fmt.Sprintf("Task delegated to team %s.", teamID), nil
 }
 

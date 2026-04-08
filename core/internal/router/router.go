@@ -73,6 +73,9 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 
 	// 3. Heartbeat / Registry Update
 	r.updateRegistry(&envelope, msg.Subject)
+	if isHeartbeatEnvelope(msg.Subject, &envelope) {
+		return
+	}
 
 	// 4. Audit Trace (Enforcement)
 	// We emit a lightweight trace of this event
@@ -91,6 +94,17 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 	// 5. Routing Logic (if any specific P2P logic is needed beyond NATS wildcards)
 	// Currently NATS handles the delivery to subscribers.
 	// This router component acts as the "Sidecar" or "Observer" for the Core.
+}
+
+func isHeartbeatEnvelope(subject string, envelope *pb.MsgEnvelope) bool {
+	if strings.TrimSpace(subject) == protocol.TopicGlobalHeartbeat {
+		return true
+	}
+	if envelope == nil {
+		return strings.Contains(strings.ToLower(subject), "heartbeat")
+	}
+	return strings.Contains(strings.ToLower(subject), "heartbeat") ||
+		(envelope.GetEvent() != nil && envelope.GetEvent().EventType == "agent.heartbeat")
 }
 
 // PublishDirect sends a message directly to NATS, bypassing Gatekeeper
@@ -162,8 +176,7 @@ func (r *Router) updateRegistry(env *pb.MsgEnvelope, subject string) {
 	}
 
 	// Determine if this is a heartbeat
-	isHeartbeat := strings.Contains(subject, "heartbeat") ||
-		(env.GetEvent() != nil && env.GetEvent().EventType == "agent.heartbeat")
+	isHeartbeat := isHeartbeatEnvelope(subject, env)
 
 	if isHeartbeat {
 		state.GlobalRegistry.UpdateHeartbeat(agentID, env.TeamId, sourceURI, state.StatusIdle)

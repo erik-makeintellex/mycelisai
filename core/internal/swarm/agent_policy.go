@@ -49,10 +49,10 @@ func preferDirectDraftResponse(input string) bool {
 
 func shouldAvoidToolsForDirectDraft(toolName string) bool {
 	switch strings.TrimSpace(toolName) {
-	case "write_file", "read_file", "local_command", "consult_council", "delegate_task",
+	case "write_file", "read_file", "local_command", "delegate_task",
 		"research_for_blueprint", "generate_blueprint", "load_deployment_context", "promote_deployment_context", "remember", "recall",
-		"store_artifact", "list_teams", "list_missions", "get_system_status",
-		"list_available_tools", "list_catalogue", "publish_signal", "read_signals",
+		"store_artifact", "list_missions",
+		"list_available_tools", "list_catalogue", "publish_signal",
 		"broadcast", "create_team":
 		return true
 	default:

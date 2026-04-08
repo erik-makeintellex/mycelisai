@@ -3,6 +3,7 @@ import {
     trimToNonEmpty,
     updateProposalLifecycle,
 } from '@/store/cortexStoreChatWorkflow';
+import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 
@@ -67,40 +68,51 @@ export function createCortexProposalExecutionSlice(
                 } catch {
                     errMsg = text || errMsg;
                 }
+                const failure = buildMissionChatFailure({
+                    assistantName: get().assistantName,
+                    targetId: 'admin',
+                    message: errMsg,
+                    statusCode: res.status,
+                });
                 console.error('[CE-1] Confirm action failed:', errMsg);
                 set((s) => ({
-                    missionChatError: errMsg,
-                    missionChatFailure: null,
+                    missionChatError: failure.summary,
+                    missionChatFailure: failure,
                     activeMode: 'blocker',
                     activeRunId: null,
                     missionChat: [
                         ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'failed', {
                             mode: 'blocker',
                         }),
-                        { role: 'council', content: errMsg, source_node: 'admin', mode: 'blocker' },
+                        { role: 'council', content: failure.summary, source_node: 'admin', mode: 'blocker' },
                     ],
                     pendingProposal: null,
                     activeConfirmToken: null,
                 }));
-                return { ok: false, runId: null, error: errMsg };
+                return { ok: false, runId: null, error: failure.summary };
             } catch (err) {
                 const errMsg = err instanceof Error ? err.message : 'Confirm action failed';
+                const failure = buildMissionChatFailure({
+                    assistantName: get().assistantName,
+                    targetId: 'admin',
+                    message: errMsg,
+                });
                 console.error('[CE-1] confirmProposal error:', err);
                 set((s) => ({
-                    missionChatError: errMsg,
-                    missionChatFailure: null,
+                    missionChatError: failure.summary,
+                    missionChatFailure: failure,
                     activeMode: 'blocker',
                     activeRunId: null,
                     missionChat: [
                         ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'failed', {
                             mode: 'blocker',
                         }),
-                        { role: 'council', content: errMsg, source_node: 'admin', mode: 'blocker' },
+                        { role: 'council', content: failure.summary, source_node: 'admin', mode: 'blocker' },
                     ],
                     pendingProposal: null,
                     activeConfirmToken: null,
                 }));
-                return { ok: false, runId: null, error: errMsg };
+                return { ok: false, runId: null, error: failure.summary };
             }
         },
 

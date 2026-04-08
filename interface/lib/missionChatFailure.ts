@@ -47,6 +47,15 @@ function classifyMissionChatFailure(message: string, statusCode?: number, availa
     ) {
         return 'setup_required';
     }
+    if (availability?.code === 'transport_timeout') {
+        return 'timeout';
+    }
+    if (availability?.code === 'transport_unavailable' || availability?.code === 'runtime_unavailable') {
+        return 'unreachable';
+    }
+    if (availability?.code === 'transport_backpressure') {
+        return 'server_error';
+    }
     const lower = message.toLowerCase();
     if (statusCode === 401 || statusCode === 403 || lower.includes('401') || lower.includes('403') || lower.includes('unauthorized') || lower.includes('forbidden')) {
         return 'permission_denied';
@@ -57,12 +66,14 @@ function classifyMissionChatFailure(message: string, statusCode?: number, availa
     if (
         (statusCode != null && statusCode >= 500) ||
         lower.includes('500') ||
+        lower.includes('internal server error') ||
         lower.includes('internal error') ||
         lower.includes('server error')
     ) {
         return 'server_error';
     }
     if (
+        lower.includes('could not reach') ||
         lower.includes('unreachable') ||
         lower.includes('failed to fetch') ||
         lower.includes('bad gateway') ||

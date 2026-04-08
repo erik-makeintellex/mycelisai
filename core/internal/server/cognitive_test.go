@@ -213,6 +213,154 @@ func TestHandleChat_ReturnsStructuredBlockerForEmptyAgentEnvelope(t *testing.T) 
 	}
 }
 
+func TestHandleChat_UnwrapsReadableJSONEnvelopeFromAgent(t *testing.T) {
+	wireNATS := withNATS(t)
+	s := newTestServer(wireNATS)
+	s.Cognitive = &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"mock": cognitiveTestProvider{},
+		},
+	}
+
+	subject := "swarm.council.admin.request"
+	_, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
+		msg.Respond([]byte(`{"message":"Council-Sentry protects the runtime and reviews operational risk."}`))
+	})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := s.NC.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Introduce sentry."}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp protocol.APIResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	data, err := json.Marshal(resp.Data)
+	if err != nil {
+		t.Fatalf("marshal response data: %v", err)
+	}
+	var envelope protocol.CTSEnvelope
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		t.Fatalf("decode envelope: %v", err)
+	}
+	var payload protocol.ChatResponsePayload
+	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Text != "Council-Sentry protects the runtime and reviews operational risk." {
+		t.Fatalf("payload.text = %q", payload.Text)
+	}
+}
+
+func TestHandleChat_ReturnsStructuredTransportBlockerWhenAdminHasNoResponder(t *testing.T) {
+	wireNATS := withNATS(t)
+	s := newTestServer(wireNATS)
+	s.Cognitive = &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"mock": cognitiveTestProvider{},
+		},
+	}
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"hello"}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusServiceUnavailable, rr.Body.String())
+	}
+
+	var resp protocol.APIResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Error != "Soma is currently unreachable from the workspace runtime." {
+		t.Fatalf("error = %q", resp.Error)
+	}
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected data object, got %T", resp.Data)
+	}
+	if data["code"] != "transport_unavailable" {
+		t.Fatalf("code = %v", data["code"])
+	}
+}
+
+func TestHandleChat_BlocksUnreadableStructuredReplyAfterRetry(t *testing.T) {
+	wireNATS := withNATS(t)
+	s := newTestServer(wireNATS)
+	s.Cognitive = &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"mock": cognitiveTestProvider{},
+		},
+	}
+
+	subject := "swarm.council.admin.request"
+	replyCount := 0
+	_, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
+		replyCount++
+		msg.Respond([]byte(`{"status":"ok","details":{"member":"council-sentry"}}`))
+	})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := s.NC.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"what is current state"}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusBadGateway, rr.Body.String())
+	}
+	if replyCount != 2 {
+		t.Fatalf("replyCount = %d, want 2", replyCount)
+	}
+
+	var resp protocol.APIResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.Error != "Soma drifted into a governed action while answering a read-only request. Retry the request or restate it more directly." {
+		t.Fatalf("error = %q", resp.Error)
+	}
+}
+
 func TestHandleChat_UsesProposalModeForMutationIntentWithoutReadableText(t *testing.T) {
 	wireNATS := withNATS(t)
 	s := newTestServer(wireNATS)

@@ -140,7 +140,6 @@ func (r *InternalToolRegistry) handlePublishSignal(ctx context.Context, args map
 	if err := r.nc.Publish(subject, payload); err != nil {
 		return "", fmt.Errorf("failed to publish to %s: %w", subject, err)
 	}
-	r.nc.Flush()
 
 	ownerAgentID := "system"
 	if inv, ok := ToolInvocationContextFromContext(ctx); ok && strings.TrimSpace(inv.AgentID) != "" {

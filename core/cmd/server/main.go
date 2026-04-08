@@ -141,6 +141,10 @@ func buildLegacyMemoryLogEntry(subject string, envelope *pb.MsgEnvelope) *memory
 }
 
 func buildMemoryLogEntryFromMessage(subject string, data []byte) *memory.LogEntry {
+	if shouldSkipMemoryLogBridge(subject) {
+		return nil
+	}
+
 	var signalEnv protocol.SignalEnvelope
 	if err := json.Unmarshal(data, &signalEnv); err == nil {
 		if signalEnv.Meta.SourceKind != "" || signalEnv.Meta.SourceChannel != "" || signalEnv.Meta.PayloadKind != "" || signalEnv.Text != "" {
@@ -161,6 +165,14 @@ func buildMemoryLogEntryFromMessage(subject string, data []byte) *memory.LogEntr
 	}
 
 	return nil
+}
+
+func shouldSkipMemoryLogBridge(subject string) bool {
+	trimmed := strings.TrimSpace(subject)
+	if trimmed == "" {
+		return false
+	}
+	return trimmed == protocol.TopicGlobalHeartbeat || strings.Contains(strings.ToLower(trimmed), "heartbeat")
 }
 
 func main() {

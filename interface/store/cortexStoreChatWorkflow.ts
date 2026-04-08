@@ -6,10 +6,30 @@ import type {
     ProposalLifecycleStatus,
 } from '@/store/cortexStoreTypes';
 
+function extractReadableStructuredText(text: string): string | null {
+    const trimmed = text.trim();
+    if (!trimmed || !/^[{\[]/.test(trimmed)) {
+        return trimmed || null;
+    }
+    try {
+        const parsed = JSON.parse(trimmed);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return null;
+        }
+        const candidate = [parsed.text, parsed.message, parsed.summary].find((value) => typeof value === 'string' && value.trim());
+        return typeof candidate === 'string' ? candidate.trim() : null;
+    } catch {
+        return trimmed;
+    }
+}
+
 export function fallbackChatContent(payload: CTSChatEnvelope['payload'], assistantName: string): string {
     const text = payload?.text?.trim();
     if (text) {
-        return text;
+        const readable = extractReadableStructuredText(text);
+        if (readable) {
+            return readable;
+        }
     }
 
     if (payload?.artifacts && payload.artifacts.length > 0) {

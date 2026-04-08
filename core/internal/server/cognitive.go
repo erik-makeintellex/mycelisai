@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
+	"github.com/nats-io/nats.go"
 )
 
 // mutationTools are tools that trigger proposal mode when used in chat.
@@ -655,8 +657,29 @@ func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID 
 
 func decodeChatAgentResult(data []byte) chatAgentResult {
 	var result chatAgentResult
-	if err := json.Unmarshal(data, &result); err == nil && result.hasStructuredState() {
-		return result
+	if err := json.Unmarshal(data, &result); err == nil {
+		if strings.TrimSpace(result.Text) == "" {
+			if readable, artifacts, ok := extractReadableStructuredReply(string(data)); ok {
+				result.Text = readable
+				if len(result.Artifacts) == 0 && len(artifacts) > 0 {
+					result.Artifacts = artifacts
+				}
+			}
+		}
+		if result.hasStructuredState() {
+			return result
+		}
+	}
+	if readable, artifacts, ok := extractReadableStructuredReply(string(data)); ok {
+		if strings.TrimSpace(readable) == "" && len(artifacts) == 0 {
+			return chatAgentResult{
+				Text: string(data),
+			}
+		}
+		return chatAgentResult{
+			Text:      readable,
+			Artifacts: artifacts,
+		}
 	}
 	return chatAgentResult{
 		Text: string(data),
@@ -710,7 +733,12 @@ func readableChatText(agentResult chatAgentResult, isMutation bool) string {
 			return "Soma captured a governed mutation intent. Review the proposal details below."
 		}
 	}
-	if !isMutation && containsToolCallJSON(agentResult.Text) {
+	if !isMutation {
+		if readable, _, ok := extractReadableStructuredReply(agentResult.Text); ok && strings.TrimSpace(readable) != "" {
+			return readable
+		}
+	}
+	if !isMutation && (containsToolCallJSON(agentResult.Text) || isUnreadableStructuredReply(agentResult.Text)) {
 		return ""
 	}
 	if strings.TrimSpace(agentResult.Text) != "" {
@@ -745,6 +773,42 @@ func containsToolCallJSON(text string) bool {
 	return strings.Contains(trimmed, `"tool_call"`)
 }
 
+func extractReadableStructuredReply(text string) (string, []protocol.ChatArtifactRef, bool) {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" || !json.Valid([]byte(trimmed)) {
+		return "", nil, false
+	}
+	if _, ok := parsePlannedToolCall(trimmed); ok || strings.Contains(trimmed, `"tool_call"`) || strings.Contains(trimmed, `"operation"`) {
+		return "", nil, false
+	}
+
+	var payload struct {
+		Text      string                     `json:"text"`
+		Message   string                     `json:"message"`
+		Summary   string                     `json:"summary"`
+		Artifact  *protocol.ChatArtifactRef  `json:"artifact,omitempty"`
+		Artifacts []protocol.ChatArtifactRef `json:"artifacts,omitempty"`
+	}
+	if err := json.Unmarshal([]byte(trimmed), &payload); err != nil {
+		return "", nil, false
+	}
+
+	artifacts := make([]protocol.ChatArtifactRef, 0, len(payload.Artifacts)+1)
+	if payload.Artifact != nil {
+		artifacts = append(artifacts, *payload.Artifact)
+	}
+	if len(payload.Artifacts) > 0 {
+		artifacts = append(artifacts, payload.Artifacts...)
+	}
+
+	return firstNonEmptyString(payload.Text, payload.Message, payload.Summary), artifacts, true
+}
+
+func isUnreadableStructuredReply(text string) bool {
+	readable, artifacts, ok := extractReadableStructuredReply(text)
+	return ok && strings.TrimSpace(readable) == "" && len(artifacts) == 0
+}
+
 func shouldRetryDirectAnswer(agentResult chatAgentResult, requestMutationTools []string) bool {
 	if len(requestMutationTools) != 0 {
 		return false
@@ -752,7 +816,7 @@ func shouldRetryDirectAnswer(agentResult chatAgentResult, requestMutationTools [
 	if isMutation, _ := hasMutationTools(agentResult.ToolsUsed); isMutation {
 		return true
 	}
-	return containsToolCallJSON(agentResult.Text)
+	return containsToolCallJSON(agentResult.Text) || isUnreadableStructuredReply(agentResult.Text)
 }
 
 func directAnswerDriftBlocker(agentResult chatAgentResult) chatAgentResult {
@@ -820,6 +884,49 @@ func respondStructuredChatBlocker(w http.ResponseWriter, agentResult chatAgentRe
 		OK:    false,
 		Error: blocker.Summary,
 		Data:  blocker,
+	})
+}
+
+func buildTransportChatBlocker(targetLabel string, err error) (int, cognitive.ExecutionAvailability) {
+	lower := strings.ToLower(strings.TrimSpace(err.Error()))
+	switch {
+	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(lower, "deadline exceeded") || strings.Contains(lower, "timeout"):
+		return http.StatusGatewayTimeout, cognitive.ExecutionAvailability{
+			Available:         false,
+			Code:              "transport_timeout",
+			Summary:           fmt.Sprintf("%s did not respond before the request deadline.", targetLabel),
+			RecommendedAction: "Retry once. If the timeout repeats, inspect NATS connectivity and the target agent runtime.",
+		}
+	case strings.Contains(lower, "outbound buffer limit exceeded"):
+		return http.StatusServiceUnavailable, cognitive.ExecutionAvailability{
+			Available:         false,
+			Code:              "transport_backpressure",
+			Summary:           fmt.Sprintf("%s is overloaded right now and could not process the request.", targetLabel),
+			RecommendedAction: "Retry once. If this repeats, inspect NATS backpressure and recent swarm traffic.",
+		}
+	case errors.Is(err, nats.ErrNoResponders) || strings.Contains(lower, "no responders") || strings.Contains(lower, "not connected") || strings.Contains(lower, "connection closed") || strings.Contains(lower, "disconnected"):
+		return http.StatusServiceUnavailable, cognitive.ExecutionAvailability{
+			Available:         false,
+			Code:              "transport_unavailable",
+			Summary:           fmt.Sprintf("%s is currently unreachable from the workspace runtime.", targetLabel),
+			RecommendedAction: "Inspect NATS connectivity and confirm the target agent runtime is online before retrying.",
+		}
+	default:
+		return http.StatusBadGateway, cognitive.ExecutionAvailability{
+			Available:         false,
+			Code:              "transport_unavailable",
+			Summary:           fmt.Sprintf("%s could not complete the request because the agent runtime did not respond cleanly.", targetLabel),
+			RecommendedAction: "Retry once. If it persists, inspect NATS connectivity and recent runtime logs.",
+		}
+	}
+}
+
+func respondChatTransportBlocker(w http.ResponseWriter, targetLabel string, err error) {
+	status, availability := buildTransportChatBlocker(targetLabel, err)
+	respondAPIJSON(w, status, protocol.APIResponse{
+		OK:    false,
+		Error: availability.Summary,
+		Data:  availability,
 	})
 }
 
@@ -1012,7 +1119,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	agentResult, err := s.requestChatAgent(r.Context(), subject, req.Messages)
 	if err != nil {
 		log.Printf("Chat via Admin agent failed: %v", err)
-		respondError(w, "Admin agent did not respond: "+err.Error(), http.StatusBadGateway)
+		respondChatTransportBlocker(w, "Soma", err)
 		return
 	}
 
@@ -1290,7 +1397,7 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	agentResult, err := s.requestChatAgent(r.Context(), subject, req.Messages)
 	if err != nil {
 		log.Printf("Council chat with %s failed: %v", memberID, err)
-		respondAPIError(w, fmt.Sprintf("Council member %s did not respond: %s", memberID, err.Error()), http.StatusBadGateway)
+		respondChatTransportBlocker(w, fmt.Sprintf("Council member %s", memberID), err)
 		return
 	}
 
