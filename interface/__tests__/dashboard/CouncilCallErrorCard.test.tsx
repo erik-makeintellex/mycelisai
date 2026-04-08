@@ -49,6 +49,51 @@ describe("CouncilCallErrorCard", () => {
         expect(screen.getByText(/returned an internal error/i)).toBeDefined();
     });
 
+    it("classifies plain internal server errors without echoing raw diagnostics", () => {
+        const rawMessage = "Internal Server Error";
+
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "admin",
+                    message: rawMessage,
+                    statusCode: 500,
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("Soma Chat Blocked")).toBeDefined();
+        expect(screen.getByText("server_error")).toBeDefined();
+        expect(screen.getByText(/server-side failure/i)).toBeDefined();
+        expect(screen.queryByText(rawMessage)).toBeNull();
+    });
+
+    it("keeps JSON-like diagnostics out of the visible blocker summary", () => {
+        const rawMessage = '{"error":"Internal Server Error","tool":"write_file"}';
+
+        render(
+            <CouncilCallErrorCard
+                failure={buildMissionChatFailure({
+                    assistantName: "Soma",
+                    targetId: "council-architect",
+                    message: rawMessage,
+                    statusCode: 500,
+                })}
+                onRetry={vi.fn()}
+                onSwitchToSoma={vi.fn()}
+                onContinueWithSoma={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText("Council Call Failed")).toBeDefined();
+        expect(screen.getByText(/internal error/i)).toBeDefined();
+        expect(screen.queryByText(rawMessage)).toBeNull();
+    });
+
     it("fires retry, switch, and continue handlers", () => {
         const onRetry = vi.fn();
         const onSwitchToSoma = vi.fn();

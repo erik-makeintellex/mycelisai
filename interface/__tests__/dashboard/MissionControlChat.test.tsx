@@ -742,6 +742,43 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Soma Chat Blocked')).toBeDefined();
         });
 
+        it('renders a readable fallback instead of raw council tool JSON in Soma chat', async () => {
+            const rawCouncilPayload = '{"error":"consult_council requires \\"member\\" and \\"question\\"","tool":"consult_council"}';
+
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return okJson({ ok: true, data: COUNCIL_MEMBERS });
+                }
+                if (url.includes('/api/v1/chat')) {
+                    return okJson({
+                        ok: true,
+                        data: {
+                            ...CTS_CHAT_RESPONSE.data,
+                            payload: {
+                                text: rawCouncilPayload,
+                                ask_class: 'direct_answer',
+                            },
+                        },
+                    });
+                }
+                return errorText(404, 'not found');
+            });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const input = screen.getByPlaceholderText(/Ask Soma/i);
+            fireEvent.change(input, { target: { value: 'summarize the current state' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(screen.getByText(/could not produce a readable reply/i)).toBeDefined();
+            });
+            expect(screen.queryByText(rawCouncilPayload)).toBeNull();
+            expect(screen.queryByText(/consult_council requires/i)).toBeNull();
+        });
+
         it('records Soma blocker mode when council roster is unavailable', async () => {
             mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
                 const url = requestUrl(input);
@@ -802,6 +839,38 @@ describe('MissionControlChat', () => {
             expect(
                 mockFetch.mock.calls.some((c: any[]) => requestUrl(c[0]).includes('/api/v1/council/council-sentry/chat'))
             ).toBe(true);
+        });
+
+        it('hides raw council transport strings behind the blocker contract', async () => {
+            const rawCouncilFailure = "consult_council requires 'member' and 'question'";
+
+            mockFetch.mockImplementation(async (input: RequestInfo | URL) => {
+                const url = requestUrl(input);
+                if (url.includes('/api/v1/council/members')) {
+                    return okJson({ ok: true, data: COUNCIL_MEMBERS });
+                }
+                if (url.includes('/api/v1/council/council-sentry/chat')) {
+                    return errorText(500, rawCouncilFailure);
+                }
+                return errorText(404, 'not found');
+            });
+
+            render(<MissionControlChat />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+            act(() => {
+                useCortexStore.getState().setCouncilTarget('council-sentry');
+            });
+
+            const input = screen.getByPlaceholderText(/Direct to Sentry/i);
+            fireEvent.change(input, { target: { value: 'hello sentry' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(useCortexStore.getState().activeMode).toBe('blocker');
+            });
+            expect(screen.getByText('Council Call Failed')).toBeDefined();
+            expect(screen.queryByText(rawCouncilFailure)).toBeNull();
+            expect(screen.queryByText(/consult_council requires/i)).toBeNull();
         });
 
         it('shows error as chat bubble with source_node on API failure', async () => {

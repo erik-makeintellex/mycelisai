@@ -157,6 +157,67 @@ describe("DegradedModeBanner", () => {
         });
     });
 
+    it("uses normalized blocker labels instead of raw workspace diagnostics", async () => {
+        const rawMessage = '{"error":"Internal Server Error","tool":"write_file"}';
+        useCortexStore.setState({
+            missionChatError: rawMessage,
+            missionChatFailure: buildMissionChatFailure({
+                assistantName: "Soma",
+                targetId: "admin",
+                message: rawMessage,
+                statusCode: 500,
+            }),
+            isStreamConnected: true,
+            streamConnectionState: "online",
+        });
+
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                data: [
+                    { name: "nats", status: "online" },
+                    { name: "postgres", status: "online" },
+                    { name: "cognitive", status: "online" },
+                ],
+            }),
+        });
+
+        render(<DegradedModeBanner />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Workspace chat server error/i)).toBeDefined();
+        });
+        expect(screen.queryByText(rawMessage)).toBeNull();
+    });
+
+    it("falls back to generic workspace chat blocked text when only raw missionChatError exists", async () => {
+        const rawMessage = '{"error":"Internal Server Error"}';
+        useCortexStore.setState({
+            missionChatError: rawMessage,
+            missionChatFailure: null,
+            isStreamConnected: true,
+            streamConnectionState: "online",
+        });
+
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                data: [
+                    { name: "nats", status: "online" },
+                    { name: "postgres", status: "online" },
+                    { name: "cognitive", status: "online" },
+                ],
+            }),
+        });
+
+        render(<DegradedModeBanner />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Workspace chat blocked/i)).toBeDefined();
+        });
+        expect(screen.queryByText(rawMessage)).toBeNull();
+    });
+
     it("shows cognitive setup detail when the engine is not available yet", async () => {
         useCortexStore.setState({
             missionChatError: null,

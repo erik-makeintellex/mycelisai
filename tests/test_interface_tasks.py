@@ -624,6 +624,31 @@ def test_e2e_keeps_playwright_server_log_on_failure(monkeypatch):
     assert "cleanup-log" not in events
 
 
+def test_e2e_keeps_playwright_server_log_on_managed_server_startup_failure(monkeypatch):
+    ctx = FakeContext()
+    events: list[str] = []
+
+    monkeypatch.setattr(interface, "INTERFACE_PORT", 4317)
+    monkeypatch.setattr(interface, "_pick_interface_port", lambda preferred=interface.INTERFACE_PORT: 4317)
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: events.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
+    monkeypatch.setattr(interface, "_start_playwright_server", lambda env, port=interface.INTERFACE_PORT, server_mode="start": (_ for _ in ()).throw(RuntimeError("startup failed")))
+
+    try:
+        interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts")
+    except RuntimeError as exc:
+        assert str(exc) == "startup failed"
+    else:
+        raise AssertionError("expected managed server startup failure")
+
+    assert events == [
+        "stop:4317",
+        "stop:4317",
+        "cleanup",
+    ]
+
+
 def test_cleanup_playwright_server_log_retries_permission_error(monkeypatch):
     events: list[str] = []
 

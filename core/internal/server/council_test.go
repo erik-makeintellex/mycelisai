@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 )
@@ -214,6 +215,44 @@ func TestHandleCouncilChat_NilNATS(t *testing.T) {
 	}
 }
 
+func TestHandleCouncilChat_ReturnsStructuredTransportBlockerWhenMemberHasNoResponder(t *testing.T) {
+	wireNATS := withNATS(t)
+	s := newTestServer(withCouncilSoma(), wireNATS)
+	s.Cognitive = &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"mock": cognitiveTestProvider{},
+		},
+	}
+	mux := setupMux(t, "POST /api/v1/council/{member}/chat", s.HandleCouncilChat)
+
+	body := `{"messages":[{"role":"user","content":"review the architecture"}]}`
+	rr := doRequest(t, mux, "POST", "/api/v1/council/council-architect/chat", body)
+	assertStatus(t, rr, http.StatusServiceUnavailable)
+
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	if resp.OK {
+		t.Fatal("expected ok=false when council responder is missing")
+	}
+	if resp.Error != "Council member council-architect is currently unreachable from the workspace runtime." {
+		t.Fatalf("error = %q", resp.Error)
+	}
+
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected data object, got %T", resp.Data)
+	}
+	if data["code"] != "transport_unavailable" {
+		t.Fatalf("code = %v, want transport_unavailable", data["code"])
+	}
+}
+
 // ── isCouncilMember unit tests ────────────────────────────────
 
 func TestIsCouncilMember(t *testing.T) {
@@ -231,8 +270,8 @@ func TestIsCouncilMember(t *testing.T) {
 		{"council-creative", true, "council-core", "creative"},
 		{"council-sentry", true, "council-core", "sentry"},
 		{"nonexistent", false, "", ""},
-		{"scraper-agent", false, "", ""},  // mission agent — not council
-		{"", false, "", ""},               // empty ID
+		{"scraper-agent", false, "", ""}, // mission agent — not council
+		{"", false, "", ""},              // empty ID
 	}
 
 	for _, tt := range tests {

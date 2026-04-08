@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -308,6 +309,48 @@ func TestHandleChat_ReturnsStructuredTransportBlockerWhenAdminHasNoResponder(t *
 	}
 	if data["code"] != "transport_unavailable" {
 		t.Fatalf("code = %v", data["code"])
+	}
+}
+
+func TestBuildTransportChatBlocker_ClassifiesTimeout(t *testing.T) {
+	status, blocker := buildTransportChatBlocker("Soma", context.DeadlineExceeded)
+
+	if status != http.StatusGatewayTimeout {
+		t.Fatalf("status = %d, want %d", status, http.StatusGatewayTimeout)
+	}
+	if blocker.Code != "transport_timeout" {
+		t.Fatalf("code = %q, want transport_timeout", blocker.Code)
+	}
+	if blocker.Summary != "Soma did not respond before the request deadline." {
+		t.Fatalf("summary = %q", blocker.Summary)
+	}
+}
+
+func TestBuildTransportChatBlocker_ClassifiesBackpressure(t *testing.T) {
+	status, blocker := buildTransportChatBlocker("Soma", errors.New("nats: outbound buffer limit exceeded"))
+
+	if status != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", status, http.StatusServiceUnavailable)
+	}
+	if blocker.Code != "transport_backpressure" {
+		t.Fatalf("code = %q, want transport_backpressure", blocker.Code)
+	}
+	if blocker.Summary != "Soma is overloaded right now and could not process the request." {
+		t.Fatalf("summary = %q", blocker.Summary)
+	}
+}
+
+func TestBuildTransportChatBlocker_ClassifiesNoResponders(t *testing.T) {
+	status, blocker := buildTransportChatBlocker("Soma", nats.ErrNoResponders)
+
+	if status != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", status, http.StatusServiceUnavailable)
+	}
+	if blocker.Code != "transport_unavailable" {
+		t.Fatalf("code = %q, want transport_unavailable", blocker.Code)
+	}
+	if blocker.Summary != "Soma is currently unreachable from the workspace runtime." {
+		t.Fatalf("summary = %q", blocker.Summary)
 	}
 }
 

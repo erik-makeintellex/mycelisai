@@ -940,6 +940,48 @@ describe('useCortexStore', () => {
                 'Soma could not produce a readable reply for that request. Retry or ask Soma to summarize the result directly.',
             );
         });
+
+        it('does not store raw council failure JSON as the final Soma answer', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    data: {
+                        meta: { source_node: 'admin', timestamp: new Date().toISOString() },
+                        signal_type: 'chat_response',
+                        trust_score: 0.5,
+                        template_id: 'chat-to-answer',
+                        mode: 'answer',
+                        payload: {
+                            text: '{"error":"consult_council requires \\"member\\" and \\"question\\"","tool":"consult_council"}',
+                            ask_class: 'direct_answer',
+                        },
+                    },
+                }),
+            });
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(store.getState().missionChat.at(-1)?.content).toBe(
+                'Soma could not produce a readable reply for that request. Retry or ask Soma to summarize the result directly.',
+            );
+            expect(store.getState().missionChat.at(-1)?.content).not.toContain("consult_council requires");
+        });
+
+        it('normalizes plain transport failure text into a blocker instead of surfacing it', async () => {
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 500,
+                text: async () => 'Internal Server Error',
+            });
+
+            await store.getState().sendMissionChat('hello');
+
+            expect(store.getState().activeMode).toBe('blocker');
+            expect(store.getState().missionChatError).toBe('Soma hit a server-side failure while handling the request.');
+            expect(store.getState().missionChat.at(-1)?.content).toBe('Soma hit a server-side failure while handling the request.');
+            expect(store.getState().missionChat.at(-1)?.content).not.toContain('Internal Server Error');
+        });
     });
 
     describe('confirmProposal', () => {
