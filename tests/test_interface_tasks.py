@@ -335,22 +335,26 @@ def test_clean_warns_and_continues_when_cache_directory_stays_locked(monkeypatch
 
 def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
     cleaned: list[str] = []
+    killed: list[int] = []
     ctx = FakeContext()
     port = 4310
 
     monkeypatch.setattr(interface, "is_windows", lambda: True)
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_windows_listening_pids_for_port", lambda _port: [1234])
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: killed.append(pid))
 
     interface.stop.body(ctx, port=port)
 
-    assert any("taskkill /F /T /PID" in command for command in ctx.commands)
+    assert killed == [1234]
     assert cleaned == ["cleanup"]
 
 
 def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
-    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult()})
+    ctx = FakeContext()
     events: list[str] = []
     env_seen: dict[str, str] = {}
+    shell_calls: list[list[str]] = []
     port = 4311
 
     class FakeServer:
@@ -390,12 +394,16 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
         return FakeServer()
 
     monkeypatch.setattr(interface, "_start_playwright_server", fake_start)
+    monkeypatch.setattr(
+        interface,
+        "_run_playwright_command_streaming",
+        lambda command, extra_env=None: shell_calls.append(command) or interface.CommandResult(exited=0, stdout="", stderr=""),
+    )
 
     interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts")
 
     assert env_seen["PLAYWRIGHT_SKIP_WEBSERVER"] == "1"
-    assert ctx.commands == ["npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1"]
-    assert ctx.cd_paths == [str(interface.INTERFACE_DIR)]
+    assert shell_calls == [["npx", "playwright", "test", "--reporter=dot", "--project=chromium", "e2e/specs/navigation.spec.ts", "--workers=1"]]
     assert env_seen["INTERFACE_HOST"] == "127.0.0.1"
     assert env_seen["INTERFACE_BIND_HOST"] == interface.INTERFACE_BIND_HOST
     assert events == [
@@ -410,7 +418,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
 
 
 def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_host(monkeypatch, capsys):
-    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult()})
+    ctx = FakeContext()
     events: list[str] = []
     env_seen: dict[str, str] = {}
     port = 4312
@@ -452,8 +460,8 @@ def test_e2e_updates_playwright_host_when_managed_server_is_only_ready_on_alt_ho
     monkeypatch.setattr(interface, "_start_playwright_server", fake_start)
     monkeypatch.setattr(
         interface,
-        "run_interface_command",
-        lambda _c, command, pty=True, env=None, hide=False, warn=False: env_seen.update(env or {}) or FakeResult(),
+        "_run_playwright_command_streaming",
+        lambda command, extra_env=None: env_seen.update(extra_env or {}) or interface.CommandResult(exited=0, stdout="", stderr=""),
     )
 
     interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts", server_mode="start")
@@ -502,7 +510,7 @@ def test_start_playwright_server_sets_standalone_host_and_port(monkeypatch, tmp_
 
 
 def test_e2e_dev_mode_skips_build(monkeypatch):
-    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult()})
+    ctx = FakeContext()
     events: list[str] = []
 
     class FakeServer:
@@ -535,6 +543,11 @@ def test_e2e_dev_mode_skips_build(monkeypatch):
     monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
     monkeypatch.setattr(interface, "_start_playwright_server", lambda env, port=interface.INTERFACE_PORT, server_mode="start": events.append(f"start:{port}:{server_mode}") or FakeServer())
+    monkeypatch.setattr(
+        interface,
+        "_run_playwright_command_streaming",
+        lambda command, extra_env=None: interface.CommandResult(exited=0, stdout="", stderr=""),
+    )
 
     interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts", server_mode="dev")
 
@@ -586,7 +599,7 @@ def test_e2e_cleans_dynamic_managed_port_before_and_after_run(monkeypatch):
     monkeypatch.setattr(interface, "_start_playwright_server", lambda env, port=interface.INTERFACE_PORT, server_mode="start": FakeServer())
     monkeypatch.setattr(
         interface,
-        "_run_interface_shell_command",
+        "_run_playwright_command_streaming",
         lambda command, extra_env=None: interface.CommandResult(exited=0, stdout="", stderr=""),
     )
 
@@ -603,7 +616,7 @@ def test_e2e_cleans_dynamic_managed_port_before_and_after_run(monkeypatch):
 
 
 def test_e2e_keeps_playwright_server_log_on_failure(monkeypatch):
-    ctx = FakeContext({"npx playwright test --reporter=dot --project=chromium e2e/specs/navigation.spec.ts --workers=1": FakeResult(exited=1)})
+    ctx = FakeContext()
     events: list[str] = []
 
     class FakeServer:
@@ -635,6 +648,11 @@ def test_e2e_keeps_playwright_server_log_on_failure(monkeypatch):
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
     monkeypatch.setattr(interface, "_start_playwright_server", lambda env, port=interface.INTERFACE_PORT, server_mode="start": FakeServer())
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
+    monkeypatch.setattr(
+        interface,
+        "_run_playwright_command_streaming",
+        lambda command, extra_env=None: interface.CommandResult(exited=1, stdout="", stderr=""),
+    )
 
     try:
         interface.e2e.body(ctx, project="chromium", spec="e2e/specs/navigation.spec.ts")

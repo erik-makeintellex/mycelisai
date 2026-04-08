@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import time
@@ -176,6 +177,36 @@ def _run_interface_shell_command(command: list[str], extra_env: dict[str, str] |
     return CommandResult(exited=result.returncode, stdout=result.stdout or "", stderr=result.stderr or "")
 
 
+def _run_interface_shell_command_streaming(command: list[str], extra_env: dict[str, str] | None = None) -> CommandResult:
+    """Run an Interface command with inherited stdio for long-lived browser flows.
+
+    Browser/tooling subprocess trees on Windows can keep captured stdout/stderr
+    pipes open after the main runner finishes. Streaming avoids that pipe-lifetime
+    hang while preserving the real exit code for Invoke tasks.
+    """
+    process_env = os.environ.copy()
+    process_env.update(_task_env(extra_env))
+    runner = list(command)
+    executable = runner[0]
+    if is_windows():
+        resolved = shutil.which(executable) or shutil.which(f"{executable}.cmd") or shutil.which(f"{executable}.exe")
+        if resolved:
+            runner[0] = resolved
+    else:
+        resolved = shutil.which(executable)
+        if resolved:
+            runner[0] = resolved
+    result = subprocess.run(
+        runner,
+        cwd=str(INTERFACE_DIR),
+        env=process_env,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return CommandResult(exited=result.returncode, stdout="", stderr="")
+
+
 def _report_command_result(result: CommandResult) -> None:
     _print_ascii_safe(result.stdout)
     _print_ascii_safe(result.stderr)
@@ -198,6 +229,20 @@ def _run_one_shot_interface_task(
     finally:
         if cleanup:
             _cleanup_repo_local_interface_processes()
+
+
+def _run_interface_commandline(
+    command: str,
+    *,
+    extra_env: dict[str, str] | None = None,
+    stream: bool = False,
+) -> CommandResult:
+    args = shlex.split(command, posix=not is_windows())
+    if stream:
+        if len(args) >= 3 and args[:3] == ["npx", "playwright", "test"]:
+            return _run_playwright_command_streaming(args, extra_env=extra_env)
+        return _run_interface_shell_command_streaming(args, extra_env=extra_env)
+    return _run_interface_shell_command(args, extra_env=extra_env)
 
 
 def _build_playwright_command(
@@ -427,10 +472,108 @@ def _cleanup_repo_local_interface_processes() -> list[dict[str, str | int]]:
     return remaining
 
 
+def _windows_listening_pids_for_port(port: int) -> list[int]:
+    result = subprocess.run(
+        ["netstat", "-ano", "-p", "tcp"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if result.returncode != 0:
+        return []
+
+    suffix = f":{port}"
+    pids: list[int] = []
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+        local_address = parts[1]
+        state = parts[3]
+        pid_text = parts[4]
+        if not local_address.endswith(suffix):
+            continue
+        if state.upper() != "LISTENING":
+            continue
+        if pid_text.isdigit():
+            pids.append(int(pid_text))
+    return pids
+
+
 def _playwright_server_log_path() -> str:
     log_dir = ROOT_DIR / "workspace" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     return str(log_dir / "interface-playwright-webserver.log")
+
+
+def _playwright_last_run_path() -> Path:
+    return INTERFACE_DIR / "test-results" / ".last-run.json"
+
+
+def _read_playwright_last_run_status() -> str | None:
+    last_run_path = _playwright_last_run_path()
+    if not last_run_path.exists():
+        return None
+    try:
+        payload = json.loads(last_run_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    status = payload.get("status")
+    return status if isinstance(status, str) else None
+
+
+def _run_playwright_command_streaming(
+    command: list[str],
+    *,
+    extra_env: dict[str, str] | None = None,
+    post_result_grace_seconds: float = 15.0,
+) -> CommandResult:
+    last_run_path = _playwright_last_run_path()
+    with suppress(FileNotFoundError):
+        last_run_path.unlink()
+
+    process_env = os.environ.copy()
+    process_env.update(_task_env(extra_env))
+    runner = list(command)
+    executable = runner[0]
+    if is_windows():
+        resolved = shutil.which(executable) or shutil.which(f"{executable}.cmd") or shutil.which(f"{executable}.exe")
+        if resolved:
+            runner[0] = resolved
+    else:
+        resolved = shutil.which(executable)
+        if resolved:
+            runner[0] = resolved
+
+    proc = subprocess.Popen(
+        runner,
+        cwd=str(INTERFACE_DIR),
+        env=process_env,
+        text=True,
+    )
+    result_seen_at: float | None = None
+    result_status: str | None = None
+    while True:
+        exit_code = proc.poll()
+        if exit_code is not None:
+            return CommandResult(exited=exit_code, stdout="", stderr="")
+
+        current_status = _read_playwright_last_run_status()
+        if current_status in {"passed", "failed"}:
+            if current_status != result_status:
+                result_status = current_status
+                result_seen_at = time.time()
+            elif result_seen_at is not None and (time.time() - result_seen_at) >= post_result_grace_seconds:
+                print(f"  WARN: Playwright reported {current_status} but did not exit cleanly; terminating the lingering test process.")
+                _kill_pid_tree(proc.pid)
+                with suppress(subprocess.TimeoutExpired, OSError):
+                    proc.wait(timeout=5)
+                return CommandResult(exited=0 if current_status == "passed" else 1, stdout="", stderr="")
+        else:
+            result_seen_at = None
+            result_status = None
+
+        time.sleep(1.0)
 
 
 def _next_dev_lock_path() -> Path:
@@ -441,12 +584,13 @@ def _cleanup_stale_next_dev_lock() -> bool:
     lock_path = _next_dev_lock_path()
     if not lock_path.exists():
         return False
+    processes: list[dict[str, str | int]] = []
     try:
         processes = _list_repo_local_interface_processes()
     except RuntimeError as exc:
         if "timed out" not in str(exc).lower():
             print(f"  WARN: unable to inspect repo-local Interface workers before clearing Next dev lock ({exc})")
-        return False
+        processes = []
     if processes:
         return False
     try:
@@ -858,7 +1002,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     try:
         server = _start_playwright_server(env, port=chosen_port, server_mode=server_mode)
         env, chosen_port = _reconcile_managed_server_endpoint(env, chosen_port, server)
-        result = run_interface_command(c, cmd, pty=not is_windows(), env=env, hide=True, warn=True)
+        result = _run_interface_commandline(cmd, extra_env=env, stream=True)
         _print_ascii_safe(result.stdout)
         _print_ascii_safe(result.stderr)
         if result.exited != 0:
@@ -888,12 +1032,13 @@ def stop(c, port=INTERFACE_PORT):
     """
     print(f"Stopping Interface (port {port})...")
     if is_windows():
-        ps_cmd = (
-            f"$c = Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue; "
-            f"if ($c) {{ taskkill /F /T /PID $c.OwningProcess | Out-Null; Write-Host Killed PID $c.OwningProcess }} "
-            f"else {{ Write-Host No process on port {port} }}"
-        )
-        c.run(powershell(ps_cmd), warn=True)
+        port_pids = _windows_listening_pids_for_port(int(port))
+        if port_pids:
+            for pid in port_pids:
+                _kill_pid_tree(pid)
+                print(f"Killed PID {pid}")
+        else:
+            print(f"No process on port {port}")
     else:
         # lsof works on macOS + Linux; fuser as fallback
         c.run(f"lsof -ti:{port} | xargs -r kill -9 2>/dev/null || fuser -k {port}/tcp 2>/dev/null || true", warn=True)
