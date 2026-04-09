@@ -60,19 +60,12 @@ function classifyMissionChatFailure(message: string, statusCode?: number, availa
     if (statusCode === 401 || statusCode === 403 || lower.includes('401') || lower.includes('403') || lower.includes('unauthorized') || lower.includes('forbidden')) {
         return 'permission_denied';
     }
-    if (lower.includes('timeout') || lower.includes('deadline exceeded')) {
+    if (statusCode === 504 || lower.includes('timeout') || lower.includes('deadline exceeded')) {
         return 'timeout';
     }
     if (
-        (statusCode != null && statusCode >= 500) ||
-        lower.includes('500') ||
-        lower.includes('internal server error') ||
-        lower.includes('internal error') ||
-        lower.includes('server error')
-    ) {
-        return 'server_error';
-    }
-    if (
+        statusCode === 502 ||
+        statusCode === 503 ||
         lower.includes('could not reach') ||
         lower.includes('unreachable') ||
         lower.includes('failed to fetch') ||
@@ -83,6 +76,15 @@ function classifyMissionChatFailure(message: string, statusCode?: number, availa
         lower.includes('offline')
     ) {
         return 'unreachable';
+    }
+    if (
+        (statusCode != null && statusCode >= 500) ||
+        lower.includes('500') ||
+        lower.includes('internal server error') ||
+        lower.includes('internal error') ||
+        lower.includes('server error')
+    ) {
+        return 'server_error';
     }
     return 'unknown';
 }

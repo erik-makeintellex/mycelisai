@@ -176,7 +176,7 @@ export function createCortexMissionChatSlice(
                                 availability = parsed.data as MissionChatAvailability;
                             }
                         } catch {
-                            errMsg = `${routeLabel} unreachable (${res.status})`;
+                            errMsg = text.trim() || `${routeLabel} unreachable (${res.status})`;
                         }
 
                         if (allowSilentColdStartRetry && !isRetryAttempt && isRetryableWorkspaceChatFailure(errMsg, res.status)) {

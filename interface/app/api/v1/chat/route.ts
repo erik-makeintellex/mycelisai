@@ -1,6 +1,5 @@
-import { proxyChatRequest } from '../../../api/_chatProxy';
+import { proxyChatRequest } from '../../_chatProxy';
 
-// Preserve the legacy /api/chat path without duplicating the chat proxy contract.
 export async function POST(req: Request) {
     return proxyChatRequest(req, {
         targetLabel: 'Soma',

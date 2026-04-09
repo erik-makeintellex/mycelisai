@@ -892,7 +892,7 @@ describe('useCortexStore', () => {
             });
         });
 
-        it('routes direct council 5xx failures through the council blocker contract', async () => {
+        it('routes direct council 503 failures through the council unreachable contract', async () => {
             store.setState({ councilTarget: 'council-coder' });
             mockFetch.mockResolvedValue({
                 ok: false,
@@ -906,11 +906,11 @@ describe('useCortexStore', () => {
                 method: 'POST',
             }));
             expect(store.getState().activeMode).toBe('blocker');
-            expect(store.getState().missionChatError).toBe('The council member service returned an internal error while handling the request.');
+            expect(store.getState().missionChatError).toBe('The council member service or proxy is currently unreachable from this client.');
             expect(store.getState().missionChatFailure).toMatchObject({
                 routeKind: 'council',
                 targetId: 'council-coder',
-                type: 'server_error',
+                type: 'unreachable',
                 title: 'Council Call Failed',
             });
         });

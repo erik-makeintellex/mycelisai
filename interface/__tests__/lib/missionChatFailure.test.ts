@@ -16,6 +16,18 @@ describe("buildMissionChatFailure", () => {
         expect(failure.title).toBe("Soma Chat Blocked");
     });
 
+    it("classifies a 503 workspace failure as unreachable when the route says it is unreachable", () => {
+        const failure = buildMissionChatFailure({
+            assistantName: "Soma",
+            targetId: "admin",
+            message: "Soma chat unreachable (503)",
+            statusCode: 503,
+        });
+
+        expect(failure.type).toBe("unreachable");
+        expect(failure.bannerLabel).toBe("Workspace chat unreachable");
+    });
+
     it("builds a council timeout contract", () => {
         const failure = buildMissionChatFailure({
             assistantName: "Soma",
