@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
-> Updated: 2026-04-06
+> Updated: 2026-04-09
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -48,6 +48,8 @@ Release posture:
 - `COMPLETE` Chunk 8.7 is now landed for the free-node release: Soma reads a user-level governance profile, mutation proposals now carry approval posture and capability-risk context, and audit records cover proposal generation, proposal confirmation/cancellation, execution runs, capability use, artifact creation, and channel writes.
 - `IN_REVIEW` the dedicated UI-testing stabilization strike plan has now cleared the live governed-chat blocker and is primarily a release-hygiene and packaging lane.
 - `IN_REVIEW` the new stable UI-testing agentry contract is now documented and partially automated: mocked browser proof for Soma-first entry, direct answer, continuity, cold-start recovery, governed proposal/cancel, audit visibility, and oversized-content handling is green.
+- `ACTIVE` browser-first UX certification is now the primary verification lane for the remaining RC product work: headed-browser proof must stay ahead of browserless-only confidence, with organization entry, Soma-first first-run readiness, team/group workflow management, and governed live-chat behavior treated as the main user-experience contract.
+- `IN_REVIEW` the dashboard quick action for `Create or open AI Organizations` now opens the hidden setup panel directly instead of only jumping to its anchor, and the organization-entry browser contract is being updated around that live Soma-first dashboard behavior.
 - `COMPLETE` the live governed-chat browser gate is now green on a fresh cluster reset and local stack bring-up: the managed live backend proof passes the real `/api/v1/chat` and `/api/v1/intent/confirm-action` path with governed proposal/confirm behavior intact.
 - `IN_REVIEW` a cross-team release platform review is now active to align security/governance, monitoring/ops, debug/live-browser proof, and matching documentation before release packaging.
 - `NEXT` a dedicated memory continuity and RAG review lane should align pgvector-backed durable memory, temporary planning continuity, and trace-clean conversation handling after the current product-trust closeout slices.
@@ -59,6 +61,7 @@ Release posture:
 - `COMPLETE` the first demo-product execution brief is now in place: default-vs-advanced surfaces, feature-preservation rules, a golden-path partner demo, and the UI testing checklist are defined as immediate engaged-team deliverables.
 - `ACTIVE` the MVP investor-demo lane is now explicitly centered on governed capability expansion: the active story must prove Soma’s initial value first, then show MCP-powered input/output, securable web/external research, and inspectable context-security posture without collapsing into a tooling console narrative.
 - `IN_REVIEW` the Connected Tools workflow is being tightened into one operator path instead of a static registry view: curated MCP install remains the add path, connected server cards remain the verification point, and the same surface now exposes recent persisted MCP activity plus live in-session usage so operators can see which server/tool agents are actively using even when they were not watching the stream at the moment it happened.
+- `NEXT` MCP library/catalog standardization is now a first-class follow-through slice for the investor and operator lanes: keep the current curated install flow, but align Mycelis MCP library metadata with the standard `server.json` concepts used by the official MCP registry (`name`, `version`, package/transport definitions, repository metadata, and typed environment-variable declarations) so future agentry registration expands through a recognizable ecosystem contract instead of a Mycelis-only schema.
 - `IN_REVIEW` governed deployment-context intake now has a first-class operator path: Resources exposes a Deployment Context tab for loading customer-provided material into `customer_context` vectors and approved company-authored guidance into `company_knowledge` vectors, the backend persists both as governed document artifacts plus vector chunks with visibility/sensitivity/trust metadata, and Soma/Council/teams can now recall that context while keeping it separate from ordinary Soma memory.
 - `ACTIVE` governed deployment context follow-through is focused on three remaining areas: verify shared runtime prompt coverage, keep promotion into `company_knowledge` explicit and lineage-preserving, and make web/MCP-fed context loading policy-bound and inspectable.
 - `IN_REVIEW` the first promotion path into `company_knowledge` now exists on the governed execution spine: a confirmed plan can promote an existing `customer_context` artifact into a new approved company-knowledge record with preserved lineage metadata instead of mutating the original source in place.
@@ -97,6 +100,14 @@ State reporting rule:
 - `IN_REVIEW`: implemented and awaiting validation/review
 - `COMPLETE`: delivered and accepted
 - `BLOCKED`: cannot advance until a dependency or defect is resolved
+
+## Current Review (2026-04-09)
+
+Review summary:
+1. `ACTIVE` browser-first UX proof is now the governing closeout lane for the RC path: headed Chromium runs against the live Compose UI are the authoritative check for Soma-first entry, guided setup, team/group management, and governed chat behavior.
+2. `IN_REVIEW` the current organization-entry fix is real product work rather than a test-only patch: the Central Soma dashboard action now opens the hidden AI Organization setup panel directly, and focused unit proof is green while the broader headed browser flow continues from the updated live behavior.
+3. `NEXT` MCP standardization is now prioritized ahead of deeper expansion in Connected Tools: the current curated YAML/install flow should be upgraded to a `server.json`-aligned metadata contract so future MCP registrations, governance review, and UI rendering can scale through the standard MCP ecosystem model instead of a local-only schema.
+4. `NEXT` continue the organization-entry and team/group workflow certification lane in the browser: re-run the patched organization-entry flow, keep temporary-team/group creation and lead-focused management under headed proof, and surface the next live first-run or starter-template defect before widening the matrix again.
 
 ## Current Review (2026-04-04)
 

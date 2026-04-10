@@ -365,6 +365,18 @@ async function clickStartMode(page: Page, label: RegExp | string) {
     });
 }
 
+async function openOrganizationSetup(page: Page) {
+    const startEmptyButton = page.getByRole("button", { name: "Start Empty", exact: true });
+    if (await startEmptyButton.isVisible().catch(() => false)) {
+        return;
+    }
+
+    const setupTrigger = page.getByRole("button", { name: "Create or open AI Organizations" });
+    await expect(setupTrigger).toBeVisible();
+    await setupTrigger.click();
+    await expect(startEmptyButton).toBeVisible();
+}
+
 async function openCreatedOrganization(page: Page, organizationId: string) {
     const organizationPath = `/organizations/${organizationId}`;
     const organizationUrl = new RegExp(`${organizationPath}$`);
@@ -980,9 +992,9 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Central Soma")).toBeVisible();
         await expect(page.getByText("The root workspace should feel like a direct conversation with Soma.")).toBeVisible();
         await expect(page.getByRole("link", { name: "Open groups workspace" })).toBeVisible();
-        await expect(page.getByText("Create or open AI Organizations")).toBeVisible();
-        await page.getByText("Create or open AI Organizations").click();
-        await expect(page.getByText("AI Organization Setup")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Create or open AI Organizations" })).toBeVisible();
+        await page.getByRole("button", { name: "Create or open AI Organizations" }).click();
+        await expect(page.getByText("AI Organization Setup", { exact: true })).toBeVisible();
         await expect(page.getByRole("button", { name: "Explore Templates" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Start Empty", exact: true })).toBeVisible();
         await expect(page.getByText("Keep the main admin home centered on Soma.")).toBeVisible();
@@ -998,6 +1010,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
+        await openOrganizationSetup(page);
         await clickStartMode(page, /Start from template/i);
 
         const starterCard = page.getByRole("button", { name: /Engineering Starter/i });
@@ -1061,6 +1074,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
+        await openOrganizationSetup(page);
         await clickStartMode(page, /Start from template/i);
         await page.getByLabel("AI Organization name").fill(createdTemplateOrganization.name);
         await page.getByLabel("Purpose").fill(createdTemplateOrganization.purpose);
@@ -1266,6 +1280,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
+        await openOrganizationSetup(page);
         await clickStartMode(page, /Start Empty$/i);
         await page.getByLabel("AI Organization name").fill(createdEmptyOrganization.name);
         await page.getByLabel("Purpose").fill(createdEmptyOrganization.purpose);
@@ -1589,6 +1604,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
+        await openOrganizationSetup(page);
         await clickStartMode(page, /Start from template/i);
         await page.getByLabel("AI Organization name").fill(createdTemplateOrganization.name);
         await page.getByLabel("Purpose").fill(createdTemplateOrganization.purpose);
@@ -1656,6 +1672,7 @@ test.describe("V8 AI Organization entry flow", () => {
         await expect(page.getByText("Recent AI Organizations are unavailable", { exact: true })).toBeVisible();
         await expect(page.getByText("You can still create a new AI Organization above while we retry your recent organizations.")).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry recent AI Organizations" })).toBeVisible();
+        await openOrganizationSetup(page);
         await clickStartMode(page, /Start from template/i);
         await expect(page.getByRole("button", { name: /Engineering Starter/i })).toBeVisible();
 

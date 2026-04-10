@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { useCortexStore } from "@/store/useCortexStore";
 
 vi.mock("@/lib/lastOrganization", () => ({
@@ -34,4 +34,23 @@ describe("CentralSomaHome", () => {
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
         expect(screen.getByRole("link", { name: /Open groups workspace/i }).getAttribute("href")).toBe("/groups");
     }, 15000);
+
+    it("opens the AI Organization setup details from the quick action", () => {
+        const details = document.createElement("details");
+        details.id = "dashboard-organization-setup";
+        document.body.appendChild(details);
+
+        try {
+            render(<CentralSomaHome />);
+
+            const trigger = screen.getByRole("button", { name: "Create or open AI Organizations" });
+            fireEvent.click(trigger);
+
+            expect(details.open).toBe(true);
+            expect(window.location.hash).toBe("#dashboard-organization-setup");
+        } finally {
+            details.remove();
+            window.history.replaceState(null, "", window.location.pathname);
+        }
+    });
 });

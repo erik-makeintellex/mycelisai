@@ -50,6 +50,25 @@ export default function CentralSomaHome({
         [requestedTeamId, teamsDetail],
     );
 
+    const openOrganizationSetup = () => {
+        if (typeof document === "undefined") {
+            return;
+        }
+
+        const details = document.getElementById("dashboard-organization-setup");
+        if (!(details instanceof HTMLDetailsElement)) {
+            return;
+        }
+
+        details.open = true;
+        if (typeof details.scrollIntoView === "function") {
+            details.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        if (typeof window !== "undefined") {
+            window.history.replaceState(null, "", "#dashboard-organization-setup");
+        }
+    };
+
     return (
         <section className="space-y-5">
             <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-5 shadow-[0_18px_40px_rgba(148,163,184,0.16)]">
@@ -71,7 +90,7 @@ export default function CentralSomaHome({
                         {lastOrganization ? (
                             <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
                         ) : null}
-                        <QuickLink href="#dashboard-organization-setup" icon={<FolderPlus className="h-4 w-4" />} label="Create or open AI Organizations" />
+                        <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Create or open AI Organizations" />
                         <QuickLink href="/docs?doc=v8-universal-soma-context-model" icon={<Layers3 className="h-4 w-4" />} label="Review Soma context model" />
                     </div>
                     {focusedTeam ? (
@@ -131,6 +150,27 @@ function QuickLink({
             <span className="text-cortex-primary">{icon}</span>
             {label}
         </Link>
+    );
+}
+
+function QuickAction({
+    onClick,
+    icon,
+    label,
+}: {
+    onClick: () => void;
+    icon: React.ReactNode;
+    label: string;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="inline-flex items-center gap-2 rounded-2xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:bg-cortex-surface"
+        >
+            <span className="text-cortex-primary">{icon}</span>
+            {label}
+        </button>
     );
 }
 
