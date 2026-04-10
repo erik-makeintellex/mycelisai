@@ -10,6 +10,23 @@ async function fulfillJSON(route: Route, status: number, body: unknown) {
 
 test.describe('Guided Team Creation (/teams/create)', () => {
     test.beforeEach(async ({ page }) => {
+        const groups = [
+            {
+                group_id: 'group-temp-launch',
+                name: 'Launch Delivery Team temporary workflow',
+                goal_statement: 'Create a temporary marketing launch team for a new product rollout.',
+                work_mode: 'propose_only',
+                member_user_ids: ['owner', 'marketing-lead'],
+                team_ids: ['launch-lead', 'design-lead'],
+                coordinator_profile: 'Launch Delivery Team lead',
+                approval_policy_ref: 'standard',
+                status: 'active',
+                expiry: '2026-04-13T18:00:00Z',
+                created_by: 'owner',
+                created_at: '2026-04-10T10:20:00Z',
+            },
+        ];
+
         await page.addInitScript(() => {
             window.localStorage.setItem('mycelis-last-organization-id', 'org-123');
             window.localStorage.setItem('mycelis-last-organization-name', 'Northstar Labs');
@@ -70,8 +87,8 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         });
 
         await page.route('**/api/v1/groups', async (route) => {
-            if (route.request().method() !== 'POST') {
-                await fulfillJSON(route, 200, { ok: true, data: [] });
+            if (route.request().method() === 'GET') {
+                await fulfillJSON(route, 200, { ok: true, data: groups });
                 return;
             }
             await fulfillJSON(route, 201, {
@@ -82,9 +99,54 @@ test.describe('Guided Team Creation (/teams/create)', () => {
                 },
             });
         });
+
+        await page.route('**/api/v1/groups/monitor', async (route) => {
+            await fulfillJSON(route, 200, {
+                ok: true,
+                data: {
+                    status: 'online',
+                    published_count: 2,
+                    last_group_id: 'group-temp-launch',
+                    last_message: 'Prepare launch brief and asset bundle',
+                    last_published_at: '2026-04-10T10:30:00Z',
+                },
+            });
+        });
+
+        await page.route('**/api/v1/groups/group-temp-launch/outputs?limit=8', async (route) => {
+            await fulfillJSON(route, 200, {
+                ok: true,
+                data: [
+                    {
+                        id: 'artifact-launch-brief',
+                        team_id: 'launch-lead',
+                        agent_id: 'launch-lead',
+                        artifact_type: 'document',
+                        title: 'Launch Brief',
+                        content_type: 'text/markdown',
+                        content: '# Launch brief\n\n- Message pillars\n- Delivery plan',
+                        metadata: {},
+                        status: 'approved',
+                        created_at: '2026-04-10T10:31:00Z',
+                    },
+                    {
+                        id: 'artifact-asset-bundle',
+                        team_id: 'design-lead',
+                        agent_id: 'design-lead',
+                        artifact_type: 'file',
+                        title: 'Asset Bundle',
+                        content_type: 'application/zip',
+                        file_path: 'workspace/groups/launch-delivery-team/assets.zip',
+                        metadata: {},
+                        status: 'approved',
+                        created_at: '2026-04-10T10:32:00Z',
+                    },
+                ],
+            });
+        });
     });
 
-    test('guides the operator through current organization context and Soma team design', async ({ page }) => {
+    test('guides the operator through current organization context, launches a temporary workflow, and opens retained outputs review', async ({ page }) => {
         await page.goto('/teams/create', { waitUntil: 'domcontentloaded' });
 
         await expect(page.getByRole('heading', { name: 'Create a team through Soma' })).toBeVisible();
@@ -104,6 +166,21 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         await expect(page.getByText('Campaign brief')).toBeVisible();
         await page.getByRole('button', { name: 'Create temporary workflow group' }).click();
         await expect(page.getByText(/Soma launched Launch Delivery Team temporary workflow/i)).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Open Launch Delivery Team temporary workflow' })).toHaveAttribute('href', '/groups?group_id=group-temp-launch');
+        const openGroupLink = page.getByRole('link', { name: 'Open Launch Delivery Team temporary workflow' });
+        await expect(openGroupLink).toHaveAttribute('href', '/groups?group_id=group-temp-launch');
+
+        await openGroupLink.click();
+
+        await expect(page.getByRole('heading', { name: 'Create, review, and coordinate focused groups.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Launch Delivery Team temporary workflow' })).toBeVisible();
+        await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
+        await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
+        await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
+        await expect(page.getByText('Asset Bundle', { exact: true })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Open Soma admin home' })).toHaveAttribute('href', '/dashboard');
+        await expect(page.getByRole('link', { name: 'Open launch-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
+        await expect(page.getByRole('link', { name: 'Open design-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=design-lead');
+        await expect(page.getByRole('link', { name: 'Download' }).last()).toHaveAttribute('href', '/api/v1/artifacts/artifact-asset-bundle/download');
     });
 });
