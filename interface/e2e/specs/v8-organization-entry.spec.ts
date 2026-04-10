@@ -406,6 +406,16 @@ async function openCreatedOrganization(page: Page, organizationId: string) {
     await page.waitForLoadState("domcontentloaded");
 }
 
+function recentOrganizationLink(page: Page, organizationName: string) {
+    return page.getByRole("link", { name: `Return to ${organizationName}` });
+}
+
+function recentOrganizationOpenButton(page: Page, organizationName: string) {
+    return page.getByRole("button", {
+        name: new RegExp(`${organizationName}.*Open AI Organization`, "i"),
+    });
+}
+
 async function sendOrganizationMessage(page: Page, content: string) {
     const input = page.getByPlaceholder(organizationChatPlaceholder);
     await input.fill(content);
@@ -1332,8 +1342,9 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
+        await openOrganizationSetup(page);
         await expect(page.getByText("Northstar Labs")).toBeVisible();
-        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await recentOrganizationOpenButton(page, "Northstar Labs").click();
         await openCreatedOrganization(page, createdTemplateOrganization.id);
 
         await expect(page.getByText("AI Organization Home")).toBeVisible();
@@ -1348,15 +1359,16 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
-        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await openOrganizationSetup(page);
+        await recentOrganizationOpenButton(page, "Northstar Labs").click();
         await openCreatedOrganization(page, createdTemplateOrganization.id);
 
         await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
         await page.goto("/dashboard");
         await expect(page).toHaveURL(/\/dashboard$/);
-        const returnToOrganizationLink = page.getByRole("link", { name: "Return to Organization" });
+        const returnToOrganizationLink = recentOrganizationLink(page, "Northstar Labs");
         await expect(returnToOrganizationLink).toBeVisible();
-        await expect(page.getByRole("link", { name: "Return to Organization" })).toHaveAttribute("href", "/organizations/org-123");
+        await expect(returnToOrganizationLink).toHaveAttribute("href", "/organizations/org-123");
 
         await Promise.all([
             page.waitForURL(/\/organizations\/org-123$/),
@@ -1373,7 +1385,8 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
-        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await openOrganizationSetup(page);
+        await recentOrganizationOpenButton(page, "Northstar Labs").click();
         await openCreatedOrganization(page, createdTemplateOrganization.id);
 
         await page.getByRole("button", { name: "Create teams with Soma" }).click();
@@ -1386,7 +1399,7 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await expect(page).toHaveURL(/\/dashboard$/);
-        await page.getByRole("link", { name: "Return to Organization" }).click();
+        await recentOrganizationLink(page, "Northstar Labs").click();
 
         await expect(page).toHaveURL(/\/organizations\/org-123$/);
         await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
@@ -1473,7 +1486,8 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
-        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await openOrganizationSetup(page);
+        await recentOrganizationOpenButton(page, "Northstar Labs").click();
         await openCreatedOrganization(page, createdTemplateOrganization.id);
 
         await page.getByRole("button", { name: "Create teams with Soma" }).click();
@@ -1541,7 +1555,8 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
-        await page.getByRole("button", { name: /Open AI Organization/i }).click();
+        await openOrganizationSetup(page);
+        await recentOrganizationOpenButton(page, "Northstar Labs").click();
         await openCreatedOrganization(page, createdTemplateOrganization.id);
 
         await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
