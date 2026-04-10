@@ -31,6 +31,12 @@ func TestLoadLibrary_ValidYAML(t *testing.T) {
 	if fs.Transport != "stdio" {
 		t.Errorf("filesystem transport = %q, want stdio", fs.Transport)
 	}
+	if fs.Version == "" {
+		t.Fatal("expected filesystem version metadata")
+	}
+	if len(fs.Packages) == 0 {
+		t.Fatal("expected filesystem package metadata")
+	}
 }
 
 func TestLoadLibrary_StandardEntriesRemainLocalFirst(t *testing.T) {
@@ -64,6 +70,36 @@ func TestLoadLibrary_StandardToolSetLinksRemainStable(t *testing.T) {
 	fetch := lib.FindByName("fetch")
 	if fetch == nil || fetch.ToolSet != "research" {
 		t.Fatalf("fetch tool_set = %q, want research", fetch.ToolSet)
+	}
+}
+
+func TestLoadLibrary_StandardEntriesExposeServerJSONStyleMetadata(t *testing.T) {
+	lib := loadStandardLibraryForTest(t)
+
+	github := lib.FindByName("github")
+	if github == nil {
+		t.Fatal("expected to find github entry")
+	}
+	if github.Title != "GitHub" {
+		t.Fatalf("title = %q, want GitHub", github.Title)
+	}
+	if github.Version == "" {
+		t.Fatal("expected github version metadata")
+	}
+	if len(github.Packages) != 1 {
+		t.Fatalf("packages len = %d, want 1", len(github.Packages))
+	}
+	if github.Packages[0].Identifier != "@modelcontextprotocol/server-github" {
+		t.Fatalf("identifier = %q, want @modelcontextprotocol/server-github", github.Packages[0].Identifier)
+	}
+	if github.Packages[0].Transport.Type != "stdio" {
+		t.Fatalf("transport.type = %q, want stdio", github.Packages[0].Transport.Type)
+	}
+	if len(github.EnvironmentVariables) != 1 {
+		t.Fatalf("environment_variables len = %d, want 1", len(github.EnvironmentVariables))
+	}
+	if !github.EnvironmentVariables[0].Required || !github.EnvironmentVariables[0].Secret {
+		t.Fatalf("expected github token to be required and secret")
 	}
 }
 
@@ -180,5 +216,39 @@ func TestLibraryEntry_ToServerConfig_CopiesURL(t *testing.T) {
 	cfg := entry.ToServerConfig(nil)
 	if cfg.URL != "https://mcp.example.com/sse" {
 		t.Fatalf("url = %q, want https://mcp.example.com/sse", cfg.URL)
+	}
+}
+
+func TestLibraryEntry_ToServerConfig_UsesEnvironmentVariableDefaults(t *testing.T) {
+	entry := LibraryEntry{
+		Name:      "stable-diffusion",
+		Transport: "stdio",
+		Command:   "npx",
+		EnvironmentVariables: []LibraryEnvVar{
+			{Name: "SD_API_URL", DefaultValue: "http://127.0.0.1:7860"},
+		},
+	}
+
+	cfg := entry.ToServerConfig(nil)
+	if cfg.Env["SD_API_URL"] != "http://127.0.0.1:7860" {
+		t.Fatalf("SD_API_URL = %q, want default value", cfg.Env["SD_API_URL"])
+	}
+}
+
+func TestLibraryEntry_DeclaredEnvKeys_DeduplicatesLegacyAndTypedEnv(t *testing.T) {
+	entry := LibraryEntry{
+		Env: map[string]string{
+			"TOKEN": "",
+			"URL":   "http://127.0.0.1",
+		},
+		EnvironmentVariables: []LibraryEnvVar{
+			{Name: "TOKEN", Required: true, Secret: true},
+			{Name: "EXTRA"},
+		},
+	}
+
+	keys := entry.DeclaredEnvKeys()
+	if len(keys) != 3 {
+		t.Fatalf("len(keys) = %d, want 3", len(keys))
 	}
 }

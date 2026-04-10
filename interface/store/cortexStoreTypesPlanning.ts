@@ -211,15 +211,39 @@ export interface MCPActivityEntry {
     timestamp: string;
 }
 
+export interface MCPLibraryPackage {
+    registry_type: string;
+    identifier: string;
+    version?: string;
+    transport: {
+        type: string;
+    };
+}
+
+export interface MCPLibraryEnvVar {
+    name: string;
+    description?: string;
+    required?: boolean;
+    secret?: boolean;
+    default_value?: string;
+}
+
 export interface MCPLibraryEntry {
     name: string;
+    title?: string;
     description: string;
+    version?: string;
     transport: string;
     command: string;
     args: string[];
     env?: Record<string, string>;
+    environment_variables?: MCPLibraryEnvVar[];
     url?: string;
+    packages?: MCPLibraryPackage[];
+    repository?: string;
+    homepage?: string;
     tags: string[];
+    tool_set?: string;
 }
 
 export interface MCPLibraryCategory {

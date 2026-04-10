@@ -10,11 +10,26 @@ interface EnvModalProps {
     onClose: () => void;
 }
 
+type EnvFieldSpec = {
+    name: string;
+    description?: string;
+    required?: boolean;
+    secret?: boolean;
+    default_value?: string;
+};
+
 function EnvConfigModal({ entry, onInstall, onClose }: EnvModalProps) {
-    const requiredEnv = entry.env ? Object.keys(entry.env) : [];
+    const declaredEnv: EnvFieldSpec[] = entry.environment_variables && entry.environment_variables.length > 0
+        ? entry.environment_variables
+        : Object.keys(entry.env ?? {}).map((name) => ({
+            name,
+            default_value: entry.env?.[name] ?? "",
+        }));
     const [envValues, setEnvValues] = useState<Record<string, string>>(() => {
         const init: Record<string, string> = {};
-        requiredEnv.forEach((k) => { init[k] = ""; });
+        declaredEnv.forEach((spec) => {
+            init[spec.name] = spec.default_value ?? "";
+        });
         return init;
     });
 
@@ -29,16 +44,21 @@ function EnvConfigModal({ entry, onInstall, onClose }: EnvModalProps) {
                 </p>
 
                 <div className="flex flex-col gap-3 mb-5">
-                    {requiredEnv.map((key) => (
-                        <label key={key} className="flex flex-col gap-1">
+                    {declaredEnv.map((spec) => (
+                        <label key={spec.name} className="flex flex-col gap-1">
                             <span className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wider">
-                                {key}
+                                {spec.name}{spec.required ? " *" : ""}
                             </span>
+                            {spec.description && (
+                                <span className="text-[10px] font-mono text-cortex-text-muted leading-relaxed">
+                                    {spec.description}
+                                </span>
+                            )}
                             <input
-                                type="text"
-                                value={envValues[key]}
-                                onChange={(e) => setEnvValues((v) => ({ ...v, [key]: e.target.value }))}
-                                placeholder={`Enter ${key}`}
+                                type={spec.secret ? "password" : "text"}
+                                value={envValues[spec.name]}
+                                onChange={(e) => setEnvValues((v) => ({ ...v, [spec.name]: e.target.value }))}
+                                placeholder={spec.default_value ? `${spec.name} (${spec.default_value})` : `Enter ${spec.name}`}
                                 className="bg-cortex-bg border border-cortex-border rounded-lg px-3 py-2 text-xs font-mono text-cortex-text-main placeholder:text-cortex-text-muted/40 focus:outline-none focus:ring-1 focus:ring-cortex-primary/50"
                             />
                         </label>
@@ -91,7 +111,8 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
     const installedNames = new Set(mcpServers.map((s) => s.name));
 
     const handleInstallClick = (entry: MCPLibraryEntry) => {
-        const hasRequiredEnv = entry.env && Object.keys(entry.env).length > 0;
+        const hasRequiredEnv = (entry.environment_variables && entry.environment_variables.length > 0)
+            || (entry.env && Object.keys(entry.env).length > 0);
         if (hasRequiredEnv) {
             setEnvModalEntry(entry);
         } else {
@@ -187,8 +208,11 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                                     <div className="flex items-start justify-between">
                                         <div>
                                             <h4 className="text-xs font-mono font-bold text-cortex-text-main">
-                                                {entry.name}
+                                                {entry.title ?? entry.name}
                                             </h4>
+                                            <p className="text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted mt-0.5">
+                                                {entry.name}{entry.version ? ` · v${entry.version}` : ""}
+                                            </p>
                                             <p className="text-[10px] font-mono text-cortex-text-muted mt-0.5 leading-relaxed">
                                                 {entry.description}
                                             </p>
@@ -224,9 +248,16 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                                             </span>
                                         ))}
                                     </div>
-                                    {entry.env && Object.keys(entry.env).length > 0 && (
+                                    {entry.packages && entry.packages.length > 0 && (
+                                        <div className="text-[9px] font-mono text-cortex-text-muted leading-relaxed">
+                                            Package: {entry.packages[0].identifier}
+                                            {entry.packages[0].version ? ` @ ${entry.packages[0].version}` : ""}
+                                            {entry.packages[0].transport?.type ? ` · ${entry.packages[0].transport.type}` : ""}
+                                        </div>
+                                    )}
+                                    {((entry.environment_variables && entry.environment_variables.length > 0) || (entry.env && Object.keys(entry.env).length > 0)) && (
                                         <p className="text-[9px] font-mono text-cortex-warning/70">
-                                            Requires: {Object.keys(entry.env).join(", ")}
+                                            Requires: {(entry.environment_variables?.map((spec) => spec.name) ?? Object.keys(entry.env ?? {})).join(", ")}
                                         </p>
                                     )}
                                 </div>

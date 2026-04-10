@@ -325,6 +325,10 @@ func TestHandleMCPLibraryInspect_StandardLibraryGitHubStaysAutoAllowedForOwnedCo
 	if resp["network_locality"] != "local" {
 		t.Fatalf("network_locality = %v, want local", resp["network_locality"])
 	}
+	secrets, ok := resp["secrets_declared"].([]interface{})
+	if !ok || len(secrets) == 0 || secrets[0] != "GITHUB_PERSONAL_ACCESS_TOKEN" {
+		t.Fatalf("secrets_declared = %v, want github token metadata", resp["secrets_declared"])
+	}
 }
 
 // ── POST /api/v1/mcp/library/install ───────────────────────────────

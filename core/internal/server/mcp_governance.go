@@ -192,7 +192,7 @@ func buildMCPLibraryInspectionReport(entry *mcp.LibraryEntry, ctx mcpGovernanceC
 		"risk_level":         riskLevel,
 		"required_scopes":    []string{"mcp:write"},
 		"network_locality":   locality,
-		"secrets_declared":   sortedMCPEnvKeys(entry.Env),
+		"secrets_declared":   sortedMCPLibraryEnvKeys(entry),
 		"decision":           decision.Decision,
 		"reasons":            decision.Reasons,
 		"governance":         decision,
@@ -214,6 +214,15 @@ func sortedMCPEnvKeys(env map[string]string) []string {
 		}
 		keys = append(keys, trimmed)
 	}
+	slices.Sort(keys)
+	return keys
+}
+
+func sortedMCPLibraryEnvKeys(entry *mcp.LibraryEntry) []string {
+	if entry == nil {
+		return nil
+	}
+	keys := entry.DeclaredEnvKeys()
 	slices.Sort(keys)
 	return keys
 }

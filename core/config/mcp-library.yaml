@@ -2,134 +2,313 @@ categories:
   - name: "Development"
     servers:
       - name: "filesystem"
+        title: "Filesystem"
         description: "Read, write, and manage local files and directories"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-filesystem", "./workspace"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-filesystem"
+            version: "latest"
+            transport:
+              type: stdio
         tags: ["files", "code", "local"]
         tool_set: "workspace"
       - name: "github"
+        title: "GitHub"
         description: "GitHub API integration — repos, issues, PRs, code search"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-github"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-github"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           GITHUB_PERSONAL_ACCESS_TOKEN: ""
+        environment_variables:
+          - name: "GITHUB_PERSONAL_ACCESS_TOKEN"
+            description: "GitHub personal access token used for repository, issue, and PR access."
+            required: true
+            secret: true
         tags: ["git", "code", "vcs"]
         tool_set: "development"
 
   - name: "Data & Search"
     servers:
       - name: "postgres"
+        title: "PostgreSQL"
         description: "Query PostgreSQL databases with read/write SQL access"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-postgres"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-postgres"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           POSTGRES_URL: ""
+        environment_variables:
+          - name: "POSTGRES_URL"
+            description: "Connection string for the PostgreSQL database this MCP server should query."
+            required: true
+            secret: true
         tags: ["database", "sql"]
       - name: "sqlite"
+        title: "SQLite"
         description: "Local SQLite database querying and management"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-sqlite"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-sqlite"
+            version: "latest"
+            transport:
+              type: stdio
         tags: ["database", "sql", "local"]
       - name: "brave-search"
+        title: "Brave Search"
         description: "Web search via Brave Search API"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-brave-search"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-brave-search"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           BRAVE_API_KEY: ""
+        environment_variables:
+          - name: "BRAVE_API_KEY"
+            description: "Brave Search API key for governed web-search execution."
+            required: true
+            secret: true
         tags: ["search", "web"]
       - name: "fetch"
+        title: "Fetch"
         description: "Fetch and convert web pages to markdown for analysis"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-fetch"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-fetch"
+            version: "latest"
+            transport:
+              type: stdio
         tags: ["web", "scraping"]
         tool_set: "research"
 
   - name: "Communication"
     servers:
       - name: "slack"
+        title: "Slack"
         description: "Slack workspace integration — channels, messages, users"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-slack"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-slack"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           SLACK_BOT_TOKEN: ""
           SLACK_TEAM_ID: ""
+        environment_variables:
+          - name: "SLACK_BOT_TOKEN"
+            description: "Slack bot token used to access channels, messages, and users."
+            required: true
+            secret: true
+          - name: "SLACK_TEAM_ID"
+            description: "Slack workspace or team identifier that scopes the integration."
+            required: true
         tags: ["messaging", "team"]
 
   - name: "Media & Content Generation"
     servers:
       - name: "stable-diffusion"
+        title: "Stable Diffusion"
         description: "Generate images via Stable Diffusion (local or API). Text-to-image, image-to-image, inpainting."
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "mcp-server-stable-diffusion"]
+        packages:
+          - registry_type: npm
+            identifier: "mcp-server-stable-diffusion"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           SD_API_URL: "http://127.0.0.1:7860"
+        environment_variables:
+          - name: "SD_API_URL"
+            description: "Base URL for the local or hosted Stable Diffusion API endpoint."
+            default_value: "http://127.0.0.1:7860"
         tags: ["image", "generation", "ai"]
       - name: "flux"
+        title: "FLUX"
         description: "Generate images using Black Forest Labs FLUX models via API"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@anthropic/mcp-server-flux"]
+        packages:
+          - registry_type: npm
+            identifier: "@anthropic/mcp-server-flux"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           BFL_API_KEY: ""
+        environment_variables:
+          - name: "BFL_API_KEY"
+            description: "Black Forest Labs API key used for FLUX image generation."
+            required: true
+            secret: true
         tags: ["image", "generation", "ai"]
       - name: "elevenlabs"
+        title: "ElevenLabs"
         description: "Text-to-speech and voice synthesis via ElevenLabs API"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "mcp-server-elevenlabs"]
+        packages:
+          - registry_type: npm
+            identifier: "mcp-server-elevenlabs"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           ELEVENLABS_API_KEY: ""
+        environment_variables:
+          - name: "ELEVENLABS_API_KEY"
+            description: "ElevenLabs API key for speech synthesis requests."
+            required: true
+            secret: true
         tags: ["audio", "tts", "voice"]
       - name: "replicate"
+        title: "Replicate"
         description: "Run ML models on Replicate — image, video, audio, text generation"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "mcp-server-replicate"]
+        packages:
+          - registry_type: npm
+            identifier: "mcp-server-replicate"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           REPLICATE_API_TOKEN: ""
+        environment_variables:
+          - name: "REPLICATE_API_TOKEN"
+            description: "Replicate API token used for hosted multimodal model execution."
+            required: true
+            secret: true
         tags: ["image", "video", "audio", "generation", "ai"]
       - name: "comfyui"
+        title: "ComfyUI"
         description: "Execute ComfyUI workflows for advanced image generation pipelines"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "mcp-server-comfyui"]
+        packages:
+          - registry_type: npm
+            identifier: "mcp-server-comfyui"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           COMFYUI_URL: "http://127.0.0.1:8188"
+        environment_variables:
+          - name: "COMFYUI_URL"
+            description: "Base URL for the ComfyUI instance used for local workflow execution."
+            default_value: "http://127.0.0.1:8188"
         tags: ["image", "workflow", "generation"]
       - name: "dall-e"
+        title: "DALL-E"
         description: "Generate images using OpenAI DALL-E models"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "mcp-server-dall-e"]
+        packages:
+          - registry_type: npm
+            identifier: "mcp-server-dall-e"
+            version: "latest"
+            transport:
+              type: stdio
         env:
           OPENAI_API_KEY: ""
+        environment_variables:
+          - name: "OPENAI_API_KEY"
+            description: "OpenAI API key for DALL-E image generation."
+            required: true
+            secret: true
         tags: ["image", "generation", "ai"]
 
   - name: "Utilities"
     servers:
       - name: "memory"
+        title: "Memory"
         description: "Persistent knowledge graph memory for entity storage and retrieval"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-memory"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-memory"
+            version: "latest"
+            transport:
+              type: stdio
         tags: ["memory", "knowledge"]
       - name: "puppeteer"
+        title: "Puppeteer"
         description: "Browser automation — navigate, screenshot, interact with web pages"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-puppeteer"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-puppeteer"
+            version: "latest"
+            transport:
+              type: stdio
         tags: ["browser", "automation"]
       - name: "sequential-thinking"
+        title: "Sequential Thinking"
         description: "Dynamic problem-solving through structured thought sequences"
+        version: "latest"
         transport: stdio
         command: "npx"
         args: ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+        packages:
+          - registry_type: npm
+            identifier: "@modelcontextprotocol/server-sequential-thinking"
+            version: "latest"
+            transport:
+              type: stdio
         tags: ["reasoning", "planning"]
