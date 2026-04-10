@@ -178,8 +178,8 @@ Typical unlocks:
 - environment ownership, identity posture, and shared-Soma governance posture
 
 Collaboration groups now have their own dedicated workflow surface:
-- `Groups` for standing and temporary group creation
-- focused group review, broadcast, and recent output visibility
+- `Groups` for standing and temporary group creation, plus archived temporary-group review after closure
+- focused group review, broadcast while active, and retained output visibility after archive
 - quick entry into the attached team-lead lanes
 
 The root Soma home also includes a filtered live interaction stream:

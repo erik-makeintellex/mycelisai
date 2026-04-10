@@ -50,6 +50,7 @@ export default function GroupManagementPanel() {
     const [refreshing, setRefreshing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [broadcasting, setBroadcasting] = useState(false);
+    const [archiving, setArchiving] = useState(false);
     const [name, setName] = useState("");
     const [goalStatement, setGoalStatement] = useState("");
     const [workMode, setWorkMode] = useState<WorkMode>("propose_only");
@@ -64,6 +65,8 @@ export default function GroupManagementPanel() {
     const selectedGroup = useMemo(() => groups.find((group) => group.group_id === selectedGroupId) ?? null, [groups, selectedGroupId]);
     const standingGroups = useMemo(() => groups.filter((group) => group.status !== "archived" && !group.expiry), [groups]);
     const temporaryGroups = useMemo(() => groups.filter((group) => group.status !== "archived" && !!group.expiry), [groups]);
+    const archivedTemporaryGroups = useMemo(() => groups.filter((group) => group.status === "archived" && !!group.expiry), [groups]);
+    const selectedGroupIsArchived = selectedGroup?.status === "archived";
 
     const loadGroups = async () => {
         setRefreshing(true);
@@ -91,14 +94,15 @@ export default function GroupManagementPanel() {
         }
         let cancelled = false;
         const loadOutputs = async () => {
-            const responses = await Promise.all(selectedGroup.team_ids.map(async (teamId) => {
-                const res = await fetch(`/api/v1/artifacts?team_id=${encodeURIComponent(teamId)}&limit=8`, { cache: "no-store" });
-                return res.ok ? getData<Artifact[]>(res) : [];
-            }));
+            const res = await fetch(`/api/v1/groups/${encodeURIComponent(selectedGroup.group_id)}/outputs?limit=8`, { cache: "no-store" });
             if (cancelled) return;
-            const merged = new Map<string, Artifact>();
-            responses.flat().forEach((artifact) => merged.set(artifact.id, artifact));
-            setOutputs(Array.from(merged.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+            if (!res.ok) {
+                setOutputs([]);
+                return;
+            }
+            const items = await getData<Artifact[]>(res);
+            if (cancelled) return;
+            setOutputs(Array.isArray(items) ? items : []);
         };
         void loadOutputs();
         return () => { cancelled = true; };
@@ -151,6 +155,27 @@ export default function GroupManagementPanel() {
         }
     };
 
+    const archiveSelectedGroup = async () => {
+        if (!selectedGroup || !selectedGroup.expiry || selectedGroupIsArchived) return;
+        setArchiving(true);
+        setNotice(null);
+        setError(null);
+        try {
+            const res = await fetch(`/api/v1/groups/${encodeURIComponent(selectedGroup.group_id)}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "archived" }),
+            });
+            if (!res.ok) throw new Error("Could not archive the selected temporary group.");
+            setNotice("Temporary group archived. Retained outputs are still available for review.");
+            await loadGroups();
+        } catch (archiveError) {
+            setError(archiveError instanceof Error ? archiveError.message : "Could not archive the selected temporary group.");
+        } finally {
+            setArchiving(false);
+        }
+    };
+
     return (
         <section className="space-y-5" data-testid="groups-workspace">
             <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-5">
@@ -190,6 +215,7 @@ export default function GroupManagementPanel() {
 
                     <GroupList title="Standing groups" groups={standingGroups} selectedGroupId={selectedGroupId} onSelect={setSelectedGroupId} />
                     <GroupList title="Temporary groups" groups={temporaryGroups} selectedGroupId={selectedGroupId} onSelect={setSelectedGroupId} />
+                    <GroupList title="Archived temporary groups" groups={archivedTemporaryGroups} selectedGroupId={selectedGroupId} onSelect={setSelectedGroupId} />
                 </div>
 
                 <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-5">
@@ -197,8 +223,18 @@ export default function GroupManagementPanel() {
                         <div className="space-y-5">
                             <div className="border-b border-cortex-border pb-4">
                                 <div className="flex flex-wrap gap-2">
-                                    <span className="rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">{selectedGroup.expiry ? "Temporary group" : "Standing group"}</span>
+                                    <span className="rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">{selectedGroup.status === "archived" && selectedGroup.expiry ? "Archived temporary group" : selectedGroup.expiry ? "Temporary group" : "Standing group"}</span>
                                     <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">{selectedGroup.work_mode}</span>
+                                    {selectedGroup.expiry && !selectedGroupIsArchived ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => void archiveSelectedGroup()}
+                                            disabled={archiving}
+                                            className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono uppercase tracking-[0.16em] text-cortex-text-main disabled:opacity-60"
+                                        >
+                                            {archiving ? "Archiving..." : "Archive temporary group"}
+                                        </button>
+                                    ) : null}
                                 </div>
                                 <h2 className="mt-3 text-2xl font-semibold text-cortex-text-main">{selectedGroup.name}</h2>
                                 <p className="mt-2 text-sm leading-7 text-cortex-text-muted">{selectedGroup.goal_statement}</p>
@@ -217,12 +253,25 @@ export default function GroupManagementPanel() {
                                 </div>
                                 <div className="space-y-4">
                                     <div className="rounded-2xl border border-cortex-border bg-cortex-bg p-4">
-                                        <div className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-cortex-primary" /><p className="text-sm font-semibold text-cortex-text-main">Broadcast a focused ask</p></div>
-                                        <textarea value={broadcastMessage} onChange={(e) => setBroadcastMessage(e.target.value)} rows={4} className={`${inputClassName} mt-3 resize-y`} />
-                                        <button type="button" onClick={() => void broadcastToGroup()} disabled={broadcasting || !broadcastMessage.trim()} className="mt-3 rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary disabled:opacity-60">{broadcasting ? "Broadcasting..." : "Broadcast to group"}</button>
+                                        <div className="flex items-center gap-2"><MessageSquare className="h-4 w-4 text-cortex-primary" /><p className="text-sm font-semibold text-cortex-text-main">{selectedGroupIsArchived ? "Group is archived" : "Broadcast a focused ask"}</p></div>
+                                        {selectedGroupIsArchived ? (
+                                            <p className="mt-3 text-sm leading-6 text-cortex-text-muted" data-testid="groups-archived-readonly-note">
+                                                This temporary group is archived. Keep it available for retained output review, but send any new coordination through an active group or directly through Soma.
+                                            </p>
+                                        ) : (
+                                            <>
+                                                <textarea value={broadcastMessage} onChange={(e) => setBroadcastMessage(e.target.value)} rows={4} className={`${inputClassName} mt-3 resize-y`} />
+                                                <button type="button" onClick={() => void broadcastToGroup()} disabled={broadcasting || !broadcastMessage.trim()} className="mt-3 rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary disabled:opacity-60">{broadcasting ? "Broadcasting..." : "Broadcast to group"}</button>
+                                            </>
+                                        )}
                                     </div>
                                     <div className="rounded-2xl border border-cortex-border bg-cortex-bg p-4">
-                                        <p className="text-sm font-semibold text-cortex-text-main">Recent outputs</p>
+                                        <p className="text-sm font-semibold text-cortex-text-main">{selectedGroupIsArchived ? "Retained outputs" : "Recent outputs"}</p>
+                                        {selectedGroupIsArchived ? (
+                                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted" data-testid="groups-retained-outputs-note">
+                                                Review the outputs this archived temporary group already produced. Downloads remain available so the work can still be inspected after the collaboration window closes.
+                                            </p>
+                                        ) : null}
                                         <div className="mt-3 space-y-3">
                                             {outputs.length === 0 ? <p className="text-sm text-cortex-text-muted">No recent team outputs found for this group yet.</p> : outputs.slice(0, 8).map((artifact) => <ArtifactRow key={artifact.id} artifact={artifact} />)}
                                         </div>
@@ -245,7 +294,7 @@ function GroupList({ title, groups, selectedGroupId, onSelect }: { title: string
     return (
         <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-5">
             <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-cortex-text-main">{title}</h2><span className="text-[11px] font-mono text-cortex-text-muted">{groups.length}</span></div>
-            <div className="mt-4 space-y-3">{groups.length === 0 ? <p className="text-sm text-cortex-text-muted">Nothing here yet.</p> : groups.map((group) => <button key={group.group_id} type="button" onClick={() => onSelect(group.group_id)} className={`w-full rounded-2xl border px-4 py-3 text-left ${selectedGroupId === group.group_id ? "border-cortex-primary/30 bg-cortex-primary/10" : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/25"}`}><p className="text-sm font-semibold text-cortex-text-main">{group.name}</p><p className="mt-1 text-sm leading-6 text-cortex-text-muted">{group.goal_statement}</p></button>)}</div>
+            <div className="mt-4 space-y-3">{groups.length === 0 ? <p className="text-sm text-cortex-text-muted">Nothing here yet.</p> : groups.map((group) => <button key={group.group_id} type="button" onClick={() => onSelect(group.group_id)} className={`w-full rounded-2xl border px-4 py-3 text-left ${selectedGroupId === group.group_id ? "border-cortex-primary/30 bg-cortex-primary/10" : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/25"}`}><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold text-cortex-text-main">{group.name}</p>{group.status === "archived" ? <span className="rounded-full border border-cortex-border bg-cortex-surface px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.14em] text-cortex-text-muted">Archived</span> : null}</div><p className="mt-1 text-sm leading-6 text-cortex-text-muted">{group.goal_statement}</p></button>)}</div>
         </section>
     );
 }

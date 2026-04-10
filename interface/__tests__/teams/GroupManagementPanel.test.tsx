@@ -85,50 +85,59 @@ describe("GroupManagementPanel", () => {
         expect(postBodies[1].confirm_token).toBe("tok-123");
     });
 
-    it("separates temporary groups and shows recent downloadable outputs", async () => {
+    it("archives temporary groups and keeps retained outputs reviewable", async () => {
+        const groups = [
+            {
+                group_id: "group-standing",
+                name: "Standing Ops",
+                goal_statement: "Run durable operations",
+                work_mode: "propose_only",
+                member_user_ids: [],
+                team_ids: ["team-ops"],
+                coordinator_profile: "ops-lead",
+                approval_policy_ref: "",
+                status: "active",
+                created_by: "admin",
+                created_at: new Date().toISOString(),
+            },
+            {
+                group_id: "group-temp",
+                name: "Temp Campaign",
+                goal_statement: "Produce one campaign package",
+                work_mode: "execute_with_approval",
+                member_user_ids: [],
+                team_ids: ["team-marketing"],
+                coordinator_profile: "marketing-lead",
+                approval_policy_ref: "",
+                status: "active",
+                expiry: new Date(Date.now() + 60_000).toISOString(),
+                created_by: "admin",
+                created_at: new Date().toISOString(),
+            },
+        ];
+
         mockFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
             const url = urlFromInput(input);
             if (url === "/api/v1/groups" && (!init?.method || init.method === "GET")) {
                 return jsonResponse({
                     ok: true,
-                    data: [
-                        {
-                            group_id: "group-standing",
-                            name: "Standing Ops",
-                            goal_statement: "Run durable operations",
-                            work_mode: "propose_only",
-                            member_user_ids: [],
-                            team_ids: ["team-ops"],
-                            coordinator_profile: "ops-lead",
-                            approval_policy_ref: "",
-                            status: "active",
-                            created_by: "admin",
-                            created_at: new Date().toISOString(),
-                        },
-                        {
-                            group_id: "group-temp",
-                            name: "Temp Campaign",
-                            goal_statement: "Produce one campaign package",
-                            work_mode: "execute_with_approval",
-                            member_user_ids: [],
-                            team_ids: ["team-marketing"],
-                            coordinator_profile: "marketing-lead",
-                            approval_policy_ref: "",
-                            status: "active",
-                            expiry: new Date(Date.now() + 60_000).toISOString(),
-                            created_by: "admin",
-                            created_at: new Date().toISOString(),
-                        },
-                    ],
+                    data: groups.map((group) => ({ ...group })),
                 });
             }
             if (url === "/api/v1/groups/monitor") {
                 return jsonResponse({ ok: true, data: { status: "online", published_count: 2, last_group_id: "group-temp" } });
             }
-            if (url === "/api/v1/artifacts?team_id=team-ops&limit=8") {
+            if (url === "/api/v1/groups/group-temp/status" && init?.method === "PATCH") {
+                groups[1] = {
+                    ...groups[1],
+                    status: "archived",
+                };
+                return jsonResponse({ ok: true, data: groups[1] });
+            }
+            if (url === "/api/v1/groups/group-standing/outputs?limit=8") {
                 return jsonResponse({ ok: true, data: [] });
             }
-            if (url === "/api/v1/artifacts?team_id=team-marketing&limit=8") {
+            if (url === "/api/v1/groups/group-temp/outputs?limit=8") {
                 return jsonResponse({
                     ok: true,
                     data: [
@@ -155,8 +164,16 @@ describe("GroupManagementPanel", () => {
         fireEvent.click(screen.getByRole("button", { name: /Temp Campaign/i }));
 
         await waitFor(() => expect(screen.getByText("Launch brief")).toBeDefined());
+        fireEvent.click(screen.getByRole("button", { name: "Archive temporary group" }));
+
+        await waitFor(() => expect(screen.getByTestId("groups-notice").textContent).toContain("Temporary group archived"));
+        await waitFor(() => expect(screen.getByText("Archived temporary groups")).toBeDefined());
+        fireEvent.click(screen.getByRole("button", { name: /Temp Campaign.*Produce one campaign package/i }));
+        await waitFor(() => expect(screen.getByTestId("groups-archived-readonly-note").textContent).toContain("retained output review"));
+        await waitFor(() => expect(screen.getByTestId("groups-retained-outputs-note").textContent).toContain("Downloads remain available"));
         expect(screen.getByText("Campaign summary")).toBeDefined();
         expect(screen.getByRole("link", { name: /Download/i }).getAttribute("href")).toBe("/api/v1/artifacts/artifact-1/download");
         expect(screen.getByRole("link", { name: /Open team-marketing lead/i }).getAttribute("href")).toBe("/dashboard?team_id=team-marketing");
+        await waitFor(() => expect(screen.queryByRole("button", { name: "Broadcast to group" })).toBeNull());
     });
 });

@@ -163,11 +163,17 @@ Steps:
    - recent outputs
    - broadcast controls
    - quick links back to Soma home and attached team leads
+5. Archive the temporary group.
+6. Confirm it moves from `Temporary groups` to `Archived temporary groups`.
+7. Confirm retained outputs remain reviewable and downloadable after archive.
+8. Confirm new broadcast is no longer available from the archived group view.
 
 Expected outcome:
 - groups are managed in their own graceful interface
 - temporary groups read as time-bounded working lanes, not permanent teams
 - outputs are reviewable from the group lane without dropping into raw logs by default
+- archived temporary groups remain reviewable after closure instead of disappearing into raw logs
+- retained outputs stay available without treating archived groups like active coordination lanes
 
 ### 4. Team Lead Focus
 

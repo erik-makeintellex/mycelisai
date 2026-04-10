@@ -170,6 +170,8 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/groups/monitor", s.HandleGroupMonitor)
 	mux.HandleFunc("POST /api/v1/groups", s.HandleCreateGroup)
 	mux.HandleFunc("PUT /api/v1/groups/{id}", s.HandleUpdateGroup)
+	mux.HandleFunc("PATCH /api/v1/groups/{id}/status", s.HandleUpdateGroupStatus)
+	mux.HandleFunc("GET /api/v1/groups/{id}/outputs", s.HandleGroupOutputs)
 	mux.HandleFunc("POST /api/v1/groups/{id}/broadcast", s.HandleGroupBroadcast)
 
 	// Missions API (Dashboard + Phase 9: Neural Wiring Edit/Delete)

@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -26,6 +28,12 @@ var validGroupWorkModes = map[string]struct{}{
 	"propose_only":          {},
 	"execute_with_approval": {},
 	"execute_bounded":       {},
+}
+
+var validGroupStatuses = map[string]struct{}{
+	groupStatusActive:   {},
+	groupStatusPaused:   {},
+	groupStatusArchived: {},
 }
 
 // CollaborationGroup is a root-admin defined execution scope for multi-user coordination.
@@ -64,6 +72,10 @@ type createGroupRequest struct {
 
 type groupBroadcastRequest struct {
 	Message string `json:"message"`
+}
+
+type updateGroupStatusRequest struct {
+	Status string `json:"status"`
 }
 
 type GroupBusSnapshot struct {
@@ -208,6 +220,17 @@ func validateGroupReq(req createGroupRequest) error {
 	}
 	if _, ok := validGroupWorkModes[mode]; !ok {
 		return fmt.Errorf("invalid work_mode")
+	}
+	return nil
+}
+
+func validateGroupStatus(status string) error {
+	status = strings.TrimSpace(status)
+	if status == "" {
+		return fmt.Errorf("status is required")
+	}
+	if _, ok := validGroupStatuses[status]; !ok {
+		return fmt.Errorf("invalid status")
 	}
 	return nil
 }
@@ -501,6 +524,81 @@ func (s *AdminServer) updateGroupDB(ctx context.Context, id string, req createGr
 	return s.getGroupDB(ctx, id)
 }
 
+func (s *AdminServer) updateGroupStatusDB(ctx context.Context, id, status, updatedAuditEventID string) (*CollaborationGroup, error) {
+	db := s.getDB()
+	if db == nil {
+		return nil, errors.New("database not available")
+	}
+	res, err := db.ExecContext(ctx, `
+		UPDATE collaboration_groups
+		SET status=$2,
+		    updated_audit_event_id=$3,
+		    updated_at=NOW()
+		WHERE id=$1 AND tenant_id='default'`,
+		id,
+		strings.TrimSpace(status),
+		parseAuditUUID(updatedAuditEventID),
+	)
+	if err != nil {
+		return nil, err
+	}
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return nil, sql.ErrNoRows
+	}
+	return s.getGroupDB(ctx, id)
+}
+
+func parseLimit(raw string, fallback int) int {
+	if fallback <= 0 {
+		fallback = 20
+	}
+	if strings.TrimSpace(raw) == "" {
+		return fallback
+	}
+	var limit int
+	if _, err := fmt.Sscanf(strings.TrimSpace(raw), "%d", &limit); err != nil || limit <= 0 {
+		return fallback
+	}
+	return limit
+}
+
+func (s *AdminServer) listGroupOutputs(ctx context.Context, group *CollaborationGroup, limit int) ([]artifacts.Artifact, error) {
+	if s.Artifacts == nil {
+		return nil, errors.New("artifacts not initialized")
+	}
+	if group == nil {
+		return []artifacts.Artifact{}, nil
+	}
+
+	merged := make(map[uuid.UUID]artifacts.Artifact)
+	for _, rawTeamID := range group.TeamIDs {
+		teamID, err := uuid.Parse(strings.TrimSpace(rawTeamID))
+		if err != nil {
+			continue
+		}
+		items, err := s.Artifacts.ListByTeam(ctx, teamID, limit)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range items {
+			merged[item.ID] = item
+		}
+	}
+
+	outputs := make([]artifacts.Artifact, 0, len(merged))
+	for _, item := range merged {
+		outputs = append(outputs, item)
+	}
+	sort.Slice(outputs, func(i, j int) bool {
+		return outputs[i].CreatedAt.After(outputs[j].CreatedAt)
+	})
+	if limit > 0 && len(outputs) > limit {
+		outputs = outputs[:limit]
+	}
+	return outputs, nil
+}
+
 // GET /api/v1/groups
 func (s *AdminServer) HandleListGroups(w http.ResponseWriter, r *http.Request) {
 	if _, ok := requireRootAdminScope(w, r, "groups:read"); !ok {
@@ -633,6 +731,87 @@ func (s *AdminServer) HandleUpdateGroup(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(group))
+}
+
+// PATCH /api/v1/groups/{id}/status
+func (s *AdminServer) HandleUpdateGroupStatus(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, "groups:write"); !ok {
+		return
+	}
+
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		respondAPIError(w, "Missing group ID", http.StatusBadRequest)
+		return
+	}
+
+	var req updateGroupStatusRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondAPIError(w, "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	if err := validateGroupStatus(req.Status); err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	status := strings.TrimSpace(req.Status)
+	auditMessage := "Updated collaboration group status"
+	if status == groupStatusArchived {
+		auditMessage = "Archived collaboration group"
+	}
+	auditEventID, _ := s.createAuditEvent(
+		protocol.TemplateChatToProposal,
+		"groups.update_status",
+		auditMessage,
+		map[string]any{
+			"group_id": id,
+			"status":   status,
+		},
+	)
+	group, err := s.updateGroupStatusDB(r.Context(), id, status, auditEventID)
+	if errors.Is(err, sql.ErrNoRows) {
+		respondAPIError(w, "Group not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		respondAPIError(w, "Failed to update group status: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(group))
+}
+
+// GET /api/v1/groups/{id}/outputs
+func (s *AdminServer) HandleGroupOutputs(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, "groups:read"); !ok {
+		return
+	}
+
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		respondAPIError(w, "Missing group ID", http.StatusBadRequest)
+		return
+	}
+
+	group, err := s.getGroupDB(r.Context(), id)
+	if err != nil {
+		respondAPIError(w, "Failed to load group: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if group == nil {
+		respondAPIError(w, "Group not found", http.StatusNotFound)
+		return
+	}
+
+	outputs, err := s.listGroupOutputs(r.Context(), group, parseLimit(r.URL.Query().Get("limit"), 20))
+	if err != nil {
+		respondAPIError(w, "Failed to list group outputs: "+err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+	if outputs == nil {
+		outputs = []artifacts.Artifact{}
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(outputs))
 }
 
 // POST /api/v1/groups/{id}/broadcast
