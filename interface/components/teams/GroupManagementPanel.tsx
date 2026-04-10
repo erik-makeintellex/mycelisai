@@ -39,7 +39,7 @@ const relativeTime = (value?: string | null) => {
     return `${Math.floor(diff / 86_400_000)}d ago`;
 };
 
-export default function GroupManagementPanel() {
+export default function GroupManagementPanel({ initialSelectedGroupId = null }: { initialSelectedGroupId?: string | null }) {
     const [groups, setGroups] = useState<Group[]>([]);
     const [monitor, setMonitor] = useState<Monitor | null>(null);
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -76,7 +76,15 @@ export default function GroupManagementPanel() {
             if (!groupsRes.ok) throw new Error("Could not load groups.");
             const nextGroups = await getData<Group[]>(groupsRes);
             setGroups(nextGroups);
-            setSelectedGroupId((current) => current && nextGroups.some((group) => group.group_id === current) ? current : nextGroups[0]?.group_id ?? null);
+            setSelectedGroupId((current) => {
+                if (current && nextGroups.some((group) => group.group_id === current)) {
+                    return current;
+                }
+                if (initialSelectedGroupId && nextGroups.some((group) => group.group_id === initialSelectedGroupId)) {
+                    return initialSelectedGroupId;
+                }
+                return nextGroups[0]?.group_id ?? null;
+            });
             if (monitorRes.ok) setMonitor(await getData<Monitor>(monitorRes));
         } catch (loadError) {
             setError(loadError instanceof Error ? loadError.message : "Could not load groups.");

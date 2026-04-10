@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, RefreshCcw } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
-import type { TeamLeadExecutionContract, TeamLeadGuidanceRequest, TeamLeadGuidanceResponse, TeamLeadGuidedAction } from "@/lib/organizations";
+import type { TeamLeadExecutionContract, TeamLeadGuidanceRequest, TeamLeadGuidanceResponse, TeamLeadGuidedAction, TeamLeadWorkflowGroupDraft } from "@/lib/organizations";
 
 type RequestState = "idle" | "loading" | "ready" | "error";
 type PersistedWorkspaceState = {
@@ -12,6 +13,11 @@ type PersistedWorkspaceState = {
     requestState?: Extract<RequestState, "idle" | "ready">;
     requestContext?: string | null;
     guidance?: TeamLeadGuidanceResponse | null;
+};
+
+type LaunchedGroupState = {
+    groupId: string;
+    name: string;
 };
 
 export type SomaGuidanceUpdate = {
@@ -112,6 +118,9 @@ export default function TeamLeadInteractionPanel({
     const [draftPrompt, setDraftPrompt] = useState("");
     const [requestContext, setRequestContext] = useState<string | null>(null);
     const [hasHydratedState, setHasHydratedState] = useState(false);
+    const [launchingGroup, setLaunchingGroup] = useState(false);
+    const [launchError, setLaunchError] = useState<string | null>(null);
+    const [launchedGroup, setLaunchedGroup] = useState<LaunchedGroupState | null>(null);
     const isLoading = requestState === "loading";
 
     useEffect(() => {
@@ -157,6 +166,8 @@ export default function TeamLeadInteractionPanel({
         setRequestState("loading");
         setError(null);
         setRequestContext(contextLabel ?? null);
+        setLaunchError(null);
+        setLaunchedGroup(null);
 
         const payload: TeamLeadGuidanceRequest = { action };
         if (contextLabel && contextLabel.trim().length > 0) {
@@ -201,6 +212,48 @@ export default function TeamLeadInteractionPanel({
             resolvePromptAction(normalizedPrompt),
             normalizedPrompt.length > 0 ? normalizedPrompt : null,
         );
+    };
+
+    const launchWorkflowGroup = async (draft: TeamLeadWorkflowGroupDraft) => {
+        if (launchingGroup) {
+            return;
+        }
+        setLaunchingGroup(true);
+        setLaunchError(null);
+        setLaunchedGroup(null);
+        try {
+            const expiry = typeof draft.expiry_hours === "number" && draft.expiry_hours > 0
+                ? new Date(Date.now() + draft.expiry_hours * 60 * 60 * 1000).toISOString()
+                : null;
+            const response = await fetch("/api/v1/groups", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: draft.name,
+                    goal_statement: draft.goal_statement,
+                    work_mode: draft.work_mode,
+                    coordinator_profile: draft.coordinator_profile,
+                    allowed_capabilities: draft.allowed_capabilities ?? [],
+                    expiry,
+                }),
+            });
+            const responsePayload = await readJson(response);
+            if (!response.ok) {
+                throw new Error(extractApiError(responsePayload) || "Could not create the temporary workflow group.");
+            }
+            const created = extractApiData<{ group_id?: string; name?: string } | null>(responsePayload);
+            if (!created?.group_id) {
+                throw new Error("Could not create the temporary workflow group.");
+            }
+            setLaunchedGroup({
+                groupId: created.group_id,
+                name: created.name || draft.name,
+            });
+        } catch (groupError) {
+            setLaunchError(groupError instanceof Error ? groupError.message : "Could not create the temporary workflow group.");
+        } finally {
+            setLaunchingGroup(false);
+        }
     };
 
     return (
@@ -373,8 +426,17 @@ export default function TeamLeadInteractionPanel({
                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{guidance.summary}</p>
                         </div>
 
-                        <div>
+                        <div className="space-y-4">
                             {guidance.execution_contract && <ExecutionContractCard contract={guidance.execution_contract} />}
+                            {guidance.execution_contract?.workflow_group ? (
+                                <TemporaryWorkflowLaunchCard
+                                    draft={guidance.execution_contract.workflow_group}
+                                    launching={launchingGroup}
+                                    launchedGroup={launchedGroup}
+                                    error={launchError}
+                                    onLaunch={() => void launchWorkflowGroup(guidance.execution_contract!.workflow_group!)}
+                                />
+                            ) : null}
                         </div>
 
                         <div>
@@ -526,6 +588,42 @@ function normalizeExecutionContract(
         team_name: sanitizeExecutionContractText(contract.team_name, ""),
         external_target: sanitizeExecutionContractText(contract.external_target, ""),
         target_outputs: targetOutputs,
+        workflow_group: normalizeWorkflowGroupDraft(contract.workflow_group, somaName, teamLeadName),
+    };
+}
+
+function normalizeWorkflowGroupDraft(
+    value: unknown,
+    somaName: string,
+    teamLeadName: string,
+): TeamLeadWorkflowGroupDraft | undefined {
+    if (!value || typeof value !== "object") {
+        return undefined;
+    }
+
+    const draft = value as Partial<TeamLeadWorkflowGroupDraft>;
+    const workMode = draft.work_mode;
+    if (
+        workMode !== "read_only" &&
+        workMode !== "propose_only" &&
+        workMode !== "execute_with_approval" &&
+        workMode !== "execute_bounded"
+    ) {
+        return undefined;
+    }
+
+    return {
+        name: rewriteGuidanceText(sanitizeExecutionContractText(draft.name, "Temporary workflow group"), somaName, teamLeadName),
+        goal_statement: rewriteGuidanceText(sanitizeExecutionContractText(draft.goal_statement, "Coordinate a focused workflow."), somaName, teamLeadName),
+        work_mode: workMode,
+        coordinator_profile: rewriteGuidanceText(sanitizeExecutionContractText(draft.coordinator_profile, "Workflow lead"), somaName, teamLeadName),
+        allowed_capabilities: Array.isArray(draft.allowed_capabilities)
+            ? draft.allowed_capabilities
+                .map((entry) => sanitizeExecutionContractText(entry, ""))
+                .filter((entry) => entry.length > 0)
+            : [],
+        expiry_hours: typeof draft.expiry_hours === "number" ? draft.expiry_hours : undefined,
+        summary: rewriteGuidanceText(sanitizeExecutionContractText(draft.summary, "Launch a temporary workflow group from this Soma plan."), somaName, teamLeadName),
     };
 }
 
@@ -649,6 +747,67 @@ function ExecutionContractCard({ contract }: { contract: TeamLeadExecutionContra
                         ))}
                     </div>
                 </div>
+            ) : null}
+        </div>
+    );
+}
+
+function TemporaryWorkflowLaunchCard({
+    draft,
+    launching,
+    launchedGroup,
+    error,
+    onLaunch,
+}: {
+    draft: TeamLeadWorkflowGroupDraft;
+    launching: boolean;
+    launchedGroup: LaunchedGroupState | null;
+    error: string | null;
+    onLaunch: () => void;
+}) {
+    return (
+        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
+            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Launch temporary workflow group</p>
+            <p className="mt-3 text-sm font-semibold text-cortex-text-main">{draft.name}</p>
+            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{draft.summary}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                    {draft.work_mode}
+                </span>
+                <span className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                    {draft.coordinator_profile}
+                </span>
+                {typeof draft.expiry_hours === "number" && draft.expiry_hours > 0 ? (
+                    <span className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                        expires in {draft.expiry_hours}h
+                    </span>
+                ) : null}
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                    type="button"
+                    onClick={onLaunch}
+                    disabled={launching}
+                    className="rounded-2xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg disabled:opacity-60"
+                >
+                    {launching ? "Creating workflow group..." : "Create temporary workflow group"}
+                </button>
+                {launchedGroup ? (
+                    <Link
+                        href={`/groups?group_id=${encodeURIComponent(launchedGroup.groupId)}`}
+                        className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-2 text-sm font-medium text-cortex-text-main hover:border-cortex-primary/20"
+                    >
+                        Open {launchedGroup.name}
+                    </Link>
+                ) : null}
+            </div>
+            {launchedGroup ? (
+                <p className="mt-3 text-sm text-cortex-primary">
+                    Soma launched {launchedGroup.name}. The workflow group is ready for focused coordination and retained output review.
+                </p>
+            ) : null}
+            {error ? (
+                <p className="mt-3 text-sm text-cortex-danger">{error}</p>
             ) : null}
         </div>
     );

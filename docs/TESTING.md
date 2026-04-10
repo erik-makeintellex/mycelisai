@@ -195,6 +195,8 @@ Signal/channel standard:
 - Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
 - Current focused groups workspace contract check: `cd interface && npx vitest run __tests__/pages/GroupsPage.test.tsx __tests__/teams/GroupManagementPanel.test.tsx --reporter=dot`
 - Current focused groups workspace browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups.spec.ts`
+- Current guided team-creation launch-path contract check: `cd interface && npx vitest run __tests__/organizations/TeamLeadInteractionPanel.test.tsx __tests__/teams/GroupManagementPanel.test.tsx __tests__/pages/GroupsPage.test.tsx --reporter=dot`
+- Current guided team-creation launch-path browser proof: `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 - Current focused teams workspace contract check: `cd interface && npx vitest run __tests__/pages/TeamsPage.test.tsx __tests__/pages/CreateTeamPage.test.tsx __tests__/teams/TeamsPage.test.tsx __tests__/teams/TeamCreationPage.test.tsx __tests__/organizations/TeamLeadInteractionPanel.test.tsx --reporter=dot`
 - Current focused teams workspace browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/teams.spec.ts`
 - Current focused guided team-creation browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts`
@@ -368,6 +370,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/proposals.spec.ts` | Proposal CRUD flow |
 | `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` | Stable V8 operator-flow proof for Soma-first entry, continuity, cold-start recovery, governed mutation/cancel, audit visibility, and oversized content handling |
 | `interface/e2e/specs/groups.spec.ts` | Standing vs temporary vs archived temporary groups, retained output review, and broadcast workflow |
+| `interface/e2e/specs/team-creation.spec.ts` | Guided team creation, Soma execution-path return, and one-click temporary workflow group launch |
 | `interface/e2e/specs/teams.spec.ts` | Teams hub, roster, lead-entry links, guided-creation handoff |
 | `interface/e2e/specs/team-creation.spec.ts` | Guided team-creation workflow, organization context, Soma handoff |
 | `interface/e2e/specs/wiring-edit.spec.ts` | Neural wiring, agent edit/delete |

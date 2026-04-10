@@ -204,6 +204,17 @@ export interface TeamLeadExecutionContract {
     team_name?: string;
     external_target?: string;
     target_outputs: string[];
+    workflow_group?: TeamLeadWorkflowGroupDraft;
+}
+
+export interface TeamLeadWorkflowGroupDraft {
+    name: string;
+    goal_statement: string;
+    work_mode: "read_only" | "propose_only" | "execute_with_approval" | "execute_bounded";
+    coordinator_profile: string;
+    allowed_capabilities?: string[];
+    expiry_hours?: number;
+    summary: string;
 }
 
 export interface TeamLeadGuidanceResponse {

@@ -52,6 +52,7 @@ Use `Teams` when you want to:
 - define or edit the reusable member templates Soma should use when specializing future teams
 - decide when a certain kind of work should prefer a specific specialist role, model, toolset, or output contract
 - enter the guided team-creation workflow at `/teams/create` instead of building a new team from a raw field list
+- launch a temporary workflow group directly from Soma's guided execution path when the design should move immediately into a bounded delivery lane
 
 ---
 

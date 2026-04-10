@@ -178,6 +178,15 @@ describe("TeamLeadInteractionPanel", () => {
                         "Reviewable image artifact",
                         "Short concept note",
                     ],
+                    workflow_group: {
+                        name: "Creative Delivery Team temporary workflow",
+                        goal_statement: "Create a creative team to generate a launch hero image.",
+                        work_mode: "propose_only",
+                        coordinator_profile: "Creative Delivery Team lead",
+                        allowed_capabilities: ["content.plan", "artifact.review"],
+                        expiry_hours: 72,
+                        summary: "Launch a temporary workflow group for Creative Delivery Team.",
+                    },
                 },
             },
         }));
@@ -212,6 +221,83 @@ describe("TeamLeadInteractionPanel", () => {
         expect(screen.getAllByText("Native Mycelis team").length).toBeGreaterThan(0);
         expect(screen.getByText("Creative Delivery Team")).toBeDefined();
         expect(screen.getByText("Reviewable image artifact")).toBeDefined();
+        expect(screen.getByRole("button", { name: "Create temporary workflow group" })).toBeDefined();
+    });
+
+    it("creates a temporary workflow group directly from Soma guidance and links to the created group", async () => {
+        mockFetch
+            .mockResolvedValueOnce(jsonResponse({
+                ok: true,
+                data: {
+                    action: "plan_next_steps",
+                    request_label: "Plan next steps for this organization",
+                    headline: "Team Lead plan for Northstar Labs",
+                    summary: "Team Lead recommends moving Northstar Labs into a focused first delivery loop.",
+                    priority_steps: [
+                        "Align the first outcome with the AI Organization purpose.",
+                    ],
+                    suggested_follow_ups: [
+                        "Review your organization setup",
+                    ],
+                    execution_contract: {
+                        execution_mode: "native_team",
+                        owner_label: "Native Mycelis team",
+                        team_name: "Marketing Launch Team",
+                        summary: "Use a bounded marketing team inside Northstar Labs.",
+                        target_outputs: [
+                            "Launch plan",
+                            "Messaging brief",
+                            "Campaign asset list",
+                        ],
+                        workflow_group: {
+                            name: "Marketing Launch Team temporary workflow",
+                            goal_statement: "Create a temporary marketing launch team for a new product rollout.",
+                            work_mode: "propose_only",
+                            coordinator_profile: "Marketing Launch Team lead",
+                            allowed_capabilities: ["team.coordinate", "artifact.review"],
+                            expiry_hours: 72,
+                            summary: "Launch a temporary workflow group for Marketing Launch Team.",
+                        },
+                    },
+                },
+            }))
+            .mockResolvedValueOnce(jsonResponse({
+                ok: true,
+                data: {
+                    group_id: "group-temp-launch",
+                    name: "Marketing Launch Team temporary workflow",
+                },
+            }, 201));
+
+        render(
+            <TeamLeadInteractionPanel
+                organizationId="org-123"
+                organizationName="Northstar Labs"
+                somaName="Soma for Northstar Labs"
+                teamLeadName="Team Lead for Northstar Labs"
+            />,
+        );
+
+        fireEvent.change(screen.getByLabelText("Tell Soma what team or delivery lane you want to create"), {
+            target: { value: "Create a temporary marketing launch team for a new product rollout." },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
+
+        expect(await screen.findByRole("button", { name: "Create temporary workflow group" })).toBeDefined();
+        fireEvent.click(screen.getByRole("button", { name: "Create temporary workflow group" }));
+
+        await waitFor(() => {
+            expect(mockFetch).toHaveBeenLastCalledWith(
+                "/api/v1/groups",
+                expect.objectContaining({
+                    method: "POST",
+                    body: expect.stringContaining("\"name\":\"Marketing Launch Team temporary workflow\""),
+                }),
+            );
+        });
+
+        expect(await screen.findByText(/Soma launched Marketing Launch Team temporary workflow/i)).toBeDefined();
+        expect(screen.getByRole("link", { name: "Open Marketing Launch Team temporary workflow" }).getAttribute("href")).toBe("/groups?group_id=group-temp-launch");
     });
 
     it("renders an external workflow contract path without stripping the contract wording", async () => {

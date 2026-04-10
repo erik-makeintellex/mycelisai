@@ -55,7 +55,30 @@ test.describe('Guided Team Creation (/teams/create)', () => {
                         team_name: 'Launch Delivery Team',
                         summary: 'Use a focused launch delivery team inside Northstar Labs.',
                         target_outputs: ['Campaign brief', 'Landing page draft'],
+                        workflow_group: {
+                            name: 'Launch Delivery Team temporary workflow',
+                            goal_statement: 'Create a temporary marketing launch team for a new product rollout.',
+                            work_mode: 'propose_only',
+                            coordinator_profile: 'Launch Delivery Team lead',
+                            allowed_capabilities: ['team.coordinate', 'artifact.review'],
+                            expiry_hours: 72,
+                            summary: 'Launch a temporary workflow group for Launch Delivery Team.',
+                        },
                     },
+                },
+            });
+        });
+
+        await page.route('**/api/v1/groups', async (route) => {
+            if (route.request().method() !== 'POST') {
+                await fulfillJSON(route, 200, { ok: true, data: [] });
+                return;
+            }
+            await fulfillJSON(route, 201, {
+                ok: true,
+                data: {
+                    group_id: 'group-temp-launch',
+                    name: 'Launch Delivery Team temporary workflow',
                 },
             });
         });
@@ -79,5 +102,8 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         await expect(page.getByText('Launch team plan for Northstar Labs')).toBeVisible();
         await expect(page.getByText('Launch Delivery Team', { exact: true })).toBeVisible();
         await expect(page.getByText('Campaign brief')).toBeVisible();
+        await page.getByRole('button', { name: 'Create temporary workflow group' }).click();
+        await expect(page.getByText(/Soma launched Launch Delivery Team temporary workflow/i)).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Open Launch Delivery Team temporary workflow' })).toHaveAttribute('href', '/groups?group_id=group-temp-launch');
     });
 });

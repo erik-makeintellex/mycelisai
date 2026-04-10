@@ -192,14 +192,19 @@ Steps:
    - guided Soma handoff
 5. Use one of the guided starter prompts or enter a custom team request.
 6. Confirm Soma returns a team-shaping response with visible next steps or execution-path framing.
-7. Return to `Teams`.
-8. Select the created or existing team.
-9. Confirm the page frames that lane around a focused Team Lead counterpart.
-10. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
+7. If a native execution path is suggested, use `Create temporary workflow group`.
+8. Confirm the success state links into `Groups` for the newly created workflow group.
+9. Open that group and confirm it is already selected in the Groups workspace.
+10. Return to `Teams`.
+11. Select the created or existing team.
+12. Confirm the page frames that lane around a focused Team Lead counterpart.
+13. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
 
 Expected outcome:
 - the Teams page reads as the admin surface for team specialization defaults and lead-entry, not the place to manually assemble a raw team form
 - the detailed creation flow happens on its own page instead of being buried in the roster
+- guided team creation can launch a temporary workflow group directly instead of forcing the user back into raw group fields
+- the newly launched group can be opened directly in the Groups workspace
 - the workspace or drawer clearly identifies a focused Team Lead / lead counterpart
 - team-specific prompts refer to the selected team first
 - the answer is scoped to that team, not the full global roster

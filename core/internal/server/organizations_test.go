@@ -376,6 +376,60 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForImageReque
 	if !ok || len(outputs) < 1 {
 		t.Fatalf("expected target outputs, got %+v", executionContract)
 	}
+	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected workflow group draft, got %+v", executionContract)
+	}
+	if workflowGroup["name"] != "Creative Delivery Team temporary workflow" {
+		t.Fatalf("expected workflow group draft name, got %+v", workflowGroup)
+	}
+	if workflowGroup["work_mode"] != "propose_only" {
+		t.Fatalf("expected propose_only workflow group mode, got %+v", workflowGroup)
+	}
+}
+
+func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingRequests(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+		Name:       "Northstar Labs",
+		Purpose:    "Ship a focused AI engineering organization",
+		StartMode:  OrganizationStartModeTemplate,
+		TemplateID: "engineering-starter",
+	}, mustResolveStarterTemplate(t, s, "engineering-starter")))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"plan_next_steps","request_context":"Create a temporary marketing launch team for a new product rollout."}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object action payload, got %T", resp.Data)
+	}
+	executionContract, ok := data["execution_contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution contract, got %+v", data)
+	}
+	if executionContract["execution_mode"] != "native_team" {
+		t.Fatalf("expected native_team execution mode, got %+v", executionContract)
+	}
+	if executionContract["team_name"] != "Marketing Launch Team" {
+		t.Fatalf("expected marketing team name, got %+v", executionContract)
+	}
+	outputs, ok := executionContract["target_outputs"].([]any)
+	if !ok || len(outputs) != 3 {
+		t.Fatalf("expected three marketing outputs, got %+v", executionContract)
+	}
+	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected workflow group draft, got %+v", executionContract)
+	}
+	if workflowGroup["coordinator_profile"] != "Marketing Launch Team lead" {
+		t.Fatalf("expected marketing workflow lead, got %+v", workflowGroup)
+	}
 }
 
 func TestHandleTeamLeadGuidedAction_AddsExternalWorkflowContractForN8NRequests(t *testing.T) {

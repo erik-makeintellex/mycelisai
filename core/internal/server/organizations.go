@@ -307,12 +307,23 @@ const (
 )
 
 type TeamLeadExecutionContract struct {
-	ExecutionMode  TeamLeadExecutionMode `json:"execution_mode"`
-	OwnerLabel     string                `json:"owner_label"`
-	Summary        string                `json:"summary"`
-	TeamName       string                `json:"team_name,omitempty"`
-	ExternalTarget string                `json:"external_target,omitempty"`
-	TargetOutputs  []string              `json:"target_outputs"`
+	ExecutionMode  TeamLeadExecutionMode       `json:"execution_mode"`
+	OwnerLabel     string                      `json:"owner_label"`
+	Summary        string                      `json:"summary"`
+	TeamName       string                      `json:"team_name,omitempty"`
+	ExternalTarget string                      `json:"external_target,omitempty"`
+	TargetOutputs  []string                    `json:"target_outputs"`
+	WorkflowGroup  *TeamLeadWorkflowGroupDraft `json:"workflow_group,omitempty"`
+}
+
+type TeamLeadWorkflowGroupDraft struct {
+	Name                string   `json:"name"`
+	GoalStatement       string   `json:"goal_statement"`
+	WorkMode            string   `json:"work_mode"`
+	CoordinatorProfile  string   `json:"coordinator_profile"`
+	AllowedCapabilities []string `json:"allowed_capabilities,omitempty"`
+	ExpiryHours         int      `json:"expiry_hours,omitempty"`
+	Summary             string   `json:"summary"`
 }
 
 var organizationAIEngineProfiles = []organizationAIEngineProfile{
@@ -1795,19 +1806,121 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 	}
 
 	if referencesImageTeamOutput(normalized) {
+		teamName := "Creative Delivery Team"
+		outputs := []string{
+			"Reviewable image artifact",
+			"Short concept note",
+		}
 		return &TeamLeadExecutionContract{
 			ExecutionMode: TeamLeadExecutionModeNativeTeam,
 			OwnerLabel:    "Native Mycelis team",
-			TeamName:      "Creative Delivery Team",
+			TeamName:      teamName,
 			Summary:       fmt.Sprintf("Use a bounded creative team inside %s so Soma can shape the work, route it through the right specialists, and return the generated image as a managed artifact.", safeOrganizationName(home.Name)),
-			TargetOutputs: []string{
-				"Reviewable image artifact",
-				"Short concept note",
-			},
+			TargetOutputs: outputs,
+			WorkflowGroup: buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"content.plan", "artifact.review"}),
+		}
+	}
+
+	if teamName, outputs, ok := inferBusinessTeamExecution(normalized); ok {
+		return &TeamLeadExecutionContract{
+			ExecutionMode: TeamLeadExecutionModeNativeTeam,
+			OwnerLabel:    "Native Mycelis team",
+			TeamName:      teamName,
+			Summary:       fmt.Sprintf("Use a bounded %s lane inside %s so Soma can stand up a focused delivery group, coordinate the right specialists, and keep the resulting outputs reviewable in one place.", strings.ToLower(teamName), safeOrganizationName(home.Name)),
+			TargetOutputs: outputs,
+			WorkflowGroup: buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review"}),
 		}
 	}
 
 	return nil
+}
+
+func inferBusinessTeamExecution(normalized string) (string, []string, bool) {
+	switch {
+	case strings.Contains(normalized, "marketing"):
+		return "Marketing Launch Team", []string{
+			"Launch plan",
+			"Messaging brief",
+			"Campaign asset list",
+		}, true
+	case strings.Contains(normalized, "customer research") || strings.Contains(normalized, "user research"):
+		return "Customer Research Team", []string{
+			"Research brief",
+			"Interview guide",
+			"Findings summary",
+		}, true
+	case strings.Contains(normalized, "revops") || strings.Contains(normalized, "revenue operations") || strings.Contains(normalized, "lead routing"):
+		return "Revenue Operations Team", []string{
+			"Workflow recommendation",
+			"Operational checklist",
+			"Handoff summary",
+		}, true
+	case strings.Contains(normalized, "security"):
+		return "Security Review Team", []string{
+			"Risk review",
+			"Mitigation checklist",
+			"Approval notes",
+		}, true
+	case strings.Contains(normalized, "creative team"):
+		return "Creative Delivery Team", []string{
+			"Creative brief",
+			"Artifact package",
+			"Review notes",
+		}, true
+	default:
+		return "", nil, false
+	}
+}
+
+func buildWorkflowGroupDraft(home OrganizationHomePayload, teamName, requestContext, workMode string, targetOutputs, allowedCapabilities []string) *TeamLeadWorkflowGroupDraft {
+	organizationName := safeOrganizationName(home.Name)
+	goal := strings.TrimSpace(requestContext)
+	if goal == "" {
+		goal = fmt.Sprintf("Coordinate a focused %s workflow inside %s.", strings.ToLower(teamName), organizationName)
+	}
+	return &TeamLeadWorkflowGroupDraft{
+		Name:                fmt.Sprintf("%s temporary workflow", teamName),
+		GoalStatement:       goal,
+		WorkMode:            workMode,
+		CoordinatorProfile:  fmt.Sprintf("%s lead", teamName),
+		AllowedCapabilities: normalizeExecutionCapabilityList(allowedCapabilities),
+		ExpiryHours:         72,
+		Summary:             fmt.Sprintf("Launch a temporary workflow group for %s, keep coordination bounded, and retain outputs like %s after the lane is archived.", teamName, humanJoin(targetOutputs)),
+	}
+}
+
+func humanJoin(items []string) string {
+	items = normalizeExecutionCapabilityList(items)
+	switch len(items) {
+	case 0:
+		return "planned outputs"
+	case 1:
+		return items[0]
+	case 2:
+		return items[0] + " and " + items[1]
+	default:
+		return strings.Join(items[:len(items)-1], ", ") + ", and " + items[len(items)-1]
+	}
+}
+
+func normalizeExecutionCapabilityList(items []string) []string {
+	if len(items) == 0 {
+		return []string{}
+	}
+	out := make([]string, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if _, ok := seen[item]; ok {
+			continue
+		}
+		seen[item] = struct{}{}
+		out = append(out, item)
+	}
+	return out
 }
 
 func referencesImageTeamOutput(normalized string) bool {

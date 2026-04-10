@@ -176,4 +176,57 @@ describe("GroupManagementPanel", () => {
         expect(screen.getByRole("link", { name: /Open team-marketing lead/i }).getAttribute("href")).toBe("/dashboard?team_id=team-marketing");
         await waitFor(() => expect(screen.queryByRole("button", { name: "Broadcast to group" })).toBeNull());
     });
+
+    it("honors an initially selected group id from the route", async () => {
+        const groups = [
+            {
+                group_id: "group-standing",
+                name: "Standing Ops",
+                goal_statement: "Run durable operations",
+                work_mode: "propose_only",
+                member_user_ids: [],
+                team_ids: ["team-ops"],
+                coordinator_profile: "ops-lead",
+                approval_policy_ref: "",
+                status: "active",
+                created_by: "admin",
+                created_at: new Date().toISOString(),
+            },
+            {
+                group_id: "group-temp",
+                name: "Temp Campaign",
+                goal_statement: "Produce one campaign package",
+                work_mode: "propose_only",
+                member_user_ids: [],
+                team_ids: [],
+                coordinator_profile: "marketing-lead",
+                approval_policy_ref: "",
+                status: "active",
+                expiry: new Date(Date.now() + 60_000).toISOString(),
+                created_by: "admin",
+                created_at: new Date().toISOString(),
+            },
+        ];
+
+        mockFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+            const url = urlFromInput(input);
+            if (url === "/api/v1/groups" && (!init?.method || init.method === "GET")) {
+                return jsonResponse({ ok: true, data: groups });
+            }
+            if (url === "/api/v1/groups/monitor") {
+                return jsonResponse({ ok: true, data: { status: "online", published_count: 0 } });
+            }
+            if (url === "/api/v1/groups/group-temp/outputs?limit=8") {
+                return jsonResponse({ ok: true, data: [] });
+            }
+            if (url === "/api/v1/groups/group-standing/outputs?limit=8") {
+                return jsonResponse({ ok: true, data: [] });
+            }
+            return jsonResponse({ error: "not found" }, false, 404);
+        });
+
+        render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
+
+        await waitFor(() => expect(screen.getByRole("heading", { name: "Temp Campaign" })).toBeDefined());
+    });
 });
