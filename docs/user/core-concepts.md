@@ -181,7 +181,7 @@ Typical unlocks:
 
 Collaboration groups now have their own dedicated workflow surface:
 - `Groups` for standing and temporary group creation, plus archived temporary-group review after closure
-- focused group review, broadcast while active, and retained output visibility after archive
+- focused group review, broadcast while active, output/contributing-lead summaries, and retained output visibility after archive
 - quick entry into the attached team-lead lanes
 
 The root Soma home also includes a filtered live interaction stream:

@@ -85,7 +85,7 @@ These runs certify:
 - Soma-first entry and re-entry
 - deterministic runtime-state answers
 - AI Organization creation and re-entry
-- team hub, guided team creation, direct temporary-workflow launch, and group specialization surfaces
+- team hub, guided team creation, direct temporary-workflow launch, and group specialization/review surfaces
 - settings and MCP visibility
 - governed live-backend execution
 

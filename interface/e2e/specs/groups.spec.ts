@@ -226,6 +226,8 @@ test.describe('Groups workspace (/groups)', () => {
         await page.getByRole('button', { name: 'Temporary Launch Sprint Drive a fast campaign launch across messaging, review, and delivery.' }).click();
 
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
+        await expect(page.getByTestId('groups-output-summary')).toContainText('1 output');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('1 contributing lead');
         await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Open Soma admin home' })).toHaveAttribute('href', '/dashboard');
         await expect(page.getByRole('link', { name: 'Open launch-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
@@ -233,6 +235,7 @@ test.describe('Groups workspace (/groups)', () => {
 
         await page.getByRole('button', { name: 'Archived Review Sprint Archived Keep the completed temporary collaboration available for retained output review.' }).click();
         await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
+        await expect(page.getByTestId('groups-output-summary')).toContainText('1 output');
         await expect(page.getByTestId('groups-archived-readonly-note')).toContainText('retained output review');
         await expect(page.getByTestId('groups-retained-outputs-note')).toContainText('Downloads remain available');
         await expect(page.getByText('Retrospective Summary')).toBeVisible();
@@ -252,6 +255,7 @@ test.describe('Groups workspace (/groups)', () => {
         await expect.poll(() => harness.readStatusBodies().length).toBe(1);
         await expect.poll(() => String(harness.readStatusBodies()[0]?.status ?? '')).toBe('archived');
         await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
+        await expect(page.getByTestId('groups-output-summary')).toContainText('1 output');
         await expect(page.getByTestId('groups-archived-readonly-note')).toContainText('retained output review');
         await expect(page.getByTestId('groups-retained-outputs-note')).toContainText('Downloads remain available');
         await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
@@ -283,6 +287,7 @@ test.describe('Groups workspace (/groups)', () => {
         await page.getByRole('button', { name: 'Broadcast to group' }).click();
 
         await expect(page.getByTestId('groups-notice')).toContainText('Broadcast queued for the selected group.');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('1 output');
         await expect.poll(() => harness.readBroadcastBodies().length).toBe(1);
         await expect.poll(() => String(harness.readBroadcastBodies()[0]?.message ?? '')).toContain('pricing checklist');
     });

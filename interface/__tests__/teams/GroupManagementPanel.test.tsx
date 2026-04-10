@@ -172,6 +172,8 @@ describe("GroupManagementPanel", () => {
         await waitFor(() => expect(screen.getByTestId("groups-archived-readonly-note").textContent).toContain("retained output review"));
         await waitFor(() => expect(screen.getByTestId("groups-retained-outputs-note").textContent).toContain("Downloads remain available"));
         expect(screen.getByText("Campaign summary")).toBeDefined();
+        expect(screen.getByTestId("groups-output-summary").textContent).toContain("1 output");
+        expect(screen.getByTestId("groups-output-summary").textContent).toContain("1 contributing lead");
         expect(screen.getByRole("link", { name: /Download/i }).getAttribute("href")).toBe("/api/v1/artifacts/artifact-1/download");
         expect(screen.getByRole("link", { name: /Open team-marketing lead/i }).getAttribute("href")).toBe("/dashboard?team_id=team-marketing");
         await waitFor(() => expect(screen.queryByRole("button", { name: "Broadcast to group" })).toBeNull());
@@ -228,5 +230,71 @@ describe("GroupManagementPanel", () => {
         render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
 
         await waitFor(() => expect(screen.getByRole("heading", { name: "Temp Campaign" })).toBeDefined());
+    });
+
+    it("summarizes multiple outputs and contributing leads for the selected group", async () => {
+        const groups = [
+            {
+                group_id: "group-temp",
+                name: "Temp Campaign",
+                goal_statement: "Produce one campaign package",
+                work_mode: "propose_only",
+                member_user_ids: [],
+                team_ids: ["team-marketing", "team-design"],
+                coordinator_profile: "marketing-lead",
+                approval_policy_ref: "",
+                status: "active",
+                expiry: new Date(Date.now() + 60_000).toISOString(),
+                created_by: "admin",
+                created_at: new Date().toISOString(),
+            },
+        ];
+
+        mockFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+            const url = urlFromInput(input);
+            if (url === "/api/v1/groups" && (!init?.method || init.method === "GET")) {
+                return jsonResponse({ ok: true, data: groups });
+            }
+            if (url === "/api/v1/groups/monitor") {
+                return jsonResponse({ ok: true, data: { status: "online", published_count: 0 } });
+            }
+            if (url === "/api/v1/groups/group-temp/outputs?limit=8") {
+                return jsonResponse({
+                    ok: true,
+                    data: [
+                        {
+                            id: "artifact-1",
+                            agent_id: "marketing-lead",
+                            artifact_type: "document",
+                            title: "Launch Brief",
+                            content_type: "text/markdown",
+                            content: "Campaign summary",
+                            metadata: {},
+                            status: "approved",
+                            created_at: new Date().toISOString(),
+                        },
+                        {
+                            id: "artifact-2",
+                            agent_id: "design-lead",
+                            artifact_type: "file",
+                            title: "Asset Bundle",
+                            content_type: "application/zip",
+                            file_path: "workspace/asset-bundle.zip",
+                            metadata: {},
+                            status: "approved",
+                            created_at: new Date().toISOString(),
+                        },
+                    ],
+                });
+            }
+            return jsonResponse({ error: "not found" }, false, 404);
+        });
+
+        render(<GroupManagementPanel initialSelectedGroupId="group-temp" />);
+
+        await waitFor(() => expect(screen.getByText("Launch Brief")).toBeDefined());
+        expect(screen.getByText("Asset Bundle")).toBeDefined();
+        expect(screen.getByTestId("groups-output-summary").textContent).toContain("2 outputs");
+        expect(screen.getByTestId("groups-output-summary").textContent).toContain("2 contributing leads");
     });
 });

@@ -166,6 +166,7 @@ Steps:
 5. Archive the temporary group.
 6. Confirm it moves from `Temporary groups` to `Archived temporary groups`.
 7. Confirm retained outputs remain reviewable and downloadable after archive.
+8. Confirm the group review surface shows how many outputs and contributing leads are currently attached to that lane.
 8. Confirm new broadcast is no longer available from the archived group view.
 
 Expected outcome:
@@ -174,6 +175,7 @@ Expected outcome:
 - outputs are reviewable from the group lane without dropping into raw logs by default
 - archived temporary groups remain reviewable after closure instead of disappearing into raw logs
 - retained outputs stay available without treating archived groups like active coordination lanes
+- the group review surface gives a quick count of outputs and contributing leads before the operator reads individual artifacts
 
 ### 4. Team Creation And Team Lead Focus
 

@@ -67,6 +67,14 @@ export default function GroupManagementPanel({ initialSelectedGroupId = null }: 
     const temporaryGroups = useMemo(() => groups.filter((group) => group.status !== "archived" && !!group.expiry), [groups]);
     const archivedTemporaryGroups = useMemo(() => groups.filter((group) => group.status === "archived" && !!group.expiry), [groups]);
     const selectedGroupIsArchived = selectedGroup?.status === "archived";
+    const outputSummary = useMemo(() => {
+        const artifactCount = outputs.length;
+        const uniqueAgents = new Set(outputs.map((artifact) => artifact.agent_id).filter(Boolean));
+        return {
+            artifactCount,
+            agentCount: uniqueAgents.size,
+        };
+    }, [outputs]);
 
     const loadGroups = async () => {
         setRefreshing(true);
@@ -253,6 +261,9 @@ export default function GroupManagementPanel({ initialSelectedGroupId = null }: 
                                     <Info label="Created by" value={selectedGroup.created_by} detail={`Created ${relativeTime(selectedGroup.created_at)}`} />
                                     <div className="rounded-2xl border border-cortex-border bg-cortex-bg p-4">
                                         <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Jump into work</p>
+                                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                            Open Soma for root coordination or drop into one of the connected lead workspaces for this group.
+                                        </p>
                                         <div className="mt-3 flex flex-col gap-2">
                                             <Link href="/dashboard" className={linkClassName}>Open Soma admin home</Link>
                                             {selectedGroup.team_ids.map((teamId) => <Link key={teamId} href={`/dashboard?team_id=${encodeURIComponent(teamId)}`} className={linkClassName}>Open {teamId} lead</Link>)}
@@ -275,6 +286,14 @@ export default function GroupManagementPanel({ initialSelectedGroupId = null }: 
                                     </div>
                                     <div className="rounded-2xl border border-cortex-border bg-cortex-bg p-4">
                                         <p className="text-sm font-semibold text-cortex-text-main">{selectedGroupIsArchived ? "Retained outputs" : "Recent outputs"}</p>
+                                        <div className="mt-2 flex flex-wrap gap-2" data-testid="groups-output-summary">
+                                            <span className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                                                {outputSummary.artifactCount} output{outputSummary.artifactCount === 1 ? "" : "s"}
+                                            </span>
+                                            <span className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                                                {outputSummary.agentCount} contributing lead{outputSummary.agentCount === 1 ? "" : "s"}
+                                            </span>
+                                        </div>
                                         {selectedGroupIsArchived ? (
                                             <p className="mt-2 text-sm leading-6 text-cortex-text-muted" data-testid="groups-retained-outputs-note">
                                                 Review the outputs this archived temporary group already produced. Downloads remain available so the work can still be inspected after the collaboration window closes.

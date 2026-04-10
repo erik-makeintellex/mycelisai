@@ -369,7 +369,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/memory.spec.ts` | Memory explorer, search |
 | `interface/e2e/specs/proposals.spec.ts` | Proposal CRUD flow |
 | `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` | Stable V8 operator-flow proof for Soma-first entry, continuity, cold-start recovery, governed mutation/cancel, audit visibility, and oversized content handling |
-| `interface/e2e/specs/groups.spec.ts` | Standing vs temporary vs archived temporary groups, retained output review, and broadcast workflow |
+| `interface/e2e/specs/groups.spec.ts` | Standing vs temporary vs archived temporary groups, output/contributing-lead summaries, retained output review, and broadcast workflow |
 | `interface/e2e/specs/team-creation.spec.ts` | Guided team creation, Soma execution-path return, and one-click temporary workflow group launch |
 | `interface/e2e/specs/teams.spec.ts` | Teams hub, roster, lead-entry links, guided-creation handoff |
 | `interface/e2e/specs/team-creation.spec.ts` | Guided team-creation workflow, organization context, Soma handoff |
