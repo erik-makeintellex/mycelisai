@@ -56,7 +56,8 @@ Current posture:
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
 - `fetch`/research capability is how governed external context can be added without treating web access as unrestricted trust
 - the same Connected Tools surface should make the workflow legible end to end: add from the curated library, confirm the server is connected, and inspect recent persisted MCP activity plus live in-session usage showing which server/tool agents are using
-- the curated MCP library is now being standardized around the MCP registry `server.json` concepts so future registrations stay recognizable outside Mycelis too: each entry should carry a canonical server name, version, published package + transport metadata, and typed environment-variable declarations instead of only a local command block
+- the curated MCP library is now being standardized around the MCP registry `server.json` concepts so future registrations stay recognizable outside Mycelis too: each entry should carry a canonical server name, version, published package + transport metadata, repository/homepage metadata when known, and typed environment-variable declarations instead of only a local command block
+- Connected Tools should also make package-version policy visible instead of hiding it in install internals; the current curated catalog mostly tracks upstream `latest`, and the next interoperability slice should preserve enough metadata to round-trip against published `server.json` records without flattening Mycelis governance-specific fields
 
 ## Exchange
 

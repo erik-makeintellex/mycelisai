@@ -95,6 +95,12 @@ func TestLoadLibrary_StandardEntriesExposeServerJSONStyleMetadata(t *testing.T) 
 	if github.Packages[0].Transport.Type != "stdio" {
 		t.Fatalf("transport.type = %q, want stdio", github.Packages[0].Transport.Type)
 	}
+	if github.Repository == "" {
+		t.Fatal("expected github repository metadata")
+	}
+	if github.Homepage == "" {
+		t.Fatal("expected github homepage metadata")
+	}
 	if len(github.EnvironmentVariables) != 1 {
 		t.Fatalf("environment_variables len = %d, want 1", len(github.EnvironmentVariables))
 	}

@@ -24,6 +24,8 @@ const mockLibrary: MCPLibraryCategory[] = [
                         transport: { type: 'stdio' },
                     },
                 ],
+                repository: 'https://github.com/modelcontextprotocol/servers',
+                homepage: 'https://modelcontextprotocol.io',
                 tags: ['files', 'local'],
             },
         ],
@@ -47,6 +49,9 @@ describe('MCPLibraryBrowser', () => {
         expect(screen.getByText(/Current Group MCP Config/i)).toBeDefined();
         expect(screen.getByText(/Local-first curated entries install directly without another approval step/i)).toBeDefined();
         expect(screen.getByText(/@modelcontextprotocol\/server-filesystem/i)).toBeDefined();
+        expect(screen.getByText(/Version policy: latest \(curated upstream tracking\)/i)).toBeDefined();
+        expect((screen.getByRole('link', { name: 'Repository' }) as HTMLAnchorElement).href).toBe('https://github.com/modelcontextprotocol/servers');
+        expect((screen.getByRole('link', { name: 'Homepage' }) as HTMLAnchorElement).href).toBe('https://modelcontextprotocol.io/');
     });
 
     it('surfaces install status instead of a follow-up approval prompt', async () => {

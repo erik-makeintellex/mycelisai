@@ -200,6 +200,8 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                         {cat.servers.map((entry) => {
                             const isInstalled = installedNames.has(entry.name);
                             const isInstalling = installingName === entry.name;
+                            const primaryPackage = entry.packages?.[0];
+                            const versionPolicy = primaryPackage?.version || entry.version;
                             return (
                                 <div
                                     key={entry.name}
@@ -248,11 +250,40 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                                             </span>
                                         ))}
                                     </div>
-                                    {entry.packages && entry.packages.length > 0 && (
+                                    {primaryPackage && (
                                         <div className="text-[9px] font-mono text-cortex-text-muted leading-relaxed">
-                                            Package: {entry.packages[0].identifier}
-                                            {entry.packages[0].version ? ` @ ${entry.packages[0].version}` : ""}
-                                            {entry.packages[0].transport?.type ? ` · ${entry.packages[0].transport.type}` : ""}
+                                            Package: {primaryPackage.identifier}
+                                            {primaryPackage.version ? ` @ ${primaryPackage.version}` : ""}
+                                            {primaryPackage.transport?.type ? ` · ${primaryPackage.transport.type}` : ""}
+                                        </div>
+                                    )}
+                                    {versionPolicy && (
+                                        <div className="text-[9px] font-mono text-cortex-text-muted leading-relaxed">
+                                            Version policy: {versionPolicy === "latest" ? "latest (curated upstream tracking)" : versionPolicy}
+                                        </div>
+                                    )}
+                                    {(entry.repository || entry.homepage) && (
+                                        <div className="flex flex-wrap gap-2 text-[9px] font-mono text-cortex-text-muted leading-relaxed">
+                                            {entry.repository && (
+                                                <a
+                                                    href={entry.repository}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-cortex-primary hover:underline"
+                                                >
+                                                    Repository
+                                                </a>
+                                            )}
+                                            {entry.homepage && (
+                                                <a
+                                                    href={entry.homepage}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-cortex-primary hover:underline"
+                                                >
+                                                    Homepage
+                                                </a>
+                                            )}
                                         </div>
                                     )}
                                     {((entry.environment_variables && entry.environment_variables.length > 0) || (entry.env && Object.keys(entry.env).length > 0)) && (

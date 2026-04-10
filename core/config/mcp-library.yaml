@@ -14,6 +14,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         tags: ["files", "code", "local"]
         tool_set: "workspace"
       - name: "github"
@@ -29,6 +31,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         env:
           GITHUB_PERSONAL_ACCESS_TOKEN: ""
         environment_variables:
@@ -54,6 +58,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         env:
           POSTGRES_URL: ""
         environment_variables:
@@ -75,6 +81,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         tags: ["database", "sql", "local"]
       - name: "brave-search"
         title: "Brave Search"
@@ -89,6 +97,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         env:
           BRAVE_API_KEY: ""
         environment_variables:
@@ -110,6 +120,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         tags: ["web", "scraping"]
         tool_set: "research"
 
@@ -128,6 +140,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         env:
           SLACK_BOT_TOKEN: ""
           SLACK_TEAM_ID: ""
@@ -283,6 +297,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         tags: ["memory", "knowledge"]
       - name: "puppeteer"
         title: "Puppeteer"
@@ -297,6 +313,8 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         tags: ["browser", "automation"]
       - name: "sequential-thinking"
         title: "Sequential Thinking"
@@ -311,4 +329,6 @@ categories:
             version: "latest"
             transport:
               type: stdio
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
         tags: ["reasoning", "planning"]
