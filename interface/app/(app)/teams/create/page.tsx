@@ -1,7 +1,10 @@
-"use client";
-
+import { Suspense } from "react";
 import TeamCreationPage from "@/components/teams/TeamCreationPage";
 
 export default function CreateTeamRoutePage() {
-    return <TeamCreationPage />;
+    return (
+        <Suspense fallback={null}>
+            <TeamCreationPage />
+        </Suspense>
+    );
 }
