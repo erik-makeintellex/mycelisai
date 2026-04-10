@@ -234,6 +234,39 @@ def test_build_retries_once_after_incomplete_next_build_output(monkeypatch):
     assert shell_calls == [["npm", "run", "build"], ["npm", "run", "build"]]
 
 
+def test_build_retries_once_after_next_standalone_cleanup_conflict(monkeypatch):
+    cleaned: list[str] = []
+    stopped: list[str] = []
+    shell_calls: list[list[str]] = []
+    shell_results = iter(
+        [
+            interface.CommandResult(
+                exited=1,
+                stdout="",
+                stderr="Error: EBUSY: resource busy or locked, rmdir 'D:\\repo\\interface\\.next\\standalone'",
+            ),
+            interface.CommandResult(exited=0, stdout="", stderr=""),
+        ]
+    )
+    ctx = FakeContext()
+
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: stopped.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "clean", lambda _c: cleaned.append("clean") or None)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_wait_for_complete_next_build_output", lambda timeout_seconds=20: None)
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: shell_calls.append(command) or next(shell_results),
+    )
+
+    interface.build.body(ctx)
+
+    assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
+    assert cleaned == ["clean", "cleanup", "cleanup", "clean", "cleanup"]
+    assert shell_calls == [["npm", "run", "build"], ["npm", "run", "build"]]
+
+
 def test_wait_for_complete_next_build_output_accepts_present_manifest_artifacts(monkeypatch, tmp_path):
     next_dir = tmp_path / ".next"
     static_dir = next_dir / "static" / "chunks"

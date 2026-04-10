@@ -101,6 +101,15 @@ def _is_incomplete_next_build_output(result: CommandResult) -> bool:
     return "enoent" in text and any(name in text for name in incomplete_outputs)
 
 
+def _is_next_standalone_cleanup_conflict(result: CommandResult) -> bool:
+    text = _normalize_process_text(f"{result.stdout}\n{result.stderr}")
+    return (
+        "ebusy" in text
+        and "rmdir" in text
+        and ".next/standalone" in text
+    )
+
+
 def _expected_next_build_artifacts() -> list[Path]:
     next_dir = INTERFACE_DIR / ".next"
     build_manifest_path = next_dir / "build-manifest.json"
@@ -905,6 +914,13 @@ def build(c):
         _report_command_result(result)
         if result.exited != 0 and _is_next_build_lock_conflict(result):
             print("Detected a stale Next.js build lock. Cleaning repo-local Interface workers and retrying once...")
+            _cleanup_repo_local_interface_processes()
+            clean(c)
+            _cleanup_repo_local_interface_processes()
+            result = _run_interface_shell_command(["npm", "run", "build"])
+            _report_command_result(result)
+        if result.exited != 0 and _is_next_standalone_cleanup_conflict(result):
+            print("Detected a stale Next.js standalone cleanup lock. Cleaning repo-local Interface workers and retrying once...")
             _cleanup_repo_local_interface_processes()
             clean(c)
             _cleanup_repo_local_interface_processes()

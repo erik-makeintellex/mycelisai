@@ -180,6 +180,7 @@ Central architect sync path and utility task surfaces.
 - **Worktree Triage**: `uv run inv team.worktree-triage`
 
 ## Directives
+- `uv run inv interface.build` retries once after a stale repo-local Next build lock or stale `.next/standalone` cleanup lock before failing so Windows cleanup residue does not masquerade as a product regression.
 - **Never tag `latest`** for production.
 - **Always pinning** dependencies in `charts/`.
 - **Prefer repo-managed caches** under `workspace/tool-cache` for Invoke-driven work so local validation does not silently refill `C:`.
