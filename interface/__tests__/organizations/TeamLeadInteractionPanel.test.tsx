@@ -36,6 +36,29 @@ describe("TeamLeadInteractionPanel", () => {
         expect(screen.queryByText(/bounded slice/i)).toBeNull();
     });
 
+    it("lets the operator seed the prompt from guided suggestion chips", () => {
+        render(
+            <TeamLeadInteractionPanel
+                organizationId="org-123"
+                organizationName="Northstar Labs"
+                somaName="Soma for Northstar Labs"
+                teamLeadName="Team Lead for Northstar Labs"
+                promptSuggestions={[
+                    {
+                        label: "Marketing launch team",
+                        prompt: "Create a temporary marketing launch team for a new product rollout.",
+                    },
+                ]}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole("button", { name: "Marketing launch team" }));
+
+        expect(
+            (screen.getByLabelText("Tell Soma what team or delivery lane you want to create") as HTMLTextAreaElement).value,
+        ).toBe("Create a temporary marketing launch team for a new product rollout.");
+    });
+
     it("triggers a Soma action and renders structured guidance", async () => {
         mockFetch.mockResolvedValueOnce(jsonResponse({
             ok: true,

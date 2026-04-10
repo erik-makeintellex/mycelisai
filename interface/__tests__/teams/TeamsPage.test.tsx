@@ -128,6 +128,7 @@ describe('TeamsPage', () => {
         expect(screen.getByText(/Review live teams here/i)).toBeDefined();
         expect(screen.getByText(/Specialize new teams through Soma/i)).toBeDefined();
         expect(screen.getByText(/Soma team-member templates/i)).toBeDefined();
+        expect(screen.getByRole('link', { name: /Open guided team creation/i }).getAttribute('href')).toBe('/teams/create');
         expect(screen.getAllByText('Marketing Writer').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Audience Researcher').length).toBeGreaterThan(0);
         expect(screen.getAllByText(/campaign copy/i).length).toBeGreaterThan(0);

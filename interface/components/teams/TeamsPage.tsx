@@ -177,12 +177,18 @@ export default function TeamsPage() {
                                     </span>
                                 </div>
                                 <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                                    Ask Soma to create or reshape a team from the root workspace, then return here to open that team lead, review the current roster, and check the member templates Soma should reach for on future team builds.
+                                    Start new teams through a guided creation flow, then hand the finished ask to Soma. Return here after launch to open the team lead, review the current roster, and maintain the member templates Soma should reuse on future team builds.
                                 </p>
                                 <div className="mt-4 flex flex-wrap gap-2">
                                     <Link
-                                        href="/dashboard"
+                                        href="/teams/create"
                                         className="inline-flex items-center justify-center rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
+                                    >
+                                        Open guided team creation
+                                    </Link>
+                                    <Link
+                                        href="/dashboard"
+                                        className="inline-flex items-center justify-center rounded-2xl border border-cortex-border px-4 py-2 text-sm font-semibold text-cortex-text-main hover:bg-cortex-border"
                                     >
                                         Open Soma workspace
                                     </Link>
@@ -195,8 +201,8 @@ export default function TeamsPage() {
                                 </div>
                                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                                     <QuickFact
-                                        label="Create with Soma"
-                                        value="Use Soma to define the team purpose, lead posture, and expected outputs."
+                                        label="Guide the request"
+                                        value="Use the guided team-creation flow to define the lane, lead posture, and expected outputs before handoff."
                                     />
                                     <QuickFact
                                         label="Work through the lead"
@@ -362,6 +368,9 @@ export default function TeamsPage() {
                             <button onClick={fetchTeamsDetail} className="px-2.5 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-[10px] font-mono hover:bg-cortex-primary/10">
                                 Refresh
                             </button>
+                            <a href="/teams/create" className="px-2.5 py-1.5 rounded border border-cortex-primary/30 text-cortex-primary text-[10px] font-mono hover:bg-cortex-primary/10">
+                                Guided team creation
+                            </a>
                             <a href="/dashboard" className="px-2.5 py-1.5 rounded border border-cortex-border text-cortex-text-main text-[10px] font-mono hover:bg-cortex-border">
                                 Open Soma workspace
                             </a>

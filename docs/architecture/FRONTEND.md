@@ -89,7 +89,6 @@ Current `page.tsx` route count: `22`.
 | --- | --- |
 | `/wiring` | `/automations?tab=wiring` |
 | `/architect` | `/automations?tab=wiring` |
-| `/teams` | `/automations?tab=teams` |
 | `/catalogue` | `/resources?tab=roles` |
 | `/marketplace` | `/resources?tab=roles` |
 | `/approvals` | `/automations?tab=approvals` |
@@ -125,6 +124,8 @@ Component files under `interface/components`: `96` (`.tsx` and `.ts`) across `27
 | Surface | Tabs / modes | Notes |
 | --- | --- | --- |
 | `/automations` | `active`, `triggers`, `approvals`, `teams`, `wiring` | `teams` and `wiring` are advanced-mode gated |
+| `/teams` | direct route | team roster, lead-entry hub, and template specialization |
+| `/teams/create` | direct route | guided team-creation workflow with Soma handoff |
 | `/resources` | `tools`, `workspace`, `engines`, `roles` | Advanced support hub |
 | `/system` | `health`, `nats`, `database`, `services` | Advanced diagnostics |
 | `/settings` | `profile`, `profiles`, `users`, `engines`, `tools` | Preferences, access, and optional advanced setup |

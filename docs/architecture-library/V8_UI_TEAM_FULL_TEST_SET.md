@@ -77,14 +77,15 @@ Run at least the critical Chromium matrix in headed mode against the managed Int
 1. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
 2. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.spec.ts`
 3. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts`
-4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
-5. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts`
+5. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
+6. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
 These runs certify:
 - Soma-first entry and re-entry
 - deterministic runtime-state answers
 - AI Organization creation and re-entry
-- team and group specialization surfaces
+- team hub, guided team creation, and group specialization surfaces
 - settings and MCP visibility
 - governed live-backend execution
 

@@ -175,24 +175,31 @@ Expected outcome:
 - archived temporary groups remain reviewable after closure instead of disappearing into raw logs
 - retained outputs stay available without treating archived groups like active coordination lanes
 
-### 4. Team Lead Focus
+### 4. Team Creation And Team Lead Focus
 
 Goal:
-- prove that once a team is selected, the user is no longer talking to a generic global surface
+- prove that team creation happens through a guided workflow first, and then team work happens through a focused lead instead of a generic global surface
 
 Steps:
 1. Open `Teams`.
 2. Confirm the page shows both:
    - the available team roster and lead-entry surface
    - the reusable team-member templates Soma can use when specializing new teams
-3. Review or edit one team-member template if template defaults are part of the session goal.
-4. Open the team list or team-focused view.
-5. Select the created or existing team.
-6. Confirm the page frames that lane around a focused Team Lead counterpart.
-7. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
+3. Open `Open guided team creation`.
+4. Confirm the workflow explains:
+   - organization context
+   - expected outputs
+   - guided Soma handoff
+5. Use one of the guided starter prompts or enter a custom team request.
+6. Confirm Soma returns a team-shaping response with visible next steps or execution-path framing.
+7. Return to `Teams`.
+8. Select the created or existing team.
+9. Confirm the page frames that lane around a focused Team Lead counterpart.
+10. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
 
 Expected outcome:
-- the Teams page reads as the admin surface for team specialization defaults, not only a passive roster
+- the Teams page reads as the admin surface for team specialization defaults and lead-entry, not the place to manually assemble a raw team form
+- the detailed creation flow happens on its own page instead of being buried in the roster
 - the workspace or drawer clearly identifies a focused Team Lead / lead counterpart
 - team-specific prompts refer to the selected team first
 - the answer is scoped to that team, not the full global roster

@@ -164,7 +164,7 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 | 8.0 | Visualization | Observable Plot (bar/line/area/dot/waffle/tree), Leaflet geo maps, DataTable, ChartRenderer, MycelisChartSpec type system, ArtifactViewer inline chart rendering, SquadRoom ProofCard |
 | 9.0 | Workflow Builder CRUD | WiringAgentEditor drawer, CircuitBoard edit/delete, mission CRUD API (GET/PUT/DELETE), Migration 020 (FK cascade), Zustand wiring actions (7 new), draft mode vs active mode |
 | 10.0 | Meta-Agent Research | research_for_blueprint tool, admin-routed negotiate via NATS |
-| 11.0 | Shared Teams | `/teams` redirect, TeamCard, TeamDetailDrawer, GET /api/v1/teams/detail |
+| 11.0 | Shared Teams | `/teams`, `/teams/create`, TeamCard, TeamDetailDrawer, guided team-creation workflow, GET /api/v1/teams/detail |
 
 ---
 

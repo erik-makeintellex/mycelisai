@@ -1,12 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Teams Tab (/automations?tab=teams)', () => {
+test.describe('Teams Workspace (/teams)', () => {
     test.beforeEach(async ({ page }) => {
         await page.addInitScript(() => {
             window.localStorage.setItem('mycelis-advanced-mode', 'true');
         });
-        await page.goto('/automations?tab=teams', { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('button', { name: /Advanced:/ })).toContainText('Advanced: On');
+        await page.goto('/teams', { waitUntil: 'domcontentloaded' });
         await expect(page.locator('h1:has-text("Team Lead Workspaces")')).toBeVisible({ timeout: 15000 });
     });
 
@@ -35,6 +34,10 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
     test('groups guidance points to the dedicated workspace', async ({ page }) => {
         await expect(page.getByText('Groups have their own workspace now.')).toBeVisible();
         await expect(page.getByRole('link', { name: 'Open groups workspace' }).last()).toHaveAttribute('href', '/groups');
+    });
+
+    test('guided team creation is reachable from the teams workspace', async ({ page }) => {
+        await expect(page.getByRole('link', { name: 'Open guided team creation' })).toHaveAttribute('href', '/teams/create');
     });
 
     test('team quick action links are wired', async ({ page }) => {

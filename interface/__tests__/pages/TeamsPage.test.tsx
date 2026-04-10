@@ -1,15 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 
-const mockRedirect = vi.fn();
-vi.mock('next/navigation', () => ({
-    redirect: (url: string) => { mockRedirect(url); throw new Error('NEXT_REDIRECT'); },
+vi.mock('@/components/teams/TeamsPage', () => ({
+    __esModule: true,
+    default: () => <div>Teams workspace route</div>,
 }));
 
-import TeamsRedirect from '@/app/(app)/teams/page';
+import TeamsRoutePage from '@/app/(app)/teams/page';
 
-describe('Teams Page (redirect)', () => {
-    it('redirects to /automations?tab=teams', () => {
-        try { TeamsRedirect(); } catch {}
-        expect(mockRedirect).toHaveBeenCalledWith('/automations?tab=teams');
+describe('Teams route page', () => {
+    it('renders the direct teams workspace', () => {
+        render(<TeamsRoutePage />);
+        expect(screen.getByText('Teams workspace route')).toBeDefined();
     });
 });

@@ -52,7 +52,9 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites | `settings.spec.ts` | `ACTIVE` |
 | `/runs`, `/runs/[id]` | run component suites (`RunDetailPage`, timeline, cards) + `RunsPage.test.tsx` | browser depth intentionally secondary to the MVP route gate | `ACTIVE` |
 | `/docs` in-app browser | `DocsPage.test.tsx` | `docs-and-runs.spec.ts` docs manifest/render smoke | `ACTIVE` |
-| Legacy redirect routes (`/wiring`, `/architect`, `/teams`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
+| `/teams` team roster + specialization hub | `TeamsPage.test.tsx`, `pages/TeamsPage.test.tsx` | `teams.spec.ts` | `ACTIVE` |
+| `/teams/create` guided team-creation workflow | `TeamCreationPage.test.tsx`, `TeamLeadInteractionPanel.test.tsx`, `pages/CreateTeamPage.test.tsx` | `team-creation.spec.ts` | `ACTIVE` |
+| Legacy redirect routes (`/wiring`, `/architect`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
 
 Immediate test additions required for stronger full-stack confidence:
 1. add live-backend browser proof for the `/organizations/[id]` Soma conversation path through the real `/api/v1/chat` proxy contract
@@ -193,6 +195,9 @@ Signal/channel standard:
 - Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
 - Current focused groups workspace contract check: `cd interface && npx vitest run __tests__/pages/GroupsPage.test.tsx __tests__/teams/GroupManagementPanel.test.tsx --reporter=dot`
 - Current focused groups workspace browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups.spec.ts`
+- Current focused teams workspace contract check: `cd interface && npx vitest run __tests__/pages/TeamsPage.test.tsx __tests__/pages/CreateTeamPage.test.tsx __tests__/teams/TeamsPage.test.tsx __tests__/teams/TeamCreationPage.test.tsx __tests__/organizations/TeamLeadInteractionPanel.test.tsx --reporter=dot`
+- Current focused teams workspace browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/teams.spec.ts`
+- Current focused guided team-creation browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 - Current focused UI testing agentry browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
 - Current focused UI testing agentry live governance proof: `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 - Current focused team-sync contract check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
@@ -303,7 +308,7 @@ go test -v -run TestScoped ./internal/swarm/... -count=1
 |-----------|----------|
 | `interface/__tests__/shell/` | ShellLayout, ZoneA_Rail, GovernanceModal |
 | `interface/__tests__/dashboard/` | MissionControlChat, ProposedActionBlock, StatusDrawer, ManifestationPanel, CouncilCallErrorCard, and degraded-state support cards |
-| `interface/__tests__/pages/` | Dashboard, Organization, Automations, Resources, Settings, Docs, System, Runs, and legacy redirect route coverage |
+| `interface/__tests__/pages/` | Dashboard, Organization, Teams, Automations, Resources, Settings, Docs, System, Runs, and remaining legacy redirect route coverage |
 | `interface/__tests__/store/` | Cortex store contract, helpers, delivery-state transitions |
 | `interface/__tests__/workspace/` | LaunchCrewModal, CircuitBoard, ArchitectChat, DeliverablesTray, BlueprintDrawer, TrustSlider |
 
@@ -363,7 +368,8 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/proposals.spec.ts` | Proposal CRUD flow |
 | `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` | Stable V8 operator-flow proof for Soma-first entry, continuity, cold-start recovery, governed mutation/cancel, audit visibility, and oversized content handling |
 | `interface/e2e/specs/groups.spec.ts` | Standing vs temporary vs archived temporary groups, retained output review, and broadcast workflow |
-| `interface/e2e/specs/teams.spec.ts` | Team management, roster |
+| `interface/e2e/specs/teams.spec.ts` | Teams hub, roster, lead-entry links, guided-creation handoff |
+| `interface/e2e/specs/team-creation.spec.ts` | Guided team-creation workflow, organization context, Soma handoff |
 | `interface/e2e/specs/wiring-edit.spec.ts` | Neural wiring, agent edit/delete |
 | `interface/e2e/specs/v7-operational-ux.spec.ts` | Legacy V7 operator UX probe (skipped in default MVP gate) |
 | `interface/e2e/specs/mobile.spec.ts` | Mobile landing-page smoke coverage under the dedicated mobile Playwright project |
@@ -395,6 +401,7 @@ uv run inv interface.e2e                     # All specs
 uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-ui-testing-agentry.spec.ts
 uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.spec.ts
 uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts
+uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts
 uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts

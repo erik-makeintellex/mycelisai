@@ -22,6 +22,11 @@ export type SomaGuidanceUpdate = {
     timestamp: string;
 };
 
+export type TeamLeadPromptSuggestion = {
+    label: string;
+    prompt: string;
+};
+
 function storageKeyForOrganization(organizationId: string) {
     return `mycelis-soma-workspace:${organizationId}`;
 }
@@ -87,6 +92,7 @@ export default function TeamLeadInteractionPanel({
     autoFocusOnLoad = false,
     embedded = false,
     onGuidanceStateChange,
+    promptSuggestions = [],
 }: {
     organizationId: string;
     organizationName: string;
@@ -95,6 +101,7 @@ export default function TeamLeadInteractionPanel({
     autoFocusOnLoad?: boolean;
     embedded?: boolean;
     onGuidanceStateChange?: (update: SomaGuidanceUpdate) => void;
+    promptSuggestions?: TeamLeadPromptSuggestion[];
 }) {
     const panelRef = useRef<HTMLElement | null>(null);
     const promptRef = useRef<HTMLTextAreaElement | null>(null);
@@ -265,6 +272,20 @@ export default function TeamLeadInteractionPanel({
                     <p className="text-xs leading-6 text-cortex-text-muted">
                         Soma will use this request to choose the right first team-design move. Leave it blank to start with a quick strategy check right away.
                     </p>
+                    {promptSuggestions.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                            {promptSuggestions.map((suggestion) => (
+                                <button
+                                    key={suggestion.label}
+                                    type="button"
+                                    onClick={() => setDraftPrompt(suggestion.prompt)}
+                                    className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1.5 text-xs font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
+                                >
+                                    {suggestion.label}
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
                 </div>
             </div>
 

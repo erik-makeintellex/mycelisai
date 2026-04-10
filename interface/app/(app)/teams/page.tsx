@@ -1,5 +1,7 @@
-import { redirect } from 'next/navigation';
+"use client";
 
-export default function TeamsRedirect() {
-    redirect('/automations?tab=teams');
+import TeamsPage from "@/components/teams/TeamsPage";
+
+export default function TeamsRoutePage() {
+    return <TeamsPage />;
 }
