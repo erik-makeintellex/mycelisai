@@ -341,6 +341,8 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 - proposal created and confirmable
 - run created and inspectable
 - structured blocker with recovery path
+- browser-visible operator proof for the critical Soma path should use a headed Chromium run before a slice is called ready
+- runtime-state prompts such as `what is your current state` and `what teams currently exist` should return a deterministic direct answer on the live `/api/v1/chat` route instead of weak provider fallback text
 
 ### Location
 
@@ -374,6 +376,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 - **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run, launches a managed local Next.js server, defaults Playwright to `--workers=1`, sweeps repo-local Next/Vitest/Playwright worker residue, clears an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains, and fails closed if the managed server exits or a stale port prevents it from owning the browser target
 - **Managed Browsers:** default task runs expect Playwright browser binaries under `workspace/tool-cache/playwright`
 - **Live Backend Mode:** `uv run inv interface.e2e --live-backend --server-mode=start ...` loads proxy auth env and enables specs that require a real Core backend
+- **Browser-Visible UX Pass:** use `--headed --project=chromium --server-mode=start` for the operator-facing certification sweep so the same run exercises the real browser window, current production bundle, and actual rendered recovery states
 - **Accessibility Gate:** `@axe-core/playwright` is a required dev dependency; accessibility specs must fail when violated, not skip because the package is missing
 - **Dark mode compliance:** Every spec includes `no bg-white` assertion
 
@@ -385,7 +388,12 @@ uv run inv core.run          # Optional: start live backend coverage in a separa
 
 # Run E2E tests
 uv run inv interface.e2e                     # All specs
+uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-ui-testing-agentry.spec.ts
+uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.spec.ts
+uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts
+uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts
 uv run inv interface.e2e --project=firefox
 uv run inv interface.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts
 npx playwright test --project=chromium    # From interface/

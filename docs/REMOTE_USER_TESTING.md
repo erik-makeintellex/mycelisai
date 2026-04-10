@@ -111,6 +111,7 @@ Steps:
 1. Open the app from the remote machine.
 2. Navigate into the active AI Organization if needed.
 3. Confirm the primary workspace lands on Soma, not a raw tool console.
+4. If the host was just rebuilt or upgraded, do one hard refresh before starting the scripted prompts so old conversation state does not masquerade as a live runtime failure.
 
 Expected outcome:
 - the workspace loads
@@ -124,12 +125,15 @@ Expected outcome:
 Goal:
 - prove that a basic informational ask returns a direct answer instead of forcing a proposal path
 
-Suggested prompt:
+Suggested prompts:
+- `what is your current state`
+- `what teams currently exist`
 - `Summarize the current design objectives for this AI Organization in 4 bullets.`
 
 Expected outcome:
 - terminal state is `answer`
 - response starts quickly
+- the first two prompts return a deterministic runtime/roster summary instead of a generic provider apology
 - no mutation proposal is shown for this informational ask
 
 ### 3. Soma Creates Or Refines A Team

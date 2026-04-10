@@ -129,6 +129,8 @@ Direct drafting behavior:
   Soma should answer with the text directly in chat
 - it should not route that request through file tools, local commands, or council delegation
   unless you explicitly ask to save, inspect, execute, or hand the work off
+- if you ask `what is your current state` or `what teams currently exist`,
+  Soma should answer from current runtime and team state directly instead of falling back to a generic provider apology
 
 Execution guardrail:
 - if Soma responds with planning-only language (for example "Step 1" / "we need to delegate") on an actionable request,

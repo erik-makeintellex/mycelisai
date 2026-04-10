@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-04-04
+> Last Updated: 2026-04-09
 > Owner: UI Testing Agentry Team
 > Purpose: Provide the full browser and operator-experience test set for the current bounded V8.1 release target, including Central Soma home, AI Organization context flows, settings persistence, governed execution, and deployed-runtime proof.
 > Supporting Docs: `V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_HOME_DOCKER_COMPOSE_RUNTIME.md`, `docs/TESTING.md`
@@ -66,6 +66,27 @@ Every run must record:
 - environment: `compose`, `kind`, or `managed-mock`
 - browser
 - whether the run is `stable`, `live-backend`, or `manual-trust`
+- whether the run used a visible headed browser window or a headless/browser-cache-only path
+
+## 3A. Browser-Visible Certification Rule
+
+For the operator-facing UX pass, do not stop at headless Playwright or API-only checks.
+
+Run at least the critical Chromium matrix in headed mode against the managed Interface server:
+
+1. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
+2. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.spec.ts`
+3. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts`
+4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
+5. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+
+These runs certify:
+- Soma-first entry and re-entry
+- deterministic runtime-state answers
+- AI Organization creation and re-entry
+- team and group specialization surfaces
+- settings and MCP visibility
+- governed live-backend execution
 
 ## 4. Execution Order
 
@@ -233,6 +254,28 @@ Evidence:
 
 - screenshot of guided organization start surface
 - screenshot of team-design lane opened from the start surface
+
+### Workflow 5C: Deterministic Soma runtime summary
+
+Surface:
+
+- `/organizations/[id]` or `/dashboard`
+
+Action:
+
+- ask `what is your current state`
+- ask `what teams currently exist`
+
+Expected:
+
+- both prompts end in a direct `answer`
+- the answer is grounded in current runtime/team state rather than provider fallback language
+- no proposal is shown
+- no raw transport/runtime error strings are visible in the primary answer lane
+
+Evidence:
+
+- screenshot of each returned answer
 
 ### Workflow 6: Direct Soma answer
 
