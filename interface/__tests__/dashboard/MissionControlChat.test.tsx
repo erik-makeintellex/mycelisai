@@ -130,6 +130,24 @@ describe('MissionControlChat', () => {
             expect(screen.getByText('Persisted org message')).toBeDefined();
         });
 
+        it('clears a stale loading lock when a new organization scope is applied', async () => {
+            localStorage.setItem('mycelis-workspace-chat:org-123', JSON.stringify([
+                { role: 'user', content: 'Persisted org message' },
+            ]));
+            useCortexStore.setState({
+                isMissionChatting: true,
+                missionChatError: 'stale loading state',
+            });
+
+            render(<MissionControlChat simpleMode organizationId="org-123" />);
+            await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+            const input = screen.getByRole('textbox');
+            expect(useCortexStore.getState().workspaceChatScope).toBe('org-123');
+            expect(useCortexStore.getState().isMissionChatting).toBe(false);
+            expect(input.hasAttribute('disabled')).toBe(false);
+        });
+
         it('hides advanced routing controls in simple Soma mode', async () => {
             useCortexStore.setState({ councilMembers: COUNCIL_MEMBERS });
             render(<MissionControlChat simpleMode />);

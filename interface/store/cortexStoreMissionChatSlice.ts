@@ -282,13 +282,17 @@ export function createCortexMissionChatSlice(
             set({
                 workspaceChatScope: normalizedScope,
                 missionChat: scopedMessages,
+                isMissionChatting: false,
                 missionChatError: null,
                 missionChatFailure: null,
                 workspaceChatPrimed: false,
+                isBroadcasting: false,
+                lastBroadcastResult: null,
                 pendingProposal: derivedState.pendingProposal,
                 activeConfirmToken: derivedState.activeConfirmToken,
                 activeRunId: derivedState.activeRunId,
                 activeMode: derivedState.activeMode,
+                activeRole: '',
             });
         },
 

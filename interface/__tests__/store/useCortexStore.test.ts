@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { buildMissionChatFailure } from '@/lib/missionChatFailure';
 import { useCortexStore } from '@/store/useCortexStore';
 import { blueprintToGraph } from '@/store/cortexStoreUtils';
 import { mockFetch } from '../setup';
@@ -1210,6 +1211,37 @@ describe('useCortexStore', () => {
             store.getState().setMissionChatScope('org-2');
             expect(store.getState().workspaceChatScope).toBe('org-2');
             expect(store.getState().missionChat).toMatchObject([{ role: 'user', content: 'org-2 history' }]);
+        });
+
+        it('clears in-flight workspace chat state when switching organization scope', () => {
+            localStorage.setItem('mycelis-workspace-chat:org-2', JSON.stringify([{ role: 'user', content: 'org-2 history' }]));
+
+            store.setState({
+                workspaceChatScope: 'org-1',
+                missionChat: [{ role: 'user', content: 'org-1 history' }],
+                isMissionChatting: true,
+                isBroadcasting: true,
+                missionChatError: 'still loading',
+                missionChatFailure: buildMissionChatFailure({
+                    assistantName: 'Soma',
+                    targetId: 'admin',
+                    message: 'still loading',
+                    statusCode: 503,
+                }),
+                activeRole: 'admin',
+                lastBroadcastResult: { teams_hit: 2 },
+            });
+
+            store.getState().setMissionChatScope('org-2');
+
+            expect(store.getState().workspaceChatScope).toBe('org-2');
+            expect(store.getState().missionChat).toMatchObject([{ role: 'user', content: 'org-2 history' }]);
+            expect(store.getState().isMissionChatting).toBe(false);
+            expect(store.getState().isBroadcasting).toBe(false);
+            expect(store.getState().missionChatError).toBeNull();
+            expect(store.getState().missionChatFailure).toBeNull();
+            expect(store.getState().lastBroadcastResult).toBeNull();
+            expect(store.getState().activeRole).toBe('');
         });
 
         it('rehydrates a proof-pending proposal without promoting it to verified execution', () => {
