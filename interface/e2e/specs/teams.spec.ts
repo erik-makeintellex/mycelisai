@@ -7,7 +7,7 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
         });
         await page.goto('/automations?tab=teams', { waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('button', { name: /Advanced:/ })).toContainText('Advanced: On');
-        await expect(page.locator('h1:has-text("Shared Teams")')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('h1:has-text("Team Lead Workspaces")')).toBeVisible({ timeout: 15000 });
     });
 
     test('header and filter controls render', async ({ page }) => {
@@ -32,13 +32,13 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
         await expect(filter).toHaveValue('all');
     });
 
-    test('group management panel renders', async ({ page }) => {
-        await expect(page.locator('text=Collaboration Groups').first()).toBeVisible();
-        await expect(page.getByTestId('groups-create-button')).toBeVisible();
+    test('groups guidance points to the dedicated workspace', async ({ page }) => {
+        await expect(page.getByText('Groups have their own workspace now.')).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Open groups workspace' }).last()).toHaveAttribute('href', '/groups');
     });
 
     test('team quick action links are wired', async ({ page }) => {
-        const openChatLinks = page.getByRole('link', { name: 'Open chat' });
+        const openChatLinks = page.getByRole('link', { name: 'Open lead workspace' });
         const viewRunsLinks = page.getByRole('link', { name: 'View runs' });
         const viewWiringLinks = page.getByRole('link', { name: 'View wiring' });
         const viewSystemLinks = page.getByRole('link', { name: 'View system' });
@@ -56,7 +56,7 @@ test.describe('Teams Tab (/automations?tab=teams)', () => {
         await expect(viewWiringLinks).toHaveCount(count);
         await expect(viewSystemLinks).toHaveCount(count);
 
-        await expect(openChatLinks.first()).toHaveAttribute('href', '/dashboard');
+        await expect(openChatLinks.first()).toHaveAttribute('href', /\/dashboard\?team_id=/);
         await expect(viewRunsLinks.first()).toHaveAttribute('href', '/runs');
         await expect(viewWiringLinks.first()).toHaveAttribute('href', '/automations?tab=wiring');
         await expect(viewSystemLinks.first()).toHaveAttribute('href', '/system?tab=services');

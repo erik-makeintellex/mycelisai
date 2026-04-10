@@ -976,15 +976,16 @@ test.describe("V8 AI Organization entry flow", () => {
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
 
-        await expect(page.getByRole("heading", { name: "Work with one Soma across every AI Organization." })).toBeVisible();
+        await expect(page.getByRole("heading", { name: /Work directly with .* from the admin home\./i })).toBeVisible();
         await expect(page.getByText("Central Soma")).toBeVisible();
-        await expect(page.getByText("Universal counterpart, scoped action.")).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Create AI Organization" })).toBeVisible();
+        await expect(page.getByText("The root workspace should feel like a direct conversation with Soma.")).toBeVisible();
+        await expect(page.getByRole("link", { name: "Open groups workspace" })).toBeVisible();
+        await expect(page.getByText("Create or open AI Organizations")).toBeVisible();
+        await page.getByText("Create or open AI Organizations").click();
         await expect(page.getByText("AI Organization Setup")).toBeVisible();
         await expect(page.getByRole("button", { name: "Explore Templates" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Start Empty", exact: true })).toBeVisible();
-        await expect(page.getByText("not a blank assistant session")).toBeVisible();
-        await expect(page.getByText("Why start here")).toBeVisible();
+        await expect(page.getByText("Keep the main admin home centered on Soma.")).toBeVisible();
         await expect(page.getByText("Mission Control")).toHaveCount(0);
         await expect(page.getByText("New Chat")).toHaveCount(0);
         await expectNoForbiddenCopy(page);
