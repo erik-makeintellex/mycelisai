@@ -999,6 +999,34 @@ func isUnreadableStructuredReply(text string) bool {
 	return ok && strings.TrimSpace(readable) == "" && len(artifacts) == 0
 }
 
+func isWeakDirectAnswerFallback(text string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(text))
+	if normalized == "" {
+		return false
+	}
+
+	weakCues := []string{
+		"i'm sorry, but i can't assist with that right now",
+		"i am sorry, but i can't assist with that right now",
+		"i'm sorry, but i cannot assist with that right now",
+		"i am sorry, but i cannot assist with that right now",
+		"can't assist with that right now",
+		"cannot assist with that right now",
+		"i'm unable to help",
+		"i am unable to help",
+		"please try again later",
+		"let me know if there's anything else i can help with",
+		"let me know if there is anything else i can help with",
+	}
+
+	for _, cue := range weakCues {
+		if strings.Contains(normalized, cue) {
+			return true
+		}
+	}
+	return false
+}
+
 func shouldRetryDirectAnswer(agentResult chatAgentResult, requestMutationTools []string) bool {
 	if len(requestMutationTools) != 0 {
 		return false
@@ -1006,7 +1034,7 @@ func shouldRetryDirectAnswer(agentResult chatAgentResult, requestMutationTools [
 	if isMutation, _ := hasMutationTools(agentResult.ToolsUsed); isMutation {
 		return true
 	}
-	return containsToolCallJSON(agentResult.Text) || isUnreadableStructuredReply(agentResult.Text)
+	return containsToolCallJSON(agentResult.Text) || isUnreadableStructuredReply(agentResult.Text) || isWeakDirectAnswerFallback(agentResult.Text)
 }
 
 func directAnswerDriftBlocker(agentResult chatAgentResult) chatAgentResult {
@@ -1324,11 +1352,14 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		if retryErr == nil {
 			agentResult = retryResult
 		}
-	}
-
-	if shouldRetryDirectAnswer(agentResult, requestMutationTools) {
-		respondStructuredChatBlocker(w, directAnswerDriftBlocker(agentResult))
-		return
+		if shouldRetryDirectAnswer(agentResult, requestMutationTools) {
+			if isWeakDirectAnswerFallback(agentResult.Text) {
+				respondStructuredChatBlocker(w, agentResult)
+			} else {
+				respondStructuredChatBlocker(w, directAnswerDriftBlocker(agentResult))
+			}
+			return
+		}
 	}
 
 	isMutation, mutTools := mergeMutationTools(agentResult.ToolsUsed, requestMutationTools)
@@ -1605,7 +1636,11 @@ func (s *AdminServer) HandleCouncilChat(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if shouldRetryDirectAnswer(agentResult, requestMutationTools) {
-		respondStructuredChatBlocker(w, directAnswerDriftBlocker(agentResult))
+		if isWeakDirectAnswerFallback(agentResult.Text) {
+			respondStructuredChatBlocker(w, agentResult)
+		} else {
+			respondStructuredChatBlocker(w, directAnswerDriftBlocker(agentResult))
+		}
 		return
 	}
 

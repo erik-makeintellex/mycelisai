@@ -677,6 +677,73 @@ func TestHandleChat_RetriesUnexpectedMutationForReadOnlyPrompt(t *testing.T) {
 	}
 }
 
+func TestHandleChat_BlocksWeakRefusalTextAfterRetry(t *testing.T) {
+	wireNATS := withNATS(t)
+	s := newTestServer(wireNATS)
+	s.Cognitive = &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"mock": cognitiveTestProvider{},
+		},
+	}
+
+	subject := "swarm.council.admin.request"
+	replyCount := 0
+	_, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
+		replyCount++
+		resp, _ := json.Marshal(map[string]any{
+			"text":        "I'm sorry, but I can't assist with that right now. Please try again later or let me know if there's anything else I can help with.",
+			"provider_id": "mock",
+			"model_used":  "test-model",
+		})
+		msg.Respond(resp)
+	})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := s.NC.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Summarize the current Workspace V8 design objectives."}]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleChat).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusBadGateway, rr.Body.String())
+	}
+	if replyCount != 2 {
+		t.Fatalf("replyCount = %d, want 2", replyCount)
+	}
+
+	var resp protocol.APIResponse
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.OK {
+		t.Fatal("expected blocker response")
+	}
+	if !strings.Contains(resp.Error, "could not produce a readable reply") {
+		t.Fatalf("error = %q, want readable-reply blocker", resp.Error)
+	}
+}
+
+func TestIsWeakDirectAnswerFallback_DoesNotFlagOrdinaryApology(t *testing.T) {
+	if isWeakDirectAnswerFallback("I'm sorry your deployment is noisy; here are the current status checks to run next.") {
+		t.Fatal("ordinary apologetic but useful answer should not be treated as a weak direct-answer fallback")
+	}
+	if !isWeakDirectAnswerFallback("I'm sorry, but I can't assist with that right now. Please try again later.") {
+		t.Fatal("known weak provider fallback should be detected")
+	}
+}
+
 func TestHandleChat_PrependsWorkspaceContextForSelectedTeam(t *testing.T) {
 	wireNATS := withNATS(t)
 	s := newTestServer(wireNATS)
