@@ -197,16 +197,20 @@ Steps:
 7. If a native execution path is suggested, use `Create temporary workflow group`.
 8. Confirm the success state links into `Groups` for the newly created workflow group.
 9. Open that group and confirm it is already selected in the Groups workspace.
-10. Return to `Teams`.
-11. Select the created or existing team.
-12. Confirm the page frames that lane around a focused Team Lead counterpart.
-13. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
+10. Confirm the selected group shows multiple outputs or at least a clear output/contributing-lead summary when outputs exist.
+11. Archive the temporary workflow group.
+12. Confirm retained outputs remain reviewable/downloadable after archive and that broadcast controls are no longer available.
+13. Return to `Teams`.
+14. Select the created or existing team.
+15. Confirm the page frames that lane around a focused Team Lead counterpart.
+16. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
 
 Expected outcome:
 - the Teams page reads as the admin surface for team specialization defaults and lead-entry, not the place to manually assemble a raw team form
 - the detailed creation flow happens on its own page instead of being buried in the roster
 - guided team creation can launch a temporary workflow group directly instead of forcing the user back into raw group fields
 - the newly launched group can be opened directly in the Groups workspace
+- the launched temporary workflow can be archived while preserving retained outputs for later review
 - the workspace or drawer clearly identifies a focused Team Lead / lead counterpart
 - team-specific prompts refer to the selected team first
 - the answer is scoped to that team, not the full global roster

@@ -1,4 +1,4 @@
-import { test, expect, type Route } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
 
 async function fulfillJSON(route: Route, status: number, body: unknown) {
     await route.fulfill({
@@ -8,7 +8,21 @@ async function fulfillJSON(route: Route, status: number, body: unknown) {
     });
 }
 
+async function gotoWithColdStartRetry(page: Page, path: string) {
+    try {
+        await page.goto(path, { waitUntil: 'domcontentloaded' });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('net::ERR_ABORTED') && !message.includes('frame was detached')) {
+            throw error;
+        }
+        await page.goto(path, { waitUntil: 'domcontentloaded' });
+    }
+}
+
 test.describe('Guided Team Creation (/teams/create)', () => {
+    test.setTimeout(120_000);
+
     test.beforeEach(async ({ page }) => {
         const groups = [
             {
@@ -113,6 +127,18 @@ test.describe('Guided Team Creation (/teams/create)', () => {
             });
         });
 
+        await page.route('**/api/v1/groups/group-temp-launch/status', async (route) => {
+            if (route.request().method() !== 'PATCH') {
+                await fulfillJSON(route, 405, { ok: false, error: 'method not allowed' });
+                return;
+            }
+            groups[0] = {
+                ...groups[0],
+                status: 'archived',
+            };
+            await fulfillJSON(route, 200, { ok: true, data: groups[0] });
+        });
+
         await page.route('**/api/v1/groups/group-temp-launch/outputs?limit=8', async (route) => {
             await fulfillJSON(route, 200, {
                 ok: true,
@@ -146,8 +172,8 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         });
     });
 
-    test('guides the operator through current organization context, launches a temporary workflow, and opens retained outputs review', async ({ page }) => {
-        await page.goto('/teams/create', { waitUntil: 'domcontentloaded' });
+    test('guides the operator through current organization context, launches a temporary workflow, archives it, and keeps retained outputs reviewable', async ({ page }) => {
+        await gotoWithColdStartRetry(page, '/teams/create');
 
         await expect(page.getByRole('heading', { name: 'Create a team through Soma' })).toBeVisible();
         await expect(page.getByText('Current organization')).toBeVisible();
@@ -182,5 +208,17 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         await expect(page.getByRole('link', { name: 'Open launch-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
         await expect(page.getByRole('link', { name: 'Open design-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=design-lead');
         await expect(page.getByRole('link', { name: 'Download' }).last()).toHaveAttribute('href', '/api/v1/artifacts/artifact-asset-bundle/download');
+
+        await page.getByRole('button', { name: 'Archive temporary group' }).click();
+
+        await expect(page.getByTestId('groups-notice')).toContainText('Temporary group archived.');
+        await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
+        await expect(page.getByTestId('groups-archived-readonly-note')).toContainText('retained output review');
+        await expect(page.getByTestId('groups-retained-outputs-note')).toContainText('Downloads remain available');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
+        await expect(page.getByTestId('groups-output-summary')).toContainText('2 contributing leads');
+        await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
+        await expect(page.getByText('Asset Bundle', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Broadcast to group' })).toHaveCount(0);
     });
 });
