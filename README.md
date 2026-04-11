@@ -587,6 +587,11 @@ Release automation:
 - also supports manual `workflow_dispatch`
 - publishes versioned archives from `dist/` as GitHub release assets
 
+Initial release handoff rule:
+- before tagging or handing off a second-machine checkout, run `uv run inv ci.release-preflight --service-health --live-backend`
+- keep the current release blockers explicit in `V8_DEV_STATE.md`; at the moment the live governed-chat direct-answer lane is still marked `BLOCKED` there, so do not call the initial release complete until that gate is repaired and revalidated
+- use [Testing](docs/TESTING.md) and [Remote User Testing](docs/REMOTE_USER_TESTING.md) as the operator-facing proof sequence for the handoff machine
+
 ## Documentation Responsibilities
 
 Every implementation slice must update:

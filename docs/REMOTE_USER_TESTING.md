@@ -300,7 +300,7 @@ Goal:
 - prove that the operator can understand what tools are available and what agents have actually used
 
 Steps:
-1. Open `Settings -> Connected Tools`.
+1. Open `Resources -> Connected Tools`.
 2. Confirm installed/connected MCP servers are visible.
 3. Review recent MCP activity.
 
@@ -380,6 +380,22 @@ This remote user test should be considered successful when all of these are true
 12. Audit/activity surfaces reconstruct the session clearly.
 13. Failure cases degrade safely into blocker/error states instead of UI collapse.
 
+## Initial Release Handoff
+
+Use this shorter sequence when you are validating a fresh checkout on another machine before a first release handoff:
+
+1. Clone or update the repo on the second machine.
+2. Follow [Local Development Workflow](./LOCAL_DEV_WORKFLOW.md) for the host you are using.
+3. Start the supported runtime (`uv run inv compose.up --build` on WSL/Linux/macOS, or the Windows Kind/lifecycle path).
+4. Run `uv run inv ci.release-preflight --service-health --live-backend`.
+5. Run the remote walkthrough in this document from the second machine.
+6. Confirm the current release blockers are named in `V8_DEV_STATE.md` before you declare the release ready.
+
+Known remaining initial-release gate:
+- `BLOCKED` live governed-chat direct-answer proof still needs repair and a fresh live-backend revalidation before initial release can be called complete.
+  - the product still needs a passing fresh-organization direct-answer proof on the governed live lane
+  - do not treat the browser-only mocked proofs as a substitute for that live gate
+
 ## Failure Notes To Capture
 
 When something goes wrong, record:
@@ -409,3 +425,4 @@ Related references:
 - [Resources](./user/resources.md)
 - [Governance & Trust](./user/governance-trust.md)
 - [Licensing & Editions](./licensing.md)
+- [Development Workflow](./LOCAL_DEV_WORKFLOW.md)

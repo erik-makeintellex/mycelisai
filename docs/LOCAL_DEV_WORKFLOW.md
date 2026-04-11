@@ -377,6 +377,8 @@ What it does:
 - cross-compiles a versioned Core binary
 - writes a versioned archive under `dist/`
 - includes a small release `README.txt` beside the binary
+- pair this with `uv run inv ci.release-preflight --service-health --live-backend` before you hand the binary to another machine for release checkout testing
+- use [Remote User Testing](./REMOTE_USER_TESTING.md) for the second-machine walkthrough sequence and [Testing](./TESTING.md) for the authoritative gate order
 
 Canonical automation:
 - `.github/workflows/release-binaries.yaml`
