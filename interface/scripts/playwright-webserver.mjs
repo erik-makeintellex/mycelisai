@@ -5,6 +5,8 @@ import { spawn } from 'node:child_process';
 
 const interfaceRoot = path.resolve(import.meta.dirname, '..');
 const standaloneServer = path.join(interfaceRoot, '.next', 'standalone', 'server.js');
+const standaloneStatic = path.join(interfaceRoot, '.next', 'standalone', '.next', 'static');
+const rootStatic = path.join(interfaceRoot, '.next', 'static');
 const nextStart = path.join(interfaceRoot, 'node_modules', 'next', 'dist', 'bin', 'next');
 const bindHost =
     process.env.INTERFACE_BIND_HOST ??
@@ -19,7 +21,17 @@ const childEnv = {
     PORT: port,
 };
 
-const command = fs.existsSync(standaloneServer)
+if (!fs.existsSync(rootStatic) && !fs.existsSync(standaloneStatic)) {
+    console.error('Playwright webserver cannot start: missing .next static assets. Run npm run build again.');
+    process.exit(1);
+}
+
+if (fs.existsSync(standaloneServer) && fs.existsSync(rootStatic) && !fs.existsSync(standaloneStatic)) {
+    fs.mkdirSync(path.dirname(standaloneStatic), { recursive: true });
+    fs.cpSync(rootStatic, standaloneStatic, { recursive: true });
+}
+
+const command = fs.existsSync(standaloneServer) && fs.existsSync(standaloneStatic)
     ? ['node', standaloneServer]
     : ['node', nextStart, 'start', '--hostname', bindHost, '--port', port];
 

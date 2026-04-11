@@ -44,7 +44,7 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | --- | --- | --- | --- |
 | `/organizations/[id]` Soma-primary AI Organization workspace | `OrganizationPage.test.tsx`, organization/workspace/store suites | `v8-organization-entry.spec.ts`, `v8-ui-testing-agentry.spec.ts`, plus live-backend proof via `soma-governance-live.spec.ts` for governed Soma execution and `workspace-live-backend.spec.ts` for proxy/status continuity when those contracts change | `ACTIVE` |
 | `/dashboard` AI Organization re-entry and status overview | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `navigation.spec.ts`, accessibility baseline | `ACTIVE` |
-| `/groups` standing + temporary collaboration workspace | `GroupsPage.test.tsx`, `GroupManagementPanel.test.tsx` | `groups.spec.ts` | `ACTIVE` |
+| `/groups` standing + temporary collaboration workspace | `GroupsPage.test.tsx`, `GroupManagementPanel.test.tsx` | `groups.spec.ts`, plus live-backend retained-output aggregation proof via `groups-live-backend.spec.ts` | `ACTIVE` |
 | `/automations` | `AutomationsPage.test.tsx`, automations component suites | `layout.spec.ts`, `proposals.spec.ts` | `ACTIVE` |
 | `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial) | `ACTIVE` |
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
@@ -146,6 +146,7 @@ uv run inv interface.e2e         # Playwright E2E tests (defaults to managed dev
 uv run inv test.e2e              # Root alias for interface.e2e with the same --workers / --server-mode controls
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts   # Real governed Soma chat + approval contract
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts  # Real workspace proxy/status continuity contract
+uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts  # Real temporary group + backend-stored retained output review
 MYCELIS_BACKEND_WORKSPACE_ROOT=core/workspace uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts  # Repo-local Core: set explicitly when spec checkout != backend checkout
 MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts  # Supported compose stack: use the compose workspace root when the spec checkout differs
 uv run inv core.smoke            # Governance smoke tests
@@ -195,6 +196,7 @@ Signal/channel standard:
 - Current focused Launch Crew live confirm proof: `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/proposals.spec.ts` (stubbed proposal display + real `/api/v1/intent/confirm-action` round-trip)
 - Current focused groups workspace contract check: `cd interface && npx vitest run __tests__/pages/GroupsPage.test.tsx __tests__/teams/GroupManagementPanel.test.tsx --reporter=dot`
 - Current focused groups workspace browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups.spec.ts`
+- Current live-backend retained group-output proof: `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
 - Current guided team-creation launch-path contract check: `cd interface && npx vitest run __tests__/organizations/TeamLeadInteractionPanel.test.tsx __tests__/teams/GroupManagementPanel.test.tsx __tests__/pages/GroupsPage.test.tsx --reporter=dot`
 - Current guided team-creation lifecycle browser proof: `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-creation.spec.ts` (guided design -> launch temporary workflow group -> open Groups -> review multiple outputs -> archive temporary lane -> retained-output review)
 - Current focused teams workspace contract check: `cd interface && npx vitest run __tests__/pages/TeamsPage.test.tsx __tests__/pages/CreateTeamPage.test.tsx __tests__/teams/TeamsPage.test.tsx __tests__/teams/TeamCreationPage.test.tsx __tests__/organizations/TeamLeadInteractionPanel.test.tsx --reporter=dot`
@@ -370,6 +372,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/proposals.spec.ts` | Proposal CRUD flow |
 | `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` | Stable V8 operator-flow proof for Soma-first entry, continuity, cold-start recovery, governed mutation/cancel, audit visibility, and oversized content handling |
 | `interface/e2e/specs/groups.spec.ts` | Standing vs temporary vs archived temporary groups, output/contributing-lead summaries, retained output review, and broadcast workflow |
+| `interface/e2e/specs/groups-live-backend.spec.ts` | Live-backend temporary group creation, backend-stored output aggregation, archive/closure, and retained-output review |
 | `interface/e2e/specs/team-creation.spec.ts` | Guided team creation, Soma execution-path return, one-click temporary workflow group launch, archive/closure, and retained-output review |
 | `interface/e2e/specs/teams.spec.ts` | Teams hub, roster, lead-entry links, guided-creation handoff |
 | `interface/e2e/specs/wiring-edit.spec.ts` | Neural wiring, agent edit/delete |
@@ -406,6 +409,7 @@ uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=
 uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts
 uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts
 uv run inv interface.e2e --project=firefox
 uv run inv interface.e2e --project=mobile-chromium --spec=e2e/specs/mobile.spec.ts

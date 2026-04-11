@@ -79,13 +79,15 @@ Run at least the critical Chromium matrix in headed mode against the managed Int
 3. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts`
 4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts`
 5. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
-6. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+6. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
+7. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
 These runs certify:
 - Soma-first entry and re-entry
 - deterministic runtime-state answers
 - AI Organization creation and re-entry
 - team hub, guided team creation, direct temporary-workflow launch, archive/closure, retained-output review, and group specialization/review surfaces
+- live backend-stored group-output aggregation and retained review after temporary-lane closure
 - settings and MCP visibility
 - governed live-backend execution
 

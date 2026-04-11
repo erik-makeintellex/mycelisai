@@ -348,7 +348,7 @@ def _list_repo_local_interface_processes() -> list[dict[str, str | int]]:
                     ["tasklist", "/FO", "CSV", "/NH", "/FI", f"IMAGENAME eq {image_name}"],
                     capture_output=True,
                     text=True,
-                    timeout=5,
+                    timeout=20,
                 )
                 if tasklist_result.returncode != 0:
                     raise RuntimeError(tasklist_result.stderr.strip() or "process query failed")
@@ -363,36 +363,42 @@ def _list_repo_local_interface_processes() -> list[dict[str, str | int]]:
             if not candidate_pids:
                 return []
 
-            filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in candidate_pids)
-            result = subprocess.run(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
-                    "Select-Object ProcessId,Name,CommandLine | "
-                    "ConvertTo-Json -Compress",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=8,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(result.stderr.strip() or "process query failed")
-            raw = result.stdout.strip()
-            if not raw:
-                return []
-            payload = json.loads(raw)
-            rows = payload if isinstance(payload, list) else [payload]
-            for row in rows:
-                pid_text = row.get("ProcessId")
-                name = row.get("Name") or ""
-                command_line = row.get("CommandLine") or ""
-                if not isinstance(pid_text, int):
+            deadline = time.monotonic() + 30
+            for start in range(0, len(candidate_pids), 12):
+                remaining_seconds = deadline - time.monotonic()
+                if remaining_seconds <= 0:
+                    raise RuntimeError("process query timed out")
+                pid_batch = candidate_pids[start:start + 12]
+                filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in pid_batch)
+                result = subprocess.run(
+                    [
+                        "powershell",
+                        "-NoProfile",
+                        "-Command",
+                        f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
+                        "Select-Object ProcessId,Name,CommandLine | "
+                        "ConvertTo-Json -Compress",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=max(1, min(8, int(remaining_seconds))),
+                )
+                if result.returncode != 0:
+                    raise RuntimeError(result.stderr.strip() or "process query failed")
+                raw = result.stdout.strip()
+                if not raw:
                     continue
-                pid = pid_text
-                if _matches_repo_local_interface_process(name, command_line):
-                    processes.append({"pid": pid, "name": name, "command": command_line})
+                payload = json.loads(raw)
+                rows = payload if isinstance(payload, list) else [payload]
+                for row in rows:
+                    pid_text = row.get("ProcessId")
+                    name = row.get("Name") or ""
+                    command_line = row.get("CommandLine") or ""
+                    if not isinstance(pid_text, int):
+                        continue
+                    pid = pid_text
+                    if _matches_repo_local_interface_process(name, command_line):
+                        processes.append({"pid": pid, "name": name, "command": command_line})
             return processes
 
         result = subprocess.run(
@@ -531,6 +537,18 @@ def _read_playwright_last_run_status() -> str | None:
     return status if isinstance(status, str) else None
 
 
+def _stop_lingering_playwright_process(proc: subprocess.Popen[str]) -> None:
+    with suppress(ProcessLookupError, OSError):
+        proc.terminate()
+    with suppress(subprocess.TimeoutExpired, OSError):
+        proc.wait(timeout=3)
+    if proc.poll() is not None:
+        return
+    _kill_pid_tree(proc.pid)
+    with suppress(subprocess.TimeoutExpired, OSError):
+        proc.wait(timeout=3)
+
+
 def _run_playwright_command_streaming(
     command: list[str],
     *,
@@ -574,9 +592,7 @@ def _run_playwright_command_streaming(
                 result_seen_at = time.time()
             elif result_seen_at is not None and (time.time() - result_seen_at) >= post_result_grace_seconds:
                 print(f"  WARN: Playwright reported {current_status} but did not exit cleanly; terminating the lingering test process.")
-                _kill_pid_tree(proc.pid)
-                with suppress(subprocess.TimeoutExpired, OSError):
-                    proc.wait(timeout=5)
+                _stop_lingering_playwright_process(proc)
                 return CommandResult(exited=0 if current_status == "passed" else 1, stdout="", stderr="")
         else:
             result_seen_at = None

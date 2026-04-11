@@ -211,6 +211,7 @@ Expected outcome:
 - guided team creation can launch a temporary workflow group directly instead of forcing the user back into raw group fields
 - the newly launched group can be opened directly in the Groups workspace
 - the launched temporary workflow can be archived while preserving retained outputs for later review
+- live-backend validation should also prove that backend-stored outputs appear in the same retained group review surface after temporary-lane archive
 - the workspace or drawer clearly identifies a focused Team Lead / lead counterpart
 - team-specific prompts refer to the selected team first
 - the answer is scoped to that team, not the full global roster

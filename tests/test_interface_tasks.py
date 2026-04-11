@@ -142,7 +142,7 @@ def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(m
             "ConvertTo-Json -Compress",
         ]
     ]
-    assert timeouts == [5, 5, 8]
+    assert timeouts == [20, 20, 8]
 
 
 def test_build_cleans_residual_interface_workers(monkeypatch):
@@ -311,6 +311,7 @@ def test_clean_ignores_missing_files_during_rmtree(monkeypatch):
     removed: list[str] = []
 
     monkeypatch.setattr(interface.os.path, "isdir", lambda path: True)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: [])
 
     def fake_rmtree(path, onexc=None):
         removed.append(path)
@@ -331,6 +332,7 @@ def test_clean_ignores_missing_files_when_rmtree_passes_exception_object(monkeyp
     removed: list[str] = []
 
     monkeypatch.setattr(interface.os.path, "isdir", lambda path: True)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: [])
 
     def fake_rmtree(path, onexc=None):
         removed.append(path)
@@ -695,6 +697,30 @@ def test_e2e_keeps_playwright_server_log_on_failure(monkeypatch):
         raise AssertionError("expected playwright failure")
 
     assert "cleanup-log" not in events
+
+
+def test_stop_lingering_playwright_process_terminates_before_tree_kill(monkeypatch):
+    events: list[str] = []
+
+    class FakeProcess:
+        pid = 9191
+        _exited = False
+
+        def terminate(self):
+            events.append("terminate")
+
+        def wait(self, timeout=0):
+            events.append(f"wait:{timeout}")
+            self._exited = True
+
+        def poll(self):
+            return 0 if self._exited else None
+
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
+
+    interface._stop_lingering_playwright_process(FakeProcess())
+
+    assert events == ["terminate", "wait:3"]
 
 
 def test_e2e_keeps_playwright_server_log_on_managed_server_startup_failure(monkeypatch):
