@@ -71,6 +71,9 @@ Available modes:
 Current self-hosted starting points shown in product:
 - `Qwen3 8B`
 - `Llama 3.1 8B`
+- `Qwen3 14B` when installed and latency is acceptable
+- `Qwen2.5 Coder 14B` or `DeepSeek Coder V2 16B` for heavier code / website generation lanes
+- `BGE-M3` and `nomic-embed-text` remain retrieval/embedding candidates, not chat-output models
 
 Current detected output-type defaults:
 - general text -> `Qwen3 8B`
@@ -78,7 +81,9 @@ Current detected output-type defaults:
 - code generation -> `Qwen2.5 Coder 7B`
 - vision analysis -> `LLaVA 7B`
 
-This routing is durable organization policy, so ordinary user chats should not silently rewrite it.
+When an admin has not pinned a specific output type, Soma should choose from installed self-hosted models using explicit criteria: match the detected output type first, prefer higher-capacity local models when latency and memory allow, and be honest about engine boundaries. Ollama vision/text models can help plan, code, critique, or review media, but pixel or voice generation still requires the configured media engine.
+
+This routing is durable organization policy, so ordinary user chats should not silently rewrite it. Soma should ask the owner/admin before reviewing potential model behavior for a requested output or changing saved routing.
 
 ---
 

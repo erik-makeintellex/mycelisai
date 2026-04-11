@@ -99,6 +99,11 @@ const outputModelRouting: OrganizationOutputModelRoutingPayload = {
     default_model_id: "qwen2.5-coder:7b-instruct",
     default_model_summary: "Qwen2.5 Coder 7B",
     hardware_summary: "Local-first self-hosted posture tuned for the current Ollama inventory and a 16GB-class GPU host.",
+    review_permission_prompt: "Ask the owner/admin before Soma reviews potential model behavior for a requested output or changes saved routing.",
+    automatic_selection_criteria: [
+        "Prefer an installed self-hosted model that declares fit for the detected output type before suggesting a pull or remote provider.",
+        "Keep the operator in control: ask for owner approval before running a model-behavior review or changing the organization's saved routing policy.",
+    ],
     bindings: organizationHome.output_model_bindings,
     recommended_models: [
         {
@@ -152,6 +157,40 @@ const outputModelRouting: OrganizationOutputModelRoutingPayload = {
             installed: true,
             popular: false,
             self_hostable: true,
+        },
+    ],
+    review_candidates: [
+        {
+            output_type_id: "general_text",
+            output_type_label: "General text",
+            model_id: "qwen3:8b",
+            model_summary: "Qwen3 8B",
+            installed: true,
+            review_criteria: ["prioritize readable direct answers, broad instruction following, and low-friction drafting"],
+        },
+        {
+            output_type_id: "research_reasoning",
+            output_type_label: "Research & reasoning",
+            model_id: "qwen3:8b",
+            model_summary: "Qwen3 8B",
+            installed: true,
+            review_criteria: ["prioritize planning depth, synthesis quality, and long-context behavior"],
+        },
+        {
+            output_type_id: "code_generation",
+            output_type_label: "Code generation",
+            model_id: "qwen2.5-coder:7b",
+            model_summary: "Qwen2.5 Coder 7B",
+            installed: true,
+            review_criteria: ["prioritize implementation accuracy, test repair, and structured code output"],
+        },
+        {
+            output_type_id: "vision_analysis",
+            output_type_label: "Vision analysis",
+            model_id: "llava:7b",
+            model_summary: "LLaVA 7B",
+            installed: true,
+            review_criteria: ["prioritize multimodal image understanding, OCR, and visual review reliability"],
         },
     ],
 };
@@ -1267,6 +1306,11 @@ describe("OrganizationPage (/organizations/[id])", () => {
         expect(screen.getByText("Popular self-hosted starting points")).toBeDefined();
         expect(screen.getByText("Qwen3 8B")).toBeDefined();
         expect(screen.getByText("Llama 3.1 8B")).toBeDefined();
+        expect(screen.getByText("Soma model review guardrail")).toBeDefined();
+        expect(screen.getByText(/Ask the owner\/admin before Soma reviews potential model behavior/i)).toBeDefined();
+        expect(screen.getByText("Behavior review candidates")).toBeDefined();
+        expect(screen.getByText("Code generation: Qwen2.5 Coder 7B")).toBeDefined();
+        expect(screen.getByText(/prioritize implementation accuracy/i)).toBeDefined();
 
         fireEvent.click(screen.getByRole("button", { name: /Use detected models by output type/i }));
         fireEvent.change(screen.getByLabelText("Organization default model"), { target: { value: "qwen3:8b" } });

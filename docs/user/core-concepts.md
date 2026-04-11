@@ -120,6 +120,10 @@ Current self-hosted starting points in the product:
 - `Qwen2.5 Coder 7B` for code generation
 - `LLaVA 7B` for vision analysis
 
+The model inventory can include several models on the same Ollama, vLLM, or LM Studio host. When the admin has not pinned a model for a requested output, Soma should prefer installed self-hosted models that match the detected output type, use larger local candidates such as `Qwen3 14B`, `Qwen2.5 Coder 14B`, or `DeepSeek Coder V2 16B` when the host and latency budget fit, and ask the owner/admin before running a model-behavior review or changing the saved routing policy.
+
+Ollama text and vision models do not automatically mean image or voice generation is configured. Soma can use them to plan prompts, write website/code artifacts, or critique images; actual pixel/audio output needs the configured media engine.
+
 Primary management surfaces:
 - `Resources -> AI Engines` (Advanced mode)
 - `Settings -> Profiles`

@@ -81,6 +81,15 @@ export interface OrganizationOutputModelCatalogEntry {
     source?: string;
 }
 
+export interface OrganizationOutputModelReviewCandidate {
+    output_type_id: OrganizationOutputTypeId;
+    output_type_label: string;
+    model_id: string;
+    model_summary: string;
+    installed: boolean;
+    review_criteria: string[];
+}
+
 export interface OrganizationOutputModelRoutingPayload {
     routing_mode: OrganizationOutputModelRoutingMode;
     default_model_id?: string;
@@ -88,7 +97,10 @@ export interface OrganizationOutputModelRoutingPayload {
     bindings?: OrganizationOutputModelBinding[];
     available_models?: OrganizationOutputModelCatalogEntry[];
     recommended_models?: OrganizationOutputModelCatalogEntry[];
+    review_candidates?: OrganizationOutputModelReviewCandidate[];
     hardware_summary: string;
+    review_permission_prompt: string;
+    automatic_selection_criteria?: string[];
 }
 
 export interface OrganizationDepartmentSummary {

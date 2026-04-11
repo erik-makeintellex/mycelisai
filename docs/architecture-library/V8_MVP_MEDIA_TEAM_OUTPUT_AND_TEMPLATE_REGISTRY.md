@@ -65,7 +65,14 @@ The MVP should route by output role before chasing a single universal model:
 - Embeddings and RAG: keep `nomic-embed-text:latest` as the proven current default; validate `bge-m3:latest` where multilingual or richer retrieval quality matters.
 - Media planning and prompt writing: use the creative/council models to create the prompt, storyboard, campaign context, and acceptance rubric; do not confuse this with the media engine that actually produces pixels or audio.
 
-Current organization output-model routing already has a useful baseline: `general_text -> qwen3:8b`, `research_reasoning -> llama3.1:8b`, `code_generation -> qwen2.5-coder:7b`, and `vision_analysis -> llava:7b`. The next implementation slice should validate those against the live installed inventory and avoid treating uninstalled catalog entries as active runtime truth.
+Current organization output-model routing already has a useful baseline: `general_text -> qwen3:8b`, `research_reasoning -> llama3.1:8b`, `code_generation -> qwen2.5-coder:7b`, and `vision_analysis -> llava:7b`. The live model-review lane now also exposes stronger installed or pull-candidate options such as `qwen3:14b`, `qwen2.5-coder:14b`, `deepseek-coder-v2:16b`, and `gemma3:12b` when they fit the requested behavior.
+
+When an output type is not pinned, Soma should select from installed self-hosted models using explicit criteria:
+
+- prefer an installed model that declares fit for the detected output type before suggesting a pull or remote provider
+- prefer larger local reasoning/code models when latency and memory budget are acceptable
+- keep the media boundary explicit: Ollama text/vision models can plan prompts, write website/code artifacts, and review images, but image or voice generation requires the configured media engine
+- ask the owner/admin before reviewing model behavior for a requested output or changing durable routing policy
 
 ## Media Generation Boundary
 

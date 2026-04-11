@@ -210,7 +210,9 @@ func TestHandleGetOrganizationOutputModelRouting_ListsInstalledAndPopularSelfHos
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"models": []map[string]any{
 				{"name": "qwen3:8b"},
+				{"name": "qwen3:14b"},
 				{"name": "llava:7b"},
+				{"name": "qwen2.5-coder:14b"},
 				{"name": "qwen2.5-coder:7b-instruct"},
 			},
 		})
@@ -274,6 +276,34 @@ func TestHandleGetOrganizationOutputModelRouting_ListsInstalledAndPopularSelfHos
 	}
 	if !foundInstalledVision {
 		t.Fatalf("expected installed llava:7b in available models, got %+v", available)
+	}
+	if data["review_permission_prompt"] == "" {
+		t.Fatalf("expected owner review permission prompt, got %+v", data)
+	}
+	criteria, ok := data["automatic_selection_criteria"].([]any)
+	if !ok || len(criteria) == 0 {
+		t.Fatalf("expected automatic selection criteria, got %+v", data)
+	}
+	reviewCandidates, ok := data["review_candidates"].([]any)
+	if !ok || len(reviewCandidates) == 0 {
+		t.Fatalf("expected model review candidates, got %+v", data)
+	}
+	var foundCodeCandidate bool
+	for _, item := range reviewCandidates {
+		entry, _ := item.(map[string]any)
+		if entry["output_type_id"] == "code_generation" {
+			foundCodeCandidate = true
+			if entry["model_id"] != "qwen2.5-coder:14b" || entry["installed"] != true {
+				t.Fatalf("expected installed higher-capacity code candidate, got %+v", entry)
+			}
+			candidateCriteria, ok := entry["review_criteria"].([]any)
+			if !ok || len(candidateCriteria) == 0 {
+				t.Fatalf("expected code candidate criteria, got %+v", entry)
+			}
+		}
+	}
+	if !foundCodeCandidate {
+		t.Fatalf("expected code generation review candidate, got %+v", reviewCandidates)
 	}
 }
 

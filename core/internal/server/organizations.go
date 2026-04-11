@@ -113,14 +113,26 @@ type OrganizationOutputModelCatalogEntry struct {
 	Source         string   `json:"source,omitempty"`
 }
 
+type OrganizationOutputModelReviewCandidate struct {
+	OutputTypeID    string   `json:"output_type_id"`
+	OutputTypeLabel string   `json:"output_type_label"`
+	ModelID         string   `json:"model_id"`
+	ModelSummary    string   `json:"model_summary"`
+	Installed       bool     `json:"installed"`
+	ReviewCriteria  []string `json:"review_criteria"`
+}
+
 type OrganizationOutputModelRoutingPayload struct {
-	RoutingMode         string                                `json:"routing_mode"`
-	DefaultModelID      string                                `json:"default_model_id,omitempty"`
-	DefaultModelSummary string                                `json:"default_model_summary"`
-	Bindings            []OrganizationOutputModelBinding      `json:"bindings,omitempty"`
-	AvailableModels     []OrganizationOutputModelCatalogEntry `json:"available_models,omitempty"`
-	RecommendedModels   []OrganizationOutputModelCatalogEntry `json:"recommended_models,omitempty"`
-	HardwareSummary     string                                `json:"hardware_summary"`
+	RoutingMode                string                                   `json:"routing_mode"`
+	DefaultModelID             string                                   `json:"default_model_id,omitempty"`
+	DefaultModelSummary        string                                   `json:"default_model_summary"`
+	Bindings                   []OrganizationOutputModelBinding         `json:"bindings,omitempty"`
+	AvailableModels            []OrganizationOutputModelCatalogEntry    `json:"available_models,omitempty"`
+	RecommendedModels          []OrganizationOutputModelCatalogEntry    `json:"recommended_models,omitempty"`
+	ReviewCandidates           []OrganizationOutputModelReviewCandidate `json:"review_candidates,omitempty"`
+	HardwareSummary            string                                   `json:"hardware_summary"`
+	ReviewPermissionPrompt     string                                   `json:"review_permission_prompt"`
+	AutomaticSelectionCriteria []string                                 `json:"automatic_selection_criteria,omitempty"`
 }
 
 type OrganizationDepartmentSummary struct {
@@ -263,6 +275,13 @@ var defaultOrganizationOutputModelBindings = []OrganizationOutputModelBinding{
 
 var curatedOutputModelCatalog = []outputModelCatalogSeed{
 	{
+		ModelID:       "qwen3:14b",
+		Label:         "Qwen3 14B",
+		Summary:       "Higher-capacity local reasoning and planning model when latency and memory budget allow it.",
+		OutputTypeIDs: []OrganizationOutputTypeID{OrganizationOutputTypeGeneralText, OrganizationOutputTypeResearchReasoning},
+		HostingFit:    "Best fit when the host can spare roughly 9GB for a stronger local reasoning lane.",
+	},
+	{
 		ModelID:        "qwen3:8b",
 		Label:          "Qwen3 8B",
 		Summary:        "Strong local-first default for general text, agent planning, and multi-step reasoning.",
@@ -281,6 +300,13 @@ var curatedOutputModelCatalog = []outputModelCatalogSeed{
 		PopularityNote: "Official Ollama library shows Llama 3.1 as one of the most widely downloaded local families.",
 	},
 	{
+		ModelID:       "qwen2.5-coder:14b",
+		Label:         "Qwen2.5 Coder 14B",
+		Summary:       "Stronger local code model for implementation, code repair, and website or application build tasks when the host can afford the larger model.",
+		OutputTypeIDs: []OrganizationOutputTypeID{OrganizationOutputTypeCodeGeneration},
+		HostingFit:    "Best fit for heavier code/test generation on the current 16GB-class local host when latency is acceptable.",
+	},
+	{
 		ModelID:       "qwen2.5-coder:7b",
 		Label:         "Qwen2.5 Coder 7B",
 		Summary:       "Focused local model for code generation, code repair, and implementation-heavy team lanes.",
@@ -289,12 +315,26 @@ var curatedOutputModelCatalog = []outputModelCatalogSeed{
 		HostingFit:    "Fits well on the current self-hosted GPU class and aligns with the current local coding default.",
 	},
 	{
+		ModelID:       "deepseek-coder-v2:16b",
+		Label:         "DeepSeek Coder V2 16B",
+		Summary:       "Alternative local coding specialist for implementation-heavy and repair-heavy asks when a second code model is useful for comparison.",
+		OutputTypeIDs: []OrganizationOutputTypeID{OrganizationOutputTypeCodeGeneration},
+		HostingFit:    "Useful as a second code-generation candidate when the host can keep a larger specialist loaded.",
+	},
+	{
 		ModelID:       "llava:7b",
 		Label:         "LLaVA 7B",
 		Summary:       "Local multimodal model for image understanding, OCR, and visual review work.",
 		OutputTypeIDs: []OrganizationOutputTypeID{OrganizationOutputTypeVisionAnalysis},
 		Popular:       false,
 		HostingFit:    "Fits the current self-hosted GPU class for vision analysis without requiring a separate cloud path.",
+	},
+	{
+		ModelID:       "gemma3:12b",
+		Label:         "Gemma 3 12B",
+		Summary:       "Local multimodal alternative for long-context text plus image review when the host can run a larger vision-capable model.",
+		OutputTypeIDs: []OrganizationOutputTypeID{OrganizationOutputTypeVisionAnalysis, OrganizationOutputTypeResearchReasoning},
+		HostingFit:    "Good future pull candidate for a stronger single-GPU multimodal review lane.",
 	},
 }
 
@@ -656,6 +696,15 @@ func outputModelBindingsMap(bindings []OrganizationOutputModelBinding) map[strin
 	return result
 }
 
+func outputModelAutomaticSelectionCriteria() []string {
+	return []string{
+		"Prefer an installed self-hosted model that declares fit for the detected output type before suggesting a pull or remote provider.",
+		"Prefer higher-capacity local models for planning, research, code generation, and website-building asks when latency and memory budget are acceptable.",
+		"Use vision-capable models for image understanding, OCR, and visual review, but do not claim Ollama text or vision models can generate images or voice without a configured media engine.",
+		"Keep the operator in control: ask for owner approval before running a model-behavior review or changing the organization's saved routing policy.",
+	}
+}
+
 func normalizedOrganizationOutputModelBindings(existing []OrganizationOutputModelBinding, defaultModelID string) []OrganizationOutputModelBinding {
 	byType := outputModelBindingsMap(existing)
 	normalized := make([]OrganizationOutputModelBinding, 0, len(defaultOrganizationOutputModelBindings))
@@ -781,6 +830,95 @@ func synthesizeOutputModelCatalog(installedModelIDs []string) []OrganizationOutp
 		return out[i].Label < out[j].Label
 	})
 	return out
+}
+
+func outputModelReviewCriteria(outputTypeID OrganizationOutputTypeID) []string {
+	switch outputTypeID {
+	case OrganizationOutputTypeResearchReasoning:
+		return []string{
+			"prioritize planning depth, synthesis quality, and long-context behavior",
+			"prefer installed higher-capacity reasoning models when latency is acceptable",
+		}
+	case OrganizationOutputTypeCodeGeneration:
+		return []string{
+			"prioritize implementation accuracy, test repair, and structured code output",
+			"prefer coding-specialized models for websites, application code, and developer workflow artifacts",
+		}
+	case OrganizationOutputTypeVisionAnalysis:
+		return []string{
+			"prioritize multimodal image understanding, OCR, and visual review reliability",
+			"route actual image or voice generation to the configured media engine instead of pretending a vision model can create the binary artifact",
+		}
+	default:
+		return []string{
+			"prioritize readable direct answers, broad instruction following, and low-friction drafting",
+			"prefer installed general-purpose local models before suggesting a pull or remote provider",
+		}
+	}
+}
+
+func outputModelPreferenceRank(outputTypeID OrganizationOutputTypeID, modelID string) int {
+	preferences := map[OrganizationOutputTypeID][]string{
+		OrganizationOutputTypeGeneralText:       {"qwen3:14b", "qwen3:8b", "llama3.1:8b"},
+		OrganizationOutputTypeResearchReasoning: {"qwen3:14b", "qwen3:8b", "llama3.1:8b", "gemma3:12b"},
+		OrganizationOutputTypeCodeGeneration:    {"qwen2.5-coder:14b", "deepseek-coder-v2:16b", "qwen2.5-coder:7b"},
+		OrganizationOutputTypeVisionAnalysis:    {"gemma3:12b", "llava:7b"},
+	}
+	for index, preferred := range preferences[outputTypeID] {
+		if matchesCatalogModel(modelID, preferred) {
+			return index
+		}
+	}
+	return len(preferences[outputTypeID]) + 100
+}
+
+func bestOutputModelCandidate(catalog []OrganizationOutputModelCatalogEntry, outputTypeID OrganizationOutputTypeID) (OrganizationOutputModelCatalogEntry, bool) {
+	candidates := make([]OrganizationOutputModelCatalogEntry, 0, len(catalog))
+	for _, entry := range catalog {
+		for _, candidateTypeID := range entry.OutputTypeIDs {
+			if candidateTypeID == string(outputTypeID) {
+				candidates = append(candidates, entry)
+				break
+			}
+		}
+	}
+	if len(candidates) == 0 {
+		return OrganizationOutputModelCatalogEntry{}, false
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		if candidates[i].Installed != candidates[j].Installed {
+			return candidates[i].Installed
+		}
+		leftRank := outputModelPreferenceRank(outputTypeID, candidates[i].ModelID)
+		rightRank := outputModelPreferenceRank(outputTypeID, candidates[j].ModelID)
+		if leftRank != rightRank {
+			return leftRank < rightRank
+		}
+		if candidates[i].Popular != candidates[j].Popular {
+			return candidates[i].Popular
+		}
+		return candidates[i].Label < candidates[j].Label
+	})
+	return candidates[0], true
+}
+
+func outputModelReviewCandidates(catalog []OrganizationOutputModelCatalogEntry) []OrganizationOutputModelReviewCandidate {
+	candidates := make([]OrganizationOutputModelReviewCandidate, 0, len(canonicalOutputTypeIDs()))
+	for _, outputTypeID := range canonicalOutputTypeIDs() {
+		entry, ok := bestOutputModelCandidate(catalog, outputTypeID)
+		if !ok {
+			continue
+		}
+		candidates = append(candidates, OrganizationOutputModelReviewCandidate{
+			OutputTypeID:    string(outputTypeID),
+			OutputTypeLabel: outputTypeLabel(string(outputTypeID)),
+			ModelID:         entry.ModelID,
+			ModelSummary:    entry.Label,
+			Installed:       entry.Installed,
+			ReviewCriteria:  outputModelReviewCriteria(outputTypeID),
+		})
+	}
+	return candidates
 }
 
 func recommendedOutputModels(catalog []OrganizationOutputModelCatalogEntry) []OrganizationOutputModelCatalogEntry {
@@ -1378,13 +1516,16 @@ func (s *AdminServer) handleGetOrganizationOutputModelRouting(w http.ResponseWri
 
 	catalog := synthesizeOutputModelCatalog(s.listLocalOllamaModelIDs())
 	payload := OrganizationOutputModelRoutingPayload{
-		RoutingMode:         home.OutputModelRoutingMode,
-		DefaultModelID:      home.DefaultOutputModelID,
-		DefaultModelSummary: home.DefaultOutputModelSummary,
-		Bindings:            append([]OrganizationOutputModelBinding(nil), home.OutputModelBindings...),
-		AvailableModels:     catalog,
-		RecommendedModels:   recommendedOutputModels(catalog),
-		HardwareSummary:     "Local-first self-hosted posture tuned for the current Ollama inventory and a 16GB-class GPU host.",
+		RoutingMode:                home.OutputModelRoutingMode,
+		DefaultModelID:             home.DefaultOutputModelID,
+		DefaultModelSummary:        home.DefaultOutputModelSummary,
+		Bindings:                   append([]OrganizationOutputModelBinding(nil), home.OutputModelBindings...),
+		AvailableModels:            catalog,
+		RecommendedModels:          recommendedOutputModels(catalog),
+		ReviewCandidates:           outputModelReviewCandidates(catalog),
+		HardwareSummary:            "Local-first self-hosted posture tuned for the current Ollama inventory and a 16GB-class GPU host.",
+		ReviewPermissionPrompt:     "Ask the owner/admin before Soma reviews potential model behavior for a requested output or changes saved routing.",
+		AutomaticSelectionCriteria: outputModelAutomaticSelectionCriteria(),
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(payload))
 }

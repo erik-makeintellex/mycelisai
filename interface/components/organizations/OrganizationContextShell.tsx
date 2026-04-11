@@ -2669,6 +2669,56 @@ function OutputModelRoutingPanel({
                         </div>
                     )}
 
+                    <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                        <p className="text-sm font-semibold text-cortex-text-main">Soma model review guardrail</p>
+                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                            {routing?.review_permission_prompt ??
+                                "Ask the owner/admin before Soma reviews potential model behavior for a requested output or changes saved routing."}
+                        </p>
+                        {(routing?.automatic_selection_criteria?.length ?? 0) > 0 && (
+                            <div className="mt-3 grid gap-2">
+                                {(routing?.automatic_selection_criteria ?? []).map((criterion) => (
+                                    <p key={criterion} className="rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm leading-6 text-cortex-text-muted">
+                                        {criterion}
+                                    </p>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {(routing?.review_candidates?.length ?? 0) > 0 && (
+                        <div className="mt-5">
+                            <p className="text-sm font-semibold text-cortex-text-main">Behavior review candidates</p>
+                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
+                                These are Soma's first-pass local candidates when the admin has not pinned a model for a specific output type yet.
+                            </p>
+                            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                                {(routing?.review_candidates ?? []).map((candidate) => (
+                                    <div key={`${candidate.output_type_id}-${candidate.model_id}`} className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-sm font-semibold text-cortex-text-main">
+                                                {candidate.output_type_label}: {candidate.model_summary}
+                                            </p>
+                                            {candidate.installed && (
+                                                <span className="inline-flex rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cortex-primary">
+                                                    Installed
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="mt-2 text-xs font-mono uppercase tracking-[0.16em] text-cortex-text-muted">{candidate.model_id}</p>
+                                        <div className="mt-3 grid gap-2">
+                                            {candidate.review_criteria.map((criterion) => (
+                                                <p key={criterion} className="rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm leading-6 text-cortex-text-muted">
+                                                    {criterion}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {updateError && (
                         <div className="mt-5 rounded-2xl border border-cortex-danger/30 bg-cortex-surface px-4 py-4 text-sm text-cortex-text-muted">
                             <p className="font-medium text-cortex-text-main">Unable to update output model routing</p>
