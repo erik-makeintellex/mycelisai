@@ -79,8 +79,9 @@ Run at least the critical Chromium matrix in headed mode against the managed Int
 3. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts`
 4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts`
 5. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
-6. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
-7. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+6. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/mcp-connected-tools.spec.ts`
+7. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
+8. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
 These runs certify:
 - Soma-first entry and re-entry
@@ -88,7 +89,7 @@ These runs certify:
 - AI Organization creation and re-entry
 - team hub, guided team creation, direct temporary-workflow launch, archive/closure, retained-output review, and group specialization/review surfaces
 - live backend-stored group-output aggregation and retained review after temporary-lane closure
-- settings and MCP visibility
+- settings and Connected Tools MCP visibility
 - governed live-backend execution
 
 ## 4. Execution Order
@@ -414,6 +415,11 @@ Evidence:
 - screenshot of the team-managed output contract or temporary group
 - screenshot of generated artifact preview/download or the precise missing-engine blocker
 - note whether team ownership, target outputs, and retained outputs stayed legible
+
+Automated proof:
+
+- `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` now includes focused Chromium coverage for direct Soma output vs team-managed output packages and for media artifact preview/save/download behavior.
+- `interface/e2e/specs/mcp-connected-tools.spec.ts` now covers the adjacent Connected Tools proof: persisted MCP activity, expanded server tool visibility, and curated library install into the current user-owned group.
 
 ### Workflow 8: Governed mutation proposal
 

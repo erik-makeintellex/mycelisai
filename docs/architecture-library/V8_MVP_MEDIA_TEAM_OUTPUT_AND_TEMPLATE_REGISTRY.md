@@ -153,11 +153,11 @@ Implementation checkpoint:
 The release proof should include both automated and visible-browser validation:
 
 - model inventory proof: UI/API can show configured output model routing and at least two popular local self-hostable candidates for each supported output family
-- direct-vs-team proof: one prompt returns a direct inline Soma answer, while a deliverable-package prompt produces a team-managed output contract
-- media proof: image request either returns a real image artifact from the configured media endpoint or a clear missing-engine blocker with next setup action
+- direct-vs-team proof: one prompt returns a direct inline Soma answer, while a deliverable-package prompt produces a team-managed output contract. `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` now covers this as a mocked browser proof.
+- media proof: image request either returns a real image artifact from the configured media endpoint or a clear missing-engine blocker with next setup action. `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` now covers preview/save/download rendering with generated media artifact payloads; live configured-engine proof remains separate.
 - website proof: generated website assets are returned as readable files/artifacts, not as invisible agent chatter
 - voice proof: if no local audio engine exists, the UI shows an honest missing-engine blocker; once an engine exists, it must return an audio artifact or playback/download reference
-- MCP proof: a team workflow uses an MCP-backed capability and the operator can see which MCP service/tool was used in the connected-tools/activity surface
+- MCP proof: a team workflow uses an MCP-backed capability and the operator can see which MCP service/tool was used in the connected-tools/activity surface. `interface/e2e/specs/mcp-connected-tools.spec.ts` now covers the Connected Tools browser side for persisted activity, expanded server tools, and curated install; live team-run-to-MCP activity correlation remains separate.
 - temporary group proof: a Soma-created temporary group can produce multiple outputs, be archived, and retain outputs after closure
 - template proof: a registered conversation template can instantiate a direct Soma ask and a temporary-group ask
 
@@ -168,7 +168,7 @@ Recommended order:
 1. `COMPLETE` document and expose the user-output posture, model-role map, and media boundary in product docs and in-app docs.
 2. `IN_REVIEW` add DB-backed conversation templates with backend CRUD and focused tests.
 3. `IN_REVIEW` add an instantiation endpoint that turns a template into a bounded Soma/council/team ask package.
-4. `NEXT` add a browser-visible demo workflow for direct answer vs team-managed marketing/media package.
-5. `NEXT` add live media smoke proof that either returns an artifact or a precise missing-engine blocker.
-6. `NEXT` add MCP usage proof inside a team-managed workflow, tied to connected-tools activity.
+4. `COMPLETE` add a browser-visible demo workflow for direct answer vs team-managed marketing/media package in the mocked Soma workspace.
+5. `IN_REVIEW` add media smoke proof that either returns an artifact or a precise missing-engine blocker; mocked browser proof now covers artifact preview/save/download, and live configured-engine proof remains `NEXT`.
+6. `IN_REVIEW` add MCP usage proof tied to connected-tools activity; browser proof now covers the Connected Tools side, and live team-run-to-MCP correlation remains `NEXT`.
 7. `NEXT` validate candidate Ollama model additions on target hardware before adding them to default catalog recommendations.

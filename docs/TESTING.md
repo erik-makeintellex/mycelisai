@@ -46,10 +46,10 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/dashboard` AI Organization re-entry and status overview | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `navigation.spec.ts`, accessibility baseline | `ACTIVE` |
 | `/groups` standing + temporary collaboration workspace | `GroupsPage.test.tsx`, `GroupManagementPanel.test.tsx` | `groups.spec.ts`, plus live-backend retained-output aggregation proof via `groups-live-backend.spec.ts` | `ACTIVE` |
 | `/automations` | `AutomationsPage.test.tsx`, automations component suites | `layout.spec.ts`, `proposals.spec.ts` | `ACTIVE` |
-| `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial) | `ACTIVE` |
+| `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial), `mcp-connected-tools.spec.ts` for Connected Tools registry/library/activity visibility | `ACTIVE` |
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
 | `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | route-level smoke remains unit-first; live-backend/browser depth is still selective | `ACTIVE` |
-| `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites, `MCPToolRegistry.test.tsx`, `MCPLibraryBrowser.test.tsx` | `settings.spec.ts` for guided settings/profile/access/theme; MCP registry remains component-level until a focused Connected Tools browser spec lands | `ACTIVE` |
+| `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites, `MCPToolRegistry.test.tsx`, `MCPLibraryBrowser.test.tsx` | `settings.spec.ts` for guided settings/profile/access/theme; Connected Tools browser depth now lives on `/resources` in `mcp-connected-tools.spec.ts` | `ACTIVE` |
 | `/runs`, `/runs/[id]` | run component suites (`RunDetailPage`, timeline, cards) + `RunsPage.test.tsx` | browser depth intentionally secondary to the MVP route gate | `ACTIVE` |
 | `/docs` in-app browser | `DocsPage.test.tsx` | `docs-and-runs.spec.ts` docs manifest/render smoke | `ACTIVE` |
 | `/teams` team roster + specialization hub | `TeamsPage.test.tsx`, `pages/TeamsPage.test.tsx` | `teams.spec.ts` | `ACTIVE` |
@@ -57,13 +57,13 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | Legacy redirect routes (`/wiring`, `/architect`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
 
 Immediate test additions required for stronger full-stack confidence:
-1. add a focused Connected Tools browser proof for MCP registry/library/activity visibility beyond component coverage
-2. add a browser proof for direct Soma output vs team-managed output package delivery
-3. add browser proof for media artifact rendering/save/download, or a precise missing-media-engine blocker when no media engine is configured
-4. add live-backend browser proof that a Soma/team workflow can use an MCP-backed capability and surface matching recent MCP activity
-5. unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven
-6. expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches
-7. deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states
+1. `COMPLETE` add a focused Connected Tools browser proof for MCP registry/library/activity visibility beyond component coverage.
+2. `COMPLETE` add a browser proof for direct Soma output vs team-managed output package delivery.
+3. `COMPLETE` add browser proof for media artifact rendering/save/download, or a precise missing-media-engine blocker when no media engine is configured.
+4. `NEXT` add live-backend browser proof that a Soma/team workflow can use an MCP-backed capability and surface matching recent MCP activity.
+5. `NEXT` unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven.
+6. `NEXT` expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches.
+7. `NEXT` deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states.
 
 Canonical UI testing agentry contract:
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
@@ -206,6 +206,8 @@ Signal/channel standard:
 - Current focused teams workspace browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/teams.spec.ts`
 - Current focused guided team-creation browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 - Current focused UI testing agentry browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
+- Current focused direct-vs-team and media-output browser proof: `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`; if the Windows Invoke-managed server wrapper is unhealthy, use a single already-started Interface listener and run the PowerShell fallback from `interface/`: `$env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3100'; npx playwright test e2e/specs/v8-ui-testing-agentry.spec.ts --project=chromium --workers=1 --grep "distinguishes|renders generated" --timeout=60000`.
+- Current focused Connected Tools MCP browser proof: `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/mcp-connected-tools.spec.ts`; if the Windows Invoke-managed server wrapper is unhealthy, use a single already-started Interface listener and run the PowerShell fallback from `interface/`: `$env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3100'; npx playwright test e2e/specs/mcp-connected-tools.spec.ts --project=chromium --workers=1 --timeout=60000`.
 - Current focused UI testing agentry live governance proof: `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 - Current focused team-sync contract check: `$env:PYTHONPATH='.'; uv run pytest tests/test_misc_tasks.py -q`
 - Current focused README navigation check: `$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q`
