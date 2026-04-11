@@ -49,7 +49,7 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial) | `ACTIVE` |
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
 | `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | route-level smoke remains unit-first; live-backend/browser depth is still selective | `ACTIVE` |
-| `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites | `settings.spec.ts` | `ACTIVE` |
+| `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites, `MCPToolRegistry.test.tsx`, `MCPLibraryBrowser.test.tsx` | `settings.spec.ts` for guided settings/profile/access/theme; MCP registry remains component-level until a focused Connected Tools browser spec lands | `ACTIVE` |
 | `/runs`, `/runs/[id]` | run component suites (`RunDetailPage`, timeline, cards) + `RunsPage.test.tsx` | browser depth intentionally secondary to the MVP route gate | `ACTIVE` |
 | `/docs` in-app browser | `DocsPage.test.tsx` | `docs-and-runs.spec.ts` docs manifest/render smoke | `ACTIVE` |
 | `/teams` team roster + specialization hub | `TeamsPage.test.tsx`, `pages/TeamsPage.test.tsx` | `teams.spec.ts` | `ACTIVE` |
@@ -57,10 +57,13 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | Legacy redirect routes (`/wiring`, `/architect`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
 
 Immediate test additions required for stronger full-stack confidence:
-1. add live-backend browser proof for the `/organizations/[id]` Soma conversation path through the real `/api/v1/chat` proxy contract
-2. unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven
-3. expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches
-4. deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states
+1. add a focused Connected Tools browser proof for MCP registry/library/activity visibility beyond component coverage
+2. add a browser proof for direct Soma output vs team-managed output package delivery
+3. add browser proof for media artifact rendering/save/download, or a precise missing-media-engine blocker when no media engine is configured
+4. add live-backend browser proof that a Soma/team workflow can use an MCP-backed capability and surface matching recent MCP activity
+5. unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven
+6. expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches
+7. deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states
 
 Canonical UI testing agentry contract:
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
@@ -363,7 +366,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/missions.spec.ts` | Dashboard load, default navigation, organization-entry actions |
 | `interface/e2e/specs/governance.spec.ts` | Approvals page, policy tab, pending section |
 | `interface/e2e/specs/catalogue.spec.ts` | Catalogue page, agent cards, create button |
-| `interface/e2e/specs/settings.spec.ts` | Settings page, MCP registry |
+| `interface/e2e/specs/settings.spec.ts` | Settings guided setup, profile/access/theme persistence; MCP registry browser proof is still a required focused addition |
 | `interface/e2e/specs/layout.spec.ts` | Shell structure, zone rendering |
 | `interface/e2e/specs/navigation.spec.ts` | Route transitions, active states |
 | `interface/e2e/specs/trust_economy.spec.ts` | Automations approvals reachability |
@@ -380,6 +383,13 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/mobile.spec.ts` | Mobile landing-page smoke coverage under the dedicated mobile Playwright project |
 | `interface/e2e/specs/accessibility.spec.ts` | Axe-backed accessibility baseline for key operator surfaces |
 | `interface/e2e/specs/workspace-live-backend.spec.ts` | Real Workspace contract coverage against live `/api/v1/services/status` and `/api/v1/council/members` traffic |
+
+Focused additions planned for the MVP media/team-output lane:
+
+- `interface/e2e/specs/mcp-connected-tools.spec.ts`: Connected Tools registry/library/activity visibility and high-risk install posture.
+- `interface/e2e/specs/media-output.spec.ts`: mocked image/audio/file/document artifacts, visible `Artifact result`, save action, saved path, and download references.
+- `interface/e2e/specs/direct-vs-team-output.spec.ts`: direct inline Soma answer vs team-managed deliverable package with target outputs and retained output framing.
+- live media extension to `soma-governance-live.spec.ts` or a gated `media-output-live.spec.ts`: real artifact display/download when the media engine exists, or a precise missing-engine blocker when it does not.
 
 ### Configuration
 

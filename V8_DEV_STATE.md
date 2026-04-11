@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
-> Updated: 2026-04-10
+> Updated: 2026-04-11
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -55,6 +55,7 @@ Release posture:
 - `IN_REVIEW` a cross-team release platform review is now active to align security/governance, monitoring/ops, debug/live-browser proof, and matching documentation before release packaging.
 - `NEXT` a dedicated memory continuity and RAG review lane should align pgvector-backed durable memory, temporary planning continuity, and trace-clean conversation handling after the current product-trust closeout slices.
 - `ACTIVE` a dedicated content-generation and collaboration lane is now in flight to align inline content delivery, governed artifact creation, media/file generation behavior, and policy-configurable specialist/model collaboration for the current product-trust and demo-value closeout.
+- `ACTIVE` the user-output-first media/team lane is now explicit: Soma must not judge ordinary user-desired creative or business outputs by taste/preference, and should instead clarify, improve, route, attribute, generate, and retain outputs while applying governance only to concrete capability, attribution, security, side-effect, external-exposure, cost, and audit boundaries.
 - `ACTIVE` a dedicated approval and product-trust lane is now in flight to simplify default approval/auth-style interactions, move low-level governance metadata behind inspectable details, and make content/artifact value delivery understandable to normal operators without weakening policy enforcement.
 - `COMPLETE` a supported single-host Docker Compose runtime now exists for home-lab and demo use: compose task automation, env separation, host-port parity, compose-managed migrations, and compose health/status/log inspection are now part of the repo contract.
 - `ACTIVE` a true-MVP finish lane is now defined to converge product value delivery, settings completion, demo readiness, and clean release proof into one prioritized close-out program.

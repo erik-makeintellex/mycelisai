@@ -39,6 +39,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8.1 Living Organization Architecture**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 - **V8 Universal Soma And Context Model PRD**: `./architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`
 - **V8 Home Docker Compose Runtime**: `./architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
+- **V8 MVP Media, Team Output, And Template Registry**: `./architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`
 - **V8.2 Production Architecture Target**: `../v8-2.md`
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
@@ -61,6 +62,7 @@ Use these when the goal is verification, release proof, or workflow-complete val
 - **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
 - **V8 UI Testing Agentry Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
+- **V8 MVP Media, Team Output, And Template Registry**: `./architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`
 - **Governance System**: `./governance.md`
 
 ## Historical and Migration Inputs

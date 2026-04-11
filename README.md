@@ -61,9 +61,10 @@ Review these in order before touching code or planning state:
 15. [Cognitive Architecture](docs/COGNITIVE_ARCHITECTURE.md)
 16. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
 17. [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md)
-18. [V8 Development State](V8_DEV_STATE.md)
-19. [V7 Development State (Historical)](V7_DEV_STATE.md)
-20. [Docs Manifest](interface/lib/docsManifest.ts)
+18. [V8 MVP Media, Team Output, And Template Registry](docs/architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md)
+19. [V8 Development State](V8_DEV_STATE.md)
+20. [V7 Development State (Historical)](V7_DEV_STATE.md)
+21. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent review rule:
 - README is the primary architecture inception document for active development.

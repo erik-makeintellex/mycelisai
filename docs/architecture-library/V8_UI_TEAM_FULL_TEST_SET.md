@@ -2,10 +2,10 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-04-09
+> Last Updated: 2026-04-11
 > Owner: UI Testing Agentry Team
 > Purpose: Provide the full browser and operator-experience test set for the current bounded V8.1 release target, including Central Soma home, AI Organization context flows, settings persistence, governed execution, and deployed-runtime proof.
-> Supporting Docs: `V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_HOME_DOCKER_COMPOSE_RUNTIME.md`, `docs/TESTING.md`
+> Supporting Docs: `V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_HOME_DOCKER_COMPOSE_RUNTIME.md`, `V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`, `docs/TESTING.md`
 
 ## 1. Test Goal
 
@@ -383,6 +383,37 @@ Evidence:
 - screenshot of the external contract target surface
 - screenshot of the normalized returned result when runnable proof exists
 - note whether ownership separation stayed clear
+
+### Workflow 7C: MVP media and team-managed output package
+
+Action:
+
+- ask Soma for a marketing or product-presentation package that includes at least two different output types
+- include one media-shaped target, such as hero image, visual concept, storyboard, or launch graphic
+- compare it with one direct short-answer prompt so the reviewer can see when a single Soma response is enough vs when a team-managed lane is valuable
+- if a media engine is configured, follow the returned artifact path through preview or download
+- if no media engine is configured, confirm the UI returns a precise missing-engine blocker and keeps the prompt pack or team plan visible as useful work
+
+Expected:
+
+- Soma does not judge ordinary user-desired creative/business output by taste or preference
+- any governance shown is tied to capability, attribution, security, side effects, external exposure, cost, or audit needs
+- direct Soma output remains inline when the request is small
+- the team-managed path names the team or temporary group, target outputs, and lead/coordinator
+- text/code outputs are readable inline or in an artifact preview
+- binary media outputs show a preview when available and a clickable path/download reference when not previewable
+- retained outputs remain visible after temporary group archive
+
+Terminal state:
+
+- `answer`, `proposal`, `execution_result`, or `blocker` depending on configured media capability
+
+Evidence:
+
+- screenshot of the direct short-answer result
+- screenshot of the team-managed output contract or temporary group
+- screenshot of generated artifact preview/download or the precise missing-engine blocker
+- note whether team ownership, target outputs, and retained outputs stayed legible
 
 ### Workflow 8: Governed mutation proposal
 

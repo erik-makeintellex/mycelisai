@@ -268,6 +268,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Single-host Docker Compose runtime for home-lab, demo, and partner review",
             },
             {
+                slug: "v8-mvp-media-team-output-template-registry",
+                label: "V8 MVP Media + Team Output",
+                path: "docs/architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md",
+                description: "User-output-first media/team proof, Ollama role routing, and conversation-template registry plan",
+            },
+            {
                 slug: "v8-2-full-production-architecture",
                 label: "Full Architecture (V8.2)",
                 path: "v8-2.md",
