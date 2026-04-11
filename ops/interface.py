@@ -515,6 +515,49 @@ def _windows_listening_pids_for_port(port: int) -> list[int]:
     return pids
 
 
+def _windows_listening_pids_for_port_range(port_start: int, port_end: int) -> list[int]:
+    result = subprocess.run(
+        ["netstat", "-ano", "-p", "tcp"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if result.returncode != 0:
+        return []
+
+    pids: list[int] = []
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+        local_address = parts[1]
+        state = parts[3]
+        pid_text = parts[4]
+        if state.upper() != "LISTENING" or not pid_text.isdigit():
+            continue
+        port_text = local_address.rsplit(":", 1)[-1]
+        if not port_text.isdigit():
+            continue
+        port = int(port_text)
+        if port_start <= port <= port_end:
+            pids.append(int(pid_text))
+    return pids
+
+
+def _cleanup_managed_interface_listeners(port_start: int = 3100, port_end: int = 3199) -> list[int]:
+    if not is_windows():
+        return []
+    pids = sorted(set(_windows_listening_pids_for_port_range(port_start, port_end)))
+    if not pids:
+        return []
+
+    print("  Cleaning managed Interface listeners...")
+    for pid in pids:
+        _kill_pid_tree(pid)
+    time.sleep(0.5)
+    return pids
+
+
 def _playwright_server_log_path() -> str:
     log_dir = ROOT_DIR / "workspace" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -938,8 +981,10 @@ def build(c):
         if result.exited != 0 and _is_next_standalone_cleanup_conflict(result):
             print("Detected a stale Next.js standalone cleanup lock. Cleaning repo-local Interface workers and retrying once...")
             _cleanup_repo_local_interface_processes()
+            _cleanup_managed_interface_listeners()
             clean(c)
             _cleanup_repo_local_interface_processes()
+            _cleanup_managed_interface_listeners()
             result = _run_interface_shell_command(["npm", "run", "build"])
             _report_command_result(result)
         if result.exited != 0 and _is_incomplete_next_build_output(result):
@@ -1025,6 +1070,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     stop(c)
     if chosen_port != INTERFACE_PORT:
         stop(c, port=chosen_port)
+    _cleanup_managed_interface_listeners()
     if server_mode == "start":
         print("Refreshing built Interface bundle for managed start-mode browser proof...")
         build(c)
@@ -1050,6 +1096,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
                 server.wait(timeout=5)
         stop(c, port=chosen_port)
         _cleanup_repo_local_interface_processes()
+        _cleanup_managed_interface_listeners()
         if not keep_server_log:
             _cleanup_playwright_server_log()
 

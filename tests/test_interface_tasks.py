@@ -145,6 +145,32 @@ def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(m
     assert timeouts == [20, 20, 8]
 
 
+def test_windows_listening_pids_for_port_range_filters_managed_ports(monkeypatch):
+    class Result:
+        def __init__(self, stdout="", returncode=0, stderr=""):
+            self.stdout = stdout
+            self.returncode = returncode
+            self.stderr = stderr
+
+    def fake_run(command, capture_output=True, text=True, timeout=0):
+        return Result(
+            stdout="\n".join(
+                [
+                    "  TCP    0.0.0.0:3099           0.0.0.0:0              LISTENING       100",
+                    "  TCP    0.0.0.0:3100           0.0.0.0:0              LISTENING       101",
+                    "  TCP    127.0.0.1:3105         0.0.0.0:0              LISTENING       105",
+                    "  TCP    [::]:3110              [::]:0                 LISTENING       110",
+                    "  TCP    0.0.0.0:3199           0.0.0.0:0              LISTENING       199",
+                    "  TCP    0.0.0.0:3200           0.0.0.0:0              LISTENING       200",
+                ]
+            ),
+        )
+
+    monkeypatch.setattr(interface.subprocess, "run", fake_run)
+
+    assert interface._windows_listening_pids_for_port_range(3100, 3199) == [101, 105, 110, 199]
+
+
 def test_build_cleans_residual_interface_workers(monkeypatch):
     cleaned: list[str] = []
     stopped: list[str] = []
@@ -262,6 +288,42 @@ def test_build_retries_once_after_next_standalone_cleanup_conflict(monkeypatch):
 
     interface.build.body(ctx)
 
+    assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
+    assert cleaned == ["clean", "cleanup", "cleanup", "clean", "cleanup"]
+    assert shell_calls == [["npm", "run", "build"], ["npm", "run", "build"]]
+
+
+def test_build_retries_once_after_next_standalone_cleanup_conflict_sweeps_managed_listeners(monkeypatch):
+    cleaned: list[str] = []
+    swept: list[str] = []
+    stopped: list[str] = []
+    shell_calls: list[list[str]] = []
+    shell_results = iter(
+        [
+            interface.CommandResult(
+                exited=1,
+                stdout="",
+                stderr="Error: EBUSY: resource busy or locked, rmdir 'D:\\repo\\interface\\.next\\standalone'",
+            ),
+            interface.CommandResult(exited=0, stdout="", stderr=""),
+        ]
+    )
+    ctx = FakeContext()
+
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: stopped.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "clean", lambda _c: cleaned.append("clean") or None)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_managed_interface_listeners", lambda: swept.append("sweep") or [3100, 3101])
+    monkeypatch.setattr(interface, "_wait_for_complete_next_build_output", lambda timeout_seconds=20: None)
+    monkeypatch.setattr(
+        interface,
+        "_run_interface_shell_command",
+        lambda command, extra_env=None: shell_calls.append(command) or next(shell_results),
+    )
+
+    interface.build.body(ctx)
+
+    assert swept == ["sweep", "sweep"]
     assert stopped == [f"stop:{interface.INTERFACE_PORT}"]
     assert cleaned == ["clean", "cleanup", "cleanup", "clean", "cleanup"]
     assert shell_calls == [["npm", "run", "build"], ["npm", "run", "build"]]
@@ -419,6 +481,7 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
     monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
     monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_managed_interface_listeners", lambda: events.append("sweep") or [])
     monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
     monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
     monkeypatch.setattr(interface, "_detect_playwright_server_port", lambda expected_port, timeout_seconds=30: expected_port)
@@ -443,11 +506,13 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     assert env_seen["INTERFACE_BIND_HOST"] == interface.INTERFACE_BIND_HOST
     assert events == [
         f"stop:{port}",
+        "sweep",
         f"start:{port}:dev",
         f"ready:127.0.0.1:{port}",
         "kill:4242",
         f"stop:{port}",
         "cleanup",
+        "sweep",
         "cleanup-log",
     ]
 
