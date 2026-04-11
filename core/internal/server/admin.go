@@ -219,6 +219,11 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// CE-1: Orchestration Templates & Intent Proofs
 	mux.HandleFunc("GET /api/v1/templates", s.handleListTemplatesAPI)
+	mux.HandleFunc("GET /api/v1/conversation-templates", s.HandleListConversationTemplates)
+	mux.HandleFunc("POST /api/v1/conversation-templates", s.HandleCreateConversationTemplate)
+	mux.HandleFunc("GET /api/v1/conversation-templates/{id}", s.HandleGetConversationTemplate)
+	mux.HandleFunc("PATCH /api/v1/conversation-templates/{id}", s.HandleUpdateConversationTemplate)
+	mux.HandleFunc("POST /api/v1/conversation-templates/{id}/instantiate", s.HandleInstantiateConversationTemplate)
 	mux.HandleFunc("GET /api/v1/organizations", s.handleListOrganizations)
 	mux.HandleFunc("POST /api/v1/organizations", s.handleCreateOrganization)
 	mux.HandleFunc("GET /api/v1/organizations/{id}/home", s.handleGetOrganizationHome)

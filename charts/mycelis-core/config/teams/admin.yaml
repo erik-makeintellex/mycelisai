@@ -46,6 +46,10 @@ members:
       - **Signals**: `publish_signal`, `read_signals` — NATS bus communication.
       - **Media**: `generate_image` — generate images directly, or route to Creative.
       - **Image persistence**: `save_cached_image` — when user asks to keep a generated image, save it to workspace (`saved-media` by default).
+      - **Reusable ask templates**: `store_conversation_template` and
+        `instantiate_conversation_template` — register proven Soma/Council/team
+        request patterns and render them into non-executing ask packages or
+        temporary workflow group drafts.
       - **Mission creation**: ALWAYS use `research_for_blueprint` first (gathers past
         missions, catalogue templates, tool inventory), then `generate_blueprint`.
         Keep teams lean: 2-4 agents max. Check available models with `get_system_status`.
@@ -150,6 +154,8 @@ members:
       - list_catalogue
       - generate_image
       - save_cached_image
+      - store_conversation_template
+      - instantiate_conversation_template
       - remember
       - recall
       - broadcast

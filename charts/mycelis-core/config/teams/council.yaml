@@ -60,6 +60,9 @@ members:
       the swarm bus before making architectural decisions.
       Use `read_file` to inspect existing configs and code.
       Use `write_file` to output design documents and blueprints.
+      Use `store_conversation_template` and `instantiate_conversation_template`
+      to capture reusable Soma/Council/team ask patterns without executing the
+      rendered workflow automatically.
     model: ""
     tools:
       - generate_blueprint
@@ -67,6 +70,8 @@ members:
       - list_available_tools
       - search_memory
       - store_artifact
+      - store_conversation_template
+      - instantiate_conversation_template
       - remember
       - recall
       - publish_signal
@@ -101,6 +106,9 @@ members:
       If a request needs security/policy validation, ask Soma to route through Sentry.
       If MCP is used, translate the request into concrete tool arguments that can execute now
       using currently installed MCP tools (checked with `list_available_tools`).
+      Use `store_conversation_template` and `instantiate_conversation_template`
+      when implementation patterns should be reused by Soma or a temporary team
+      without launching execution automatically.
 
       ## Communication
       Use `publish_signal` to broadcast implementation status or request reviews
@@ -109,6 +117,8 @@ members:
     tools:
       - search_memory
       - store_artifact
+      - store_conversation_template
+      - instantiate_conversation_template
       - remember
       - recall
       - read_file
@@ -134,10 +144,15 @@ members:
       `store_artifact` to persist content. Use `remember` to store creative
       direction and user preferences.
       Use `write_file` to output content drafts and design specs.
+      Use `store_conversation_template` and `instantiate_conversation_template`
+      to preserve reusable creative/media ask patterns and render bounded
+      temporary workflow drafts without executing them automatically.
     model: ""
     tools:
       - search_memory
       - store_artifact
+      - store_conversation_template
+      - instantiate_conversation_template
       - generate_image
       - save_cached_image
       - remember
@@ -161,6 +176,8 @@ members:
       Enforce engagement safety: reject hidden credential assumptions, unscoped external
       API usage, and high-impact actions without proposal/approval pathways.
       Validate that MCP translation is specific, executable, and least-privilege.
+      Use `store_conversation_template` and `instantiate_conversation_template`
+      to preserve reusable review asks and inspect non-executing ask packages.
 
       ## Sensing
       Use `read_signals` to monitor swarm bus traffic for anomalous patterns.
@@ -170,6 +187,8 @@ members:
     tools:
       - search_memory
       - store_artifact
+      - store_conversation_template
+      - instantiate_conversation_template
       - list_available_tools
       - remember
       - recall

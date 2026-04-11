@@ -143,6 +143,11 @@ Instantiation should return a bounded ask package that Soma can use to start a d
 
 The MVP instantiation path should be non-executing by default: render the template with supplied variables, update `last_used_at`, and return the ask package plus any workflow-group draft for the caller to approve or launch through the existing group endpoint.
 
+Implementation checkpoint:
+
+- `IN_REVIEW` the backend MVP slice now has migration `038_conversation_templates`, protocol/store types, admin API routes, internal tools, standing-team manifests, and focused tests for create and non-executing instantiation.
+- `NEXT` expose template discovery/launch in the Soma/team UI.
+
 ## Workflow Proof Set
 
 The release proof should include both automated and visible-browser validation:
@@ -160,9 +165,9 @@ The release proof should include both automated and visible-browser validation:
 
 Recommended order:
 
-1. `ACTIVE` document and expose the user-output posture, model-role map, and media boundary in product docs and in-app docs.
-2. `NEXT` add DB-backed conversation templates with backend CRUD and focused tests.
-3. `NEXT` add an instantiation endpoint that turns a template into a bounded Soma/council/team ask package.
+1. `COMPLETE` document and expose the user-output posture, model-role map, and media boundary in product docs and in-app docs.
+2. `IN_REVIEW` add DB-backed conversation templates with backend CRUD and focused tests.
+3. `IN_REVIEW` add an instantiation endpoint that turns a template into a bounded Soma/council/team ask package.
 4. `NEXT` add a browser-visible demo workflow for direct answer vs team-managed marketing/media package.
 5. `NEXT` add live media smoke proof that either returns an artifact or a precise missing-engine blocker.
 6. `NEXT` add MCP usage proof inside a team-managed workflow, tied to connected-tools activity.

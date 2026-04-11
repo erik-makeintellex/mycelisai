@@ -144,6 +144,9 @@
 | `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return run_id |
 | `/api/v1/intent/proof/{id}` | GET | Retrieve intent proof bundle by ID |
 | `/api/v1/templates` | GET | List CE-1 orchestration templates or V8 AI Organization starters when `view=organization-starters` |
+| `/api/v1/conversation-templates` | GET/POST | List/create DB-backed reusable Soma/Council/team ask templates |
+| `/api/v1/conversation-templates/{id}` | GET/PATCH | Read/update a reusable conversation template |
+| `/api/v1/conversation-templates/{id}/instantiate` | POST | Render a template with variables and return a non-executing ask package, team ask, or temporary-group draft |
 | **AI Organizations (V8)** | | |
 | `/api/v1/organizations` | GET | List created AI Organization summaries for the entry flow |
 | `/api/v1/organizations` | POST | Create an AI Organization from template or empty start |

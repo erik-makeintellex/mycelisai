@@ -23,8 +23,8 @@ Defined as YAML manifests in `core/config/teams/`. Loaded by `Registry.LoadManif
 
 | Team | ID | Members | Tools | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| **Admin** | `admin-core` | admin (max 5 ReAct iterations) | consult_council, delegate_task, search_memory, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, generate_image, remember, recall, publish_signal, read_signals, read_file, write_file | Orchestrator — routes user chat, consults council, delegates to teams, senses bus |
-| **Council** | `council-core` | architect, coder, creative, sentry | Per-member: search_memory, store_artifact, remember, recall, read_file, write_file, publish_signal, read_signals + role-specific (generate_blueprint, list_catalogue, generate_image, list_available_tools) | Standing specialists, individually addressable via `swarm.council.<id>.request` |
+| **Admin** | `admin-core` | admin (max 5 ReAct iterations) | consult_council, delegate_task, search_memory, list_teams, list_missions, get_system_status, list_available_tools, list_catalogue, generate_image, store_conversation_template, instantiate_conversation_template, remember, recall, publish_signal, read_signals, read_file, write_file | Orchestrator — routes user chat, consults council, delegates to teams, senses bus |
+| **Council** | `council-core` | architect, coder, creative, sentry | Per-member: search_memory, store_artifact, store_conversation_template, instantiate_conversation_template, remember, recall, read_file, write_file, publish_signal, read_signals + role-specific (generate_blueprint, list_catalogue, generate_image, list_available_tools) | Standing specialists, individually addressable via `swarm.council.<id>.request` |
 
 To add a standing team: create a YAML file in `core/config/teams/` following the manifest schema:
 
@@ -79,6 +79,8 @@ Built-in tools available to agents without external MCP servers:
 | `read_file` | Read local filesystem (32KB max) | All |
 | `write_file` | Write to local filesystem | All |
 | `generate_image` | Diffusers media engine (SDXL) | Creative, Admin |
+| `store_conversation_template` | Store a reusable Soma/Council/team ask template without executing it | Admin, Council |
+| `instantiate_conversation_template` | Render a registered template into a non-executing ask package or temporary workflow draft | Admin, Council |
 | `local_command` | Execute allowlisted local host commands (no shell interpolation) | Admin |
 
 The `CompositeToolExecutor` wraps both `InternalToolRegistry` and `mcp.ToolExecutorAdapter` behind a single `MCPToolExecutor` interface — internal tools are tried first, MCP falls back.

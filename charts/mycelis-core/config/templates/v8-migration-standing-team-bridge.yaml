@@ -68,6 +68,10 @@ teams:
           - **Signals**: `publish_signal`, `read_signals` — NATS bus communication.
           - **Media**: `generate_image` — generate images directly, or route to Creative.
           - **Image persistence**: `save_cached_image` — when user asks to keep a generated image, save it to workspace (`saved-media` by default).
+          - **Reusable ask templates**: `store_conversation_template` and
+            `instantiate_conversation_template` — register proven Soma/Council/team
+            request patterns and render them into non-executing ask packages or
+            temporary workflow group drafts.
           - **Mission creation**: ALWAYS use `research_for_blueprint` first (gathers past
             missions, catalogue templates, tool inventory), then `generate_blueprint`.
             Keep teams lean: 2-4 agents max. Check available models with `get_system_status`.
@@ -172,6 +176,8 @@ teams:
           - list_catalogue
           - generate_image
           - save_cached_image
+          - store_conversation_template
+          - instantiate_conversation_template
           - remember
           - recall
           - broadcast
@@ -292,6 +298,9 @@ teams:
           the swarm bus before making architectural decisions.
           Use `read_file` to inspect existing configs and code.
           Use `write_file` to output design documents and blueprints.
+          Use `store_conversation_template` and `instantiate_conversation_template`
+          to capture reusable Soma/Council/team ask patterns without executing the
+          rendered workflow automatically.
         model: ""
         tools:
           - generate_blueprint
@@ -299,6 +308,8 @@ teams:
           - list_available_tools
           - search_memory
           - store_artifact
+          - store_conversation_template
+          - instantiate_conversation_template
           - remember
           - recall
           - publish_signal
@@ -333,6 +344,9 @@ teams:
           If a request needs security/policy validation, ask Soma to route through Sentry.
           If MCP is used, translate the request into concrete tool arguments that can execute now
           using currently installed MCP tools (checked with `list_available_tools`).
+          Use `store_conversation_template` and `instantiate_conversation_template`
+          when implementation patterns should be reused by Soma or a temporary team
+          without launching execution automatically.
     
           ## Communication
           Use `publish_signal` to broadcast implementation status or request reviews
@@ -341,6 +355,8 @@ teams:
         tools:
           - search_memory
           - store_artifact
+          - store_conversation_template
+          - instantiate_conversation_template
           - remember
           - recall
           - read_file
@@ -366,10 +382,15 @@ teams:
           `store_artifact` to persist content. Use `remember` to store creative
           direction and user preferences.
           Use `write_file` to output content drafts and design specs.
+          Use `store_conversation_template` and `instantiate_conversation_template`
+          to preserve reusable creative/media ask patterns and render bounded
+          temporary workflow drafts without executing them automatically.
         model: ""
         tools:
           - search_memory
           - store_artifact
+          - store_conversation_template
+          - instantiate_conversation_template
           - generate_image
           - save_cached_image
           - remember
@@ -393,6 +414,8 @@ teams:
           Enforce engagement safety: reject hidden credential assumptions, unscoped external
           API usage, and high-impact actions without proposal/approval pathways.
           Validate that MCP translation is specific, executable, and least-privilege.
+          Use `store_conversation_template` and `instantiate_conversation_template`
+          to preserve reusable review asks and inspect non-executing ask packages.
     
           ## Sensing
           Use `read_signals` to monitor swarm bus traffic for anomalous patterns.
@@ -402,6 +425,8 @@ teams:
         tools:
           - search_memory
           - store_artifact
+          - store_conversation_template
+          - instantiate_conversation_template
           - list_available_tools
           - remember
           - recall
