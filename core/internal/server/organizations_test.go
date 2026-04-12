@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mycelis/core/internal/cognitive"
@@ -449,6 +450,12 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingR
 	if executionContract["team_name"] != "Marketing Launch Team" {
 		t.Fatalf("expected marketing team name, got %+v", executionContract)
 	}
+	if executionContract["coordination_model"] != "compact_team" {
+		t.Fatalf("expected compact team coordination, got %+v", executionContract)
+	}
+	if executionContract["recommended_team_member_limit"] != float64(6) {
+		t.Fatalf("expected compact team member limit, got %+v", executionContract)
+	}
 	outputs, ok := executionContract["target_outputs"].([]any)
 	if !ok || len(outputs) != 3 {
 		t.Fatalf("expected three marketing outputs, got %+v", executionContract)
@@ -459,6 +466,65 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingR
 	}
 	if workflowGroup["coordinator_profile"] != "Marketing Launch Team lead" {
 		t.Fatalf("expected marketing workflow lead, got %+v", workflowGroup)
+	}
+	if workflowGroup["recommended_member_limit"] != float64(6) {
+		t.Fatalf("expected recommended member limit on workflow group, got %+v", workflowGroup)
+	}
+}
+
+func TestHandleTeamLeadGuidedAction_SplitsBroadRequestsIntoSmallTeamOrchestration(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+		Name:       "Northstar Labs",
+		Purpose:    "Ship a focused AI engineering organization",
+		StartMode:  OrganizationStartModeTemplate,
+		TemplateID: "engineering-starter",
+	}, mustResolveStarterTemplate(t, s, "engineering-starter")))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"plan_next_steps","request_context":"Create a company-wide product launch program across marketing, sales, support, docs, and engineering so the organization can coordinate several workstreams at once."}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object action payload, got %T", resp.Data)
+	}
+	executionContract, ok := data["execution_contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution contract, got %+v", data)
+	}
+	if executionContract["execution_mode"] != "native_team" {
+		t.Fatalf("expected native_team execution mode, got %+v", executionContract)
+	}
+	if executionContract["coordination_model"] != "multi_team_orchestration" {
+		t.Fatalf("expected multi-team orchestration guidance, got %+v", executionContract)
+	}
+	if executionContract["recommended_team_count"] != float64(3) {
+		t.Fatalf("expected several small teams, got %+v", executionContract)
+	}
+	if executionContract["recommended_team_member_limit"] != float64(5) {
+		t.Fatalf("expected compact per-team member limit, got %+v", executionContract)
+	}
+	if executionContract["recommended_team_shape"] == "" {
+		t.Fatalf("expected recommended team shape guidance, got %+v", executionContract)
+	}
+	summary, _ := executionContract["summary"].(string)
+	if !strings.Contains(strings.ToLower(summary), "several compact teams") {
+		t.Fatalf("expected summary to describe small coordinated teams, got %q", summary)
+	}
+	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected workflow group draft, got %+v", executionContract)
+	}
+	if workflowGroup["recommended_member_limit"] != float64(5) {
+		t.Fatalf("expected compact member cap in workflow group, got %+v", workflowGroup)
+	}
+	if workflowGroup["work_mode"] != "propose_only" {
+		t.Fatalf("expected propose_only workflow group mode, got %+v", workflowGroup)
 	}
 }
 

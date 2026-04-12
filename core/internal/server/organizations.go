@@ -347,23 +347,28 @@ const (
 )
 
 type TeamLeadExecutionContract struct {
-	ExecutionMode  TeamLeadExecutionMode       `json:"execution_mode"`
-	OwnerLabel     string                      `json:"owner_label"`
-	Summary        string                      `json:"summary"`
-	TeamName       string                      `json:"team_name,omitempty"`
-	ExternalTarget string                      `json:"external_target,omitempty"`
-	TargetOutputs  []string                    `json:"target_outputs"`
-	WorkflowGroup  *TeamLeadWorkflowGroupDraft `json:"workflow_group,omitempty"`
+	ExecutionMode              TeamLeadExecutionMode       `json:"execution_mode"`
+	OwnerLabel                 string                      `json:"owner_label"`
+	Summary                    string                      `json:"summary"`
+	TeamName                   string                      `json:"team_name,omitempty"`
+	ExternalTarget             string                      `json:"external_target,omitempty"`
+	CoordinationModel          string                      `json:"coordination_model,omitempty"`
+	RecommendedTeamShape       string                      `json:"recommended_team_shape,omitempty"`
+	RecommendedTeamCount       int                         `json:"recommended_team_count,omitempty"`
+	RecommendedTeamMemberLimit int                         `json:"recommended_team_member_limit,omitempty"`
+	TargetOutputs              []string                    `json:"target_outputs"`
+	WorkflowGroup              *TeamLeadWorkflowGroupDraft `json:"workflow_group,omitempty"`
 }
 
 type TeamLeadWorkflowGroupDraft struct {
-	Name                string   `json:"name"`
-	GoalStatement       string   `json:"goal_statement"`
-	WorkMode            string   `json:"work_mode"`
-	CoordinatorProfile  string   `json:"coordinator_profile"`
-	AllowedCapabilities []string `json:"allowed_capabilities,omitempty"`
-	ExpiryHours         int      `json:"expiry_hours,omitempty"`
-	Summary             string   `json:"summary"`
+	Name                   string   `json:"name"`
+	GoalStatement          string   `json:"goal_statement"`
+	WorkMode               string   `json:"work_mode"`
+	CoordinatorProfile     string   `json:"coordinator_profile"`
+	AllowedCapabilities    []string `json:"allowed_capabilities,omitempty"`
+	RecommendedMemberLimit int      `json:"recommended_member_limit,omitempty"`
+	ExpiryHours            int      `json:"expiry_hours,omitempty"`
+	Summary                string   `json:"summary"`
 }
 
 var organizationAIEngineProfiles = []organizationAIEngineProfile{
@@ -1946,6 +1951,27 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 		}
 	}
 
+	if isBroadCoordinationRequest(normalized) {
+		teamName := "Program Orchestration Team"
+		outputs := []string{
+			"Program orchestration brief",
+			"Per-team delivery plans",
+			"Cross-team coordination summary",
+		}
+		return &TeamLeadExecutionContract{
+			ExecutionMode:              TeamLeadExecutionModeNativeTeam,
+			OwnerLabel:                 "Soma and Council orchestration",
+			TeamName:                   teamName,
+			CoordinationModel:          "multi_team_orchestration",
+			RecommendedTeamShape:       "Several small teams coordinated by Soma and Council over NATS/exchange, with no single team exceeding the member cap.",
+			RecommendedTeamCount:       3,
+			RecommendedTeamMemberLimit: 5,
+			Summary:                    fmt.Sprintf("This request is broad enough to split into several compact teams instead of one oversized group. Use Soma and Council to coordinate the lanes over NATS/exchange, keep each team small, and return one orchestration summary plus the team-level outputs for %s.", safeOrganizationName(home.Name)),
+			TargetOutputs:              outputs,
+			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review", "broadcast"}, 5),
+		}
+	}
+
 	if referencesImageTeamOutput(normalized) {
 		teamName := "Creative Delivery Team"
 		outputs := []string{
@@ -1953,23 +1979,31 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 			"Short concept note",
 		}
 		return &TeamLeadExecutionContract{
-			ExecutionMode: TeamLeadExecutionModeNativeTeam,
-			OwnerLabel:    "Native Mycelis team",
-			TeamName:      teamName,
-			Summary:       fmt.Sprintf("Use a bounded creative team inside %s so Soma can shape the work, route it through the right specialists, and return the generated image as a managed artifact.", safeOrganizationName(home.Name)),
-			TargetOutputs: outputs,
-			WorkflowGroup: buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"content.plan", "artifact.review"}),
+			ExecutionMode:              TeamLeadExecutionModeNativeTeam,
+			OwnerLabel:                 "Native Mycelis team",
+			TeamName:                   teamName,
+			CoordinationModel:          "compact_team",
+			RecommendedTeamShape:       "One focused team with a small specialist roster.",
+			RecommendedTeamCount:       1,
+			RecommendedTeamMemberLimit: 6,
+			Summary:                    fmt.Sprintf("Use a bounded creative team inside %s so Soma can shape the work, route it through the right specialists, and return the generated image as a managed artifact.", safeOrganizationName(home.Name)),
+			TargetOutputs:              outputs,
+			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"content.plan", "artifact.review"}, 6),
 		}
 	}
 
 	if teamName, outputs, ok := inferBusinessTeamExecution(normalized); ok {
 		return &TeamLeadExecutionContract{
-			ExecutionMode: TeamLeadExecutionModeNativeTeam,
-			OwnerLabel:    "Native Mycelis team",
-			TeamName:      teamName,
-			Summary:       fmt.Sprintf("Use a bounded %s lane inside %s so Soma can stand up a focused delivery group, coordinate the right specialists, and keep the resulting outputs reviewable in one place.", strings.ToLower(teamName), safeOrganizationName(home.Name)),
-			TargetOutputs: outputs,
-			WorkflowGroup: buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review"}),
+			ExecutionMode:              TeamLeadExecutionModeNativeTeam,
+			OwnerLabel:                 "Native Mycelis team",
+			TeamName:                   teamName,
+			CoordinationModel:          "compact_team",
+			RecommendedTeamShape:       "One focused team with a small specialist roster.",
+			RecommendedTeamCount:       1,
+			RecommendedTeamMemberLimit: 6,
+			Summary:                    fmt.Sprintf("Use a bounded %s lane inside %s so Soma can stand up a focused delivery group, coordinate the right specialists, and keep the resulting outputs reviewable in one place.", strings.ToLower(teamName), safeOrganizationName(home.Name)),
+			TargetOutputs:              outputs,
+			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review"}, 6),
 		}
 	}
 
@@ -2013,20 +2047,47 @@ func inferBusinessTeamExecution(normalized string) (string, []string, bool) {
 	}
 }
 
-func buildWorkflowGroupDraft(home OrganizationHomePayload, teamName, requestContext, workMode string, targetOutputs, allowedCapabilities []string) *TeamLeadWorkflowGroupDraft {
+func isBroadCoordinationRequest(normalized string) bool {
+	breadthSignals := 0
+	for _, marker := range []string{
+		"company-wide",
+		"organization-wide",
+		"cross-functional",
+		"multi-team",
+		"multiple teams",
+		"several teams",
+		"several workstreams",
+		"whole organization",
+		"enterprise-wide",
+		"all teams",
+		"across teams",
+		"across functions",
+	} {
+		if strings.Contains(normalized, marker) {
+			breadthSignals++
+		}
+	}
+	if breadthSignals >= 1 {
+		return true
+	}
+	return strings.Contains(normalized, "program") && (strings.Contains(normalized, "across") || strings.Contains(normalized, "multiple") || strings.Contains(normalized, "several") || strings.Contains(normalized, "cross"))
+}
+
+func buildWorkflowGroupDraft(home OrganizationHomePayload, teamName, requestContext, workMode string, targetOutputs, allowedCapabilities []string, recommendedMemberLimit int) *TeamLeadWorkflowGroupDraft {
 	organizationName := safeOrganizationName(home.Name)
 	goal := strings.TrimSpace(requestContext)
 	if goal == "" {
 		goal = fmt.Sprintf("Coordinate a focused %s workflow inside %s.", strings.ToLower(teamName), organizationName)
 	}
 	return &TeamLeadWorkflowGroupDraft{
-		Name:                fmt.Sprintf("%s temporary workflow", teamName),
-		GoalStatement:       goal,
-		WorkMode:            workMode,
-		CoordinatorProfile:  fmt.Sprintf("%s lead", teamName),
-		AllowedCapabilities: normalizeExecutionCapabilityList(allowedCapabilities),
-		ExpiryHours:         72,
-		Summary:             fmt.Sprintf("Launch a temporary workflow group for %s, keep coordination bounded, and retain outputs like %s after the lane is archived.", teamName, humanJoin(targetOutputs)),
+		Name:                   fmt.Sprintf("%s temporary workflow", teamName),
+		GoalStatement:          goal,
+		WorkMode:               workMode,
+		CoordinatorProfile:     fmt.Sprintf("%s lead", teamName),
+		AllowedCapabilities:    normalizeExecutionCapabilityList(allowedCapabilities),
+		RecommendedMemberLimit: recommendedMemberLimit,
+		ExpiryHours:            72,
+		Summary:                fmt.Sprintf("Launch a temporary workflow group for %s, keep coordination bounded to at most %d members, and retain outputs like %s after the lane is archived.", teamName, recommendedMemberLimit, humanJoin(targetOutputs)),
 	}
 }
 
