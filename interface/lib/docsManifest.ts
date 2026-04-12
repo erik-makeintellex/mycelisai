@@ -103,6 +103,12 @@ export const DOC_MANIFEST: DocSection[] = [
         section: "Getting Started",
         docs: [
             {
+                slug: "docs-home",
+                label: "Docs Home",
+                path: "docs/README.md",
+                description: "Clean navigation layer between user guidance, developer guidance, testing guidance, and historical references",
+            },
+            {
                 slug: "readme",
                 label: "Overview",
                 path: "README.md",

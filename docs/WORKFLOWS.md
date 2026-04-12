@@ -110,7 +110,7 @@ This is a dry-run. No NATS messages, no team context, no side effects.
 
 **Purpose**: The user installs, manages, and tests external MCP tool servers. These provide tools (filesystem, GitHub, databases, Slack, etc.) that can be bound to agents.
 
-**Route**: `/settings/tools` (sub-route of Settings)
+**Route**: `/resources?tab=tools` (Connected Tools under Resources; `/settings/tools` remains a legacy redirect surface)
 
 **Backend Dependencies**:
 - `GET /api/v1/mcp/servers` — list servers with tools (existing)
@@ -583,7 +583,7 @@ For voice input, the frontend captures audio via `MediaRecorder` API, transcribe
 **Sub-routes**:
 - `/settings` — General settings (existing)
 - `/settings/brain` — Model matrix configuration (existing)
-- `/settings/tools` — MCP Tool Registry (Workflow 2, new)
+- `/resources?tab=tools` — Connected Tools / MCP Tool Registry (Workflow 2, new)
 - `/settings/trust` — Trust Economy configuration (new dedicated page)
 
 ### Step-by-Step User Flow
@@ -600,7 +600,7 @@ The user can:
 - Change profile assignments
 - Trigger re-discovery probe
 
-#### 8.2 — MCP Tools (`/settings/tools`)
+#### 8.2 — MCP Tools (`/resources?tab=tools`)
 
 Full MCP Tool Registry interface (Workflow 2). Manages external tool servers and their discovered tools.
 
@@ -659,7 +659,7 @@ All live data flows through the existing SSE stream at `/api/v1/stream`. The Zus
 /catalogue            → Agent Catalogue (new)
 /settings             → General Settings
 /settings/brain       → Model Matrix
-/settings/tools       → MCP Tool Registry (new)
+/resources?tab=tools   → MCP Tool Registry / Connected Tools (new)
 /settings/trust       → Trust Configuration (new)
 /telemetry            → Telemetry deep-dive
 /approvals            → Approval queue
