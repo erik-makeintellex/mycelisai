@@ -149,6 +149,13 @@ Current scope guard:
 - `ACTIVE` lanes above are not all release blockers; they are targeted follow-through lanes for issues discovered during testing.
 - `NEXT` lanes should remain deferred unless a real tester or investor review need makes them blocking.
 
+MVP prep sequence:
+1. `COMPLETE` remove stale root debug/generated artifacts that are not canonical source, automation, or precise documentation.
+2. `ACTIVE` run initial user testing from a clean supported runtime and capture blockers against the Current Target State board.
+3. `ACTIVE` keep first-pass MVP testing focused on Soma setup/chat, proposal confirmation, guided team/group workflow, context intake, MCP visibility, and artifact/output review.
+4. `IN_REVIEW` treat media generation as an environment-capability note unless the test host has a configured local or remote media engine.
+5. `NEXT` convert only tester-discovered blockers into implementation slices; defer enterprise IAM, advanced runtime UI, and deeper reflection-promotion UX unless they block the MVP walkthrough.
+
 ## Prior Review (2026-04-09)
 
 Review summary:

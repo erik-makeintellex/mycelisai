@@ -393,10 +393,10 @@ Use this shorter sequence when you are validating a fresh checkout on another ma
 5. Run the remote walkthrough in this document from the second machine.
 6. Confirm the current release blockers are named in `V8_DEV_STATE.md` before you declare the release ready.
 
-Known remaining initial-release gate:
-- `BLOCKED` live governed-chat direct-answer proof still needs repair and a fresh live-backend revalidation before initial release can be called complete.
-  - the product still needs a passing fresh-organization direct-answer proof on the governed live lane
-  - do not treat the browser-only mocked proofs as a substitute for that live gate
+Initial-release gate rule:
+- treat `V8_DEV_STATE.md` as the live blocker board
+- do not promote a release if the remote walkthrough finds a fresh Soma chat, proposal/confirm, guided team creation, context intake, or artifact/output review defect
+- record media-engine gaps as environment notes unless the target machine is explicitly configured for live media generation
 
 ## Failure Notes To Capture
 

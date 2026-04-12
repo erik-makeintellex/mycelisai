@@ -55,7 +55,13 @@ architect_work_order.md
 scripts/__pycache__/
 
 kubeconfig.yaml
+kind-config.gen.yaml
 workspace/kind-kubeconfig.yaml
+debug.yaml
+debug_manifest.yaml
+full_migration.sql
+migration-pod.yaml
+seeds.sql
 
 uv.lock
 
