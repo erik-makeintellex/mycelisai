@@ -25,10 +25,28 @@ type ExecutionAvailability struct {
 	FallbackApplied   bool   `json:"fallback_applied,omitempty"`
 }
 
-// MediaConfig holds the Diffusers media engine endpoint (OpenAI-compatible images API).
+// MediaProviderConfig describes the media provider backing Soma's image/voice outputs.
+// It is intentionally explicit so local-hosted and hosted providers can be configured
+// and tested through the same contract.
+type MediaProviderConfig struct {
+	ProviderID   string `yaml:"provider_id,omitempty" json:"provider_id,omitempty"`
+	Type         string `yaml:"type,omitempty" json:"type,omitempty"`                   // openai_compatible, hosted_api, diffusers, comfyui, etc.
+	Endpoint     string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`           // provider base endpoint
+	ModelID      string `yaml:"model_id,omitempty" json:"model_id,omitempty"`           // model/workflow identifier
+	Location     string `yaml:"location,omitempty" json:"location,omitempty"`           // local | remote
+	DataBoundary string `yaml:"data_boundary,omitempty" json:"data_boundary,omitempty"` // local_only | leaves_org
+	UsagePolicy  string `yaml:"usage_policy,omitempty" json:"usage_policy,omitempty"`   // local_first | require_approval | allow_escalation
+	AuthKeyEnv   string `yaml:"api_key_env,omitempty" json:"api_key_env,omitempty"`
+	Enabled      *bool  `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+}
+
+// MediaConfig holds the media provider contract plus the legacy image endpoint fields.
+// The legacy fields remain so existing YAML continues to work; the typed provider block
+// makes local vs hosted configuration explicit.
 type MediaConfig struct {
-	Endpoint string `yaml:"endpoint" json:"endpoint"` // e.g. "http://127.0.0.1:8001/v1"
-	ModelID  string `yaml:"model_id" json:"model_id"` // e.g. "stable-diffusion-xl"
+	Provider MediaProviderConfig `yaml:"provider,omitempty" json:"provider,omitempty"`
+	Endpoint string              `yaml:"endpoint" json:"endpoint"` // e.g. "http://127.0.0.1:8001/v1"
+	ModelID  string              `yaml:"model_id" json:"model_id"` // e.g. "stable-diffusion-xl"
 }
 
 type ProviderConfig struct {

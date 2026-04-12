@@ -47,7 +47,7 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/dashboard` AI Organization re-entry and status overview | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `navigation.spec.ts`, accessibility baseline | `ACTIVE` |
 | `/groups` standing + temporary collaboration workspace | `GroupsPage.test.tsx`, `GroupManagementPanel.test.tsx` | `groups.spec.ts`, plus live-backend retained-output aggregation proof via `groups-live-backend.spec.ts` | `ACTIVE` |
 | `/automations` | `AutomationsPage.test.tsx`, automations component suites | `layout.spec.ts`, `proposals.spec.ts` | `ACTIVE` |
-| `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial), `mcp-connected-tools.spec.ts` for Connected Tools registry/library/activity visibility | `ACTIVE` |
+| `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial), `mcp-connected-tools.spec.ts` for Connected Tools registry/library/activity visibility and empty-state activation guidance | `ACTIVE` |
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
 | `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | route-level smoke remains unit-first; live-backend/browser depth is still selective | `ACTIVE` |
 | `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites, `MCPToolRegistry.test.tsx`, `MCPLibraryBrowser.test.tsx` | `settings.spec.ts` for guided settings/profile/access/theme; Connected Tools browser depth now lives on `/resources` in `mcp-connected-tools.spec.ts` | `ACTIVE` |
@@ -80,6 +80,31 @@ Immediate test additions required for stronger full-stack confidence:
 4. `NEXT` add live-backend browser proof that a Soma/team workflow can use an MCP-backed capability and surface matching recent MCP activity.
 5. `NEXT` unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven.
 6. `NEXT` expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches.
+
+### Tester Proof Slice: Output Block, Media Readiness, And Team-Managed Review
+
+Use this compact slice when you need to prove the current media/output lane without expanding into backend runtime changes:
+
+1. **Local-hosted output block**
+   - Set `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted`.
+   - Set `MYCELIS_OUTPUT_HOST_PATH` to an existing host directory before Compose bring-up.
+   - Run `uv run inv compose.up --build`, then `uv run inv compose.health`.
+   - In the browser, confirm team or Soma-generated file outputs resolve to download links that point at the mounted output location and the UI presents them as locally hosted artifacts.
+
+2. **Cluster-generated output block**
+   - Use the chart/runtime default `cluster_generated` mode.
+   - Render or deploy the chart with PVC-backed output storage.
+   - Confirm the UI still exposes downloadable retained outputs, but the operator path is treated as cluster-managed storage rather than a host-mounted directory.
+
+3. **Live media provider readiness**
+   - Run `uv run inv lifecycle.health` first.
+   - If the media engine is offline, record the blocker explicitly instead of treating the run as passed.
+   - If a media provider is available, use the headed Chromium proof in `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` to validate generated media artifact rendering, save, and download behavior.
+
+4. **Team-managed output review**
+   - Run the guided team creation path in `interface/e2e/specs/team-creation.spec.ts`.
+   - Confirm the temporary workflow group can be created, archived, and reviewed with retained outputs still visible.
+   - Pair that with `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` to prove direct Soma answers stay distinct from team-managed output packages.
 7. `NEXT` deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states.
 
 Canonical UI testing agentry contract:

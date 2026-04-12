@@ -67,6 +67,47 @@ func applyEnvOverrides(config *BrainConfig) {
 			}
 			config.Media.ModelID = value
 			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_MODEL_ID=%s", value)
+		case "MYCELIS_MEDIA_PROVIDER_ID":
+			if config.Media == nil {
+				config.Media = &MediaConfig{}
+			}
+			config.Media.Provider.ProviderID = value
+			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_PROVIDER_ID=%s", value)
+		case "MYCELIS_MEDIA_TYPE":
+			if config.Media == nil {
+				config.Media = &MediaConfig{}
+			}
+			config.Media.Provider.Type = strings.ToLower(value)
+			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_TYPE=%s", value)
+		case "MYCELIS_MEDIA_LOCATION":
+			if config.Media == nil {
+				config.Media = &MediaConfig{}
+			}
+			config.Media.Provider.Location = strings.ToLower(value)
+			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_LOCATION=%s", value)
+		case "MYCELIS_MEDIA_DATA_BOUNDARY":
+			if config.Media == nil {
+				config.Media = &MediaConfig{}
+			}
+			config.Media.Provider.DataBoundary = strings.ToLower(value)
+			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_DATA_BOUNDARY=%s", value)
+		case "MYCELIS_MEDIA_USAGE_POLICY":
+			if config.Media == nil {
+				config.Media = &MediaConfig{}
+			}
+			config.Media.Provider.UsagePolicy = strings.ToLower(value)
+			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_USAGE_POLICY=%s", value)
+		case "MYCELIS_MEDIA_ENABLED":
+			if config.Media == nil {
+				config.Media = &MediaConfig{}
+			}
+			enabled, err := strconv.ParseBool(value)
+			if err != nil {
+				log.Printf("WARN: ignoring invalid bool for MYCELIS_MEDIA_ENABLED: %q", value)
+				continue
+			}
+			config.Media.Provider.Enabled = &enabled
+			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_ENABLED=%s", value)
 		}
 	}
 }

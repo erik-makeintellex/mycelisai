@@ -66,6 +66,121 @@ func TestCognitiveMatrix(t *testing.T) {
 	}
 }
 
+func TestHandleCognitiveStatus_ExposesTypedMediaProviderContract(t *testing.T) {
+	mediaEnabled := true
+	mediaHealth := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/health" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer mediaHealth.Close()
+
+	s := &AdminServer{
+		Cognitive: &cognitive.Router{
+			Config: &cognitive.BrainConfig{
+				Media: &cognitive.MediaConfig{
+					Provider: cognitive.MediaProviderConfig{
+						ProviderID:   "media-local",
+						Type:         "openai_compatible",
+						Endpoint:     mediaHealth.URL + "/v1",
+						ModelID:      "stable-diffusion-xl",
+						Location:     "local",
+						DataBoundary: "local_only",
+						UsagePolicy:  "local_first",
+						Enabled:      &mediaEnabled,
+					},
+				},
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	media, ok := resp["media"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected media status object, got %T", resp["media"])
+	}
+	if media["status"] != "online" {
+		t.Fatalf("media status = %v, want online", media["status"])
+	}
+	if media["provider_id"] != "media-local" {
+		t.Fatalf("media provider_id = %v, want media-local", media["provider_id"])
+	}
+	if media["provider_type"] != "openai_compatible" {
+		t.Fatalf("media provider_type = %v, want openai_compatible", media["provider_type"])
+	}
+	if media["location"] != "local" {
+		t.Fatalf("media location = %v, want local", media["location"])
+	}
+	if media["data_boundary"] != "local_only" {
+		t.Fatalf("media data_boundary = %v, want local_only", media["data_boundary"])
+	}
+	if media["usage_policy"] != "local_first" {
+		t.Fatalf("media usage_policy = %v, want local_first", media["usage_policy"])
+	}
+	if media["configured"] != true {
+		t.Fatalf("media configured = %v, want true", media["configured"])
+	}
+	if media["enabled"] != true {
+		t.Fatalf("media enabled = %v, want true", media["enabled"])
+	}
+}
+
+func TestHandleCognitiveStatus_MediaProviderCanBeExplicitlyDisabled(t *testing.T) {
+	mediaEnabled := false
+	s := &AdminServer{
+		Cognitive: &cognitive.Router{
+			Config: &cognitive.BrainConfig{
+				Media: &cognitive.MediaConfig{
+					Provider: cognitive.MediaProviderConfig{
+						Endpoint: "http://127.0.0.1:8001/v1",
+						ModelID:  "stable-diffusion-xl",
+						Enabled:  &mediaEnabled,
+					},
+				},
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	media, ok := resp["media"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected media status object, got %T", resp["media"])
+	}
+	if media["status"] != "disabled" {
+		t.Fatalf("media status = %v, want disabled", media["status"])
+	}
+	if media["enabled"] != false {
+		t.Fatalf("media enabled = %v, want false", media["enabled"])
+	}
+}
+
 func TestHandleChat_RequiresAvailableCognitiveEngine(t *testing.T) {
 	s := &AdminServer{
 		Cognitive: &cognitive.Router{

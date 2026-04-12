@@ -1160,6 +1160,13 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 		Status            string `json:"status"`
 		Endpoint          string `json:"endpoint,omitempty"`
 		Model             string `json:"model,omitempty"`
+		ProviderID        string `json:"provider_id,omitempty"`
+		ProviderType      string `json:"provider_type,omitempty"`
+		Location          string `json:"location,omitempty"`
+		DataBoundary      string `json:"data_boundary,omitempty"`
+		UsagePolicy       string `json:"usage_policy,omitempty"`
+		Configured        bool   `json:"configured,omitempty"`
+		Enabled           bool   `json:"enabled"`
 		Detail            string `json:"detail,omitempty"`
 		RecommendedAction string `json:"recommended_action,omitempty"`
 		SetupRequired     bool   `json:"setup_required,omitempty"`
@@ -1204,20 +1211,34 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Probe media engine
-	if cfg.Media != nil && cfg.Media.Endpoint != "" {
-		healthURL := cfg.Media.Endpoint[:len(cfg.Media.Endpoint)-3] + "/health" // strip /v1, add /health
-		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		defer cancel()
+	if cfg.Media != nil {
+		media := cfg.Media.EffectiveProvider()
+		result["media"] = &engineStatus{
+			Status:       "offline",
+			Endpoint:     media.Endpoint,
+			Model:        media.ModelID,
+			ProviderID:   media.ProviderID,
+			ProviderType: media.Type,
+			Location:     media.Location,
+			DataBoundary: media.DataBoundary,
+			UsagePolicy:  media.UsagePolicy,
+			Configured:   cfg.Media.IsConfigured(),
+			Enabled:      media.IsEnabled(),
+		}
 
-		httpReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, healthURL, nil)
-		resp, err := http.DefaultClient.Do(httpReq)
-		if err == nil {
-			resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				result["media"] = &engineStatus{
-					Status:   "online",
-					Endpoint: cfg.Media.Endpoint,
-					Model:    cfg.Media.ModelID,
+		if !media.IsEnabled() {
+			result["media"].Status = "disabled"
+		} else if strings.TrimSpace(media.Endpoint) != "" {
+			healthURL := strings.TrimSuffix(media.Endpoint, "/v1") + "/health"
+			ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+			defer cancel()
+
+			httpReq, _ := http.NewRequestWithContext(ctx, http.MethodGet, healthURL, nil)
+			resp, err := http.DefaultClient.Do(httpReq)
+			if err == nil {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					result["media"].Status = "online"
 				}
 			}
 		}

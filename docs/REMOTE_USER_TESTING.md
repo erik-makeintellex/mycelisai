@@ -67,6 +67,14 @@ Before the walkthrough, verify these are true on the machine hosting Mycelis:
    - `filesystem` and/or `fetch` should already be connected if you want to test governed tool usage
    - do not assume remote/high-risk MCP install should auto-allow
 
+6. Output storage expectations are known before the walkthrough.
+   - if testing `local_hosted` output storage, confirm the host path exists before Compose bring-up
+   - if testing cluster-generated output storage, confirm the chart/runtime is using the PVC-backed default
+
+7. Media readiness is known before the walkthrough.
+   - if no media provider is configured, capture the missing-provider blocker explicitly
+   - if a media provider is configured, be ready to prove render/save/download behavior from the browser
+
 Useful host-side checks:
 
 ```bash
@@ -241,6 +249,26 @@ Expected outcome:
 - the admin can save either routing mode without touching YAML directly
 - team-facing summaries reflect the detected effective model after save
 - ordinary non-admin interaction is not framed as the place to rewrite shared output-model policy
+
+### 4b. Output Block And Media Readiness
+
+Goal:
+- prove that retained outputs are written to the correct storage posture and that media generation is either live or clearly blocked
+
+Steps:
+1. Confirm the current output-block mode is visible in the setup or runtime notes.
+2. If the run is `local_hosted`, verify the host path exists before you start the browser walkthrough.
+3. If the run is `cluster_generated`, verify the storage path is presented as cluster-managed/PVC-backed.
+4. Run the health check and confirm whether the media engine is online.
+5. If media is online, run the headed browser proof that renders generated media artifacts and exposes save/download paths.
+6. If media is offline, capture the blocker text and stop the run as blocked instead of treating it as a pass.
+7. Use a team-managed flow such as guided team creation and temporary-group review to confirm retained outputs are still reviewable after archive.
+
+Expected outcome:
+- local-hosted output storage is tied to a real host directory and reads as a self-hosted exception
+- cluster-generated output storage reads as the default managed path
+- media readiness is explicit, not implied
+- team-managed outputs stay reviewable after temporary group closure
 
 ### 5. Governed Mutation: Cancel Path
 

@@ -281,6 +281,43 @@ Evidence:
 
 - screenshot of each returned answer
 
+### Workflow 5D: Output block and media readiness
+
+Surface:
+
+- `/dashboard`
+- `/organizations/[id]`
+- `/groups`
+
+Action:
+
+- confirm whether the run is `local_hosted` or `cluster_generated` for retained output storage
+- if `local_hosted`, verify the host path exists before the browser proof begins
+- if `cluster_generated`, verify the output block is presented as cluster-managed/PVC-backed
+- confirm media readiness from the live health surface before asserting generated-artifact behavior
+- if media is online, prove render/save/download behavior for a generated media artifact
+- if media is offline, capture the blocker text instead of treating the run as a pass
+- use guided team creation and temporary-group archive/review to prove retained outputs remain reviewable after closure
+
+Expected:
+
+- output storage posture is obvious to the operator
+- local-hosted output storage requires an explicit host directory
+- cluster-generated output storage reads as the default managed path
+- generated media is either visible as an artifact or clearly blocked
+- team-managed outputs stay reviewable after archive
+
+Terminal state:
+
+- `answer` for informational checks
+- `blocker` when media capability is not configured
+
+Evidence:
+
+- screenshot of output-block posture or settings surface
+- screenshot of media readiness result or blocker
+- screenshot of archived temporary-group retained-output review
+
 ### Workflow 6: Direct Soma answer
 
 Surface:

@@ -13,7 +13,31 @@ async function fulfillJSON(route: RouteLike, status: number, body: unknown) {
     });
 }
 
-async function mockConnectedToolsApis(page: Page) {
+type MockConnectedToolsOptions = {
+    servers?: Array<{
+        id: string;
+        name: string;
+        transport: string;
+        status: string;
+        tools: Array<{
+            id: string;
+            name: string;
+            description: string;
+        }>;
+    }>;
+    activity?: Array<{
+        id: string;
+        server_id?: string;
+        server_name: string;
+        tool_name: string;
+        state: string;
+        summary: string;
+        message: string;
+        timestamp: string;
+    }>;
+};
+
+async function mockConnectedToolsApis(page: Page, options: MockConnectedToolsOptions = {}) {
     const filesystemServer = {
         id: "mcp-filesystem",
         name: "filesystem",
@@ -45,8 +69,8 @@ async function mockConnectedToolsApis(page: Page) {
             },
         ],
     };
-    const servers = [filesystemServer];
-    const activity = [
+    const servers = options.servers ?? [filesystemServer];
+    const activity = options.activity ?? [
         {
             id: "activity-read-file",
             server_id: "mcp-filesystem",
@@ -153,18 +177,29 @@ async function mockConnectedToolsApis(page: Page) {
     });
 }
 
+async function openConnectedTools(page: Page) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+        await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+        await page.evaluate(() => window.localStorage.setItem("mycelis-advanced-mode", "true"));
+        await page.waitForFunction(() => window.localStorage.getItem("mycelis-advanced-mode") === "true");
+        await page.reload({ waitUntil: "domcontentloaded" });
+        if (await page.getByTestId("nav-resources").isVisible({ timeout: 5_000 }).catch(() => false)) {
+            break;
+        }
+    }
+
+    await expect(page.getByTestId("nav-resources")).toBeVisible({ timeout: 10_000 });
+    await page.goto("/resources?tab=tools", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible({ timeout: 20_000 });
+}
+
 test.describe("Connected Tools MCP workflow", () => {
     test.skip(({ browserName }) => browserName !== "chromium", "Connected Tools browser workflow proof is stabilized in Chromium for MVP review.");
 
     test("shows active MCP usage and installs a curated server from the library", async ({ page }) => {
         await mockConnectedToolsApis(page);
-        await page.addInitScript(() => {
-            window.localStorage.setItem("mycelis-advanced-mode", "true");
-        });
+        await openConnectedTools(page);
 
-        await page.goto("/resources?tab=tools", { waitUntil: "domcontentloaded" });
-
-        await expect(page.getByRole("heading", { name: "Resources" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Connected Tools" })).toBeVisible();
         await expect(page.getByText("Connected Tools Workflow")).toBeVisible();
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();
@@ -187,5 +222,17 @@ test.describe("Connected Tools MCP workflow", () => {
         await expect(page.getByText("Installed fetch. Check the connected server card and live MCP activity below.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText("fetch").first()).toBeVisible();
         await expect(page.getByText("Fetch MCP server installed for the current user-owned group.").first()).toBeVisible();
+    });
+
+    test("shows the bootstrap-disabled empty state and sends the operator to the library", async ({ page }) => {
+        await mockConnectedToolsApis(page, { servers: [], activity: [] });
+        await openConnectedTools(page);
+
+        await expect(page.getByText("No MCP servers installed.", { exact: true })).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByRole("button", { name: "OPEN LIBRARY" })).toBeVisible();
+
+        await page.getByRole("button", { name: "OPEN LIBRARY" }).click();
+        await expect(page.getByText("Current Group MCP Config")).toBeVisible();
+        await expect(page.getByText("Fetch", { exact: true })).toBeVisible();
     });
 });

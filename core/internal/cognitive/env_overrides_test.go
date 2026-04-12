@@ -55,6 +55,12 @@ func TestApplyEnvOverrides_CreatesProviderAndMedia(t *testing.T) {
 	t.Setenv("MYCELIS_PROFILE_ADMIN_PROVIDER", "teamlead_ollama")
 	t.Setenv("MYCELIS_MEDIA_ENDPOINT", "http://127.0.0.1:8001/v1")
 	t.Setenv("MYCELIS_MEDIA_MODEL_ID", "flux-schnell")
+	t.Setenv("MYCELIS_MEDIA_PROVIDER_ID", "media-local")
+	t.Setenv("MYCELIS_MEDIA_TYPE", "openai_compatible")
+	t.Setenv("MYCELIS_MEDIA_LOCATION", "local")
+	t.Setenv("MYCELIS_MEDIA_DATA_BOUNDARY", "local_only")
+	t.Setenv("MYCELIS_MEDIA_USAGE_POLICY", "local_first")
+	t.Setenv("MYCELIS_MEDIA_ENABLED", "true")
 
 	cfg := &BrainConfig{}
 	applyEnvOverrides(cfg)
@@ -83,6 +89,24 @@ func TestApplyEnvOverrides_CreatesProviderAndMedia(t *testing.T) {
 	}
 	if cfg.Media.ModelID != "flux-schnell" {
 		t.Fatalf("expected media model override, got %q", cfg.Media.ModelID)
+	}
+	if cfg.Media.Provider.ProviderID != "media-local" {
+		t.Fatalf("expected media provider id override, got %q", cfg.Media.Provider.ProviderID)
+	}
+	if cfg.Media.Provider.Type != "openai_compatible" {
+		t.Fatalf("expected media provider type override, got %q", cfg.Media.Provider.Type)
+	}
+	if cfg.Media.Provider.Location != "local" {
+		t.Fatalf("expected media provider location override, got %q", cfg.Media.Provider.Location)
+	}
+	if cfg.Media.Provider.DataBoundary != "local_only" {
+		t.Fatalf("expected media provider boundary override, got %q", cfg.Media.Provider.DataBoundary)
+	}
+	if cfg.Media.Provider.UsagePolicy != "local_first" {
+		t.Fatalf("expected media provider usage policy override, got %q", cfg.Media.Provider.UsagePolicy)
+	}
+	if !cfg.Media.Provider.IsEnabled() {
+		t.Fatal("expected media provider enabled override to be true")
 	}
 }
 

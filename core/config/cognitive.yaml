@@ -120,5 +120,12 @@ profiles:
     overseer: local-ollama-dev
     sentry: local-ollama-dev
 media:
+    provider:
+        provider_id: media-local
+        type: openai_compatible
+        location: local
+        data_boundary: local_only
+        usage_policy: local_first
+        enabled: true
     endpoint: http://127.0.0.1:8001/v1
     model_id: stable-diffusion-xl

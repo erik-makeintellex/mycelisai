@@ -22,6 +22,7 @@ export default function MCPToolRegistry() {
 
     const [activeTab, setActiveTab] = useState<Tab>("installed");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
+    const isEmptyInstalledState = !isFetching && mcpServers.length === 0;
 
     useEffect(() => {
         fetchMCPServers();
@@ -177,6 +178,20 @@ export default function MCPToolRegistry() {
                             </div>
                         </div>
 
+                        {isEmptyInstalledState && (
+                            <div className="rounded-xl border border-cortex-warning/25 bg-cortex-warning/10 px-4 py-3">
+                                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-warning">
+                                    No MCP servers installed yet
+                                </p>
+                                <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
+                                    Default bootstrap is disabled in the compose home runtime, so Library is the first activation step for connected tools.
+                                </p>
+                                <p className="mt-2 text-[10px] font-mono leading-5 text-cortex-text-muted">
+                                    Install a curated server such as filesystem or fetch, then return here to confirm the server card and recent activity appear.
+                                </p>
+                            </div>
+                        )}
+
                         {installNotice && (
                             <div className="rounded-xl border border-cortex-success/25 bg-cortex-success/10 px-4 py-3">
                                 <p className="text-xs font-mono leading-5 text-cortex-text-main">{installNotice}</p>
@@ -237,7 +252,7 @@ export default function MCPToolRegistry() {
                                 <Wrench className="w-12 h-12 mb-3 opacity-20" />
                                 <p className="text-sm font-mono">No MCP servers installed.</p>
                                 <p className="text-[10px] font-mono mt-1 opacity-50">
-                                    Browse the Library tab to add approved tool servers.
+                                    Browse the Library tab to add the first approved tool server for this group.
                                 </p>
                                 <button
                                     onClick={() => setActiveTab("library")}

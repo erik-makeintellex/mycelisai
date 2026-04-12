@@ -138,6 +138,8 @@ Expanding a server card reveals its tools list — each tool showing: name, desc
 
 **API Call on mount**: `GET /api/v1/mcp/servers` → populates Zustand `mcpServers[]`
 
+When `GET /api/v1/mcp/servers` returns an empty list, the Connected Tools panel should say that default bootstrap is disabled in the compose home runtime and direct the operator to the Library tab as the first activation step.
+
 #### 2.2 — Install an Approved Server From the Library
 
 The user opens the **Library** tab from the MCP Tool Registry. The library shows curated server entries with:

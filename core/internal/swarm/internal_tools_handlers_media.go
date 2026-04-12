@@ -28,11 +28,15 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		size = "1024x1024"
 	}
 	if r.brain == nil || r.brain.Config == nil || r.brain.Config.Media == nil {
-		return "", fmt.Errorf("media engine not configured — set media.endpoint in cognitive.yaml")
+		return "", fmt.Errorf("media provider not configured — set media.provider or media.endpoint/model_id in cognitive.yaml")
+	}
+	media := r.brain.Config.Media.EffectiveProvider()
+	if !media.IsEnabled() || strings.TrimSpace(media.Endpoint) == "" || strings.TrimSpace(media.ModelID) == "" {
+		return "", fmt.Errorf("media provider not configured — set media.provider or media.endpoint/model_id in cognitive.yaml")
 	}
 
-	reqBody, _ := json.Marshal(map[string]any{"prompt": prompt, "n": 1, "size": size, "response_format": "b64_json", "model": r.brain.Config.Media.ModelID})
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, r.brain.Config.Media.Endpoint+"/images/generations", bytes.NewReader(reqBody))
+	reqBody, _ := json.Marshal(map[string]any{"prompt": prompt, "n": 1, "size": size, "response_format": "b64_json", "model": media.ModelID})
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, media.Endpoint+"/images/generations", bytes.NewReader(reqBody))
 	if err != nil {
 		return "", fmt.Errorf("failed to create image request: %w", err)
 	}
