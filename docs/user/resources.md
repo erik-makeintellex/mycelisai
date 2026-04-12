@@ -15,7 +15,7 @@ Current tabs:
 |-----|---------|
 | Connected Tools | Installed MCP servers and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
-| Deployment Context | Load governed customer context and approved company knowledge into a separate vector-backed context store for Soma |
+| Deployment Context | Load governed private/user records, customer context, approved company knowledge, and Soma operating context into separate vector-backed stores |
 | Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
@@ -82,9 +82,11 @@ Operators should be able to answer "what entered the system, how trusted is it, 
 
 ## Deployment Context
 
-Deployment Context is the governed intake surface for deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory.
+Deployment Context is the governed intake surface for private/user-owned content and deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory.
 
 Typical inputs:
+- private records or diary/journal notes the user explicitly wants Soma to use
+- finance, legal, health, household, or business references tied to target goal sets
 - customer deployment notes
 - architecture briefs
 - provider and MCP constraints
@@ -95,16 +97,19 @@ Typical inputs:
 Operational behavior:
 - every load creates a durable document artifact plus vector-backed chunks in the governed context store
 - each entry carries `knowledge_class`, visibility, sensitivity, trust, and provenance metadata
+- uploaded text files are read into the same governed intake contract as pasted content
+- `knowledge_class=user_private_context` is for private user-owned records, diary entries, finance notes, and other sensitive references; it defaults to private visibility, restricted sensitivity, and explicit goal-set metadata
 - `knowledge_class=customer_context` is for operator/customer-provided material
 - `knowledge_class=company_knowledge` is for approved company-authored guidance only
 - `knowledge_class=soma_operating_context` is for root-admin or delegated-owner guidance that shapes shared Soma behavior across users
 - promotion from customer context into company knowledge should happen through a governed approval path with lineage preserved, not by rewriting the original entry in place
 - Soma operating context is stricter than ordinary deployment intake: it is normalized into admin guidance, stays globally scoped, and is intended for durable shared output/identity/stance shaping rather than personal chat preferences
-- Soma, Council, and teams can recall this context during planning and answer generation without treating it as raw unrestricted web input
+- Soma, Council, and teams can recall allowed context during planning and answer generation without treating it as raw unrestricted web input
+- private user context is only intended to enter agent work when its visibility/scope and target goal sets match the user’s request; it is not company knowledge and should not be promoted silently
 - use `source_kind=web_research` or a stricter trust/sensitivity class when the content came from external sources
 
 Key outcome:
-Operators should be able to answer "what governed context did we intentionally load into Soma, which store did it enter, and under what trust boundary?" from one surface.
+Operators should be able to answer "what governed context did we intentionally load into Soma, which store did it enter, what target goals can use it, and under what trust boundary?" from one surface.
 
 ---
 

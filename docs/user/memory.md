@@ -15,15 +15,16 @@ WARM  → Structured logs, SitReps, artifacts (recent history)
 COLD  → Semantic vector store (long-term, searchable by meaning)
 ```
 
-All three tiers are populated automatically as agents work. You can also intentionally load governed deployment knowledge through **Resources → Deployment Context** so Soma has durable architectural and policy context to reuse later without mixing it into ordinary remembered facts.
+All three tiers are populated automatically as agents work. You can also intentionally load governed private records, customer/deployment knowledge, and approved company guidance through **Resources → Deployment Context** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
 
 ---
 
 ## Memory Classes
 
-Mycelis now treats memory as four different classes with different purposes:
+Mycelis now treats memory as several different classes with different purposes:
 
 - **Durable semantic memory**: reusable facts, decisions, SitReps, recipes, and intentionally promoted summaries. This is the pgvector-backed recall substrate.
+- **User-private context store**: user-uploaded or pasted records, diary notes, finance/legal/health references, and other sensitive material intentionally made available for specific target goal sets. This is private/restricted by default and is not company knowledge.
 - **Customer context store**: operator- or customer-provided docs, notes, briefs, and research intentionally loaded into pgvector so Soma, Council, and teams can reason with deployment-specific requirements across future sessions.
 - **Company knowledge store**: approved company-authored guidance or playbooks that Soma or teams are explicitly allowed to treat as durable organizational reference.
 - **Temporary continuity**: restart-safe planning checkpoints and in-flight working context. This stays in temporary memory channels and does **not** automatically become long-term semantic memory.
@@ -32,6 +33,7 @@ Mycelis now treats memory as four different classes with different purposes:
 Rule of thumb:
 
 - if it should be reusable later by meaning as a learned fact, promote it into durable memory
+- if it is private user-owned reference material for a specific personal/business goal, load it into the user-private context store and name the target goal sets
 - if it is customer-provided or deployment-shaping reference material, load it into the customer context store
 - if it is approved company-authored guidance, load it into the company knowledge store
 - if customer context needs to become durable company reference, promote it through a governed approval path instead of silently reclassifying the original entry
@@ -67,6 +69,7 @@ Governed deployment knowledge is stored under dedicated vector types:
 - `customer_context` for operator- or customer-provided source material
 - `company_knowledge` for approved company-authored guidance
 - `soma_operating_context` for admin-owned guidance that shapes shared Soma posture and output specificity
+- `user_private_context` for user-owned private records, diary entries, finance notes, and other sensitive references tied to explicit goal sets
 
 That lets Soma, Council, and teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed.
 

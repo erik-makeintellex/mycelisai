@@ -65,6 +65,8 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 			TeamID            string   `json:"team_id,omitempty"`
 			SomaContextKind   string   `json:"soma_context_kind,omitempty"`
 			OutputSpecificity string   `json:"output_specificity,omitempty"`
+			ContentDomain     string   `json:"content_domain,omitempty"`
+			TargetGoalSets    []string `json:"target_goal_sets,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			respondError(w, "invalid JSON body", http.StatusBadRequest)
@@ -87,6 +89,8 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 			UserLabel:         auditUserLabelFromRequest(r),
 			SomaContextKind:   req.SomaContextKind,
 			OutputSpecificity: req.OutputSpecificity,
+			ContentDomain:     req.ContentDomain,
+			TargetGoalSets:    req.TargetGoalSets,
 		})
 		if err != nil {
 			respondError(w, err.Error(), http.StatusBadRequest)

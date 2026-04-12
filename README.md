@@ -214,7 +214,7 @@ Current operator experience summary:
 - that same Soma conversation surface is also the canonical operator output lane for imagery, briefs, charts, code, and other rich artifacts, even when specialist or council paths generated them on Soma's behalf
 - team design now lives as a guided Soma mode inside that same workspace so the operator can stay in one continuous interaction context
 - advanced Resources support now includes an inspect-only Managed Exchange surface for channels, active threads, and recent normalized outputs
-- advanced Resources now also includes Deployment Context intake so operators can load customer context and approved company knowledge into the governed pgvector store with explicit trust/sensitivity posture
+- advanced Resources now also includes Deployment Context intake so operators can upload/paste private user records, customer context, approved company knowledge, and admin-shaped Soma guidance into governed pgvector stores with explicit trust, sensitivity, visibility, and target-goal posture
 - Soma always presents guided starting actions instead of a dead-end blank state
 - `Start with Soma` works immediately, even before the operator types a custom request
 - live workspace streaming starts automatically; degraded mode is reserved for an actual connection failure, not normal startup warm-up

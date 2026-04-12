@@ -17,6 +17,8 @@ type DeploymentContextEntry = {
     vector_count: number;
     content_preview: string;
     content_length: number;
+    content_domain?: string;
+    target_goal_sets?: string[];
     created_at: string;
 };
 
@@ -29,6 +31,7 @@ type LoadResponse = {
 };
 
 const KNOWLEDGE_CLASS_OPTIONS = [
+    { value: "user_private_context", label: "Private user content" },
     { value: "customer_context", label: "Customer context" },
     { value: "company_knowledge", label: "Approved company knowledge" },
 ];
@@ -36,8 +39,21 @@ const KNOWLEDGE_CLASS_OPTIONS = [
 const SOURCE_KIND_OPTIONS = [
     { value: "user_document", label: "User document" },
     { value: "user_note", label: "User note" },
+    { value: "user_record", label: "User/private record" },
+    { value: "diary_entry", label: "Diary entry" },
+    { value: "finance_record", label: "Finance record" },
     { value: "workspace_file", label: "Workspace file" },
     { value: "web_research", label: "Web research" },
+];
+
+const CONTENT_DOMAIN_OPTIONS = [
+    { value: "private_records", label: "Private records" },
+    { value: "diary", label: "Diary / journal" },
+    { value: "finance", label: "Finance" },
+    { value: "health", label: "Health" },
+    { value: "legal", label: "Legal" },
+    { value: "creative", label: "Creative" },
+    { value: "operations", label: "Operations" },
 ];
 
 const VISIBILITY_OPTIONS = [
@@ -68,15 +84,18 @@ export default function DeploymentContextPanel() {
     const [status, setStatus] = useState("Ready");
     const [error, setError] = useState<string | null>(null);
     const [form, setForm] = useState({
-        knowledge_class: "customer_context",
+        knowledge_class: "user_private_context",
         title: "",
         source_label: "",
         content: "",
-        source_kind: "user_document",
-        visibility: "global",
-        sensitivity_class: "role_scoped",
+        content_type: "text/markdown",
+        source_kind: "user_record",
+        visibility: "private",
+        sensitivity_class: "restricted",
         trust_class: "user_provided",
-        tags: "deployment,context",
+        content_domain: "private_records",
+        target_goal_sets: "",
+        tags: "user-private-context",
     });
 
     const canSubmit = useMemo(() => {
@@ -108,7 +127,7 @@ export default function DeploymentContextPanel() {
     const submit = async () => {
         if (!canSubmit) return;
         setSubmitting(true);
-        setStatus("Loading governed context into the customer/company knowledge store...");
+        setStatus("Loading governed context into the private/customer/company knowledge store...");
         try {
             const res = await fetch("/api/v1/memory/deployment-context", {
                 method: "POST",
@@ -116,6 +135,7 @@ export default function DeploymentContextPanel() {
                 body: JSON.stringify({
                     ...form,
                     tags: form.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+                    target_goal_sets: form.target_goal_sets.split(",").map((goal) => goal.trim()).filter(Boolean),
                 }),
             });
             const payload = await res.json().catch(async () => ({ error: await res.text() }));
@@ -123,7 +143,7 @@ export default function DeploymentContextPanel() {
                 throw new Error(typeof payload?.error === "string" ? payload.error : "Deployment context load failed.");
             }
             const result = payload as LoadResponse;
-            const label = result.knowledge_class === "company_knowledge" ? "approved company knowledge" : "customer context";
+            const label = knowledgeClassLabel(result.knowledge_class);
             setStatus(`Loaded ${result.title} as ${label} into ${result.vector_count} vectors across ${result.chunk_count} chunks.`);
             setForm((current) => ({
                 ...current,
@@ -141,6 +161,41 @@ export default function DeploymentContextPanel() {
         }
     };
 
+    const applyKnowledgeClass = (knowledgeClass: string) => {
+        setForm((current) => {
+            if (knowledgeClass === "user_private_context") {
+                return {
+                    ...current,
+                    knowledge_class: knowledgeClass,
+                    source_kind: current.source_kind === "user_document" ? "user_record" : current.source_kind,
+                    visibility: "private",
+                    sensitivity_class: "restricted",
+                    content_domain: current.content_domain || "private_records",
+                    tags: current.tags.trim() ? current.tags : "user-private-context",
+                };
+            }
+            return {
+                ...current,
+                knowledge_class: knowledgeClass,
+                visibility: current.visibility === "private" ? "global" : current.visibility,
+                sensitivity_class: current.sensitivity_class === "restricted" ? "role_scoped" : current.sensitivity_class,
+                source_kind: current.source_kind === "user_record" ? "user_document" : current.source_kind,
+            };
+        });
+    };
+
+    const loadFile = async (file: File | undefined) => {
+        if (!file) return;
+        const text = await readFileAsText(file);
+        setForm((current) => ({
+            ...current,
+            title: current.title || file.name,
+            source_label: current.source_label || file.name,
+            content_type: file.type || "text/plain",
+            content: text,
+        }));
+    };
+
     return (
         <div className="h-full overflow-y-auto bg-cortex-bg">
             <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6">
@@ -152,7 +207,7 @@ export default function DeploymentContextPanel() {
                                 <h2 className="text-sm font-semibold text-cortex-text-main">Deployment Context Intake</h2>
                             </div>
                             <p className="text-xs text-cortex-text-muted mt-2 max-w-2xl">
-                                Load governed knowledge into the separate context store Soma uses for deployment RAG. Keep customer-provided context separate from approved company knowledge.
+                                Load governed knowledge into the separate context store Soma uses for RAG. Private records, diary notes, finance references, customer context, company guidance, and admin-shaped Soma context stay in distinct lanes with explicit visibility and goal-set scope.
                             </p>
                         </div>
                         <button
@@ -184,7 +239,7 @@ export default function DeploymentContextPanel() {
                         <Field label="Knowledge Class">
                             <select
                                 value={form.knowledge_class}
-                                onChange={(e) => setForm((current) => ({ ...current, knowledge_class: e.target.value }))}
+                                onChange={(e) => applyKnowledgeClass(e.target.value)}
                                 className={INPUT_CLASS}
                             >
                                 {KNOWLEDGE_CLASS_OPTIONS.map((option) => (
@@ -199,6 +254,17 @@ export default function DeploymentContextPanel() {
                                 className={INPUT_CLASS}
                             >
                                 {SOURCE_KIND_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </Field>
+                        <Field label="Content Domain">
+                            <select
+                                value={form.content_domain}
+                                onChange={(e) => setForm((current) => ({ ...current, content_domain: e.target.value }))}
+                                className={INPUT_CLASS}
+                            >
+                                {CONTENT_DOMAIN_OPTIONS.map((option) => (
                                     <option key={option.value} value={option.value}>{option.label}</option>
                                 ))}
                             </select>
@@ -238,11 +304,30 @@ export default function DeploymentContextPanel() {
                         </Field>
                     </div>
 
-                    <Field label="Tags" className="mt-3">
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <Field label="Target Goal Sets">
+                            <input
+                                value={form.target_goal_sets}
+                                onChange={(e) => setForm((current) => ({ ...current, target_goal_sets: e.target.value }))}
+                                placeholder="tax planning, investor prep, household budget"
+                                className={INPUT_CLASS}
+                            />
+                        </Field>
+                        <Field label="Tags">
+                            <input
+                                value={form.tags}
+                                onChange={(e) => setForm((current) => ({ ...current, tags: e.target.value }))}
+                                placeholder="finance,records,planning"
+                                className={INPUT_CLASS}
+                            />
+                        </Field>
+                    </div>
+
+                    <Field label="Upload Text File" className="mt-3">
                         <input
-                            value={form.tags}
-                            onChange={(e) => setForm((current) => ({ ...current, tags: e.target.value }))}
-                            placeholder="deployment,security,mcp"
+                            type="file"
+                            accept=".txt,.md,.markdown,.csv,.json,text/*,application/json"
+                            onChange={(e) => void loadFile(e.target.files?.[0])}
                             className={INPUT_CLASS}
                         />
                     </Field>
@@ -251,7 +336,7 @@ export default function DeploymentContextPanel() {
                         <textarea
                             value={form.content}
                             onChange={(e) => setForm((current) => ({ ...current, content: e.target.value }))}
-                            placeholder="Paste customer docs, deployment notes, approved company guidance, security requirements, provider constraints, or other governed context here."
+                            placeholder="Paste private records, diary notes, finance references, customer docs, approved company guidance, security requirements, provider constraints, or other governed context here."
                             className={`${INPUT_CLASS} min-h-[240px] resize-y`}
                         />
                     </Field>
@@ -323,6 +408,10 @@ export default function DeploymentContextPanel() {
                                         <Badge>{entry.visibility}</Badge>
                                         <Badge>{entry.sensitivity_class}</Badge>
                                         <Badge>{entry.trust_class}</Badge>
+                                        {entry.content_domain ? <Badge>{entry.content_domain.replaceAll("_", " ")}</Badge> : null}
+                                        {(entry.target_goal_sets ?? []).map((goal) => (
+                                            <Badge key={`${entry.artifact_id}-${goal}`}>goal: {goal}</Badge>
+                                        ))}
                                         <Badge>{entry.chunk_count} chunks</Badge>
                                     </div>
                                 </article>
@@ -333,6 +422,31 @@ export default function DeploymentContextPanel() {
             </div>
         </div>
     );
+}
+
+function readFileAsText(file: File): Promise<string> {
+    if (typeof file.text === "function") {
+        return file.text();
+    }
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.onerror = () => reject(reader.error ?? new Error("Unable to read uploaded file."));
+        reader.readAsText(file);
+    });
+}
+
+function knowledgeClassLabel(value: string) {
+    switch (value) {
+        case "company_knowledge":
+            return "approved company knowledge";
+        case "soma_operating_context":
+            return "admin-shaped Soma context";
+        case "user_private_context":
+            return "private user content";
+        default:
+            return "customer context";
+    }
 }
 
 function Field({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {

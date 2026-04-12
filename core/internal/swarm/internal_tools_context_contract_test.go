@@ -32,9 +32,11 @@ func TestBuildContext_IncludesGovernedMemoryBoundaries(t *testing.T) {
 		"Customer context store",
 		"Company knowledge store",
 		"Admin-shaped Soma context",
+		"User-private context store",
 		"knowledge_class=customer_context",
 		"knowledge_class=company_knowledge",
 		"knowledge_class=soma_operating_context",
+		"knowledge_class=user_private_context",
 	} {
 		if !strings.Contains(ctx, expected) {
 			t.Fatalf("expected %q in runtime context, got:\n%s", expected, ctx)

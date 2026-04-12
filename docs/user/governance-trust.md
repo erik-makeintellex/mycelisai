@@ -52,6 +52,7 @@ This keeps low-risk answer work lightweight while forcing higher-risk mutations 
 Examples:
 - ordinary direct explanation -> usually stays `answer`
 - load customer deployment brief into `customer_context` -> governed, medium-risk by default
+- load private user diary/finance/record material into `user_private_context` -> governed, high-risk by default, private/restricted unless explicitly scoped otherwise
 - load approved company-authored rollout playbook into `company_knowledge` -> governed, higher-risk and more likely to require approval
 - web-fed research promoted into durable context -> governed and shaped by external-data rules
 

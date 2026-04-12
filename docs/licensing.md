@@ -89,7 +89,7 @@ It should include:
 - approvals, audit, and capability-aware policy
 - local or customer-managed MCP connectivity
 - local or customer-managed provider connectivity
-- governed deployment context and RAG stores
+- governed private user context, deployment context, and RAG stores
 - root-admin ownership of durable shared Soma shaping and output specificity
 
 It should not assume:

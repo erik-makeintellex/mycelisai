@@ -102,23 +102,27 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		UserLabel:         currentToolUserLabel(ctx),
 		SomaContextKind:   stringValue(args["soma_context_kind"]),
 		OutputSpecificity: stringValue(args["output_specificity"]),
+		ContentDomain:     stringValue(args["content_domain"]),
+		TargetGoalSets:    stringSlice(args["target_goal_sets"]),
 	})
 	if err != nil {
 		return "", err
 	}
 
 	return mustJSON(map[string]any{
-		"message":         fmt.Sprintf("Knowledge entry '%s' loaded into the governed context store.", result.Title),
-		"artifact":        map[string]any{"id": result.ArtifactID, "type": "document", "title": result.Title, "content_type": "text/markdown"},
-		"knowledge_class": result.KnowledgeClass,
-		"chunk_count":     result.ChunkCount,
-		"vector_count":    result.VectorCount,
-		"source_label":    result.SourceLabel,
-		"source_kind":     result.SourceKind,
-		"visibility":      result.Visibility,
-		"trust_class":     result.TrustClass,
-		"context_kind":    "governed_knowledge",
-		"description":     "Stored in the governed context store for later Soma recall, separate from Soma memory.",
+		"message":          fmt.Sprintf("Knowledge entry '%s' loaded into the governed context store.", result.Title),
+		"artifact":         map[string]any{"id": result.ArtifactID, "type": "document", "title": result.Title, "content_type": "text/markdown"},
+		"knowledge_class":  result.KnowledgeClass,
+		"chunk_count":      result.ChunkCount,
+		"vector_count":     result.VectorCount,
+		"source_label":     result.SourceLabel,
+		"source_kind":      result.SourceKind,
+		"visibility":       result.Visibility,
+		"trust_class":      result.TrustClass,
+		"content_domain":   result.ContentDomain,
+		"target_goal_sets": result.TargetGoalSets,
+		"context_kind":     "governed_knowledge",
+		"description":      "Stored in the governed context store for later Soma recall, separate from Soma memory.",
 	}), nil
 }
 

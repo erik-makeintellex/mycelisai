@@ -28,6 +28,7 @@ Mycelis now governs actions through three linked layers:
    - channel write recorded
 
 This governance model also applies to durable context loading:
+- user-uploaded private records, diary entries, finance notes, and other sensitive references belong in `user_private_context` with private/restricted defaults and explicit target goal sets
 - customer-provided deployment material belongs in the separate `customer_context` pgvector lane
 - approved company-authored guidance belongs in `company_knowledge`
 - admin-authored shared Soma guidance belongs in `soma_operating_context`
@@ -62,6 +63,7 @@ Current release posture:
 - user governance profile shapes how strict the approval policy becomes
 - confirm/cancel is explicit and inspectable
 - approval and execution decisions are audit-linked
+- `user_private_context` loading is treated as high-risk because it can contain sensitive personal or business records even when the operator wants Soma to use it
 - `company_knowledge` loading is stricter than `customer_context` loading because it promotes durable company reference material
 - `soma_operating_context` loading is stricter again because it can shape shared Soma identity, stance, and output specificity across users
 

@@ -31,6 +31,8 @@ describe("DeploymentContextPanel", () => {
                     vector_count: 2,
                     content_preview: "Mycelis should run with governed MCP access.",
                     content_length: 58,
+                    content_domain: "operations",
+                    target_goal_sets: ["deployment readiness"],
                     created_at: "2026-04-04T12:00:00Z",
                 }],
             }),
@@ -42,6 +44,7 @@ describe("DeploymentContextPanel", () => {
             expect(screen.getByText("Deployment Brief")).toBeDefined();
             expect(screen.getByText(/governed MCP access/i)).toBeDefined();
             expect(screen.getByText(/2 vectors/i)).toBeDefined();
+            expect(screen.getByText(/goal: deployment readiness/i)).toBeDefined();
         });
     });
 
@@ -103,5 +106,55 @@ describe("DeploymentContextPanel", () => {
         const submitCall = fetchMock.mock.calls[1];
         expect(submitCall?.[0]).toBe("/api/v1/memory/deployment-context");
         expect(submitCall?.[1]?.method).toBe("POST");
+    });
+
+    it("submits private user content with goal-set metadata", async () => {
+        fetchMock
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ entries: [] }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    artifact_id: "ctx-private",
+                    knowledge_class: "user_private_context",
+                    title: "Finance Notes",
+                    chunk_count: 1,
+                    vector_count: 1,
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ entries: [] }),
+            });
+
+        render(<DeploymentContextPanel />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+        });
+
+        fireEvent.change(screen.getByLabelText("Source Kind"), { target: { value: "finance_record" } });
+        fireEvent.change(screen.getByLabelText("Content Domain"), { target: { value: "finance" } });
+        fireEvent.change(screen.getByLabelText("Target Goal Sets"), { target: { value: "tax planning, cash flow" } });
+        const file = new File(["Invoice timing and savings goals."], "Finance Notes.md", { type: "text/markdown" });
+        fireEvent.change(screen.getByLabelText("Upload Text File"), { target: { files: [file] } });
+        await waitFor(() => {
+            expect(screen.getAllByDisplayValue("Finance Notes.md").length).toBeGreaterThan(0);
+        });
+        fireEvent.click(screen.getByRole("button", { name: /Load Context/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText(/Loaded Finance Notes as private user content/i)).toBeDefined();
+        });
+
+        const submitBody = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
+        expect(submitBody.knowledge_class).toBe("user_private_context");
+        expect(submitBody.visibility).toBe("private");
+        expect(submitBody.sensitivity_class).toBe("restricted");
+        expect(submitBody.content_domain).toBe("finance");
+        expect(submitBody.target_goal_sets).toEqual(["tax planning", "cash flow"]);
+        expect(submitBody.content).toBe("Invoice timing and savings goals.");
     });
 });

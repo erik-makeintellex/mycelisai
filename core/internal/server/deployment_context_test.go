@@ -322,6 +322,80 @@ func TestHandleDeploymentContext_PostNormalizesAdminSomaDefaults(t *testing.T) {
 	}
 }
 
+func TestHandleDeploymentContext_PostStoresUserPrivateGoalContext(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	mem := memory.NewServiceWithDB(db)
+	artSvc := artifacts.NewService(db, "/data/artifacts")
+	s := &AdminServer{
+		Artifacts: artSvc,
+		Mem:       mem,
+		Cognitive: newDeploymentContextBrain(),
+	}
+
+	now := time.Now()
+	mock.ExpectQuery("INSERT INTO artifacts").
+		WithArgs(
+			sqlmock.AnyArg(), sqlmock.AnyArg(),
+			"admin", sqlmock.AnyArg(),
+			artifacts.ArtifactType("document"), "Personal Finance Notes", "text/markdown",
+			"Q2 savings goals and invoice timing.", sqlmock.AnyArg(), sqlmock.AnyArg(),
+			metadataContains{
+				"knowledge_class":   "user_private_context",
+				"source_kind":       "finance_record",
+				"source_label":      "private user content",
+				"visibility":        "private",
+				"sensitivity_class": "restricted",
+				"trust_class":       "user_provided",
+				"content_domain":    "finance",
+				"target_goal_sets":  []string{"tax-planning", "cash-flow"},
+				"tags":              []string{"finance", "user-private-context"},
+			},
+			sqlmock.AnyArg(), "approved",
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
+			AddRow("dddddddd-dddd-dddd-dddd-dddddddddddd", now))
+	mock.ExpectExec("INSERT INTO context_vectors").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	body := `{
+		"knowledge_class": "user_private_context",
+		"title": "Personal Finance Notes",
+		"content": "Q2 savings goals and invoice timing.",
+		"source_kind": "finance_record",
+		"visibility": "global",
+		"sensitivity_class": "role_scoped",
+		"content_domain": "finance",
+		"target_goal_sets": ["tax-planning", "cash-flow"]
+	}`
+	rr := doRequest(t, http.HandlerFunc(s.HandleDeploymentContext), http.MethodPost, "/api/v1/memory/deployment-context", body)
+	assertStatus(t, rr, http.StatusCreated)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["knowledge_class"] != "user_private_context" {
+		t.Fatalf("expected user_private_context knowledge class, got %+v", resp)
+	}
+	if resp["visibility"] != "private" {
+		t.Fatalf("expected visibility=private, got %+v", resp)
+	}
+	if resp["sensitivity_class"] != "restricted" {
+		t.Fatalf("expected sensitivity_class=restricted, got %+v", resp)
+	}
+	if resp["content_domain"] != "finance" {
+		t.Fatalf("expected content_domain=finance, got %+v", resp)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("expectations: %v", err)
+	}
+}
+
 func TestHandleDeploymentContext_GetListsEntries(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

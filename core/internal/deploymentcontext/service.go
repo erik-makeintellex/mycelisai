@@ -20,6 +20,7 @@ const (
 	KnowledgeClassCustomerContext  = "customer_context"
 	KnowledgeClassCompanyKnowledge = "company_knowledge"
 	KnowledgeClassSomaOperating    = "soma_operating_context"
+	KnowledgeClassUserPrivate      = "user_private_context"
 )
 
 type IngestRequest struct {
@@ -38,6 +39,8 @@ type IngestRequest struct {
 	UserLabel         string
 	SomaContextKind   string
 	OutputSpecificity string
+	ContentDomain     string
+	TargetGoalSets    []string
 	ExtraMetadata     map[string]any
 }
 
@@ -70,6 +73,8 @@ type IngestResult struct {
 	VectorCount      int       `json:"vector_count"`
 	ContentPreview   string    `json:"content_preview"`
 	ContentLength    int       `json:"content_length"`
+	ContentDomain    string    `json:"content_domain,omitempty"`
+	TargetGoalSets   []string  `json:"target_goal_sets,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
 }
 
@@ -86,6 +91,8 @@ type Entry struct {
 	VectorCount      int       `json:"vector_count"`
 	ContentPreview   string    `json:"content_preview"`
 	ContentLength    int       `json:"content_length"`
+	ContentDomain    string    `json:"content_domain,omitempty"`
+	TargetGoalSets   []string  `json:"target_goal_sets,omitempty"`
 	CreatedAt        time.Time `json:"created_at"`
 }
 
@@ -141,7 +148,11 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 	trustClass := normalizeTrustClass(req.TrustClass)
 	agentID := strings.TrimSpace(req.AgentID)
 	if agentID == "" {
-		agentID = "soma"
+		if knowledgeClass == KnowledgeClassUserPrivate {
+			agentID = "admin"
+		} else {
+			agentID = "soma"
+		}
 	}
 	teamID := strings.TrimSpace(req.TeamID)
 	userLabel := strings.TrimSpace(req.UserLabel)
@@ -151,6 +162,8 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 	tags := normalizeTags(req.Tags)
 	somaContextKind := normalizeSomaContextKind(req.SomaContextKind)
 	outputSpecificity := normalizeOutputSpecificity(req.OutputSpecificity)
+	contentDomain := normalizeContentDomain(req.ContentDomain)
+	targetGoalSets := normalizeTags(req.TargetGoalSets)
 	if knowledgeClass == KnowledgeClassSomaOperating {
 		if sourceLabel == "operator provided" {
 			sourceLabel = "admin guidance"
@@ -171,6 +184,23 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		if outputSpecificity != "" {
 			tags = append(tags, "shared-output-specificity")
 		}
+		tags = normalizeTags(tags)
+	}
+	if knowledgeClass == KnowledgeClassUserPrivate {
+		if sourceLabel == "operator provided" {
+			sourceLabel = "private user content"
+		}
+		if sourceKind == "user_document" {
+			sourceKind = "user_record"
+		}
+		if visibility == "global" {
+			visibility = "private"
+		}
+		sensitivityClass = "restricted"
+		if contentDomain != "" {
+			tags = append(tags, contentDomain)
+		}
+		tags = append(tags, "user-private-context")
 		tags = normalizeTags(tags)
 	}
 	chunks := chunkText(content, defaultChunkSize, defaultChunkOverlap)
@@ -196,8 +226,11 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		"content_length":     utf8.RuneCountInString(content),
 		"loaded_by":          userLabel,
 		"team_id":            teamID,
+		"agent_id":           agentID,
 		"soma_context_kind":  somaContextKind,
 		"output_specificity": outputSpecificity,
+		"content_domain":     contentDomain,
+		"target_goal_sets":   targetGoalSets,
 	}
 	for key, value := range req.ExtraMetadata {
 		if _, exists := metadataMap[key]; exists {
@@ -247,6 +280,8 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 			"tags":               tags,
 			"soma_context_kind":  somaContextKind,
 			"output_specificity": outputSpecificity,
+			"content_domain":     contentDomain,
+			"target_goal_sets":   targetGoalSets,
 			"chunk_index":        idx,
 			"chunk_count":        len(chunks),
 			"loaded_by":          userLabel,
@@ -276,6 +311,8 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		VectorCount:      len(chunks),
 		ContentPreview:   previewContent(content, 220),
 		ContentLength:    utf8.RuneCountInString(content),
+		ContentDomain:    contentDomain,
+		TargetGoalSets:   targetGoalSets,
 		CreatedAt:        stored.CreatedAt,
 	}, nil
 }
@@ -445,6 +482,8 @@ func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
 				entry.ChunkCount = intMeta(meta, "chunk_count", 0)
 				entry.VectorCount = intMeta(meta, "vector_count", entry.ChunkCount)
 				entry.ContentLength = intMeta(meta, "content_length", entry.ContentLength)
+				entry.ContentDomain = stringMeta(meta, "content_domain", entry.ContentDomain)
+				entry.TargetGoalSets = stringSliceMeta(meta, "target_goal_sets")
 			}
 		}
 
@@ -465,6 +504,12 @@ func normalizeSourceKind(raw string) string {
 		return "web_research"
 	case "user_note":
 		return "user_note"
+	case "user_record":
+		return "user_record"
+	case "diary_entry":
+		return "diary_entry"
+	case "finance_record":
+		return "finance_record"
 	default:
 		return "user_document"
 	}
@@ -476,8 +521,31 @@ func normalizeKnowledgeClass(raw string) string {
 		return KnowledgeClassCompanyKnowledge
 	case KnowledgeClassSomaOperating:
 		return KnowledgeClassSomaOperating
+	case KnowledgeClassUserPrivate:
+		return KnowledgeClassUserPrivate
 	default:
 		return KnowledgeClassCustomerContext
+	}
+}
+
+func normalizeContentDomain(raw string) string {
+	switch strings.TrimSpace(strings.ToLower(raw)) {
+	case "private_records":
+		return "private_records"
+	case "diary":
+		return "diary"
+	case "finance":
+		return "finance"
+	case "health":
+		return "health"
+	case "legal":
+		return "legal"
+	case "creative":
+		return "creative"
+	case "operations":
+		return "operations"
+	default:
+		return ""
 	}
 }
 

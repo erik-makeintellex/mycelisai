@@ -54,7 +54,7 @@ func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID,
 	sb.WriteString("\n")
 }
 
-func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, teamID, currentInput string) {
+func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agentID, teamID, currentInput string) {
 	if r.brain == nil || r.mem == nil || strings.TrimSpace(currentInput) == "" {
 		return
 	}
@@ -78,7 +78,8 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, teamI
 		Limit:               3,
 		TenantID:            "default",
 		TeamID:              strings.TrimSpace(teamID),
-		Types:               []string{"customer_context", "company_knowledge", "soma_operating_context"},
+		AgentID:             strings.TrimSpace(agentID),
+		Types:               []string{"customer_context", "company_knowledge", "soma_operating_context", "user_private_context"},
 		AllowGlobal:         true,
 		AllowLegacyUnscoped: false,
 	})
@@ -89,12 +90,15 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, teamI
 	customerResults := make([]memory.VectorResult, 0, len(results))
 	companyResults := make([]memory.VectorResult, 0, len(results))
 	somaResults := make([]memory.VectorResult, 0, len(results))
+	privateResults := make([]memory.VectorResult, 0, len(results))
 	for _, result := range results {
 		switch strings.TrimSpace(stringMeta(result.Metadata, "knowledge_class")) {
 		case "company_knowledge":
 			companyResults = append(companyResults, result)
 		case "soma_operating_context":
 			somaResults = append(somaResults, result)
+		case "user_private_context":
+			privateResults = append(privateResults, result)
 		default:
 			customerResults = append(customerResults, result)
 		}
@@ -118,6 +122,13 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, teamI
 		sb.WriteString("### Admin-Shaped Soma Context (organization-owned Soma operating guidance)\n")
 		for _, result := range somaResults {
 			writeKnowledgeResult(sb, result, "admin-shaped Soma context")
+		}
+		sb.WriteString("\n")
+	}
+	if len(privateResults) > 0 {
+		sb.WriteString("### User-Private Context Store (private records and goal-scoped references)\n")
+		for _, result := range privateResults {
+			writeKnowledgeResult(sb, result, "private user context")
 		}
 		sb.WriteString("\n")
 	}
