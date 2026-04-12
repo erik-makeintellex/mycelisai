@@ -69,6 +69,8 @@ describe("TeamCreationPage", () => {
 
         expect(await screen.findByText("Northstar Labs")).toBeDefined();
         expect(screen.getByRole("button", { name: "Marketing launch team" })).toBeDefined();
+        expect(screen.getByText(/Default team shape/i)).toBeDefined();
+        expect(screen.getByText(/several small teams or lane bundles/i)).toBeDefined();
 
         fireEvent.click(screen.getByRole("button", { name: "Marketing launch team" }));
         expect(

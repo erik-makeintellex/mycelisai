@@ -87,7 +87,7 @@ export default function TeamCreationPage() {
         () => [
             "Start from the organization context Soma already knows instead of building a team from scratch.",
             "Ask for the team outcome, expected outputs, and delivery style before member details.",
-            "Let Soma decide whether the work should become a native team, a focused delivery lane, or an external workflow contract.",
+            "Keep the first team compact by default; if the ask is broad, let Soma split it into several small teams or lane bundles instead of one giant roster.",
         ],
         [],
     );
@@ -134,6 +134,12 @@ export default function TeamCreationPage() {
                                     <li key={item}>{item}</li>
                                 ))}
                             </ul>
+                            <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                                <p className="text-xs font-mono uppercase tracking-[0.18em] text-cortex-primary">Default team shape</p>
+                                <p className="mt-2 leading-6 text-cortex-text-muted">
+                                    Keep rosters small and focused first. When the request spans marketing, product, ops, or media in the same breath, Soma should create several compact teams or lane bundles and coordinate the handoffs with Council over NATS instead of inflating one team past a dozen members.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -233,7 +239,7 @@ export default function TeamCreationPage() {
                             <div className="mt-3 space-y-2 text-sm leading-6 text-cortex-text-muted">
                                 <p>Start with the outcome you need, not a list of members.</p>
                                 <p>Name the deliverables the team should return, such as review notes, campaign assets, workflow contracts, or approval-ready recommendations.</p>
-                                <p>Use the prompt chips in the creation panel if you want a quick enterprise-oriented starting point.</p>
+                                <p>Use the prompt chips in the creation panel if you want a quick enterprise-oriented starting point, then let Soma keep the default team compact unless the ask clearly needs several small coordinated teams.</p>
                             </div>
                         </div>
                     </section>
