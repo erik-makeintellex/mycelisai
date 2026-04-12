@@ -667,6 +667,9 @@ profiles:
 | `uv run inv k8s.status` | Cluster health check |
 | `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
 | `uv run inv k8s.reset` | Full teardown + canonical bring-up (includes readiness wait) |
+| `uv run inv compose.infra-up` | Start only Compose PostgreSQL + NATS for personal-owner data-plane preflight |
+| `uv run inv compose.infra-health` | Probe only Compose PostgreSQL/NATS without requiring Core or Interface |
+| `uv run inv compose.storage-health` | Probe post-migration Compose PostgreSQL long-term storage for pgvector, memory/context, artifacts, exchange, and continuity |
 | `uv run inv compose.up` | Managed Docker Compose bring-up: postgres/nats -> migrate -> core/interface |
 | `uv run inv compose.down` | Stop the Docker Compose stack |
 | `uv run inv compose.status` | Compose service + host-port status |

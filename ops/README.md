@@ -52,6 +52,9 @@ Handles the atomic deployment to Kubernetes (Kind).
 
 ### `compose.py` (Home Runtime)
 Handles the supported Docker Compose single-host runtime for home-lab and demo use.
+- **Infra Up**: `uv run inv compose.infra-up` (postgres + nats only, Core/Interface stay down, readiness checks + owner-facing connection settings; add `--migrate` only when schema bootstrap is intentionally needed)
+- **Infra Health**: `uv run inv compose.infra-health` (PostgreSQL port/query readiness, NATS port, and NATS monitor only; no Core/UI health checks)
+- **Storage Health**: `uv run inv compose.storage-health` (post-migration PostgreSQL long-term storage gate for pgvector, semantic context vectors, durable memory, conversation continuity, artifacts, managed exchange, collaboration groups, and templates)
 - **Up**: `uv run inv compose.up` (postgres + nats -> migrate -> core + interface, with numbered stage output and optional `--wait-timeout=<seconds>`)
 - Compose `up` and `migrate` now behave like the main `db.migrate` contract: they bootstrap forward only when the compose `cortex` schema is not already compatible with the current runtime, and they point to `uv run inv compose.down --volumes` for a truly fresh replay.
 - **Down**: `uv run inv compose.down`
@@ -61,6 +64,9 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 - Compose uses `.env.compose` so host/container assumptions stay separate from the Kind/bridge `.env` path.
 - Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally.
 - Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.
+- Compose `infra-up` is the data-plane-only preflight for personal-owner deployments where PostgreSQL/NATS should be reachable before app services are launched.
+- Compose `storage-health` is the matching post-migration proof that the long-term Mycelis Postgres store is present before claiming RAG, retained outputs, or continuity are available.
+- Compose `migrate` skips unsafe full replay on compatible volumes but still applies known missing late storage migrations so `storage-health` can close the long-term store gate.
 - Compose validates output block mounting: use `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` plus `MYCELIS_OUTPUT_HOST_PATH=<host-directory>` when a local or Pinokio/media-hosted output directory should be mounted into Core as `/data`. The task resolves the host path with Python `pathlib` across Windows, Linux, and macOS before Docker starts.
 - Compose now emits deterministic stage expectations and timeout guidance so humans and agent-run callers can tell what should happen next and which recovery command to run if a stage stalls.
 - Use `uv run inv compose.up --build --wait-timeout=240` on a fresh or slower machine when image build and first readiness can legitimately take longer than the default window.

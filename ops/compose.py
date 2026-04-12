@@ -205,8 +205,16 @@ def _expect_stage(
     raise SystemExit(_failure_guidance(failure, *next_steps))
 
 
-def _compose_query_succeeds(sql: str) -> bool:
-    result = _run_compose(
+def _compose_db_user(env_values: dict[str, str]) -> str:
+    return _clean_env_value(env_values.get("DB_USER") or env_values.get("POSTGRES_USER") or "mycelis")
+
+
+def _compose_db_name(env_values: dict[str, str]) -> str:
+    return _clean_env_value(env_values.get("DB_NAME") or env_values.get("POSTGRES_DB") or "cortex")
+
+
+def _run_compose_psql(sql: str, env_values: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
         _compose_command(
             "exec",
             "-T",
@@ -217,26 +225,202 @@ def _compose_query_succeeds(sql: str) -> bool:
             "-h",
             "127.0.0.1",
             "-U",
-            "mycelis",
+            _compose_db_user(env_values),
             "-d",
-            "cortex",
+            _compose_db_name(env_values),
             "-c",
             sql,
         ),
-        check=False,
+        text=True,
+        capture_output=True,
     )
+
+
+def _compose_query_succeeds(sql: str, env_values: dict[str, str] | None = None) -> bool:
+    env_values = env_values or _load_compose_env()
+    result = _run_compose_psql(sql, env_values)
     return result.returncode == 0 and "1" in result.stdout.split()
 
 
-def _compose_schema_bootstrapped() -> bool:
-    for _label, sql in db_tasks.SCHEMA_COMPATIBILITY_CHECKS:
-        if not _compose_query_succeeds(sql):
-            return False
+def _compose_check_results(checks: tuple[tuple[str, str], ...], env_values: dict[str, str]) -> list[tuple[str, bool]]:
+    values = []
+    for index, (label, sql) in enumerate(checks, start=1):
+        exists_sql = sql.strip().rstrip(";")
+        escaped_label = label.replace("'", "''")
+        values.append(f"({index}, '{escaped_label}', EXISTS({exists_sql}))")
+    query = (
+        "WITH checks(ord, label, ok) AS (VALUES "
+        + ", ".join(values)
+        + ") SELECT label || E'\\t' || CASE WHEN ok THEN 'ok' ELSE 'missing' END FROM checks ORDER BY ord;"
+    )
+    result = _run_compose_psql(query, env_values)
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "unknown psql error"
+        raise SystemExit(_failure_guidance(
+            f"Compose PostgreSQL check failed: {detail}",
+            "Run 'uv run inv compose.infra-health' to confirm the data plane is reachable.",
+            "Run 'uv run inv compose.logs postgres' to inspect database service logs.",
+        ))
+
+    parsed: list[tuple[str, bool]] = []
+    for raw_line in result.stdout.splitlines():
+        line = raw_line.strip()
+        if not line or "\t" not in line:
+            continue
+        label, state = line.split("\t", 1)
+        parsed.append((label, state == "ok"))
+    return parsed
+
+
+def _compose_schema_bootstrapped(env_values: dict[str, str] | None = None) -> bool:
+    env_values = env_values or _load_compose_env()
+    return all(ok for _label, ok in _compose_check_results(db_tasks.SCHEMA_COMPATIBILITY_CHECKS, env_values))
+
+
+COMPOSE_LONG_TERM_STORAGE_CHECKS = (
+    (
+        "pgvector extension",
+        "SELECT 1 FROM pg_extension WHERE extname = 'vector';",
+    ),
+    (
+        "semantic context vectors",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'context_vectors';",
+    ),
+    (
+        "durable agent memory",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'agent_memories';",
+    ),
+    (
+        "conversation continuity",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_turns';",
+    ),
+    (
+        "retained artifacts",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'artifacts';",
+    ),
+    (
+        "temporary continuity",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'temp_memory_channels';",
+    ),
+    (
+        "collaboration groups",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'collaboration_groups';",
+    ),
+    (
+        "managed exchange channels",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exchange_channels';",
+    ),
+    (
+        "managed exchange items",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exchange_items';",
+    ),
+    (
+        "conversation templates",
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_templates';",
+    ),
+)
+
+
+COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
+    "semantic context vectors": ("008_context_engine.up.sql",),
+    "durable agent memory": ("019_agent_memories.up.sql", "037_scoped_memory_visibility.up.sql"),
+    "conversation continuity": ("030_conversation_turns.up.sql",),
+    "retained artifacts": ("018_artifacts.up.sql",),
+    "temporary continuity": ("033_temp_memory_channels.up.sql",),
+    "collaboration groups": ("034_collaboration_groups.up.sql",),
+    "managed exchange channels": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
+    "managed exchange items": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
+    "conversation templates": ("038_conversation_templates.up.sql",),
+}
+
+
+def _compose_storage_check_results(env_values: dict[str, str]) -> list[tuple[str, bool]]:
+    return _compose_check_results(COMPOSE_LONG_TERM_STORAGE_CHECKS, env_values)
+
+
+def _compose_host_port(env_values: dict[str, str], key: str, default: str) -> int:
+    try:
+        return int(env_values.get(key, default))
+    except ValueError as exc:
+        raise SystemExit(f"Invalid .env.compose {key}: {env_values.get(key)!r} must be an integer port.") from exc
+
+
+def _print_data_plane_connection_guidance(env_values: dict[str, str]):
+    postgres_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_POSTGRES_PORT", "5432")
+    nats_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_PORT", "4222")
+    nats_monitor_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_MONITOR_PORT", "8222")
+    db_user = _compose_db_user(env_values)
+    db_name = _compose_db_name(env_values)
+
+    print("\nData service connection settings:")
+    print("  Same compose project app containers:")
+    print("    DB_HOST=postgres")
+    print("    DB_PORT=5432")
+    print("    NATS_URL=nats://nats:4222")
+    print("  Host-native clients:")
+    print("    DB_HOST=127.0.0.1")
+    print(f"    DB_PORT={postgres_port}")
+    print(f"    NATS_URL=nats://127.0.0.1:{nats_port}")
+    print("  Separate Docker Compose app project:")
+    print("    DB_HOST=host.docker.internal")
+    print(f"    DB_PORT={postgres_port}")
+    print(f"    NATS_URL=nats://host.docker.internal:{nats_port}")
+    print("  Credentials:")
+    print(f"    DB_USER={db_user}")
+    print("    DB_PASSWORD=<from .env.compose; not printed>")
+    print(f"    DB_NAME={db_name}")
+    print(f"    NATS monitor=http://127.0.0.1:{nats_monitor_port}/varz")
+
+
+def _run_compose_migration_file(migration: Path, env_values: dict[str, str]):
+    result = _run_compose(
+        _compose_command(
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-h",
+            "127.0.0.1",
+            "-U",
+            _compose_db_user(env_values),
+            "-d",
+            _compose_db_name(env_values),
+            "-f",
+            f"/migrations/{migration.name}",
+        ),
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(f"Compose migration failed: {migration.name}")
+
+
+def _run_missing_compose_storage_migrations(env_values: dict[str, str]) -> bool:
+    missing = [label for label, ok in _compose_storage_check_results(env_values) if not ok]
+    migration_names: list[str] = []
+    for label in missing:
+        for migration_name in COMPOSE_STORAGE_MIGRATIONS_BY_CHECK.get(label, ()):
+            if migration_name not in migration_names:
+                migration_names.append(migration_name)
+
+    if not migration_names:
+        return False
+
+    migrations_by_name = {migration.name: migration for migration in db_tasks._migration_files()}
+    print("Applying missing long-term storage migrations:")
+    for migration_name in migration_names:
+        migration = migrations_by_name.get(migration_name)
+        if migration is None:
+            raise SystemExit(f"Missing migration file required for Compose storage bootstrap: {migration_name}")
+        print(f"  - {migration_name}")
+        _run_compose_migration_file(migration, env_values)
     return True
 
 
 def _run_compose_migrations(strict: bool = False):
-    if not strict and _compose_schema_bootstrapped():
+    env_values = _load_compose_env()
+    if not strict and _compose_schema_bootstrapped(env_values):
         print(
             "Compose schema already appears compatible with the current runtime; "
             "skipping forward migration replay."
@@ -245,33 +429,15 @@ def _run_compose_migrations(strict: bool = False):
             "Use 'uv run inv compose.down --volumes' for a truly fresh compose rebuild "
             "when you need to replay the canonical migration stack end-to-end."
         )
+        _run_missing_compose_storage_migrations(env_values)
         return
 
     for migration in db_tasks._migration_files():
-        result = _run_compose(
-            _compose_command(
-                "exec",
-                "-T",
-                "postgres",
-                "psql",
-                "-v",
-                "ON_ERROR_STOP=1",
-                "-h",
-                "127.0.0.1",
-                "-U",
-                "mycelis",
-                "-d",
-                "cortex",
-                "-f",
-                f"/migrations/{migration.name}",
-            ),
-            check=False,
-        )
-        if result.returncode != 0:
-            raise SystemExit(f"Compose migration failed: {migration.name}")
+        _run_compose_migration_file(migration, env_values)
 
 
-def _wait_for_postgres_ready(timeout_seconds: int = 90) -> bool:
+def _wait_for_postgres_ready(timeout_seconds: int = 90, env_values: dict[str, str] | None = None) -> bool:
+    env_values = env_values or _load_compose_env()
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         result = _run_compose(
@@ -283,9 +449,9 @@ def _wait_for_postgres_ready(timeout_seconds: int = 90) -> bool:
                 "-h",
                 "127.0.0.1",
                 "-U",
-                "mycelis",
+                _compose_db_user(env_values),
                 "-d",
-                "cortex",
+                _compose_db_name(env_values),
             ),
             check=False,
         )
@@ -293,6 +459,92 @@ def _wait_for_postgres_ready(timeout_seconds: int = 90) -> bool:
             return True
         time.sleep(2)
     return False
+
+
+@task(
+    help={
+        "wait_timeout": "Seconds to wait for PostgreSQL and NATS readiness (default: 180).",
+        "migrate": "Apply canonical migrations after PostgreSQL is ready (default: False).",
+    }
+)
+def infra_up(c, wait_timeout=180, migrate=False):
+    """Start only PostgreSQL and NATS for a Compose data-plane test."""
+    del c
+    _require_compose_env_file()
+    env_values = _load_compose_env()
+    _validate_compose_env(env_values)
+    wait_timeout = int(wait_timeout)
+    if wait_timeout < 30:
+        raise SystemExit("Compose infra-up wait timeout must be at least 30 seconds.")
+
+    postgres_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_POSTGRES_PORT", "5432")
+    nats_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_PORT", "4222")
+
+    print("=== Mycelis Compose Data Plane Up ===\n")
+    _print_step(
+        1,
+        3,
+        "Starting PostgreSQL and NATS only...",
+        "Core and Interface stay down; this exposes the shared data services for a separate app bring-up or connectivity test.",
+    )
+    _run_compose(_compose_command("up", "-d", "postgres", "nats"))
+
+    _expect_stage(
+        _wait_for_port,
+        postgres_port,
+        "PostgreSQL",
+        timeout_seconds=wait_timeout,
+        failure=f"Compose infra-up failed: PostgreSQL did not become reachable within {wait_timeout}s.",
+        next_steps=[
+            "Run 'uv run inv compose.status' to inspect container state and host ports.",
+            "Run 'uv run inv compose.logs postgres' for PostgreSQL startup logs.",
+            "Verify MYCELIS_COMPOSE_POSTGRES_PORT is not already occupied.",
+        ],
+    )
+    _expect_stage(
+        _wait_for_postgres_ready,
+        timeout_seconds=max(wait_timeout, 90),
+        env_values=env_values,
+        failure=f"Compose infra-up failed: PostgreSQL did not become query-ready within {max(wait_timeout, 90)}s.",
+        next_steps=[
+            "Run 'uv run inv compose.logs postgres' to inspect readiness errors.",
+            "Use 'uv run inv compose.down --volumes' only when you intentionally want to reset persisted database state.",
+        ],
+    )
+    _expect_stage(
+        _wait_for_port,
+        nats_port,
+        "NATS",
+        timeout_seconds=wait_timeout,
+        failure=f"Compose infra-up failed: NATS did not become reachable within {wait_timeout}s.",
+        next_steps=[
+            "Run 'uv run inv compose.status' to confirm the NATS container is up.",
+            "Run 'uv run inv compose.logs nats' for broker startup details.",
+            "Verify MYCELIS_COMPOSE_NATS_PORT is not already occupied.",
+        ],
+    )
+
+    print()
+    _print_step(
+        2,
+        3,
+        "Data plane reachable.",
+        "Use the printed endpoints to configure Core/UI app services that connect to these shared data services.",
+    )
+    if migrate:
+        print("  Applying canonical migrations because --migrate was requested.")
+        _run_compose_migrations()
+    else:
+        print("  Migrations skipped. Run 'uv run inv compose.migrate' when the app schema needs bootstrap before Core starts.")
+
+    print()
+    _print_step(
+        3,
+        3,
+        "Connection handoff.",
+        "Keep credentials in .env.compose or the consuming deployment's configuration surface; do not bake them into images.",
+    )
+    _print_data_plane_connection_guidance(env_values)
 
 
 @task(
@@ -342,6 +594,7 @@ def up(c, build=False, wait_timeout=180):
     _expect_stage(
         _wait_for_postgres_ready,
         timeout_seconds=max(wait_timeout, 90),
+        env_values=env_values,
         failure=f"Compose up failed: PostgreSQL did not become query-ready within {max(wait_timeout, 90)}s.",
         next_steps=[
             "Run 'uv run inv compose.logs postgres' to inspect readiness or migration errors.",
@@ -485,6 +738,89 @@ def status(c):
 
 
 @task
+def infra_health(c):
+    """Health probe for the Compose PostgreSQL + NATS data plane only."""
+    del c
+    _require_compose_env_file()
+    env_values = _load_compose_env()
+    _validate_compose_env(env_values)
+    postgres_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_POSTGRES_PORT", "5432")
+    nats_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_PORT", "4222")
+    nats_monitor_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_MONITOR_PORT", "8222")
+
+    print("=== Mycelis Compose Data Plane Health ===\n")
+    failures: list[str] = []
+
+    if _port_open(postgres_port):
+        print(f"  [OK] {'PostgreSQL port':<18} 127.0.0.1:{postgres_port}")
+    else:
+        print(f"  [FAIL] {'PostgreSQL port':<18} 127.0.0.1:{postgres_port}")
+        failures.append("PostgreSQL host port is not reachable.")
+
+    if _wait_for_postgres_ready(timeout_seconds=5, env_values=env_values):
+        print(f"  [OK] {'PostgreSQL query':<18} {_compose_db_user(env_values)}@postgres/{_compose_db_name(env_values)}")
+    else:
+        print(f"  [FAIL] {'PostgreSQL query':<18} {_compose_db_user(env_values)}@postgres/{_compose_db_name(env_values)}")
+        failures.append("PostgreSQL container did not accept a query with the configured DB user/name.")
+
+    if _port_open(nats_port):
+        print(f"  [OK] {'NATS port':<18} nats://127.0.0.1:{nats_port}")
+    else:
+        print(f"  [FAIL] {'NATS port':<18} nats://127.0.0.1:{nats_port}")
+        failures.append("NATS host port is not reachable.")
+
+    nats_monitor_url = f"http://127.0.0.1:{nats_monitor_port}/varz"
+    status_code, body = _http_get(nats_monitor_url, timeout=5.0)
+    if status_code == 200:
+        print(f"  [OK] {'NATS monitor':<18} {nats_monitor_url}")
+    else:
+        print(f"  [FAIL] {'NATS monitor':<18} {nats_monitor_url} [{status_code}]")
+        failures.append(f"NATS monitor did not answer /varz: {body}")
+
+    if failures:
+        print("\nIssues:")
+        for failure in failures:
+            print(f"  - {failure}")
+        print("\nNext steps:")
+        print("  - Run 'uv run inv compose.status' to inspect service/container state.")
+        print("  - Run 'uv run inv compose.logs postgres' or 'uv run inv compose.logs nats' for service logs.")
+        raise SystemExit(1)
+
+    _print_data_plane_connection_guidance(env_values)
+    print("\nData plane healthy. Core/Interface may remain down for infra-only testing.")
+
+
+@task
+def storage_health(c):
+    """Probe Compose PostgreSQL long-term Mycelis storage after migrations."""
+    del c
+    _require_compose_env_file()
+    env_values = _load_compose_env()
+    _validate_compose_env(env_values)
+
+    print("=== Mycelis Compose Long-Term Storage Health ===\n")
+    failures: list[str] = []
+    for label, ok in _compose_storage_check_results(env_values):
+        if ok:
+            print(f"  [OK] {label}")
+        else:
+            print(f"  [FAIL] {label}")
+            failures.append(label)
+
+    if failures:
+        print("\nIssues:")
+        for failure in failures:
+            print(f"  - Missing or unavailable: {failure}")
+        print("\nNext steps:")
+        print("  - Run 'uv run inv compose.migrate' to apply canonical schema migrations.")
+        print("  - Run 'uv run inv compose.logs postgres' if migrations or storage checks fail.")
+        print("  - Use 'uv run inv compose.down --volumes' only when an intentional destructive schema reset is required.")
+        raise SystemExit(1)
+
+    print("\nLong-term storage ready for semantic memory, continuity, artifacts, managed exchange, and template recall.")
+
+
+@task
 def health(c):
     """Deep health probe for the Docker Compose runtime path."""
     del c
@@ -562,6 +898,9 @@ def logs(c, service="", tail=200):
 
 
 ns = Collection("compose")
+ns.add_task(infra_up)
+ns.add_task(infra_health)
+ns.add_task(storage_health)
 ns.add_task(up)
 ns.add_task(down)
 ns.add_task(migrate)

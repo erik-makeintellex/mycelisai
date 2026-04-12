@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: Canonical
-> Last Updated: 2026-04-11
+> Last Updated: 2026-04-12
 > Purpose: Define the compact-team default for Mycelis so ordinary asks produce small, focused teams while broad asks are split into several smaller coordinated teams or lanes orchestrated by Soma with Council help over NATS and the managed exchange framework.
 
 ## TOC
@@ -31,26 +31,30 @@ This document sets the default posture for team creation and broader execution s
 ## Compact By Default
 
 Default team shape:
-- 1 focused lead
-- 2 to 5 supporting specialists
+- 1 focused Team Lead
+- 1 Architect Prime
+- 1 focused builder/developer role matched to the requested output
+- up to 2 additional targeted specialists only when the mission output clearly requires distinct capability coverage
 - a bounded output contract
 - a clear completion path
 - a visible archive or retained-output outcome when the work is done
 
 Default guidance:
-- start from the smallest team that can reasonably deliver the requested outcome
+- start from the 3-person default whenever it can reasonably deliver the requested outcome
 - prefer reusable templates over inventing extra members
 - keep the team roster readable in the UI
 - keep the execution path narrow enough that a user can understand who is doing what
+- keep any single launched team at 5 members or fewer
 
 Avoid by default:
 - large monolithic teams
 - sprawling member lists with overlapping roles
 - teams that exist only because a prompt was broad
 - hidden internal sub-teams that the operator cannot reason about
+- single-team launches with more than 5 members
 
 The practical rule is simple:
-- if the request is ordinary, keep the team compact
+- if the request is ordinary, launch the smallest useful 3-person team
 - if the request is broad, split the work into several compact teams and coordinate them
 
 ## Broad Ask Orchestration
@@ -75,22 +79,22 @@ This is intentionally not a giant team with every discipline in one roster. The 
 ## Team Shape Guidance
 
 Suggested size guidance:
-- 1 to 5 members: normal default
-- 6 to 8 members: only when the request is clearly cross-functional
-- 9 to 12 members: exceptional, and only when the work is broad enough that a split would be less clear than a single short-lived team
-- over 12 members: not the default and should trigger a decomposition review
+- 3 members: normal ideal default
+- 4 to 5 members: allowed only when the output needs a distinct reviewer, domain specialist, or second focused builder
+- over 5 members: do not launch as one team; trigger decomposition into multiple compact teams or lanes
 
 Recommended specialization pattern:
-- lead: owns the lane and the operator-facing summary
-- researcher: gathers and normalizes input
-- implementer: creates the artifact or execution payload
-- reviewer: checks quality, trust, or compliance
-- optional specialist: only when the task truly needs a distinct capability
+- Team Lead: owns the lane and the operator-facing summary
+- Architect Prime: turns the operator request into a practical plan, dependencies, and output contract
+- Focused Builder: creates the artifact, implementation payload, analysis, media direction, website draft, data review, or other requested deliverable
+- Optional Reviewer / Tester: checks acceptance criteria, quality, cleanup, and retained outputs
+- Optional Domain Specialist: covers one distinct capability such as media direction, security, data analysis, or integration
 
 When creating templates:
 - prefer role templates that can be reused across many compact teams
 - avoid baking a large permanent roster into the template
 - make the team lead visible as the first operational counterpart
+- force any template over 5 members through decomposition or explicit architecture review before it becomes product default
 
 ## NATS And Exchange Coordination
 
@@ -132,10 +136,11 @@ This compact-team rule must be proven at multiple layers:
 - UI tests should verify the creation workflow teaches compact default teams and shows the broad-ask split into smaller lanes
 - NATS/exchange observability tests should verify that multiple compact teams can coordinate and remain inspectable through governed signals and outputs
 - browser workflow tests should verify a user can create a focused team, inspect the lead, and see broad requests broken into several small team bundles instead of one oversized roster
+- documentation tests and user walkthroughs should show ordinary team creation as Team Lead + Architect Prime + focused builder, with 4th/5th roles justified by output need
 
 The first pass should fail if:
 - the default team shape exceeds the compact threshold without an explicit broad-ask reason
+- any single team launch exceeds 5 members instead of decomposing
 - broad asks silently create one giant team instead of multiple lanes
 - coordination cannot be observed in the bus or exchange view
 - the UI obscures the team lead or output contract
-

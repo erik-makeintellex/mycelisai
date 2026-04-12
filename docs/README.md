@@ -15,9 +15,10 @@ Use this page as the clean navigation layer between user guidance, developer gui
 
 These are the best entry points for someone using Mycelis through the product:
 
-- **User Docs Home**: `./user/`
+- **User Docs Home**: `./user/README.md`
 - **Core Concepts**: `./user/core-concepts.md`
 - **Using Soma Chat**: `./user/soma-chat.md`
+- **Teams**: `./user/teams.md`
 - **Governance & Trust**: `./user/governance-trust.md`
 - **Automations**: `./user/automations.md`
 - **Resources**: `./user/resources.md`
@@ -39,6 +40,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8.1 Living Organization Architecture**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 - **V8 Universal Soma And Context Model PRD**: `./architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`
 - **V8 Home Docker Compose Runtime**: `./architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
+- **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`
 - **V8 MVP Media, Team Output, And Template Registry**: `./architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`
 - **V8.2 Production Architecture Target**: `../v8-2.md`
 - **Operations**: `./architecture/OPERATIONS.md`
@@ -60,6 +62,7 @@ Use these when the goal is verification, release proof, or workflow-complete val
 
 - **Testing Guide**: `./TESTING.md`
 - **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
+- **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`
 - **V8 UI Testing Agentry Product Contract**: `./architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - **V8 UI Team Full Test Set**: `./architecture-library/V8_UI_TEAM_FULL_TEST_SET.md`
 - **V8 MVP Media, Team Output, And Template Registry**: `./architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`

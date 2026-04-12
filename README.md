@@ -84,6 +84,8 @@ Bootstrap reminder:
 Tasking note:
 - `uv run inv db.migrate` is a forward-bootstrap task for schemas that are not yet compatible with the current runtime; if the `cortex` schema already has the required runtime tables and columns, it skips replay and points operators to `uv run inv db.reset` for a clean rebuild
 - `uv run inv compose.up` and `uv run inv compose.migrate` follow the same compatibility posture for the supported home-runtime stack: they replay canonical forward migrations only when the compose `cortex` schema is not yet compatible with the current runtime, and otherwise keep the existing schema in place until you intentionally use `uv run inv compose.down --volumes` for a fresh rebuild
+- `uv run inv compose.infra-up` starts only the Compose data plane (`postgres` + `nats`), leaves Core/Interface down, and prints owner-facing connection settings for same-project containers, host-native tools, and separate Compose app projects; `uv run inv compose.infra-health` probes that data plane without checking Core/UI
+- `uv run inv compose.storage-health` is the post-migration long-term storage gate for Compose PostgreSQL: it checks pgvector plus the durable semantic/context, memory, conversation, artifact, managed-exchange, group, and template tables Mycelis uses for long-horizon recall and retained outputs
 - `uv run inv compose.up` now emits deterministic numbered stages with expectations and recovery guidance, and accepts `--wait-timeout=<seconds>` when a slower host or first rebuild needs longer readiness windows
 - Compose output storage is explicitly configurable: `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` with `MYCELIS_OUTPUT_HOST_PATH=<host-directory>` mounts a local or Pinokio/media-hosted output block into Core as `/data`, while Kubernetes/chart usage should keep output generation on the cluster-managed PVC path. The Invoke compose task resolves host paths with Python `pathlib` across Windows, Linux, and macOS before startup.
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
@@ -279,12 +281,13 @@ Contract rule:
 ## Compact Team Orchestration
 
 Team creation should stay compact by default:
-- a normal team should have a small focused lead and a handful of specialists
+- a normal launch should start with 3 precise roles: Team Lead, Architect Prime, and focused builder/developer
+- a single team should stay at 5 members or fewer, with 4th/5th roles justified by a distinct output need
 - broad asks should become several small teams or lane bundles rather than one oversized roster
 - Soma remains the root orchestrator that can split work, coordinate lanes, and pull Council in when specialist review helps
 - NATS and managed exchange are the communication and observability fabric for that coordination story
 
-The user-facing rule is simple: if the work is broad, the product should split it cleanly instead of scaling the roster until it becomes hard to understand or test.
+The user-facing rule is simple: if the work is broad, the product should split it cleanly instead of scaling a single roster until it becomes hard to understand or test.
 
 Implementation note:
 - V8.1 currently ships the default operator surface plus bounded guided controls and inspect-only detail where explicitly called out in `V8_DEV_STATE.md`
@@ -393,6 +396,9 @@ Required command references for active V8 work:
 - `uv run inv cache.status`
 - `uv run inv cache.clean`
 - `uv run inv lifecycle.memory-restart`
+- `uv run inv compose.infra-up`
+- `uv run inv compose.infra-health`
+- `uv run inv compose.storage-health`
 - `uv run inv compose.up`
 - `uv run inv compose.health`
 - `uv run inv team.architecture-sync`
@@ -502,9 +508,11 @@ For a new user who wants the quickest supported path to a running service:
   1. `cp .env.compose.example .env.compose`
   2. `uv run inv auth.posture --compose`
   3. `uv run inv install`
-  4. `uv run inv compose.up --build --wait-timeout=240`
-  5. `uv run inv compose.health`
-  6. open `http://localhost:3000`
+  4. optional data-plane proof: `uv run inv compose.infra-up --wait-timeout=180`
+  5. optional long-term storage proof after migration: `uv run inv compose.storage-health`
+  6. `uv run inv compose.up --build --wait-timeout=240`
+  7. `uv run inv compose.health`
+  8. open `http://localhost:3000`
 - Windows native:
   1. `copy .env.example .env`
   2. `uv run inv auth.dev-key`
@@ -535,8 +543,10 @@ Recommended easiest setup path by host:
 - WSL2/Linux/macOS:
   1. `cp .env.compose.example .env.compose`
   2. `uv run inv install`
-  3. `uv run inv compose.up --build --wait-timeout=240`
-  4. `uv run inv compose.health`
+  3. optional data-plane proof: `uv run inv compose.infra-up --wait-timeout=180`
+  4. optional long-term storage proof after migration: `uv run inv compose.storage-health`
+  5. `uv run inv compose.up --build --wait-timeout=240`
+  6. `uv run inv compose.health`
 - Windows native:
   1. `copy .env.example .env`
   2. `uv run inv install`

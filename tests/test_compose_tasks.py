@@ -61,7 +61,8 @@ def test_run_compose_migrations_executes_canonical_files(monkeypatch):
     files = [Path("001_init_memory.sql"), Path("002_extra.up.sql")]
 
     monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: files)
-    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda: False)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "mycelis", "DB_NAME": "cortex"})
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: False)
     monkeypatch.setattr(
         compose,
         "_run_compose",
@@ -106,8 +107,31 @@ def test_run_compose_migrations_executes_canonical_files(monkeypatch):
     ]
 
 
+def test_run_compose_migrations_uses_configured_db_login(monkeypatch):
+    commands: list[list[str]] = []
+    files = [Path("001_init_memory.sql")]
+
+    monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: files)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "owner", "DB_NAME": "ownerdb"})
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: False)
+    monkeypatch.setattr(
+        compose,
+        "_run_compose",
+        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+    )
+
+    compose._run_compose_migrations()
+
+    assert "-U" in commands[0]
+    assert "owner" in commands[0]
+    assert "-d" in commands[0]
+    assert "ownerdb" in commands[0]
+
+
 def test_run_compose_migrations_skips_replay_when_schema_is_compatible(monkeypatch, capsys):
-    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda: True)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "mycelis", "DB_NAME": "cortex"})
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: True)
+    monkeypatch.setattr(compose, "_run_missing_compose_storage_migrations", lambda env_values: False)
     monkeypatch.setattr(
         compose.db_tasks,
         "_migration_files",
@@ -121,17 +145,61 @@ def test_run_compose_migrations_skips_replay_when_schema_is_compatible(monkeypat
     assert "compose.down --volumes" in out
 
 
+def test_run_compose_migrations_applies_missing_late_storage_when_base_schema_is_compatible(monkeypatch, capsys):
+    files = [Path("038_conversation_templates.up.sql")]
+    commands: list[list[str]] = []
+
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "mycelis", "DB_NAME": "cortex"})
+    monkeypatch.setattr(compose, "_compose_schema_bootstrapped", lambda env_values=None: True)
+    monkeypatch.setattr(
+        compose,
+        "_compose_storage_check_results",
+        lambda env_values: [
+            ("pgvector extension", True),
+            ("conversation templates", False),
+        ],
+    )
+    monkeypatch.setattr(compose.db_tasks, "_migration_files", lambda: files)
+    monkeypatch.setattr(
+        compose,
+        "_run_compose",
+        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+    )
+
+    compose._run_compose_migrations()
+
+    out = capsys.readouterr().out
+    assert "Applying missing long-term storage migrations" in out
+    assert commands == [
+        compose._compose_command(
+            "exec",
+            "-T",
+            "postgres",
+            "psql",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-h",
+            "127.0.0.1",
+            "-U",
+            "mycelis",
+            "-d",
+            "cortex",
+            "-f",
+            "/migrations/038_conversation_templates.up.sql",
+        )
+    ]
+
+
 def test_compose_schema_bootstrapped_requires_all_runtime_objects(monkeypatch):
-    responses = iter([True, True, False])
     monkeypatch.setattr(compose.db_tasks, "SCHEMA_COMPATIBILITY_CHECKS", [("a", "sql"), ("b", "sql"), ("c", "sql")])
-    monkeypatch.setattr(compose, "_compose_query_succeeds", lambda sql: next(responses))
+    monkeypatch.setattr(compose, "_compose_check_results", lambda checks, env_values: [("a", True), ("b", True), ("c", False)])
 
     assert compose._compose_schema_bootstrapped() is False
 
 
 def test_compose_schema_bootstrapped_accepts_current_runtime_schema(monkeypatch):
     monkeypatch.setattr(compose.db_tasks, "SCHEMA_COMPATIBILITY_CHECKS", [("a", "sql"), ("b", "sql")])
-    monkeypatch.setattr(compose, "_compose_query_succeeds", lambda sql: True)
+    monkeypatch.setattr(compose, "_compose_check_results", lambda checks, env_values: [("a", True), ("b", True)])
 
     assert compose._compose_schema_bootstrapped() is True
 
@@ -148,7 +216,11 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
     )
     monkeypatch.setattr(compose, "_run_compose_migrations", lambda: waits.append(("migrate", 0)))
     monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: waits.append((label, port)) or True)
-    monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90: waits.append(("PostgreSQL ready", timeout_seconds)) or True)
+    monkeypatch.setattr(
+        compose,
+        "_wait_for_postgres_ready",
+        lambda timeout_seconds=90, env_values=None: waits.append(("PostgreSQL ready", timeout_seconds)) or True,
+    )
     monkeypatch.setattr(
         compose,
         "_wait_for_http_ok",
@@ -173,6 +245,213 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
         ("Frontend", f"http://{compose.INTERFACE_HOST}:{compose.INTERFACE_PORT}/"),
         ("status", 0),
     ]
+
+
+def test_compose_infra_up_starts_only_data_services(monkeypatch):
+    commands: list[list[str]] = []
+    waits: list[tuple[str, int]] = []
+
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(
+        compose,
+        "_load_compose_env",
+        lambda: {
+            "MYCELIS_COMPOSE_POSTGRES_PORT": "15432",
+            "MYCELIS_COMPOSE_NATS_PORT": "14222",
+            "MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434",
+        },
+    )
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(
+        compose,
+        "_run_compose",
+        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+    )
+    monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: waits.append((label, port)) or True)
+    monkeypatch.setattr(
+        compose,
+        "_wait_for_postgres_ready",
+        lambda timeout_seconds=90, env_values=None: waits.append(("PostgreSQL ready", timeout_seconds)) or True,
+    )
+    monkeypatch.setattr(compose, "_run_compose_migrations", lambda: pytest.fail("migrations should be opt-in for infra-up"))
+
+    compose.infra_up.body(None, wait_timeout=120)
+
+    assert commands == [compose._compose_command("up", "-d", "postgres", "nats")]
+    assert waits == [
+        ("PostgreSQL", 15432),
+        ("PostgreSQL ready", 120),
+        ("NATS", 14222),
+    ]
+
+
+def test_compose_infra_up_can_run_migrations_when_requested(monkeypatch):
+    commands: list[list[str]] = []
+    migrated: list[bool] = []
+
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(
+        compose,
+        "_run_compose",
+        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+    )
+    monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: True)
+    monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90, env_values=None: True)
+    monkeypatch.setattr(compose, "_run_compose_migrations", lambda: migrated.append(True))
+
+    compose.infra_up.body(None, wait_timeout=120, migrate=True)
+
+    assert commands == [compose._compose_command("up", "-d", "postgres", "nats")]
+    assert migrated == [True]
+
+
+def test_compose_infra_up_prints_connection_guidance(monkeypatch, capsys):
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(
+        compose,
+        "_load_compose_env",
+        lambda: {
+            "MYCELIS_COMPOSE_POSTGRES_PORT": "15432",
+            "MYCELIS_COMPOSE_NATS_PORT": "14222",
+            "MYCELIS_COMPOSE_NATS_MONITOR_PORT": "18222",
+            "DB_USER": "owner",
+            "DB_PASSWORD": "secret",
+            "DB_NAME": "ownerdb",
+        },
+    )
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(
+        compose,
+        "_run_compose",
+        lambda args, check=True: type("Result", (), {"returncode": 0})(),
+    )
+    monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: True)
+    monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90, env_values=None: True)
+
+    compose.infra_up.body(None, wait_timeout=120)
+
+    out = capsys.readouterr().out
+    assert "Core and Interface stay down" in out
+    assert "DB_HOST=host.docker.internal" in out
+    assert "DB_PORT=15432" in out
+    assert "NATS_URL=nats://host.docker.internal:14222" in out
+    assert "DB_USER=owner" in out
+    assert "secret" not in out
+    assert "DB_PASSWORD=<from .env.compose; not printed>" in out
+    assert "NATS monitor=http://127.0.0.1:18222/varz" in out
+
+
+def test_compose_infra_health_checks_data_plane_only(monkeypatch, capsys):
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(
+        compose,
+        "_load_compose_env",
+        lambda: {
+            "MYCELIS_COMPOSE_POSTGRES_PORT": "15432",
+            "MYCELIS_COMPOSE_NATS_PORT": "14222",
+            "MYCELIS_COMPOSE_NATS_MONITOR_PORT": "18222",
+            "DB_USER": "owner",
+            "DB_NAME": "ownerdb",
+        },
+    )
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(compose, "_port_open", lambda port: port in {15432, 14222})
+    monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90, env_values=None: True)
+    monkeypatch.setattr(compose, "_http_get", lambda url, timeout=3.0, headers=None: (200, "{}"))
+
+    compose.infra_health.body(None)
+
+    out = capsys.readouterr().out
+    assert "Compose Data Plane Health" in out
+    assert "PostgreSQL query" in out
+    assert "NATS monitor" in out
+    assert "Data plane healthy" in out
+    assert "Core health" not in out
+    assert "Frontend" not in out
+
+
+def test_compose_infra_health_fails_without_nats_monitor(monkeypatch):
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(compose, "_port_open", lambda port: True)
+    monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90, env_values=None: True)
+    monkeypatch.setattr(compose, "_http_get", lambda url, timeout=3.0, headers=None: (0, "connection refused"))
+
+    with pytest.raises(SystemExit) as excinfo:
+        compose.infra_health.body(None)
+
+    assert "NATS monitor did not answer" in str(excinfo.value) or excinfo.value.code == 1
+
+
+def test_compose_storage_health_checks_long_term_storage(monkeypatch, capsys):
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {"DB_USER": "owner", "DB_NAME": "ownerdb"})
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(
+        compose,
+        "_compose_storage_check_results",
+        lambda env_values: [(label, True) for label, _sql in compose.COMPOSE_LONG_TERM_STORAGE_CHECKS],
+    )
+
+    compose.storage_health.body(None)
+
+    out = capsys.readouterr().out
+    assert "Long-Term Storage Health" in out
+    assert "pgvector extension" in out
+    assert "semantic context vectors" in out
+    assert "conversation continuity" in out
+    assert "managed exchange items" in out
+    assert "Long-term storage ready" in out
+
+
+def test_compose_storage_health_guides_migration_when_missing(monkeypatch, capsys):
+    monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
+    monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
+    monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(
+        compose,
+        "_compose_storage_check_results",
+        lambda env_values: [
+            ("pgvector extension", True),
+            ("semantic context vectors", False),
+        ],
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        compose.storage_health.body(None)
+
+    out = capsys.readouterr().out
+    assert excinfo.value.code == 1
+    assert "uv run inv compose.migrate" in out
+    assert "semantic context vectors" in out
+
+
+def test_compose_storage_check_results_batches_queries(monkeypatch):
+    captured: list[str] = []
+
+    def fake_psql(sql, env_values):
+        captured.append(sql)
+        return type(
+            "Result",
+            (),
+            {
+                "returncode": 0,
+                "stdout": "pgvector extension\tok\nsemantic context vectors\tmissing\n",
+                "stderr": "",
+            },
+        )()
+
+    monkeypatch.setattr(compose, "_run_compose_psql", fake_psql)
+
+    assert compose._compose_storage_check_results({}) == [
+        ("pgvector extension", True),
+        ("semantic context vectors", False),
+    ]
+    assert len(captured) == 1
+    assert "context_vectors" in captured[0]
 
 
 def test_compose_up_rejects_tiny_wait_timeout(monkeypatch):
@@ -217,7 +496,7 @@ def test_compose_up_prints_expectations(monkeypatch, capsys):
     )
     monkeypatch.setattr(compose, "_run_compose_migrations", lambda: None)
     monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: True)
-    monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90: True)
+    monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90, env_values=None: True)
     monkeypatch.setattr(compose, "_wait_for_http_ok", lambda url, label, timeout_seconds=60, headers=None: True)
     monkeypatch.setattr(compose.status, "body", lambda _c=None: None)
 

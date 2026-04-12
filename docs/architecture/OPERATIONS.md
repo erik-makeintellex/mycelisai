@@ -157,6 +157,9 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 
 | Command | Description |
 |---------|-------------|
+| `uv run inv compose.infra-up` | Start only the Compose data plane (`postgres` + `nats`), leave Core/Interface down, wait for readiness, and print owner-facing DB/NATS connection settings; use `--migrate` only when schema bootstrap is intentionally needed |
+| `uv run inv compose.infra-health` | Probe only the Compose data plane: PostgreSQL port/query readiness, NATS port, and NATS monitor, without checking Core or Interface |
+| `uv run inv compose.storage-health` | Probe post-migration Compose PostgreSQL long-term storage: pgvector plus semantic context vectors, durable memory, conversation continuity, artifacts, temporary continuity, collaboration groups, managed exchange, and conversation templates |
 | `uv run inv compose.up` | Managed Docker Compose bring-up: postgres + nats -> compatibility-aware canonical forward migrations -> core + interface, with numbered stage output, host readiness checks, and optional `--wait-timeout=<seconds>` |
 | `uv run inv compose.down` | Stop the compose stack (`--volumes` for a truly fresh rebuild) |
 | `uv run inv compose.migrate` | Apply canonical forward migrations through the PostgreSQL compose service when the compose schema is not already compatible with the current runtime |
@@ -168,6 +171,9 @@ Compose runtime guardrails:
 - `.env.compose` is the supported env contract for the home-runtime path; do not reuse Kind/bridge `OLLAMA_HOST` values blindly
 - use `MYCELIS_COMPOSE_OLLAMA_HOST` for the home-runtime AI engine path so host-level `OLLAMA_HOST` bind settings do not override the compose runtime
 - loopback compose Ollama values (`localhost`, `127.0.0.1`, `0.0.0.0`) are invalid for the Core container and are rejected by the compose task layer
+- `compose.infra-up` is the supported personal-owner data-plane preflight when the operator wants PostgreSQL/NATS up and exposed before deciding how Core/Interface should connect
+- `compose.storage-health` is the post-migration gate for the long-term Postgres store; it should pass before a personal-owner workflow claims semantic memory, deployment context, retained outputs, managed exchange, or conversation continuity are available
+- when the base compose schema is already compatible, `compose.migrate` skips unsafe full replay and can apply known missing late storage migrations before `compose.storage-health` runs
 - `compose.up` and `compose.migrate` now follow the same compatibility-aware posture as `db.migrate`: once the compose `cortex` schema already has the required late-runtime tables and columns, the tasks skip forward replay and leave reset/rebuild work to `compose.down --volumes`
 - `compose.up` prints deterministic step numbers, stage expectations, and recovery guidance on timeout so both operators and agent callers can follow the same bring-up contract
 - prefer `uv run inv compose.up --build --wait-timeout=240` on a fresh or slower host where image build and first readiness can legitimately take longer than the default wait window

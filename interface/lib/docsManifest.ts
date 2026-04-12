@@ -32,6 +32,12 @@ export const DOC_MANIFEST: DocSection[] = [
         section: "User Guides",
         docs: [
             {
+                slug: "user-docs-home",
+                label: "User Docs Home",
+                path: "docs/user/README.md",
+                description: "Operator-first entry point for Soma, teams, resources, memory, and recovery workflows",
+            },
+            {
                 slug: "core-concepts",
                 label: "Core Concepts",
                 path: "docs/user/core-concepts.md",
@@ -290,6 +296,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "V8 Home Docker Compose Runtime",
                 path: "docs/architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md",
                 description: "Single-host Docker Compose runtime for home-lab, demo, and partner review",
+            },
+            {
+                slug: "v8-compose-personal-owner-test-plan",
+                label: "V8 Compose Personal Owner Test Plan",
+                path: "docs/architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md",
+                description: "PRD-style test plan for personal-owner Compose deployment from data-plane-only startup through workflow proof",
             },
             {
                 slug: "v8-mvp-media-team-output-template-registry",

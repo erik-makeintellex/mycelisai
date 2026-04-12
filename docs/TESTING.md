@@ -9,6 +9,7 @@ Current validation contract:
 - use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
 - use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses the `cortex` schema only when it is already compatible with the current runtime, and otherwise bootstraps the database before proving the browser contract against the managed built server / built production server path
 - when the validation target is the supported home-runtime stack, use `uv run inv compose.up`, `uv run inv compose.status`, and `uv run inv compose.health` before browser proof instead of assuming Kind/bridge is the only real local environment; compose bring-up now mirrors `db.migrate` by skipping forward replay when the compose `cortex` schema is already compatible with the current runtime, emits numbered stage output with operator expectations, and accepts `--wait-timeout=<seconds>` for slower rebuild hosts
+- when the validation target is a personal-owner Compose deployment with user-configured data services, use `uv run inv compose.infra-up --wait-timeout=180` first to start only PostgreSQL/NATS, verify the printed DB/NATS connection settings, run `uv run inv compose.infra-health`, then run `uv run inv compose.storage-health` after migrations so the long-term pgvector/Postgres memory and artifact store is proven before Core/Interface workflow proof
 - in the supported home-runtime stack, `.env.compose` must keep container-host assumptions separate from `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`
 - use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
@@ -143,6 +144,9 @@ Minimum policy:
 
 - Before any runtime or integration-style test, stop prior local services using the repo lifecycle task path. Use `uv run inv lifecycle.down` unless a narrower repo task is the safer equivalent for the slice.
 - For Docker Compose runtime proof, use `uv run inv compose.down --volumes` as the clean reset equivalent so PostgreSQL, NATS, and Core state are truly rebuilt instead of inherited from a prior container run.
+- For personal-owner Compose data-plane proof, use `uv run inv compose.infra-up --wait-timeout=180` and `uv run inv compose.infra-health` before full app launch, and expect PostgreSQL/NATS to be `UP` while Core API and Frontend remain `DOWN`.
+- For personal-owner long-term storage proof, run `uv run inv compose.migrate` and `uv run inv compose.storage-health` before claiming semantic memory, deployment context, retained artifacts, managed exchange, or conversation continuity are available.
+- For partially migrated Compose volumes, `compose.migrate` should not replay older unsafe migrations when the base schema is already compatible; it should apply only known missing late storage migrations and then rely on `compose.storage-health` for proof.
 - For Docker Compose runtime proof, treat `uv run inv compose.up` and `uv run inv compose.migrate` as forward-bootstrap helpers, not replay-everything hammers. Once the compose `cortex` schema is already compatible with the current runtime, they intentionally skip replay and point to `uv run inv compose.down --volumes` when a truly fresh rebuild is required.
 - For Docker Compose runtime proof, prefer `uv run inv compose.up --build --wait-timeout=240` on a fresh host or first rebuild so readiness checks stay aligned with slower image-build timelines instead of failing early at the caller layer.
 - For Docker Compose runtime proof, treat `uv run inv compose.health` as a product-availability gate, not only a port gate: the text cognitive engine must be online before browser proof is considered valid.
@@ -207,6 +211,9 @@ uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 uv run inv ci.baseline           # Canonical strict baseline (docs/logging/topics/line gates + core + interface + Playwright by default)
 uv run inv ci.baseline --no-e2e  # Narrower local debug path when browser proof is intentionally skipped
 uv run inv ci.service-check      # Running-stack health proof against local services
+uv run inv compose.infra-up --wait-timeout=180      # Personal-owner Compose data-plane preflight: postgres + nats only, no Core/UI
+uv run inv compose.infra-health      # Data-plane-only health proof: PostgreSQL + NATS without Core/UI checks
+uv run inv compose.storage-health    # Post-migration long-term storage proof: pgvector, memory/context, artifacts, exchange, continuity
 uv run inv compose.up --build --wait-timeout=240    # Supported home-runtime bring-up without Kind on a fresh or slower host
 uv run inv compose.health        # Deep health proof for the compose stack
 uv run inv ci.release-preflight --service-health --live-backend  # Clean-tree + baseline + live service/browser proof

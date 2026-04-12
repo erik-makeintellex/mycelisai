@@ -184,9 +184,11 @@ The user clicks the trash icon on a server card. Confirmation: "Remove server '{
 
 ## Workflow 3: Team Builder
 
-**Purpose**: The user composes a team by selecting agents from the catalogue, assigning them roles within the team, defining the team's I/O contracts (which NATS topics it listens to and delivers on), and configuring inter-agent data flow.
+**Purpose**: The user creates a compact, output-oriented team through a guided Soma workflow, then uses advanced visual wiring only when graph-level inspection or manual assembly is needed.
 
-**Route**: `/wiring` (existing route, enhanced)
+**Primary Route**: `/teams/create`
+
+**Advanced Route**: `/wiring` for graph-level inspection and manual assembly
 
 **Backend Dependencies**:
 - `GET /api/v1/catalogue/agents` — list available agent definitions (new)
@@ -196,13 +198,45 @@ The user clicks the trash icon on a server card. Confirmation: "Remove server '{
 
 ### Step-by-Step User Flow
 
-#### 3.1 — Enter the Wiring Page
+#### 3.1 — Enter Guided Team Creation
+
+The user navigates to `/teams/create` from the Teams page or the root Soma workspace. The page asks for outcome first, not a raw roster.
+
+The user provides:
+- desired outcome
+- expected visible outputs
+- whether the work is temporary or standing
+- whether the ask is narrow or broad
+- any specific tools, model preferences, or retained-output requirements
+
+Soma proposes the smallest useful launch shape. The default proposal should be:
+
+1. Team Lead: user-facing owner for status, handoffs, and output summary.
+2. Architect Prime: planner for approach, dependencies, acceptance criteria, and output contract.
+3. Focused Builder: producer for the requested artifact, implementation, analysis, media direction, data review, website draft, or delivery payload.
+
+The proposal can include a 4th or 5th member only when a distinct output need requires it, such as a reviewer/tester, domain specialist, or second focused builder. A single team must not exceed 5 members; if more roles are needed, Soma should split the work into multiple compact lanes and explain each lane's output.
+
+#### 3.2 — Review And Launch
+
+Before launch, the user reviews:
+- team name and purpose
+- Team Lead identity
+- Architect Prime role
+- focused builder role and tool/model fit
+- optional 4th/5th role justification when present
+- expected output list
+- whether the team is temporary, retained, or standing
+
+The user can ask Soma to revise the shape in natural language before launch. Once confirmed, Soma creates the team or temporary workflow group and routes the user to the team lead or group review surface.
+
+#### 3.3 — Advanced Wiring Page
 
 The user navigates to `/wiring`. The existing Workspace layout loads:
 - **Left panel** (360px): ArchitectChat — conversational intent negotiation
 - **Right panel** (flex): CircuitBoard — ReactFlow canvas showing the team topology
 
-The user has two paths to build a team:
+The user has two advanced paths to inspect or manually assemble a team:
 
 **Path A: Conversational (existing)**
 The user types a mission intent in the ArchitectChat (e.g., "I need a team to monitor my GitHub repos and summarize PRs"). The MetaArchitect LLM generates a `MissionBlueprint` and the CircuitBoard renders it as ghost-draft nodes.
@@ -210,7 +244,7 @@ The user types a mission intent in the ArchitectChat (e.g., "I need a team to mo
 **Path B: Manual Assembly (new)**
 The user drags agents from a catalogue sidebar onto the CircuitBoard canvas, wires them together, and defines team metadata manually.
 
-#### 3.2 — Path B: Manual Team Assembly
+#### 3.4 — Path B: Manual Team Assembly
 
 A new collapsible left sidebar (inside the CircuitBoard panel) shows the Agent Catalogue as a compact list. Each entry is draggable.
 
@@ -237,7 +271,9 @@ A new collapsible left sidebar (inside the CircuitBoard panel) shows the Agent C
    - **Inputs**: tag input for NATS topic patterns
    - **Deliveries**: tag input for output topic patterns
 
-#### 3.3 — Blueprint Preview
+Manual assembly must still preserve the compact-team rule. A graph that exceeds 5 members in a single team should show a decomposition warning and recommend splitting into smaller lanes.
+
+#### 3.5 — Blueprint Preview
 
 Whether via Path A (conversational) or Path B (manual), the user now has a blueprint represented as ghost-draft nodes on the CircuitBoard. A "Preview Blueprint" button in the canvas toolbar opens a slide-out showing the full JSON blueprint:
 
@@ -260,7 +296,7 @@ Whether via Path A (conversational) or Path B (manual), the user now has a bluep
 
 The user can edit this JSON directly (Monaco editor with syntax highlighting) or continue using the visual canvas.
 
-#### 3.4 — Commit (Activate)
+#### 3.6 — Commit (Activate)
 
 The user clicks "Activate Mission" in the ArchitectChat or the canvas toolbar. This triggers the existing `instantiateMission()` flow:
 

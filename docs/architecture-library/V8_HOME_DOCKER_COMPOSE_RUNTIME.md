@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-03-29
+> Last Updated: 2026-04-12
 > Purpose: Define the supported single-host Docker Compose runtime for home and small-team operators who want Mycelis without Kind/Kubernetes.
 
 ## Goal
@@ -115,6 +115,9 @@ Compose MCP note:
 ## Managed Task Contract
 
 Supported task path:
+- `uv run inv compose.infra-up`
+- `uv run inv compose.infra-health`
+- `uv run inv compose.storage-health`
 - `uv run inv compose.up`
 - `uv run inv compose.down`
 - `uv run inv compose.migrate`
@@ -122,7 +125,34 @@ Supported task path:
 - `uv run inv compose.health`
 - `uv run inv compose.logs`
 
-`compose.up` is the canonical bring-up path because it:
+`compose.infra-up` is the data-plane-only path because it:
+1. starts PostgreSQL and NATS only
+2. leaves Core and Interface down
+3. waits for PostgreSQL and NATS readiness
+4. prints same-project, host-native, and separate-Compose-project connection settings
+5. keeps migrations explicit through `--migrate` or `compose.migrate`
+
+`compose.infra-health` is the matching data-plane-only probe because it:
+1. checks the PostgreSQL host port
+2. checks PostgreSQL query readiness with the configured DB user/name
+3. checks the NATS host port
+4. checks the NATS monitor endpoint
+5. does not check Core or Interface
+
+`compose.storage-health` is the post-migration long-term storage probe because it:
+1. checks the `vector` extension for pgvector-backed semantic recall
+2. checks `context_vectors` for durable RAG/deployment context storage
+3. checks `agent_memories` for reviewed Soma/agent memory
+4. checks `conversation_turns` for conversation continuity
+5. checks `artifacts` for retained outputs
+6. checks `temp_memory_channels` for restart-safe temporary continuity
+7. checks `collaboration_groups` for temporary/standing group persistence
+8. checks managed exchange tables for channel/thread/item retention
+9. checks `conversation_templates` for reusable ask/template recall
+
+When the base runtime schema is already compatible, `compose.migrate` skips unsafe full replay of older migrations but still applies known missing late storage migrations before the storage-health gate is allowed to pass.
+
+`compose.up` is the canonical full-stack bring-up path because it:
 1. starts PostgreSQL and NATS first
 2. waits for local ports to bind
 3. applies canonical migrations through the PostgreSQL container
@@ -133,10 +163,16 @@ Supported task path:
 
 For the compose runtime, clean proof should use this order:
 1. `uv run inv compose.down --volumes`
-2. `uv run inv compose.up --build`
-3. `uv run inv compose.status`
-4. `uv run inv compose.health`
-5. focused browser/product proof against the compose-hosted stack
+2. `uv run inv compose.infra-up --wait-timeout=180`
+3. `uv run inv compose.infra-health`
+4. `uv run inv compose.migrate`
+5. `uv run inv compose.storage-health`
+6. `uv run inv compose.status`
+7. `uv run inv compose.up --build`
+8. `uv run inv compose.health`
+9. focused browser/product proof against the compose-hosted stack
+
+Use [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) for the thorough PRD-style validation path that starts with the shared data plane and proceeds into near-enterprise owner workflow proof.
 
 Classification reminder:
 - compose startup failure is `environment`
