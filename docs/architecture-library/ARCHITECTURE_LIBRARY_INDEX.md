@@ -50,6 +50,7 @@ This index is now intentionally narrower:
 | [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) | defining how team creation should stay compact by default | compact team shape guidance, broad-ask splitting, and Soma/Council orchestration over NATS |
 | [V8 Universal Soma And Context Model PRD](V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md) | working on Central Soma, context switching, or scoped execution | persistent Soma/Council identity and governed context model |
 | [V8 Multi-User Identity And Soma Tenancy](V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md) | planning multi-user access, enterprise federation, or shared Soma identity | SAML/SSO, break-glass admins, modular user management, and one-Soma tenancy |
+| [V8 Memory Layer And Reflection Delivery Contract](V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md) | planning memory layers, reflection synthesis, exchange-backed learning candidates, or memory promotion | explicit `SOMA_MEMORY`, `AGENT_MEMORY`, `PROJECT_MEMORY`, `REFLECTION_MEMORY`, candidate-first reflection, and promotion guardrails |
 | [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) | supporting the single-host compose runtime | compose tasking, persistence, monitoring, and operator expectations |
 | [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) | planning user-output-first media/team demos, Ollama role routing, or DB-backed conversation templates | model-role routing, media-engine boundary, team-managed output proof, and conversation-template registry |
 | [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | defining what browser validation must prove | Soma-first browser proof contract for answers, governed actions, continuity, and audit visibility |
@@ -72,11 +73,12 @@ This index is now intentionally narrower:
 12. Use [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) when shaping team defaults, broad-ask decomposition, or Soma/Council coordination over NATS.
 13. Use [V8 Universal Soma And Context Model PRD](V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md) when reasoning about one persistent Soma/Council pair across organizations and deployments.
 14. Use [V8 Multi-User Identity And Soma Tenancy](V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md) when reasoning about enterprise federation, local break-glass admins, or one shared Soma persona across many users.
-15. Use [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) when validating the supported single-host compose path.
-16. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
-17. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
-18. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
-19. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production target rather than the current release.
+15. Use [V8 Memory Layer And Reflection Delivery Contract](V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md) when defining memory-layer boundaries, reflection candidates, or promotion rules.
+16. Use [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) when validating the supported single-host compose path.
+17. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
+18. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
+19. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
+20. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production target rather than the current release.
 
 Execution governance reminder:
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md) and [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) remain authoritative migration inputs for delivery discipline.

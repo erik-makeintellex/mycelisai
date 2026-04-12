@@ -32,7 +32,7 @@ This governance model also applies to durable context loading:
 - customer-provided deployment material belongs in the separate `customer_context` pgvector lane
 - approved company-authored guidance belongs in `company_knowledge`
 - admin-authored shared Soma guidance belongs in `soma_operating_context`
-- distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations belong in `reflection_synthesis`, private/restricted by default, instead of being stored as raw transcript or ordinary Soma memory
+- distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations start as classified Managed Exchange `LearningCandidate` items, then promote into `reflection_synthesis` only after confidence and review posture are explicit
 - external research loaded into either lane must stay explicitly classified by source kind, trust class, and sensitivity posture
 
 Current release boundary note:
@@ -68,6 +68,7 @@ Current release posture:
 - `company_knowledge` loading is stricter than `customer_context` loading because it promotes durable company reference material
 - `soma_operating_context` loading is stricter again because it can shape shared Soma identity, stance, and output specificity across users
 - `reflection_synthesis` loading is also treated as high-risk because it can encode sensitive meta-observations about user trajectory, contradictions, and changing work patterns
+- Managed Exchange learning-candidate capture is not the same as memory mutation; promotion from a candidate into durable memory remains the stricter governed step
 
 ## Audit Model
 

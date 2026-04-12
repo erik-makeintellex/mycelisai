@@ -274,6 +274,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Target contract for SAML/SSO, break-glass admins, modular IAM, and one shared Soma persona",
             },
             {
+                slug: "v8-memory-layer-reflection-delivery",
+                label: "V8 Memory Layer + Reflection",
+                path: "docs/architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md",
+                description: "Explicit Soma/agent/project/reflection memory layers, candidate-first reflection, and promotion guardrails",
+            },
+            {
                 slug: "v8-home-docker-compose-runtime",
                 label: "V8 Home Docker Compose Runtime",
                 path: "docs/architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md",

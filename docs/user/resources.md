@@ -103,7 +103,7 @@ Operational behavior:
 - `knowledge_class=customer_context` is for operator/customer-provided material
 - `knowledge_class=company_knowledge` is for approved company-authored guidance only
 - `knowledge_class=soma_operating_context` is for root-admin or delegated-owner guidance that shapes shared Soma behavior across users
-- `knowledge_class=reflection_synthesis` is for distilled lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations; it defaults toward private/restricted handling and should store synthesis rather than raw transcripts
+- `knowledge_class=reflection_synthesis` is the promotion target for distilled lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations; agent-driven reflection should start as a Managed Exchange `LearningCandidate` with classification, confidence, and review posture before it is promoted
 - promotion from customer context into company knowledge should happen through a governed approval path with lineage preserved, not by rewriting the original entry in place
 - Soma operating context is stricter than ordinary deployment intake: it is normalized into admin guidance, stays globally scoped, and is intended for durable shared output/identity/stance shaping rather than personal chat preferences
 - reflection/synthesis context is separate from Soma memory and from user-private/customer/company lanes so Soma can reason about what is changing over time without mixing those meta-observations into raw source material

@@ -52,7 +52,7 @@ Every agent receives **live system state** injected into its system prompt befor
 2. **Agent Identity & NATS Topology** — agent ID, team ID, trigger/respond bus subjects, direct address topic, team inputs/deliveries
 3. **Cognitive Engine** — active providers with endpoints, models, and profile routing
 4. **Installed MCP Servers** — server names, transport, status, and discovered tools
-5. **Interaction Protocol** — pre-response checklist (recall, consult, delegate, MCP tools) and post-response protocol (remember, store artifact, report)
+5. **Interaction Protocol** — pre-response checklist (recall, context loading, Managed Exchange learning candidates, consult, delegate, MCP tools) and post-response protocol (classified candidate capture, reviewed memory promotion, store artifact, report)
 
 This ensures agents are never "context-blind" — they know what teams exist, what tools are available, and how to reach other agents.
 
@@ -74,6 +74,7 @@ Built-in tools available to agents without external MCP servers:
 | `remember` | Store fact/preference/goal (RDBMS + vector) | All |
 | `recall` | Semantic + keyword recall of stored memories | All |
 | `store_artifact` | Persist code/doc/data artifact | All |
+| `publish_exchange_item` | Publish structured governed outputs or classified learning candidates into Managed Exchange | Soma, Team Leads |
 | `publish_signal` | Publish to any NATS topic | All |
 | `read_signals` | Subscribe and collect NATS messages | All |
 | `read_file` | Read local filesystem (32KB max) | All |

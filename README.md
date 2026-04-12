@@ -325,19 +325,21 @@ Use these as the top detailed references when you need the deeper framework cont
    - canonical memory for template vs instantiated organization, bootstrap resolution, inheritance, precedence, and V7-to-V8 bootstrap translation
 5. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
    - canonical operator workflow contract for AI Organization creation, Soma-primary workspace behavior, visibility boundaries, and screen-to-API mapping
-6. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
+6. [V8 Memory Layer And Reflection Delivery Contract](docs/architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md)
+   - canonical memory-layer contract for `SOMA_MEMORY`, `AGENT_MEMORY`, `PROJECT_MEMORY`, `REFLECTION_MEMORY`, candidate-first reflection, and promotion guardrails
+7. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
    - canonical map of which detailed planning doc owns which part of the framework
-7. [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
+8. [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
    - detailed runtime, storage, NATS, deployment, and service-boundary memory until V8 replacements land
-8. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+9. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
    - detailed workflow, run, manifest, recurring-plan, and activation memory
-9. [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+10. [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
    - detailed acceptance, gate, and proof requirements for implementation slices
-10. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
+11. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
    - detailed state-file, coordination, and execution-discipline memory for multi-slice work
-11. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
+12. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
    - detailed operator experience, simplification, and anti-complexity memory for the UI layer
-12. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+13. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
    - detailed UI transaction/state expectations for operator-visible behavior
 
 Rule:

@@ -278,6 +278,12 @@ In V8.1, pgvector is not just action storage. It is the semantic continuity subs
 - procedure and skill retrieval
 - continuity recall
 
+Explicit memory layers:
+- `SOMA_MEMORY`: Soma-owned continuity and reviewed orchestrator facts
+- `AGENT_MEMORY`: team/agent-scoped specialist memory
+- `PROJECT_MEMORY`: governed source context such as user-private records, customer context, and company knowledge
+- `REFLECTION_MEMORY`: synthesized lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations that begin as exchange candidates before promotion
+
 #### Required memory stages
 
 - raw memory
@@ -291,6 +297,7 @@ In V8.1, pgvector is not just action storage. It is the semantic continuity subs
 
 - pgvector acts as the semantic persistence and recall substrate, not as a hidden policy engine
 - promotion never happens through silent self-rewrite
+- interaction never promotes directly into durable memory without classification, confidence, and review posture
 - reviewed and promoted memory must preserve lineage back to raw evidence
 - promoted memory may inform continuity and retrieval, but it does not replace Response Contract, AI Engine Settings, or Runtime Capabilities
 
@@ -343,6 +350,7 @@ Required rules:
 - channels, threads, and exchange items carry explicit readers, writers, reviewers, participants, sensitivity classes, and downstream allowed-consumer metadata
 - capability-producing outputs carry a capability id, risk class, trust class, and audit-ready publication metadata
 - normalization into exchange does not imply unrestricted trust; MCP and external outputs remain bounded by trust classification and review requirements
+- reflection and learning should start as `LearningCandidate` exchange items with classification, memory layer, confidence, and review posture before any durable memory promotion
 
 ## 6. Execution model
 

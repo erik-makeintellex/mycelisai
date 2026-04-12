@@ -50,6 +50,11 @@
 | `/api/v1/memory/sitreps` | GET | Recent SitReps (filterable by team) |
 | `/api/v1/memory/stream` | GET | Live memory/log stream (polling) |
 | `/api/v1/memory/sitrep` | POST | Trigger SitRep generation |
+| **Managed Exchange** | | |
+| `/api/v1/exchange/fields` | GET | List exchange field definitions, including learning-candidate fields such as `classification`, `memory_layer`, `confidence`, `review_required`, `promotion_target`, and `evidence_refs` |
+| `/api/v1/exchange/schemas` | GET | List exchange schemas, including `LearningCandidate` for classified reflection/learning candidates before memory promotion |
+| `/api/v1/exchange/channels` | GET | List governed exchange channels such as `organization.learning.candidates` |
+| `/api/v1/exchange/items` | GET/POST | List or publish structured exchange items; `LearningCandidate` items are the candidate-first boundary before reflection memory promotion |
 | **Governance & Proposals** | | |
 | `/api/v1/proposals` | GET/POST | Team manifestation proposals |
 | `/api/v1/proposals/{id}/approve` | POST | Approve proposal |

@@ -23,6 +23,10 @@ All three tiers are populated automatically as agents work. You can also intenti
 
 Mycelis now treats memory as several different classes with different purposes:
 
+- **`SOMA_MEMORY`**: Soma-owned continuity and reviewed orchestrator facts. Admin-shaped Soma behavior belongs in the governed `soma_operating_context` sublane, not casual chat memory.
+- **`AGENT_MEMORY`**: team/agent-scoped specialist continuity, decisions, and role-specific execution lessons.
+- **`PROJECT_MEMORY`**: governed source context for work, including `user_private_context`, `customer_context`, and `company_knowledge`.
+- **`REFLECTION_MEMORY`**: distilled lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations. Reflection starts as a Managed Exchange `LearningCandidate` before promotion into `reflection_synthesis`.
 - **Durable semantic memory**: reusable facts, decisions, SitReps, recipes, and intentionally promoted summaries. This is the pgvector-backed recall substrate.
 - **User-private context store**: user-uploaded or pasted records, diary notes, finance/legal/health references, and other sensitive material intentionally made available for specific target goal sets. This is private/restricted by default and is not company knowledge.
 - **Customer context store**: operator- or customer-provided docs, notes, briefs, and research intentionally loaded into pgvector so Soma, Council, and teams can reason with deployment-specific requirements across future sessions.
@@ -38,7 +42,7 @@ Rule of thumb:
 - if it is customer-provided or deployment-shaping reference material, load it into the customer context store
 - if it is approved company-authored guidance, load it into the company knowledge store
 - if customer context needs to become durable company reference, promote it through a governed approval path instead of silently reclassifying the original entry
-- if it is a durable lesson, inferred pattern, contradiction, trajectory shift, or meta-observation that Soma should remember about how work is changing, load it as `reflection_synthesis`
+- if it is a durable lesson, inferred pattern, contradiction, trajectory shift, or meta-observation that Soma should remember about how work is changing, first publish a classified Managed Exchange `LearningCandidate` with confidence and review posture, then promote it into `reflection_synthesis` only through the governed path
 - if it is only useful for the current planning cycle, keep it in temporary continuity
 - if it exists to explain what happened, treat it as trace or audit
 
@@ -94,6 +98,12 @@ For general stored facts:
 Stored facts are immediately available to agents for RAG recall within their allowed memory scope.
 
 General exploratory planning and routine conversation checkpoints are no longer promoted into semantic memory automatically. They stay in temporary continuity unless an agent deliberately promotes them.
+
+Reflection is stricter than ordinary recall:
+
+- raw interaction text should not go directly into `REFLECTION_MEMORY`
+- reflection candidates must carry classification, confidence, and review posture in Managed Exchange first
+- promotion into `reflection_synthesis` should preserve evidence and trust/sensitivity metadata
 
 ---
 
@@ -168,4 +178,7 @@ Important boundary:
 - **SitReps as quick history**: The SitReps tab is faster than reading full run timelines when you just need a summary of what happened in a session
 - **Memory persists across sessions**: Everything stored here survives server restarts and is available in future sessions
 - **Use Deployment Context for larger briefs**: architecture docs, MCP constraints, web research summaries, customer requirements, and approved company rollout policies belong in the dedicated governed-context intake lane so provenance and security posture stay explicit
-- **Use reflection/synthesis for lessons, not transcripts**: store the distilled change, contradiction, or pattern Soma should retain, and keep the raw conversation in trace/continuity instead
+- **Use reflection/synthesis for lessons, not transcripts**: capture the distilled change, contradiction, or pattern as a Managed Exchange learning candidate first, and keep the raw conversation in trace/continuity instead
+
+Architecture reference:
+- [V8 Memory Layer And Reflection Delivery Contract](../architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md)
