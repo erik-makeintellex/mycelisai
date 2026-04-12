@@ -481,6 +481,8 @@ defaults:
 | `DB_NAME` | `cortex` | PostgreSQL database |
 | `NATS_URL` | `nats://mycelis-core-nats:4222` | NATS broker |
 | `PORT` | `8080` | Core HTTP listen port |
+| `MYCELIS_OUTPUT_BLOCK_MODE` / `outputBlock.mode` | `local_hosted` (Compose) / `cluster_generated` (Helm) | Output-block ownership mode for generated artifacts, media, and workspace files |
+| `MYCELIS_OUTPUT_HOST_PATH` | `./workspace/docker-compose/data` (Compose) | Host directory mounted into Core as `/data` when `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` |
 | `MYCELIS_WORKSPACE` | `./workspace` (local) / `/data/workspace` (K8s) | Workspace sandbox root for manifested files and filesystem tools |
 | `DATA_DIR` | `./workspace/artifacts` (local) / `/data/artifacts` (K8s) | Artifact storage root for file-backed outputs |
 | `MYCELIS_PROJECT_CACHE_ROOT` | `./workspace/tool-cache` | Repo-managed cache root used by Invoke tasks for uv/pip/npm/go/python bytecode |
@@ -520,6 +522,7 @@ Deployment automation rule:
 - token consumption must stay configuration-owned: set `token_budget_profile` and `max_output_tokens` in `core/config/cognitive.yaml`, override them with `MYCELIS_PROVIDER_<PROVIDER_ID>_TOKEN_BUDGET_PROFILE` / `MYCELIS_PROVIDER_<PROVIDER_ID>_MAX_OUTPUT_TOKENS` during deployment automation, or manage them in `/settings` -> `AI Engines` (Advanced mode)
 - safe preset ranges are `conservative=512`, `standard=1024`, `extended=2048`, and `deep=4096`; treat `standard` as the normal local default and opt into larger budgets intentionally
 - `MYCELIS_API_KEY` remains the normal local-admin credential for current self-hosted operation; use `MYCELIS_BREAK_GLASS_API_KEY` only for an explicit recovery path, not as a second everyday token
+- local-hosted output storage must provide a real `MYCELIS_OUTPUT_HOST_PATH`; the Compose task resolves it with Python `pathlib` before startup so platform-specific paths are normalized and missing directories fail early instead of being silently mis-mounted
 - do not treat env overrides as runtime organization behavior or team/role routing control
 - runtime truth remains `Bundle -> Instantiated Organization -> Inheritance -> Routing`
 

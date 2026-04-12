@@ -60,6 +60,7 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 - Compose uses `.env.compose` so host/container assumptions stay separate from the Kind/bridge `.env` path.
 - Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally.
 - Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.
+- Compose validates output block mounting: use `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` plus `MYCELIS_OUTPUT_HOST_PATH=<host-directory>` when a local or Pinokio/media-hosted output directory should be mounted into Core as `/data`. The task resolves the host path with Python `pathlib` across Windows, Linux, and macOS before Docker starts.
 - Compose now emits deterministic stage expectations and timeout guidance so humans and agent-run callers can tell what should happen next and which recovery command to run if a stage stalls.
 - Use `uv run inv compose.up --build --wait-timeout=240` on a fresh or slower machine when image build and first readiness can legitimately take longer than the default window.
 - `compose.health` is a usable-product gate for the home runtime, so it fails when text inference is offline even if the API still responds.

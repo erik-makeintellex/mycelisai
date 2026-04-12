@@ -62,7 +62,14 @@ probes:
     timeoutSeconds: 5
     failureThreshold: 5
 
-# Agent output data volume (artifacts, generated files, media)
+# Agent output block (artifacts, generated files, media)
+outputBlock:
+  # cluster_generated uses the chart-managed PVC. local_hosted mounts a node hostPath.
+  mode: cluster_generated
+  mountPath: /data
+  hostPath: ""
+
+# Agent output data PVC used when outputBlock.mode is clusterGenerated.
 dataVolume:
   size: 2Gi
   storageClassName: standard

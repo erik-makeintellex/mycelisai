@@ -2,6 +2,7 @@ import socket
 import subprocess
 import time
 import json
+import os
 from pathlib import Path
 from typing import Callable
 
@@ -15,6 +16,8 @@ COMPOSE_FILE = ROOT_DIR / "docker-compose.yml"
 COMPOSE_ENV_FILE = ROOT_DIR / ".env.compose"
 COMPOSE_ENV_EXAMPLE = ROOT_DIR / ".env.compose.example"
 COMPOSE_PROJECT = "mycelis-home"
+DEFAULT_OUTPUT_HOST_PATH = ROOT_DIR / "workspace" / "docker-compose" / "data"
+OUTPUT_BLOCK_MODES = {"local_hosted", "cluster_generated"}
 
 
 def _compose_command(*args: str) -> list[str]:
@@ -75,6 +78,50 @@ def _looks_like_container_loopback(url: str) -> bool:
     return host in {"127.0.0.1", "localhost", "0.0.0.0"}
 
 
+def _clean_env_value(value: str) -> str:
+    return value.strip().strip('"').strip("'")
+
+
+def _resolve_host_path(path_value: str) -> Path:
+    raw_path = _clean_env_value(path_value)
+    expanded = os.path.expandvars(os.path.expanduser(raw_path))
+    return Path(expanded).resolve(strict=False)
+
+
+def _validate_output_block_config(env_values: dict[str, str]):
+    mode_explicit = "MYCELIS_OUTPUT_BLOCK_MODE" in env_values
+    mode = _clean_env_value(env_values.get("MYCELIS_OUTPUT_BLOCK_MODE", "local_hosted")).lower()
+    if mode not in OUTPUT_BLOCK_MODES:
+        raise SystemExit(
+            "Invalid .env.compose MYCELIS_OUTPUT_BLOCK_MODE: "
+            f"{mode}. Use one of: {', '.join(sorted(OUTPUT_BLOCK_MODES))}."
+        )
+
+    path_explicit = "MYCELIS_OUTPUT_HOST_PATH" in env_values
+    raw_path = _clean_env_value(env_values.get("MYCELIS_OUTPUT_HOST_PATH", ""))
+    if not raw_path:
+        if mode == "local_hosted" and mode_explicit:
+            raise SystemExit(
+                "MYCELIS_OUTPUT_HOST_PATH is required when MYCELIS_OUTPUT_BLOCK_MODE=local_hosted. "
+                "Set it to the host directory Docker should mount as Core /data."
+            )
+        raw_path = str(DEFAULT_OUTPUT_HOST_PATH)
+
+    host_path = _resolve_host_path(raw_path)
+    if host_path.exists() and not host_path.is_dir():
+        raise SystemExit(
+            "Invalid .env.compose MYCELIS_OUTPUT_HOST_PATH: "
+            f"{host_path} exists but is not a directory."
+        )
+    if not host_path.exists():
+        if mode == "local_hosted" and (mode_explicit or path_explicit):
+            raise SystemExit(
+                "Invalid .env.compose MYCELIS_OUTPUT_HOST_PATH: "
+                f"{host_path} does not exist. Create the directory first so Docker mounts the intended output block."
+            )
+        host_path.mkdir(parents=True, exist_ok=True)
+
+
 def _validate_compose_env(env_values: dict[str, str]):
     ollama_host = env_values.get("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434").strip()
     if ollama_host and _looks_like_container_loopback(ollama_host):
@@ -83,6 +130,7 @@ def _validate_compose_env(env_values: dict[str, str]):
             f"{ollama_host}. Use a host-reachable address such as "
             "http://host.docker.internal:11434 or another container/service hostname."
         )
+    _validate_output_block_config(env_values)
 
 
 def _print_step(step: int, total: int, title: str, expectation: str | None = None):

@@ -409,6 +409,7 @@ Focused additions planned for the MVP media/team-output lane:
 - `interface/e2e/specs/media-output.spec.ts`: mocked image/audio/file/document artifacts, visible `Artifact result`, save action, saved path, and download references.
 - `interface/e2e/specs/direct-vs-team-output.spec.ts`: direct inline Soma answer vs team-managed deliverable package with target outputs and retained output framing.
 - live media extension to `soma-governance-live.spec.ts` or a gated `media-output-live.spec.ts`: real artifact display/download when the media engine exists, or a precise missing-engine blocker when it does not.
+- compose output-block proof: when testing a local or Pinokio/media-hosted output directory, set `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` and `MYCELIS_OUTPUT_HOST_PATH` to the host directory mounted as Core `/data`; the Compose task resolves the path with Python `pathlib` and should fail early if the directory is missing or not a directory. For chart/Kubernetes proof, keep the output block on the cluster-managed PVC and treat host-path mounts as an explicit self-hosted exception.
 
 ### Configuration
 

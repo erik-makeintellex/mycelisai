@@ -73,7 +73,7 @@ spec:
             - name: tmp-volume
               mountPath: /tmp
             - name: data-volume
-              mountPath: /data
+              mountPath: {{ default "/data" .Values.outputBlock.mountPath }}
             - name: config-volume
               mountPath: /core/config
               readOnly: true
@@ -81,8 +81,14 @@ spec:
         - name: tmp-volume
           emptyDir: {}
         - name: data-volume
+          {{- if eq (default "cluster_generated" .Values.outputBlock.mode) "local_hosted" }}
+          hostPath:
+            path: {{ required "outputBlock.hostPath is required when outputBlock.mode=local_hosted" .Values.outputBlock.hostPath | quote }}
+            type: DirectoryOrCreate
+          {{- else }}
           persistentVolumeClaim:
             claimName: {{ .Chart.Name }}-data
+          {{- end }}
         - name: config-volume
           configMap:
             name: {{ .Chart.Name }}-config

@@ -101,6 +101,7 @@ All provider paths must normalize into the same Soma-visible artifact contract:
 
 - provider identity: `provider_id`, provider kind (`local_process`, `local_http`, `mcp`, or `hosted_api`), endpoint origin, model/workflow id, and whether the provider was owner-configured or chosen by Soma for the output type
 - locality and exposure: `local_only`, `self_hosted_remote`, or `hosted_external`, plus whether user/customer/project context leaves the self-hosted boundary
+- output block: local/self-hosted providers that write files directly must target the configured Core `/data` mount. In Compose that is `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` plus `MYCELIS_OUTPUT_HOST_PATH`; in Kubernetes it is the chart-managed `outputBlock.mode=cluster_generated` PVC unless the operator explicitly chooses a hostPath exception.
 - credential posture: required environment variables, secret presence without secret echoing, and whether the provider requires owner approval before first use
 - cost and runtime posture: estimated cost class, long-running status, queue/run id where available, cancellation capability, and retry posture
 - output normalization: generated image/audio/video/document artifacts return previewable content when safe, saved paths or download URLs when binary, and lineage metadata that ties the artifact back to the team/run/provider

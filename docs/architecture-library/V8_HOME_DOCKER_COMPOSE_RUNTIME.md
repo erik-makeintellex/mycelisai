@@ -58,6 +58,8 @@ Important defaults:
 - `MYCELIS_BOOTSTRAP_TEMPLATE_ID=v8-migration-standing-team-bridge`
 - `MYCELIS_COMPOSE_OLLAMA_HOST=http://host.docker.internal:11434`
 - `MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP=true`
+- `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted`
+- `MYCELIS_OUTPUT_HOST_PATH=./workspace/docker-compose/data`
 - `DATA_DIR=/data/artifacts`
 - `MYCELIS_WORKSPACE=/data/workspace`
 
@@ -77,11 +79,17 @@ Host port defaults stay aligned with the normal local operator path:
 Compose persistence is split intentionally:
 - named volume for PostgreSQL data
 - named volume for NATS JetStream data
-- bind-mounted repo path at `workspace/docker-compose/data` for Core `/data`
+- bind-mounted output block path at `MYCELIS_OUTPUT_HOST_PATH` for Core `/data`
 
 That keeps:
 - database and bus state durable across restarts
-- generated artifacts and workspace files inspectable from the repo workspace
+- generated artifacts and workspace files inspectable from the configured host output block
+
+Output block modes:
+- `local_hosted`: the operator provides a real host directory in `MYCELIS_OUTPUT_HOST_PATH`. This is the Docker Compose and Pinokio/local-media handoff path.
+- `cluster_generated`: the chart/Kubernetes path owns `/data` through the cluster-managed PVC. Compose keeps its repo-managed default path when this mode is used outside a cluster.
+
+The Invoke compose task validates the host path with Python `pathlib` before Docker starts. It expands `~` and environment variables, accepts platform-native path syntax, rejects file paths, and fails early when `local_hosted` points at a missing directory instead of letting Docker silently create or mount the wrong output block.
 
 ## Monitoring And Logging Contract
 

@@ -450,6 +450,8 @@ Persistent storage contract:
 - Kubernetes should mount the PVC at `/data`
 - manifested files and MCP filesystem access should use `MYCELIS_WORKSPACE=/data/workspace`
 - artifact blobs should use `DATA_DIR=/data/artifacts`
+- Compose output blocks use `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` with `MYCELIS_OUTPUT_HOST_PATH` pointing at the host directory mounted as Core `/data`; use `cluster_generated` for chart/PVC-owned cluster output storage
+- when `local_hosted` is selected, create the host directory first. The Invoke compose task resolves the path with Python `pathlib`, including `~`, environment variables, Windows drive paths, Linux paths, macOS paths, and paths with spaces
 
 The Next.js `next.config.ts` rewrites `/api/*` to `http://{MYCELIS_API_HOST}:{MYCELIS_API_PORT}/api/*`.
 

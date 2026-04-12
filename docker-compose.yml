@@ -59,6 +59,7 @@ services:
       NATS_URL: ${NATS_URL:-nats://nats:4222}
       OLLAMA_HOST: ${MYCELIS_COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}
       MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP: ${MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP:-true}
+      MYCELIS_OUTPUT_BLOCK_MODE: ${MYCELIS_OUTPUT_BLOCK_MODE:-local_hosted}
       DATA_DIR: ${DATA_DIR:-/data/artifacts}
       MYCELIS_WORKSPACE: ${MYCELIS_WORKSPACE:-/data/workspace}
     depends_on:
@@ -70,7 +71,7 @@ services:
       - "${MYCELIS_COMPOSE_CORE_PORT:-8081}:8080"
     volumes:
       - ./core/config:/core/config:ro
-      - ./workspace/docker-compose/data:/data
+      - ${MYCELIS_OUTPUT_HOST_PATH:-./workspace/docker-compose/data}:/data
     healthcheck:
       test: ["CMD", "/server", "action", "GET", "/healthz"]
       interval: 10s

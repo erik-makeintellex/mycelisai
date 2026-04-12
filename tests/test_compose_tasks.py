@@ -249,8 +249,65 @@ def test_validate_compose_env_rejects_loopback_ollama_host():
     assert "host.docker.internal" in str(excinfo.value)
 
 
-def test_validate_compose_env_allows_host_gateway_alias():
+def test_validate_compose_env_allows_host_gateway_alias(tmp_path):
+    compose._validate_compose_env(
+        {
+            "MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434",
+            "MYCELIS_OUTPUT_BLOCK_MODE": "local_hosted",
+            "MYCELIS_OUTPUT_HOST_PATH": str(tmp_path),
+        }
+    )
+
+
+def test_validate_output_block_requires_local_hosted_path():
+    with pytest.raises(SystemExit) as excinfo:
+        compose._validate_output_block_config({"MYCELIS_OUTPUT_BLOCK_MODE": "local_hosted"})
+
+    assert "MYCELIS_OUTPUT_HOST_PATH" in str(excinfo.value)
+
+
+def test_validate_output_block_rejects_explicit_missing_local_hosted_path(tmp_path):
+    missing = tmp_path / "missing-output"
+
+    with pytest.raises(SystemExit) as excinfo:
+        compose._validate_output_block_config(
+            {
+                "MYCELIS_OUTPUT_BLOCK_MODE": "local_hosted",
+                "MYCELIS_OUTPUT_HOST_PATH": str(missing),
+            }
+        )
+
+    assert "does not exist" in str(excinfo.value)
+
+
+def test_validate_output_block_resolves_cross_platform_directory(tmp_path):
+    output_dir = tmp_path / "Output Block With Spaces"
+    output_dir.mkdir()
+
+    compose._validate_output_block_config(
+        {
+            "MYCELIS_OUTPUT_BLOCK_MODE": "local_hosted",
+            "MYCELIS_OUTPUT_HOST_PATH": f'"{output_dir}"',
+        }
+    )
+
+
+def test_validate_output_block_creates_cluster_generated_default(tmp_path, monkeypatch):
+    generated = tmp_path / "cluster-generated"
+    monkeypatch.setattr(compose, "DEFAULT_OUTPUT_HOST_PATH", generated)
+
+    compose._validate_output_block_config({"MYCELIS_OUTPUT_BLOCK_MODE": "cluster_generated"})
+
+    assert generated.is_dir()
+
+
+def test_validate_compose_env_creates_implicit_default_output_path(tmp_path, monkeypatch):
+    generated = tmp_path / "implicit-output"
+    monkeypatch.setattr(compose, "DEFAULT_OUTPUT_HOST_PATH", generated)
+
     compose._validate_compose_env({"MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434"})
+
+    assert generated.is_dir()
 
 
 def test_compose_health_fails_when_text_engine_is_offline(monkeypatch, capsys):
