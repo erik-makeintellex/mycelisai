@@ -111,6 +111,8 @@ Soma responses can include:
 No mutation executes until you confirm.
 
 6. **Memory-backed continuity**
+- central Soma chat uses a scoped session id so backend conversation turns can be persisted and replayed for that same workspace/session when available
+- this session continuity is separate from semantic memory promotion: it helps Soma keep a conversation thread coherent, but it does not automatically promote raw interaction content into durable Soma memory or reflection memory
 - durable memory stays available for scoped recall when it has been intentionally promoted
 - ordinary draft planning and return-visit continuity can stay useful without automatically becoming long-term semantic memory
 

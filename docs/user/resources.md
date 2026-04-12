@@ -52,6 +52,7 @@ Operators should be able to determine "what the system can access" directly from
 
 Current posture:
 - curated library installs are the default path
+- `/api/v1/mcp/library/apply` is the one-call API for applying a curated potential source: it returns `installed` with server/tools/governance when allowed, or `requires_approval` with the inspection report when a policy boundary is still required
 - local-first current-group configuration can install directly when policy allows
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
 - `fetch`/research capability is how governed external context can be added without treating web access as unrestricted trust

@@ -94,7 +94,8 @@
 | `/api/v1/mcp/servers/{id}/tools/{tool}/call` | POST | Invoke a specific MCP tool |
 | `/api/v1/mcp/library` | GET | Browse curated MCP server library (categorized), including server.json-aligned metadata such as version, package transport, repository/homepage links when known, and typed environment-variable declarations |
 | `/api/v1/mcp/library/inspect` | POST | Policy inspection preview for a library candidate (`allow|require_approval|deny`) before install. MCP settings installs may send `governance_context` so owner-scoped current-group config can auto-allow without a second approval loop |
-| `/api/v1/mcp/library/install` | POST | One-click install from library by name. Returns `202` with inspection details when the candidate still requires approval |
+| `/api/v1/mcp/library/install` | POST | Apply/install from library by name. Returns `202` with inspection details when the candidate still requires approval |
+| `/api/v1/mcp/library/apply` | POST | One-call inspect/apply path for curated MCP candidates. Returns `status=installed` with server/tools/governance when allowed, or `status=requires_approval` with inspection details when a boundary is required |
 | `/api/v1/mcp/toolsets` | GET | List MCP tool sets (`tenant_id='default'`) |
 | `/api/v1/mcp/toolsets` | POST | Create MCP tool set (name, description, tool_refs, optional `governance_context`) |
 | `/api/v1/mcp/toolsets/{id}` | PUT | Update MCP tool set by ID (`404` if not found, optional `governance_context`) |

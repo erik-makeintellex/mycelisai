@@ -280,6 +280,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/mcp/library", s.handleMCPLibrary)
 	mux.HandleFunc("POST /api/v1/mcp/library/inspect", s.handleMCPLibraryInspect)
 	mux.HandleFunc("POST /api/v1/mcp/library/install", s.handleMCPLibraryInstall)
+	mux.HandleFunc("POST /api/v1/mcp/library/apply", s.handleMCPLibraryApply)
 
 	// Phase 7.7: Governance Policy API
 	mux.HandleFunc("GET /api/v1/governance/policy", s.handleGetPolicy)

@@ -17,11 +17,13 @@ vi.mock('reactflow', () => {
 
 import type { MissionBlueprint } from '@/store/useCortexStore';
 import {
+    buildChatSessionStorageKey,
     CHAT_STORAGE_KEY,
     buildChatStorageKey,
     clearPersistedChat,
     blueprintToGraph,
     dispatchSignalToNodes,
+    loadOrCreateChatSessionId,
     loadPersistedChat,
     normalizeProposalData,
     persistChat,
@@ -162,13 +164,30 @@ describe('cortexStoreUtils', () => {
         expect(localStorage.getItem(buildChatStorageKey('org-b'))).toContain('org-b');
     });
 
+    it('creates and reuses scoped chat session ids for server-side conversation continuity', () => {
+        const first = loadOrCreateChatSessionId('org-a');
+        const second = loadOrCreateChatSessionId('org-a');
+        const otherScope = loadOrCreateChatSessionId('org-b');
+
+        expect(first).toMatch(/^[0-9a-f-]{36}$/i);
+        expect(second).toBe(first);
+        expect(otherScope).not.toBe(first);
+        expect(localStorage.getItem(buildChatSessionStorageKey('org-a'))).toBe(first);
+        expect(localStorage.getItem(buildChatSessionStorageKey('org-b'))).toBe(otherScope);
+    });
+
     it('clears only the requested scoped chat history', () => {
         persistChat([{ role: 'user', content: 'scoped' }] as any, 'org-1');
         persistChat([{ role: 'user', content: 'global' }] as any);
+        const scopedSession = loadOrCreateChatSessionId('org-1');
+        const globalSession = loadOrCreateChatSessionId();
 
         clearPersistedChat('org-1');
 
         expect(loadPersistedChat('org-1')).toEqual([]);
         expect(loadPersistedChat()).toMatchObject([{ role: 'user', content: 'global' }]);
+        expect(localStorage.getItem(buildChatSessionStorageKey('org-1'))).toBeNull();
+        expect(localStorage.getItem(buildChatSessionStorageKey())).toBe(globalSession);
+        expect(scopedSession).toBeTruthy();
     });
 });

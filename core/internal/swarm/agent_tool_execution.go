@@ -50,10 +50,6 @@ func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCal
 		go a.eventEmitter.Emit(a.ctx, a.runID, protocol.EventToolInvoked, protocol.SeverityInfo, a.Manifest.ID, a.TeamID, map[string]interface{}{"tool": toolCall.Name, "iteration": i + 1}) //nolint:errcheck
 	}
 
-	toolCallTurnID := ""
-	if a.conversationLogger != nil {
-		toolCallTurnID = fmt.Sprintf("%s-%d", a.sessionID, a.turnIndex)
-	}
 	a.logTurn("tool_call", result.responseText, "", "", toolCall.Name, toolCall.Arguments, "", "")
 
 	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
@@ -104,7 +100,7 @@ func (a *Agent) executeToolIteration(i int, req *cognitive.InferRequest, toolCal
 			result.consultations = append(result.consultations, protocol.ConsultationEntry{Member: member, Summary: summary})
 		}
 	}
-	a.logTurn("tool_result", toolResult, "", "", toolCall.Name, nil, toolCallTurnID, consultMember)
+	a.logTurn("tool_result", toolResult, "", "", toolCall.Name, nil, "", consultMember)
 	if toolMessage, toolArtifacts, ok := extractToolOutputArtifacts(toolResult); ok {
 		result.artifacts = append(result.artifacts, toolArtifacts...)
 		toolResult = toolMessage

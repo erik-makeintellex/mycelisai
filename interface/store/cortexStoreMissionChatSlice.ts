@@ -8,7 +8,7 @@ import {
 import type { CortexState } from '@/store/cortexStoreState';
 import type { APIResponse, ChatMessage, CTSChatEnvelope } from '@/store/cortexStoreTypes';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
-import { clearPersistedChat, loadPersistedChat, normalizeProposalData } from '@/store/cortexStoreUtils';
+import { clearPersistedChat, loadOrCreateChatSessionId, loadPersistedChat, normalizeProposalData } from '@/store/cortexStoreUtils';
 
 interface ChatRouteConfig {
     isSomaRoute: boolean;
@@ -153,12 +153,14 @@ export function createCortexMissionChatSlice(
                 try {
                     const messages = buildRecentMissionMessages(get().missionChat);
                     const teamContext = resolveSelectedTeamContext(get);
+                    const sessionId = loadOrCreateChatSessionId(get().workspaceChatScope);
 
                     const res = await fetch(chatRoute, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             messages,
+                            session_id: sessionId ?? undefined,
                             organization_id: get().workspaceChatScope ?? undefined,
                             team_id: teamContext?.id,
                             team_name: teamContext?.name,

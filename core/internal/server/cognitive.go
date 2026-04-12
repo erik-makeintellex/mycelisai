@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/cognitive"
+	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
@@ -335,6 +337,74 @@ func prependChatWorkspaceContext(messages []chatRequestMessage, context string) 
 	})
 	out = append(out, messages...)
 	return out
+}
+
+func recentSessionChatMessages(turns []conversations.ConversationTurn, limit int) []chatRequestMessage {
+	if limit <= 0 || len(turns) == 0 {
+		return nil
+	}
+	start := len(turns) - limit
+	if start < 0 {
+		start = 0
+	}
+	out := make([]chatRequestMessage, 0, len(turns)-start)
+	for _, turn := range turns[start:] {
+		role := strings.ToLower(strings.TrimSpace(turn.Role))
+		if role != "user" && role != "assistant" {
+			continue
+		}
+		content := strings.TrimSpace(turn.Content)
+		if content == "" {
+			continue
+		}
+		out = append(out, chatRequestMessage{Role: role, Content: content})
+	}
+	return out
+}
+
+func mergePersistedSessionMessages(current []chatRequestMessage, prior []conversations.ConversationTurn) []chatRequestMessage {
+	if len(current) != 1 || len(prior) == 0 {
+		return current
+	}
+	recent := recentSessionChatMessages(prior, 20)
+	if len(recent) == 0 {
+		return current
+	}
+	out := make([]chatRequestMessage, 0, len(recent)+len(current))
+	out = append(out, recent...)
+	out = append(out, current...)
+	return out
+}
+
+func validateOptionalChatSessionID(sessionID string) (string, bool) {
+	trimmed := strings.TrimSpace(sessionID)
+	if trimmed == "" {
+		return "", true
+	}
+	parsed, err := uuid.Parse(trimmed)
+	if err != nil {
+		return "", false
+	}
+	return parsed.String(), true
+}
+
+func logSomaConversationTurn(ctx context.Context, store protocol.ConversationLogger, sessionID string, index int, role string, content string, agentResult chatAgentResult) {
+	if store == nil || sessionID == "" || strings.TrimSpace(content) == "" {
+		return
+	}
+	if _, err := store.LogTurn(ctx, protocol.ConversationTurnData{
+		SessionID:  sessionID,
+		TenantID:   "default",
+		AgentID:    "admin",
+		TeamID:     "admin-core",
+		TurnIndex:  index,
+		Role:       role,
+		Content:    content,
+		ProviderID: agentResult.ProviderID,
+		ModelUsed:  agentResult.ModelUsed,
+	}); err != nil {
+		log.Printf("[chat] conversation turn persistence failed: %v", err)
+	}
 }
 
 func resolveChatAskClass(defaultAgentTarget string, isMutation bool, agentResult chatAgentResult) protocol.AskClass {
@@ -1313,6 +1383,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Messages       []chatRequestMessage `json:"messages"`
+		SessionID      string               `json:"session_id,omitempty"`
 		OrganizationID string               `json:"organization_id,omitempty"`
 		TeamID         string               `json:"team_id,omitempty"`
 		TeamName       string               `json:"team_name,omitempty"`
@@ -1327,11 +1398,29 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sessionID, sessionIDValid := validateOptionalChatSessionID(req.SessionID)
+	if !sessionIDValid {
+		respondAPIError(w, "Invalid session_id: expected UUID", http.StatusBadRequest)
+		return
+	}
+
+	sessionTurnIndex := 0
+	if sessionID != "" && s.Conversations != nil {
+		if priorTurns, err := s.Conversations.GetSessionTurns(r.Context(), sessionID); err != nil {
+			log.Printf("[chat] prior session conversation lookup failed: %v", err)
+		} else {
+			sessionTurnIndex = len(priorTurns)
+			req.Messages = mergePersistedSessionMessages(req.Messages, priorTurns)
+		}
+	}
+
 	latestUserText := latestUserMessageContent(req.Messages)
 	if isRuntimeStateQuestion(latestUserText) {
 		s.respondRuntimeStateSummary(w, r, req.OrganizationID, req.TeamID, req.TeamName)
 		return
 	}
+
+	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
 
 	req.Messages = prependChatWorkspaceContext(
 		req.Messages,
@@ -1397,8 +1486,11 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	replyText := readableChatText(agentResult, isMutation)
+	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex+1, "assistant", replyText, agentResult)
+
 	chatPayload := protocol.ChatResponsePayload{
-		Text:          readableChatText(agentResult, isMutation),
+		Text:          replyText,
 		ToolsUsed:     mutTools,
 		Artifacts:     agentResult.Artifacts,
 		Consultations: agentResult.Consultations,

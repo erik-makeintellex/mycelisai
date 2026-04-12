@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
-> Updated: 2026-04-11
+> Updated: 2026-04-12
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -55,6 +55,7 @@ Release posture:
 - `COMPLETE` the live governed-chat browser gate is now green on a fresh cluster reset and local stack bring-up: the managed live backend proof passes the real `/api/v1/chat` and `/api/v1/intent/confirm-action` path with governed proposal/confirm behavior intact.
 - `IN_REVIEW` a cross-team release platform review is now active to align security/governance, monitoring/ops, debug/live-browser proof, and matching documentation before release packaging.
 - `NEXT` a dedicated memory continuity and RAG review lane should align pgvector-backed durable memory, temporary planning continuity, and trace-clean conversation handling after the current product-trust closeout slices.
+- `COMPLETE` Soma continuity/data review found the live central chat path working through `/api/v1/chat`, and central Soma chat now carries an explicit scoped `session_id`: UI continuity remains localStorage-scoped for the operator, backend conversation turns are persisted/replayed from `conversation_turns` when that session key is present, and durable semantic memory still requires `remember`, `summarize_conversation`, governed context ingestion, or a reviewed memory-promotion path. The rebuilt Compose stack now certifies this live: a scoped chat wrote user/assistant turns, `/api/v1/conversations/{session_id}` read them back, and a follow-up chat request with only that `session_id` recalled the prior marker without client-provided message history. A small persistence bug was also fixed so tool-result conversation turns no longer fail by sending a synthetic non-UUID `parent_turn_id`; richer tool-call-to-result UUID linking remains a follow-up design item.
 - `ACTIVE` a dedicated content-generation and collaboration lane is now in flight to align inline content delivery, governed artifact creation, media/file generation behavior, and policy-configurable specialist/model collaboration for the current product-trust and demo-value closeout.
 - `ACTIVE` the user-output-first media/team lane is now explicit: Soma must not judge ordinary user-desired creative or business outputs by taste/preference, and should instead clarify, improve, route, attribute, generate, and retain outputs while applying governance only to concrete capability, attribution, security, side-effect, external-exposure, cost, and audit boundaries.
 - `ACTIVE` a dedicated approval and product-trust lane is now in flight to simplify default approval/auth-style interactions, move low-level governance metadata behind inspectable details, and make content/artifact value delivery understandable to normal operators without weakening policy enforcement.
