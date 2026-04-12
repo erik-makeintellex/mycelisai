@@ -23,8 +23,8 @@ type LaunchedGroupState = {
 type GuidedExecutionContract = TeamLeadExecutionContract & {
     recommended_team_shape?: string;
     coordination_model?: string;
-    member_count_limit?: number;
-    nats_subject?: string;
+    recommended_team_count?: number;
+    recommended_team_member_limit?: number;
 };
 
 export type SomaGuidanceUpdate = {
@@ -601,8 +601,8 @@ function normalizeExecutionContract(
         workflow_group: normalizeWorkflowGroupDraft(contract.workflow_group, somaName, teamLeadName),
         recommended_team_shape: sanitizeExecutionContractText(contract.recommended_team_shape, ""),
         coordination_model: sanitizeExecutionContractText(contract.coordination_model, ""),
-        member_count_limit: typeof contract.member_count_limit === "number" ? contract.member_count_limit : undefined,
-        nats_subject: sanitizeExecutionContractText(contract.nats_subject, ""),
+        recommended_team_count: typeof contract.recommended_team_count === "number" ? contract.recommended_team_count : undefined,
+        recommended_team_member_limit: typeof contract.recommended_team_member_limit === "number" ? contract.recommended_team_member_limit : undefined,
     };
 }
 
@@ -636,6 +636,7 @@ function normalizeWorkflowGroupDraft(
                 .map((entry) => sanitizeExecutionContractText(entry, ""))
                 .filter((entry) => entry.length > 0)
             : [],
+        recommended_member_limit: typeof draft.recommended_member_limit === "number" ? draft.recommended_member_limit : undefined,
         expiry_hours: typeof draft.expiry_hours === "number" ? draft.expiry_hours : undefined,
         summary: rewriteGuidanceText(sanitizeExecutionContractText(draft.summary, "Launch a temporary workflow group from this Soma plan."), somaName, teamLeadName),
     };
@@ -696,23 +697,19 @@ function classifyRequestScope(value: string): "compact" | "broad" {
         "company-wide",
         "organization-wide",
         "enterprise",
+        "enterprise-wide",
         "cross-functional",
         "multi-team",
         "multi team",
+        "multiple teams",
+        "several teams",
+        "several workstreams",
         "full suite",
         "end-to-end",
-        "entire",
-        "campaign",
-        "launch",
-        "rollout",
-        "website",
-        "product review",
-        "marketing",
-        "media",
-        "voice",
-        "video",
-        "image",
-        "ops",
+        "whole organization",
+        "entire organization",
+        "across teams",
+        "across functions",
     ];
     let score = 0;
     for (const signal of broadSignals) {
@@ -731,7 +728,7 @@ function classifyRequestScope(value: string): "compact" | "broad" {
     if (normalized.split(/\s+/).filter(Boolean).length >= 18) {
         score += 1;
     }
-    return score >= 2 ? "broad" : "compact";
+    return score >= 1 ? "broad" : "compact";
 }
 
 function containsForbiddenGuidanceCopy(value: string) {
@@ -822,7 +819,7 @@ function ExecutionContractCard({ contract }: { contract: TeamLeadExecutionContra
                     </div>
                 </div>
             ) : null}
-            {(richContract.recommended_team_shape || richContract.coordination_model || typeof richContract.member_count_limit === "number" || richContract.nats_subject) ? (
+            {(richContract.recommended_team_shape || richContract.coordination_model || typeof richContract.recommended_team_count === "number" || typeof richContract.recommended_team_member_limit === "number") ? (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
                     <p className="text-xs font-mono uppercase tracking-[0.18em] text-cortex-primary">Compact orchestration hints</p>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -836,14 +833,14 @@ function ExecutionContractCard({ contract }: { contract: TeamLeadExecutionContra
                                 {richContract.coordination_model}
                             </span>
                         ) : null}
-                        {typeof richContract.member_count_limit === "number" ? (
+                        {typeof richContract.recommended_team_count === "number" ? (
                             <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                                member limit {richContract.member_count_limit}
+                                {richContract.recommended_team_count} team{richContract.recommended_team_count === 1 ? "" : "s"}
                             </span>
                         ) : null}
-                        {richContract.nats_subject ? (
+                        {typeof richContract.recommended_team_member_limit === "number" ? (
                             <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                                {richContract.nats_subject}
+                                member limit {richContract.recommended_team_member_limit}
                             </span>
                         ) : null}
                     </div>

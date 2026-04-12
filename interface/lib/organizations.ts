@@ -215,6 +215,10 @@ export interface TeamLeadExecutionContract {
     summary: string;
     team_name?: string;
     external_target?: string;
+    coordination_model?: string;
+    recommended_team_shape?: string;
+    recommended_team_count?: number;
+    recommended_team_member_limit?: number;
     target_outputs: string[];
     workflow_group?: TeamLeadWorkflowGroupDraft;
 }
@@ -225,6 +229,7 @@ export interface TeamLeadWorkflowGroupDraft {
     work_mode: "read_only" | "propose_only" | "execute_with_approval" | "execute_bounded";
     coordinator_profile: string;
     allowed_capabilities?: string[];
+    recommended_member_limit?: number;
     expiry_hours?: number;
     summary: string;
 }

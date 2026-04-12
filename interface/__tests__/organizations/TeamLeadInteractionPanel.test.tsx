@@ -250,8 +250,8 @@ describe("TeamLeadInteractionPanel", () => {
                     ],
                     recommended_team_shape: "3-6 people per team",
                     coordination_model: "multi-team bundle",
-                    member_count_limit: 6,
-                    nats_subject: "swarm.global.broadcast",
+                    recommended_team_count: 3,
+                    recommended_team_member_limit: 6,
                 },
             },
         }));
@@ -289,8 +289,8 @@ describe("TeamLeadInteractionPanel", () => {
         expect(screen.getByText("Compact orchestration hints")).toBeDefined();
         expect(screen.getByText("3-6 people per team")).toBeDefined();
         expect(screen.getByText("multi-team bundle")).toBeDefined();
+        expect(screen.getByText("3 teams")).toBeDefined();
         expect(screen.getByText("member limit 6")).toBeDefined();
-        expect(screen.getByText("swarm.global.broadcast")).toBeDefined();
     });
 
     it("creates a temporary workflow group directly from Soma guidance and links to the created group", async () => {
@@ -353,6 +353,7 @@ describe("TeamLeadInteractionPanel", () => {
         fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
 
         expect(await screen.findByRole("button", { name: "Create temporary workflow group" })).toBeDefined();
+        expect(screen.getByText("This ask looks compact enough for one focused team.")).toBeDefined();
         fireEvent.click(screen.getByRole("button", { name: "Create temporary workflow group" }));
 
         await waitFor(() => {
