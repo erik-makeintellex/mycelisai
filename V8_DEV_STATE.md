@@ -30,6 +30,7 @@ Development is progressing toward the V8.2 full production target.
 
 Release posture:
 - `ACTIVE` current posture is `V1 MVP Release Candidate`.
+- `ACTIVE` current coordination should use the Current Target State board below as the day-to-day source for lane ownership, dependencies, and next actions; the longer release-posture bullets remain implementation history and evidence.
 - `COMPLETE` the previously release-blocking Soma action integrity recovery pass is now closed for the current RC path: governed mutation requests enter proposal mode, proposal generation is side-effect free, and confirmation produces durable execution proof on the validated live lane.
 - `COMPLETE` the default Soma-primary operator flow is now release-candidate ready with guided first-run actions, resilient support panels, and user-facing vocabulary aligned around Automations, Memory & Continuity, AI Engine, Response Style, Advisors, and Departments.
 - `COMPLETE` Soma is now the primary default interface and organization orchestrator for the AI Organization workspace.
@@ -118,7 +119,37 @@ State reporting rule:
 - `COMPLETE`: delivered and accepted
 - `BLOCKED`: cannot advance until a dependency or defect is resolved
 
-## Current Review (2026-04-09)
+## Current Target State (2026-04-11)
+
+Use this board for current team coordination. It supersedes the scattered `ACTIVE` / `IN_REVIEW` lane notes above when deciding what to do next.
+
+| Team / Lane | Status | Current Target | Dependencies / Handoffs | Next Action |
+| --- | --- | --- | --- | --- |
+| Release UX Certification | `ACTIVE` | Prepare initial user testing around Soma-first setup, chat, guided team creation, temporary group outputs, MCP visibility, deployment context intake, and artifact review. | Needs Compose stack health and browser-first proof to stay green. | Run the remote-machine user testing plan from `docs/REMOTE_USER_TESTING.md`, record blockers, and avoid expanding scope unless a tester hits a real defect. |
+| Platform / Ops Readiness | `IN_REVIEW` | Keep the single-host Docker Compose path, rebuild/reset workflow, docs, and startup checks usable for a new evaluator. | Feeds Release UX Certification and any checkout test on another machine. | Re-run `uv run inv lifecycle.health` / compose health on the target machine before external walkthrough; document any environment-only media boundary separately. |
+| Soma Product Trust + Approvals | `ACTIVE` | Keep low-level governance details behind readable proposal/approval UX while preserving policy, audit, and capability guardrails. | Feeds Soma chat, Launch Crew, team action, artifact generation, memory promotion. | Validate a live proposal/cancel/confirm walkthrough and make any approval reason text operator-readable without loosening policy. |
+| Team Workflow + Compact Orchestration | `IN_REVIEW` | Keep team creation compact, guide users through `/teams/create`, support temporary workflow groups, and preserve retained outputs after archive. | Depends on structured ask routing, Groups output review, and managed exchange visibility. | Use initial user testing to confirm a non-technical user can create a team/workflow without understanding internal manifests. |
+| Content / Media / Team Outputs | `ACTIVE` | Prove that team-managed outputs can create visible value beyond a single-agent answer, with inline text value and clickable artifact paths for binary outputs. | Depends on artifact preview/download and media provider availability. | Treat text/file artifacts as the reliable initial test lane; keep media-generation proof as environment-bound until a local/remote media endpoint is healthy. |
+| MCP / Connected Tools | `IN_REVIEW` | Keep MCP setup and active usage visible through the Resources surface using the standardized catalog/library posture. | Feeds governed external research and tool-output exchange review. | Test "what tools are available" and "what did agents use" in the user walkthrough; defer deeper import/export compatibility until after initial testing. |
+| Memory / RAG / Reflection | `ACTIVE` | Maintain explicit `SOMA_MEMORY`, `AGENT_MEMORY`, `PROJECT_MEMORY`, and `REFLECTION_MEMORY` separation; reflection starts as Managed Exchange `LearningCandidate` before promotion. | Depends on Managed Exchange candidate schema, governed context intake, and future promotion UI. | Do not build "more recall" first; next implementation should add typed candidate helper and reviewed promotion path, then browser proof. |
+| Identity / Enterprise Layering | `NEXT` | Preserve the investor-review story for SAML/OIDC, local break-glass admins, paid hosted/self-hosted user management, and one shared Soma persona. | Depends on current free-node governance foundation. | Keep out of initial user testing unless investor questions require a walkthrough of Settings -> People & Access. |
+| Advanced Architecture Runtime UI | `NEXT` | Keep advanced config/inheritance surfaces non-default so they do not pollute the MVP operator flow. | Depends on release UX not needing raw runtime controls. | Do not implement before initial user testing unless a setup blocker proves the advanced surface is required. |
+
+Cross-team management rule:
+- Start with Release UX Certification as the primary lane.
+- Pull Platform/Ops only for setup, health, and rebuild blockers.
+- Pull Product Trust only when proposal, approval, audit, or capability wording blocks comprehension.
+- Pull Team Workflow only when users cannot create or inspect teams/groups.
+- Pull Content/Media only when outputs are not visible, downloadable, or understandable.
+- Pull MCP only when tool availability or activity visibility is confusing.
+- Pull Memory/RAG only when context intake, recall boundaries, or reflection candidate behavior is directly under test.
+
+Current scope guard:
+- `COMPLETE` live workflow browser certification gives enough confidence to start guided user testing.
+- `ACTIVE` lanes above are not all release blockers; they are targeted follow-through lanes for issues discovered during testing.
+- `NEXT` lanes should remain deferred unless a real tester or investor review need makes them blocking.
+
+## Prior Review (2026-04-09)
 
 Review summary:
 1. `ACTIVE` browser-first UX proof is now the governing closeout lane for the RC path: headed Chromium runs against the live Compose UI are the authoritative check for Soma-first entry, guided setup, team/group management, and governed chat behavior.
