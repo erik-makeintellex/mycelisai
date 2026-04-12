@@ -71,7 +71,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "resources-guide",
                 label: "Resources",
                 path: "docs/user/resources.md",
-                description: "Advanced tools, workspace files, AI engines, and governed private/deployment context",
+                description: "Advanced tools, workspace files, AI engines, and governed private/deployment/reflection context",
             },
             {
                 slug: "teams-guide",
@@ -83,7 +83,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "memory-guide",
                 label: "Memory",
                 path: "docs/user/memory.md",
-                description: "Semantic search, retained knowledge, private/deployment context, and continuity rules",
+                description: "Semantic search, retained knowledge, private/deployment/reflection context, and continuity rules",
             },
             {
                 slug: "governance-trust",

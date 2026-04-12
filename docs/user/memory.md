@@ -15,7 +15,7 @@ WARM  → Structured logs, SitReps, artifacts (recent history)
 COLD  → Semantic vector store (long-term, searchable by meaning)
 ```
 
-All three tiers are populated automatically as agents work. You can also intentionally load governed private records, customer/deployment knowledge, and approved company guidance through **Resources → Deployment Context** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
+All three tiers are populated automatically as agents work. You can also intentionally load governed private records, customer/deployment knowledge, approved company guidance, admin-shaped Soma operating context, and reflection/synthesis observations through **Resources → Deployment Context** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
 
 ---
 
@@ -27,6 +27,7 @@ Mycelis now treats memory as several different classes with different purposes:
 - **User-private context store**: user-uploaded or pasted records, diary notes, finance/legal/health references, and other sensitive material intentionally made available for specific target goal sets. This is private/restricted by default and is not company knowledge.
 - **Customer context store**: operator- or customer-provided docs, notes, briefs, and research intentionally loaded into pgvector so Soma, Council, and teams can reason with deployment-specific requirements across future sessions.
 - **Company knowledge store**: approved company-authored guidance or playbooks that Soma or teams are explicitly allowed to treat as durable organizational reference.
+- **Reflection / synthesis memory**: distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations about what is changing over time. This is stored as `reflection_synthesis`, private/restricted by default, and should not be treated as raw transcript or customer content.
 - **Temporary continuity**: restart-safe planning checkpoints and in-flight working context. This stays in temporary memory channels and does **not** automatically become long-term semantic memory.
 - **Trace and audit**: conversation turns, mission events, and operational review logs used for causality, inspection, and governance. These are review surfaces, not default semantic memory.
 
@@ -37,6 +38,7 @@ Rule of thumb:
 - if it is customer-provided or deployment-shaping reference material, load it into the customer context store
 - if it is approved company-authored guidance, load it into the company knowledge store
 - if customer context needs to become durable company reference, promote it through a governed approval path instead of silently reclassifying the original entry
+- if it is a durable lesson, inferred pattern, contradiction, trajectory shift, or meta-observation that Soma should remember about how work is changing, load it as `reflection_synthesis`
 - if it is only useful for the current planning cycle, keep it in temporary continuity
 - if it exists to explain what happened, treat it as trace or audit
 
@@ -70,6 +72,7 @@ Governed deployment knowledge is stored under dedicated vector types:
 - `company_knowledge` for approved company-authored guidance
 - `soma_operating_context` for admin-owned guidance that shapes shared Soma posture and output specificity
 - `user_private_context` for user-owned private records, diary entries, finance notes, and other sensitive references tied to explicit goal sets
+- `reflection_synthesis` for lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations that Soma should retain as synthesis rather than transcript
 
 That lets Soma, Council, and teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed.
 
@@ -143,7 +146,7 @@ Stored in PostgreSQL (log_entries + artifacts tables)
     ↓
 Embedded via nomic-embed-text → context_vectors (pgvector)
     ↓
-Available for semantic search plus governed customer/company context recall
+Available for semantic search plus governed customer/company/private/reflection context recall
     ↓
 Archivist compresses raw logs into SitReps every 5 minutes
 ```
@@ -154,7 +157,7 @@ Important boundary:
 
 - ordinary chat continuity and draft planning do **not** automatically become durable semantic memory
 - they remain available through temporary continuity and trace surfaces until deliberately promoted
-- governed deployment knowledge does **not** become ordinary Soma memory; it stays in the separate customer/company context store unless deliberately reclassified through an approved workflow
+- governed deployment knowledge does **not** become ordinary Soma memory; it stays in the separate customer/company/private/reflection context store unless deliberately reclassified through an approved workflow
 
 ---
 
@@ -165,3 +168,4 @@ Important boundary:
 - **SitReps as quick history**: The SitReps tab is faster than reading full run timelines when you just need a summary of what happened in a session
 - **Memory persists across sessions**: Everything stored here survives server restarts and is available in future sessions
 - **Use Deployment Context for larger briefs**: architecture docs, MCP constraints, web research summaries, customer requirements, and approved company rollout policies belong in the dedicated governed-context intake lane so provenance and security posture stay explicit
+- **Use reflection/synthesis for lessons, not transcripts**: store the distilled change, contradiction, or pattern Soma should retain, and keep the raw conversation in trace/continuity instead

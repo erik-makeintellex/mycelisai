@@ -180,7 +180,7 @@ Included in the V8.1 release target:
 - bounded AI Engine and Response Style controls
 - read-only Automations visibility
 - read-only retained-knowledge visibility
-- governed deployment-context intake for customer-provided material and approved company-authored guidance, kept separate from ordinary Soma memory
+- governed deployment-context intake for user-private content, customer-provided material, approved company-authored guidance, admin-shaped Soma context, and reflection/synthesis memory, kept separate from ordinary Soma memory
 - intentional empty states, retry guidance, and partial-failure-safe workspace panels
 - Loop Profiles, Runtime Capabilities, semantic continuity, and Procedure / Skill Sets defined as architecture truth even where implementation is still partial
 

@@ -282,7 +282,7 @@ Goal:
 Steps:
 1. Open `Resources -> Deployment Context`.
 2. Paste a short deployment brief, policy note, or requirements summary.
-3. Load it as either `user_private_context` for private records tied to a target goal set or `customer_context` for operator/customer deployment material.
+3. Load it as either `user_private_context` for private records tied to a target goal set, `customer_context` for operator/customer deployment material, or `reflection_synthesis` for a distilled lesson/pattern/trajectory-shift note.
 4. Set a reasonable trust/sensitivity posture.
 
 Suggested sample content:
@@ -293,6 +293,7 @@ Expected outcome:
 - it appears in recent Deployment Context history
 - the UI makes clear this is governed context, not ordinary Soma memory
 - private context shows private/restricted posture and target-goal metadata when provided
+- reflection/synthesis context shows a synthesis-oriented source kind such as `lesson`, `inferred_pattern`, `contradiction`, `trajectory_shift`, or `meta_observation`
 - it is clear that this context can support Soma and team leads without becoming ungoverned shared chat history
 
 ### 8. MCP Visibility And Tool Activity

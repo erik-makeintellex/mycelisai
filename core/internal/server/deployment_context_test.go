@@ -396,6 +396,80 @@ func TestHandleDeploymentContext_PostStoresUserPrivateGoalContext(t *testing.T) 
 	}
 }
 
+func TestHandleDeploymentContext_PostStoresReflectionSynthesisDefaults(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	mem := memory.NewServiceWithDB(db)
+	artSvc := artifacts.NewService(db, "/data/artifacts")
+	s := &AdminServer{
+		Artifacts: artSvc,
+		Mem:       mem,
+		Cognitive: newDeploymentContextBrain(),
+	}
+
+	now := time.Now()
+	mock.ExpectQuery("INSERT INTO artifacts").
+		WithArgs(
+			sqlmock.AnyArg(), sqlmock.AnyArg(),
+			"admin", sqlmock.AnyArg(),
+			artifacts.ArtifactType("document"), "Investor Workflow Shift", "text/markdown",
+			"The user trajectory shifted toward investor-ready team-managed media output demos.", sqlmock.AnyArg(), sqlmock.AnyArg(),
+			metadataContains{
+				"knowledge_class":   "reflection_synthesis",
+				"source_kind":       "synthesis_note",
+				"source_label":      "reflection synthesis",
+				"visibility":        "private",
+				"sensitivity_class": "restricted",
+				"trust_class":       "trusted_internal",
+				"content_domain":    "reflection",
+				"reflection_kind":   "synthesis_note",
+				"target_goal_sets":  []string{"investor-review"},
+				"tags":              []string{"reflection-synthesis-memory", "synthesis_note"},
+			},
+			sqlmock.AnyArg(), "approved",
+		).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
+			AddRow("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", now))
+	mock.ExpectExec("INSERT INTO context_vectors").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	body := `{
+		"knowledge_class": "reflection_synthesis",
+		"title": "Investor Workflow Shift",
+		"content": "The user trajectory shifted toward investor-ready team-managed media output demos.",
+		"target_goal_sets": ["investor-review"]
+	}`
+	rr := doRequest(t, http.HandlerFunc(s.HandleDeploymentContext), http.MethodPost, "/api/v1/memory/deployment-context", body)
+	assertStatus(t, rr, http.StatusCreated)
+
+	var resp map[string]any
+	assertJSON(t, rr, &resp)
+	if resp["knowledge_class"] != "reflection_synthesis" {
+		t.Fatalf("expected reflection_synthesis knowledge class, got %+v", resp)
+	}
+	if resp["source_kind"] != "synthesis_note" {
+		t.Fatalf("expected source_kind=synthesis_note, got %+v", resp)
+	}
+	if resp["visibility"] != "private" {
+		t.Fatalf("expected visibility=private, got %+v", resp)
+	}
+	if resp["sensitivity_class"] != "restricted" {
+		t.Fatalf("expected sensitivity_class=restricted, got %+v", resp)
+	}
+	if resp["trust_class"] != "trusted_internal" {
+		t.Fatalf("expected trust_class=trusted_internal, got %+v", resp)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("expectations: %v", err)
+	}
+}
+
 func TestHandleDeploymentContext_GetListsEntries(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

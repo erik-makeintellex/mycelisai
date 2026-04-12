@@ -21,6 +21,7 @@ const (
 	KnowledgeClassCompanyKnowledge = "company_knowledge"
 	KnowledgeClassSomaOperating    = "soma_operating_context"
 	KnowledgeClassUserPrivate      = "user_private_context"
+	KnowledgeClassReflection       = "reflection_synthesis"
 )
 
 type IngestRequest struct {
@@ -142,13 +143,16 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 	contentType := normalizeContentType(req.ContentType)
 	knowledgeClass := normalizeKnowledgeClass(req.KnowledgeClass)
 	sourceLabel := normalizeSourceLabel(req.SourceLabel)
+	rawSourceKind := strings.TrimSpace(req.SourceKind)
 	sourceKind := normalizeSourceKind(req.SourceKind)
+	rawVisibility := strings.TrimSpace(req.Visibility)
 	visibility := normalizeVisibility(req.Visibility)
 	sensitivityClass := normalizeSensitivityClass(req.SensitivityClass)
+	rawTrustClass := strings.TrimSpace(req.TrustClass)
 	trustClass := normalizeTrustClass(req.TrustClass)
 	agentID := strings.TrimSpace(req.AgentID)
 	if agentID == "" {
-		if knowledgeClass == KnowledgeClassUserPrivate {
+		if knowledgeClass == KnowledgeClassUserPrivate || knowledgeClass == KnowledgeClassReflection {
 			agentID = "admin"
 		} else {
 			agentID = "soma"
@@ -203,6 +207,26 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		tags = append(tags, "user-private-context")
 		tags = normalizeTags(tags)
 	}
+	if knowledgeClass == KnowledgeClassReflection {
+		if sourceLabel == "operator provided" {
+			sourceLabel = "reflection synthesis"
+		}
+		if rawSourceKind == "" || sourceKind == "user_document" {
+			sourceKind = "synthesis_note"
+		}
+		if rawVisibility == "" {
+			visibility = "private"
+		}
+		sensitivityClass = "restricted"
+		if rawTrustClass == "" {
+			trustClass = "trusted_internal"
+		}
+		if contentDomain == "" {
+			contentDomain = "reflection"
+		}
+		tags = append(tags, "reflection-synthesis-memory", sourceKind)
+		tags = normalizeTags(tags)
+	}
 	chunks := chunkText(content, defaultChunkSize, defaultChunkOverlap)
 	if len(chunks) == 0 {
 		return nil, fmt.Errorf("content is required")
@@ -231,6 +255,9 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		"output_specificity": outputSpecificity,
 		"content_domain":     contentDomain,
 		"target_goal_sets":   targetGoalSets,
+	}
+	if knowledgeClass == KnowledgeClassReflection {
+		metadataMap["reflection_kind"] = sourceKind
 	}
 	for key, value := range req.ExtraMetadata {
 		if _, exists := metadataMap[key]; exists {
@@ -285,6 +312,9 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 			"chunk_index":        idx,
 			"chunk_count":        len(chunks),
 			"loaded_by":          userLabel,
+		}
+		if knowledgeClass == KnowledgeClassReflection {
+			vectorMeta["reflection_kind"] = sourceKind
 		}
 		for key, value := range req.ExtraMetadata {
 			if _, exists := vectorMeta[key]; exists {
@@ -510,6 +540,18 @@ func normalizeSourceKind(raw string) string {
 		return "diary_entry"
 	case "finance_record":
 		return "finance_record"
+	case "lesson":
+		return "lesson"
+	case "inferred_pattern":
+		return "inferred_pattern"
+	case "contradiction":
+		return "contradiction"
+	case "trajectory_shift":
+		return "trajectory_shift"
+	case "meta_observation":
+		return "meta_observation"
+	case "synthesis_note":
+		return "synthesis_note"
 	default:
 		return "user_document"
 	}
@@ -523,6 +565,8 @@ func normalizeKnowledgeClass(raw string) string {
 		return KnowledgeClassSomaOperating
 	case KnowledgeClassUserPrivate:
 		return KnowledgeClassUserPrivate
+	case KnowledgeClassReflection:
+		return KnowledgeClassReflection
 	default:
 		return KnowledgeClassCustomerContext
 	}
@@ -544,6 +588,8 @@ func normalizeContentDomain(raw string) string {
 		return "creative"
 	case "operations":
 		return "operations"
+	case "reflection":
+		return "reflection"
 	default:
 		return ""
 	}

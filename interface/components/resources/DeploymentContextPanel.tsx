@@ -34,6 +34,8 @@ const KNOWLEDGE_CLASS_OPTIONS = [
     { value: "user_private_context", label: "Private user content" },
     { value: "customer_context", label: "Customer context" },
     { value: "company_knowledge", label: "Approved company knowledge" },
+    { value: "soma_operating_context", label: "Admin-shaped Soma context" },
+    { value: "reflection_synthesis", label: "Reflection / synthesis memory" },
 ];
 
 const SOURCE_KIND_OPTIONS = [
@@ -42,6 +44,12 @@ const SOURCE_KIND_OPTIONS = [
     { value: "user_record", label: "User/private record" },
     { value: "diary_entry", label: "Diary entry" },
     { value: "finance_record", label: "Finance record" },
+    { value: "lesson", label: "Distilled lesson" },
+    { value: "inferred_pattern", label: "Inferred pattern" },
+    { value: "contradiction", label: "Contradiction" },
+    { value: "trajectory_shift", label: "Trajectory shift" },
+    { value: "meta_observation", label: "Meta-observation" },
+    { value: "synthesis_note", label: "Synthesis note" },
     { value: "workspace_file", label: "Workspace file" },
     { value: "web_research", label: "Web research" },
 ];
@@ -54,6 +62,7 @@ const CONTENT_DOMAIN_OPTIONS = [
     { value: "legal", label: "Legal" },
     { value: "creative", label: "Creative" },
     { value: "operations", label: "Operations" },
+    { value: "reflection", label: "Reflection / synthesis" },
 ];
 
 const VISIBILITY_OPTIONS = [
@@ -127,7 +136,7 @@ export default function DeploymentContextPanel() {
     const submit = async () => {
         if (!canSubmit) return;
         setSubmitting(true);
-        setStatus("Loading governed context into the private/customer/company knowledge store...");
+        setStatus("Loading governed context into the private/customer/company/reflection knowledge store...");
         try {
             const res = await fetch("/api/v1/memory/deployment-context", {
                 method: "POST",
@@ -167,11 +176,34 @@ export default function DeploymentContextPanel() {
                 return {
                     ...current,
                     knowledge_class: knowledgeClass,
-                    source_kind: current.source_kind === "user_document" ? "user_record" : current.source_kind,
+                    source_kind: current.source_kind === "user_document" || isReflectionSourceKind(current.source_kind) ? "user_record" : current.source_kind,
                     visibility: "private",
                     sensitivity_class: "restricted",
                     content_domain: current.content_domain || "private_records",
                     tags: current.tags.trim() ? current.tags : "user-private-context",
+                };
+            }
+            if (knowledgeClass === "reflection_synthesis") {
+                return {
+                    ...current,
+                    knowledge_class: knowledgeClass,
+                    source_kind: current.source_kind === "user_document" || current.source_kind === "user_record" ? "synthesis_note" : current.source_kind,
+                    visibility: "private",
+                    sensitivity_class: "restricted",
+                    trust_class: "trusted_internal",
+                    content_domain: "reflection",
+                    tags: current.tags.trim() ? current.tags : "reflection-synthesis-memory",
+                };
+            }
+            if (knowledgeClass === "soma_operating_context") {
+                return {
+                    ...current,
+                    knowledge_class: knowledgeClass,
+                    source_kind: current.source_kind === "user_record" || isReflectionSourceKind(current.source_kind) ? "user_note" : current.source_kind,
+                    visibility: "global",
+                    sensitivity_class: "restricted",
+                    trust_class: "trusted_internal",
+                    tags: current.tags.trim() ? current.tags : "soma-operating-context",
                 };
             }
             return {
@@ -179,7 +211,7 @@ export default function DeploymentContextPanel() {
                 knowledge_class: knowledgeClass,
                 visibility: current.visibility === "private" ? "global" : current.visibility,
                 sensitivity_class: current.sensitivity_class === "restricted" ? "role_scoped" : current.sensitivity_class,
-                source_kind: current.source_kind === "user_record" ? "user_document" : current.source_kind,
+                source_kind: current.source_kind === "user_record" || isReflectionSourceKind(current.source_kind) ? "user_document" : current.source_kind,
             };
         });
     };
@@ -207,7 +239,7 @@ export default function DeploymentContextPanel() {
                                 <h2 className="text-sm font-semibold text-cortex-text-main">Deployment Context Intake</h2>
                             </div>
                             <p className="text-xs text-cortex-text-muted mt-2 max-w-2xl">
-                                Load governed knowledge into the separate context store Soma uses for RAG. Private records, diary notes, finance references, customer context, company guidance, and admin-shaped Soma context stay in distinct lanes with explicit visibility and goal-set scope.
+                                Load governed knowledge into the separate context store Soma uses for RAG. Private records, diary notes, finance references, customer context, company guidance, admin-shaped Soma context, and reflection/synthesis observations stay in distinct lanes with explicit visibility and goal-set scope.
                             </p>
                         </div>
                         <button
@@ -336,7 +368,7 @@ export default function DeploymentContextPanel() {
                         <textarea
                             value={form.content}
                             onChange={(e) => setForm((current) => ({ ...current, content: e.target.value }))}
-                            placeholder="Paste private records, diary notes, finance references, customer docs, approved company guidance, security requirements, provider constraints, or other governed context here."
+                            placeholder="Paste private records, diary notes, finance references, customer docs, approved company guidance, reflection/synthesis observations, security requirements, provider constraints, or other governed context here."
                             className={`${INPUT_CLASS} min-h-[240px] resize-y`}
                         />
                     </Field>
@@ -444,9 +476,15 @@ function knowledgeClassLabel(value: string) {
             return "admin-shaped Soma context";
         case "user_private_context":
             return "private user content";
+        case "reflection_synthesis":
+            return "reflection / synthesis memory";
         default:
             return "customer context";
     }
+}
+
+function isReflectionSourceKind(value: string) {
+    return ["lesson", "inferred_pattern", "contradiction", "trajectory_shift", "meta_observation", "synthesis_note"].includes(value);
 }
 
 function Field({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {

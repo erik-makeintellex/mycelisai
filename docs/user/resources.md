@@ -15,7 +15,7 @@ Current tabs:
 |-----|---------|
 | Connected Tools | Installed MCP servers and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
-| Deployment Context | Load governed private/user records, customer context, approved company knowledge, and Soma operating context into separate vector-backed stores |
+| Deployment Context | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate vector-backed stores |
 | Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
@@ -93,6 +93,7 @@ Typical inputs:
 - security policies
 - curated external research or handoff documents
 - approved company-authored playbooks or guidance
+- reflection/synthesis observations such as distilled lessons, inferred patterns, contradictions, shifts in user trajectory, and meta-observations about what is changing over time
 
 Operational behavior:
 - every load creates a durable document artifact plus vector-backed chunks in the governed context store
@@ -102,8 +103,10 @@ Operational behavior:
 - `knowledge_class=customer_context` is for operator/customer-provided material
 - `knowledge_class=company_knowledge` is for approved company-authored guidance only
 - `knowledge_class=soma_operating_context` is for root-admin or delegated-owner guidance that shapes shared Soma behavior across users
+- `knowledge_class=reflection_synthesis` is for distilled lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations; it defaults toward private/restricted handling and should store synthesis rather than raw transcripts
 - promotion from customer context into company knowledge should happen through a governed approval path with lineage preserved, not by rewriting the original entry in place
 - Soma operating context is stricter than ordinary deployment intake: it is normalized into admin guidance, stays globally scoped, and is intended for durable shared output/identity/stance shaping rather than personal chat preferences
+- reflection/synthesis context is separate from Soma memory and from user-private/customer/company lanes so Soma can reason about what is changing over time without mixing those meta-observations into raw source material
 - Soma, Council, and teams can recall allowed context during planning and answer generation without treating it as raw unrestricted web input
 - private user context is only intended to enter agent work when its visibility/scope and target goal sets match the user’s request; it is not company knowledge and should not be promoted silently
 - use `source_kind=web_research` or a stricter trust/sensitivity class when the content came from external sources

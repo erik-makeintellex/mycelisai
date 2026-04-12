@@ -75,11 +75,11 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agent
 	// Restrict retrieval to the governed deployment-context vector classes so
 	// ordinary Soma memory and durable company/customer knowledge never blur.
 	results, err := r.mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
-		Limit:               3,
+		Limit:               5,
 		TenantID:            "default",
 		TeamID:              strings.TrimSpace(teamID),
 		AgentID:             strings.TrimSpace(agentID),
-		Types:               []string{"customer_context", "company_knowledge", "soma_operating_context", "user_private_context"},
+		Types:               []string{"customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis"},
 		AllowGlobal:         true,
 		AllowLegacyUnscoped: false,
 	})
@@ -91,6 +91,7 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agent
 	companyResults := make([]memory.VectorResult, 0, len(results))
 	somaResults := make([]memory.VectorResult, 0, len(results))
 	privateResults := make([]memory.VectorResult, 0, len(results))
+	reflectionResults := make([]memory.VectorResult, 0, len(results))
 	for _, result := range results {
 		switch strings.TrimSpace(stringMeta(result.Metadata, "knowledge_class")) {
 		case "company_knowledge":
@@ -99,6 +100,8 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agent
 			somaResults = append(somaResults, result)
 		case "user_private_context":
 			privateResults = append(privateResults, result)
+		case "reflection_synthesis":
+			reflectionResults = append(reflectionResults, result)
 		default:
 			customerResults = append(customerResults, result)
 		}
@@ -129,6 +132,13 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agent
 		sb.WriteString("### User-Private Context Store (private records and goal-scoped references)\n")
 		for _, result := range privateResults {
 			writeKnowledgeResult(sb, result, "private user context")
+		}
+		sb.WriteString("\n")
+	}
+	if len(reflectionResults) > 0 {
+		sb.WriteString("### Reflection / Synthesis Memory (lessons, patterns, contradictions, and trajectory shifts)\n")
+		for _, result := range reflectionResults {
+			writeKnowledgeResult(sb, result, "reflection synthesis")
 		}
 		sb.WriteString("\n")
 	}

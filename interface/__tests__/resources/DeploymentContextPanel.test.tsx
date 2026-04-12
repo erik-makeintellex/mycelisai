@@ -157,4 +157,52 @@ describe("DeploymentContextPanel", () => {
         expect(submitBody.target_goal_sets).toEqual(["tax planning", "cash flow"]);
         expect(submitBody.content).toBe("Invoice timing and savings goals.");
     });
+
+    it("submits reflection synthesis memory with private trusted defaults", async () => {
+        fetchMock
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ entries: [] }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    artifact_id: "ctx-reflection",
+                    knowledge_class: "reflection_synthesis",
+                    title: "Investor Workflow Shift",
+                    chunk_count: 1,
+                    vector_count: 1,
+                }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ entries: [] }),
+            });
+
+        render(<DeploymentContextPanel />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/No deployment context loaded yet/i)).toBeDefined();
+        });
+
+        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Investor Workflow Shift" } });
+        fireEvent.change(screen.getByLabelText("Knowledge Class"), { target: { value: "reflection_synthesis" } });
+        fireEvent.change(screen.getByLabelText("Source Kind"), { target: { value: "trajectory_shift" } });
+        fireEvent.change(screen.getByLabelText("Target Goal Sets"), { target: { value: "investor review" } });
+        fireEvent.change(screen.getByLabelText("Content"), { target: { value: "The user trajectory shifted toward team-managed media output demos." } });
+        fireEvent.click(screen.getByRole("button", { name: /Load Context/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText(/Loaded Investor Workflow Shift as reflection \/ synthesis memory/i)).toBeDefined();
+        });
+
+        const submitBody = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
+        expect(submitBody.knowledge_class).toBe("reflection_synthesis");
+        expect(submitBody.source_kind).toBe("trajectory_shift");
+        expect(submitBody.visibility).toBe("private");
+        expect(submitBody.sensitivity_class).toBe("restricted");
+        expect(submitBody.trust_class).toBe("trusted_internal");
+        expect(submitBody.content_domain).toBe("reflection");
+        expect(submitBody.target_goal_sets).toEqual(["investor review"]);
+    });
 });

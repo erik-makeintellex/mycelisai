@@ -145,8 +145,9 @@ Output-specificity rule:
 - durable output-specificity changes for shared Soma/team behavior must go through a governed root-admin path with audit and lineage
 
 Implementation implication:
-- Mycelis likely needs one explicit admin-owned foundational layer in addition to ordinary Soma memory, `user_private_context`, `customer_context`, and `company_knowledge`
+- Mycelis needs an explicit admin-owned foundational layer in addition to ordinary Soma memory, `user_private_context`, `customer_context`, `company_knowledge`, and `reflection_synthesis`
 - that layer should be treated as organization-operating context, not generic chat history
+- Mycelis also needs a separate reflection/synthesis memory lane so distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations about change over time do not get flattened into raw transcript, customer context, or company knowledge
 
 ## Memory And RAG Access Model
 
@@ -163,6 +164,8 @@ Those layers remain distinct:
   - approved company-authored material loaded into governed `company_knowledge`
 - Admin-shaped Soma context
   - durable foundational context approved by the root admin or configured owner and allowed to shape Soma's shared organization-level behavior
+- Reflection / synthesis memory
+  - distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations loaded into governed `reflection_synthesis`, private/restricted by default unless explicitly widened
 
 Multi-user implications:
 - access to those stores must be policy-scoped by user, role, team, and sensitivity
@@ -171,6 +174,7 @@ Multi-user implications:
 - private user context should remain private/restricted by default and should not become company knowledge or shared Soma identity without explicit governed promotion
 - promotion into durable shared knowledge must remain approval-backed and lineage-preserving
 - admin-shaped Soma context should be writable only through explicitly governed admin paths, not through ordinary user chat
+- reflection/synthesis entries should preserve sensitivity boundaries because they may describe user trajectory or contradictions even when the raw source material is not included
 
 ## Governance And Audit Requirements
 
@@ -216,6 +220,7 @@ Current release truth:
 - current self-hosted recovery posture is now explicit instead of inferred: `MYCELIS_API_KEY` maps to the named primary local admin, while optional `MYCELIS_BREAK_GLASS_API_KEY` maps to a separate break-glass recovery principal
 - the first private user context lane now exists in the governed deployment-context store as `user_private_context`: it is separate from ordinary Soma memory, `customer_context`, `company_knowledge`, and `soma_operating_context`, and is intended for user-provided private records tied to explicit target goal sets
 - the first admin-shaped Soma context lane now exists in the governed deployment-context store as `soma_operating_context`: it is separate from ordinary Soma memory, `user_private_context`, `customer_context`, and `company_knowledge`, and it is intended for durable organization-level Soma behavior such as shared output specificity
+- the first reflection/synthesis lane now exists in the governed deployment-context store as `reflection_synthesis`: it is separate from ordinary Soma memory, user-private records, customer context, company knowledge, and admin-shaped Soma context, and is intended for durable synthesized lessons, patterns, contradictions, trajectory shifts, and meta-observations
 
 Required next target:
 - formalize principal, auth-source, and role mapping contracts
@@ -223,7 +228,7 @@ Required next target:
 - add local break-glass admin support for self-host
 - bind shared Soma identity to organization/environment ownership instead of ad hoc per-user assistant state
 - define an explicit admin-shaped Soma context layer instead of letting baseline behavior emerge from unclassified chat history
-- enforce scoped retrieval rules across Soma memory, user-private context, customer context, and company knowledge
+- enforce scoped retrieval rules across Soma memory, user-private context, customer context, company knowledge, admin-shaped Soma context, and reflection/synthesis memory
 
 ## Rollout Sequence
 
@@ -239,13 +244,14 @@ The clean implementation path should be:
 
 3. Admin-shaped context layer
 	- introduce an explicit governed store for admin-authored Soma-shaping context
-	- keep it separate from ordinary Soma memory, `user_private_context`, `customer_context`, and `company_knowledge`
+	- keep it separate from ordinary Soma memory, `user_private_context`, `customer_context`, `company_knowledge`, and `reflection_synthesis`
    - require audit, lineage, and governed promotion/update paths
    - make root-admin control of shared agent/output specificity explicit instead of allowing it to emerge from general chat
 
 Current progress:
 - `IN_REVIEW` the first governed user-private context lane now exists as `user_private_context` with private/restricted defaults and target-goal metadata
 - `IN_REVIEW` the first governed admin-shaped context lane now exists as `soma_operating_context`
+- `IN_REVIEW` the first governed reflection/synthesis memory lane now exists as `reflection_synthesis`
 - `NEXT` add explicit update/promotion UX and role/delegation enforcement around who may change that shared Soma layer
 
 4. Scoped user interaction rules

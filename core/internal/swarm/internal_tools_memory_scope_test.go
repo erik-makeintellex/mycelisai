@@ -264,12 +264,13 @@ func TestBuildContext_IncludesDeploymentContextRecall(t *testing.T) {
 
 	mem := memory.NewServiceWithDB(db)
 	mock.ExpectQuery("SELECT id, content, metadata, 1 - \\(embedding <=> \\$1::vector\\) AS score, created_at").
-		WithArgs(sqlmock.AnyArg(), "default", "customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "alpha", "lead-alpha", 3).
+		WithArgs(sqlmock.AnyArg(), "default", "customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis", "alpha", "lead-alpha", 5).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
 			AddRow("vec-ctx", "[customer_context] secure web access via MCP policy gates", `{"artifact_title":"Security Brief","source_label":"operator brief","visibility":"global","knowledge_class":"customer_context"}`, 0.93, time.Now()).
 			AddRow("vec-company", "[company_knowledge] approved deployment playbook", `{"artifact_title":"Deployment Playbook","source_label":"approved company guide","visibility":"global","knowledge_class":"company_knowledge"}`, 0.9, time.Now()).
 			AddRow("vec-soma", "[soma_operating_context] executive investor-facing output by default", `{"artifact_title":"Soma Output Contract","source_label":"root admin guidance","visibility":"global","knowledge_class":"soma_operating_context"}`, 0.89, time.Now()).
-			AddRow("vec-private", "[user_private_context] Q2 cash-flow notes for tax planning", `{"artifact_title":"Personal Finance Notes","source_label":"private user content","visibility":"private","knowledge_class":"user_private_context"}`, 0.88, time.Now()))
+			AddRow("vec-private", "[user_private_context] Q2 cash-flow notes for tax planning", `{"artifact_title":"Personal Finance Notes","source_label":"private user content","visibility":"private","knowledge_class":"user_private_context"}`, 0.88, time.Now()).
+			AddRow("vec-reflection", "[reflection_synthesis] user trajectory shifted toward investor-ready media workflows", `{"artifact_title":"Investor Workflow Shift","source_label":"reflection synthesis","visibility":"private","knowledge_class":"reflection_synthesis"}`, 0.87, time.Now()))
 
 	registry := NewInternalToolRegistry(InternalToolDeps{
 		Brain: newFakeBrain(fakeMemoryProvider{embedVec: []float64{0.1, 0.2}}),
@@ -277,7 +278,7 @@ func TestBuildContext_IncludesDeploymentContextRecall(t *testing.T) {
 	})
 
 	text := registry.BuildContext("lead-alpha", "alpha", "lead", nil, nil, "Summarize our MCP security posture.")
-	if !strings.Contains(text, "Customer Context Store") || !strings.Contains(text, "Company Knowledge Store") || !strings.Contains(text, "Admin-Shaped Soma Context") || !strings.Contains(text, "User-Private Context Store") || !strings.Contains(text, "Security Brief") || !strings.Contains(text, "Deployment Playbook") || !strings.Contains(text, "Soma Output Contract") || !strings.Contains(text, "Personal Finance Notes") {
+	if !strings.Contains(text, "Customer Context Store") || !strings.Contains(text, "Company Knowledge Store") || !strings.Contains(text, "Admin-Shaped Soma Context") || !strings.Contains(text, "User-Private Context Store") || !strings.Contains(text, "Reflection / Synthesis Memory") || !strings.Contains(text, "Security Brief") || !strings.Contains(text, "Deployment Playbook") || !strings.Contains(text, "Soma Output Contract") || !strings.Contains(text, "Personal Finance Notes") || !strings.Contains(text, "Investor Workflow Shift") {
 		t.Fatalf("expected deployment context in build context, got %s", text)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
