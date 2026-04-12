@@ -82,6 +82,7 @@ Release posture:
 - `IN_REVIEW` browser proof for the MVP media/team output lane now covers direct Soma answer vs team-managed output package distinction, generated media artifact preview/save/download rendering, and Connected Tools MCP activity/library install visibility in focused Chromium specs.
 - `IN_REVIEW` Soma direct-answer hardening now treats weak provider fallback text such as "I can't assist with that right now" as a retry-worthy bad answer and returns a structured readable-reply blocker if the retry still fails, while preserving the existing governed-drift blocker for tool-call JSON, mutation drift, and unreadable structured replies.
 - `IN_REVIEW` admin-owned output-model routing now exposes behavior-review candidates and selection criteria from the local Ollama inventory: Soma can show owner-approved model-review guidance, prefer installed self-hosted candidates by detected output type when no model is pinned, and keep the media-engine boundary explicit instead of pretending text/vision models generate pixels or voice.
+- `COMPLETE` the live workflow browser certification pass is now green against the rebuilt Compose stack: Central Soma dashboard entry, AI Organization setup/re-entry, Launch Crew proposal/blocker/confirm, Soma governed mutation proof, guided team creation, temporary group retained-output lifecycle, MCP connected-tools workflow, settings, navigation, accessibility, and live workspace/group backend contracts all pass in serial Chromium (`81` passed, `10` intentionally skipped).
 - `NEXT` enterprise identity, approval workflows, and multi-user access management remain deferred beyond the free-node governance foundation; that deferred lane now has a sharper target contract: support SAML/OIDC-style federation and optional SCIM lifecycle sync, preserve local break-glass admins for self-hosted recovery, keep user management modular so it can be self-hosted or provided as a paid control layer, treat Soma as one organization-owned persona serving many authorized users through scoped privacy, audit, memory, and RAG access rules, and give the root admin an explicitly governed way to shape Soma's durable organization-level operating context and shared agent/output specificity without letting ordinary user chat silently redefine either. The current Settings -> People & Access contract now exposes the investor-review version of that layered story through persisted `product_edition`, `identity_mode`, and `shared_agent_specificity_owner` fields, and `/api/v1/user/me` now carries explicit principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`) plus a real self-hosted credential split between the named primary local admin and the optional break-glass recovery principal, without claiming the full enterprise runtime is finished.
 - `IN_REVIEW` the first admin-owned shared-Soma context lane now exists inside the governed deployment-context system: `soma_operating_context` is separate from ordinary Soma memory, `customer_context`, and `company_knowledge`, carries stricter governance defaults, can encode shared output-specificity guidance, and is intended to preserve root-admin ownership over durable organization-level Soma behavior without letting ordinary user chat redefine it.
 
@@ -679,20 +680,33 @@ Evidence:
 1. `interface/e2e/specs/navigation.spec.ts` now resets to `/dashboard` before each primary-route navigation, which removes the stale page-reuse assumption without widening the MVP route surface.
 2. Validation on 2026-03-22: `uv run inv interface.test` -> pass (`65` files, `404` tests), `uv run inv interface.typecheck` -> pass, `uv run inv interface.e2e` -> pass (`129` passed, `66` skipped), `uv run pytest tests/test_docs_links.py -q` -> pass (`37` passed).
 
+### 26. Live workflow browser certification
+
+Status:
+1. `COMPLETE` rebuilt the single-host Compose runtime from current source and revalidated the live browser workflows against the rebuilt frontend/core containers.
+2. `COMPLETE` aligned stale browser specs with the current Soma-first AI Organization workflow: dashboard setup entry now opens the hidden setup panel, Launch Crew lives behind `Create teams with Soma` / `Open crew launcher`, and recent-organization failure guidance is asserted inside the setup panel where the operator sees it.
+3. `COMPLETE` corrected the Launch Crew confirm proof so it no longer uses the high-impact groups approval shortcut as a fake token source. The test now obtains a real `/api/v1/chat` mutation proposal with stored `write_file` plan, feeds that proposal into the Launch Crew UI, confirms through `/api/v1/intent/confirm-action`, asserts durable verified execution proof, and removes generated QA files after the run.
+4. `COMPLETE` broad serial Chromium live workflow pass is green: `91` specs executed, `81` passed, `10` intentionally skipped. Covered workflows include Soma dashboard entry, AI Organization setup/re-entry, Launch Crew proposal/blocker/confirm, governed Soma mutation proof, guided team creation, temporary group retained-output lifecycle, MCP connected-tools workflow, settings, navigation, accessibility, and live workspace/group backend contracts.
+5. `IN_REVIEW` media remains a known environment boundary rather than a browser workflow failure: Compose health reports text cognitive online and media engine offline on the Windows host because the optional local Diffusers/vLLM helper lane is Linux/remote-endpoint oriented.
+
+Evidence:
+1. `uv run inv compose.health` on 2026-04-11 -> Core health OK, Template Engine OK, Brains API OK, Telemetry OK, Frontend OK, NATS Monitor OK, Cognitive Engine `text=online`, Media Engine `media=offline`.
+2. `cd interface; npx tsc --noEmit` -> pass.
+3. `cd interface; $env:PLAYWRIGHT_LIVE_BACKEND='1'; $env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3000'; $env:MYCELIS_BACKEND_WORKSPACE_ROOT='workspace/docker-compose/data/workspace'; npx playwright test e2e/specs/proposals.spec.ts --project=chromium --workers=1 --timeout=120000` -> pass (`4` passed).
+4. `cd interface; $env:PLAYWRIGHT_LIVE_BACKEND='1'; $env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3000'; $env:MYCELIS_BACKEND_WORKSPACE_ROOT='workspace/docker-compose/data/workspace'; npx playwright test --project=chromium --workers=1 --timeout=120000` -> pass (`81` passed, `10` skipped).
+
 ## Immediate Next Actions
 
 1. `NEXT` continue Phase 2 of the approval/product-trust lane: extend visible content/artifact value delivery beyond the first Launch Crew artifact-reference slice so drafting requests return inline value and durable outputs return explicit artifact references or previews wherever Soma surfaces the result.
 2. `REQUIRED` keep future delivery slices on clean committed checkpoints instead of mixed local batches.
    - do not reopen a large cross-surface dirty tree
    - prove each slice from committed state with the exact command set recorded here
-3. `NEXT` finish the live governed-chat stabilization lane.
-   - rerun `interface/e2e/specs/soma-governance-live.spec.ts` against a confirmed healthy local runtime stack
-   - verify weak provider fallback text is no longer accepted as a successful Soma answer in live chat
-   - restore selector parity with the current `Approve & Execute` / `Execute` UI contract
-4. `NEXT` rerun the full live-service gate once the governed lane is repaired.
-   - `uv run inv ci.service-check --live-backend`
-   - any additional focused live browser proof needed for the repaired path
-   - update this state file from `BLOCKED` only after those commands pass from committed state
+3. `NEXT` promote the now-green direct Playwright live workflow command into the preferred Invoke-managed service-check path once the Windows-managed Interface cleanup/start wrapper is fully reliable again.
+   - keep the current live-browser fallback documented for already-started Compose stacks
+   - avoid treating the media helper offline note as a text/Soma workflow blocker on Windows
+4. `NEXT` add live media-engine proof from WSL/Linux or a remote OpenAI-compatible media endpoint.
+   - verify actual generated image/object output, not only mocked artifact rendering
+   - keep the browser UI expectation unchanged: inline preview for renderable outputs, clickable artifact path for binary/download-only objects
 5. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
    - `README.md`
    - `docs/TESTING.md`

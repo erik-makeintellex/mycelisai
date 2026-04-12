@@ -190,10 +190,12 @@ To send directly to a specialist:
 
 For multi-step execution:
 
-1. Click `Launch Crew` in Workspace header.
-2. Provide mission intent.
-3. Review generated proposal.
-4. Confirm execution.
+1. Open the AI Organization workspace you want Soma to coordinate.
+2. Click `Create teams with Soma`.
+3. Click `Open crew launcher`.
+4. Provide mission intent.
+5. Review the generated proposal or blocker recovery guidance.
+6. Confirm execution when Soma returns a proposal.
 
 On success, a system message includes a run link (`/runs/{run_id}`).
 

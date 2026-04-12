@@ -11,8 +11,8 @@ test.describe('Mission Control Dashboard (/dashboard)', () => {
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
 
-        await expect(page.getByRole('heading', { name: 'Create AI Organization' })).toBeVisible();
-        await expect(page.getByText(/Use a starter that already defines a Team Lead/i)).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Work directly with Soma from the admin home/i })).toBeVisible();
+        await expect(page.getByText(/Talk to Soma first/i)).toBeVisible();
     });
 
     test('navigation rail is visible', async ({ page }) => {
@@ -22,11 +22,13 @@ test.describe('Mission Control Dashboard (/dashboard)', () => {
     });
 
     test('organization entry actions render', async ({ page }) => {
+        await page.getByRole('button', { name: 'Create or open AI Organizations' }).click();
         await expect(page.getByRole('button', { name: 'Start from template' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Start Empty', exact: true })).toBeVisible();
     });
 
     test('recent organization guidance renders', async ({ page }) => {
+        await page.getByRole('button', { name: 'Create or open AI Organizations' }).click();
         await expect(page.getByRole('heading', { name: 'Recent AI Organizations' })).toBeVisible();
         await expect(
             page.getByText(/Create the AI Organization first so Mycelis opens with structure, not a one-off assistant session\./i),

@@ -110,12 +110,14 @@ Soma detects this requires a multi-agent setup and delegates to the Architect. T
 
 For structured intent before starting a conversation:
 
-1. Click **Launch Crew** in the Workspace header
-2. Describe the mission goal in the Step 1 text field — be specific about:
+1. Open the relevant AI Organization workspace
+2. Click **Create teams with Soma**
+3. Click **Open crew launcher**
+4. Describe the mission goal in the Step 1 text field — be specific about:
    - What needs to be produced
    - What tools or data sources are involved
    - Any constraints (language, file paths, output format)
-3. Soma routes directly to blueprint generation — no pre-conversation needed
+5. Soma routes directly to blueprint generation — no pre-conversation needed
 
 ### Via API (Direct)
 

@@ -1683,11 +1683,11 @@ test.describe("V8 AI Organization entry flow", () => {
 
         await page.goto("/dashboard");
         await page.waitForLoadState("domcontentloaded");
+        await openOrganizationSetup(page);
 
         await expect(page.getByText("Recent AI Organizations are unavailable", { exact: true })).toBeVisible();
         await expect(page.getByText("You can still create a new AI Organization above while we retry your recent organizations.")).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry recent AI Organizations" })).toBeVisible();
-        await openOrganizationSetup(page);
         await clickStartMode(page, /Start from template/i);
         await expect(page.getByRole("button", { name: /Engineering Starter/i })).toBeVisible();
 

@@ -1,47 +1,100 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
 
-async function issueLiveConfirmToken(request: import('@playwright/test').APIRequestContext) {
-    const apiKey = process.env.MYCELIS_API_KEY;
-    if (!apiKey) {
-        throw new Error('MYCELIS_API_KEY is required for live-backend Launch Crew confirmation coverage');
+const repoRoot = path.resolve(__dirname, '../../..');
+
+function resolveBackendWorkspaceRoots() {
+    const configuredRoot =
+        process.env.PLAYWRIGHT_BACKEND_WORKSPACE_ROOT ?? process.env.MYCELIS_BACKEND_WORKSPACE_ROOT;
+    if (configuredRoot && configuredRoot.trim().length > 0) {
+        return [path.isAbsolute(configuredRoot) ? configuredRoot : path.join(repoRoot, configuredRoot)];
     }
 
-    const response = await request.post('http://127.0.0.1:8081/api/v1/groups', {
-        headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-        },
+    return [
+        path.join(repoRoot, 'workspace', 'docker-compose', 'data', 'workspace'),
+        path.join(repoRoot, 'core', 'workspace'),
+    ];
+}
+
+function resolveBackendLogTargets(filename: string) {
+    return resolveBackendWorkspaceRoots().map((workspaceRoot) => path.join(workspaceRoot, 'workspace', 'logs', filename));
+}
+
+function removeExistingTargets(paths: string[]) {
+    for (const candidate of paths) {
+        if (fs.existsSync(candidate)) {
+            fs.rmSync(candidate, { force: true });
+        }
+    }
+}
+
+async function issueLiveConfirmToken(page: import('@playwright/test').Page, targetPath: string) {
+    const response = await page.request.post('/api/v1/chat', {
         data: {
-            name: 'launch-crew-live-confirm',
-            goal_statement: 'Generate a live confirm token for Launch Crew browser verification',
-            work_mode: 'execute_with_approval',
-            allowed_capabilities: ['groups:write'],
-            member_user_ids: [],
-            team_ids: [],
-            coordinator_profile: 'admin',
-            approval_policy_ref: 'live-backend-test',
-            confirm_token: '',
+            messages: [
+                {
+                    role: 'user',
+                    content: `Create a simple python file named ${targetPath} that prints hello world.`,
+                },
+            ],
         },
     });
 
-    expect(response.status()).toBe(202);
-    const body = await response.json();
-    const data = body?.data ?? {};
-    const confirmToken = data?.confirm_token?.token;
-    const intentProofId = data?.intent_proof?.id;
+    const text = await response.text();
+    let body: any = null;
+    try {
+        body = JSON.parse(text);
+    } catch {
+        body = null;
+    }
+    expect(response.ok(), body ? JSON.stringify(body) : text).toBeTruthy();
+    expect(body?.data?.mode).toBe('proposal');
+
+    const proposal = body?.data?.payload?.proposal ?? {};
+    const confirmToken = proposal?.confirm_token;
+    const intentProofId = proposal?.intent_proof_id;
     expect(typeof confirmToken).toBe('string');
     expect(confirmToken.length).toBeGreaterThan(0);
     expect(typeof intentProofId).toBe('string');
     return { confirmToken, intentProofId };
 }
 
+async function createLiveOrganization(page: import('@playwright/test').Page) {
+    const response = await page.request.post('/api/v1/organizations', {
+        data: {
+            name: `Launch Crew E2E ${Date.now()}`,
+            purpose: 'Live Launch Crew browser verification',
+            start_mode: 'empty',
+        },
+    });
+    expect(response.ok()).toBeTruthy();
+    const body = await response.json();
+    const organizationId = body?.data?.id;
+    expect(typeof organizationId).toBe('string');
+    return organizationId as string;
+}
+
+async function openCrewLauncher(page: import('@playwright/test').Page) {
+    const organizationId = await createLiveOrganization(page);
+    await page.goto(`/organizations/${organizationId}`);
+    await page.waitForLoadState('domcontentloaded');
+    await page.getByRole('button', { name: 'Create teams with Soma' }).click();
+    await page.getByRole('button', { name: 'Open crew launcher' }).click();
+    return page.locator('.fixed.inset-0.z-50').last();
+}
+
 test.describe('Mission Proposal Entry Points', () => {
+    test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires live AI Organization workspace');
+
     test('workspace exposes launch controls for mission planning', async ({ page }) => {
-        await page.goto('/dashboard');
+        const organizationId = await createLiveOrganization(page);
+        await page.goto(`/organizations/${organizationId}`);
         await page.waitForLoadState('domcontentloaded');
 
-        await expect(page.locator('h1:has-text("Workspace")')).toBeVisible();
-        await expect(page.locator('button:has-text("Launch Crew"), button:has-text("Launch")').first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Soma for/i })).toBeVisible();
+        await page.getByRole('button', { name: 'Create teams with Soma' }).click();
+        await expect(page.getByRole('button', { name: 'Open crew launcher' })).toBeVisible();
     });
 
     test('launch crew reaches a proposal outcome and can be cancelled without executing', async ({ page }) => {
@@ -78,14 +131,10 @@ test.describe('Mission Proposal Entry Points', () => {
             });
         });
 
-        await page.goto('/dashboard');
-        await page.waitForLoadState('domcontentloaded');
-
-        await page.getByRole('button', { name: /Launch Crew/i }).click();
+        const modal = await openCrewLauncher(page);
         await page.getByPlaceholder('Describe the outcome you need...').fill('Create a documentation delivery crew');
         await page.getByRole('button', { name: /Send to Soma/i }).click();
 
-        const modal = page.locator('.fixed.inset-0.z-50').last();
         await expect(modal.getByText(/prepared a crew proposal/i)).toBeVisible();
         await expect(modal.getByText(/Create a documentation delivery crew/i)).toBeVisible();
         await expect(modal.getByRole('button', { name: /^Launch Crew$/i })).toBeVisible();
@@ -114,24 +163,22 @@ test.describe('Mission Proposal Entry Points', () => {
             });
         });
 
-        await page.goto('/dashboard');
-        await page.waitForLoadState('domcontentloaded');
-
-        await page.getByRole('button', { name: /Launch Crew/i }).click();
+        const modal = await openCrewLauncher(page);
         await page.getByPlaceholder('Describe the outcome you need...').fill('Launch a crew for deployment recovery');
         await page.getByRole('button', { name: /Send to Soma/i }).click();
 
-        const modal = page.locator('.fixed.inset-0.z-50').last();
         await expect(modal.getByText(/Launch Crew is blocked/i)).toBeVisible();
-        await expect(modal.getByText(/Soma chat blocked \(500\)/i)).toBeVisible();
+        await expect(modal.getByText(/Soma hit a server-side failure while handling the request/i)).toBeVisible();
         await expect(modal.getByRole('button', { name: /Revise request/i })).toBeVisible();
         await expect(modal.getByRole('button', { name: /Continue in chat/i })).toBeVisible();
     });
 
-    test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires a live Core backend');
-
-    test('launch crew confirm path returns durable proof when the live backend verifies execution', async ({ page, request }) => {
-        const { confirmToken, intentProofId } = await issueLiveConfirmToken(request);
+    test('launch crew confirm path returns durable proof when the live backend verifies execution', async ({ page }) => {
+        const filename = `qa_launch_crew_confirm_${Date.now()}.py`;
+        const targetPath = `workspace/logs/${filename}`;
+        const targetPaths = resolveBackendLogTargets(filename);
+        removeExistingTargets(targetPaths);
+        const { confirmToken, intentProofId } = await issueLiveConfirmToken(page, targetPath);
 
         await page.route('**/api/v1/chat', async (route) => {
             await route.fulfill({
@@ -157,33 +204,40 @@ test.describe('Mission Proposal Entry Points', () => {
             });
         });
 
-        await page.goto('/dashboard');
-        await page.waitForLoadState('domcontentloaded');
+        const modal = await openCrewLauncher(page);
+        try {
+            await page.getByPlaceholder('Describe the outcome you need...').fill('Create a live-backed workflow onboarding crew');
+            await page.getByRole('button', { name: /Send to Soma/i }).click();
 
-        await page.getByRole('button', { name: /Launch Crew/i }).click();
-        await page.getByPlaceholder('Describe the outcome you need...').fill('Create a live-backed workflow onboarding crew');
-        await page.getByRole('button', { name: /Send to Soma/i }).click();
+            await expect(modal.getByText(/prepared a crew proposal/i)).toBeVisible();
 
-        const modal = page.locator('.fixed.inset-0.z-50').last();
-        await expect(modal.getByText(/prepared a crew proposal/i)).toBeVisible();
+            const confirmResponsePromise = page.waitForResponse(
+                (response) =>
+                    response.url().includes('/api/v1/intent/confirm-action') &&
+                    response.request().method() === 'POST',
+            );
 
-        const confirmResponsePromise = page.waitForResponse(
-            (response) =>
-                response.url().includes('/api/v1/intent/confirm-action') &&
-                response.request().method() === 'POST',
-        );
+            await modal.getByRole('button', { name: /^Launch Crew$/i }).click();
 
-        await modal.getByRole('button', { name: /^Launch Crew$/i }).click();
+            const confirmResponse = await confirmResponsePromise;
+            const confirmText = await confirmResponse.text();
+            let confirmBody: any = null;
+            try {
+                confirmBody = JSON.parse(confirmText);
+            } catch {
+                confirmBody = null;
+            }
+            expect(confirmResponse.ok(), confirmBody ? JSON.stringify(confirmBody) : confirmText).toBeTruthy();
+            expect(confirmBody?.data?.confirmed).toBeTruthy();
 
-        const confirmResponse = await confirmResponsePromise;
-        expect(confirmResponse.ok()).toBeTruthy();
-        const confirmBody = await confirmResponse.json();
-        expect(confirmBody?.data?.confirmed).toBeTruthy();
+            expect(typeof confirmBody?.data?.run_id).toBe('string');
+            expect(confirmBody?.data?.run_id?.length ?? 0).toBeGreaterThan(0);
+            expect(confirmBody?.data?.verified).toBeTruthy();
+            expect(confirmBody?.data?.execution_state).toBe('verified');
 
-        expect(typeof confirmBody?.data?.run_id).toBe('string');
-        expect(confirmBody?.data?.run_id?.length ?? 0).toBeGreaterThan(0);
-        expect(confirmBody?.data?.verified).toBeTruthy();
-
-        await expect(modal.getByText(/Mission activated/i)).toBeVisible();
+            await expect(modal.getByText(/Mission activated/i)).toBeVisible();
+        } finally {
+            removeExistingTargets(targetPaths);
+        }
     });
 });
