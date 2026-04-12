@@ -12,6 +12,7 @@
 - [Current Local Model Inventory](#current-local-model-inventory)
 - [MVP Model Roles](#mvp-model-roles)
 - [Media Generation Boundary](#media-generation-boundary)
+- [Media Provider Contract](#media-provider-contract)
 - [Team-Managed Output Demonstration](#team-managed-output-demonstration)
 - [Conversation Template Registry](#conversation-template-registry)
 - [Workflow Proof Set](#workflow-proof-set)
@@ -92,6 +93,30 @@ This gives Soma a clean answer when a user asks for media:
 - if only Ollama is available, create the prompt pack, storyboard, image-review rubric, website assets, or implementation files that the available models can actually produce
 - if voice/audio is requested and no local audio engine is configured, return a blocker that names the missing engine and offers a local setup path rather than pretending the work completed
 
+## Media Provider Contract
+
+Media providers must support both local/self-hosted and hosted execution. Pinokio, ComfyUI, Stable Diffusion WebUI, and the repo's Diffusers server are local provider launch or endpoint options; Replicate, FLUX, DALL-E, ElevenLabs, and comparable API-backed services are hosted provider options.
+
+All provider paths must normalize into the same Soma-visible artifact contract:
+
+- provider identity: `provider_id`, provider kind (`local_process`, `local_http`, `mcp`, or `hosted_api`), endpoint origin, model/workflow id, and whether the provider was owner-configured or chosen by Soma for the output type
+- locality and exposure: `local_only`, `self_hosted_remote`, or `hosted_external`, plus whether user/customer/project context leaves the self-hosted boundary
+- credential posture: required environment variables, secret presence without secret echoing, and whether the provider requires owner approval before first use
+- cost and runtime posture: estimated cost class, long-running status, queue/run id where available, cancellation capability, and retry posture
+- output normalization: generated image/audio/video/document artifacts return previewable content when safe, saved paths or download URLs when binary, and lineage metadata that ties the artifact back to the team/run/provider
+- audit metadata: provider, model/workflow, request class, target team, source context class, and final artifact id must be visible in managed exchange/audit without exposing raw secrets or unnecessary prompt internals by default
+
+Hosted providers are not a fallback loophole. They are normal first-class media providers when the owner/admin configures them or approves their use for a specific output class. Soma should prefer local/self-hosted providers when policy says local-first, but it must also support hosted media providers when the user wants capability breadth, speed, or higher-quality output and the relevant credential/cost/external-exposure posture is acceptable.
+
+MVP provider routing order:
+
+- if the admin pins an output type to a provider, use that provider after checking health and required credentials
+- if no provider is pinned, prefer an online local/self-hosted provider that can produce the requested media type
+- if no local provider is online, present configured hosted providers as executable options with clear exposure/cost notes
+- if no executable provider exists, preserve value by returning the prompt pack, storyboard, team plan, and precise setup action instead of pretending media was generated
+
+Pinokio-style app launchers should be treated as local process supervisors and model/app installers, not as the media provider protocol itself. Mycelis should connect to the service Pinokio launches, such as a ComfyUI or Stable Diffusion WebUI HTTP endpoint, or register an MCP connector that calls that endpoint through the curated MCP library.
+
 ## Team-Managed Output Demonstration
 
 The MVP demonstration must show why a team-managed workflow is different from asking one agent to do everything.
@@ -161,7 +186,7 @@ The release proof should include both automated and visible-browser validation:
 
 - model inventory proof: UI/API can show configured output model routing and at least two popular local self-hostable candidates for each supported output family
 - direct-vs-team proof: one prompt returns a direct inline Soma answer, while a deliverable-package prompt produces a team-managed output contract. `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` now covers this as a mocked browser proof.
-- media proof: image request either returns a real image artifact from the configured media endpoint or a clear missing-engine blocker with next setup action. `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` now covers preview/save/download rendering with generated media artifact payloads; live configured-engine proof remains separate.
+- media proof: image request either returns a real image artifact from the configured local/self-hosted or hosted media provider, or a clear missing-engine / missing-credential / approval-needed blocker with next setup action. `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` now covers preview/save/download rendering with generated media artifact payloads; live configured-provider proof remains separate.
 - website proof: generated website assets are returned as readable files/artifacts, not as invisible agent chatter
 - voice proof: if no local audio engine exists, the UI shows an honest missing-engine blocker; once an engine exists, it must return an audio artifact or playback/download reference
 - MCP proof: a team workflow uses an MCP-backed capability and the operator can see which MCP service/tool was used in the connected-tools/activity surface. `interface/e2e/specs/mcp-connected-tools.spec.ts` now covers the Connected Tools browser side for persisted activity, expanded server tools, and curated install; live team-run-to-MCP activity correlation remains separate.
@@ -179,3 +204,4 @@ Recommended order:
 5. `IN_REVIEW` add media smoke proof that either returns an artifact or a precise missing-engine blocker; mocked browser proof now covers artifact preview/save/download, and live configured-engine proof remains `NEXT`.
 6. `IN_REVIEW` add MCP usage proof tied to connected-tools activity; browser proof now covers the Connected Tools side, and live team-run-to-MCP correlation remains `NEXT`.
 7. `NEXT` validate candidate Ollama model additions on target hardware before adding them to default catalog recommendations.
+8. `NEXT` implement a provider registry for media execution that supports local Diffusers, Pinokio-launched ComfyUI / Stable Diffusion endpoints, MCP-backed media servers, and hosted providers with explicit credential, cost, locality, and audit metadata.
