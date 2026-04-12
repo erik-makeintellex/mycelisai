@@ -60,6 +60,7 @@ func TestApplyEnvOverrides_CreatesProviderAndMedia(t *testing.T) {
 	t.Setenv("MYCELIS_MEDIA_LOCATION", "local")
 	t.Setenv("MYCELIS_MEDIA_DATA_BOUNDARY", "local_only")
 	t.Setenv("MYCELIS_MEDIA_USAGE_POLICY", "local_first")
+	t.Setenv("MYCELIS_MEDIA_API_KEY_ENV", "LOCAL_MEDIA_API_KEY")
 	t.Setenv("MYCELIS_MEDIA_ENABLED", "true")
 
 	cfg := &BrainConfig{}
@@ -104,6 +105,9 @@ func TestApplyEnvOverrides_CreatesProviderAndMedia(t *testing.T) {
 	}
 	if cfg.Media.Provider.UsagePolicy != "local_first" {
 		t.Fatalf("expected media provider usage policy override, got %q", cfg.Media.Provider.UsagePolicy)
+	}
+	if cfg.Media.Provider.AuthKeyEnv != "LOCAL_MEDIA_API_KEY" {
+		t.Fatalf("expected media provider auth env override, got %q", cfg.Media.Provider.AuthKeyEnv)
 	}
 	if !cfg.Media.Provider.IsEnabled() {
 		t.Fatal("expected media provider enabled override to be true")

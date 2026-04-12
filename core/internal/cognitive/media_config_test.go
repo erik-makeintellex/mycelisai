@@ -76,6 +76,22 @@ func TestNormalizeMediaConfig_ExplicitFalseRemainsDisabled(t *testing.T) {
 	}
 }
 
+func TestNormalizeMediaConfig_PartialConfigIsNotGenerationReady(t *testing.T) {
+	cfg := NormalizeMediaConfig(MediaConfig{
+		Endpoint: "http://127.0.0.1:8001/v1",
+	})
+
+	if cfg.Provider.IsEnabled() {
+		t.Fatal("expected provider to stay disabled until endpoint and model are both configured")
+	}
+	if cfg.IsConfigured() {
+		t.Fatal("expected endpoint-only media config to be incomplete")
+	}
+	if cfg.IsReadyForGeneration() {
+		t.Fatal("expected endpoint-only media config to be not ready for generation")
+	}
+}
+
 func boolPtr(value bool) *bool {
 	return &value
 }

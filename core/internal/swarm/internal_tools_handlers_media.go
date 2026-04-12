@@ -41,6 +41,9 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 		return "", fmt.Errorf("failed to create image request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	if authKey := strings.TrimSpace(os.Getenv(strings.TrimSpace(media.AuthKeyEnv))); authKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+authKey)
+	}
 	resp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return "", fmt.Errorf("media engine unreachable: %w", err)

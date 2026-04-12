@@ -1166,7 +1166,7 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 		DataBoundary      string `json:"data_boundary,omitempty"`
 		UsagePolicy       string `json:"usage_policy,omitempty"`
 		Configured        bool   `json:"configured,omitempty"`
-		Enabled           bool   `json:"enabled"`
+		Enabled           *bool  `json:"enabled,omitempty"`
 		Detail            string `json:"detail,omitempty"`
 		RecommendedAction string `json:"recommended_action,omitempty"`
 		SetupRequired     bool   `json:"setup_required,omitempty"`
@@ -1213,6 +1213,7 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 	// Probe media engine
 	if cfg.Media != nil {
 		media := cfg.Media.EffectiveProvider()
+		mediaEnabled := media.IsEnabled()
 		result["media"] = &engineStatus{
 			Status:       "offline",
 			Endpoint:     media.Endpoint,
@@ -1223,11 +1224,14 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 			DataBoundary: media.DataBoundary,
 			UsagePolicy:  media.UsagePolicy,
 			Configured:   cfg.Media.IsConfigured(),
-			Enabled:      media.IsEnabled(),
+			Enabled:      &mediaEnabled,
 		}
 
-		if !media.IsEnabled() {
+		if !mediaEnabled {
 			result["media"].Status = "disabled"
+		} else if media.Location == cognitive.DefaultMediaRemoteLocation {
+			result["media"].Status = "configured"
+			result["media"].Detail = "Hosted media provider is configured; live provider health is checked during generation."
 		} else if strings.TrimSpace(media.Endpoint) != "" {
 			healthURL := strings.TrimSuffix(media.Endpoint, "/v1") + "/health"
 			ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)

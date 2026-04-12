@@ -11,6 +11,7 @@ type Tab = "installed" | "library";
 export default function MCPToolRegistry() {
     const mcpServers = useCortexStore((s) => s.mcpServers);
     const isFetching = useCortexStore((s) => s.isFetchingMCPServers);
+    const mcpServersError = useCortexStore((s) => s.mcpServersError);
     const mcpActivity = useCortexStore((s) => s.mcpActivity);
     const isFetchingActivity = useCortexStore((s) => s.isFetchingMCPActivity);
     const fetchMCPServers = useCortexStore((s) => s.fetchMCPServers);
@@ -22,7 +23,8 @@ export default function MCPToolRegistry() {
 
     const [activeTab, setActiveTab] = useState<Tab>("installed");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
-    const isEmptyInstalledState = !isFetching && mcpServers.length === 0;
+    const isRegistryErrorState = !isFetching && Boolean(mcpServersError);
+    const isEmptyInstalledState = !isFetching && !mcpServersError && mcpServers.length === 0;
 
     useEffect(() => {
         fetchMCPServers();
@@ -192,6 +194,20 @@ export default function MCPToolRegistry() {
                             </div>
                         )}
 
+                        {isRegistryErrorState && (
+                            <div className="rounded-xl border border-cortex-danger/25 bg-cortex-danger/10 px-4 py-3">
+                                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-danger">
+                                    MCP registry unreachable
+                                </p>
+                                <p className="mt-1 text-xs font-mono leading-5 text-cortex-text-main">
+                                    Connected Tools could not confirm installed MCP servers, so this is not treated as an empty registry.
+                                </p>
+                                <p className="mt-2 text-[10px] font-mono leading-5 text-cortex-text-muted">
+                                    {mcpServersError}
+                                </p>
+                            </div>
+                        )}
+
                         {installNotice && (
                             <div className="rounded-xl border border-cortex-success/25 bg-cortex-success/10 px-4 py-3">
                                 <p className="text-xs font-mono leading-5 text-cortex-text-main">{installNotice}</p>
@@ -247,7 +263,7 @@ export default function MCPToolRegistry() {
                         )}
 
                         {/* Empty State */}
-                        {!isFetching && mcpServers.length === 0 && (
+                        {isEmptyInstalledState && (
                             <div className="flex flex-col items-center justify-center py-24 text-cortex-text-muted">
                                 <Wrench className="w-12 h-12 mb-3 opacity-20" />
                                 <p className="text-sm font-mono">No MCP servers installed.</p>

@@ -62,6 +62,7 @@ const initialResourcesState: StripActions<CortexResourcesContract> = {
     selectedArtifactDetail: null,
     mcpServers: [],
     isFetchingMCPServers: false,
+    mcpServersError: null,
     mcpActivity: [],
     isFetchingMCPActivity: false,
     mcpTools: [],

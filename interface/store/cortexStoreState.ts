@@ -96,6 +96,7 @@ export interface CortexResourcesContract {
     selectedArtifactDetail: Artifact | null;
     mcpServers: MCPServerWithTools[];
     isFetchingMCPServers: boolean;
+    mcpServersError: string | null;
     mcpActivity: MCPActivityEntry[];
     isFetchingMCPActivity: boolean;
     mcpTools: MCPTool[];

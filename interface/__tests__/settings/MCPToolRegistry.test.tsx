@@ -59,6 +59,7 @@ describe('MCPToolRegistry', () => {
         useCortexStore.setState({
             mcpServers: [],
             isFetchingMCPServers: false,
+            mcpServersError: null,
             mcpActivity: [],
             isFetchingMCPActivity: false,
             fetchMCPServers: vi.fn(),
@@ -109,6 +110,18 @@ describe('MCPToolRegistry', () => {
         fireEvent.click(screen.getByText('BROWSE LIBRARY'));
 
         expect(screen.getByTestId('library-browser')).toBeDefined();
+    });
+
+    it('separates registry failures from a true empty installed state', () => {
+        useCortexStore.setState({
+            mcpServers: [],
+            mcpServersError: 'MCP registry unreachable (HTTP 500)',
+        });
+
+        render(<MCPToolRegistry />);
+
+        expect(screen.getByText('MCP registry unreachable')).toBeDefined();
+        expect(screen.queryByText('No MCP servers installed.')).toBeNull();
     });
 
     it('surfaces recent MCP activity from persisted history', () => {

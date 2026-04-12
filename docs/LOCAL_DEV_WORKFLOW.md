@@ -71,6 +71,7 @@ cp .env.example .env
 | `MYCELIS_PROFILE_<PROFILE>_PROVIDER` | — | Route a profile to a provider from env. Example: `MYCELIS_PROFILE_CHAT_PROVIDER=local_ollama_dev` |
 | `MYCELIS_MEDIA_ENDPOINT` | — | Override the image/media engine endpoint |
 | `MYCELIS_MEDIA_MODEL_ID` | — | Override the image/media model id |
+| `MYCELIS_MEDIA_API_KEY_ENV` | — | Point a hosted or protected media provider at an env var containing the API key |
 | **Database** | | |
 | `DB_HOST` | `127.0.0.1` | PostgreSQL host (localhost via bridge, or K8s service name in-cluster) |
 | `DB_PORT` | `5432` | PostgreSQL port |
@@ -116,6 +117,8 @@ cp .env.example .env
 ### `core/config/cognitive.yaml` — LLM Provider Routing
 
 Defines which LLM providers are available and which profiles route to them.
+
+Python dependency resolution is pinned by the tracked root `uv.lock`. Regenerate it intentionally with `uv lock` after changing `pyproject.toml`, then run `uv lock --check` before release handoff.
 
 ```yaml
 providers:

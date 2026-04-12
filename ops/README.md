@@ -34,6 +34,7 @@ Recommended host posture:
 
 - Use `uv run inv install --optional-engines` when you also want the local `cognitive/` extras.
 - Use `uv run inv cognitive.install` if you want only the optional local engine dependencies.
+- The root `uv.lock` is tracked for reproducible Python automation; update it intentionally with `uv lock` after dependency changes and verify with `uv lock --check` before release handoff.
 
 ### `version.py` (Identity)
 Calculates the **Immutable Tag**: `v{SEMVER}-{SHA}`.

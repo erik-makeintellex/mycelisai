@@ -97,6 +97,12 @@ func applyEnvOverrides(config *BrainConfig) {
 			}
 			config.Media.Provider.UsagePolicy = strings.ToLower(value)
 			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_USAGE_POLICY=%s", value)
+		case "MYCELIS_MEDIA_API_KEY_ENV":
+			if config.Media == nil {
+				config.Media = &MediaConfig{}
+			}
+			config.Media.Provider.AuthKeyEnv = value
+			log.Printf("DEBUG: Applied media env override MYCELIS_MEDIA_API_KEY_ENV=%s", value)
 		case "MYCELIS_MEDIA_ENABLED":
 			if config.Media == nil {
 				config.Media = &MediaConfig{}

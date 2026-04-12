@@ -63,8 +63,6 @@ full_migration.sql
 migration-pod.yaml
 seeds.sql
 
-uv.lock
-
 # Local agent/session artifacts
 .claude/
 .claude/settings.local.json

@@ -33,7 +33,12 @@ func (cfg MediaConfig) EffectiveProvider() MediaProviderConfig {
 
 func (cfg MediaConfig) IsConfigured() bool {
 	normalized := NormalizeMediaConfig(cfg).Provider
-	return strings.TrimSpace(normalized.Endpoint) != "" || strings.TrimSpace(normalized.ModelID) != ""
+	return strings.TrimSpace(normalized.Endpoint) != "" && strings.TrimSpace(normalized.ModelID) != ""
+}
+
+func (cfg MediaConfig) IsReadyForGeneration() bool {
+	normalized := NormalizeMediaConfig(cfg).Provider
+	return normalized.IsEnabled() && strings.TrimSpace(normalized.Endpoint) != "" && strings.TrimSpace(normalized.ModelID) != ""
 }
 
 func (cfg MediaProviderConfig) normalized(legacyEndpoint, legacyModelID string) MediaProviderConfig {
@@ -67,7 +72,7 @@ func (cfg MediaProviderConfig) normalized(legacyEndpoint, legacyModelID string) 
 		}
 	}
 	if cfg.Enabled == nil {
-		enabled := strings.TrimSpace(cfg.Endpoint) != "" || strings.TrimSpace(cfg.ModelID) != ""
+		enabled := strings.TrimSpace(cfg.Endpoint) != "" && strings.TrimSpace(cfg.ModelID) != ""
 		cfg.Enabled = &enabled
 	}
 	return cfg

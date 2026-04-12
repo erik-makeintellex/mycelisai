@@ -506,6 +506,7 @@ defaults:
 | `MYCELIS_PROFILE_<PROFILE>_PROVIDER` | — | Route a profile to a provider via env |
 | `MYCELIS_MEDIA_ENDPOINT` | — | Override media/image endpoint |
 | `MYCELIS_MEDIA_MODEL_ID` | — | Override media/image model id |
+| `MYCELIS_MEDIA_API_KEY_ENV` | — | Point a hosted or protected media provider at an env var containing the API key |
 | `MYCELIS_LOCAL_ADMIN_USERNAME` | `admin` | Primary self-hosted local-admin principal name behind `MYCELIS_API_KEY` |
 | `MYCELIS_LOCAL_ADMIN_USER_ID` | `00000000-0000-0000-0000-000000000000` | Stable internal id for the primary self-hosted local-admin principal |
 | `MYCELIS_BREAK_GLASS_API_KEY` | — | Optional dedicated break-glass credential for self-hosted hybrid/federated recovery |

@@ -126,6 +126,7 @@ media:
         location: local
         data_boundary: local_only
         usage_policy: local_first
+        api_key_env: ""
         enabled: true
     endpoint: http://127.0.0.1:8001/v1
     model_id: stable-diffusion-xl

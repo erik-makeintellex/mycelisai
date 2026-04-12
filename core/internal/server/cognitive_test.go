@@ -140,6 +140,78 @@ func TestHandleCognitiveStatus_ExposesTypedMediaProviderContract(t *testing.T) {
 	}
 }
 
+func TestHandleCognitiveStatus_DoesNotExposeTextEnabledFalse(t *testing.T) {
+	s := &AdminServer{
+		Cognitive: &cognitive.Router{
+			Config: &cognitive.BrainConfig{},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	text, ok := resp["text"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected text status object, got %T", resp["text"])
+	}
+	if _, ok := text["enabled"]; ok {
+		t.Fatalf("text status should not expose media-only enabled flag: %#v", text)
+	}
+}
+
+func TestHandleCognitiveStatus_HostedMediaProviderReportsConfiguredWithoutHealthProbe(t *testing.T) {
+	mediaEnabled := true
+	s := &AdminServer{
+		Cognitive: &cognitive.Router{
+			Config: &cognitive.BrainConfig{
+				Media: &cognitive.MediaConfig{
+					Provider: cognitive.MediaProviderConfig{
+						ProviderID: "replicate",
+						Type:       "hosted_api",
+						Endpoint:   "https://api.replicate.example/v1",
+						ModelID:    "sdxl",
+						Enabled:    &mediaEnabled,
+					},
+				},
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/cognitive/status", nil)
+	rr := httptest.NewRecorder()
+
+	http.HandlerFunc(s.HandleCognitiveStatus).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp map[string]any
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	media, ok := resp["media"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected media status object, got %T", resp["media"])
+	}
+	if media["status"] != "configured" {
+		t.Fatalf("media status = %v, want configured", media["status"])
+	}
+	if media["location"] != "remote" {
+		t.Fatalf("media location = %v, want remote", media["location"])
+	}
+}
+
 func TestHandleCognitiveStatus_MediaProviderCanBeExplicitlyDisabled(t *testing.T) {
 	mediaEnabled := false
 	s := &AdminServer{

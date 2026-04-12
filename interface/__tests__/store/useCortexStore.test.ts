@@ -336,6 +336,16 @@ describe('useCortexStore', () => {
             await store.getState().fetchMCPServers();
 
             expect(store.getState().mcpServers).toEqual(servers);
+            expect(store.getState().mcpServersError).toBeNull();
+        });
+
+        it('records MCP server fetch failures separately from empty registry state', async () => {
+            mockFetch.mockResolvedValue({ ok: false, status: 500 });
+
+            await store.getState().fetchMCPServers();
+
+            expect(store.getState().mcpServers).toEqual([]);
+            expect(store.getState().mcpServersError).toContain('HTTP 500');
         });
 
         it('deleteMCPServer removes from store', async () => {

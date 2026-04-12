@@ -39,18 +39,19 @@ export function createCortexMcpSlice(
 > {
     return {
         fetchMCPServers: async () => {
-            set({ isFetchingMCPServers: true });
+            set({ isFetchingMCPServers: true, mcpServersError: null });
             try {
                 const res = await fetch('/api/v1/mcp/servers');
                 if (res.ok) {
                     const payload = await res.json();
                     const data = extractApiData<MCPServerWithTools[] | unknown>(payload);
-                    set({ mcpServers: Array.isArray(data) ? data : [], isFetchingMCPServers: false });
+                    set({ mcpServers: Array.isArray(data) ? data : [], isFetchingMCPServers: false, mcpServersError: null });
                 } else {
-                    set({ mcpServers: [], isFetchingMCPServers: false });
+                    set({ mcpServers: [], isFetchingMCPServers: false, mcpServersError: `MCP registry unreachable (HTTP ${res.status})` });
                 }
-            } catch {
-                set({ mcpServers: [], isFetchingMCPServers: false });
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'network error';
+                set({ mcpServers: [], isFetchingMCPServers: false, mcpServersError: `MCP registry unreachable (${message})` });
             }
         },
 
