@@ -23,6 +23,7 @@ Canonical ownership reminder:
 - [Final Production Architecture (V8.2)](#final-production-architecture-v82)
 - [Current Release Target (V8.1)](#current-release-target-v81)
 - [Current Implementation State](#current-implementation-state)
+- [Compact Team Orchestration](#compact-team-orchestration)
 - [Default And Advanced Surfaces](#default-and-advanced-surfaces)
 - [Architecture Terms To Operator Terms](#architecture-terms-to-operator-terms)
 - [Detailed Framework Memory](#detailed-framework-memory)
@@ -94,12 +95,13 @@ For someone using Mycelis rather than changing the codebase, start here:
 1. [Docs Navigation](docs/README.md)
 2. [Core Concepts](docs/user/core-concepts.md)
 3. [Using Soma Chat](docs/user/soma-chat.md)
-4. [Governance & Trust](docs/user/governance-trust.md)
-5. [Automations](docs/user/automations.md)
-6. [Resources](docs/user/resources.md)
-7. [Memory](docs/user/memory.md)
-8. [System Status & Recovery](docs/user/system-status-recovery.md)
-9. [Run Timeline](docs/user/run-timeline.md)
+4. [Teams](docs/user/teams.md)
+5. [Governance & Trust](docs/user/governance-trust.md)
+6. [Automations](docs/user/automations.md)
+7. [Resources](docs/user/resources.md)
+8. [Memory](docs/user/memory.md)
+9. [System Status & Recovery](docs/user/system-status-recovery.md)
+10. [Run Timeline](docs/user/run-timeline.md)
 
 Operator guidance rule:
 - user guidance should explain how to get value from Soma, organizations, approvals, artifacts, and settings without assuming architecture knowledge
@@ -213,6 +215,7 @@ Current operator experience summary:
 - the default Soma conversation hides raw broadcast and direct-council routing controls until Advanced mode is intentionally opened
 - that same Soma conversation surface is also the canonical operator output lane for imagery, briefs, charts, code, and other rich artifacts, even when specialist or council paths generated them on Soma's behalf
 - team design now lives as a guided Soma mode inside that same workspace so the operator can stay in one continuous interaction context
+- team design defaults to small focused teams; broad asks should be split into several compact lanes or teams orchestrated by Soma with Council help over NATS and managed exchange rather than turning into one giant roster
 - advanced Resources support now includes an inspect-only Managed Exchange surface for channels, active threads, and recent normalized outputs
 - advanced Resources now also includes Deployment Context intake so operators can upload/paste private user records, customer context, approved company knowledge, and admin-shaped Soma guidance into governed pgvector stores with explicit trust, sensitivity, visibility, and target-goal posture
 - Soma always presents guided starting actions instead of a dead-end blank state
@@ -271,6 +274,16 @@ Contract rule:
 - the default UX must stay simple and intent-first
 - the advanced architecture/runtime surface must stay separate, make inheritance legible, and make config origin legible
 - the advanced layer must not replace bundle/file/env/runtime truth or collapse the Soma-primary MVP into a config dashboard
+
+## Compact Team Orchestration
+
+Team creation should stay compact by default:
+- a normal team should have a small focused lead and a handful of specialists
+- broad asks should become several small teams or lane bundles rather than one oversized roster
+- Soma remains the root orchestrator that can split work, coordinate lanes, and pull Council in when specialist review helps
+- NATS and managed exchange are the communication and observability fabric for that coordination story
+
+The user-facing rule is simple: if the work is broad, the product should split it cleanly instead of scaling the roster until it becomes hard to understand or test.
 
 Implementation note:
 - V8.1 currently ships the default operator surface plus bounded guided controls and inspect-only detail where explicitly called out in `V8_DEV_STATE.md`

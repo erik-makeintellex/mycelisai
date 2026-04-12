@@ -74,6 +74,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Advanced tools, workspace files, AI engines, and governed private/deployment context",
             },
             {
+                slug: "teams-guide",
+                label: "Teams",
+                path: "docs/user/teams.md",
+                description: "Compact team defaults, broad-ask splitting, and lead-centered team workflows",
+            },
+            {
                 slug: "memory-guide",
                 label: "Memory",
                 path: "docs/user/memory.md",
@@ -248,6 +254,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "Current Release Architecture (V8.1)",
                 path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
                 description: "Current bounded release architecture for loops, continuity, capabilities, and bounded automations",
+            },
+            {
+                slug: "v8-compact-team-orchestration-defaults",
+                label: "V8 Compact Team Orchestration",
+                path: "docs/architecture-library/V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md",
+                description: "Compact-team defaults, broad-ask splitting, and Soma/Council orchestration over NATS",
             },
             {
                 slug: "v8-universal-soma-context-model",

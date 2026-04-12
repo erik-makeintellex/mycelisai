@@ -13,6 +13,7 @@ Current validation contract:
 - use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
+- team-creation and orchestration changes must prove the compact-default rule: small teams by default, broad asks split into several smaller lanes, and the coordination path remains visible through Soma/Council/NATS rather than being hidden in a giant roster
 
 Canonical full-gate references:
 - use this document for the ordered release-style testing pass across repo baseline, stable browser proof, live service/browser proof, and compose-aware runtime proof
@@ -55,6 +56,22 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/teams` team roster + specialization hub | `TeamsPage.test.tsx`, `pages/TeamsPage.test.tsx` | `teams.spec.ts` | `ACTIVE` |
 | `/teams/create` guided team-creation workflow | `TeamCreationPage.test.tsx`, `TeamLeadInteractionPanel.test.tsx`, `pages/CreateTeamPage.test.tsx` | `team-creation.spec.ts` | `ACTIVE` |
 | Legacy redirect routes (`/wiring`, `/architect`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
+
+### Team-Creation / Compact-Default Test Contract
+
+When the work changes team defaults or team shaping behavior, add proof across four layers:
+
+- backend contract: verify the guidance response or routing contract keeps ordinary requests compact and splits broad asks into multiple smaller lanes instead of one giant team
+- UI workflow: verify the creation surface explains the compact default and shows the broad-ask split clearly enough for an operator to understand the plan
+- NATS/exchange observability: verify that multi-team orchestration stays inspectable through governed status/result/review surfaces and that lane handoffs remain visible
+- browser workflow: verify a real headed browser path can create a focused team, review the lead, and confirm the broad-ask case becomes multiple compact lanes with retained outputs rather than a monolithic roster
+
+Recommended evidence targets:
+- `uv run inv core.test`
+- `cd interface; npx vitest run __tests__/teams/TeamCreationPage.test.tsx __tests__/organizations/TeamLeadInteractionPanel.test.tsx --reporter=dot`
+- `cd interface; npx tsc --noEmit`
+- `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts`
+- a live-backend browser proof if the slice changes runtime coordination or retained-output behavior
 
 Immediate test additions required for stronger full-stack confidence:
 1. `COMPLETE` add a focused Connected Tools browser proof for MCP registry/library/activity visibility beyond component coverage.

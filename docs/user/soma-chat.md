@@ -49,6 +49,7 @@ Team workspaces are different from the root Soma workspace:
 - the `Teams` page is where admins review available teams, open focused lead workspaces, and define the reusable member templates Soma should apply when creating new team members
 - the dedicated guided team-creation workflow now lives at `/teams/create`, so detailed team creation is a step-by-step Soma lane instead of a dense roster-side form
 - when Soma returns a native execution path there, the same lane can now launch a temporary workflow group directly, hand you into `Groups`, and continue through archive/closure while keeping retained outputs reviewable
+- team defaults should stay compact unless the request is genuinely broad; broad asks should usually become several small teams or lanes coordinated by Soma and Council over NATS and managed exchange instead of one oversized roster
 - entering a created team should center the team's focused lead entity first
 - that team lead can still coordinate back through Soma using scoped memory, RAG retrieval, and broader organization context when needed
 - the team's lead and specialists inherit the organization output-model policy unless an admin changes it
