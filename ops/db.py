@@ -50,7 +50,7 @@ def _load_env():
             raise
         raise SystemExit(
             "Missing python-dotenv in the current invoke environment. "
-            "Run tasks with 'uv run inv ...' or '.\\.venv\\Scripts\\inv.exe ...'; "
+            "Run tasks with 'uv run inv ...'; "
             "do not use 'uvx --from invoke inv ...'."
         ) from exc
     load_dotenv(str(ROOT_DIR / ".env"))

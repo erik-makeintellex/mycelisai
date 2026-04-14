@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
-> Updated: 2026-04-12
+> Updated: 2026-04-13
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -19,6 +19,15 @@ Use this file to track:
 - immediate next actions
 
 Use `V7_DEV_STATE.md` only as a migration input and historical checkpoint source while V7 planning artifacts are being migrated.
+
+## WSL/Linux Handoff Baseline
+
+- `ACTIVE` WSL/Linux/macOS is now the canonical local development posture for ongoing work unless a slice is explicitly Kubernetes-specific. Use the Compose path first, keep Kind/Kubernetes as a secondary validation lane, and prefer a WSL-native clone or worktree over reusing a Windows-generated environment.
+- `ACTIVE` the canonical runner contract stays narrow on WSL: use `uv run inv ...` for real work, use `uvx --from invoke inv -l` only as a compatibility probe, and treat raw `npx`, direct Playwright, and PowerShell wrappers as troubleshooting-only historical fallbacks rather than the normal proof path.
+- `ACTIVE` when moving a working copy from Windows to WSL/Linux/macOS, recreate `.venv`, `interface/node_modules`, and `interface/.next` before trusting any test or build result. Do not share one long-lived generated environment across Windows and WSL toolchains.
+- `ACTIVE` current WSL bring-up order is `.env.compose` -> `uv run inv auth.posture --compose` -> `uv run inv install` -> optional `uv run inv compose.infra-up --wait-timeout=180` / `uv run inv compose.infra-health` -> `uv run inv compose.migrate` -> `uv run inv compose.storage-health` -> `uv run inv compose.up --build --wait-timeout=240` -> `uv run inv compose.health`.
+- `ACTIVE` current WSL validation gate is `uv run inv ci.baseline`, `uv run inv ci.service-check --live-backend`, and `uv run inv ci.release-preflight --service-health --live-backend`. Compose-backed live browser specs that assert filesystem outputs should set `MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace` when the spec checkout differs from the running backend worktree.
+- `COMPLETE` current repo/runtime checkpoint for the handoff is clean and quiet: Mycelis Compose services were brought down without deleting volumes, `uv run inv compose.status` last reported PostgreSQL, NATS, NATS Monitor, Core API, and Frontend as `DOWN`, and the only remaining matching listener found during cleanup was the non-Mycelis host `ToolkitService` on `30002`, which was intentionally left untouched.
 
 ## Layered Architecture Truth
 

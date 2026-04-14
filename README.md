@@ -74,6 +74,12 @@ Fresh-agent review rule:
 - [V8 Development State](V8_DEV_STATE.md) is the live implementation scoreboard.
 - V7 documents remain migration inputs until replaced, but they do not override the V8 bootstrap and release truth.
 
+WSL/Linux Codex handoff rule:
+- treat WSL/Linux/macOS as the canonical active development path unless the slice is explicitly Windows-native or Kubernetes-specific
+- use `.env.compose` plus the Compose task path first, not the Windows Kind/lifecycle flow
+- trust the same Invoke task names and architecture docs across hosts, but treat older Windows PowerShell snippets and fallback evidence as historical troubleshooting notes rather than the normal command syntax
+- when switching from a Windows working copy, recreate `.venv`, `interface/node_modules`, and `interface/.next` before trusting results
+
 Bootstrap reminder:
 - treat `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the canonical V7->V8 migration and bootstrap contract, not just another planning note
 - always translate V7 YAML, runtime config, DB seeding, and operator wizard flows through that model before they touch a live organization

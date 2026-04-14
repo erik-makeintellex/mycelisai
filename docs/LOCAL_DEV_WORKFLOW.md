@@ -15,6 +15,7 @@
 - [Prerequisites](#prerequisites)
 - [Configuration Reference](#configuration-reference)
 - [Recommended Host Paths](#recommended-host-paths)
+- [WSL/Linux Codex Handoff](#wsllinux-codex-handoff)
 - [Quick Start Paths](#quick-start-paths)
 - [First-Time Setup](#first-time-setup)
 - [Daily Startup Sequence](#daily-startup-sequence)
@@ -258,6 +259,25 @@ If you switch host environments:
 - recreate `interface/node_modules`
 - recreate `interface/.next`
 
+## WSL/Linux Codex Handoff
+
+Use this as the canonical resume path when active development moves to WSL/Linux/macOS:
+
+1. Start from a WSL-native clone or worktree, not a mixed Windows-generated environment.
+2. Recreate `.venv`, `interface/node_modules`, and `interface/.next` if the checkout was ever used from Windows.
+3. Copy `.env.compose.example` to `.env.compose` and set `MYCELIS_COMPOSE_OLLAMA_HOST` deliberately for the real model host.
+4. Run `uv run inv auth.posture --compose`.
+5. Run `uv run inv install`.
+6. For personal-owner or data-plane-first validation, use `uv run inv compose.infra-up --wait-timeout=180`, `uv run inv compose.infra-health`, `uv run inv compose.migrate`, and `uv run inv compose.storage-health`.
+7. For the normal full-stack path, use `uv run inv compose.up --build --wait-timeout=240`, then `uv run inv compose.health`.
+8. Use `uv run inv ci.baseline`, `uv run inv ci.service-check --live-backend`, and `uv run inv ci.release-preflight --service-health --live-backend` as the canonical validation gate.
+
+WSL/Linux notes:
+- treat `uv run inv ...` as the only normal execution path; raw `npx`, direct Playwright, and PowerShell wrappers are fallback troubleshooting paths only
+- use `MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace` for Compose-backed live browser specs when the spec checkout differs from the running backend worktree
+- `psql` is required for `db.*` tasks, but pure `compose.*` workflows run migrations and health checks through the Postgres container
+- `host.docker.internal` is usually correct for Docker Desktop + WSL, but native Linux Docker hosts may need another hostname or reachable service address instead
+
 Safest posture:
 - use a separate clone or worktree per host environment when you actively move between Windows and WSL
 
@@ -355,7 +375,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ```bash
 # 1. Configure compose-specific environment
 cp .env.compose.example .env.compose
-# Edit .env.compose — set MYCELIS_API_KEY and adjust OLLAMA_HOST if needed
+# Edit .env.compose — set MYCELIS_API_KEY and adjust MYCELIS_COMPOSE_OLLAMA_HOST if needed
 
 # 2. Bring up the full single-host stack
 uv run inv compose.up --build
