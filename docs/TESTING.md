@@ -488,6 +488,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/groups.spec.ts` | Standing vs temporary vs archived temporary groups, output/contributing-lead summaries, retained output review, and broadcast workflow |
 | `interface/e2e/specs/groups-live-backend.spec.ts` | Live-backend temporary group creation, backend-stored output aggregation, archive/closure, and retained-output review |
 | `interface/e2e/specs/team-creation.spec.ts` | Guided team creation, Soma execution-path return, one-click temporary workflow group launch, archive/closure, and retained-output review |
+| `interface/e2e/specs/direct-vs-team-output.spec.ts` | Mocked workflow-variant proof for direct Soma, compact team package, multi-lane retained outputs, and resume from retained package |
 | `interface/e2e/specs/teams.spec.ts` | Teams hub, roster, lead-entry links, guided-creation handoff |
 | `interface/e2e/specs/wiring-edit.spec.ts` | Neural wiring, agent edit/delete |
 | `interface/e2e/specs/v7-operational-ux.spec.ts` | Legacy V7 operator UX probe (skipped in default MVP gate) |
@@ -495,11 +496,10 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/accessibility.spec.ts` | Axe-backed accessibility baseline for key operator surfaces |
 | `interface/e2e/specs/workspace-live-backend.spec.ts` | Real Workspace contract coverage against live `/api/v1/services/status` and `/api/v1/council/members` traffic |
 
-Focused additions planned for the MVP media/team-output lane:
+Focused additions still planned for the MVP media/team-output lane:
 
 - `interface/e2e/specs/mcp-connected-tools.spec.ts`: Connected Tools registry/library/activity visibility and high-risk install posture.
 - `interface/e2e/specs/media-output.spec.ts`: mocked image/audio/file/document artifacts, visible `Artifact result`, save action, saved path, and download references.
-- `interface/e2e/specs/direct-vs-team-output.spec.ts`: direct inline Soma answer vs team-managed deliverable package with target outputs and retained output framing.
 - live media extension to `soma-governance-live.spec.ts` or a gated `media-output-live.spec.ts`: real artifact display/download when the media engine exists, or a precise missing-engine blocker when it does not.
 - compose output-block proof: when testing a local or Pinokio/media-hosted output directory, set `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` and `MYCELIS_OUTPUT_HOST_PATH` to the host directory mounted as Core `/data`; the Compose task resolves the path with Python `pathlib` and should fail early if the directory is missing or not a directory. For chart/Kubernetes proof, keep the output block on the cluster-managed PVC and treat host-path mounts as an explicit self-hosted exception.
 

@@ -8,6 +8,7 @@
 ## TOC
 
 - [Why This Proof Set Exists](#why-this-proof-set-exists)
+- [Automation Companions](#automation-companions)
 - [The Shared Objective](#the-shared-objective)
 - [Variant A: Direct Soma](#variant-a-direct-soma)
 - [Variant B: Compact Team](#variant-b-compact-team)
@@ -26,6 +27,12 @@ Mycelis should be able to demonstrate:
 
 The point is not "more agents."
 The point is that the workflow shape should change the operator outcome in an understandable way.
+
+## Automation Companions
+
+Use the automated browser proof together with the manual reboot pass:
+- `interface/e2e/specs/direct-vs-team-output.spec.ts` for stable mocked comparison of direct Soma, compact team packaging, multi-lane retained outputs, and resume from the retained package
+- `tests/ui/browser_qa_workflow_variants_reboot.md` for the full operator-facing reboot and trust pass
 
 ## The Shared Objective
 
