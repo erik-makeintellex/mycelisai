@@ -9,7 +9,16 @@ from typing import Callable
 from invoke import task, Collection
 
 from . import db as db_tasks
-from .config import API_HOST, API_PORT, INTERFACE_HOST, INTERFACE_PORT, ROOT_DIR
+from .config import (
+    API_HOST,
+    API_PORT,
+    INTERFACE_HOST,
+    INTERFACE_PORT,
+    ROOT_DIR,
+    docker_command,
+    docker_host_mode,
+    docker_host_path,
+)
 
 
 COMPOSE_FILE = ROOT_DIR / "docker-compose.yml"
@@ -21,17 +30,17 @@ OUTPUT_BLOCK_MODES = {"local_hosted", "cluster_generated"}
 
 
 def _compose_command(*args: str) -> list[str]:
-    return [
-        "docker",
+    return docker_command(
         "compose",
         "--project-name",
         COMPOSE_PROJECT,
         "--env-file",
-        str(COMPOSE_ENV_FILE),
+        docker_host_path(COMPOSE_ENV_FILE),
         "-f",
-        str(COMPOSE_FILE),
+        docker_host_path(COMPOSE_FILE),
         *args,
-    ]
+        cwd=ROOT_DIR,
+    )
 
 
 def _require_compose_env_file():
@@ -133,6 +142,19 @@ def _validate_compose_env(env_values: dict[str, str]):
     _validate_output_block_config(env_values)
 
 
+def _compose_runtime_env(env_values: dict[str, str] | None = None) -> dict[str, str] | None:
+    if docker_host_mode() != "wsl":
+        return None
+
+    values = dict(env_values or _load_compose_env())
+    raw_host_path = _clean_env_value(values.get("MYCELIS_OUTPUT_HOST_PATH", ""))
+    resolved_host_path = _resolve_host_path(raw_host_path) if raw_host_path else DEFAULT_OUTPUT_HOST_PATH
+
+    env = os.environ.copy()
+    env["MYCELIS_OUTPUT_HOST_PATH"] = docker_host_path(resolved_host_path)
+    return env
+
+
 def _print_step(step: int, total: int, title: str, expectation: str | None = None):
     print(f"[{step}/{total}] {title}")
     if expectation:
@@ -182,8 +204,12 @@ def _wait_for_http_ok(url: str, label: str, timeout_seconds: int = 60, headers: 
     return False
 
 
-def _run_compose(args: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(args, text=True, capture_output=True)
+def _run_compose(
+    args: list[str],
+    check: bool = True,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(args, text=True, capture_output=True, env=env)
     if result.stdout:
         print(result.stdout.rstrip())
     if result.stderr:
@@ -233,6 +259,7 @@ def _run_compose_psql(sql: str, env_values: dict[str, str]) -> subprocess.Comple
         ),
         text=True,
         capture_output=True,
+        env=_compose_runtime_env(env_values),
     )
 
 
@@ -391,6 +418,7 @@ def _run_compose_migration_file(migration: Path, env_values: dict[str, str]):
             f"/migrations/{migration.name}",
         ),
         check=False,
+        env=_compose_runtime_env(env_values),
     )
     if result.returncode != 0:
         raise SystemExit(f"Compose migration failed: {migration.name}")
@@ -454,6 +482,7 @@ def _wait_for_postgres_ready(timeout_seconds: int = 90, env_values: dict[str, st
                 _compose_db_name(env_values),
             ),
             check=False,
+            env=_compose_runtime_env(env_values),
         )
         if result.returncode == 0:
             return True
@@ -487,7 +516,10 @@ def infra_up(c, wait_timeout=180, migrate=False):
         "Starting PostgreSQL and NATS only...",
         "Core and Interface stay down; this exposes the shared data services for a separate app bring-up or connectivity test.",
     )
-    _run_compose(_compose_command("up", "-d", "postgres", "nats"))
+    _run_compose(
+        _compose_command("up", "-d", "postgres", "nats"),
+        env=_compose_runtime_env(env_values),
+    )
 
     _expect_stage(
         _wait_for_port,
@@ -577,7 +609,7 @@ def up(c, build=False, wait_timeout=180):
     if build:
         infra_cmd.append("--build")
     infra_cmd.extend(["postgres", "nats"])
-    _run_compose(infra_cmd)
+    _run_compose(infra_cmd, env=_compose_runtime_env(env_values))
 
     _expect_stage(
         _wait_for_port,
@@ -636,7 +668,7 @@ def up(c, build=False, wait_timeout=180):
     if build:
         app_cmd.append("--build")
     app_cmd.extend(["core", "interface"])
-    _run_compose(app_cmd)
+    _run_compose(app_cmd, env=_compose_runtime_env(env_values))
 
     _expect_stage(
         _wait_for_port,
@@ -702,7 +734,7 @@ def down(c, volumes=False):
     cmd = _compose_command("down")
     if volumes:
         cmd.append("--volumes")
-    _run_compose(cmd)
+    _run_compose(cmd, env=_compose_runtime_env())
 
 
 @task
@@ -722,7 +754,7 @@ def status(c):
     env_values = _load_compose_env()
     _validate_compose_env(env_values)
     print("=== Mycelis Compose Status ===\n")
-    _run_compose(_compose_command("ps"), check=False)
+    _run_compose(_compose_command("ps"), check=False, env=_compose_runtime_env(env_values))
 
     checks = [
         ("PostgreSQL", int(env_values.get("MYCELIS_COMPOSE_POSTGRES_PORT", "5432"))),
@@ -894,7 +926,7 @@ def logs(c, service="", tail=200):
     cmd = _compose_command("logs", "--tail", str(int(tail)))
     if service:
         cmd.append(service)
-    subprocess.run(cmd, check=False)
+    subprocess.run(cmd, check=False, env=_compose_runtime_env())
 
 
 ns = Collection("compose")

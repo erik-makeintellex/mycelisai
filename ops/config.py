@@ -1,6 +1,9 @@
+from functools import lru_cache
 from pathlib import Path
 import os
 import platform
+import shutil
+import subprocess
 
 # -- Environment Sanitization --
 # The Windows Store Python sets a global VIRTUAL_ENV that conflicts with uv's
@@ -49,6 +52,72 @@ def powershell(command: str) -> str:
     Works on both Windows PowerShell 5.1 and PowerShell 7+.
     """
     return f'powershell -NoProfile -Command "{command}"'
+
+
+def windows_path_to_wsl(path: Path | str) -> str:
+    raw = str(path)
+    if len(raw) >= 2 and raw[1] == ":":
+        drive = raw[0].lower()
+        tail = raw[2:].replace("\\", "/").lstrip("/")
+        return f"/mnt/{drive}/{tail}"
+    return raw.replace("\\", "/")
+
+
+def _wsl_base_command(cwd: Path | None = None) -> list[str]:
+    command = ["wsl.exe"]
+    distro = os.environ.get("MYCELIS_WSL_DISTRO", "").strip()
+    if distro:
+        command.extend(["-d", distro])
+    if cwd is not None:
+        command.extend(["--cd", windows_path_to_wsl(cwd)])
+    command.append("--exec")
+    return command
+
+
+def wsl_has_command(command: str) -> bool:
+    try:
+        result = subprocess.run(
+            _wsl_base_command() + ["sh", "-lc", f"command -v {command}"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
+@lru_cache(maxsize=1)
+def docker_host_mode() -> str:
+    requested = os.environ.get("MYCELIS_DOCKER_HOST", "auto").strip().lower()
+    if requested not in {"", "auto", "native", "wsl"}:
+        raise SystemExit("Invalid MYCELIS_DOCKER_HOST. Use one of: auto, native, wsl.")
+
+    if requested in {"", "auto"}:
+        if shutil.which("docker"):
+            return "native"
+        if is_windows() and shutil.which("wsl.exe") and wsl_has_command("docker"):
+            return "wsl"
+        return "native"
+
+    if requested == "wsl":
+        if not is_windows():
+            raise SystemExit("MYCELIS_DOCKER_HOST=wsl is only valid on Windows hosts.")
+        if not shutil.which("wsl.exe") or not wsl_has_command("docker"):
+            raise SystemExit("MYCELIS_DOCKER_HOST=wsl requires Docker inside WSL.")
+    return requested
+
+
+def docker_host_path(path: Path | str) -> str:
+    if docker_host_mode() == "wsl":
+        return windows_path_to_wsl(path)
+    return str(path)
+
+
+def docker_command(*args: str, cwd: Path | None = None) -> list[str]:
+    if docker_host_mode() == "wsl":
+        return _wsl_base_command(cwd=cwd) + ["docker", *args]
+    return ["docker", *args]
 
 
 def managed_cache_paths(root: Path | None = None) -> dict[str, Path]:

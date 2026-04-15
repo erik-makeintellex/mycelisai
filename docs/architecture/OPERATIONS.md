@@ -171,6 +171,7 @@ Compose runtime guardrails:
 - `.env.compose` is the supported env contract for the home-runtime path; do not reuse Kind/bridge `OLLAMA_HOST` values blindly
 - use `MYCELIS_COMPOSE_OLLAMA_HOST` for the home-runtime AI engine path so host-level `OLLAMA_HOST` bind settings do not override the compose runtime
 - loopback compose Ollama values (`localhost`, `127.0.0.1`, `0.0.0.0`) are invalid for the Core container and are rejected by the compose task layer
+- on Windows hosts without a native `docker` binary, the compose task layer can execute Docker through WSL instead and translates compose/output-block host paths for that runtime; set `MYCELIS_WSL_DISTRO` when the Docker-owning distro is not the default
 - `compose.infra-up` is the supported personal-owner data-plane preflight when the operator wants PostgreSQL/NATS up and exposed before deciding how Core/Interface should connect
 - `compose.storage-health` is the post-migration gate for the long-term Postgres store; it should pass before a personal-owner workflow claims semantic memory, deployment context, retained outputs, managed exchange, or conversation continuity are available
 - when the base compose schema is already compatible, `compose.migrate` skips unsafe full replay and can apply known missing late storage migrations before `compose.storage-health` runs

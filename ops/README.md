@@ -25,7 +25,7 @@ This directory contains the logic for the **Service Release Standard 1.0**.
 
 Recommended host posture:
 - WSL2/Linux/macOS: prefer `uv run inv compose.up --build` as the easiest supported full-stack bring-up
-- Windows native: use the Kind + lifecycle path when you want the main desktop development flow
+- Windows native: keep the runtime story anchored to Compose or self-hosted Kubernetes; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 
@@ -68,6 +68,7 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 - Compose `storage-health` is the matching post-migration proof that the long-term Mycelis Postgres store is present before claiming RAG, retained outputs, or continuity are available.
 - Compose `migrate` skips unsafe full replay on compatible volumes but still applies known missing late storage migrations so `storage-health` can close the long-term store gate.
 - Compose validates output block mounting: use `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` plus `MYCELIS_OUTPUT_HOST_PATH=<host-directory>` when a local or Pinokio/media-hosted output directory should be mounted into Core as `/data`. The task resolves the host path with Python `pathlib` across Windows, Linux, and macOS before Docker starts.
+- On Windows, when native `docker` is absent but WSL Docker is available, `compose.*` uses the WSL Docker CLI automatically and translates compose/output-block paths for that runtime. Set `MYCELIS_WSL_DISTRO` when the Docker-owning distro is not the default.
 - Compose now emits deterministic stage expectations and timeout guidance so humans and agent-run callers can tell what should happen next and which recovery command to run if a stage stalls.
 - Use `uv run inv compose.up --build --wait-timeout=240` on a fresh or slower machine when image build and first readiness can legitimately take longer than the default window.
 - `compose.health` is a usable-product gate for the home runtime, so it fails when text inference is offline even if the API still responds.

@@ -30,7 +30,7 @@
 
 | Tool | Version | Install | Purpose |
 |:--|:--|:--|:--|
-| Docker Desktop | Latest | [docker.com](https://www.docker.com/) | Container runtime for Kind cluster |
+| Docker Engine / Docker CLI | Latest | Docker Desktop, native Linux Docker, or Docker inside WSL | Container runtime for Compose or local Kubernetes bring-up |
 | Kind | Latest | `scoop install kind` / `brew install kind` | Local Kubernetes cluster |
 | kubectl | **v1.35+** | `scoop install kubectl` / `brew install kubectl` | K8s CLI (v1.32 has port-forward bugs) |
 | Helm | v3+ | `scoop install helm` / `brew install helm` | Chart deployment |
@@ -42,7 +42,7 @@
 
 Platform-first guidance:
 - WSL2/Linux/macOS should usually start with the Docker Compose path because it is the easiest full-stack bring-up and avoids the extra Kind/bridge layer.
-- Windows native is still a supported main local-development path, especially when desktop Ollama and Docker Desktop are already part of the workflow.
+- Windows native is still a supported operator/development path, but the durable runtime stories are Compose and self-hosted Kubernetes rather than a Windows-only Docker Desktop assumption.
 - Optional repo-local `cognitive.*` helpers are for supported Linux GPU hosts; they are not the default setup path on Windows or macOS.
 
 ## Configuration Reference
@@ -274,6 +274,7 @@ Use this as the canonical resume path when active development moves to WSL/Linux
 
 WSL/Linux notes:
 - treat `uv run inv ...` as the only normal execution path; raw `npx`, direct Playwright, and PowerShell wrappers are fallback troubleshooting paths only
+- when Windows no longer has a native `docker` binary, `uv run inv compose.*` can drive Docker through WSL automatically; set `MYCELIS_WSL_DISTRO` if the default WSL distro is not the one that owns Docker
 - use `MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace` for Compose-backed live browser specs when the spec checkout differs from the running backend worktree
 - `psql` is required for `db.*` tasks, but pure `compose.*` workflows run migrations and health checks through the Postgres container
 - `host.docker.internal` is usually correct for Docker Desktop + WSL, but native Linux Docker hosts may need another hostname or reachable service address instead
