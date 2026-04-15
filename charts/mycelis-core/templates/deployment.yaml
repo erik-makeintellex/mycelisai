@@ -66,6 +66,16 @@ spec:
                   name: {{ default (include "mycelis-core.coreAuthSecretName" .) .Values.coreAuth.existingSecret }}
                   key: mycelis-api-key
             {{- end }}
+            {{- if .Values.ai.textEndpoint }}
+            {{- range $providerID := .Values.ai.textProviderIds }}
+            - name: MYCELIS_PROVIDER_{{ $providerID | replace "-" "_" | upper }}_ENDPOINT
+              value: {{ $.Values.ai.textEndpoint | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.ai.mediaEndpoint }}
+            - name: MYCELIS_MEDIA_ENDPOINT
+              value: {{ .Values.ai.mediaEndpoint | quote }}
+            {{- end }}
             {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
             {{- end }}

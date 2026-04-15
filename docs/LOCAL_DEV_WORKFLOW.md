@@ -348,7 +348,11 @@ Docker Compose rule:
 ```bash
 # 1. Configure environment
 cp .env.example .env
-# Edit .env — set OLLAMA_HOST, DB credentials, etc.
+# Edit .env — set DB credentials, API key, and any optional runtime overrides.
+# For an external Windows-hosted text model service:
+#   set MYCELIS_K8S_TEXT_ENDPOINT=http://192.168.x.x:11434/v1
+# Optional external media endpoint:
+#   set MYCELIS_K8S_MEDIA_ENDPOINT=http://192.168.x.x:8001/v1
 
 # 2. Bring up cluster services in dependency order
 uv run inv k8s.up

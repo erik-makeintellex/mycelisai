@@ -231,6 +231,12 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 | `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL), then wait for readiness and fail closed if the cluster is unreachable |
 | `uv run inv k8s.reset` | Full reset: delete cluster -> canonical bring-up (includes readiness wait) |
 
+Kubernetes operator contract:
+- use explicit reachable AI endpoints for deployed text or media engines instead of localhost assumptions
+- `uv run inv k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT` from the shell or `.env` and forwards them into the Helm chart as operator-owned runtime config
+- the Helm chart applies `MYCELIS_K8S_TEXT_ENDPOINT` through provider-specific env overrides (`MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`) so deployed providers can target a Windows-hosted or otherwise external self-hosted AI service without editing chart source
+- for the current GPU-attached Windows-host topology, use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`
+
 ### Cognitive Tasks (`ops/cognitive.py`)
 
 | Command | Description |

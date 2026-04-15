@@ -53,6 +53,24 @@ def test_deploy_uses_core_build_task_body(monkeypatch):
     assert any("--set image.tag=v0.1.0-deadbee" in command for command in ctx.commands)
 
 
+def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch):
+    ctx = FakeContext()
+
+    monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.1.0-deadbee")
+    monkeypatch.setenv("POSTGRES_USER", "mycelis")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "password")
+    monkeypatch.setenv("POSTGRES_DB", "cortex")
+    monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
+    monkeypatch.setenv("MYCELIS_K8S_TEXT_ENDPOINT", "http://192.168.50.156:11434/v1")
+    monkeypatch.setenv("MYCELIS_K8S_MEDIA_ENDPOINT", "http://192.168.50.156:8001/v1")
+
+    k8s.deploy.body(ctx)
+
+    helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
+    assert "--set-string ai.textEndpoint=http://192.168.50.156:11434/v1" in helm_command
+    assert "--set-string ai.mediaEndpoint=http://192.168.50.156:8001/v1" in helm_command
+
+
 def test_init_reads_and_writes_kind_config_under_root_dir(monkeypatch, tmp_path: Path):
     ctx = FakeContext()
     monkeypatch.setattr(k8s, "_cluster_exists", lambda _c: False)

@@ -144,10 +144,16 @@ def deploy(c):
     pg_pass = os.getenv("POSTGRES_PASSWORD", "password")
     pg_db = os.getenv("POSTGRES_DB", "cortex")
     api_key = os.getenv("MYCELIS_API_KEY", "")
+    k8s_text_endpoint = os.getenv("MYCELIS_K8S_TEXT_ENDPOINT", "").strip()
+    k8s_media_endpoint = os.getenv("MYCELIS_K8S_MEDIA_ENDPOINT", "").strip()
     if not api_key:
         raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
 
     print(f"   Injecting Secrets for DB User: {pg_user}")
+    if k8s_text_endpoint:
+        print(f"   Text AI endpoint: {k8s_text_endpoint}")
+    if k8s_media_endpoint:
+        print(f"   Media AI endpoint: {k8s_media_endpoint}")
 
     cmd = (
         "helm upgrade --install mycelis-core ./charts/mycelis-core "
@@ -157,8 +163,12 @@ def deploy(c):
         f"--set postgresql.auth.password={pg_pass} "
         f"--set postgresql.auth.database={pg_db} "
         f"--set coreAuth.apiKey={shlex.quote(api_key)} "
-        "--wait"
     )
+    if k8s_text_endpoint:
+        cmd += f"--set-string ai.textEndpoint={shlex.quote(k8s_text_endpoint)} "
+    if k8s_media_endpoint:
+        cmd += f"--set-string ai.mediaEndpoint={shlex.quote(k8s_media_endpoint)} "
+    cmd += "--wait"
     c.run(cmd)
     
     # 4. Restart to ensure fresh config

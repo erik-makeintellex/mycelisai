@@ -74,10 +74,21 @@ dataVolume:
   size: 2Gi
   storageClassName: standard
 
+# External AI service wiring for self-hosted deployments.
+ai:
+  # Explicit reachable endpoint for the text engine used by deployed providers.
+  # Example: http://192.168.50.156:11434/v1
+  textEndpoint: ""
+  # Providers that should receive the text endpoint override when textEndpoint is set.
+  textProviderIds:
+    - ollama
+    - local-ollama-dev
+    - local-sovereign
+  # Optional explicit media endpoint for self-hosted image or voice generation.
+  mediaEndpoint: ""
+
 # Environment variables (Extras)
 env:
-  - name: OLLAMA_HOST
-    value: "http://192.168.50.156:11434"
   - name: DATA_DIR
     value: "/data/artifacts"
   - name: MYCELIS_WORKSPACE
