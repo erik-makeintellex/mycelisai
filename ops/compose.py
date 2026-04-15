@@ -162,16 +162,19 @@ def _parse_network_endpoint(url: str) -> tuple[str, int]:
 
 def _wsl_http_available(url: str) -> bool:
     probe = url.rstrip("/") + "/api/tags"
-    result = subprocess.run(
-        _wsl_exec_command(
-            "sh",
-            "-lc",
-            f"curl -fsS --max-time 5 -o /dev/null {shlex.quote(probe)}",
-        ),
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
+    try:
+        result = subprocess.run(
+            _wsl_exec_command(
+                "sh",
+                "-lc",
+                f"curl -fsS --max-time 5 -o /dev/null {shlex.quote(probe)}",
+            ),
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        return False
     return result.returncode == 0
 
 
@@ -271,9 +274,21 @@ def _prepare_wsl_ollama_host(env_values: dict[str, str]) -> dict[str, str]:
 
     configured = _clean_env_value(values.get("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434"))
     configured_host, configured_port = _parse_network_endpoint(configured)
+    relay_port = _wsl_ollama_relay_port(values)
+    labels = _inspect_wsl_ollama_relay_labels()
+    if labels and labels.get("mycelis.relay.listen_port") == str(relay_port):
+        target_port = labels.get("mycelis.relay.target_port", "")
+        target_host = labels.get("mycelis.relay.target_host", "")
+        if target_port == str(configured_port) and target_host in {configured_host, "127.0.0.1"}:
+            print(
+                "  WSL Ollama relay: "
+                f"http://host.docker.internal:{relay_port} -> {target_host}:{target_port}"
+            )
+            values["MYCELIS_COMPOSE_OLLAMA_HOST"] = f"http://host.docker.internal:{relay_port}"
+            return values
+
     relay_target_host = configured_host
     relay_target_port = configured_port
-
     if not _wsl_http_available(configured):
         localhost_candidate = f"http://127.0.0.1:{configured_port}"
         if _wsl_http_available(localhost_candidate):
@@ -285,7 +300,6 @@ def _prepare_wsl_ollama_host(env_values: dict[str, str]) -> dict[str, str]:
                 "Verify the Windows Ollama service is running and reachable from the Docker-owning WSL distro."
             )
 
-    relay_port = _wsl_ollama_relay_port(values)
     _ensure_wsl_ollama_relay(relay_target_host, relay_target_port, relay_port)
     print(
         "  WSL Ollama relay: "

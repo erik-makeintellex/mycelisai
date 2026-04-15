@@ -73,6 +73,7 @@ def test_prepare_wsl_ollama_host_uses_reachable_configured_target(monkeypatch):
     calls: list[tuple[str, int, int]] = []
 
     monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setattr(compose, "_inspect_wsl_ollama_relay_labels", lambda: None)
     monkeypatch.setattr(compose, "_wsl_http_available", lambda url: url == "http://192.168.50.156:11434/api/tags" or url == "http://192.168.50.156:11434")
     monkeypatch.setattr(
         compose,
@@ -92,6 +93,7 @@ def test_prepare_wsl_ollama_host_falls_back_to_wsl_localhost(monkeypatch):
     calls: list[tuple[str, int, int]] = []
 
     monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setattr(compose, "_inspect_wsl_ollama_relay_labels", lambda: None)
     monkeypatch.setattr(
         compose,
         "_wsl_http_available",
@@ -113,6 +115,7 @@ def test_prepare_wsl_ollama_host_falls_back_to_wsl_localhost(monkeypatch):
 
 def test_prepare_wsl_ollama_host_fails_when_target_and_localhost_are_unreachable(monkeypatch):
     monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setattr(compose, "_inspect_wsl_ollama_relay_labels", lambda: None)
     monkeypatch.setattr(compose, "_wsl_http_available", lambda url: False)
 
     with pytest.raises(SystemExit) as excinfo:
@@ -121,6 +124,27 @@ def test_prepare_wsl_ollama_host_fails_when_target_and_localhost_are_unreachable
         )
 
     assert "could not reach the configured MYCELIS_COMPOSE_OLLAMA_HOST" in str(excinfo.value)
+
+
+def test_prepare_wsl_ollama_host_reuses_existing_matching_relay(monkeypatch):
+    monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setattr(
+        compose,
+        "_inspect_wsl_ollama_relay_labels",
+        lambda: {
+            "mycelis.relay.listen_port": "11435",
+            "mycelis.relay.target_host": "127.0.0.1",
+            "mycelis.relay.target_port": "11434",
+        },
+    )
+    monkeypatch.setattr(compose, "_wsl_http_available", lambda url: pytest.fail("should not probe WSL when relay already matches"))
+    monkeypatch.setattr(compose, "_ensure_wsl_ollama_relay", lambda *args: pytest.fail("should not recreate relay"))
+
+    values = compose._prepare_wsl_ollama_host(
+        {"MYCELIS_COMPOSE_OLLAMA_HOST": "http://192.168.50.156:11434"}
+    )
+
+    assert values["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://host.docker.internal:11435"
 
 
 def test_require_compose_env_file_has_clear_guidance(tmp_path, monkeypatch):
