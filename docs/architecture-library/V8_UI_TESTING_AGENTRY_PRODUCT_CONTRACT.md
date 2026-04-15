@@ -12,6 +12,7 @@ Companion artifacts:
 - Stable mocked browser proof: `interface/e2e/specs/v8-ui-testing-agentry.spec.ts`
 - Live backend browser proof: `interface/e2e/specs/soma-governance-live.spec.ts`
 - Workspace continuity manual trust pass: `tests/ui/browser_qa_plan_workspace_chat.md`
+- Workflow variants + reboot resume manual pass: `tests/ui/browser_qa_workflow_variants_reboot.md`
 
 ## Required Proof Surfaces
 
@@ -73,6 +74,11 @@ No single test lane is enough on its own.
    - Purpose: verify interruption, recovery feel, wording quality, and operator trust
    - Prompt baseline:
      - `tests/ui/browser_qa_plan_workspace_chat.md`
+
+4. Manual workflow-shape and reboot pass
+   - Purpose: compare direct Soma, compact-team, and multi-lane behavior on one objective and verify reboot-safe resume through retained outputs
+   - Prompt baseline:
+     - `tests/ui/browser_qa_workflow_variants_reboot.md`
 
 ## Release Gate
 

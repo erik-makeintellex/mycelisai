@@ -116,6 +116,7 @@ Use this compact slice when you need to prove the current media/output lane with
    - Run the guided team creation path in `interface/e2e/specs/team-creation.spec.ts`.
    - Confirm the temporary workflow group can be created, archived, and reviewed with retained outputs still visible.
    - Pair that with `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` to prove direct Soma answers stay distinct from team-managed output packages.
+   - Use `tests/ui/browser_qa_workflow_variants_reboot.md` when the goal is to compare direct Soma, compact teams, and multi-lane workflow shape on one objective and verify the reboot-safe resume path from retained outputs.
 
 ### Windows Self-Hosted Validation Lane
 

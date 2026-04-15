@@ -478,6 +478,7 @@ Automated proof:
 
 - `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` now includes focused Chromium coverage for direct Soma output vs team-managed output packages and for media artifact preview/save/download behavior.
 - `interface/e2e/specs/mcp-connected-tools.spec.ts` now covers the adjacent Connected Tools proof: persisted MCP activity, expanded server tool visibility, and curated library install into the current user-owned group.
+- `tests/ui/browser_qa_workflow_variants_reboot.md` is the manual comparative pass for direct Soma vs compact team vs multi-lane workflow, plus reboot-safe resume from retained outputs.
 
 ### Workflow 8: Governed mutation proposal
 
