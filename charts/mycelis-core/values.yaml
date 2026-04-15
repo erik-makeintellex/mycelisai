@@ -2,12 +2,35 @@ replicaCount: 1
 
 image:
   repository: mycelis/core
-  tag: latest
+  tag: dev
+  digest: ""
   pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+imagePullSecrets: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+topologySpreadConstraints: []
 
 service:
   type: ClusterIP
   port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
 
 coreAuth:
   # Either provide apiKey (for dev) or reference an existing secret

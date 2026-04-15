@@ -40,6 +40,7 @@ def test_deploy_uses_core_build_task_body(monkeypatch):
     ctx = FakeContext()
     build_calls: list[str] = []
 
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "kind")
     monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: build_calls.append("build") or "v0.1.0-deadbee")
     monkeypatch.setenv("POSTGRES_USER", "mycelis")
     monkeypatch.setenv("POSTGRES_PASSWORD", "password")
@@ -53,9 +54,26 @@ def test_deploy_uses_core_build_task_body(monkeypatch):
     assert any("--set image.tag=v0.1.0-deadbee" in command for command in ctx.commands)
 
 
+def test_deploy_uses_k3d_image_import_when_k3d_backend_selected(monkeypatch):
+    ctx = FakeContext()
+
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
+    monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.1.0-deadbee")
+    monkeypatch.setenv("POSTGRES_USER", "mycelis")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "password")
+    monkeypatch.setenv("POSTGRES_DB", "cortex")
+    monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
+
+    k8s.deploy.body(ctx)
+
+    assert any("k3d image import mycelis/core:v0.1.0-deadbee -c mycelis-cluster" in command for command in ctx.commands)
+    assert any("--set image.tag=v0.1.0-deadbee" in command for command in ctx.commands)
+
+
 def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch):
     ctx = FakeContext()
 
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
     monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.1.0-deadbee")
     monkeypatch.setenv("POSTGRES_USER", "mycelis")
     monkeypatch.setenv("POSTGRES_PASSWORD", "password")
@@ -71,8 +89,30 @@ def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch):
     assert "--set-string ai.mediaEndpoint=http://192.168.50.156:8001/v1" in helm_command
 
 
+def test_k8s_backend_prefers_k3d_when_available(monkeypatch):
+    monkeypatch.delenv("MYCELIS_K8S_BACKEND", raising=False)
+    monkeypatch.setattr(
+        k8s.shutil,
+        "which",
+        lambda name: f"/usr/bin/{name}" if name in {"k3d", "kind"} else None,
+    )
+
+    assert k8s._k8s_backend() == "k3d"
+
+
+def test_init_creates_k3d_cluster_when_k3d_backend_selected(monkeypatch):
+    ctx = FakeContext()
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
+    monkeypatch.setattr(k8s, "_cluster_exists", lambda _c: False)
+
+    k8s.init.body(ctx)
+
+    assert "k3d cluster create mycelis-cluster" in ctx.commands
+
+
 def test_init_reads_and_writes_kind_config_under_root_dir(monkeypatch, tmp_path: Path):
     ctx = FakeContext()
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "kind")
     monkeypatch.setattr(k8s, "_cluster_exists", lambda _c: False)
     monkeypatch.setattr(k8s, "ROOT_DIR", tmp_path)
 
@@ -93,6 +133,7 @@ def test_init_reads_and_writes_kind_config_under_root_dir(monkeypatch, tmp_path:
 
 def test_reset_prints_managed_status_command(monkeypatch, capsys):
     ctx = FakeContext()
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "kind")
     monkeypatch.setattr(k8s, "up", lambda _ctx: ctx.commands.append("up"))
 
     k8s.reset.body(ctx)
@@ -102,11 +143,38 @@ def test_reset_prints_managed_status_command(monkeypatch, capsys):
     assert "Run 'inv k8s.status' to verify." not in output
 
 
-def test_cluster_exists_parses_kind_get_clusters_directly():
+def test_reset_uses_k3d_cluster_delete_when_k3d_backend_selected(monkeypatch):
+    ctx = FakeContext()
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
+    monkeypatch.setattr(k8s, "up", lambda _ctx: ctx.commands.append("up"))
+
+    k8s.reset.body(ctx)
+
+    assert "k3d cluster delete mycelis-cluster" in ctx.commands
+
+
+def test_cluster_exists_parses_kind_get_clusters_directly(monkeypatch):
     ctx = FakeContext({"kind get clusters": FakeResult(stdout="other\nmycelis-cluster\n")})
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "kind")
 
     assert k8s._cluster_exists(ctx)
+
     assert ctx.commands == ["kind get clusters"]
+
+
+def test_cluster_exists_parses_k3d_cluster_list_directly(monkeypatch):
+    ctx = FakeContext(
+        {
+            "k3d cluster list": FakeResult(
+                stdout="NAME SERVERS AGENTS LOADBALANCER\nmycelis-cluster running 1 1\n"
+            )
+        }
+    )
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
+
+    assert k8s._cluster_exists(ctx)
+
+    assert ctx.commands == ["k3d cluster list"]
 
 
 def test_status_skips_cluster_checks_when_docker_is_down(capsys):
@@ -123,7 +191,7 @@ def test_status_skips_cluster_checks_when_docker_is_down(capsys):
 
     output = capsys.readouterr().out
     assert "Docker: NOT Running." in output
-    assert "Kind Cluster: SKIPPED (Docker down)" in output
+    assert "Local Kubernetes Cluster: SKIPPED (Docker down)" in output
     assert "Pod Status: SKIPPED" in output
     assert "Persistence (PVC) Status: SKIPPED" in output
     assert ctx.commands == ["docker info"]

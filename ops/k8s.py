@@ -1,5 +1,7 @@
+import os
 import socket
 import subprocess
+import shutil
 import time
 
 from invoke import task, Collection
@@ -7,11 +9,47 @@ from .config import CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
 from .core import build as core_build
 
 
+def _k8s_backend() -> str:
+    requested = os.environ.get("MYCELIS_K8S_BACKEND", "auto").strip().lower()
+    if requested not in {"", "auto", "k3d", "kind"}:
+        raise SystemExit("Invalid MYCELIS_K8S_BACKEND. Use one of: auto, k3d, kind.")
+
+    if requested in {"", "auto"}:
+        if shutil.which("k3d"):
+            return "k3d"
+        if shutil.which("kind"):
+            return "kind"
+        raise SystemExit("No supported local Kubernetes backend found. Install k3d or kind.")
+
+    if requested == "k3d" and not shutil.which("k3d"):
+        raise SystemExit("MYCELIS_K8S_BACKEND=k3d requires k3d on PATH.")
+    if requested == "kind" and not shutil.which("kind"):
+        raise SystemExit("MYCELIS_K8S_BACKEND=kind requires kind on PATH.")
+    return requested
+
+
+def _cluster_list_has_name(output: str, backend: str) -> bool:
+    for line in output.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if backend == "k3d":
+            if stripped.lower().startswith("name "):
+                continue
+            if stripped.split()[0] == CLUSTER_NAME:
+                return True
+        elif stripped == CLUSTER_NAME:
+            return True
+    return False
+
+
 def _cluster_exists(c) -> bool:
-    result = c.run("kind get clusters", hide=True, warn=True)
+    backend = _k8s_backend()
+    command = "k3d cluster list" if backend == "k3d" else "kind get clusters"
+    result = c.run(command, hide=True, warn=True)
     if not result or not result.ok:
         return False
-    return any(line.strip() == CLUSTER_NAME for line in result.stdout.splitlines())
+    return _cluster_list_has_name(result.stdout, backend)
 
 
 def _resource_exists(c, resource: str) -> bool:
@@ -80,34 +118,38 @@ def _start_port_forward_detached(service: str, forward: str):
 def init(c):
     """
     Initialize Infrastructure Layer.
-    Creates Kind cluster and applies persistent infra (NATS, DBs).
+    Creates the preferred local Kubernetes cluster and applies persistent infra (NATS, DBs).
     """
-    print(f"Initializing Cluster: {CLUSTER_NAME}...")
+    backend = _k8s_backend()
+    print(f"Initializing Local Kubernetes Cluster: {CLUSTER_NAME} ({backend})...")
     if _cluster_exists(c):
         print("Cluster exists.")
     else:
-        # Check if we need to hydrate absolute paths for Windows Kind
-        kind_config_path = ROOT_DIR / "kind-config.yaml"
-        generated_config_path = ROOT_DIR / "kind-config.gen.yaml"
-        with kind_config_path.open("r", encoding="utf-8") as f:
-            config = f.read()
-        
-        # Replace relative paths with absolute
-        # We assume relative paths start with ./ops/
-        abs_ops = str(ROOT_DIR / "ops").replace("\\", "/")
-        # Basic substitution - robust enough for this specific file
-        config = config.replace("./ops", abs_ops)
-        
-        # Fix Logs path too
-        abs_logs = str(ROOT_DIR / "logs").replace("\\", "/")
-        config = config.replace("./logs", abs_logs)
+        if backend == "k3d":
+            c.run(f"k3d cluster create {CLUSTER_NAME}")
+        else:
+            # Check if we need to hydrate absolute paths for Windows Kind
+            kind_config_path = ROOT_DIR / "kind-config.yaml"
+            generated_config_path = ROOT_DIR / "kind-config.gen.yaml"
+            with kind_config_path.open("r", encoding="utf-8") as f:
+                config = f.read()
 
-        # Write temp
-        with generated_config_path.open("w", encoding="utf-8") as f:
-            f.write(config)
+            # Replace relative paths with absolute
+            # We assume relative paths start with ./ops/
+            abs_ops = str(ROOT_DIR / "ops").replace("\\", "/")
+            # Basic substitution - robust enough for this specific file
+            config = config.replace("./ops", abs_ops)
 
-        print(f"Generated absolute config at {generated_config_path}")
-        c.run(f"kind create cluster --name {CLUSTER_NAME} --config {generated_config_path}")
+            # Fix Logs path too
+            abs_logs = str(ROOT_DIR / "logs").replace("\\", "/")
+            config = config.replace("./logs", abs_logs)
+
+            # Write temp
+            with generated_config_path.open("w", encoding="utf-8") as f:
+                f.write(config)
+
+            print(f"Generated absolute config at {generated_config_path}")
+            c.run(f"kind create cluster --name {CLUSTER_NAME} --config {generated_config_path}")
     
     
     # Legacy raw manifests removed. Helm chart handles infra.
@@ -128,9 +170,14 @@ def deploy(c):
     print("Building Helm Dependencies...")
     c.run("helm dependency update ./charts/mycelis-core")
     
-    # 2. Load into Kind
+    backend = _k8s_backend()
+
+    # 2. Load into the local Kubernetes backend
     print(f"   Loading Image into Cluster...")
-    c.run(f"kind load docker-image mycelis/core:{tag} --name {CLUSTER_NAME}")
+    if backend == "k3d":
+        c.run(f"k3d image import mycelis/core:{tag} -c {CLUSTER_NAME}")
+    else:
+        c.run(f"kind load docker-image mycelis/core:{tag} --name {CLUSTER_NAME}")
     
     # 3. Helm Upgrade (Atomic with Tag Override)
     print("   Applying Helm Chart...")
@@ -219,7 +266,7 @@ def up(c, timeout=180):
     Order: init -> deploy -> wait.
     """
     print("=== Mycelis Cluster Up ===\n")
-    print("[1/3] Ensure Kind cluster + namespace...")
+    print("[1/3] Ensure local Kubernetes cluster + namespace...")
     init(c)
     print("\n[2/3] Deploy Helm release...")
     deploy(c)
@@ -243,7 +290,7 @@ def bridge(c):
     if not cluster_ready.ok:
         raise SystemExit(
             "K8S BRIDGE FAILED: kubectl cannot reach the cluster. "
-            "Start Docker/Kind first with 'uv run inv k8s.status' or 'uv run inv k8s.up'."
+            "Start Docker and the local Kubernetes backend first with 'uv run inv k8s.status' or 'uv run inv k8s.up'."
         )
 
     forwards = [
@@ -281,20 +328,22 @@ def status(c):
         print("Docker: Running")
     except:
         print("Docker: NOT Running.")
-        print("Kind Cluster: SKIPPED (Docker down)")
+        print("Local Kubernetes Cluster: SKIPPED (Docker down)")
         print("Pod Status: SKIPPED")
         print("Persistence (PVC) Status: SKIPPED")
         return
 
     try:
-        cluster_info = c.run("kind get clusters", hide=True, warn=True)
-        if cluster_info and cluster_info.ok and any(line.strip() == CLUSTER_NAME for line in cluster_info.stdout.splitlines()):
-            print(f"Kind Cluster ({CLUSTER_NAME}): Active")
+        backend = _k8s_backend()
+        cluster_command = "k3d cluster list" if backend == "k3d" else "kind get clusters"
+        cluster_info = c.run(cluster_command, hide=True, warn=True)
+        if cluster_info and cluster_info.ok and _cluster_list_has_name(cluster_info.stdout, backend):
+            print(f"Local Kubernetes Cluster ({backend} / {CLUSTER_NAME}): Active")
         else:
-            print(f"Kind Cluster: Not Found")
+            print("Local Kubernetes Cluster: Not Found")
             return
     except:
-         print(f"Kind Cluster: Error checking")
+         print(f"Local Kubernetes Cluster: Error checking")
          return
 
     print("\nPod Status:")
@@ -311,7 +360,7 @@ def recover(c, timeout=180):
     if not cluster_ready.ok:
         raise SystemExit(
             "K8S RECOVER FAILED: kubectl cannot reach the cluster. "
-            "Start Docker Desktop / Kind first, then retry."
+            "Start Docker / the local Kubernetes backend first, then retry."
         )
     restart_failures: list[str] = []
 
@@ -349,8 +398,12 @@ def reset(c):
     print("Resetting Infrastructure...")
     
     # 1. Teardown
-    print("Stopping Cluster...")
-    c.run(f"kind delete cluster --name {CLUSTER_NAME}")
+    backend = _k8s_backend()
+    print("Stopping Local Kubernetes Cluster...")
+    if backend == "k3d":
+        c.run(f"k3d cluster delete {CLUSTER_NAME}")
+    else:
+        c.run(f"kind delete cluster --name {CLUSTER_NAME}")
     
     # 2. Canonical bring-up
     up(c)

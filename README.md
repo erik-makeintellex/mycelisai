@@ -97,6 +97,7 @@ Tasking note:
 - on Windows hosts that no longer have a native `docker` binary, the Compose task path now falls back to Docker inside WSL when available, translates the compose file/env file paths into WSL form, and rewrites `MYCELIS_OUTPUT_HOST_PATH` for the container runtime; use `MYCELIS_WSL_DISTRO` when the default WSL distro is not the Docker host
 - on that same Windows + WSL Docker path, `compose.up` and `compose.health` now auto-start a WSL-host relay for the AI endpoint when needed, so Core can still use a Windows-hosted Ollama service through `host.docker.internal` even when bridge containers cannot reach the Windows LAN IP directly
 - `uv run inv k8s.deploy` now accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT` so the Helm deploy path can target an explicit external AI service such as a Windows-hosted Ollama box without editing chart source; use a reachable host/IP like `http://192.168.x.x:11434/v1`, not `localhost`
+- `uv run inv k8s.init` / `k8s.up` / `k8s.deploy` now prefer `k3d` as the local Kubernetes backend when it is available, while keeping `MYCELIS_K8S_BACKEND=kind` as the explicit fallback for older local workflows
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, point it at a host-reachable endpoint such as `http://host.docker.internal:11434`, and let Compose map that value into the provider-specific runtime overrides inside Core
 - when Docker runs inside WSL and the AI engine is on the same Windows host, keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer can relay that through the WSL host so bridge containers do not need direct access to the Windows LAN IP
@@ -529,7 +530,7 @@ For a new user who wants the quickest supported path to a running service:
   3. `uv run inv auth.break-glass-key`
   4. `uv run inv auth.posture`
   5. `uv run inv install`
-  6. `uv run inv k8s.up`
+  6. `uv run inv k8s.up` (`k3d` preferred when installed; use `MYCELIS_K8S_BACKEND=kind` for the legacy fallback)
   7. `uv run inv lifecycle.up --frontend`
   8. `uv run inv lifecycle.health`
   9. open `http://localhost:3000`
@@ -560,7 +561,7 @@ Recommended easiest setup path by host:
 - Windows native:
   1. `copy .env.example .env`
   2. `uv run inv install`
-  3. `uv run inv k8s.up`
+  3. `uv run inv k8s.up` (`k3d` preferred when installed; use `MYCELIS_K8S_BACKEND=kind` for the legacy fallback)
   4. `uv run inv lifecycle.up --frontend`
   5. `uv run inv lifecycle.health`
 

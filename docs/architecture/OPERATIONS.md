@@ -224,16 +224,17 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv k8s.init` | Create Kind cluster (handles Windows absolute paths) |
-| `uv run inv k8s.up` | Canonical cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
-| `uv run inv k8s.deploy` | Build Core, load Docker image, helm upgrade (injects secrets from .env) |
+| `uv run inv k8s.init` | Create the preferred local Kubernetes cluster (`k3d` when available, Kind fallback) |
+| `uv run inv k8s.up` | Canonical local-cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
+| `uv run inv k8s.deploy` | Build Core, load or import the Docker image into the active local backend, helm upgrade (injects secrets from .env) |
 | `uv run inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
 | `uv run inv k8s.bridge` | Port-forward NATS:4222, HTTP:8080, PG:5432 and verify the local forwards actually bind before reporting success |
-| `uv run inv k8s.status` | Check Docker, Kind cluster, pod status, PVC status |
+| `uv run inv k8s.status` | Check Docker, the preferred local Kubernetes backend, pod status, PVC status |
 | `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL), then wait for readiness and fail closed if the cluster is unreachable |
 | `uv run inv k8s.reset` | Full reset: delete cluster -> canonical bring-up (includes readiness wait) |
 
 Kubernetes operator contract:
+- local Kubernetes now prefers `k3d` when it is installed; set `MYCELIS_K8S_BACKEND=kind` when you intentionally need the older Kind workflow
 - use explicit reachable AI endpoints for deployed text or media engines instead of localhost assumptions
 - `uv run inv k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT` from the shell or `.env` and forwards them into the Helm chart as operator-owned runtime config
 - the Helm chart applies `MYCELIS_K8S_TEXT_ENDPOINT` through provider-specific env overrides (`MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`) so deployed providers can target a Windows-hosted or otherwise external self-hosted AI service without editing chart source
@@ -330,14 +331,16 @@ uv run inv compose.status
 uv run inv compose.health
 ```
 
-This is the supported single-host runtime for home-lab and demo use when Kind/Kubernetes is unnecessary.
+This is the supported single-host runtime for home-lab and demo use when local Kubernetes is unnecessary.
 It is also the recommended easiest full-stack bring-up path on WSL2, Linux, and macOS.
 
-### Kind / Kubernetes Local Development
+### k3d / Local Kubernetes Development
 
 ```bash
 # Prerequisite (run once per reboot/reset):
-uv run inv k8s.up       # Kind/namespace -> Helm deploy -> PostgreSQL -> NATS -> Core API
+uv run inv k8s.up       # preferred local backend (`k3d` when available) -> Helm deploy -> PostgreSQL -> NATS -> Core API
+# optional legacy fallback:
+#   MYCELIS_K8S_BACKEND=kind uv run inv k8s.up
 
 # Managed local bridge + backend + frontend
 uv run inv lifecycle.up --frontend
@@ -374,7 +377,7 @@ cp .env.example .env
 # Edit .env: POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 
 # 2. Boot infrastructure in dependency order
-uv run inv k8s.up        # Kind + Helm + readiness gates (PostgreSQL -> NATS -> Core API)
+uv run inv k8s.up        # preferred local backend (`k3d` when available) + Helm + readiness gates
 
 # 3. Install frontend deps (first time only)
 uv run inv interface.install  # First time only

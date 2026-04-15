@@ -42,12 +42,13 @@ Calculates the **Immutable Tag**: `v{SEMVER}-{SHA}`.
 - Git: `git rev-parse --short HEAD`.
 
 ### `k8s.py` (Deployment)
-Handles the atomic deployment to Kubernetes (Kind).
+Handles the atomic deployment to local Kubernetes, with `k3d` preferred and Kind retained as a fallback.
 - **Init**: `uv run inv k8s.init` (Infra).
 - **Deploy**: `uv run inv k8s.deploy` (Core).
 - **Status**: `uv run inv k8s.status` (Health).
 - **Bridge**: `uv run inv k8s.bridge` now verifies the local PostgreSQL/NATS/Core port-forwards actually bind before reporting success.
 - **Recover**: `uv run inv k8s.recover` now fails closed when the cluster is unreachable and waits for rollout readiness before claiming recovery.
+- **Backend selection**: local Kubernetes now prefers `k3d` when available; set `MYCELIS_K8S_BACKEND=kind` when you intentionally need the older Kind workflow.
 - **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host without editing chart source.
 - Chart/runtime config alignment: the deployed Core image resolves startup config from `/core/config`, so the chart mount path and container workdir must stay in sync for bootstrap bundles to load.
 
@@ -62,7 +63,7 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 - **Health**: `uv run inv compose.health`
 - **Status**: `uv run inv compose.status`
 - **Logs**: `uv run inv compose.logs`
-- Compose uses `.env.compose` so host/container assumptions stay separate from the Kind/bridge `.env` path.
+- Compose uses `.env.compose` so host/container assumptions stay separate from the local-Kubernetes `.env` path.
 - Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally, and maps that value into provider-specific endpoint overrides inside Core.
 - Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.
 - Compose `infra-up` is the data-plane-only preflight for personal-owner deployments where PostgreSQL/NATS should be reachable before app services are launched.

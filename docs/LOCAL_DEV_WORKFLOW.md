@@ -31,7 +31,8 @@
 | Tool | Version | Install | Purpose |
 |:--|:--|:--|:--|
 | Docker Engine / Docker CLI | Latest | Docker Desktop, native Linux Docker, or Docker inside WSL | Container runtime for Compose or local Kubernetes bring-up |
-| Kind | Latest | `scoop install kind` / `brew install kind` | Local Kubernetes cluster |
+| k3d | Latest | `brew install k3d` or package manager of choice | Preferred local Kubernetes cluster in Docker |
+| Kind | Latest | `scoop install kind` / `brew install kind` | Legacy local Kubernetes fallback when `MYCELIS_K8S_BACKEND=kind` is required |
 | kubectl | **v1.35+** | `scoop install kubectl` / `brew install kubectl` | K8s CLI (v1.32 has port-forward bugs) |
 | Helm | v3+ | `scoop install helm` / `brew install helm` | Chart deployment |
 | Go | 1.26 | [go.dev](https://go.dev/) | Backend compiler |
@@ -42,6 +43,7 @@
 
 Platform-first guidance:
 - WSL2/Linux/macOS should usually start with the Docker Compose path because it is the easiest full-stack bring-up and avoids the extra Kind/bridge layer.
+- when you do need local Kubernetes, prefer `k3d`; use `MYCELIS_K8S_BACKEND=kind` only when you intentionally need the older Kind flow
 - Windows native is still a supported operator/development path, but the durable runtime stories are Compose and self-hosted Kubernetes rather than a Windows-only Docker Desktop assumption.
 - Optional repo-local `cognitive.*` helpers are for supported Linux GPU hosts; they are not the default setup path on Windows or macOS.
 
@@ -199,7 +201,7 @@ If you change local engines:
 ## Deployment Guidance By Host Architecture
 
 - Windows x86_64:
-  - best fit for local development, operator workflow iteration, and desktop Docker Desktop / Kind usage
+  - best fit for local development, operator workflow iteration, and desktop Docker Desktop / local-Kubernetes usage
   - move tool caches off a tight `C:` volume early with `uv run inv cache.apply-user-policy`
   - use remote Ollama or hosted providers when the desktop is not meant to be the long-running inference host
 - Linux x86_64:
@@ -231,7 +233,7 @@ uv run inv compose.health
 Use this path when you want:
 - the easiest supported full-stack bring-up
 - a single-host runtime for development, demos, or home-lab use
-- to avoid local Kind/bridge complexity unless you are specifically working on Kubernetes behavior
+- to avoid local Kubernetes/bridge complexity unless you are specifically working on Kubernetes behavior
 
 ### Windows Native
 
@@ -248,7 +250,7 @@ uv run inv lifecycle.health
 Use this path when you want:
 - the normal Windows desktop development experience
 - local Ollama on the same host
-- direct validation of the Kind/Kubernetes local path
+- direct validation of the local Kubernetes path (`k3d` preferred, `MYCELIS_K8S_BACKEND=kind` fallback)
 
 ### Cross-Host Working Copy Rule
 
@@ -336,7 +338,7 @@ Use the shortest path that matches your host:
 Run all commands from `scratch/` (project root where `tasks.py` lives).
 
 Choose one supported local runtime:
-- `Kind/Kubernetes` for chart and cluster parity
+- `k3d/local Kubernetes` for chart and cluster parity
 - `Docker Compose` for home-lab, single-host, and partner-demo use
 
 Docker Compose rule:
@@ -345,7 +347,7 @@ Docker Compose rule:
 - `MYCELIS_COMPOSE_OLLAMA_HOST` must resolve from inside the Core container, so use `http://host.docker.internal:11434` or another reachable service hostname instead of `localhost`
 - if Docker is running inside WSL and Ollama is on the same Windows host, keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer can relay that through the WSL host when bridge containers cannot reach the Windows LAN IP directly
 
-### Option A: Kind / Kubernetes
+### Option A: k3d / Local Kubernetes
 
 ```bash
 # 1. Configure environment
@@ -358,8 +360,10 @@ cp .env.example .env
 
 # 2. Bring up cluster services in dependency order
 uv run inv k8s.up
+# Optional legacy fallback:
+#   MYCELIS_K8S_BACKEND=kind uv run inv k8s.up
 # Order enforced by task:
-#   Kind/namespace -> Helm deploy -> PostgreSQL ready -> NATS ready -> Core API ready
+#   preferred local backend (`k3d` when available) -> Helm deploy -> PostgreSQL ready -> NATS ready -> Core API ready
 
 # 3. Install frontend dependencies (first time only)
 uv run inv interface.install
@@ -433,7 +437,7 @@ Shutdown:
 uv run inv compose.down
 ```
 
-Kind/Kubernetes daily path:
+k3d/local Kubernetes daily path:
 
 ```bash
 uv run inv k8s.up
@@ -459,13 +463,13 @@ uv run inv core.test        # Run Go unit tests
 |:--|:--|:--|:--|
 | Next.js (frontend) | **3000** | Native | HTTP |
 | Go Core (backend) | **8081** | Native | HTTP |
-| PostgreSQL | **5432** | Kind bridge or Compose publish | TCP |
-| NATS | **4222** | Kind bridge or Compose publish | TCP |
+| PostgreSQL | **5432** | Local-Kubernetes bridge or Compose publish | TCP |
+| NATS | **4222** | Local-Kubernetes bridge or Compose publish | TCP |
 | NATS Monitor | **8222** | Compose publish | HTTP |
 | Ollama | **11434** | Local / LAN | HTTP |
 | vLLM (optional) | **8000** | Native | HTTP |
 | Media Server (optional) | **8001** | Native | HTTP |
-| Kind API Server | **6443** | Docker | TCP |
+| Local Kubernetes API Server | **6443** | Docker | TCP |
 
 ### Architecture: How Requests Flow
 
@@ -490,7 +494,7 @@ The Next.js `next.config.ts` rewrites `/api/*` to `http://{MYCELIS_API_HOST}:{MY
 Quick commands to verify each service:
 
 ```bash
-# Kind cluster + pods
+# Local Kubernetes cluster + pods
 uv run inv k8s.status
 
 # Compose stack
@@ -563,9 +567,9 @@ uv run inv core.restart
 2. If the log points to MCP bootstrap/connect issues, rerun after fixing the failing server config
 3. Recheck with `uv run inv lifecycle.status`
 
-### Kind cluster cert chain broken
+### Kind fallback cluster cert chain broken
 
-**Cause:** Docker Desktop restart invalidates Kind cluster certificates.
+**Cause:** Docker Desktop restart can invalidate Kind cluster certificates when you are intentionally using the Kind fallback backend.
 
 **Fix:**
 ```bash
@@ -686,12 +690,12 @@ profiles:
 | `uv run inv db.reset` | Drop + recreate + migrate |
 | `uv run inv db.status` | Show tables |
 | **Infrastructure** | |
-| `uv run inv k8s.init` | Create Kind cluster |
+| `uv run inv k8s.init` | Create preferred local Kubernetes cluster (`k3d` when available, Kind fallback) |
 | `uv run inv k8s.up` | Canonical cluster bring-up: init → deploy → wait |
 | `uv run inv k8s.deploy` | Helm deploy to cluster |
 | `uv run inv k8s.wait` | Wait for readiness gates (PostgreSQL → NATS → Core API) |
 | `uv run inv k8s.bridge` | Port-forward NATS, PG, API |
-| `uv run inv k8s.status` | Cluster health check |
+| `uv run inv k8s.status` | Local Kubernetes health check |
 | `uv run inv k8s.recover` | Restart core + infra resources (core, NATS, PostgreSQL) |
 | `uv run inv k8s.reset` | Full teardown + canonical bring-up (includes readiness wait) |
 | `uv run inv compose.infra-up` | Start only Compose PostgreSQL + NATS for personal-owner data-plane preflight |

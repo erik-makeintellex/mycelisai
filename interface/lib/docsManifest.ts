@@ -304,6 +304,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Compact delivery-team contract for deployable Compose and self-hosted Kubernetes runtime work",
             },
             {
+                slug: "v8-enterprise-self-hosted-kubernetes-delivery-plan",
+                label: "V8 Enterprise Self-Hosted Kubernetes",
+                path: "docs/architecture-library/V8_ENTERPRISE_SELF_HOSTED_KUBERNETES_DELIVERY_PLAN.md",
+                description: "Enterprise-compatible Kubernetes delivery plan with local k3d validation, chart promotion rules, and acceptance gates",
+            },
+            {
                 slug: "v8-compose-personal-owner-test-plan",
                 label: "V8 Compose Personal Owner Test Plan",
                 path: "docs/architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md",

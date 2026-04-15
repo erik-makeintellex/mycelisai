@@ -63,3 +63,38 @@ def test_compose_runtime_maps_ai_host_into_provider_overrides():
     missing = [snippet for snippet in required_snippets if snippet not in text]
     assert not missing, "docker-compose.yml is missing provider endpoint overrides:\n" + "\n".join(missing)
     assert "      OLLAMA_HOST:" not in text, "docker-compose.yml should not inject legacy OLLAMA_HOST into Core"
+
+
+def test_k8s_docs_prefer_k3d_with_kind_fallback():
+    snippets = [
+        (
+            README,
+            [
+                "prefer `k3d` as the local Kubernetes backend when it is available",
+                "MYCELIS_K8S_BACKEND=kind",
+            ],
+        ),
+        (
+            TESTING,
+            [
+                "when the validation target is local Kubernetes, prefer `k3d`",
+                "`MYCELIS_K8S_BACKEND=kind`",
+            ],
+        ),
+        (
+            OPERATIONS,
+            [
+                "local Kubernetes now prefers `k3d` when it is installed",
+                "MYCELIS_K8S_BACKEND=kind",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "k3d local-Kubernetes contract is missing from active docs:\n" + "\n".join(missing)
