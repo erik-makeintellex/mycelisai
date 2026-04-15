@@ -65,6 +65,8 @@ Use `Create Team` when you want a guided setup instead of filling raw fields:
 - decide whether the work should stay as one team or split into lanes
 - confirm the visible output contract before launch
 
+If you need the higher-level boundary between direct Soma, one context-rich agent, compact teams, and multi-lane orchestration, read [V8 Teamed Agentry Workflow Advantage](../architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md).
+
 ## What A Good Team Looks Like
 
 Most teams should have:

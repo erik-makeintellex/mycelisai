@@ -280,6 +280,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Compact-team defaults, broad-ask splitting, and Soma/Council orchestration over NATS",
             },
             {
+                slug: "v8-teamed-agentry-workflow-advantage",
+                label: "V8 Teamed Agentry Advantage",
+                path: "docs/architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md",
+                description: "Workflow variants and the boundary between direct Soma, compact teams, and multi-lane coordinated agentry",
+            },
+            {
                 slug: "v8-universal-soma-context-model",
                 label: "V8 Universal Soma Context Model",
                 path: "docs/architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md",
