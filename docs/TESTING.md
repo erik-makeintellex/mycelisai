@@ -12,6 +12,7 @@ Current validation contract:
 - when the validation target is a personal-owner Compose deployment with user-configured data services, use `uv run inv compose.infra-up --wait-timeout=180` first to start only PostgreSQL/NATS, verify the printed DB/NATS connection settings, run `uv run inv compose.infra-health`, then run `uv run inv compose.storage-health` after migrations so the long-term pgvector/Postgres memory and artifact store is proven before Core/Interface workflow proof
 - in the supported home-runtime stack, `.env.compose` must keep container-host assumptions separate from `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`
 - on Windows hosts without a native `docker` binary, the compose task layer may execute Docker through WSL instead; keep the Docker daemon in a WSL distro that can reach the repo filesystem, and set `MYCELIS_WSL_DISTRO` when the default distro is not the correct Docker host
+- on that Windows + WSL Docker path, the compose task layer may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host so the Core container can still reach a Windows-hosted Ollama service even when the Windows LAN IP is not directly reachable from bridge containers
 - when the validation target is the Helm/self-hosted Kubernetes path, use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT` to prove the deployment targets an explicit reachable AI host instead of a chart-baked or localhost default
 - when the validation target is the Windows self-hosted operator lane, prove the field topology directly: a Windows browser/client opens the UI over the network, the runtime runs in Compose or self-hosted Kubernetes, and the AI engine lives on a Windows GPU host reached by explicit IP or hostname rather than `localhost`
 - use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
@@ -122,6 +123,7 @@ Use this lane when you need repeatable proof that the self-hosted product works 
 Required setup:
 
 1. Set the runtime endpoint explicitly in the compose or Helm environment, for example `MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434` or the provider-specific endpoint override used by the deployment.
+   - On Windows + WSL Docker, `compose.up` may relay that endpoint through `host.docker.internal:<relay-port>` on the WSL host as an implementation detail; the operator-facing contract is still the explicit Windows AI host.
 2. Bring the stack up with the supported runtime task path.
 3. Confirm `compose.status` or the relevant Kubernetes health proof shows the UI and backend are healthy before browser work begins.
 4. Record the Windows host address used for the model service and the browser URL used for the UI.

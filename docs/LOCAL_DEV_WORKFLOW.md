@@ -275,6 +275,7 @@ Use this as the canonical resume path when active development moves to WSL/Linux
 WSL/Linux notes:
 - treat `uv run inv ...` as the only normal execution path; raw `npx`, direct Playwright, and PowerShell wrappers are fallback troubleshooting paths only
 - when Windows no longer has a native `docker` binary, `uv run inv compose.*` can drive Docker through WSL automatically; set `MYCELIS_WSL_DISTRO` if the default WSL distro is not the one that owns Docker
+- on that Windows + WSL Docker path, `compose.up` and `compose.health` can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST` so bridge containers can still reach a Windows-hosted Ollama service through `host.docker.internal`
 - use `MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace` for Compose-backed live browser specs when the spec checkout differs from the running backend worktree
 - `psql` is required for `db.*` tasks, but pure `compose.*` workflows run migrations and health checks through the Postgres container
 - `host.docker.internal` is usually correct for Docker Desktop + WSL, but native Linux Docker hosts may need another hostname or reachable service address instead
@@ -342,6 +343,7 @@ Docker Compose rule:
 - keep `.env.compose` separate from `.env`
 - use `MYCELIS_COMPOSE_OLLAMA_HOST` in `.env.compose` so Windows/macOS host-level `OLLAMA_HOST` bind settings do not override the container runtime
 - `MYCELIS_COMPOSE_OLLAMA_HOST` must resolve from inside the Core container, so use `http://host.docker.internal:11434` or another reachable service hostname instead of `localhost`
+- if Docker is running inside WSL and Ollama is on the same Windows host, keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer can relay that through the WSL host when bridge containers cannot reach the Windows LAN IP directly
 
 ### Option A: Kind / Kubernetes
 

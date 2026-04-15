@@ -3,8 +3,10 @@ import subprocess
 import time
 import json
 import os
+import shlex
 from pathlib import Path
 from typing import Callable
+from urllib.parse import urlparse
 
 from invoke import task, Collection
 
@@ -27,6 +29,9 @@ COMPOSE_ENV_EXAMPLE = ROOT_DIR / ".env.compose.example"
 COMPOSE_PROJECT = "mycelis-home"
 DEFAULT_OUTPUT_HOST_PATH = ROOT_DIR / "workspace" / "docker-compose" / "data"
 OUTPUT_BLOCK_MODES = {"local_hosted", "cluster_generated"}
+WSL_OLLAMA_RELAY_NAME = f"{COMPOSE_PROJECT}-ollama-relay"
+WSL_OLLAMA_RELAY_IMAGE = "alpine:3.21"
+DEFAULT_WSL_OLLAMA_RELAY_PORT = 11435
 COMPOSE_RUNTIME_OVERRIDE_KEYS = {
     "CORS_ORIGIN",
     "DATA_DIR",
@@ -43,6 +48,7 @@ COMPOSE_RUNTIME_OVERRIDE_KEYS = {
     "MYCELIS_COMPOSE_NATS_PORT",
     "MYCELIS_COMPOSE_OLLAMA_HOST",
     "MYCELIS_COMPOSE_POSTGRES_PORT",
+    "MYCELIS_COMPOSE_WSL_OLLAMA_RELAY_PORT",
     "MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP",
     "MYCELIS_OUTPUT_BLOCK_MODE",
     "MYCELIS_OUTPUT_HOST_PATH",
@@ -101,6 +107,15 @@ def _compose_effective_env(env_values: dict[str, str] | None = None) -> dict[str
     return values
 
 
+def _wsl_exec_command(*args: str) -> list[str]:
+    command = ["wsl.exe"]
+    distro = os.environ.get("MYCELIS_WSL_DISTRO", "").strip()
+    if distro:
+        command.extend(["-d", distro])
+    command.extend(["--exec", *args])
+    return command
+
+
 def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -132,6 +147,152 @@ def _resolve_host_path(path_value: str) -> Path:
     raw_path = _clean_env_value(path_value)
     expanded = os.path.expandvars(os.path.expanduser(raw_path))
     return Path(expanded).resolve(strict=False)
+
+
+def _parse_network_endpoint(url: str) -> tuple[str, int]:
+    parsed = urlparse(url.strip())
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise SystemExit(
+            "Invalid .env.compose MYCELIS_COMPOSE_OLLAMA_HOST: "
+            f"{url}. Use an http(s) endpoint such as http://host.docker.internal:11434."
+        )
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    return parsed.hostname, port
+
+
+def _wsl_http_available(url: str) -> bool:
+    probe = url.rstrip("/") + "/api/tags"
+    result = subprocess.run(
+        _wsl_exec_command(
+            "sh",
+            "-lc",
+            f"curl -fsS --max-time 5 -o /dev/null {shlex.quote(probe)}",
+        ),
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    return result.returncode == 0
+
+
+def _wsl_ollama_relay_port(env_values: dict[str, str]) -> int:
+    raw = _clean_env_value(
+        env_values.get("MYCELIS_COMPOSE_WSL_OLLAMA_RELAY_PORT", str(DEFAULT_WSL_OLLAMA_RELAY_PORT))
+    )
+    try:
+        return int(raw)
+    except ValueError as exc:
+        raise SystemExit(
+            "Invalid .env.compose MYCELIS_COMPOSE_WSL_OLLAMA_RELAY_PORT: "
+            f"{raw!r} must be an integer port."
+        ) from exc
+
+
+def _docker_run(args: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        docker_command(*args, cwd=ROOT_DIR),
+        capture_output=True,
+        text=True,
+    )
+    if check and result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "unknown docker error"
+        raise SystemExit(f"Docker command failed: {' '.join(args)} ({detail})")
+    return result
+
+
+def _inspect_wsl_ollama_relay_labels() -> dict[str, str] | None:
+    result = _docker_run(
+        ["inspect", WSL_OLLAMA_RELAY_NAME, "--format", "{{json .Config.Labels}}"],
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    raw = result.stdout.strip()
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+
+
+def _stop_wsl_ollama_relay():
+    if docker_host_mode() != "wsl":
+        return
+    _docker_run(["rm", "-f", WSL_OLLAMA_RELAY_NAME], check=False)
+
+
+def _ensure_wsl_ollama_relay(target_host: str, target_port: int, relay_port: int):
+    labels = _inspect_wsl_ollama_relay_labels()
+    expected = {
+        "mycelis.relay.target_host": target_host,
+        "mycelis.relay.target_port": str(target_port),
+        "mycelis.relay.listen_port": str(relay_port),
+    }
+    if labels and all(labels.get(key) == value for key, value in expected.items()):
+        return
+
+    _stop_wsl_ollama_relay()
+    relay_cmd = (
+        "apk add --no-cache socat >/dev/null && "
+        f"exec socat TCP-LISTEN:{relay_port},fork,reuseaddr,bind=0.0.0.0 "
+        f"TCP:{target_host}:{target_port}"
+    )
+    result = _docker_run(
+        [
+            "run",
+            "-d",
+            "--rm",
+            "--name",
+            WSL_OLLAMA_RELAY_NAME,
+            "--network",
+            "host",
+            "--label",
+            f"mycelis.relay.target_host={target_host}",
+            "--label",
+            f"mycelis.relay.target_port={target_port}",
+            "--label",
+            f"mycelis.relay.listen_port={relay_port}",
+            WSL_OLLAMA_RELAY_IMAGE,
+            "sh",
+            "-lc",
+            relay_cmd,
+        ]
+    )
+    if not result.stdout.strip():
+        raise SystemExit("Failed to start the WSL Ollama relay container.")
+    time.sleep(2)
+
+
+def _prepare_wsl_ollama_host(env_values: dict[str, str]) -> dict[str, str]:
+    values = dict(env_values)
+    if docker_host_mode() != "wsl":
+        return values
+
+    configured = _clean_env_value(values.get("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434"))
+    configured_host, configured_port = _parse_network_endpoint(configured)
+    relay_target_host = configured_host
+    relay_target_port = configured_port
+
+    if not _wsl_http_available(configured):
+        localhost_candidate = f"http://127.0.0.1:{configured_port}"
+        if _wsl_http_available(localhost_candidate):
+            relay_target_host = "127.0.0.1"
+        else:
+            raise SystemExit(
+                "WSL Docker could not reach the configured MYCELIS_COMPOSE_OLLAMA_HOST and "
+                "no mirrored localhost Ollama fallback was reachable from WSL. "
+                "Verify the Windows Ollama service is running and reachable from the Docker-owning WSL distro."
+            )
+
+    relay_port = _wsl_ollama_relay_port(values)
+    _ensure_wsl_ollama_relay(relay_target_host, relay_target_port, relay_port)
+    print(
+        "  WSL Ollama relay: "
+        f"http://host.docker.internal:{relay_port} -> {relay_target_host}:{relay_target_port}"
+    )
+    values["MYCELIS_COMPOSE_OLLAMA_HOST"] = f"http://host.docker.internal:{relay_port}"
+    return values
 
 
 def _validate_output_block_config(env_values: dict[str, str]):
@@ -638,6 +799,7 @@ def up(c, build=False, wait_timeout=180):
     _require_compose_env_file()
     env_values = _compose_effective_env()
     _validate_compose_env(env_values)
+    env_values = _prepare_wsl_ollama_host(env_values)
     wait_timeout = int(wait_timeout)
     if wait_timeout < 30:
         raise SystemExit("Compose up wait timeout must be at least 30 seconds.")
@@ -782,6 +944,7 @@ def down(c, volumes=False):
     if volumes:
         cmd.append("--volumes")
     _run_compose(cmd, env=_compose_runtime_env())
+    _stop_wsl_ollama_relay()
 
 
 @task
@@ -906,6 +1069,7 @@ def health(c):
     _require_compose_env_file()
     env_values = _compose_effective_env()
     _validate_compose_env(env_values)
+    env_values = _prepare_wsl_ollama_host(env_values)
     api_key = env_values.get("MYCELIS_API_KEY", "")
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 

@@ -1478,6 +1478,19 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 	}
 }
 
+func TestParsePlannedToolCall_NormalizesWriteFileAliases(t *testing.T) {
+	call, ok := parsePlannedToolCall(`{"tool_call":{"name":"write_file","arguments":{"file_path":"workspace/logs/alias_test.py","body":"print('hello world')"}}}`)
+	if !ok {
+		t.Fatal("expected planned tool call to parse")
+	}
+	if call.Arguments["path"] != "workspace/logs/alias_test.py" {
+		t.Fatalf("path = %#v", call.Arguments["path"])
+	}
+	if call.Arguments["content"] != "print('hello world')" {
+		t.Fatalf("content = %#v", call.Arguments["content"])
+	}
+}
+
 func TestResolveChatAskContract(t *testing.T) {
 	direct := resolveChatAskContract("soma", false, chatAgentResult{})
 	if direct.AskClass != protocol.AskClassDirectAnswer {

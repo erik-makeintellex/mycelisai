@@ -459,10 +459,40 @@ func parsePlannedToolCall(text string) (protocol.PlannedToolCall, bool) {
 	if envelope.ToolCall.Arguments == nil {
 		envelope.ToolCall.Arguments = map[string]any{}
 	}
-	return protocol.PlannedToolCall{
+	return normalizePlannedToolCall(protocol.PlannedToolCall{
 		Name:      strings.TrimSpace(envelope.ToolCall.Name),
 		Arguments: envelope.ToolCall.Arguments,
-	}, true
+	}), true
+}
+
+func normalizePlannedToolCall(call protocol.PlannedToolCall) protocol.PlannedToolCall {
+	if call.Arguments == nil {
+		call.Arguments = map[string]any{}
+	}
+
+	switch strings.TrimSpace(call.Name) {
+	case "write_file":
+		if firstNonEmptyString(call.Arguments["path"]) == "" {
+			if path := firstNonEmptyString(
+				call.Arguments["file_path"],
+				call.Arguments["target_path"],
+				call.Arguments["filename"],
+				call.Arguments["file"],
+			); path != "" {
+				call.Arguments["path"] = path
+			}
+		}
+		if firstNonEmptyString(call.Arguments["content"]) == "" {
+			if content := firstNonEmptyString(
+				call.Arguments["body"],
+				call.Arguments["text"],
+			); content != "" {
+				call.Arguments["content"] = content
+			}
+		}
+	}
+
+	return call
 }
 
 func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool) {
@@ -520,13 +550,13 @@ func filepathExt(targetPath string) string {
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
 	var planned []protocol.PlannedToolCall
 	if call, ok := parsePlannedToolCall(agentResult.Text); ok {
-		planned = append(planned, call)
+		planned = append(planned, normalizePlannedToolCall(call))
 	}
 	if len(planned) == 0 {
 		for _, tool := range mutTools {
 			if tool == "write_file" {
 				if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
-					planned = append(planned, call)
+					planned = append(planned, normalizePlannedToolCall(call))
 				}
 			}
 		}

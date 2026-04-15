@@ -69,6 +69,60 @@ def test_compose_runtime_env_passes_overrides_into_wsl(tmp_path, monkeypatch):
     assert "MYCELIS_OUTPUT_HOST_PATH" in env["WSLENV"]
 
 
+def test_prepare_wsl_ollama_host_uses_reachable_configured_target(monkeypatch):
+    calls: list[tuple[str, int, int]] = []
+
+    monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setattr(compose, "_wsl_http_available", lambda url: url == "http://192.168.50.156:11434/api/tags" or url == "http://192.168.50.156:11434")
+    monkeypatch.setattr(
+        compose,
+        "_ensure_wsl_ollama_relay",
+        lambda host, target_port, relay_port: calls.append((host, target_port, relay_port)),
+    )
+
+    values = compose._prepare_wsl_ollama_host(
+        {"MYCELIS_COMPOSE_OLLAMA_HOST": "http://192.168.50.156:11434"}
+    )
+
+    assert values["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://host.docker.internal:11435"
+    assert calls == [("192.168.50.156", 11434, 11435)]
+
+
+def test_prepare_wsl_ollama_host_falls_back_to_wsl_localhost(monkeypatch):
+    calls: list[tuple[str, int, int]] = []
+
+    monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setattr(
+        compose,
+        "_wsl_http_available",
+        lambda url: url == "http://127.0.0.1:11434/api/tags" or url == "http://127.0.0.1:11434",
+    )
+    monkeypatch.setattr(
+        compose,
+        "_ensure_wsl_ollama_relay",
+        lambda host, target_port, relay_port: calls.append((host, target_port, relay_port)),
+    )
+
+    values = compose._prepare_wsl_ollama_host(
+        {"MYCELIS_COMPOSE_OLLAMA_HOST": "http://192.168.50.156:11434"}
+    )
+
+    assert values["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://host.docker.internal:11435"
+    assert calls == [("127.0.0.1", 11434, 11435)]
+
+
+def test_prepare_wsl_ollama_host_fails_when_target_and_localhost_are_unreachable(monkeypatch):
+    monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setattr(compose, "_wsl_http_available", lambda url: False)
+
+    with pytest.raises(SystemExit) as excinfo:
+        compose._prepare_wsl_ollama_host(
+            {"MYCELIS_COMPOSE_OLLAMA_HOST": "http://192.168.50.156:11434"}
+        )
+
+    assert "could not reach the configured MYCELIS_COMPOSE_OLLAMA_HOST" in str(excinfo.value)
+
+
 def test_require_compose_env_file_has_clear_guidance(tmp_path, monkeypatch):
     missing = tmp_path / ".env.compose"
     example = tmp_path / ".env.compose.example"
@@ -253,6 +307,7 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
         "_wait_for_http_ok",
         lambda url, label, timeout_seconds=60, headers=None: waits.append((label, url)) or True,
     )
+    monkeypatch.setattr(compose, "_prepare_wsl_ollama_host", lambda env_values: env_values)
     monkeypatch.setattr(compose.status, "body", lambda _c=None: waits.append(("status", 0)))
 
     compose.up.body(None, build=False, wait_timeout=180)
@@ -485,6 +540,7 @@ def test_compose_up_rejects_tiny_wait_timeout(monkeypatch):
     monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
     monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(compose, "_prepare_wsl_ollama_host", lambda env_values: env_values)
 
     with pytest.raises(SystemExit) as excinfo:
         compose.up.body(None, wait_timeout=29)
@@ -496,6 +552,7 @@ def test_compose_up_postgres_timeout_has_guidance(monkeypatch):
     monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
     monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(compose, "_prepare_wsl_ollama_host", lambda env_values: env_values)
     monkeypatch.setattr(
         compose,
         "_run_compose",
@@ -516,6 +573,7 @@ def test_compose_up_prints_expectations(monkeypatch, capsys):
     monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {})
     monkeypatch.setattr(compose, "_validate_compose_env", lambda env_values: None)
+    monkeypatch.setattr(compose, "_prepare_wsl_ollama_host", lambda env_values: env_values)
     monkeypatch.setattr(
         compose,
         "_run_compose",
@@ -538,13 +596,16 @@ def test_compose_up_prints_expectations(monkeypatch, capsys):
 
 def test_compose_down_forwards_volumes_flag(monkeypatch):
     commands: list[list[str]] = []
+    stopped: list[bool] = []
 
     monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
     monkeypatch.setattr(compose, "_run_compose", lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})())
+    monkeypatch.setattr(compose, "_stop_wsl_ollama_relay", lambda: stopped.append(True))
 
     compose.down.body(None, volumes=True)
 
     assert commands == [compose._compose_command("down", "--volumes")]
+    assert stopped == [True]
 
 
 def test_validate_compose_env_rejects_loopback_ollama_host():
@@ -629,6 +690,7 @@ def test_validate_compose_env_creates_implicit_default_output_path(tmp_path, mon
 def test_compose_health_fails_when_text_engine_is_offline(monkeypatch, capsys):
     monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
     monkeypatch.setattr(compose, "_load_compose_env", lambda: {"MYCELIS_API_KEY": "test-key"})
+    monkeypatch.setattr(compose, "_prepare_wsl_ollama_host", lambda env_values: env_values)
 
     responses = {
         f"http://{compose.API_HOST}:{compose.API_PORT}/healthz": (200, "ok"),
