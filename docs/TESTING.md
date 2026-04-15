@@ -27,6 +27,7 @@ Current validation contract:
 Canonical full-gate references:
 - use this document for the ordered release-style testing pass across repo baseline, stable browser proof, live service/browser proof, and compose-aware runtime proof
 - use `docs/user/deployment-methods.md` when you first need to choose which runtime lane should be under test
+- use `docs/architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md` when the goal is to compare direct Soma, compact teams, multi-lane workflows, and reboot-safe resume on the same objective
 - use `docs/REMOTE_USER_TESTING.md` when the goal is a human walkthrough from a different machine on the same network rather than a repo-local engineering gate
 - use `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md` for the Soma-first browser contract
 - use `docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md` for the full UI/browser validation set

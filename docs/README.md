@@ -41,6 +41,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - **V8.1 Living Organization Architecture**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 - **V8 Teamed Agentry Workflow Advantage**: `./architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md`
+- **V8 Workflow Variants And Reboot Proof Set**: `./architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md`
 - **V8 Universal Soma And Context Model PRD**: `./architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`
 - **V8 Home Docker Compose Runtime**: `./architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
 - **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`

@@ -22,6 +22,8 @@ This runbook is designed for:
 - a live Mycelis environment reachable over the network
 - a user-testing pass that proves governed product behavior, not just page rendering
 
+Use [V8 Workflow Variants And Reboot Proof Set](./architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md) when you specifically want to compare direct Soma, compact-team, and multi-lane workflow behavior for the same objective and verify the resume path after a full reboot.
+
 It is a product walkthrough, not a raw engineering soak test.
 
 ## Current Truth And Boundaries

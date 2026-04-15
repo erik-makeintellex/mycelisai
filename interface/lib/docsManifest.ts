@@ -292,6 +292,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Workflow variants, reboot-safe plan continuity, and the boundary between direct Soma, compact teams, and multi-lane coordinated agentry",
             },
             {
+                slug: "v8-workflow-variants-reboot-proof-set",
+                label: "V8 Workflow Variants Proof Set",
+                path: "docs/architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md",
+                description: "Comparative proof set for direct Soma, compact teams, multi-lane workflows, and reboot-safe resume behavior",
+            },
+            {
                 slug: "v8-universal-soma-context-model",
                 label: "V8 Universal Soma Context Model",
                 path: "docs/architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md",
