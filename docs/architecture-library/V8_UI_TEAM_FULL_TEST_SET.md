@@ -56,6 +56,25 @@ Bring-up order:
 5. `uv run inv lifecycle.status`
 6. `uv run inv lifecycle.health`
 
+### 2.3 Windows Self-Hosted Operator Runtime
+
+Use when:
+
+- the browser/operator session is on Windows
+- the runtime is Compose or self-hosted Kubernetes
+- the AI engine is running on a Windows GPU host or other self-hosted service reached by explicit IP or hostname
+- you need proof that the field topology works without relying on Docker Desktop or loopback inference
+
+Bring-up order:
+
+1. `uv run inv compose.down --volumes`
+2. Set `MYCELIS_COMPOSE_OLLAMA_HOST` or the provider-specific endpoint override to the explicit Windows host address used for inference.
+3. `uv run inv compose.up --build --wait-timeout=240`
+4. `uv run inv compose.status`
+5. `uv run inv compose.health`
+6. `uv run inv interface.check`
+7. Run the headed browser proof from the Windows client against the reachable UI host.
+
 ## 3. Required Preflight Record
 
 Every run must record:
@@ -63,7 +82,7 @@ Every run must record:
 - branch
 - commit SHA
 - local date/time
-- environment: `compose`, `kind`, or `managed-mock`
+- environment: `compose`, `kind`, `windows-self-hosted`, or `managed-mock`
 - browser
 - whether the run is `stable`, `live-backend`, or `manual-trust`
 - whether the run used a visible headed browser window or a headless/browser-cache-only path
@@ -82,6 +101,7 @@ Run at least the critical Chromium matrix in headed mode against the managed Int
 6. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/mcp-connected-tools.spec.ts`
 7. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
 8. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+9. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 
 These runs certify:
 - Soma-first entry and re-entry
@@ -91,6 +111,7 @@ These runs certify:
 - live backend-stored group-output aggregation and retained review after temporary-lane closure
 - settings and Connected Tools MCP visibility
 - governed live-backend execution
+- Windows self-hosted operator proof against an explicit non-loopback AI endpoint
 
 ## 4. Execution Order
 
@@ -739,6 +760,30 @@ Current known risk:
 Classification:
 
 - this is now `test` / `docs` contract drift unless a clean compose rerun reproduces a real runtime failure
+
+### 6.3 Windows self-hosted browser proof
+
+Run this when the operator/browser session is on Windows and the AI host is a separate Windows GPU machine or equivalent explicit self-hosted provider:
+
+- `PLAYWRIGHT_LIVE_BACKEND=1`
+- `PLAYWRIGHT_SKIP_WEBSERVER=1`
+- `PLAYWRIGHT_PORT=3000`
+- `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT=d:\MakeIntellex\Projects\mycelisai\scratch\workspace\docker-compose\data\workspace`
+
+Required proof set:
+
+- `e2e/specs/v8-ui-testing-agentry.spec.ts`
+- `e2e/specs/team-creation.spec.ts`
+- `e2e/specs/groups-live-backend.spec.ts`
+- `e2e/specs/soma-governance-live.spec.ts`
+
+Pass condition:
+
+- the browser session reaches the product from Windows
+- the runtime is self-hosted and not Docker Desktop-dependent
+- the AI endpoint is explicit and non-loopback
+- the operator can complete Soma, governance, team creation, and retained-output review in one repeatable lane
+- a failed AI host is surfaced as a visible blocker and recovery is verified after the endpoint returns
 
 ## 7. Reporting Format
 

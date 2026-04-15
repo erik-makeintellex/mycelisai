@@ -9,6 +9,7 @@ Use this runbook when you want to walk through Mycelis from a different machine 
 - [Current Truth And Boundaries](#current-truth-and-boundaries)
 - [Preflight](#preflight)
 - [Environment Setup](#environment-setup)
+- [Windows Self-Hosted Operator Lane](#windows-self-hosted-operator-lane)
 - [Walkthrough](#walkthrough)
 - [Pass Criteria](#pass-criteria)
 - [Failure Notes To Capture](#failure-notes-to-capture)
@@ -36,6 +37,7 @@ This runbook should prove the current shipped posture:
 - admin-visible output-model routing for team delivery types
 - MCP visibility and recent persisted tool activity
 - optional governed external/web research when the environment has that path enabled
+- the same user journey must also work from a Windows browser against a self-hosted runtime while the AI engine runs on a Windows GPU host addressed by explicit IP or hostname
 
 This runbook should not be used to claim broader remote-host control than the product currently guarantees.
 
@@ -58,6 +60,7 @@ Before the walkthrough, verify these are true on the machine hosting Mycelis:
    - local Ollama
    - LAN Ollama
    - or another configured provider
+   - for Windows self-hosted validation, record the explicit Windows GPU host IP or hostname used by the model service and do not validate against loopback
 
 4. Authentication posture is ready.
    - self-hosted local admin path works
@@ -107,6 +110,22 @@ On the remote user-testing machine:
 
 If the environment relies on a LAN model endpoint, confirm the host machine is configured for that before the walkthrough:
 - `OLLAMA_HOST=http://<lan-ip>:11434`
+
+If the environment relies on a Windows GPU inference host, confirm the browser-facing deployment references an explicit host or IP before the walkthrough:
+- `MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434`
+- or the equivalent provider-specific endpoint override used by the deployment
+
+## Windows Self-Hosted Operator Lane
+
+Use this lane when the operator is on Windows and the product is running as a self-hosted deployment:
+
+1. Open the UI from the Windows browser using the network-reachable host name or IP.
+2. Confirm the root Soma workspace loads with a healthy runtime and a direct `answer` path for informational prompts.
+3. Confirm a mutating prompt enters `proposal` and can be approved or cancelled.
+4. Confirm guided team creation or temporary workflow launch completes without forcing a local-only dev shortcut.
+5. Confirm archived temporary groups retain their outputs and stay reviewable after refresh.
+6. Confirm a missing or unreachable Windows AI host produces a visible blocker, not a silent fallback to `localhost`.
+7. Restore the AI host and confirm the same browser session can continue working without a full reinstallation or desktop-only reset.
 
 ## Walkthrough
 
@@ -409,6 +428,7 @@ This remote user test should be considered successful when all of these are true
 11. Optional web research, if enabled, behaves as a governed capability.
 12. Audit/activity surfaces reconstruct the session clearly.
 13. Failure cases degrade safely into blocker/error states instead of UI collapse.
+14. The same walkthrough works from Windows against a self-hosted runtime with an explicit non-loopback AI host.
 
 ## Initial Release Handoff
 
@@ -416,7 +436,7 @@ Use this shorter sequence when you are validating a fresh checkout on another ma
 
 1. Clone or update the repo on the second machine.
 2. Follow [Local Development Workflow](./LOCAL_DEV_WORKFLOW.md) for the host you are using.
-3. Start the supported runtime (`uv run inv compose.up --build` on WSL/Linux/macOS, or the Windows Kind/lifecycle path).
+3. Start the supported runtime (`uv run inv compose.up --build` on WSL/Linux/macOS, or the supported self-hosted runtime path with an explicit non-loopback AI endpoint on Windows or another host).
 4. Run `uv run inv ci.release-preflight --service-health --live-backend`.
 5. Run the remote walkthrough in this document from the second machine.
 6. Confirm the current release blockers are named in `V8_DEV_STATE.md` before you declare the release ready.

@@ -27,6 +27,31 @@ COMPOSE_ENV_EXAMPLE = ROOT_DIR / ".env.compose.example"
 COMPOSE_PROJECT = "mycelis-home"
 DEFAULT_OUTPUT_HOST_PATH = ROOT_DIR / "workspace" / "docker-compose" / "data"
 OUTPUT_BLOCK_MODES = {"local_hosted", "cluster_generated"}
+COMPOSE_RUNTIME_OVERRIDE_KEYS = {
+    "CORS_ORIGIN",
+    "DATA_DIR",
+    "DB_HOST",
+    "DB_NAME",
+    "DB_PASSWORD",
+    "DB_PORT",
+    "DB_USER",
+    "MYCELIS_API_KEY",
+    "MYCELIS_BOOTSTRAP_TEMPLATE_ID",
+    "MYCELIS_COMPOSE_CORE_PORT",
+    "MYCELIS_COMPOSE_INTERFACE_PORT",
+    "MYCELIS_COMPOSE_NATS_MONITOR_PORT",
+    "MYCELIS_COMPOSE_NATS_PORT",
+    "MYCELIS_COMPOSE_OLLAMA_HOST",
+    "MYCELIS_COMPOSE_POSTGRES_PORT",
+    "MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP",
+    "MYCELIS_OUTPUT_BLOCK_MODE",
+    "MYCELIS_OUTPUT_HOST_PATH",
+    "MYCELIS_WORKSPACE",
+    "NATS_URL",
+    "POSTGRES_DB",
+    "POSTGRES_PASSWORD",
+    "POSTGRES_USER",
+}
 
 
 def _compose_command(*args: str) -> list[str]:
@@ -61,6 +86,18 @@ def _load_compose_env() -> dict[str, str]:
             continue
         key, value = line.split("=", 1)
         values[key.strip()] = value.strip()
+    return values
+
+
+def _compose_effective_env(env_values: dict[str, str] | None = None) -> dict[str, str]:
+    values = dict(env_values or _load_compose_env())
+    for key in COMPOSE_RUNTIME_OVERRIDE_KEYS:
+        override = os.environ.get(key)
+        if override is None:
+            continue
+        cleaned = _clean_env_value(override)
+        if cleaned:
+            values[key] = cleaned
     return values
 
 
@@ -146,12 +183,22 @@ def _compose_runtime_env(env_values: dict[str, str] | None = None) -> dict[str, 
     if docker_host_mode() != "wsl":
         return None
 
-    values = dict(env_values or _load_compose_env())
+    values = _compose_effective_env(env_values)
     raw_host_path = _clean_env_value(values.get("MYCELIS_OUTPUT_HOST_PATH", ""))
     resolved_host_path = _resolve_host_path(raw_host_path) if raw_host_path else DEFAULT_OUTPUT_HOST_PATH
 
     env = os.environ.copy()
+    passthrough_keys = sorted(values.keys())
+    for key in passthrough_keys:
+        env[key] = values[key]
     env["MYCELIS_OUTPUT_HOST_PATH"] = docker_host_path(resolved_host_path)
+    passthrough_entries = [entry for entry in env.get("WSLENV", "").split(":") if entry]
+    if "MYCELIS_OUTPUT_HOST_PATH" not in passthrough_keys:
+        passthrough_keys.append("MYCELIS_OUTPUT_HOST_PATH")
+    for key in passthrough_keys:
+        if key not in passthrough_entries:
+            passthrough_entries.append(key)
+    env["WSLENV"] = ":".join(passthrough_entries)
     return env
 
 
@@ -264,7 +311,7 @@ def _run_compose_psql(sql: str, env_values: dict[str, str]) -> subprocess.Comple
 
 
 def _compose_query_succeeds(sql: str, env_values: dict[str, str] | None = None) -> bool:
-    env_values = env_values or _load_compose_env()
+    env_values = env_values or _compose_effective_env()
     result = _run_compose_psql(sql, env_values)
     return result.returncode == 0 and "1" in result.stdout.split()
 
@@ -300,7 +347,7 @@ def _compose_check_results(checks: tuple[tuple[str, str], ...], env_values: dict
 
 
 def _compose_schema_bootstrapped(env_values: dict[str, str] | None = None) -> bool:
-    env_values = env_values or _load_compose_env()
+    env_values = env_values or _compose_effective_env()
     return all(ok for _label, ok in _compose_check_results(db_tasks.SCHEMA_COMPATIBILITY_CHECKS, env_values))
 
 
@@ -447,7 +494,7 @@ def _run_missing_compose_storage_migrations(env_values: dict[str, str]) -> bool:
 
 
 def _run_compose_migrations(strict: bool = False):
-    env_values = _load_compose_env()
+    env_values = _compose_effective_env()
     if not strict and _compose_schema_bootstrapped(env_values):
         print(
             "Compose schema already appears compatible with the current runtime; "
@@ -465,7 +512,7 @@ def _run_compose_migrations(strict: bool = False):
 
 
 def _wait_for_postgres_ready(timeout_seconds: int = 90, env_values: dict[str, str] | None = None) -> bool:
-    env_values = env_values or _load_compose_env()
+    env_values = env_values or _compose_effective_env()
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         result = _run_compose(
@@ -500,7 +547,7 @@ def infra_up(c, wait_timeout=180, migrate=False):
     """Start only PostgreSQL and NATS for a Compose data-plane test."""
     del c
     _require_compose_env_file()
-    env_values = _load_compose_env()
+    env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     wait_timeout = int(wait_timeout)
     if wait_timeout < 30:
@@ -589,7 +636,7 @@ def up(c, build=False, wait_timeout=180):
     """Bring up the home-runtime Docker Compose stack with managed ordering."""
     del c
     _require_compose_env_file()
-    env_values = _load_compose_env()
+    env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     wait_timeout = int(wait_timeout)
     if wait_timeout < 30:
@@ -751,7 +798,7 @@ def status(c):
     """Show Docker Compose service state plus key host port reachability."""
     del c
     _require_compose_env_file()
-    env_values = _load_compose_env()
+    env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     print("=== Mycelis Compose Status ===\n")
     _run_compose(_compose_command("ps"), check=False, env=_compose_runtime_env(env_values))
@@ -774,7 +821,7 @@ def infra_health(c):
     """Health probe for the Compose PostgreSQL + NATS data plane only."""
     del c
     _require_compose_env_file()
-    env_values = _load_compose_env()
+    env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     postgres_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_POSTGRES_PORT", "5432")
     nats_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_PORT", "4222")
@@ -827,7 +874,7 @@ def storage_health(c):
     """Probe Compose PostgreSQL long-term Mycelis storage after migrations."""
     del c
     _require_compose_env_file()
-    env_values = _load_compose_env()
+    env_values = _compose_effective_env()
     _validate_compose_env(env_values)
 
     print("=== Mycelis Compose Long-Term Storage Health ===\n")
@@ -857,7 +904,7 @@ def health(c):
     """Deep health probe for the Docker Compose runtime path."""
     del c
     _require_compose_env_file()
-    env_values = _load_compose_env()
+    env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     api_key = env_values.get("MYCELIS_API_KEY", "")
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}

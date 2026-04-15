@@ -13,6 +13,7 @@ Current validation contract:
 - in the supported home-runtime stack, `.env.compose` must keep container-host assumptions separate from `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`
 - on Windows hosts without a native `docker` binary, the compose task layer may execute Docker through WSL instead; keep the Docker daemon in a WSL distro that can reach the repo filesystem, and set `MYCELIS_WSL_DISTRO` when the default distro is not the correct Docker host
 - when the validation target is the Helm/self-hosted Kubernetes path, use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT` to prove the deployment targets an explicit reachable AI host instead of a chart-baked or localhost default
+- when the validation target is the Windows self-hosted operator lane, prove the field topology directly: a Windows browser/client opens the UI over the network, the runtime runs in Compose or self-hosted Kubernetes, and the AI engine lives on a Windows GPU host reached by explicit IP or hostname rather than `localhost`
 - use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
@@ -108,6 +109,51 @@ Use this compact slice when you need to prove the current media/output lane with
    - Run the guided team creation path in `interface/e2e/specs/team-creation.spec.ts`.
    - Confirm the temporary workflow group can be created, archived, and reviewed with retained outputs still visible.
    - Pair that with `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` to prove direct Soma answers stay distinct from team-managed output packages.
+
+### Windows Self-Hosted Validation Lane
+
+Use this lane when you need repeatable proof that the self-hosted product works the way a Windows operator actually uses it:
+
+- the browser session runs on Windows
+- the UI is reached over the network, not through a local-only shortcut
+- the runtime is Compose or self-hosted Kubernetes
+- the AI engine runs on a Windows GPU host or equivalent self-hosted service reached by explicit IP or hostname
+
+Required setup:
+
+1. Set the runtime endpoint explicitly in the compose or Helm environment, for example `MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434` or the provider-specific endpoint override used by the deployment.
+2. Bring the stack up with the supported runtime task path.
+3. Confirm `compose.status` or the relevant Kubernetes health proof shows the UI and backend are healthy before browser work begins.
+4. Record the Windows host address used for the model service and the browser URL used for the UI.
+
+Required proof sequence:
+
+1. Open the UI from Windows using the network-reachable host name or IP.
+2. Confirm Soma returns a direct `answer` for a non-mutating prompt.
+3. Confirm a mutating prompt enters `proposal` and can be approved or cancelled.
+4. Confirm guided team creation reaches a real team or temporary workflow lane.
+5. Confirm retained outputs remain available after the lane is archived or closed.
+6. Confirm the run still works after a browser reload or fresh session.
+7. Confirm the operator can see a clear blocker if the AI host becomes unreachable, and that recovery restores the normal flow once the endpoint is reachable again.
+
+Recommended evidence targets:
+
+- `uv run inv compose.up --build --wait-timeout=240`
+- `uv run inv compose.status`
+- `uv run inv compose.health`
+- `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+- `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
+- `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
+- `uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
+
+Pass condition:
+
+- the browser path works from Windows
+- the runtime is self-hosted and not Docker Desktop-dependent
+- the AI engine endpoint is explicit and non-loopback
+- the operator can complete a normal user journey, a governed mutation, and a retention/recovery check in the same lane
+- failure of the AI host is visible and recoverable instead of being hidden by browser-only success
+
 7. `NEXT` deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states.
 
 Canonical UI testing agentry contract:
@@ -258,6 +304,7 @@ Signal/channel standard:
 - Current focused teams workspace browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/teams.spec.ts`
 - Current focused guided team-creation browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 - Current focused UI testing agentry browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
+- Current focused Windows self-hosted browser proof: `MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434 uv run inv compose.up --build --wait-timeout=240` followed by `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 - Current focused direct-vs-team and media-output browser proof: `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`; if the Windows Invoke-managed server wrapper is unhealthy, use a single already-started Interface listener and run the PowerShell fallback from `interface/`: `$env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3100'; npx playwright test e2e/specs/v8-ui-testing-agentry.spec.ts --project=chromium --workers=1 --grep "distinguishes|renders generated" --timeout=60000`.
 - Current focused Connected Tools MCP browser proof: `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/mcp-connected-tools.spec.ts`; if the Windows Invoke-managed server wrapper is unhealthy, use a single already-started Interface listener and run the PowerShell fallback from `interface/`: `$env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3100'; npx playwright test e2e/specs/mcp-connected-tools.spec.ts --project=chromium --workers=1 --timeout=60000`.
 - Current focused UI testing agentry live governance proof: `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`

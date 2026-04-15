@@ -5,19 +5,17 @@ from pathlib import Path
 import pytest
 
 from ops import compose
+from ops.config import docker_host_path
 
 
 def test_compose_command_includes_env_file_and_project_name():
     cmd = compose._compose_command("ps")
 
-    assert cmd[:6] == [
-        "docker",
-        "compose",
-        "--project-name",
-        compose.COMPOSE_PROJECT,
-        "--env-file",
-        str(compose.COMPOSE_ENV_FILE),
-    ]
+    assert "compose" in cmd
+    assert "--project-name" in cmd
+    assert compose.COMPOSE_PROJECT in cmd
+    assert "--env-file" in cmd
+    assert docker_host_path(compose.COMPOSE_ENV_FILE) in cmd
     assert cmd[-1] == "ps"
 
 
@@ -40,6 +38,35 @@ def test_load_compose_env_parses_key_values(tmp_path, monkeypatch):
         "MYCELIS_API_KEY": "test-key",
         "DB_HOST": "postgres",
     }
+
+
+def test_compose_effective_env_prefers_runtime_override(monkeypatch):
+    monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://192.168.50.156:11434")
+
+    values = compose._compose_effective_env(
+        {"MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434"}
+    )
+
+    assert values["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://192.168.50.156:11434"
+
+
+def test_compose_runtime_env_passes_overrides_into_wsl(tmp_path, monkeypatch):
+    monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://192.168.50.156:11434")
+
+    env = compose._compose_runtime_env(
+        {
+            "MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434",
+            "MYCELIS_OUTPUT_HOST_PATH": str(tmp_path),
+            "MYCELIS_API_KEY": "test-key",
+        }
+    )
+
+    assert env is not None
+    assert env["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://192.168.50.156:11434"
+    assert env["MYCELIS_OUTPUT_HOST_PATH"] == docker_host_path(tmp_path)
+    assert "MYCELIS_COMPOSE_OLLAMA_HOST" in env["WSLENV"]
+    assert "MYCELIS_OUTPUT_HOST_PATH" in env["WSLENV"]
 
 
 def test_require_compose_env_file_has_clear_guidance(tmp_path, monkeypatch):
@@ -66,7 +93,7 @@ def test_run_compose_migrations_executes_canonical_files(monkeypatch):
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})(),
     )
 
     compose._run_compose_migrations()
@@ -117,7 +144,7 @@ def test_run_compose_migrations_uses_configured_db_login(monkeypatch):
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})(),
     )
 
     compose._run_compose_migrations()
@@ -163,7 +190,7 @@ def test_run_compose_migrations_applies_missing_late_storage_when_base_schema_is
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})(),
     )
 
     compose._run_compose_migrations()
@@ -212,7 +239,7 @@ def test_compose_up_orders_infra_then_migrations_then_app(monkeypatch):
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})(),
     )
     monkeypatch.setattr(compose, "_run_compose_migrations", lambda: waits.append(("migrate", 0)))
     monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: waits.append((label, port)) or True)
@@ -265,7 +292,7 @@ def test_compose_infra_up_starts_only_data_services(monkeypatch):
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})(),
     )
     monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: waits.append((label, port)) or True)
     monkeypatch.setattr(
@@ -295,7 +322,7 @@ def test_compose_infra_up_can_run_migrations_when_requested(monkeypatch):
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})(),
     )
     monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: True)
     monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90, env_values=None: True)
@@ -325,7 +352,7 @@ def test_compose_infra_up_prints_connection_guidance(monkeypatch, capsys):
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: type("Result", (), {"returncode": 0})(),
     )
     monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: True)
     monkeypatch.setattr(compose, "_wait_for_postgres_ready", lambda timeout_seconds=90, env_values=None: True)
@@ -472,7 +499,7 @@ def test_compose_up_postgres_timeout_has_guidance(monkeypatch):
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: type("Result", (), {"returncode": 0})(),
     )
     monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: False)
 
@@ -492,7 +519,7 @@ def test_compose_up_prints_expectations(monkeypatch, capsys):
     monkeypatch.setattr(
         compose,
         "_run_compose",
-        lambda args, check=True: type("Result", (), {"returncode": 0})(),
+        lambda args, check=True, env=None: type("Result", (), {"returncode": 0})(),
     )
     monkeypatch.setattr(compose, "_run_compose_migrations", lambda: None)
     monkeypatch.setattr(compose, "_wait_for_port", lambda port, label, timeout_seconds=60: True)
@@ -513,7 +540,7 @@ def test_compose_down_forwards_volumes_flag(monkeypatch):
     commands: list[list[str]] = []
 
     monkeypatch.setattr(compose, "_require_compose_env_file", lambda: None)
-    monkeypatch.setattr(compose, "_run_compose", lambda args, check=True: commands.append(args) or type("Result", (), {"returncode": 0})())
+    monkeypatch.setattr(compose, "_run_compose", lambda args, check=True, env=None: commands.append(args) or type("Result", (), {"returncode": 0})())
 
     compose.down.body(None, volumes=True)
 
@@ -532,6 +559,16 @@ def test_validate_compose_env_allows_host_gateway_alias(tmp_path):
     compose._validate_compose_env(
         {
             "MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434",
+            "MYCELIS_OUTPUT_BLOCK_MODE": "local_hosted",
+            "MYCELIS_OUTPUT_HOST_PATH": str(tmp_path),
+        }
+    )
+
+
+def test_validate_compose_env_allows_explicit_windows_lan_ollama_host(tmp_path):
+    compose._validate_compose_env(
+        {
+            "MYCELIS_COMPOSE_OLLAMA_HOST": "http://192.168.50.156:11434",
             "MYCELIS_OUTPUT_BLOCK_MODE": "local_hosted",
             "MYCELIS_OUTPUT_HOST_PATH": str(tmp_path),
         }
