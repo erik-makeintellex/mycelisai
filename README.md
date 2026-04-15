@@ -405,6 +405,7 @@ Required command references for active V8 work:
 - `uv run inv ci.entrypoint-check`
 - `uv run inv ci.service-check`
 - `uv run inv cache.status`
+- `uv run inv cache.guard`
 - `uv run inv cache.clean`
 - `uv run inv lifecycle.memory-restart`
 - `uv run inv compose.infra-up`
@@ -433,6 +434,7 @@ Provider/runtime workflow reminders:
 - safe output-budget presets follow common operational ranges: `conservative=512`, `standard=1024`, `extended=2048`, `deep=4096`; default local providers should stay on `standard` unless the role really needs longer output, while remote or heavier reasoning providers can opt into `extended`
 - keep repo-managed caches under `workspace/tool-cache` and use `cache.apply-user-policy` when a Windows user profile needs heavy tool caches moved off `C:`
 - check `uv run inv cache.status` before large build/test/browser runs when disk headroom is tight; the main repo-local growth surfaces are `workspace/tool-cache`, `interface/.next`, Playwright browser binaries, and other generated test artifacts
+- use `uv run inv cache.guard` when you want a fail-fast preflight on repo/cache disk headroom before repeated builds, Playwright runs, or CI-style local validation
 - use `uv run inv cache.clean` as the first repo-safe reclaim path when builds or tests start failing under disk pressure instead of manually deleting random working files
 - local lifecycle tasks target the bridged Core API on `localhost:8081` by default unless `MYCELIS_API_PORT` overrides it
 - the home-runtime compose path keeps the same host port contract (`3000`, `8081`, `5432`, `4222`) through `.env.compose` so browser/operator proof does not need a separate port story
@@ -586,7 +588,8 @@ Agents implementing V8 should follow this process:
 4. identify migration targets and required contract updates
 5. implement incremental runtime or documentation updates
 6. verify with tests and execution gates
-   - if the machine is low on free space, prefer the repo task path in this order: `uv run inv lifecycle.down`, `uv run inv cache.status`, then `uv run inv cache.clean`
+- if the machine is low on free space, prefer the repo task path in this order: `uv run inv lifecycle.down`, `uv run inv cache.status`, then `uv run inv cache.clean`
+- heavy repo-managed build/test paths now run a disk-headroom preflight automatically; if it fails, reclaim space before retrying instead of pushing through partial builds
    - if you are setting up a new development machine, treat cache placement as part of the build config, not an afterthought: Windows should stamp user-level cache vars early, and Linux/macOS should point project/user cache roots at the volume you actually want repeated builds and browser runs to consume
 7. update `V8_DEV_STATE.md` with current status and evidence
 

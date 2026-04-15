@@ -105,6 +105,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 | Command | Description |
 |---------|-------------|
 | `uv run inv cache.status` | Report repo-managed cache sizes plus configured user-cache roots |
+| `uv run inv cache.guard` | Fail fast when the repo/cache volume does not have enough free space for heavy build/test churn |
 | `uv run inv cache.clean` | Clear repo-managed tool caches and local build artifacts under `workspace/tool-cache` |
 | `uv run inv cache.clean --user` | Also clear user-level tool caches configured by `cache.apply-user-policy` |
 | `uv run inv cache.apply-user-policy` | Persist Windows user cache env vars so pip/npm/go/uv stop defaulting back to `C:` |
@@ -121,6 +122,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 - Cross-platform:
   - prefer Invoke-managed build/test/browser tasks over raw tool commands so cache roots, browser binaries, telemetry suppression, and worker cleanup stay consistent
   - use `uv run inv cache.status` before large validation runs when free space is tight, then `uv run inv cache.clean` as the first repo-safe reclaim path
+  - use `uv run inv cache.guard` when you want a hard preflight on repo/cache disk headroom; it covers the repo/cache volume and intentionally does not pretend to measure Docker daemon image-layer storage
 
 ### Deployment Guidance Across Host Architectures
 

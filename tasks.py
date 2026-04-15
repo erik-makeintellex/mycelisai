@@ -32,8 +32,10 @@ def install(c, optional_engines=False):
     """
     print("Installing workspace Python dependencies...")
     from ops.config import ensure_managed_cache_dirs, managed_cache_env
+    from ops.cache import ensure_disk_headroom
 
     ensure_managed_cache_dirs()
+    ensure_disk_headroom(min_free_gb=12, reason="install")
     env = managed_cache_env()
     c.run("uv sync --all-packages --dev", env=env)
 

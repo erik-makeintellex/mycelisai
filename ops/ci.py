@@ -18,6 +18,7 @@ from .config import (
     managed_cache_env,
 )
 from . import db as db_tasks
+from . import cache as cache_tasks
 from . import logging as logging_tasks
 from . import core as core_tasks
 from . import interface as interface_tasks
@@ -103,6 +104,7 @@ def build(c):
 
     print("=== BUILD ===")
     print()
+    cache_tasks.ensure_disk_headroom(min_free_gb=10, reason="ci build")
 
     # 1. Go binary
     print("[1/2] core compile")
@@ -177,6 +179,7 @@ def baseline(c, e2e=True):
 
     print("=== BASELINE ===")
     print()
+    cache_tasks.ensure_disk_headroom(min_free_gb=10, reason="ci baseline")
 
     print("[1/7] logging.check-schema")
     try:

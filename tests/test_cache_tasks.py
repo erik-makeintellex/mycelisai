@@ -118,3 +118,34 @@ def test_cache_clean_retries_transient_directory_not_empty(monkeypatch, tmp_path
     assert attempts["count"] == 2
     assert uv_dir.exists()
     assert list(uv_dir.iterdir()) == []
+
+
+def test_cache_guard_fails_when_free_space_is_below_threshold(monkeypatch, tmp_path):
+    project_root = tmp_path / "workspace" / "tool-cache"
+    project_root.mkdir(parents=True)
+
+    monkeypatch.setattr(cache, "PROJECT_CACHE_ROOT", project_root)
+    monkeypatch.setattr(cache, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(cache.shutil, "disk_usage", lambda _path: shutil._ntuple_diskusage(100, 95, 5))
+
+    try:
+        cache.guard.body(Context(), min_free_gb=8)
+    except SystemExit as exc:
+        assert "DISK HEADROOM CHECK FAILED" in str(exc)
+    else:
+        raise AssertionError("cache.guard should fail under low disk headroom")
+
+
+def test_cache_status_reports_disk_headroom(monkeypatch, tmp_path, capsys):
+    project_root = tmp_path / "workspace" / "tool-cache"
+    project_root.mkdir(parents=True)
+
+    monkeypatch.setattr(cache, "PROJECT_CACHE_ROOT", project_root)
+    monkeypatch.setattr(cache, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(cache.shutil, "disk_usage", lambda _path: shutil._ntuple_diskusage(200, 100, 100))
+
+    cache.status.body(Context())
+
+    output = capsys.readouterr().out
+    assert "Disk headroom:" in output
+    assert "Docker daemon / WSL image-layer storage is tracked separately" in output

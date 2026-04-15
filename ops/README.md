@@ -92,11 +92,13 @@ Keeps local API-key development access aligned.
 ### `cache.py` (Cache Hygiene)
 Keeps project and user-level tool caches off the system drive hot path and easy to prune.
 - **Status**: `uv run inv cache.status`
+- **Guard**: `uv run inv cache.guard`
 - **Clean**: `uv run inv cache.clean`
 - **Clean User Cache Too**: `uv run inv cache.clean --user`
 - **Apply Windows User Policy**: `uv run inv cache.apply-user-policy`
 - Project-owned backstops: root `.npmrc` keeps direct npm/npx cache local to `workspace/tool-cache`, pytest cache metadata lives in `workspace/tool-cache/pytest`, and task-managed browser runs export `PLAYWRIGHT_BROWSERS_PATH`
 - Suggested platform posture: on Windows, stamp the user-level cache env vars early if `C:` is the small drive; on Linux/macOS, move project/user cache roots only when the default workspace or home volume is the wrong place for repeated build churn
+- Heavy repo-managed build/test paths now run a disk-headroom preflight before large local churn; that guard covers the repo/cache volume and leaves Docker daemon / WSL image-layer storage as a separate budget to monitor.
 
 ### `logging.py` (Logging Gates)
 Enforces logging contract quality checks before delivery.

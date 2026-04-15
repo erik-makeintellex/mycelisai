@@ -24,6 +24,7 @@ from .config import (
     managed_cache_env,
     powershell,
 )
+from .cache import ensure_disk_headroom
 
 ns = Collection("interface")
 INTERFACE_DIR = ROOT_DIR / "interface"
@@ -964,6 +965,7 @@ def install(c):
 def build(c):
     """Build the Interface for production."""
     print("Building Interface...")
+    ensure_disk_headroom(min_free_gb=8, reason="interface build")
     stop(c)
     clean(c)
     _cleanup_repo_local_interface_processes()
@@ -1064,6 +1066,7 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     the Next.js proxy instead of relying entirely on route stubs.
     """
     print("Running Playwright E2E Tests...")
+    ensure_disk_headroom(min_free_gb=8 if server_mode == "start" else 6, reason=f"interface e2e ({server_mode})")
     cmd = _build_playwright_command(project=project, spec=spec, workers=workers, headed=headed)
     chosen_port = _pick_interface_port(INTERFACE_PORT)
     env = _build_playwright_env(live_backend=live_backend, port=chosen_port)

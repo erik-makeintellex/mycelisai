@@ -28,6 +28,7 @@ PROJECT_CACHE_ARTIFACTS = (
     ROOT_DIR / "interface" / "tsconfig.tsbuildinfo",
     ROOT_DIR / "core" / "bin",
 )
+DEFAULT_MIN_FREE_GB = 8
 
 
 def _username() -> str:
@@ -92,6 +93,60 @@ def _format_size(num_bytes: int) -> str:
             return f"{size:.2f} {unit}"
         size /= 1024
     return f"{num_bytes} B"
+
+
+def _existing_usage_path(path: Path) -> Path:
+    candidate = path
+    while not candidate.exists():
+        if candidate.parent == candidate:
+            return ROOT_DIR
+        candidate = candidate.parent
+    return candidate
+
+
+def _disk_targets(paths: tuple[Path, ...] | list[Path] | None = None) -> list[tuple[str, Path]]:
+    requested = paths or [PROJECT_CACHE_ROOT, ROOT_DIR]
+    deduped: dict[int, tuple[str, Path]] = {}
+    for raw_path in requested:
+        usage_path = _existing_usage_path(Path(raw_path))
+        try:
+            device_id = usage_path.stat().st_dev
+        except OSError:
+            device_id = hash(str(usage_path))
+        deduped.setdefault(device_id, (str(raw_path), usage_path))
+    return list(deduped.values())
+
+
+def _free_gb(path: Path) -> float:
+    return shutil.disk_usage(path).free / float(1024 ** 3)
+
+
+def ensure_disk_headroom(
+    *,
+    min_free_gb: int = DEFAULT_MIN_FREE_GB,
+    paths: tuple[Path, ...] | list[Path] | None = None,
+    reason: str = "",
+) -> None:
+    failures: list[str] = []
+    heading = f"=== DISK HEADROOM CHECK{f' ({reason})' if reason else ''} ==="
+    print(heading)
+    for label, usage_path in _disk_targets(paths):
+        usage = shutil.disk_usage(usage_path)
+        free_gb = usage.free / float(1024 ** 3)
+        print(
+            f"  - {label}: free {_format_size(usage.free)} / total {_format_size(usage.total)}"
+            f" ({free_gb:.1f} GiB free)"
+        )
+        if free_gb < float(min_free_gb):
+            failures.append(f"{label} has only {free_gb:.1f} GiB free")
+
+    print("  Note: this guard covers the repo/cache volume, not Docker daemon image-layer storage.")
+    if failures:
+        print("  Suggested recovery order: uv run inv lifecycle.down -> uv run inv cache.status -> uv run inv cache.clean")
+        raise SystemExit(
+            f"DISK HEADROOM CHECK FAILED: need at least {min_free_gb} GiB free.\n- "
+            + "\n- ".join(failures)
+        )
 
 
 def _delete_path(path: Path) -> int:
@@ -183,6 +238,21 @@ def status(c):
     print("Project build artifacts:")
     for path in PROJECT_CACHE_ARTIFACTS:
         print(f"  - {_format_size(_path_size_bytes(path))} ({path})")
+    print("Disk headroom:")
+    for label, usage_path in _disk_targets():
+        usage = shutil.disk_usage(usage_path)
+        print(
+            f"  - {label}: free {_format_size(usage.free)} / total {_format_size(usage.total)}"
+            f" ({_free_gb(usage_path):.1f} GiB free)"
+        )
+    print("  Note: Docker daemon / WSL image-layer storage is tracked separately from repo-managed cache usage.")
+
+
+@task(help={"min_free_gb": "Minimum free disk headroom in GiB required before heavy build/test work (default: 8)."})
+def guard(c, min_free_gb=DEFAULT_MIN_FREE_GB):
+    """Fail fast when the repo/cache volume is too full for repeated build and test churn."""
+    del c
+    ensure_disk_headroom(min_free_gb=int(min_free_gb), reason="preflight")
 
 
 @task(
@@ -252,5 +322,6 @@ def apply_user_policy(c, root=""):
 
 
 ns.add_task(status)
+ns.add_task(guard)
 ns.add_task(clean)
 ns.add_task(apply_user_policy)
