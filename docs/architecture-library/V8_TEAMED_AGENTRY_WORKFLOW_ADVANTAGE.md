@@ -13,6 +13,7 @@
 - [When A Single Agent Is The Right Tool](#when-a-single-agent-is-the-right-tool)
 - [Where Teamed Agentry Shows A True Win](#where-teamed-agentry-shows-a-true-win)
 - [Complex Workflow Patterns Where Teams Matter](#complex-workflow-patterns-where-teams-matter)
+- [Plan Design And Reboot Continuity](#plan-design-and-reboot-continuity)
 - [Operator Guidance](#operator-guidance)
 - [Product Positioning Rule](#product-positioning-rule)
 
@@ -259,6 +260,117 @@ Why the team wins:
 - this produces structured productive tension
 - it is stronger than asking one agent to "be creative and critical at the same time"
 - the operator can inspect the disagreement instead of only seeing the final blended answer
+
+## Plan Design And Reboot Continuity
+
+The workflow advantage should also survive a full environment reboot.
+
+That means a plan must not live only as:
+- one transient chat turn
+- one hidden internal chain of thought
+- one unstructured memory blob
+
+The durable design rule is:
+- keep the plan shape visible
+- keep the outputs retained
+- keep the handoffs inspectable
+- keep restart-safe working continuity separate from long-term learned memory
+
+### What Should Persist
+
+For any workflow that matters beyond one short answer, preserve:
+- the requested outcome
+- the chosen workflow shape
+- the output contract
+- the lane or team ownership
+- the latest retained outputs
+- the run or review trace needed to resume
+
+In Mycelis, that persistence can live across several surfaces:
+- temporary continuity for restart-safe in-flight planning checkpoints
+- retained artifacts for durable plan summaries, briefs, checklists, and output packages
+- run timelines for causal execution history
+- team or group review surfaces for lane ownership and archived output review
+- conversation templates for reusable ask shapes
+- governed context stores when the plan or lesson should influence future work beyond one run
+
+### Continuity By Workflow Variant
+
+#### Direct Soma / Single Agent
+
+Persist:
+- short scoped session continuity
+- an intentional summary or artifact if the answer should survive beyond the thread
+
+Best use:
+- small asks where reconstructing the context after reboot is cheap
+
+Weakness:
+- if the thread was carrying the whole plan implicitly, recovery becomes fragile
+
+#### Single Agent With Deep Context
+
+Persist:
+- summary artifact
+- acceptance criteria
+- any reusable facts promoted into the correct memory layer
+
+Best use:
+- one complex output with one main reasoning line
+
+Weakness:
+- a reboot can leave too much of the structure trapped in one conversational state unless the plan was externalized
+
+#### Compact Delivery Team
+
+Persist:
+- named lead
+- explicit output contract
+- retained outputs
+- run trace
+- temporary continuity checkpoints for in-flight work
+
+Why this is stronger:
+- the plan is no longer only inside one thread
+- the lead, builder, and reviewer boundaries remain visible after restart
+- recovery can resume from the last known output and lane state
+
+#### Multi-Lane Coordinated Team Bundle
+
+Persist:
+- lane boundaries
+- handoff rules
+- retained outputs per lane
+- archived temporary workflow groups when used
+- causal run history and review state
+
+Why this is strongest:
+- after reboot, the operator can see which lane was complete, which lane was blocked, and which outputs already exist
+- recovery can restart one lane without rebuilding the whole mission from scratch
+
+### Practical Plan-Persistence Rule
+
+When the plan matters enough that you would be upset to lose it after a full environment reboot, do not leave it only in chat.
+
+Promote the plan into at least one durable surface:
+- a retained artifact such as a brief, checklist, plan summary, or output contract
+- a temporary workflow group with visible retained outputs
+- a conversation template when the ask shape should be reused
+- governed memory or context only when the content truly belongs in durable recall rather than one mission's working state
+
+### The Important Boundary
+
+Do not flatten all planning into semantic memory.
+
+Keep these distinct:
+- temporary continuity: restart-safe working state
+- retained artifacts: durable outputs and plan packages
+- semantic memory: intentionally promoted reusable meaning
+- trace and audit: what happened and why
+
+That separation is part of the product advantage.
+A single context-rich agent often keeps the plan mostly inside one conversation.
+A teamed execution system can keep the plan as explicit operational state that remains inspectable and resumable after reboot.
 
 ## Operator Guidance
 

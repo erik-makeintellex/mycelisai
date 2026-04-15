@@ -25,6 +25,7 @@ The normal product path is not "configure every backend component first." It is 
 ## Core Workflows
 
 - [Using Soma Chat](soma-chat.md): central Soma chat, generated outputs, team handoffs, and failure recovery.
+- [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md): when direct Soma is enough, when a team matters, and how to keep plans through a reboot.
 - [Teams](teams.md): compact team creation, lead-centered workflow, and broad-ask lane splitting.
 - [Core Concepts](core-concepts.md): operator-language explanation of Soma, Council, teams, memory, and governance.
 - [Resources](resources.md): private/context content, MCP tools, workspace files, AI engines, and deployment context.

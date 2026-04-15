@@ -177,8 +177,10 @@ Important boundary:
 - **Check artifacts before re-creating**: Agents and users often store work products here — search before asking Soma to write something from scratch
 - **SitReps as quick history**: The SitReps tab is faster than reading full run timelines when you just need a summary of what happened in a session
 - **Memory persists across sessions**: Everything stored here survives server restarts and is available in future sessions
+- **Keep important plans out of chat-only state**: if a workflow should survive a full reboot, ask Soma to retain a plan summary, checklist, or output contract as an artifact and keep working state in temporary continuity
 - **Use Deployment Context for larger briefs**: architecture docs, MCP constraints, web research summaries, customer requirements, and approved company rollout policies belong in the dedicated governed-context intake lane so provenance and security posture stay explicit
 - **Use reflection/synthesis for lessons, not transcripts**: capture the distilled change, contradiction, or pattern as a Managed Exchange learning candidate first, and keep the raw conversation in trace/continuity instead
 
 Architecture reference:
 - [V8 Memory Layer And Reflection Delivery Contract](../architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md)
+- [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md)

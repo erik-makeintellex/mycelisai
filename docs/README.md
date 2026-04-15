@@ -19,6 +19,7 @@ These are the best entry points for someone using Mycelis through the product:
 - **Deployment Method Selection**: `./user/deployment-methods.md`
 - **Core Concepts**: `./user/core-concepts.md`
 - **Using Soma Chat**: `./user/soma-chat.md`
+- **Workflow Variants And Plan Memory**: `./user/workflow-variants-and-plan-memory.md`
 - **Teams**: `./user/teams.md`
 - **Governance & Trust**: `./user/governance-trust.md`
 - **Automations**: `./user/automations.md`

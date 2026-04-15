@@ -62,6 +62,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Send messages, read delegation traces, and confirm governed proposals",
             },
             {
+                slug: "workflow-variants-plan-memory",
+                label: "Workflow Variants + Plan Memory",
+                path: "docs/user/workflow-variants-and-plan-memory.md",
+                description: "Choose between direct Soma, compact teams, and multi-lane workflows, and keep important plans durable across reboots",
+            },
+            {
                 slug: "meta-agent-blueprint",
                 label: "Meta-Agent & Blueprints",
                 path: "docs/user/meta-agent-blueprint.md",
@@ -283,7 +289,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-teamed-agentry-workflow-advantage",
                 label: "V8 Teamed Agentry Advantage",
                 path: "docs/architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md",
-                description: "Workflow variants and the boundary between direct Soma, compact teams, and multi-lane coordinated agentry",
+                description: "Workflow variants, reboot-safe plan continuity, and the boundary between direct Soma, compact teams, and multi-lane coordinated agentry",
             },
             {
                 slug: "v8-universal-soma-context-model",
