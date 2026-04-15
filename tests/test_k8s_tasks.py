@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+import shlex
 
 from invoke import Context
 import pytest
@@ -87,6 +88,44 @@ def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch):
     helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
     assert "--set-string ai.textEndpoint=http://192.168.50.156:11434/v1" in helm_command
     assert "--set-string ai.mediaEndpoint=http://192.168.50.156:8001/v1" in helm_command
+
+
+def test_deploy_includes_repo_relative_values_file(monkeypatch, tmp_path: Path):
+    ctx = FakeContext()
+    values_file = tmp_path / "preset files" / "k8s-values.yaml"
+    values_file.parent.mkdir(parents=True)
+    values_file.write_text("replicaCount: 1\n", encoding="utf-8")
+
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
+    monkeypatch.setattr(k8s, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.1.0-deadbee")
+    monkeypatch.setenv("POSTGRES_USER", "mycelis")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "password")
+    monkeypatch.setenv("POSTGRES_DB", "cortex")
+    monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
+    monkeypatch.setenv("MYCELIS_K8S_VALUES_FILE", "preset files/k8s-values.yaml")
+
+    k8s.deploy.body(ctx)
+
+    helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
+    expected_path = shlex.quote(str(values_file.resolve()))
+    assert f"--values {expected_path}" in helm_command
+
+
+def test_deploy_fails_fast_when_values_file_is_missing(monkeypatch, tmp_path: Path):
+    ctx = FakeContext()
+
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
+    monkeypatch.setattr(k8s, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.1.0-deadbee")
+    monkeypatch.setenv("POSTGRES_USER", "mycelis")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "password")
+    monkeypatch.setenv("POSTGRES_DB", "cortex")
+    monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
+    monkeypatch.setenv("MYCELIS_K8S_VALUES_FILE", "preset files/missing.yaml")
+
+    with pytest.raises(SystemExit, match="MYCELIS_K8S_VALUES_FILE does not exist"):
+        k8s.deploy.body(ctx)
 
 
 def test_k8s_backend_prefers_k3d_when_available(monkeypatch):

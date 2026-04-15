@@ -116,3 +116,44 @@ def test_user_docs_explain_deployment_method_selection_by_target_environment():
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
     assert not missing, "Deployment method selection doc is missing required guidance:\n" + "\n".join(missing)
+
+
+def test_k8s_docs_cover_promoted_values_file_contract():
+    snippets = [
+        (
+            README,
+            [
+                "MYCELIS_K8S_VALUES_FILE",
+                "charts/mycelis-core/values-k3d.yaml",
+                "charts/mycelis-core/values-enterprise.yaml",
+                "charts/mycelis-core/values-enterprise-windows-ai.yaml",
+            ],
+        ),
+        (
+            TESTING,
+            [
+                "MYCELIS_K8S_VALUES_FILE",
+                "charts/mycelis-core/values-k3d.yaml",
+                "charts/mycelis-core/values-enterprise.yaml",
+                "charts/mycelis-core/values-enterprise-windows-ai.yaml",
+            ],
+        ),
+        (
+            OPERATIONS,
+            [
+                "MYCELIS_K8S_VALUES_FILE",
+                "values-k3d.yaml",
+                "values-enterprise.yaml",
+                "values-enterprise-windows-ai.yaml",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Kubernetes preset-values contract is missing from active docs:\n" + "\n".join(missing)

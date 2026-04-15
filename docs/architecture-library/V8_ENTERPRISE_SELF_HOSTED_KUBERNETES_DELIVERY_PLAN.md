@@ -128,10 +128,10 @@ PM rules:
 | --- | --- | --- | --- | --- |
 | Delivery Management | `ACTIVE` | Delivery Manager | keep one enterprise-Kubernetes target and compact team ownership | updated state + accepted slice board |
 | Platform Contract | `ACTIVE` | Platform Architect | define `k3d` as local K8s lane and enterprise chart promotion rules | canonical plan + docs alignment |
-| Chart Enterprise Readiness | `NEXT` | Chart / Runtime Engineer | add enterprise-friendly Helm surfaces for ingress, scheduling, image pull, and secrets posture | rendered chart diff + focused tests |
-| Local K8s Ops | `NEXT` | Ops / Deployment Engineer | replace remaining Kind-biased local tasking with `k3d`-aware automation and runbooks | deterministic local `k3d` up/deploy/status proof |
-| Validation + Release | `NEXT` | Validation / Release Engineer | make chart render/policy/runtime proof part of the repo gate | local enterprise-sim render/test gate |
-| Enterprise Staging Contract | `REQUIRED` | Shared after preceding lanes | define promoted values files and customer-managed dependency posture | documented deploy contract for real clusters |
+| Chart Enterprise Readiness | `IN_REVIEW` | Chart / Runtime Engineer | keep enterprise-friendly Helm surfaces aligned with promoted preset files | rendered chart diff + focused tests |
+| Local K8s Ops | `IN_REVIEW` | Ops / Deployment Engineer | apply promoted preset files through `MYCELIS_K8S_VALUES_FILE` and keep `k3d` tasking deterministic | deterministic local `k3d` up/deploy/status proof |
+| Validation + Release | `IN_REVIEW` | Validation / Release Engineer | keep chart render/policy/runtime proof in the repo gate and cover preset values files | local enterprise-sim render/test gate |
+| Enterprise Staging Contract | `IN_REVIEW` | Shared after preceding lanes | use promoted values files to define customer-managed dependency posture | documented deploy contract for real clusters |
 
 ## Acceptance Gates
 
@@ -155,7 +155,7 @@ Evidence bias:
 Execute in this order:
 
 1. `ACTIVE` publish this delivery plan and align state/docs to it.
-2. `NEXT` add enterprise-ready chart surfaces:
+2. `COMPLETE` add enterprise-ready chart surfaces:
    - ingress
    - service account
    - image pull secrets
@@ -164,16 +164,17 @@ Execute in this order:
    - affinity
    - topology spread constraints
    - explicit image tag/digest posture
-3. `NEXT` convert local Kubernetes tasking from Kind bias to `k3d` bias:
+3. `IN_REVIEW` convert local Kubernetes tasking from Kind bias to `k3d` bias:
    - cluster create/delete/status contract
    - image import or local registry flow
+   - promoted values file application through `MYCELIS_K8S_VALUES_FILE`
    - kubeconfig guidance
-4. `NEXT` add enterprise-simulated validation gates:
+4. `IN_REVIEW` add enterprise-simulated validation gates:
    - Helm lint/render
    - chart config tests
    - local `k3d` smoke deploy
-5. `NEXT` publish promoted-values guidance:
+5. `IN_REVIEW` publish promoted-values guidance:
    - local `k3d`
    - enterprise-managed services
    - external AI host
-6. `IN_REVIEW` run the full local proof and update `V8_DEV_STATE.md` with the resulting delivery truth.
+6. `NEXT` run the full local proof and update `V8_DEV_STATE.md` with the resulting delivery truth.

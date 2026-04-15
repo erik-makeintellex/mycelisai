@@ -1,0 +1,35 @@
+# Local k3d validation preset.
+# Keep this lane cluster-shaped, but light enough for repo-local Helm smoke tests.
+
+replicaCount: 1
+
+serviceAccount:
+  create: false
+
+coreAuth:
+  apiKey: k3d-local-dev-key
+
+ingress:
+  enabled: false
+
+outputBlock:
+  mode: cluster_generated
+
+dataVolume:
+  size: 2Gi
+  storageClassName: local-path
+
+ai:
+  textEndpoint: ""
+  mediaEndpoint: ""
+
+nats:
+  jetstream:
+    fileStore:
+      pvc:
+        storageClassName: local-path
+
+postgresql:
+  primary:
+    persistence:
+      storageClass: local-path

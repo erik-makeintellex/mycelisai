@@ -97,6 +97,7 @@ Tasking note:
 - on Windows hosts that no longer have a native `docker` binary, the Compose task path now falls back to Docker inside WSL when available, translates the compose file/env file paths into WSL form, and rewrites `MYCELIS_OUTPUT_HOST_PATH` for the container runtime; use `MYCELIS_WSL_DISTRO` when the default WSL distro is not the Docker host
 - on that same Windows + WSL Docker path, `compose.up` and `compose.health` now auto-start a WSL-host relay for the AI endpoint when needed, so Core can still use a Windows-hosted Ollama service through `host.docker.internal` even when bridge containers cannot reach the Windows LAN IP directly
 - `uv run inv k8s.deploy` now accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT` so the Helm deploy path can target an explicit external AI service such as a Windows-hosted Ollama box without editing chart source; use a reachable host/IP like `http://192.168.x.x:11434/v1`, not `localhost`
+- `uv run inv k8s.deploy` and `uv run inv k8s.up` also accept `MYCELIS_K8S_VALUES_FILE` so operators can apply promoted Helm preset files such as `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml` without patching the chart
 - `uv run inv k8s.init` / `k8s.up` / `k8s.deploy` now prefer `k3d` as the local Kubernetes backend when it is available, while keeping `MYCELIS_K8S_BACKEND=kind` as the explicit fallback for older local workflows
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, point it at a host-reachable endpoint such as `http://host.docker.internal:11434`, and let Compose map that value into the provider-specific runtime overrides inside Core
@@ -560,6 +561,11 @@ Deployment guidance by target environment:
 - `k3d`: preferred local Kubernetes validation lane for Helm and cluster behavior
 - enterprise self-hosted Kubernetes: use the Helm chart on the target cluster with real registry, secret, ingress, and storage values
 - packaged binary or node-attached service: fit for small Linux nodes or edge/control-host roles that should point at a remote AI service
+
+Promoted Kubernetes preset files:
+- `charts/mycelis-core/values-k3d.yaml`: local `k3d` validation
+- `charts/mycelis-core/values-enterprise.yaml`: enterprise-shaped self-hosted cluster
+- `charts/mycelis-core/values-enterprise-windows-ai.yaml`: enterprise-shaped self-hosted cluster with an explicit Windows-hosted AI endpoint
 
 Recommended easiest setup path by host:
 - WSL2/Linux/macOS:

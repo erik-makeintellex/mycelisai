@@ -239,6 +239,7 @@ Kubernetes operator contract:
 - local Kubernetes now prefers `k3d` when it is installed; set `MYCELIS_K8S_BACKEND=kind` when you intentionally need the older Kind workflow
 - use explicit reachable AI endpoints for deployed text or media engines instead of localhost assumptions
 - `uv run inv k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT` from the shell or `.env` and forwards them into the Helm chart as operator-owned runtime config
+- `uv run inv k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`, resolves repo-relative preset paths, and fails fast if the requested values file does not exist
 - the Helm chart applies `MYCELIS_K8S_TEXT_ENDPOINT` through provider-specific env overrides (`MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`) so deployed providers can target a Windows-hosted or otherwise external self-hosted AI service without editing chart source
 - for the current GPU-attached Windows-host topology, use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`
 
@@ -344,6 +345,8 @@ Choose the runtime by target environment, not by whichever local helper happens 
 
 AI endpoint rule:
 - when a Windows GPU host runs Ollama or another self-hosted AI service, point Compose or Kubernetes at the reachable Windows IP or hostname instead of `localhost`
+- use `charts/mycelis-core/values-k3d.yaml` for local `k3d` validation, `charts/mycelis-core/values-enterprise.yaml` for the baseline enterprise self-hosted posture, and `charts/mycelis-core/values-enterprise-windows-ai.yaml` when the cluster should target a Windows-hosted AI endpoint
+- set `MYCELIS_K8S_VALUES_FILE` before `uv run inv k8s.deploy` or `uv run inv k8s.up` to apply one of those promoted presets without editing the chart
 
 ### Docker Compose Home Runtime
 

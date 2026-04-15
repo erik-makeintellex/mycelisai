@@ -34,6 +34,7 @@ Deployment selection rule:
 - `k3d` is the preferred local Kubernetes validation lane for Helm behavior
 - enterprise self-hosted Kubernetes uses the same Helm chart with real cluster values
 - packaged binaries fit small Linux nodes or edge/control-host roles that should point at a remote AI service
+- promoted chart presets now live at `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, and `charts/mycelis-core/values-enterprise-windows-ai.yaml`
 
 ### Root `install` Task
 `uv run inv install` now installs the supported default Core + Interface stack only.
@@ -56,6 +57,7 @@ Handles the atomic deployment to local Kubernetes, with `k3d` preferred and Kind
 - **Recover**: `uv run inv k8s.recover` now fails closed when the cluster is unreachable and waits for rollout readiness before claiming recovery.
 - **Backend selection**: local Kubernetes now prefers `k3d` when available; set `MYCELIS_K8S_BACKEND=kind` when you intentionally need the older Kind workflow.
 - **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host without editing chart source.
+- **Preset values contract**: `k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`; repo-relative paths such as `charts/mycelis-core/values-k3d.yaml` are resolved from the repo root and the task fails fast if the requested values file does not exist.
 - Chart/runtime config alignment: the deployed Core image resolves startup config from `/core/config`, so the chart mount path and container workdir must stay in sync for bootstrap bundles to load.
 
 ### `compose.py` (Home Runtime)

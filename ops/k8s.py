@@ -3,6 +3,7 @@ import socket
 import subprocess
 import shutil
 import time
+from pathlib import Path
 
 from invoke import task, Collection
 from .config import CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
@@ -94,6 +95,22 @@ def _wait_for_local_port(port: int, label: str, timeout_seconds: int = 30, inter
         time.sleep(interval_seconds)
     print(f"  ERROR: {label} did not bind localhost:{port} within {timeout_seconds}s")
     return False
+
+
+def _resolve_k8s_values_file() -> Path | None:
+    raw_value = os.environ.get("MYCELIS_K8S_VALUES_FILE", "").strip()
+    if not raw_value:
+        return None
+
+    candidate = Path(raw_value).expanduser()
+    if candidate.is_absolute():
+        resolved = candidate.resolve()
+    else:
+        resolved = (ROOT_DIR / candidate).resolve()
+
+    if not resolved.exists():
+        raise SystemExit(f"MYCELIS_K8S_VALUES_FILE does not exist: {resolved}")
+    return resolved
 
 
 def _start_port_forward_detached(service: str, forward: str):
@@ -193,6 +210,7 @@ def deploy(c):
     api_key = os.getenv("MYCELIS_API_KEY", "")
     k8s_text_endpoint = os.getenv("MYCELIS_K8S_TEXT_ENDPOINT", "").strip()
     k8s_media_endpoint = os.getenv("MYCELIS_K8S_MEDIA_ENDPOINT", "").strip()
+    values_file = _resolve_k8s_values_file()
     if not api_key:
         raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
 
@@ -201,6 +219,8 @@ def deploy(c):
         print(f"   Text AI endpoint: {k8s_text_endpoint}")
     if k8s_media_endpoint:
         print(f"   Media AI endpoint: {k8s_media_endpoint}")
+    if values_file:
+        print(f"   Helm values file: {values_file}")
 
     cmd = (
         "helm upgrade --install mycelis-core ./charts/mycelis-core "
@@ -211,6 +231,8 @@ def deploy(c):
         f"--set postgresql.auth.database={pg_db} "
         f"--set coreAuth.apiKey={shlex.quote(api_key)} "
     )
+    if values_file:
+        cmd += f"--values {shlex.quote(str(values_file))} "
     if k8s_text_endpoint:
         cmd += f"--set-string ai.textEndpoint={shlex.quote(k8s_text_endpoint)} "
     if k8s_media_endpoint:

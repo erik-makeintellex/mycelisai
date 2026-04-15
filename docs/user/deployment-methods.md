@@ -68,6 +68,7 @@ Recommended path:
 ```bash
 cp .env.example .env
 # set MYCELIS_K8S_TEXT_ENDPOINT to a reachable AI service when needed
+export MYCELIS_K8S_VALUES_FILE=charts/mycelis-core/values-k3d.yaml
 uv run inv k8s.up
 uv run inv k8s.status
 uv run inv lifecycle.up --frontend
@@ -92,6 +93,10 @@ Typical fit:
 Use the Helm chart as the canonical deployment contract.
 Treat `k3d` as the local preflight lane for that chart, not as the production target.
 
+Promoted preset files:
+- `charts/mycelis-core/values-enterprise.yaml`
+- `charts/mycelis-core/values-enterprise-windows-ai.yaml`
+
 Expect to provide:
 - image registry and pull credentials
 - secret management for API keys and runtime credentials
@@ -99,6 +104,14 @@ Expect to provide:
 - storage class and PVC sizing
 - scheduling policy such as node selectors, tolerations, affinity, and spread constraints
 - explicit AI endpoint wiring for text and optional media services
+
+Example preflight command:
+
+```powershell
+$env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-enterprise-windows-ai.yaml"
+$env:MYCELIS_K8S_TEXT_ENDPOINT="http://<windows-ai-host>:11434/v1"
+uv run inv k8s.up
+```
 
 ## Edge Or Small Node Deployments
 

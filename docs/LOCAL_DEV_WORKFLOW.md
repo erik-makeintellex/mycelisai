@@ -67,6 +67,12 @@ Deployment selection rules:
 - use the binary path for edge/control-node deployments and point it at a reachable remote AI service
 - when the AI service lives on a Windows GPU host, keep Compose or Kubernetes pointed at the reachable Windows IP or hostname rather than `localhost`
 
+Promoted Kubernetes preset files:
+- `charts/mycelis-core/values-k3d.yaml` for local `k3d` validation
+- `charts/mycelis-core/values-enterprise.yaml` for an enterprise-shaped self-hosted cluster
+- `charts/mycelis-core/values-enterprise-windows-ai.yaml` for an enterprise-shaped self-hosted cluster that points at a Windows-hosted AI service
+- set `MYCELIS_K8S_VALUES_FILE` before `uv run inv k8s.deploy` or `uv run inv k8s.up` to apply one of those presets without editing the chart
+
 ## Configuration Reference
 
 All configuration lives in **three places** — the `.env` file, `cognitive.yaml`, and team YAML files.
@@ -373,10 +379,12 @@ Docker Compose rule:
 # 1. Configure environment
 cp .env.example .env
 # Edit .env — set DB credentials, API key, and any optional runtime overrides.
+# Optional promoted preset:
+#   export MYCELIS_K8S_VALUES_FILE=charts/mycelis-core/values-k3d.yaml
 # For an external Windows-hosted text model service:
-#   set MYCELIS_K8S_TEXT_ENDPOINT=http://192.168.x.x:11434/v1
+#   export MYCELIS_K8S_TEXT_ENDPOINT=http://192.168.x.x:11434/v1
 # Optional external media endpoint:
-#   set MYCELIS_K8S_MEDIA_ENDPOINT=http://192.168.x.x:8001/v1
+#   export MYCELIS_K8S_MEDIA_ENDPOINT=http://192.168.x.x:8001/v1
 
 # 2. Bring up cluster services in dependency order
 uv run inv k8s.up
@@ -400,6 +408,13 @@ uv run inv lifecycle.health
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Enterprise preflight render examples:
+
+```bash
+helm template mycelis-core charts/mycelis-core -f charts/mycelis-core/values-enterprise.yaml
+helm template mycelis-core charts/mycelis-core -f charts/mycelis-core/values-enterprise-windows-ai.yaml
+```
 
 ### Option B: Docker Compose Home Runtime
 

@@ -1,0 +1,54 @@
+# Enterprise self-hosted Kubernetes preset.
+# Use this for a cluster-owned install with ingress, registry auth, and persistent storage.
+
+replicaCount: 1
+
+serviceAccount:
+  create: true
+
+image:
+  repository: registry.example.com/mycelis/core
+  tag: v1.0.0
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: mycelis-registry
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: mycelis.example.com
+      path: /
+      pathType: Prefix
+  tls:
+    - secretName: mycelis-core-tls
+      hosts:
+        - mycelis.example.com
+
+coreAuth:
+  existingSecret: mycelis-core-auth
+
+outputBlock:
+  mode: cluster_generated
+
+dataVolume:
+  size: 5Gi
+  storageClassName: standard
+
+ai:
+  textEndpoint: ""
+  mediaEndpoint: ""
+
+nats:
+  jetstream:
+    fileStore:
+      pvc:
+        storageClassName: standard
+
+postgresql:
+  primary:
+    persistence:
+      storageClass: standard

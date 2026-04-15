@@ -5,6 +5,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VALUES = ROOT / "charts" / "mycelis-core" / "values.yaml"
+VALUES_K3D = ROOT / "charts" / "mycelis-core" / "values-k3d.yaml"
+VALUES_ENTERPRISE = ROOT / "charts" / "mycelis-core" / "values-enterprise.yaml"
+VALUES_ENTERPRISE_WINDOWS_AI = ROOT / "charts" / "mycelis-core" / "values-enterprise-windows-ai.yaml"
 DEPLOYMENT = ROOT / "charts" / "mycelis-core" / "templates" / "deployment.yaml"
 HELPERS = ROOT / "charts" / "mycelis-core" / "templates" / "_helpers.tpl"
 INGRESS = ROOT / "charts" / "mycelis-core" / "templates" / "ingress.yaml"
@@ -57,3 +60,51 @@ def test_chart_adds_ingress_and_serviceaccount_templates():
     service_account_text = SERVICE_ACCOUNT.read_text(encoding="utf-8")
     assert "kind: ServiceAccount" in service_account_text
     assert ".Values.serviceAccount.create" in service_account_text
+
+
+def test_chart_presets_cover_local_k3d_and_enterprise_postures():
+    checks = [
+        (
+            VALUES_K3D,
+            [
+                "serviceAccount:\n  create: false",
+                "coreAuth:\n  apiKey: k3d-local-dev-key",
+                "ingress:\n  enabled: false",
+                "storageClassName: local-path",
+                "storageClass: local-path",
+            ],
+        ),
+        (
+            VALUES_ENTERPRISE,
+            [
+                "serviceAccount:\n  create: true",
+                "image:\n  repository: registry.example.com/mycelis/core",
+                "imagePullSecrets:\n  - name: mycelis-registry",
+                "ingress:\n  enabled: true",
+                "coreAuth:\n  existingSecret: mycelis-core-auth",
+                "storageClassName: standard",
+                "storageClass: standard",
+            ],
+        ),
+        (
+            VALUES_ENTERPRISE_WINDOWS_AI,
+            [
+                "serviceAccount:\n  create: true",
+                "imagePullSecrets:\n  - name: mycelis-registry",
+                "ingress:\n  enabled: true",
+                "coreAuth:\n  existingSecret: mycelis-core-auth",
+                'textEndpoint: "http://<windows-ai-host>:11434/v1"',
+                "storageClassName: standard",
+                "storageClass: standard",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, snippets in checks:
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Chart preset values are missing the expected deployment posture choices:\n" + "\n".join(missing)
