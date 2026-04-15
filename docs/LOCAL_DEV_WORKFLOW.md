@@ -13,6 +13,7 @@
 ## TOC
 
 - [Prerequisites](#prerequisites)
+- [Deployment Method Selection](#deployment-method-selection)
 - [Configuration Reference](#configuration-reference)
 - [Recommended Host Paths](#recommended-host-paths)
 - [WSL/Linux Codex Handoff](#wsllinux-codex-handoff)
@@ -46,6 +47,25 @@ Platform-first guidance:
 - when you do need local Kubernetes, prefer `k3d`; use `MYCELIS_K8S_BACKEND=kind` only when you intentionally need the older Kind flow
 - Windows native is still a supported operator/development path, but the durable runtime stories are Compose and self-hosted Kubernetes rather than a Windows-only Docker Desktop assumption.
 - Optional repo-local `cognitive.*` helpers are for supported Linux GPU hosts; they are not the default setup path on Windows or macOS.
+
+## Deployment Method Selection
+
+Choose the runtime by the environment you are targeting:
+
+| Target environment | Choose this path | Why |
+| :-- | :-- | :-- |
+| Single-host self-hosted runtime | Docker Compose | Easiest supported full-stack bring-up for one machine, demos, and home-lab use |
+| Local Kubernetes or Helm validation | `k3d` | Best repo-local proof for chart behavior before a real cluster |
+| Enterprise or customer-managed cluster | Helm on self-hosted Kubernetes | Best fit for real ingress, secrets, registry, storage, and policy controls |
+| Small node or Raspberry Pi style control host | Packaged binary or node-attached service | Keeps the runtime lighter and lets AI stay remote |
+| Active code changes | Source-mode lifecycle tasks | Good for implementation work, but not the deployment target to recommend to operators |
+
+Deployment selection rules:
+- use Docker Compose for the normal single-host self-hosted story
+- use `k3d` when the goal is local Kubernetes behavior, not just "run the app somehow"
+- use the Helm chart for enterprise self-hosted Kubernetes and treat `k3d` as the preflight lane for that chart
+- use the binary path for edge/control-node deployments and point it at a reachable remote AI service
+- when the AI service lives on a Windows GPU host, keep Compose or Kubernetes pointed at the reachable Windows IP or hostname rather than `localhost`
 
 ## Configuration Reference
 
@@ -249,8 +269,8 @@ uv run inv lifecycle.health
 
 Use this path when you want:
 - the normal Windows desktop development experience
-- local Ollama on the same host
 - direct validation of the local Kubernetes path (`k3d` preferred, `MYCELIS_K8S_BACKEND=kind` fallback)
+- a Windows operator/browser station that reaches a self-hosted runtime and an explicit Windows-hosted AI endpoint
 
 ### Cross-Host Working Copy Rule
 

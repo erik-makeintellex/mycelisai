@@ -29,6 +29,12 @@ Recommended host posture:
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 
+Deployment selection rule:
+- Docker Compose is the default single-host self-hosted runtime
+- `k3d` is the preferred local Kubernetes validation lane for Helm behavior
+- enterprise self-hosted Kubernetes uses the same Helm chart with real cluster values
+- packaged binaries fit small Linux nodes or edge/control-host roles that should point at a remote AI service
+
 ### Root `install` Task
 `uv run inv install` now installs the supported default Core + Interface stack only.
 

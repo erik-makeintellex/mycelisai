@@ -322,6 +322,29 @@ powershell(command: str) → str  # PowerShell with -NoProfile flag
 
 ## III. Development Workflow
 
+### Deployment Method Selection
+
+Choose the runtime by target environment, not by whichever local helper happens to be installed first.
+
+- Docker Compose:
+  - default single-host self-hosted runtime for home-lab, demo, and personal-owner deployment
+  - recommended easiest full-stack bring-up on WSL2, Linux, and macOS
+- local Kubernetes with `k3d`:
+  - preferred repo-local validation lane for Helm, readiness, PVC, ingress, and other cluster behavior
+  - not the default choice when the real target is only one host
+- enterprise self-hosted Kubernetes:
+  - same Helm contract on a customer or enterprise cluster with real registry, secret, ingress, and storage values
+  - treat `k3d` as the preflight lane for that chart, not as the production target
+- edge or small-node deployment:
+  - packaged binary or node-attached service on a smaller Linux host
+  - keep AI remote unless the smaller host has been explicitly validated for local inference
+- developer source mode:
+  - implementation lane for active code changes
+  - not the deployment story to hand to operators
+
+AI endpoint rule:
+- when a Windows GPU host runs Ollama or another self-hosted AI service, point Compose or Kubernetes at the reachable Windows IP or hostname instead of `localhost`
+
 ### Docker Compose Home Runtime
 
 ```bash
@@ -655,9 +678,12 @@ Validation:
 
 ## VII. Deployment Architecture
 
-### Kubernetes (Kind)
+### Kubernetes (Self-Hosted / Helm)
 
 **Helm Chart:** `charts/mycelis-core/`
+
+This chart is the shared contract for both local `k3d` validation and enterprise self-hosted Kubernetes deployment.
+Local `k3d` is the validation backend; the enterprise target is the real customer or internal cluster.
 
 ```yaml
 replicaCount: 1

@@ -32,6 +32,7 @@ The normal product path is not "configure every backend component first." It is 
 
 ## Setup And Recovery
 
+- [Deployment Method Selection](deployment-methods.md): choose Docker Compose, local `k3d`, enterprise self-hosted Kubernetes, or edge/binary deployment by target environment.
 - [System Status & Recovery](system-status-recovery.md): health checks, degraded states, and recovery expectations.
 - [Governance & Trust](governance-trust.md): approval posture, risk classes, and audit visibility.
 - [Run Timeline](run-timeline.md): reading execution activity and outcome history.

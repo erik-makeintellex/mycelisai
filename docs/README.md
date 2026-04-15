@@ -16,6 +16,7 @@ Use this page as the clean navigation layer between user guidance, developer gui
 These are the best entry points for someone using Mycelis through the product:
 
 - **User Docs Home**: `./user/README.md`
+- **Deployment Method Selection**: `./user/deployment-methods.md`
 - **Core Concepts**: `./user/core-concepts.md`
 - **Using Soma Chat**: `./user/soma-chat.md`
 - **Teams**: `./user/teams.md`

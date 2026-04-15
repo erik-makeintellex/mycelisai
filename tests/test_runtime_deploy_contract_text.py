@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 TESTING = ROOT / "docs" / "TESTING.md"
 OPERATIONS = ROOT / "docs" / "architecture" / "OPERATIONS.md"
+DEPLOYMENT_METHODS = ROOT / "docs" / "user" / "deployment-methods.md"
 DOCKER_COMPOSE = ROOT / "docker-compose.yml"
 
 
@@ -98,3 +99,20 @@ def test_k8s_docs_prefer_k3d_with_kind_fallback():
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "k3d local-Kubernetes contract is missing from active docs:\n" + "\n".join(missing)
+
+
+def test_user_docs_explain_deployment_method_selection_by_target_environment():
+    text = DEPLOYMENT_METHODS.read_text(encoding="utf-8")
+
+    required_snippets = [
+        "Docker Compose",
+        "Local Kubernetes With k3d",
+        "Enterprise Self-Hosted Kubernetes",
+        "Edge Or Small Node Deployments",
+        "Developer source mode is not a deployment method",
+        "MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434",
+        "MYCELIS_K8S_TEXT_ENDPOINT=http://<windows-ai-host>:11434/v1",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, "Deployment method selection doc is missing required guidance:\n" + "\n".join(missing)

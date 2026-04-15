@@ -107,15 +107,16 @@ Tasking note:
 For someone using Mycelis rather than changing the codebase, start here:
 
 1. [Docs Navigation](docs/README.md)
-2. [Core Concepts](docs/user/core-concepts.md)
-3. [Using Soma Chat](docs/user/soma-chat.md)
-4. [Teams](docs/user/teams.md)
-5. [Governance & Trust](docs/user/governance-trust.md)
-6. [Automations](docs/user/automations.md)
-7. [Resources](docs/user/resources.md)
-8. [Memory](docs/user/memory.md)
-9. [System Status & Recovery](docs/user/system-status-recovery.md)
-10. [Run Timeline](docs/user/run-timeline.md)
+2. [Deployment Method Selection](docs/user/deployment-methods.md)
+3. [Core Concepts](docs/user/core-concepts.md)
+4. [Using Soma Chat](docs/user/soma-chat.md)
+5. [Teams](docs/user/teams.md)
+6. [Governance & Trust](docs/user/governance-trust.md)
+7. [Automations](docs/user/automations.md)
+8. [Resources](docs/user/resources.md)
+9. [Memory](docs/user/memory.md)
+10. [System Status & Recovery](docs/user/system-status-recovery.md)
+11. [Run Timeline](docs/user/run-timeline.md)
 
 Operator guidance rule:
 - user guidance should explain how to get value from Soma, organizations, approvals, artifacts, and settings without assuming architecture knowledge
@@ -517,6 +518,8 @@ Use those when you need one release-style pass that ties together:
 
 For a new user who wants the quickest supported path to a running service:
 
+Need help choosing the right runtime first? Start with [Deployment Method Selection](docs/user/deployment-methods.md).
+
 - WSL2/Linux/macOS:
   1. `cp .env.compose.example .env.compose`
   2. `uv run inv auth.posture --compose`
@@ -551,6 +554,12 @@ Recommended host posture:
 - Windows native: best for desktop-first local development and operator workflow work; use Ollama locally or point at remote providers
 - WSL2, Linux, and macOS: prefer the Docker Compose path first for the easiest full-stack bring-up
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate there when you intentionally want local vLLM/Diffusers
+
+Deployment guidance by target environment:
+- Docker Compose: default single-host self-hosted runtime for home-lab, demo, and personal owner deployments
+- `k3d`: preferred local Kubernetes validation lane for Helm and cluster behavior
+- enterprise self-hosted Kubernetes: use the Helm chart on the target cluster with real registry, secret, ingress, and storage values
+- packaged binary or node-attached service: fit for small Linux nodes or edge/control-host roles that should point at a remote AI service
 
 Recommended easiest setup path by host:
 - WSL2/Linux/macOS:

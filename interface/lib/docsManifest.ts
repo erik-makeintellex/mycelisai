@@ -38,6 +38,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Operator-first entry point for Soma, teams, resources, memory, and recovery workflows",
             },
             {
+                slug: "deployment-method-selection",
+                label: "Deployment Method Selection",
+                path: "docs/user/deployment-methods.md",
+                description: "Pick Docker Compose, local k3d, enterprise self-hosted Kubernetes, or edge deployment by target environment",
+            },
+            {
                 slug: "core-concepts",
                 label: "Core Concepts",
                 path: "docs/user/core-concepts.md",
