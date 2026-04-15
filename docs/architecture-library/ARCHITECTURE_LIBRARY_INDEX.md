@@ -52,6 +52,7 @@ This index is now intentionally narrower:
 | [V8 Multi-User Identity And Soma Tenancy](V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md) | planning multi-user access, enterprise federation, or shared Soma identity | SAML/SSO, break-glass admins, modular user management, and one-Soma tenancy |
 | [V8 Memory Layer And Reflection Delivery Contract](V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md) | planning memory layers, reflection synthesis, exchange-backed learning candidates, or memory promotion | explicit `SOMA_MEMORY`, `AGENT_MEMORY`, `PROJECT_MEMORY`, `REFLECTION_MEMORY`, candidate-first reflection, and promotion guardrails |
 | [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) | supporting the single-host compose runtime | compose tasking, persistence, monitoring, and operator expectations |
+| [V8 Self-Hosted Runtime Delivery Program](V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md) | coordinating the compact delivery team for real deployment work | delivery target, team ownership, management cadence, and acceptance gates for Compose and self-hosted Kubernetes |
 | [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) | validating a personal-owner Compose deployment from data-plane-only startup through near-enterprise product workflows | data-plane-only Postgres/NATS launch, owner configuration, app bring-up, workflow proof, recovery, and evidence matrix |
 | [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) | planning user-output-first media/team demos, Ollama role routing, or DB-backed conversation templates | model-role routing, media-engine boundary, team-managed output proof, and conversation-template registry |
 | [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | defining what browser validation must prove | Soma-first browser proof contract for answers, governed actions, continuity, and audit visibility |
@@ -76,11 +77,12 @@ This index is now intentionally narrower:
 14. Use [V8 Multi-User Identity And Soma Tenancy](V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md) when reasoning about enterprise federation, local break-glass admins, or one shared Soma persona across many users.
 15. Use [V8 Memory Layer And Reflection Delivery Contract](V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md) when defining memory-layer boundaries, reflection candidates, or promotion rules.
 16. Use [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) when validating the supported single-host compose path.
-17. Use [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) when validating data-plane-only Postgres/NATS startup, owner endpoint/credential configuration, and near-enterprise Compose workflow proof.
-18. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
-19. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
-20. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
-21. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production target rather than the current release.
+17. Use [V8 Self-Hosted Runtime Delivery Program](V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md) when coordinating the active compact team delivering Compose and self-hosted Kubernetes runtime truth.
+18. Use [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) when validating data-plane-only Postgres/NATS startup, owner endpoint/credential configuration, and near-enterprise Compose workflow proof.
+19. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
+20. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
+21. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
+22. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production target rather than the current release.
 
 Execution governance reminder:
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md) and [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) remain authoritative migration inputs for delivery discipline.

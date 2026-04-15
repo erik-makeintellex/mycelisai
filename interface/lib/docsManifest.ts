@@ -298,6 +298,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 description: "Single-host Docker Compose runtime for home-lab, demo, and partner review",
             },
             {
+                slug: "v8-self-hosted-runtime-delivery-program",
+                label: "V8 Self-Hosted Runtime Delivery",
+                path: "docs/architecture-library/V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md",
+                description: "Compact delivery-team contract for deployable Compose and self-hosted Kubernetes runtime work",
+            },
+            {
                 slug: "v8-compose-personal-owner-test-plan",
                 label: "V8 Compose Personal Owner Test Plan",
                 path: "docs/architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md",
