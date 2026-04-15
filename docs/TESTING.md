@@ -11,6 +11,7 @@ Current validation contract:
 - when the validation target is the supported home-runtime stack, use `uv run inv compose.up`, `uv run inv compose.status`, and `uv run inv compose.health` before browser proof instead of assuming Kind/bridge is the only real local environment; compose bring-up now mirrors `db.migrate` by skipping forward replay when the compose `cortex` schema is already compatible with the current runtime, emits numbered stage output with operator expectations, and accepts `--wait-timeout=<seconds>` for slower rebuild hosts
 - when the validation target is a personal-owner Compose deployment with user-configured data services, use `uv run inv compose.infra-up --wait-timeout=180` first to start only PostgreSQL/NATS, verify the printed DB/NATS connection settings, run `uv run inv compose.infra-health`, then run `uv run inv compose.storage-health` after migrations so the long-term pgvector/Postgres memory and artifact store is proven before Core/Interface workflow proof
 - in the supported home-runtime stack, `.env.compose` must keep container-host assumptions separate from `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`
+- the Compose runtime maps `MYCELIS_COMPOSE_OLLAMA_HOST` into provider-specific endpoint overrides inside Core; do not rely on a blanket `OLLAMA_HOST` patch at runtime
 - on Windows hosts without a native `docker` binary, the compose task layer may execute Docker through WSL instead; keep the Docker daemon in a WSL distro that can reach the repo filesystem, and set `MYCELIS_WSL_DISTRO` when the default distro is not the correct Docker host
 - on that Windows + WSL Docker path, the compose task layer may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host so the Core container can still reach a Windows-hosted Ollama service even when the Windows LAN IP is not directly reachable from bridge containers
 - when the validation target is the Helm/self-hosted Kubernetes path, use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT` to prove the deployment targets an explicit reachable AI host instead of a chart-baked or localhost default
@@ -552,10 +553,10 @@ npx playwright show-report                # View HTML report
 # ollama pull qwen2.5-coder:7b-instruct
 
 # Windows (PowerShell)
-$env:OLLAMA_HOST="http://192.168.50.156:11434"; go test -v -tags=integration ./tests/...
+$env:MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT="http://192.168.50.156:11434/v1"; go test -v -tags=integration ./tests/...
 
 # Linux/Mac
-OLLAMA_HOST=http://192.168.50.156:11434 go test -v -tags=integration ./tests/...
+MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT=http://192.168.50.156:11434/v1 go test -v -tags=integration ./tests/...
 ```
 
 ---

@@ -93,34 +93,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		}
 	}
 
-	// 3. Dynamic Overrides (Docker Support)
-	// OLLAMA_HOST can be a bind address (e.g. "0.0.0.0") used by Ollama itself
-	// to listen on all interfaces, or a reachable endpoint (e.g. "192.168.50.156:11434").
-	// Only patch provider endpoints when the value is a routable address.
-	if host := os.Getenv("OLLAMA_HOST"); host != "" {
-		log.Printf("DEBUG: Found OLLAMA_HOST env var: %s", host)
-		stripped := strings.TrimPrefix(strings.TrimPrefix(host, "http://"), "https://")
-		stripped = strings.Split(stripped, ":")[0] // extract just the host portion
-		if stripped == "0.0.0.0" || stripped == "" {
-			log.Println("DEBUG: OLLAMA_HOST is a bind address (0.0.0.0), skipping provider patching.")
-		} else {
-			if !strings.HasPrefix(host, "http") {
-				host = "http://" + host
-			}
-			// Patch all ollama-compatible endpoints (any openai_compatible provider)
-			for k, v := range config.Providers {
-				if k == "ollama" || v.Type == "openai_compatible" || v.Driver == "ollama" {
-					v.Endpoint = host + "/v1" // Standardize on /v1 for adapter
-					config.Providers[k] = v
-					log.Printf("DEBUG: Patched provider %s endpoint to %s", k, v.Endpoint)
-				}
-			}
-		}
-	} else {
-		log.Println("DEBUG: No OLLAMA_HOST env var found.")
-	}
-
-	// 4. Deployment-friendly env overrides
+	// 3. Deployment-friendly env overrides
 	// These support automation tooling without reviving the retired
 	// team/agent env-map routing path. Overrides apply at provider/profile/media
 	// config surfaces and win over YAML/DB defaults.
@@ -135,7 +108,7 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		Adapters:   make(map[string]LLMProvider),
 	}
 
-	// 5. Initialize Adapters
+	// 4. Initialize Adapters
 	for id, pConfig := range config.Providers {
 		log.Printf("DEBUG: Initializing provider %s with endpoint %s", id, pConfig.Endpoint)
 		var adapter LLMProvider
@@ -173,62 +146,18 @@ func NewRouter(configPath string, db *sql.DB) (*Router, error) {
 		r.Adapters[id] = adapter
 	}
 
-	// 6. Emergency Sovereign Fallback
-	// If zero adapters were initialized (YAML missing + DB down), attempt to
-	// discover a local Ollama instance at well-known endpoints. This implements
-	// the Universal Sovereignty principle: the organism must survive in isolation.
+	// 5. Degraded startup posture
+	// Fail closed when no provider is configured instead of silently probing
+	// desktop-local loopback addresses that do not exist in deployed runtimes.
 	if len(r.Adapters) == 0 {
-		log.Println("WARN: Zero cognitive adapters initialized. Attempting emergency Ollama discovery...")
-		emergencyEndpoints := []string{
-			"http://localhost:11434/v1",
-			"http://127.0.0.1:11434/v1",
-		}
-		// Also check OLLAMA_HOST env
-		if host := os.Getenv("OLLAMA_HOST"); host != "" {
-			if !strings.HasPrefix(host, "http") {
-				host = "http://" + host
-			}
-			emergencyEndpoints = append([]string{host + "/v1"}, emergencyEndpoints...)
-		}
-
-		for _, ep := range emergencyEndpoints {
-			emergencyConfig := ProviderConfig{
-				Type:     "openai_compatible",
-				Endpoint: ep,
-				ModelID:  "qwen2.5-coder:7b",
-				AuthKey:  "ollama",
-			}
-			adapter, err := NewOpenAIAdapter(emergencyConfig)
-			if err != nil {
-				continue
-			}
-			// Probe with short timeout
-			probeCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			healthy, _ := adapter.Probe(probeCtx)
-			cancel()
-			if healthy {
-				log.Printf("Emergency Ollama discovered at %s", ep)
-				r.Adapters["emergency-ollama"] = adapter
-				r.Config.Providers["emergency-ollama"] = emergencyConfig
-				// Wire all missing profiles to emergency adapter
-				for _, profile := range []string{"architect", "sentry", "coder", "chat", "creative", "overseer"} {
-					if _, exists := r.Config.Profiles[profile]; !exists {
-						r.Config.Profiles[profile] = "emergency-ollama"
-					}
-				}
-				break
-			}
-		}
-		if len(r.Adapters) == 0 {
-			log.Println("WARN: Emergency Ollama discovery failed. Cognitive Engine will operate in DEGRADED mode.")
-		}
+		log.Println("WARN: Zero cognitive adapters initialized after YAML/DB/env resolution. Cognitive Engine will operate in DEGRADED mode until an explicit provider endpoint is configured.")
 	}
 
 	if rebound := r.EnsureDefaultProfileBindings(); len(rebound) > 0 {
 		log.Printf("INFO: rebound default cognitive profiles to fallback provider: %v", rebound)
 	}
 
-	// 7. Discovery & Grading (startup scope)
+	// 6. Discovery & Grading (startup scope)
 	// Only auto-configure if we have providers.
 	// Startup intentionally probes only default Ollama and profile-routed providers,
 	// so we don't try connecting to every declared backend unless explicitly configured.

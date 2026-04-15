@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 TESTING = ROOT / "docs" / "TESTING.md"
 OPERATIONS = ROOT / "docs" / "architecture" / "OPERATIONS.md"
+DOCKER_COMPOSE = ROOT / "docker-compose.yml"
 
 
 def test_compose_testing_contract_points_to_explicit_non_loopback_ai_hosts():
@@ -47,3 +48,18 @@ def test_compose_testing_contract_points_to_explicit_non_loopback_ai_hosts():
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "Compose/testing contract is missing explicit non-loopback AI endpoint guidance:\n" + "\n".join(missing)
+
+
+def test_compose_runtime_maps_ai_host_into_provider_overrides():
+    text = DOCKER_COMPOSE.read_text(encoding="utf-8")
+
+    required_snippets = [
+        "MYCELIS_PROVIDER_OLLAMA_ENDPOINT: ${MYCELIS_COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}/v1",
+        "MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT: ${MYCELIS_COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}/v1",
+        'MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED: "true"',
+        "MYCELIS_PROVIDER_LOCAL_SOVEREIGN_ENDPOINT: ${MYCELIS_COMPOSE_OLLAMA_HOST:-http://host.docker.internal:11434}/v1",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, "docker-compose.yml is missing provider endpoint overrides:\n" + "\n".join(missing)
+    assert "      OLLAMA_HOST:" not in text, "docker-compose.yml should not inject legacy OLLAMA_HOST into Core"

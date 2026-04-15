@@ -170,6 +170,7 @@ Interface-focused Invoke and CI tasks must execute from the `interface/` working
 Compose runtime guardrails:
 - `.env.compose` is the supported env contract for the home-runtime path; do not reuse Kind/bridge `OLLAMA_HOST` values blindly
 - use `MYCELIS_COMPOSE_OLLAMA_HOST` for the home-runtime AI engine path so host-level `OLLAMA_HOST` bind settings do not override the compose runtime
+- the Compose stack maps `MYCELIS_COMPOSE_OLLAMA_HOST` into provider-specific runtime endpoint overrides inside Core, so deployed execution follows the same explicit provider contract as Helm instead of relying on a global host rewrite
 - loopback compose Ollama values (`localhost`, `127.0.0.1`, `0.0.0.0`) are invalid for the Core container and are rejected by the compose task layer
 - on Windows hosts without a native `docker` binary, the compose task layer can execute Docker through WSL instead and translates compose/output-block host paths for that runtime; set `MYCELIS_WSL_DISTRO` when the Docker-owning distro is not the default
 - on that Windows + WSL Docker path, `compose.up` and `compose.health` can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST` so bridge containers keep using `host.docker.internal` even when the Windows LAN IP is not directly reachable from Docker-in-WSL
@@ -322,7 +323,7 @@ powershell(command: str) → str  # PowerShell with -NoProfile flag
 
 ```bash
 cp .env.compose.example .env.compose
-# set MYCELIS_API_KEY and adjust OLLAMA_HOST if needed
+# set MYCELIS_API_KEY and adjust MYCELIS_COMPOSE_OLLAMA_HOST if needed
 
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.status
@@ -508,7 +509,7 @@ defaults:
 | `GOMODCACHE` | managed by task env or user policy | Go module cache location |
 | `PLAYWRIGHT_BROWSERS_PATH` | managed by task env or user policy | Playwright browser binary cache location |
 | `NEXT_TELEMETRY_DISABLED` | `1` in task-managed Interface runs | Prevents Next telemetry writes during local build/test/browser execution |
-| `OLLAMA_HOST` | — | Override Ollama endpoint |
+| `MYCELIS_COMPOSE_OLLAMA_HOST` | — | Compose-side text AI host that is projected into provider-specific endpoint overrides for the Core container |
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_MODEL_ID` | — | Override provider model selection at startup/runtime config load |
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT` | — | Override provider endpoint from automation tooling |
 | `MYCELIS_PROVIDER_<PROVIDER_ID>_ENABLED` | — | Enable/disable a provider via env (`true` / `false`) |

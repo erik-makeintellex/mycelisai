@@ -3,6 +3,8 @@ package cognitive
 import (
 	"context"
 	"database/sql"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -157,4 +159,82 @@ func TestLoadFromDB_PreservesYAMLExecutionFields(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)
 	}
+}
+
+func TestNewRouter_IgnoresLegacyOllamaHostPatch(t *testing.T) {
+	t.Setenv("OLLAMA_HOST", "http://192.168.50.156:11434")
+
+	configPath := writeTestCognitiveConfig(t, `
+providers:
+  ollama:
+    type: openai_compatible
+    endpoint: http://127.0.0.1:11434/v1
+    model_id: qwen2.5-coder:7b
+    api_key: ollama
+    enabled: true
+profiles:
+  chat: ollama
+`)
+
+	router, err := NewRouter(configPath, nil)
+	if err != nil {
+		t.Fatalf("NewRouter: %v", err)
+	}
+
+	if got := router.Config.Providers["ollama"].Endpoint; got != "http://127.0.0.1:11434/v1" {
+		t.Fatalf("expected legacy OLLAMA_HOST to be ignored, got endpoint %q", got)
+	}
+}
+
+func TestNewRouter_UsesExplicitProviderEndpointOverrides(t *testing.T) {
+	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT", "http://192.168.50.156:11434/v1")
+	t.Setenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED", "true")
+
+	configPath := writeTestCognitiveConfig(t, `
+providers:
+  local-ollama-dev:
+    type: ollama
+    endpoint: http://127.0.0.1:11434/v1
+    model_id: qwen2.5-coder:7b
+    enabled: false
+profiles:
+  chat: local-ollama-dev
+`)
+
+	router, err := NewRouter(configPath, nil)
+	if err != nil {
+		t.Fatalf("NewRouter: %v", err)
+	}
+
+	provider := router.Config.Providers["local-ollama-dev"]
+	if provider.Endpoint != "http://192.168.50.156:11434/v1" {
+		t.Fatalf("expected explicit endpoint override, got %q", provider.Endpoint)
+	}
+	if !provider.Enabled {
+		t.Fatal("expected explicit enabled override to be true")
+	}
+}
+
+func TestNewRouter_NoEmergencyLoopbackFallbackWithoutConfiguredProviders(t *testing.T) {
+	router, err := NewRouter(filepath.Join(t.TempDir(), "missing-cognitive.yaml"), nil)
+	if err != nil {
+		t.Fatalf("NewRouter: %v", err)
+	}
+
+	if len(router.Adapters) != 0 {
+		t.Fatalf("expected no adapters without explicit providers, got %d", len(router.Adapters))
+	}
+	if len(router.Config.Providers) != 0 {
+		t.Fatalf("expected no providers without explicit config, got %d", len(router.Config.Providers))
+	}
+}
+
+func writeTestCognitiveConfig(t *testing.T, contents string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "cognitive.yaml")
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	return path
 }
