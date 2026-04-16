@@ -55,7 +55,7 @@ def test_deploy_uses_core_build_task_body(monkeypatch):
     assert any("--set image.tag=v0.1.0-deadbee" in command for command in ctx.commands)
 
 
-def test_deploy_uses_k3d_image_import_when_k3d_backend_selected(monkeypatch):
+def test_deploy_uses_k3d_image_import_when_k3d_backend_selected(monkeypatch, capsys):
     ctx = FakeContext()
 
     monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
@@ -66,15 +66,25 @@ def test_deploy_uses_k3d_image_import_when_k3d_backend_selected(monkeypatch):
     monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
 
     k8s.deploy.body(ctx)
+    output = capsys.readouterr().out
 
+    assert "Deployment posture: k3d validation" in output
     assert any("k3d image import mycelis/core:v0.1.0-deadbee -c mycelis-cluster" in command for command in ctx.commands)
     assert any("--set image.tag=v0.1.0-deadbee" in command for command in ctx.commands)
 
 
-def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch):
+def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch, tmp_path: Path, capsys):
     ctx = FakeContext()
+    values_file = tmp_path / "values-enterprise-windows-ai.yaml"
+    values_file.write_text(
+        "ai:\n"
+        '  textEndpoint: "http://<windows-ai-host>:11434/v1"\n'
+        '  mediaEndpoint: ""\n',
+        encoding="utf-8",
+    )
 
     monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
+    monkeypatch.setattr(k8s, "ROOT_DIR", tmp_path)
     monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.1.0-deadbee")
     monkeypatch.setenv("POSTGRES_USER", "mycelis")
     monkeypatch.setenv("POSTGRES_PASSWORD", "password")
@@ -82,12 +92,39 @@ def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch):
     monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
     monkeypatch.setenv("MYCELIS_K8S_TEXT_ENDPOINT", "http://192.168.50.156:11434/v1")
     monkeypatch.setenv("MYCELIS_K8S_MEDIA_ENDPOINT", "http://192.168.50.156:8001/v1")
+    monkeypatch.setenv("MYCELIS_K8S_VALUES_FILE", values_file.name)
 
     k8s.deploy.body(ctx)
+    output = capsys.readouterr().out
 
+    assert "Deployment posture: enterprise self-hosted with Windows-hosted AI" in output
     helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
     assert "--set-string ai.textEndpoint=http://192.168.50.156:11434/v1" in helm_command
     assert "--set-string ai.mediaEndpoint=http://192.168.50.156:8001/v1" in helm_command
+    assert f"--values {shlex.quote(str(values_file.resolve()))}" in helm_command
+
+
+def test_deploy_requires_explicit_windows_ai_endpoint_for_enterprise_preset(monkeypatch, tmp_path: Path):
+    ctx = FakeContext()
+    values_file = tmp_path / "values-enterprise-windows-ai.yaml"
+    values_file.write_text(
+        "ai:\n"
+        '  textEndpoint: "http://<windows-ai-host>:11434/v1"\n'
+        '  mediaEndpoint: ""\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
+    monkeypatch.setattr(k8s, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.1.0-deadbee")
+    monkeypatch.setenv("POSTGRES_USER", "mycelis")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "password")
+    monkeypatch.setenv("POSTGRES_DB", "cortex")
+    monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
+    monkeypatch.setenv("MYCELIS_K8S_VALUES_FILE", values_file.name)
+
+    with pytest.raises(SystemExit, match="MYCELIS_K8S_TEXT_ENDPOINT must be set"):
+        k8s.deploy.body(ctx)
 
 
 def test_deploy_includes_repo_relative_values_file(monkeypatch, tmp_path: Path):

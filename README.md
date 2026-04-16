@@ -98,7 +98,9 @@ Tasking note:
 - on that same Windows + WSL Docker path, `compose.up` and `compose.health` now auto-start a WSL-host relay for the AI endpoint when needed, so Core can still use a Windows-hosted Ollama service through `host.docker.internal` even when bridge containers cannot reach the Windows LAN IP directly
 - `uv run inv k8s.deploy` now accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT` so the Helm deploy path can target an explicit external AI service such as a Windows-hosted Ollama box without editing chart source; use a reachable host/IP like `http://192.168.x.x:11434/v1`, not `localhost`
 - `uv run inv k8s.deploy` and `uv run inv k8s.up` also accept `MYCELIS_K8S_VALUES_FILE` so operators can apply promoted Helm preset files such as `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml` without patching the chart
+- the `charts/mycelis-core/values-enterprise-windows-ai.yaml` preset now fails closed unless `MYCELIS_K8S_TEXT_ENDPOINT` is set to a real Windows-hosted AI endpoint; do not treat the placeholder value as deployable
 - `uv run inv k8s.init` / `k8s.up` / `k8s.deploy` now prefer `k3d` as the local Kubernetes backend when it is available, while keeping `MYCELIS_K8S_BACKEND=kind` as the explicit fallback for older local workflows
+- `uv run inv ci.release-preflight --runtime-posture` now adds a tighter runtime gate before baseline proof: 12 GiB disk headroom plus an explicit non-loopback AI-endpoint probe from Compose/Kubernetes/provider env vars
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, point it at a host-reachable endpoint such as `http://host.docker.internal:11434`, and let Compose map that value into the provider-specific runtime overrides inside Core
 - when Docker runs inside WSL and the AI engine is on the same Windows host, keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer can relay that through the WSL host so bridge containers do not need direct access to the Windows LAN IP
@@ -502,7 +504,7 @@ Documentation rule:
 - `uv run inv ci.baseline` now includes Playwright by default; use `--no-e2e` only for intentionally narrower local debugging
 - default release-candidate browser coverage is MVP-aligned; legacy V7 or raw-endpoint-only specs should stay outside the default gate unless a slice explicitly revives them
 - live-backend browser checks are still required when proxy/runtime contracts change
-- live service issues belong in the release story too: use `uv run inv ci.service-check` for running-stack verification and `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes service/runtime contracts
+- live service issues belong in the release story too: use `uv run inv ci.service-check` for running-stack verification and `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` when a branch changes service/runtime contracts
 
 ## Testing Gate
 
@@ -643,7 +645,7 @@ Release automation:
 - publishes versioned archives from `dist/` as GitHub release assets
 
 Initial release handoff rule:
-- before tagging or handing off a second-machine checkout, run `uv run inv ci.release-preflight --service-health --live-backend`
+- before tagging or handing off a second-machine checkout, run `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend`
 - keep current release blockers explicit in `V8_DEV_STATE.md`; the latest state board is the authority for whether an issue is blocking initial user testing or release lock
 - use [Testing](docs/TESTING.md) and [Remote User Testing](docs/REMOTE_USER_TESTING.md) as the operator-facing proof sequence for the handoff machine
 

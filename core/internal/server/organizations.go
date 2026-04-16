@@ -194,9 +194,10 @@ type OrganizationHomePayload struct {
 type TeamLeadGuidedAction string
 
 const (
-	TeamLeadGuidedActionPlanNextSteps TeamLeadGuidedAction = "plan_next_steps"
-	TeamLeadGuidedActionFocusFirst    TeamLeadGuidedAction = "focus_first"
-	TeamLeadGuidedActionReviewSetup   TeamLeadGuidedAction = "review_setup"
+	TeamLeadGuidedActionPlanNextSteps         TeamLeadGuidedAction = "plan_next_steps"
+	TeamLeadGuidedActionFocusFirst            TeamLeadGuidedAction = "focus_first"
+	TeamLeadGuidedActionReviewSetup           TeamLeadGuidedAction = "review_setup"
+	TeamLeadGuidedActionResumeRetainedPackage TeamLeadGuidedAction = "resume_retained_package"
 )
 
 type OrganizationCreateRequest struct {
@@ -344,12 +345,16 @@ const (
 	TeamLeadExecutionModeGuidedReview             TeamLeadExecutionMode = "guided_review"
 	TeamLeadExecutionModeNativeTeam               TeamLeadExecutionMode = "native_team"
 	TeamLeadExecutionModeExternalWorkflowContract TeamLeadExecutionMode = "external_workflow_contract"
+	TeamLeadExecutionModeContinuityResume         TeamLeadExecutionMode = "continuity_resume"
 )
 
 type TeamLeadExecutionContract struct {
 	ExecutionMode              TeamLeadExecutionMode       `json:"execution_mode"`
 	OwnerLabel                 string                      `json:"owner_label"`
 	Summary                    string                      `json:"summary"`
+	ContinuityLabel            string                      `json:"continuity_label,omitempty"`
+	ContinuitySummary          string                      `json:"continuity_summary,omitempty"`
+	ResumeCheckpoint           string                      `json:"resume_checkpoint,omitempty"`
 	TeamName                   string                      `json:"team_name,omitempty"`
 	ExternalTarget             string                      `json:"external_target,omitempty"`
 	CoordinationModel          string                      `json:"coordination_model,omitempty"`
@@ -1841,10 +1846,10 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 	organizationName := safeOrganizationName(home.Name)
 	teamLeadLabel := safeTeamLeadLabel(home.TeamLeadLabel)
 	purposeText := safePurposeText(home.Purpose)
-	executionContract := buildTeamLeadExecutionContract(home, requestContext)
 
 	switch action {
 	case TeamLeadGuidedActionPlanNextSteps:
+		executionContract := buildTeamLeadExecutionContract(home, requestContext)
 		steps := []string{
 			fmt.Sprintf("Align the first outcome with this purpose: %s.", purposeText),
 			firstDepartmentStep(home),
@@ -1864,6 +1869,7 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 			ExecutionContract: executionContract,
 		}, nil
 	case TeamLeadGuidedActionFocusFirst:
+		executionContract := buildTeamLeadExecutionContract(home, requestContext)
 		return TeamLeadGuidanceResponse{
 			Action:       action,
 			RequestLabel: "What should I focus on first?",
@@ -1882,6 +1888,7 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 			ExecutionContract: executionContract,
 		}, nil
 	case TeamLeadGuidedActionReviewSetup:
+		executionContract := buildTeamLeadExecutionContract(home, requestContext)
 		return TeamLeadGuidanceResponse{
 			Action:       action,
 			RequestLabel: "Review my organization setup",
@@ -1899,8 +1906,27 @@ func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAc
 			},
 			ExecutionContract: executionContract,
 		}, nil
+	case TeamLeadGuidedActionResumeRetainedPackage:
+		executionContract := buildRetainedPackageContinuityContract(home, requestContext)
+		return TeamLeadGuidanceResponse{
+			Action:       action,
+			RequestLabel: "Resume retained package continuity",
+			Headline:     fmt.Sprintf("Retained package continuity for %s", organizationName),
+			Summary:      fmt.Sprintf("%s resumes the retained package for %s so completed work stays durable and the next step stays explicit after a reboot or reload.", teamLeadLabel, organizationName),
+			PrioritySteps: []string{
+				"Open the retained package and confirm the latest durable outputs.",
+				"Record what is already complete, what remains, and who owns the next step.",
+				"Continue from the retained package without rebuilding finished work.",
+			},
+			SuggestedFollowUps: []string{
+				"Plan next steps for this organization",
+				"Review my organization setup",
+				"Use the retained package continuity contract as the starting point for UI or live test automation.",
+			},
+			ExecutionContract: executionContract,
+		}, nil
 	default:
-		return TeamLeadGuidanceResponse{}, fmt.Errorf("action must be plan_next_steps, focus_first, or review_setup")
+		return TeamLeadGuidanceResponse{}, fmt.Errorf("action must be plan_next_steps, focus_first, review_setup, or resume_retained_package")
 	}
 }
 
@@ -2008,6 +2034,30 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 	}
 
 	return nil
+}
+
+func buildRetainedPackageContinuityContract(home OrganizationHomePayload, requestContext string) *TeamLeadExecutionContract {
+	organizationName := safeOrganizationName(home.Name)
+	resumeGoal := strings.TrimSpace(requestContext)
+	if resumeGoal == "" {
+		resumeGoal = fmt.Sprintf("Resume the retained package for %s after a reboot or reload.", organizationName)
+	}
+
+	targetOutputs := []string{
+		"Retained package continuity summary",
+		"Completed work snapshot",
+		"Remaining work checklist",
+	}
+	return &TeamLeadExecutionContract{
+		ExecutionMode:     TeamLeadExecutionModeContinuityResume,
+		OwnerLabel:        "Team Lead continuity",
+		Summary:           fmt.Sprintf("Resume the retained package for %s, confirm completed work, and keep the remaining steps reviewable after a reboot or reload.", organizationName),
+		ContinuityLabel:   "Retained package continuity",
+		ContinuitySummary: fmt.Sprintf("Continuity resumes from the last durable outputs for %s without rebuilding finished work.", organizationName),
+		ResumeCheckpoint:  "Continue from the last retained package after reload or reboot.",
+		TargetOutputs:     targetOutputs,
+		WorkflowGroup:     buildWorkflowGroupDraft(home, "Retained Package Continuity", resumeGoal, "resume_continuity", targetOutputs, []string{"artifact.review", "team.coordinate"}, 4),
+	}
 }
 
 func inferBusinessTeamExecution(normalized string) (string, []string, bool) {

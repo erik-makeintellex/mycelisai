@@ -113,6 +113,18 @@ def _resolve_k8s_values_file() -> Path | None:
     return resolved
 
 
+def _deployment_posture(backend: str, values_file: Path | None) -> str:
+    if values_file:
+        values_name = values_file.name.lower()
+        if "windows-ai" in values_name:
+            return "enterprise self-hosted with Windows-hosted AI"
+        if "enterprise" in values_name:
+            return "enterprise self-hosted"
+    if backend == "k3d":
+        return "k3d validation"
+    return f"{backend} validation"
+
+
 def _start_port_forward_detached(service: str, forward: str):
     if is_windows():
         subprocess.Popen(
@@ -213,8 +225,14 @@ def deploy(c):
     values_file = _resolve_k8s_values_file()
     if not api_key:
         raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
+    if values_file and "windows-ai" in values_file.name.lower() and not k8s_text_endpoint:
+        raise SystemExit(
+            "MYCELIS_K8S_TEXT_ENDPOINT must be set when deploying the enterprise Windows AI preset. "
+            "Point it at the Windows GPU host, for example http://192.168.50.156:11434/v1."
+        )
 
     print(f"   Injecting Secrets for DB User: {pg_user}")
+    print(f"   Deployment posture: {_deployment_posture(backend, values_file)}")
     if k8s_text_endpoint:
         print(f"   Text AI endpoint: {k8s_text_endpoint}")
     if k8s_media_endpoint:

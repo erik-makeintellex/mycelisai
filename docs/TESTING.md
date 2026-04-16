@@ -16,9 +16,10 @@ Current validation contract:
 - on that Windows + WSL Docker path, the compose task layer may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host so the Core container can still reach a Windows-hosted Ollama service even when the Windows LAN IP is not directly reachable from bridge containers
 - when the validation target is the Helm/self-hosted Kubernetes path, use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT` to prove the deployment targets an explicit reachable AI host instead of a chart-baked or localhost default
 - when the validation target is the Helm/self-hosted Kubernetes path, prefer a promoted preset through `MYCELIS_K8S_VALUES_FILE` such as `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`
+- when the validation target is the enterprise Windows-AI preset, `k8s.deploy` / `k8s.up` should fail closed unless `MYCELIS_K8S_TEXT_ENDPOINT` points at the real Windows GPU host
 - when the validation target is local Kubernetes, prefer `k3d` as the repo-local backend and use `MYCELIS_K8S_BACKEND=kind` only when you intentionally need the older Kind path
 - when the validation target is the Windows self-hosted operator lane, prove the field topology directly: a Windows browser/client opens the UI over the network, the runtime runs in Compose or self-hosted Kubernetes, and the AI engine lives on a Windows GPU host reached by explicit IP or hostname rather than `localhost`
-- use `uv run inv ci.release-preflight --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
+- use `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence
 - when repeated local builds or browser runs are filling the repo/cache volume, use `uv run inv cache.guard` to fail fast before another large build expands `.next`, Playwright browsers, or tool caches; remember that Docker daemon / WSL image-layer storage is a separate disk budget
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
@@ -273,7 +274,7 @@ uv run inv compose.infra-health      # Data-plane-only health proof: PostgreSQL 
 uv run inv compose.storage-health    # Post-migration long-term storage proof: pgvector, memory/context, artifacts, exchange, continuity
 uv run inv compose.up --build --wait-timeout=240    # Supported home-runtime bring-up without Kind on a fresh or slower host
 uv run inv compose.health        # Deep health proof for the compose stack
-uv run inv ci.release-preflight --service-health --live-backend  # Clean-tree + baseline + live service/browser proof
+uv run inv ci.release-preflight --runtime-posture --service-health --live-backend  # Clean-tree + runtime posture + baseline + live service/browser proof
 ```
 
 Runner matrix:

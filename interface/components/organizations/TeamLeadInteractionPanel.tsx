@@ -87,6 +87,11 @@ const GUIDED_ACTIONS: Array<{ action: TeamLeadGuidedAction; label: string; detai
         label: "Review your organization setup",
         detail: "Check whether Advisors, Departments, and Specialists are ready and see what Soma recommends inspecting next.",
     },
+    {
+        action: "resume_retained_package",
+        label: "Resume retained package",
+        detail: "Recover the next step from durable outputs after a reboot, reload, or interruption without rebuilding finished work.",
+    },
 ];
 
 async function readJson(response: Response) {
@@ -517,6 +522,9 @@ function defaultRequestLabel(action: TeamLeadGuidedAction) {
 
 function resolvePromptAction(prompt: string): TeamLeadGuidedAction {
     const normalized = prompt.trim().toLowerCase();
+    if (/(resume|reboot|reload|retained package|retained output|continue from|pick back up)/i.test(normalized)) {
+        return "resume_retained_package";
+    }
     if (/(review|check|audit|inspect|understand|setup|structure)/i.test(normalized)) {
         return "review_setup";
     }
@@ -528,6 +536,11 @@ function resolvePromptAction(prompt: string): TeamLeadGuidedAction {
 
 function defaultPrioritySteps(action: TeamLeadGuidedAction, organizationName: string) {
     switch (action) {
+        case "resume_retained_package":
+            return [
+                `Resume the retained package for ${organizationName}.`,
+                "Confirm what is done, what remains, and who owns the next step.",
+            ];
         case "focus_first":
             return [
                 `Confirm the first priority for ${organizationName}.`,
@@ -552,6 +565,7 @@ function defaultFollowUps(action: TeamLeadGuidedAction) {
         "Run a quick strategy check",
         "Choose the first priority",
         "Review your organization setup",
+        "Resume retained package",
     ];
     return fallbacks.filter((label) => label !== defaultRequestLabel(action));
 }
@@ -580,7 +594,8 @@ function normalizeExecutionContract(
     if (
         executionMode !== "guided_review" &&
         executionMode !== "native_team" &&
-        executionMode !== "external_workflow_contract"
+        executionMode !== "external_workflow_contract" &&
+        executionMode !== "continuity_resume"
     ) {
         return undefined;
     }
@@ -595,6 +610,9 @@ function normalizeExecutionContract(
         execution_mode: executionMode,
         owner_label: rewriteGuidanceText(sanitizeExecutionContractText(contract.owner_label, "Execution path"), somaName, teamLeadName),
         summary: rewriteGuidanceText(sanitizeExecutionContractText(contract.summary, "Soma has an execution path ready."), somaName, teamLeadName),
+        continuity_label: rewriteGuidanceText(sanitizeExecutionContractText(contract.continuity_label, ""), somaName, teamLeadName),
+        continuity_summary: rewriteGuidanceText(sanitizeExecutionContractText(contract.continuity_summary, ""), somaName, teamLeadName),
+        resume_checkpoint: rewriteGuidanceText(sanitizeExecutionContractText(contract.resume_checkpoint, ""), somaName, teamLeadName),
         team_name: sanitizeExecutionContractText(contract.team_name, ""),
         external_target: sanitizeExecutionContractText(contract.external_target, ""),
         target_outputs: targetOutputs,
@@ -621,7 +639,8 @@ function normalizeWorkflowGroupDraft(
         workMode !== "read_only" &&
         workMode !== "propose_only" &&
         workMode !== "execute_with_approval" &&
-        workMode !== "execute_bounded"
+        workMode !== "execute_bounded" &&
+        workMode !== "resume_continuity"
     ) {
         return undefined;
     }
@@ -778,8 +797,11 @@ function CompactTeamGuidanceCard({ requestScope }: { requestScope: "compact" | "
 function ExecutionContractCard({ contract }: { contract: TeamLeadExecutionContract }) {
     const richContract = contract as GuidedExecutionContract;
     const isNativeTeam = contract.execution_mode === "native_team";
+    const isContinuityResume = contract.execution_mode === "continuity_resume";
     const title = isNativeTeam ? "Native Mycelis team" : contract.execution_mode === "external_workflow_contract"
         ? "External workflow contract"
+        : isContinuityResume
+        ? "Retained package continuity"
         : "Guided execution path";
 
     return (
@@ -804,6 +826,19 @@ function ExecutionContractCard({ contract }: { contract: TeamLeadExecutionContra
                 ) : null}
             </div>
             <p className="mt-3 text-sm leading-6 text-cortex-text-muted">{contract.summary}</p>
+            {isContinuityResume && (contract.continuity_summary || contract.resume_checkpoint) ? (
+                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                    {contract.continuity_label ? (
+                        <p className="text-xs font-mono uppercase tracking-[0.18em] text-cortex-primary">{contract.continuity_label}</p>
+                    ) : null}
+                    {contract.continuity_summary ? (
+                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{contract.continuity_summary}</p>
+                    ) : null}
+                    {contract.resume_checkpoint ? (
+                        <p className="mt-3 text-sm font-medium text-cortex-text-main">{contract.resume_checkpoint}</p>
+                    ) : null}
+                </div>
+            ) : null}
             {contract.target_outputs.length > 0 ? (
                 <div className="mt-4">
                     <p className="text-sm font-medium text-cortex-text-main">Target outputs</p>
@@ -863,9 +898,12 @@ function TemporaryWorkflowLaunchCard({
     error: string | null;
     onLaunch: () => void;
 }) {
+    const launchable = draft.work_mode !== "resume_continuity";
     return (
         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
-            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Launch temporary workflow group</p>
+            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
+                {launchable ? "Launch temporary workflow group" : "Retained package continuity"}
+            </p>
             <p className="mt-3 text-sm font-semibold text-cortex-text-main">{draft.name}</p>
             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{draft.summary}</p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -881,24 +919,30 @@ function TemporaryWorkflowLaunchCard({
                     </span>
                 ) : null}
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                    type="button"
-                    onClick={onLaunch}
-                    disabled={launching}
-                    className="rounded-2xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg disabled:opacity-60"
-                >
-                    {launching ? "Creating workflow group..." : "Create temporary workflow group"}
-                </button>
-                {launchedGroup ? (
-                    <Link
-                        href={`/groups?group_id=${encodeURIComponent(launchedGroup.groupId)}`}
-                        className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-2 text-sm font-medium text-cortex-text-main hover:border-cortex-primary/20"
+            {launchable ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={onLaunch}
+                        disabled={launching}
+                        className="rounded-2xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg disabled:opacity-60"
                     >
-                        Open {launchedGroup.name}
-                    </Link>
-                ) : null}
-            </div>
+                        {launching ? "Creating workflow group..." : "Create temporary workflow group"}
+                    </button>
+                    {launchedGroup ? (
+                        <Link
+                            href={`/groups?group_id=${encodeURIComponent(launchedGroup.groupId)}`}
+                            className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-2 text-sm font-medium text-cortex-text-main hover:border-cortex-primary/20"
+                        >
+                            Open {launchedGroup.name}
+                        </Link>
+                    ) : null}
+                </div>
+            ) : (
+                <p className="mt-4 text-sm text-cortex-text-muted">
+                    This continuity path is review-first. Reopen the retained package and continue from the recorded checkpoint instead of launching a new temporary group.
+                </p>
+            )}
             {launchedGroup ? (
                 <p className="mt-3 text-sm text-cortex-primary">
                     Soma launched {launchedGroup.name}. The workflow group is ready for focused coordination and retained output review.

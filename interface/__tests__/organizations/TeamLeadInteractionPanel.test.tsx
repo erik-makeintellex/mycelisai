@@ -649,6 +649,65 @@ describe("TeamLeadInteractionPanel", () => {
         expect(await screen.findByText("First focus for Northstar Labs")).toBeDefined();
         expect(screen.getByText("Priority steps")).toBeDefined();
     });
+
+    it("renders retained package continuity guidance without offering a temporary group launch", async () => {
+        mockFetch.mockResolvedValueOnce(jsonResponse({
+            ok: true,
+            data: {
+                action: "resume_retained_package",
+                request_label: "Resume retained package continuity",
+                headline: "Retained package continuity for Northstar Labs",
+                summary: "Team Lead resumes the retained package for Northstar Labs so completed work stays durable and the next step stays explicit after a reboot or reload.",
+                priority_steps: [
+                    "Open the retained package and confirm the latest durable outputs.",
+                    "Record what is already complete, what remains, and who owns the next step.",
+                ],
+                suggested_follow_ups: [
+                    "Run a quick strategy check",
+                    "Review your organization setup",
+                ],
+                execution_contract: {
+                    execution_mode: "continuity_resume",
+                    owner_label: "Team Lead continuity",
+                    summary: "Resume the retained package for Northstar Labs, confirm completed work, and keep the remaining steps reviewable after a reboot or reload.",
+                    continuity_label: "Retained package continuity",
+                    continuity_summary: "Continuity resumes from the last durable outputs for Northstar Labs without rebuilding finished work.",
+                    resume_checkpoint: "Continue from the last retained package after reload or reboot.",
+                    target_outputs: [
+                        "Retained package continuity summary",
+                        "Completed work snapshot",
+                        "Remaining work checklist",
+                    ],
+                    workflow_group: {
+                        name: "Retained Package Continuity temporary workflow",
+                        goal_statement: "Resume the retained package for Northstar Labs after a reboot or reload.",
+                        work_mode: "resume_continuity",
+                        coordinator_profile: "Retained Package Continuity lead",
+                        allowed_capabilities: ["artifact.review", "team.coordinate"],
+                        expiry_hours: 24,
+                        summary: "Resume continuity from the retained package without launching a new temporary execution lane.",
+                    },
+                },
+            },
+        }));
+
+        render(
+            <TeamLeadInteractionPanel
+                organizationId="org-123"
+                organizationName="Northstar Labs"
+                somaName="Soma for Northstar Labs"
+                teamLeadName="Team Lead for Northstar Labs"
+            />,
+        );
+
+        fireEvent.click(screen.getByRole("button", { name: /Resume retained package/i }));
+
+        expect((await screen.findAllByText("Retained package continuity")).length).toBeGreaterThan(0);
+        expect(screen.getByText("Continue from the last retained package after reload or reboot.")).toBeDefined();
+        expect(screen.getByText("Retained package continuity summary")).toBeDefined();
+        expect(screen.getByText(/review-first/i)).toBeDefined();
+        expect(screen.queryByRole("button", { name: "Create temporary workflow group" })).toBeNull();
+    });
 });
 
 

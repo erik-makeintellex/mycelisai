@@ -89,6 +89,7 @@ def test_chart_presets_cover_local_k3d_and_enterprise_postures():
         (
             VALUES_ENTERPRISE_WINDOWS_AI,
             [
+                "Enterprise self-hosted Kubernetes preset with a Windows-hosted AI endpoint.",
                 "serviceAccount:\n  create: true",
                 "imagePullSecrets:\n  - name: mycelis-registry",
                 "ingress:\n  enabled: true",

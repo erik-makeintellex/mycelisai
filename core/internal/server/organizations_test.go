@@ -561,6 +561,80 @@ func TestHandleTeamLeadGuidedAction_AddsExternalWorkflowContractForN8NRequests(t
 	}
 }
 
+func TestHandleTeamLeadGuidedAction_AddsContinuityResumeContractForRetainedPackage(t *testing.T) {
+	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
+	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+		Name:       "Northstar Labs",
+		Purpose:    "Ship a focused AI engineering organization",
+		StartMode:  OrganizationStartModeTemplate,
+		TemplateID: "engineering-starter",
+	}, mustResolveStarterTemplate(t, s, "engineering-starter")))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	requestContext := "Retained package for release readiness after reboot."
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"resume_retained_package","request_context":"`+requestContext+`"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object action payload, got %T", resp.Data)
+	}
+	if data["action"] != "resume_retained_package" {
+		t.Fatalf("expected resume action echo, got %+v", data)
+	}
+	if data["request_label"] != "Resume retained package continuity" {
+		t.Fatalf("expected resume request label, got %+v", data)
+	}
+
+	executionContract, ok := data["execution_contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution contract, got %+v", data)
+	}
+	if executionContract["execution_mode"] != "continuity_resume" {
+		t.Fatalf("expected continuity resume mode, got %+v", executionContract)
+	}
+	if executionContract["continuity_label"] != "Retained package continuity" {
+		t.Fatalf("expected retained package continuity label, got %+v", executionContract)
+	}
+	if executionContract["resume_checkpoint"] != "Continue from the last retained package after reload or reboot." {
+		t.Fatalf("expected explicit resume checkpoint, got %+v", executionContract)
+	}
+	if executionContract["summary"] != "Resume the retained package for Northstar Labs, confirm completed work, and keep the remaining steps reviewable after a reboot or reload." {
+		t.Fatalf("expected continuity summary, got %+v", executionContract)
+	}
+	outputs, ok := executionContract["target_outputs"].([]any)
+	if !ok || len(outputs) != 3 {
+		t.Fatalf("expected retained package outputs, got %+v", executionContract)
+	}
+	if outputs[0] != "Retained package continuity summary" || outputs[1] != "Completed work snapshot" || outputs[2] != "Remaining work checklist" {
+		t.Fatalf("unexpected retained package outputs: %+v", outputs)
+	}
+
+	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected workflow group draft, got %+v", executionContract)
+	}
+	if workflowGroup["name"] != "Retained Package Continuity temporary workflow" {
+		t.Fatalf("expected continuity workflow group name, got %+v", workflowGroup)
+	}
+	if workflowGroup["goal_statement"] != requestContext {
+		t.Fatalf("expected request context to anchor workflow goal, got %+v", workflowGroup)
+	}
+	if workflowGroup["work_mode"] != "resume_continuity" {
+		t.Fatalf("expected resume continuity workflow mode, got %+v", workflowGroup)
+	}
+	if workflowGroup["coordinator_profile"] != "Retained Package Continuity lead" {
+		t.Fatalf("expected continuity coordinator profile, got %+v", workflowGroup)
+	}
+	if workflowGroup["recommended_member_limit"] != float64(4) {
+		t.Fatalf("expected bounded member limit, got %+v", workflowGroup)
+	}
+}
+
 func TestHandleCreateOrganization_StartEmpty(t *testing.T) {
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)))
 
@@ -1498,5 +1572,45 @@ func TestBuildTeamLeadGuidance_UsesReadableFallbacksForPartialHome(t *testing.T)
 	}
 	if len(response.SuggestedFollowUps) != 3 {
 		t.Fatalf("expected fallback follow-ups, got %+v", response)
+	}
+}
+
+func TestBuildTeamLeadGuidance_ResumeRetainedPackageUsesReadableFallbacksForPartialHome(t *testing.T) {
+	response, err := buildTeamLeadGuidance(OrganizationHomePayload{
+		OrganizationSummary: OrganizationSummary{
+			StartMode:     OrganizationStartModeEmpty,
+			TeamLeadLabel: "Team Lead",
+		},
+	}, TeamLeadGuidedActionResumeRetainedPackage, "")
+	if err != nil {
+		t.Fatalf("buildTeamLeadGuidance returned error: %v", err)
+	}
+
+	if response.Headline != "Retained package continuity for this AI Organization" {
+		t.Fatalf("unexpected fallback headline: %+v", response)
+	}
+	if response.Summary != "Team Lead resumes the retained package for this AI Organization so completed work stays durable and the next step stays explicit after a reboot or reload." {
+		t.Fatalf("unexpected fallback summary: %+v", response)
+	}
+	if len(response.PrioritySteps) != 3 {
+		t.Fatalf("expected fallback priority steps, got %+v", response)
+	}
+	if response.PrioritySteps[0] != "Open the retained package and confirm the latest durable outputs." {
+		t.Fatalf("unexpected fallback priority steps: %+v", response.PrioritySteps)
+	}
+	if response.ExecutionContract == nil {
+		t.Fatal("expected execution contract")
+	}
+	if response.ExecutionContract.ExecutionMode != TeamLeadExecutionModeContinuityResume {
+		t.Fatalf("expected continuity resume execution mode, got %+v", response.ExecutionContract)
+	}
+	if response.ExecutionContract.ContinuityLabel != "Retained package continuity" {
+		t.Fatalf("expected continuity label, got %+v", response.ExecutionContract)
+	}
+	if response.ExecutionContract.WorkflowGroup == nil {
+		t.Fatal("expected workflow group draft")
+	}
+	if response.ExecutionContract.WorkflowGroup.GoalStatement != "Resume the retained package for this AI Organization after a reboot or reload." {
+		t.Fatalf("unexpected fallback goal statement: %+v", response.ExecutionContract.WorkflowGroup)
 	}
 }

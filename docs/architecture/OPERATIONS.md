@@ -240,6 +240,7 @@ Kubernetes operator contract:
 - use explicit reachable AI endpoints for deployed text or media engines instead of localhost assumptions
 - `uv run inv k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT` from the shell or `.env` and forwards them into the Helm chart as operator-owned runtime config
 - `uv run inv k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`, resolves repo-relative preset paths, and fails fast if the requested values file does not exist
+- the `values-enterprise-windows-ai` preset is intentionally fail-closed: `uv run inv k8s.deploy` / `uv run inv k8s.up` require `MYCELIS_K8S_TEXT_ENDPOINT` to point at the real Windows-hosted AI service before rollout begins
 - the Helm chart applies `MYCELIS_K8S_TEXT_ENDPOINT` through provider-specific env overrides (`MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`) so deployed providers can target a Windows-hosted or otherwise external self-hosted AI service without editing chart source
 - for the current GPU-attached Windows-host topology, use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`
 
@@ -277,7 +278,7 @@ The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hos
 | `uv run inv ci.service-check` | Verify the currently running local stack with `lifecycle.health`, plus optional live-backend governed Soma browser proof |
 | `uv run inv ci.entrypoint-check` | Verify the supported invoke runner matrix and reject unsupported bare aliases |
 | `uv run inv ci.toolchain-check` | Report toolchain versions and optionally enforce Go lock policy |
-| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with optional `--service-health` and `--live-backend` proof for service/runtime changes |
+| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with optional `--runtime-posture`, `--service-health`, and `--live-backend` proof for deployment/runtime changes |
 | `uv run inv ci.deploy` | Build + Docker + K8s deploy |
 
 ### Other Tasks

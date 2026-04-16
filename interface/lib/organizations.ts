@@ -201,8 +201,8 @@ export interface OrganizationOutputModelRoutingUpdateRequest {
     bindings: OrganizationOutputModelBindingUpdateRequest[];
 }
 
-export type TeamLeadGuidedAction = "plan_next_steps" | "focus_first" | "review_setup";
-export type TeamLeadExecutionMode = "guided_review" | "native_team" | "external_workflow_contract";
+export type TeamLeadGuidedAction = "plan_next_steps" | "focus_first" | "review_setup" | "resume_retained_package";
+export type TeamLeadExecutionMode = "guided_review" | "native_team" | "external_workflow_contract" | "continuity_resume";
 
 export interface TeamLeadGuidanceRequest {
     action: TeamLeadGuidedAction;
@@ -213,6 +213,9 @@ export interface TeamLeadExecutionContract {
     execution_mode: TeamLeadExecutionMode;
     owner_label: string;
     summary: string;
+    continuity_label?: string;
+    continuity_summary?: string;
+    resume_checkpoint?: string;
     team_name?: string;
     external_target?: string;
     coordination_model?: string;
@@ -226,7 +229,7 @@ export interface TeamLeadExecutionContract {
 export interface TeamLeadWorkflowGroupDraft {
     name: string;
     goal_statement: string;
-    work_mode: "read_only" | "propose_only" | "execute_with_approval" | "execute_bounded";
+    work_mode: "read_only" | "propose_only" | "execute_with_approval" | "execute_bounded" | "resume_continuity";
     coordinator_profile: string;
     allowed_capabilities?: string[];
     recommended_member_limit?: number;
