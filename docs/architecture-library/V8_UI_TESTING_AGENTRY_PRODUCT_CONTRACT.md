@@ -11,6 +11,7 @@ Companion artifacts:
 
 - Stable mocked browser proof: `interface/e2e/specs/v8-ui-testing-agentry.spec.ts`
 - Workflow-variant mocked proof: `interface/e2e/specs/direct-vs-team-output.spec.ts`
+- Workflow-variant live backend proof: `interface/e2e/specs/workflow-variants-live-backend.spec.ts`
 - Live backend browser proof: `interface/e2e/specs/soma-governance-live.spec.ts`
 - Workspace continuity manual trust pass: `tests/ui/browser_qa_plan_workspace_chat.md`
 - Workflow variants + reboot resume manual pass: `tests/ui/browser_qa_workflow_variants_reboot.md`
@@ -71,17 +72,22 @@ No single test lane is enough on its own.
    - Command:
      - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/direct-vs-team-output.spec.ts`
 
-3. Live backend governance proof
+3. Workflow-variant live backend proof
+   - Purpose: prove the real `/api/v1/chat` and `/api/v1/organizations/{id}/workspace/actions` contract for direct Soma, compact-team vs multi-team shaping, and retained-output review after archive/reload
+   - Command:
+     - `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/workflow-variants-live-backend.spec.ts`
+
+4. Live backend governance proof
    - Purpose: prove the real `/api/v1/chat` and confirm-action contract
    - Command:
      - `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
-4. Manual trust and disruption pass
+5. Manual trust and disruption pass
    - Purpose: verify interruption, recovery feel, wording quality, and operator trust
    - Prompt baseline:
      - `tests/ui/browser_qa_plan_workspace_chat.md`
 
-5. Manual workflow-shape and reboot pass
+6. Manual workflow-shape and reboot pass
    - Purpose: compare direct Soma, compact-team, and multi-lane behavior on one objective and verify reboot-safe resume through retained outputs
    - Prompt baseline:
      - `tests/ui/browser_qa_workflow_variants_reboot.md`

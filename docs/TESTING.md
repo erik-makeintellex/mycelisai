@@ -489,6 +489,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/groups-live-backend.spec.ts` | Live-backend temporary group creation, backend-stored output aggregation, archive/closure, and retained-output review |
 | `interface/e2e/specs/team-creation.spec.ts` | Guided team creation, Soma execution-path return, one-click temporary workflow group launch, archive/closure, and retained-output review |
 | `interface/e2e/specs/direct-vs-team-output.spec.ts` | Mocked workflow-variant proof for direct Soma, compact team package, multi-lane retained outputs, and resume from retained package |
+| `interface/e2e/specs/workflow-variants-live-backend.spec.ts` | Live-backend proof for direct Soma, compact-team vs multi-team shaping, and retained-output review after archive/reload |
 | `interface/e2e/specs/teams.spec.ts` | Teams hub, roster, lead-entry links, guided-creation handoff |
 | `interface/e2e/specs/wiring-edit.spec.ts` | Neural wiring, agent edit/delete |
 | `interface/e2e/specs/v7-operational-ux.spec.ts` | Legacy V7 operator UX probe (skipped in default MVP gate) |

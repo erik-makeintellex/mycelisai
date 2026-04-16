@@ -32,6 +32,7 @@ The point is that the workflow shape should change the operator outcome in an un
 
 Use the automated browser proof together with the manual reboot pass:
 - `interface/e2e/specs/direct-vs-team-output.spec.ts` for stable mocked comparison of direct Soma, compact team packaging, multi-lane retained outputs, and resume from the retained package
+- `interface/e2e/specs/workflow-variants-live-backend.spec.ts` for the live backend contract of direct Soma, compact-team vs multi-team shaping, and retained-output review after archive/reload
 - `tests/ui/browser_qa_workflow_variants_reboot.md` for the full operator-facing reboot and trust pass
 
 ## The Shared Objective
