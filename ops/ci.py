@@ -12,14 +12,17 @@ Usage:
 
 import os
 import ipaddress
+import re
 import time
 from contextlib import suppress
+from pathlib import Path
 from urllib.parse import urljoin, urlparse
 import urllib.error
 import urllib.request
 from invoke import task, Collection
 from .config import (
     CORE_DIR,
+    ROOT_DIR,
     ensure_managed_cache_dirs,
     managed_cache_env,
 )
@@ -37,17 +40,55 @@ def _task_env(extra=None):
     return managed_cache_env(extra=extra)
 
 
-def _configured_ai_endpoints() -> list[tuple[str, str, str]]:
+def _read_env_file(path: Path) -> dict[str, str]:
+    if not path.exists():
+        return {}
+    values: dict[str, str] = {}
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in raw_line:
+            continue
+        key, value = raw_line.split("=", 1)
+        cleaned = value.strip().strip('"').strip("'")
+        if cleaned:
+            values[key.strip()] = cleaned
+    return values
+
+
+def _runtime_posture_env_values() -> dict[str, str]:
+    values: dict[str, str] = {}
+    for path_name in (".env", ".env.compose"):
+        values.update(_read_env_file(ROOT_DIR / path_name))
+    values.update({key: value for key, value in os.environ.items() if value})
+    return values
+
+
+def _configured_ai_endpoints(env_values: dict[str, str] | None = None) -> list[tuple[str, str, str]]:
+    values = env_values or _runtime_posture_env_values()
     endpoints: list[tuple[str, str, str]] = []
+    seen_env_names: set[str] = set()
     for env_name, label in (
         ("MYCELIS_COMPOSE_OLLAMA_HOST", "compose Ollama host"),
         ("MYCELIS_K8S_TEXT_ENDPOINT", "k8s text endpoint"),
         ("MYCELIS_K8S_MEDIA_ENDPOINT", "k8s media endpoint"),
         ("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT", "local Ollama provider endpoint"),
     ):
-        raw = (os.environ.get(env_name, "") or "").strip()
+        raw = (values.get(env_name, "") or "").strip()
         if raw:
             endpoints.append((env_name, label, raw))
+            seen_env_names.add(env_name)
+
+    for env_name in sorted(values):
+        if env_name in seen_env_names:
+            continue
+        if not re.fullmatch(r"MYCELIS_PROVIDER_[A-Z0-9_]+_ENDPOINT", env_name):
+            continue
+        raw = (values.get(env_name, "") or "").strip()
+        if not raw:
+            continue
+        provider_name = env_name.removeprefix("MYCELIS_PROVIDER_").removesuffix("_ENDPOINT").replace("_", " ").lower()
+        endpoints.append((env_name, f"{provider_name} provider endpoint", raw))
+
     return endpoints
 
 
@@ -92,8 +133,10 @@ def _runtime_posture_check(c):
 
     endpoints = _configured_ai_endpoints()
     if not endpoints:
-        print("  No explicit AI endpoints configured; skipping endpoint reachability probe.")
-        return
+        raise SystemExit(
+            "RUNTIME POSTURE CHECK FAILED: no explicit AI endpoint configured in process env, .env.compose, or .env. "
+            "Set MYCELIS_COMPOSE_OLLAMA_HOST, a Kubernetes endpoint, or a provider-specific endpoint override."
+        )
 
     failures: list[str] = []
     for env_name, label, raw in endpoints:

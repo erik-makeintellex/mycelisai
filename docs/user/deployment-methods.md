@@ -168,4 +168,4 @@ Before user testing or UI testing, prove the lane you picked:
 - local Kubernetes: `uv run inv k8s.status` and `uv run inv lifecycle.health`
 - enterprise self-hosted Kubernetes: render or deploy the Helm chart with the real values, then prove ingress, readiness, storage, and the explicit AI endpoint on the target cluster
 - Windows operator testing: open the UI from Windows over the network and confirm the runtime reaches the explicit Windows AI host instead of a loopback-only address
-- release gate: `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend`
+- release gate: `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` (`--runtime-posture` reads process env plus `.env.compose` / `.env` and fails if the deployment does not declare an explicit supported AI endpoint)

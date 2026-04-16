@@ -8,7 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
 )
@@ -407,6 +411,14 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForImageReque
 	if !ok || len(outputs) < 1 {
 		t.Fatalf("expected target outputs, got %+v", executionContract)
 	}
+	workstreams, ok := executionContract["workstreams"].([]any)
+	if !ok || len(workstreams) != 3 {
+		t.Fatalf("expected creative workstreams, got %+v", executionContract)
+	}
+	firstWorkstream, ok := workstreams[0].(map[string]any)
+	if !ok || firstWorkstream["label"] != "Creative direction lane" {
+		t.Fatalf("expected creative direction workstream, got %+v", workstreams)
+	}
 	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected workflow group draft, got %+v", executionContract)
@@ -460,6 +472,14 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForMarketingR
 	if !ok || len(outputs) != 3 {
 		t.Fatalf("expected three marketing outputs, got %+v", executionContract)
 	}
+	workstreams, ok := executionContract["workstreams"].([]any)
+	if !ok || len(workstreams) != 3 {
+		t.Fatalf("expected compact workstreams, got %+v", executionContract)
+	}
+	firstWorkstream, ok := workstreams[0].(map[string]any)
+	if !ok || firstWorkstream["label"] != "Planning lane" || firstWorkstream["status"] != "ACTIVE" {
+		t.Fatalf("expected planning lane workstream, got %+v", workstreams)
+	}
 	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected workflow group draft, got %+v", executionContract)
@@ -511,6 +531,14 @@ func TestHandleTeamLeadGuidedAction_SplitsBroadRequestsIntoSmallTeamOrchestratio
 	}
 	if executionContract["recommended_team_shape"] == "" {
 		t.Fatalf("expected recommended team shape guidance, got %+v", executionContract)
+	}
+	workstreams, ok := executionContract["workstreams"].([]any)
+	if !ok || len(workstreams) != 3 {
+		t.Fatalf("expected orchestration workstreams, got %+v", executionContract)
+	}
+	reviewLane, ok := workstreams[2].(map[string]any)
+	if !ok || reviewLane["label"] != "Review lane" || reviewLane["owner_label"] != "Review lane lead" {
+		t.Fatalf("expected review lane handoff, got %+v", workstreams)
 	}
 	summary, _ := executionContract["summary"].(string)
 	if !strings.Contains(strings.ToLower(summary), "several compact teams") {
@@ -613,6 +641,14 @@ func TestHandleTeamLeadGuidedAction_AddsContinuityResumeContractForRetainedPacka
 	if outputs[0] != "Retained package continuity summary" || outputs[1] != "Completed work snapshot" || outputs[2] != "Remaining work checklist" {
 		t.Fatalf("unexpected retained package outputs: %+v", outputs)
 	}
+	workstreams, ok := executionContract["workstreams"].([]any)
+	if !ok || len(workstreams) != 3 {
+		t.Fatalf("expected continuity workstreams, got %+v", executionContract)
+	}
+	completedLane, ok := workstreams[0].(map[string]any)
+	if !ok || completedLane["label"] != "Completed work lane" || completedLane["status"] != "COMPLETE" {
+		t.Fatalf("expected completed work lane, got %+v", workstreams)
+	}
 
 	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
 	if !ok {
@@ -632,6 +668,157 @@ func TestHandleTeamLeadGuidedAction_AddsContinuityResumeContractForRetainedPacka
 	}
 	if workflowGroup["recommended_member_limit"] != float64(4) {
 		t.Fatalf("expected bounded member limit, got %+v", workflowGroup)
+	}
+}
+
+func TestHandleTeamLeadGuidedAction_ResumeRetainedPackageUsesLatestGroupOutputs(t *testing.T) {
+	dbOpt, mock := withDB(t)
+	s := newTestServer(
+		dbOpt,
+		withTemplateBundlesPath(writeStarterBundle(t)),
+		func(s *AdminServer) {
+			s.Artifacts = artifacts.NewService(s.DB, "")
+		},
+	)
+	created := s.organizationStore().Save(s.buildOrganizationHome(OrganizationCreateRequest{
+		Name:       "Northstar Labs",
+		Purpose:    "Ship a focused AI engineering organization",
+		StartMode:  OrganizationStartModeTemplate,
+		TemplateID: "engineering-starter",
+	}, mustResolveStarterTemplate(t, s, "engineering-starter")))
+
+	groupUpdatedAt := time.Now().UTC()
+	groupExpiry := groupUpdatedAt.Add(4 * time.Hour)
+	teamID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+
+	mock.ExpectQuery("SELECT id::text, tenant_id, name, goal_statement, work_mode").
+		WillReturnRows(sqlmock.NewRows(collaborationGroupColumns()).
+			AddRow(
+				"group-retained",
+				"default",
+				"Release Readiness Workflow",
+				"Resume release readiness after reboot.",
+				"resume_continuity",
+				[]byte(`["artifact.review","team.coordinate"]`),
+				[]byte(`["owner"]`),
+				[]byte(`["11111111-1111-1111-1111-111111111111"]`),
+				"release-workflow-coordinator",
+				"",
+				groupStatusArchived,
+				"test-user-001",
+				groupExpiry,
+				"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				groupUpdatedAt.Add(-2*time.Hour),
+				groupUpdatedAt,
+			))
+
+	mock.ExpectQuery("(?s)SELECT id, mission_id, team_id, agent_id, trace_id, artifact_type,.*FROM artifacts.*WHERE team_id = \\$1.*LIMIT \\$2").
+		WithArgs(teamID, 8).
+		WillReturnRows(sqlmock.NewRows(artifactColumns()).
+			AddRow(
+				"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+				nil,
+				teamID.String(),
+				"review-lead",
+				"",
+				"document",
+				"Review lane summary",
+				"text/markdown",
+				"review summary",
+				"",
+				nil,
+				[]byte(`{}`),
+				nil,
+				"approved",
+				groupUpdatedAt.Add(-15*time.Minute),
+			).
+			AddRow(
+				"cccccccc-cccc-cccc-cccc-cccccccccccc",
+				nil,
+				teamID.String(),
+				"validation-lead",
+				"",
+				"document",
+				"Validation lane checklist",
+				"text/markdown",
+				"validation checklist",
+				"",
+				nil,
+				[]byte(`{}`),
+				nil,
+				"approved",
+				groupUpdatedAt.Add(-30*time.Minute),
+			))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/organizations/{id}/workspace/actions", s.handleTeamLeadGuidedAction)
+
+	rr := doRequest(t, mux, "POST", "/api/v1/organizations/"+created.ID+"/workspace/actions", `{"action":"resume_retained_package","request_context":"Resume the retained package for Northstar Labs after a reboot or reload."}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object action payload, got %T", resp.Data)
+	}
+	headline, _ := data["headline"].(string)
+	if !strings.Contains(headline, "Release Readiness Workflow") {
+		t.Fatalf("expected retained workflow headline, got %+v", data)
+	}
+	summary, _ := data["summary"].(string)
+	if !strings.Contains(summary, "2 retained outputs") {
+		t.Fatalf("expected retained output count in summary, got %+v", data)
+	}
+
+	executionContract, ok := data["execution_contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution contract, got %+v", data)
+	}
+	if executionContract["owner_label"] != "Release Workflow Coordinator" {
+		t.Fatalf("expected humanized coordinator owner, got %+v", executionContract)
+	}
+	if executionContract["continuity_label"] != "Release Readiness Workflow" {
+		t.Fatalf("expected retained package label from state, got %+v", executionContract)
+	}
+	if executionContract["resume_checkpoint"] != "Open Release Readiness Workflow and continue with Review Lead after reviewing Review lane summary." {
+		t.Fatalf("expected retained checkpoint from artifacts, got %+v", executionContract)
+	}
+
+	outputs, ok := executionContract["target_outputs"].([]any)
+	if !ok || len(outputs) != 2 {
+		t.Fatalf("expected retained output titles, got %+v", executionContract)
+	}
+	if outputs[0] != "Review lane summary" || outputs[1] != "Validation lane checklist" {
+		t.Fatalf("unexpected retained output titles: %+v", outputs)
+	}
+
+	workstreams, ok := executionContract["workstreams"].([]any)
+	if !ok || len(workstreams) != 3 {
+		t.Fatalf("expected retained workstreams, got %+v", executionContract)
+	}
+	handoffLane, ok := workstreams[2].(map[string]any)
+	if !ok || handoffLane["owner_label"] != "Review Lead" {
+		t.Fatalf("expected next owner in handoff lane, got %+v", workstreams)
+	}
+
+	workflowGroup, ok := executionContract["workflow_group"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected workflow group draft, got %+v", executionContract)
+	}
+	if workflowGroup["group_id"] != "group-retained" {
+		t.Fatalf("expected retained group id, got %+v", workflowGroup)
+	}
+	if workflowGroup["name"] != "Release Readiness Workflow" {
+		t.Fatalf("expected retained group name, got %+v", workflowGroup)
+	}
+	if workflowGroup["recommended_member_limit"] != float64(1) {
+		t.Fatalf("expected member limit from retained team count, got %+v", workflowGroup)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sql expectations: %v", err)
 	}
 }
 
@@ -1606,6 +1793,12 @@ func TestBuildTeamLeadGuidance_ResumeRetainedPackageUsesReadableFallbacksForPart
 	}
 	if response.ExecutionContract.ContinuityLabel != "Retained package continuity" {
 		t.Fatalf("expected continuity label, got %+v", response.ExecutionContract)
+	}
+	if len(response.ExecutionContract.Workstreams) != 3 {
+		t.Fatalf("expected continuity workstreams, got %+v", response.ExecutionContract)
+	}
+	if response.ExecutionContract.Workstreams[2].Label != "Next-step handoff lane" {
+		t.Fatalf("unexpected continuity handoff lane: %+v", response.ExecutionContract.Workstreams)
 	}
 	if response.ExecutionContract.WorkflowGroup == nil {
 		t.Fatal("expected workflow group draft")

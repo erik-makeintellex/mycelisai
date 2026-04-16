@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
-> Updated: 2026-04-15
+> Updated: 2026-04-16
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -41,6 +41,7 @@ Release posture:
 - `ACTIVE` current posture is `V1 MVP Release Candidate`.
 - `ACTIVE` current coordination should use the Current Target State board below as the day-to-day source for lane ownership, dependencies, and next actions; the longer release-posture bullets remain implementation history and evidence.
 - `ACTIVE` current execution is now intentionally narrowed to the self-hosted runtime delivery program: ship a real Compose deployment contract first, keep self-hosted Kubernetes aligned as the scale-up path, and treat external AI hosts as first-class reachable services rather than desktop-local assumptions.
+- `IN_REVIEW` the runtime-posture release gate correction is now landed locally: `ci.release-preflight --runtime-posture` reads process env plus `.env.compose` / `.env`, fails closed when no explicit supported AI endpoint is configured, includes provider-specific endpoint overrides in its probe set, and has focused task-test proof.
 - `ACTIVE` the enterprise-compatible Kubernetes delivery lane is now engaged: `k3d` is the intended local Kubernetes validation posture for WSL/Linux work, and the next runtime-program target is turning the Helm/chart/task surfaces into an enterprise-friendly promoted deployment contract instead of a Kind-biased local-only path.
 - `IN_REVIEW` the first enterprise-Kubernetes implementation slice is now landed locally: the Helm chart exposes service account, image pull secret, scheduling, ingress, and digest-aware image hooks with a non-`latest` default tag posture, while focused chart/task/docs tests plus Helm lint/render proof are green.
 - `IN_REVIEW` the first Kubernetes external-AI-host slice is now in flight: Helm values no longer need a hardcoded live Ollama IP, `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT`, and the chart maps text endpoint overrides through `MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT` so a Windows-hosted GPU inference service can be targeted as operator-owned runtime config instead of chart source.
@@ -201,6 +202,29 @@ Runtime delivery sequence:
 3. `NEXT` codify the matching Helm/self-hosted Kubernetes operator contract.
 4. `NEXT` run acceptance proof against the deployable runtime paths, not only the development host.
 5. `NEXT` convert only deployment-blocking findings into new implementation slices while this board is active.
+
+## Immediate Execution Plan (2026-04-16)
+
+This is the engaged compact team and the exact proof-producing sequence for the next runtime slice.
+
+| Role | Status | Immediate Ownership | Deliverable |
+| --- | --- | --- | --- |
+| Team Lead / Delivery Manager | `ACTIVE` | keep the board narrowed to one runtime-acceptance slice and reject unrelated drift | accepted slice summary with owner, proof, docs, and blocker state |
+| Platform Architect | `ACTIVE` | confirm the runtime-posture gate reads the same env contract the Compose runtime actually uses | explicit `.env.compose` / `.env` precedence and failure behavior |
+| Backend / Runtime Engineer | `ACTIVE` | fix `ci.release-preflight --runtime-posture` so it loads deployment env sources and fails clearly when endpoint posture is missing or invalid | corrected `ops/ci.py` runtime-posture behavior plus focused tests |
+| Validation / Release Engineer | `NEXT` | prove the corrected gate on the supported Compose path | `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` evidence on the supported runtime contract |
+| Operator Handoff Docs | `NEXT` | align state/testing/ops wording to the corrected gate and supported command sequence | synchronized docs and unchanged-doc review notes for touched surfaces |
+
+Execution order:
+1. `ACTIVE` fix the runtime-posture gate so it reads `.env.compose` for the supported Compose path instead of only process env.
+2. `ACTIVE` make the gate fail clearly when required endpoint posture is absent, loopback-shaped, or inconsistent with the supported deployment model.
+3. `NEXT` update the affected docs so the command contract, env contract, and release gate all tell the same story.
+4. `NEXT` run the full supported proof path: `uv run inv ci.baseline`, `uv run inv ci.service-check --live-backend`, and `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend`.
+5. `NEXT` only after that proof is stable, return to the Kubernetes operator lane and broader continuity/team-run expansion work.
+
+Immediate blocker rule:
+- `BLOCKED` anything that depends on release-preflight being a truthful runtime gate stays secondary until the env-loading and failure-mode slice is accepted.
+- `IN_REVIEW` temporary workflow and retained-package continuity work is now supporting value, not the active release-center blocker.
 
 ## Prior Review (2026-04-09)
 

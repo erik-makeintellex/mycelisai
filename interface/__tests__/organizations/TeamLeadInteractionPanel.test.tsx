@@ -178,6 +178,24 @@ describe("TeamLeadInteractionPanel", () => {
                         "Reviewable image artifact",
                         "Short concept note",
                     ],
+                    workstreams: [
+                        {
+                            label: "Creative direction lane",
+                            owner_label: "Creative Delivery Team lead",
+                            status: "ACTIVE",
+                            summary: "Shape the visual direction before generation starts.",
+                            next_step: "Lock the concept direction and hand it to the generation specialist.",
+                            target_outputs: ["Short concept note"],
+                        },
+                        {
+                            label: "Artifact generation lane",
+                            owner_label: "Image generation specialist",
+                            status: "NEXT",
+                            summary: "Generate the image artifact and keep it reviewable.",
+                            next_step: "Produce the first artifact candidate for review.",
+                            target_outputs: ["Reviewable image artifact"],
+                        },
+                    ],
                     workflow_group: {
                         name: "Creative Delivery Team temporary workflow",
                         goal_statement: "Create a creative team to generate a launch hero image.",
@@ -220,7 +238,10 @@ describe("TeamLeadInteractionPanel", () => {
         expect(await screen.findByText("Execution path")).toBeDefined();
         expect(screen.getAllByText("Native Mycelis team").length).toBeGreaterThan(0);
         expect(screen.getByText("Creative Delivery Team")).toBeDefined();
-        expect(screen.getByText("Reviewable image artifact")).toBeDefined();
+        expect(screen.getAllByText("Reviewable image artifact").length).toBeGreaterThan(0);
+        expect(screen.getByText("Working together now")).toBeDefined();
+        expect(screen.getByText("Creative direction lane")).toBeDefined();
+        expect(screen.getByText("Artifact generation lane")).toBeDefined();
         expect(screen.getByRole("button", { name: "Create temporary workflow group" })).toBeDefined();
     });
 
@@ -252,6 +273,32 @@ describe("TeamLeadInteractionPanel", () => {
                     coordination_model: "multi-team bundle",
                     recommended_team_count: 3,
                     recommended_team_member_limit: 6,
+                    workstreams: [
+                        {
+                            label: "Planning lane",
+                            owner_label: "Planning lane lead",
+                            status: "ACTIVE",
+                            summary: "Define the scope and retained package.",
+                            next_step: "Publish the retained planning package.",
+                            target_outputs: ["Launch plan"],
+                        },
+                        {
+                            label: "Validation lane",
+                            owner_label: "Validation lane lead",
+                            status: "NEXT",
+                            summary: "Turn the plan into proof steps.",
+                            next_step: "Capture the first validation pass.",
+                            target_outputs: ["Website brief"],
+                        },
+                        {
+                            label: "Review lane",
+                            owner_label: "Review lane lead",
+                            status: "NEXT",
+                            summary: "Review the outputs together and name the next owner.",
+                            next_step: "Call out the next follow-through step.",
+                            target_outputs: ["Media brief"],
+                        },
+                    ],
                 },
             },
         }));
@@ -291,6 +338,9 @@ describe("TeamLeadInteractionPanel", () => {
         expect(screen.getByText("multi-team bundle")).toBeDefined();
         expect(screen.getByText("3 teams")).toBeDefined();
         expect(screen.getByText("member limit 6")).toBeDefined();
+        expect(screen.getByText("Planning lane")).toBeDefined();
+        expect(screen.getByText("Validation lane")).toBeDefined();
+        expect(screen.getByText("Review lane")).toBeDefined();
     });
 
     it("creates a temporary workflow group directly from Soma guidance and links to the created group", async () => {
@@ -668,24 +718,50 @@ describe("TeamLeadInteractionPanel", () => {
                 ],
                 execution_contract: {
                     execution_mode: "continuity_resume",
-                    owner_label: "Team Lead continuity",
-                    summary: "Resume the retained package for Northstar Labs, confirm completed work, and keep the remaining steps reviewable after a reboot or reload.",
-                    continuity_label: "Retained package continuity",
-                    continuity_summary: "Continuity resumes from the last durable outputs for Northstar Labs without rebuilding finished work.",
-                    resume_checkpoint: "Continue from the last retained package after reload or reboot.",
+                    owner_label: "Release Workflow Coordinator",
+                    summary: "Resume Northstar Labs from the Release Readiness Workflow retained package, confirm the finished outputs, and keep the next owner explicit instead of rebuilding finished work.",
+                    continuity_label: "Release Readiness Workflow",
+                    continuity_summary: "Release Readiness Workflow is archived and already retains Review lane summary and Validation lane checklist.",
+                    resume_checkpoint: "Open Release Readiness Workflow and continue with Review Lead after reviewing Review lane summary.",
                     target_outputs: [
-                        "Retained package continuity summary",
-                        "Completed work snapshot",
-                        "Remaining work checklist",
+                        "Review lane summary",
+                        "Validation lane checklist",
+                    ],
+                    workstreams: [
+                        {
+                            label: "Completed work lane",
+                            owner_label: "Release Workflow Coordinator",
+                            status: "COMPLETE",
+                            summary: "Use durable outputs like Review lane summary and Validation lane checklist as the completed baseline already captured in Release Readiness Workflow.",
+                            next_step: "Keep Review lane summary and Validation lane checklist linked to Release Readiness Workflow so the restart point stays anchored in retained work.",
+                            target_outputs: ["Review lane summary"],
+                        },
+                        {
+                            label: "Continuity briefing lane",
+                            owner_label: "Release Workflow Coordinator",
+                            status: "ACTIVE",
+                            summary: "Turn Release Readiness Workflow into a readable continuity brief so the rebooted workspace can resume without rebuilding finished work.",
+                            next_step: "Publish the retained package summary for Release Readiness Workflow and highlight Review Lead as the next owner.",
+                            target_outputs: ["Validation lane checklist"],
+                        },
+                        {
+                            label: "Next-step handoff lane",
+                            owner_label: "Review Lead",
+                            status: "NEXT",
+                            summary: "Hand the retained package to Review Lead with the finished outputs and the remaining step made explicit.",
+                            next_step: "Continue from Review lane summary after Review Lead reviews the retained outputs.",
+                            target_outputs: ["Validation lane checklist"],
+                        },
                     ],
                     workflow_group: {
-                        name: "Retained Package Continuity temporary workflow",
+                        group_id: "group-retained",
+                        name: "Release Readiness Workflow",
                         goal_statement: "Resume the retained package for Northstar Labs after a reboot or reload.",
                         work_mode: "resume_continuity",
-                        coordinator_profile: "Retained Package Continuity lead",
+                        coordinator_profile: "release-workflow-coordinator",
                         allowed_capabilities: ["artifact.review", "team.coordinate"],
-                        expiry_hours: 24,
-                        summary: "Resume continuity from the retained package without launching a new temporary execution lane.",
+                        expiry_hours: 4,
+                        summary: "Reopen the Release Readiness Workflow retained package, review Review lane summary and Validation lane checklist, and continue with Review Lead as the next owner.",
                     },
                 },
             },
@@ -703,9 +779,13 @@ describe("TeamLeadInteractionPanel", () => {
         fireEvent.click(screen.getByRole("button", { name: /Resume retained package/i }));
 
         expect((await screen.findAllByText("Retained package continuity")).length).toBeGreaterThan(0);
-        expect(screen.getByText("Continue from the last retained package after reload or reboot.")).toBeDefined();
-        expect(screen.getByText("Retained package continuity summary")).toBeDefined();
+        expect(screen.getByText("Open Release Readiness Workflow and continue with Review Lead after reviewing Review lane summary.")).toBeDefined();
+        expect(screen.getAllByText("Review lane summary").length).toBeGreaterThan(0);
+        expect(screen.getByText("Completed work lane")).toBeDefined();
+        expect(screen.getByText("Continuity briefing lane")).toBeDefined();
+        expect(screen.getByText("Next-step handoff lane")).toBeDefined();
         expect(screen.getByText(/review-first/i)).toBeDefined();
+        expect(screen.getByRole("link", { name: "Open retained package" }).getAttribute("href")).toBe("/groups?group_id=group-retained");
         expect(screen.queryByRole("button", { name: "Create temporary workflow group" })).toBeNull();
     });
 });

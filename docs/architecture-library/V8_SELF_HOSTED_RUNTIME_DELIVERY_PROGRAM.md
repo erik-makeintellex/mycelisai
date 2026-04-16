@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-04-15
+> Last Updated: 2026-04-16
 > Purpose: Define the compact delivery team, management contract, and acceptance gates for the deployable self-hosted runtime.
 
 ## TOC
@@ -108,3 +108,31 @@ Current acceptance bias:
 - keep the team compact
 - require proof for every slice
 - avoid dev-only assumptions becoming architecture truth
+
+## Engaged Next Slice
+
+The currently engaged slice is the runtime-posture gate correction.
+
+Why this slice is first:
+- release acceptance currently depends on `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend`
+- the supported Compose runtime contract is `.env.compose`-driven
+- the runtime-posture gate must therefore read the same deployment env contract and fail clearly when the supported endpoint posture is missing or invalid
+
+Current local status:
+- `IN_REVIEW` the gate now reads process env plus `.env.compose` / `.env`, includes provider-specific endpoint overrides in its probe set, and fails when no explicit supported AI endpoint contract is configured; focused task tests are green and the next proof step is the supported full release gate.
+
+Engaged ownership:
+
+| Role | Status | Immediate Action | Acceptance |
+| --- | --- | --- | --- |
+| Team Lead / Delivery Manager | `ACTIVE` | keep this as the only active release-blocking slice until proof lands | no competing target displaces the gate correction before acceptance |
+| Platform Architect | `ACTIVE` | lock `.env.compose` / `.env` precedence and required non-loopback endpoint rules for the gate | gate behavior matches the supported runtime topology |
+| Backend / Runtime Engineer | `ACTIVE` | update `ops/ci.py` so runtime-posture reads deployment env files and reports missing/invalid endpoint posture as failure | focused task tests pass and the gate behavior is explicit |
+| Validation / Release Engineer | `NEXT` | run the supported proof chain once the gate is corrected | `ci.baseline`, `ci.service-check --live-backend`, and release-preflight all pass against the supported runtime |
+| Operator Handoff Docs | `NEXT` | synchronize testing/ops/state docs to the corrected gate contract | touched docs name the same command and env posture |
+
+Exit condition:
+1. runtime-posture reads the supported env contract
+2. missing or loopback-only endpoint posture fails fast
+3. docs name the same contract
+4. the supported Compose proof path is green

@@ -223,10 +223,21 @@ export interface TeamLeadExecutionContract {
     recommended_team_count?: number;
     recommended_team_member_limit?: number;
     target_outputs: string[];
+    workstreams?: TeamLeadExecutionWorkstream[];
     workflow_group?: TeamLeadWorkflowGroupDraft;
 }
 
+export interface TeamLeadExecutionWorkstream {
+    label: string;
+    owner_label: string;
+    status?: string;
+    summary: string;
+    next_step: string;
+    target_outputs?: string[];
+}
+
 export interface TeamLeadWorkflowGroupDraft {
+    group_id?: string;
     name: string;
     goal_statement: string;
     work_mode: "read_only" | "propose_only" | "execute_with_approval" | "execute_bounded" | "resume_continuity";

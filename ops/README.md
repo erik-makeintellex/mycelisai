@@ -193,7 +193,7 @@ Delivery-focused validation, runner checks, and release preflight.
 - **Baseline**: `uv run inv ci.baseline` (includes Playwright by default; use `--no-e2e` only for intentionally narrower local debugging)
 - **Service Check**: `uv run inv ci.service-check --live-backend`
 - **Release Preflight**: `uv run inv ci.release-preflight --strict-toolchain --runtime-posture --service-health --live-backend`
-- **Runtime Posture Gate**: `--runtime-posture` adds a 12 GiB disk-headroom check plus explicit non-loopback AI-endpoint probing from Compose/Kubernetes/provider env vars before baseline proof runs.
+- **Runtime Posture Gate**: `--runtime-posture` adds a 12 GiB disk-headroom check, reads explicit AI endpoints from process env plus `.env.compose` / `.env`, and fails closed when no supported non-loopback endpoint contract is configured before baseline proof runs.
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
 - GitHub validation workflows should keep dependency/bootstrap steps workflow-native (`actions/setup-*`, `npm ci`, Playwright browser install), then hand real build/test execution back to the same `uv run inv ...` task surfaces so local and CI validation stay aligned
 - Push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens; use local `uv run inv ...` proof plus PR/manual workflow runs as the active validation path

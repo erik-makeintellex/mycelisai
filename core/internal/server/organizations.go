@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
@@ -349,23 +351,34 @@ const (
 )
 
 type TeamLeadExecutionContract struct {
-	ExecutionMode              TeamLeadExecutionMode       `json:"execution_mode"`
-	OwnerLabel                 string                      `json:"owner_label"`
-	Summary                    string                      `json:"summary"`
-	ContinuityLabel            string                      `json:"continuity_label,omitempty"`
-	ContinuitySummary          string                      `json:"continuity_summary,omitempty"`
-	ResumeCheckpoint           string                      `json:"resume_checkpoint,omitempty"`
-	TeamName                   string                      `json:"team_name,omitempty"`
-	ExternalTarget             string                      `json:"external_target,omitempty"`
-	CoordinationModel          string                      `json:"coordination_model,omitempty"`
-	RecommendedTeamShape       string                      `json:"recommended_team_shape,omitempty"`
-	RecommendedTeamCount       int                         `json:"recommended_team_count,omitempty"`
-	RecommendedTeamMemberLimit int                         `json:"recommended_team_member_limit,omitempty"`
-	TargetOutputs              []string                    `json:"target_outputs"`
-	WorkflowGroup              *TeamLeadWorkflowGroupDraft `json:"workflow_group,omitempty"`
+	ExecutionMode              TeamLeadExecutionMode         `json:"execution_mode"`
+	OwnerLabel                 string                        `json:"owner_label"`
+	Summary                    string                        `json:"summary"`
+	ContinuityLabel            string                        `json:"continuity_label,omitempty"`
+	ContinuitySummary          string                        `json:"continuity_summary,omitempty"`
+	ResumeCheckpoint           string                        `json:"resume_checkpoint,omitempty"`
+	TeamName                   string                        `json:"team_name,omitempty"`
+	ExternalTarget             string                        `json:"external_target,omitempty"`
+	CoordinationModel          string                        `json:"coordination_model,omitempty"`
+	RecommendedTeamShape       string                        `json:"recommended_team_shape,omitempty"`
+	RecommendedTeamCount       int                           `json:"recommended_team_count,omitempty"`
+	RecommendedTeamMemberLimit int                           `json:"recommended_team_member_limit,omitempty"`
+	TargetOutputs              []string                      `json:"target_outputs"`
+	Workstreams                []TeamLeadExecutionWorkstream `json:"workstreams,omitempty"`
+	WorkflowGroup              *TeamLeadWorkflowGroupDraft   `json:"workflow_group,omitempty"`
+}
+
+type TeamLeadExecutionWorkstream struct {
+	Label         string   `json:"label"`
+	OwnerLabel    string   `json:"owner_label"`
+	Status        string   `json:"status,omitempty"`
+	Summary       string   `json:"summary"`
+	NextStep      string   `json:"next_step"`
+	TargetOutputs []string `json:"target_outputs,omitempty"`
 }
 
 type TeamLeadWorkflowGroupDraft struct {
+	GroupID                string   `json:"group_id,omitempty"`
 	Name                   string   `json:"name"`
 	GoalStatement          string   `json:"goal_statement"`
 	WorkMode               string   `json:"work_mode"`
@@ -1832,7 +1845,7 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 		return
 	}
 
-	response, err := buildTeamLeadGuidance(home, req.Action, req.RequestContext)
+	response, err := s.buildTeamLeadGuidanceResponse(r.Context(), home, req.Action, req.RequestContext)
 	if err != nil {
 		respondAPIError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -1840,6 +1853,22 @@ func (s *AdminServer) handleTeamLeadGuidedAction(w http.ResponseWriter, r *http.
 
 	s.emitReviewLoopEvent(home.ID, ReviewLoopEventTeamLeadActionCompleted)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(response))
+}
+
+func (s *AdminServer) buildTeamLeadGuidanceResponse(ctx context.Context, home OrganizationHomePayload, action TeamLeadGuidedAction, requestContext string) (TeamLeadGuidanceResponse, error) {
+	response, err := buildTeamLeadGuidance(home, action, requestContext)
+	if err != nil {
+		return TeamLeadGuidanceResponse{}, err
+	}
+	if action != TeamLeadGuidedActionResumeRetainedPackage {
+		return response, nil
+	}
+
+	enriched, ok := s.buildRetainedPackageContinuityFromState(ctx, home, requestContext)
+	if !ok {
+		return response, nil
+	}
+	return enriched, nil
 }
 
 func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAction, requestContext string) (TeamLeadGuidanceResponse, error) {
@@ -1974,6 +2003,7 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 				"Normalized workflow result",
 				"Linked artifact or execution note",
 			},
+			Workstreams: buildExternalWorkflowWorkstreams(externalWorkflowTarget(normalized)),
 		}
 	}
 
@@ -1994,6 +2024,7 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 			RecommendedTeamMemberLimit: 5,
 			Summary:                    fmt.Sprintf("This request is broad enough to split into several compact teams instead of one oversized group. Use Soma and Council to coordinate the lanes over NATS/exchange, keep each team small, and return one orchestration summary plus the team-level outputs for %s.", safeOrganizationName(home.Name)),
 			TargetOutputs:              outputs,
+			Workstreams:                buildMultiTeamExecutionWorkstreams(outputs),
 			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review", "broadcast"}, 5),
 		}
 	}
@@ -2014,6 +2045,7 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 			RecommendedTeamMemberLimit: 6,
 			Summary:                    fmt.Sprintf("Use a bounded creative team inside %s so Soma can shape the work, route it through the right specialists, and return the generated image as a managed artifact.", safeOrganizationName(home.Name)),
 			TargetOutputs:              outputs,
+			Workstreams:                buildCreativeExecutionWorkstreams(teamName, outputs),
 			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"content.plan", "artifact.review"}, 6),
 		}
 	}
@@ -2029,6 +2061,7 @@ func buildTeamLeadExecutionContract(home OrganizationHomePayload, requestContext
 			RecommendedTeamMemberLimit: 6,
 			Summary:                    fmt.Sprintf("Use a bounded %s lane inside %s so Soma can stand up a focused delivery group, coordinate the right specialists, and keep the resulting outputs reviewable in one place.", strings.ToLower(teamName), safeOrganizationName(home.Name)),
 			TargetOutputs:              outputs,
+			Workstreams:                buildCompactExecutionWorkstreams(teamName, outputs),
 			WorkflowGroup:              buildWorkflowGroupDraft(home, teamName, requestContext, "propose_only", outputs, []string{"team.coordinate", "artifact.review"}, 6),
 		}
 	}
@@ -2056,8 +2089,197 @@ func buildRetainedPackageContinuityContract(home OrganizationHomePayload, reques
 		ContinuitySummary: fmt.Sprintf("Continuity resumes from the last durable outputs for %s without rebuilding finished work.", organizationName),
 		ResumeCheckpoint:  "Continue from the last retained package after reload or reboot.",
 		TargetOutputs:     targetOutputs,
+		Workstreams:       buildContinuityExecutionWorkstreams(),
 		WorkflowGroup:     buildWorkflowGroupDraft(home, "Retained Package Continuity", resumeGoal, "resume_continuity", targetOutputs, []string{"artifact.review", "team.coordinate"}, 4),
 	}
+}
+
+func (s *AdminServer) buildRetainedPackageContinuityFromState(ctx context.Context, home OrganizationHomePayload, requestContext string) (TeamLeadGuidanceResponse, bool) {
+	if s == nil {
+		return TeamLeadGuidanceResponse{}, false
+	}
+
+	pkg, err := s.latestRetainedPackage(ctx)
+	if err != nil {
+		log.Printf("team lead continuity enrichment skipped: %v", err)
+		return TeamLeadGuidanceResponse{}, false
+	}
+	if pkg == nil {
+		return TeamLeadGuidanceResponse{}, false
+	}
+
+	organizationName := safeOrganizationName(home.Name)
+	teamLeadLabel := safeTeamLeadLabel(home.TeamLeadLabel)
+	titles := retainedOutputTitles(pkg.Outputs, 3)
+	nextOwner := retainedNextOwner(pkg.Group, pkg.Outputs)
+	coordinator := retainedCoordinatorLabel(pkg.Group)
+	groupState := retainedGroupStateLabel(pkg.Group)
+	resumeGoal := strings.TrimSpace(requestContext)
+	if resumeGoal == "" {
+		resumeGoal = pkg.Group.GoalStatement
+	}
+	if strings.TrimSpace(resumeGoal) == "" {
+		resumeGoal = fmt.Sprintf("Resume the retained package for %s after a reboot or reload.", organizationName)
+	}
+
+	return TeamLeadGuidanceResponse{
+		Action:       TeamLeadGuidedActionResumeRetainedPackage,
+		RequestLabel: "Resume retained package continuity",
+		Headline:     fmt.Sprintf("Resume %s through %s", pkg.Group.Name, organizationName),
+		Summary:      fmt.Sprintf("%s can resume %s through the %s retained package. %d retained output%s are already reviewable, and %s owns the next handoff after reload or reboot.", teamLeadLabel, organizationName, pkg.Group.Name, len(pkg.Outputs), pluralSuffix(len(pkg.Outputs)), nextOwner),
+		PrioritySteps: []string{
+			fmt.Sprintf("Reopen %s and review retained outputs like %s.", pkg.Group.Name, humanJoin(titles)),
+			fmt.Sprintf("Treat %s as completed work already captured in the %s package.", humanJoin(titles), groupState),
+			fmt.Sprintf("Hand the next step to %s after %s reviews the retained package summary.", nextOwner, coordinator),
+		},
+		SuggestedFollowUps: []string{
+			fmt.Sprintf("Open %s for retained output review", pkg.Group.Name),
+			"Plan next steps for this organization",
+			"Review my organization setup",
+		},
+		ExecutionContract: &TeamLeadExecutionContract{
+			ExecutionMode:     TeamLeadExecutionModeContinuityResume,
+			OwnerLabel:        coordinator,
+			Summary:           fmt.Sprintf("Resume %s from the %s retained package, confirm the finished outputs, and keep the next owner explicit instead of rebuilding finished work.", organizationName, pkg.Group.Name),
+			ContinuityLabel:   pkg.Group.Name,
+			ContinuitySummary: fmt.Sprintf("%s is %s and already retains %s.", pkg.Group.Name, groupState, humanJoin(titles)),
+			ResumeCheckpoint:  fmt.Sprintf("Open %s and continue with %s after reviewing %s.", pkg.Group.Name, nextOwner, titles[0]),
+			TargetOutputs:     titles,
+			Workstreams:       buildContinuityExecutionWorkstreamsFromPackage(pkg.Group, pkg.Outputs, nextOwner),
+			WorkflowGroup: &TeamLeadWorkflowGroupDraft{
+				GroupID:                pkg.Group.ID,
+				Name:                   pkg.Group.Name,
+				GoalStatement:          resumeGoal,
+				WorkMode:               "resume_continuity",
+				CoordinatorProfile:     pkg.Group.CoordinatorProfile,
+				AllowedCapabilities:    append([]string(nil), pkg.Group.AllowedCapabilities...),
+				RecommendedMemberLimit: maxInt(len(pkg.Group.TeamIDs), 1),
+				ExpiryHours:            retainedExpiryHours(pkg.Group),
+				Summary:                fmt.Sprintf("Reopen the %s retained package, review %s, and continue with %s as the next owner.", pkg.Group.Name, humanJoin(titles), nextOwner),
+			},
+		},
+	}, true
+}
+
+type retainedPackage struct {
+	Group   CollaborationGroup
+	Outputs []artifacts.Artifact
+}
+
+func (s *AdminServer) latestRetainedPackage(ctx context.Context) (*retainedPackage, error) {
+	groups, err := s.listGroupsDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sort.SliceStable(groups, func(i, j int) bool {
+		return groups[i].UpdatedAt.After(groups[j].UpdatedAt)
+	})
+	for _, group := range groups {
+		outputs, err := s.listGroupOutputs(ctx, &group, 8)
+		if err != nil {
+			return nil, err
+		}
+		if len(outputs) == 0 {
+			continue
+		}
+		return &retainedPackage{
+			Group:   group,
+			Outputs: outputs,
+		}, nil
+	}
+	return nil, nil
+}
+
+func retainedOutputTitles(outputs []artifacts.Artifact, limit int) []string {
+	if limit <= 0 {
+		limit = 3
+	}
+	titles := make([]string, 0, limit)
+	seen := map[string]struct{}{}
+	for _, output := range outputs {
+		title := strings.TrimSpace(output.Title)
+		if title == "" {
+			title = strings.TrimSpace(output.AgentID)
+		}
+		if title == "" {
+			continue
+		}
+		if _, ok := seen[title]; ok {
+			continue
+		}
+		seen[title] = struct{}{}
+		titles = append(titles, title)
+		if len(titles) >= limit {
+			break
+		}
+	}
+	if len(titles) == 0 {
+		return []string{"Retained package continuity summary"}
+	}
+	return titles
+}
+
+func retainedNextOwner(group CollaborationGroup, outputs []artifacts.Artifact) string {
+	for _, output := range outputs {
+		if label := humanizeOwnerLabel(output.AgentID); label != "" {
+			return label
+		}
+	}
+	return retainedCoordinatorLabel(group)
+}
+
+func retainedCoordinatorLabel(group CollaborationGroup) string {
+	if label := humanizeOwnerLabel(group.CoordinatorProfile); label != "" {
+		return label
+	}
+	return "Team Lead continuity"
+}
+
+func retainedGroupStateLabel(group CollaborationGroup) string {
+	switch strings.TrimSpace(group.Status) {
+	case groupStatusArchived:
+		return "archived"
+	case groupStatusPaused:
+		return "paused"
+	case groupStatusActive:
+		return "active"
+	default:
+		return "retained"
+	}
+}
+
+func retainedExpiryHours(group CollaborationGroup) int {
+	if group.Expiry == nil {
+		return 0
+	}
+	until := time.Until(group.Expiry.UTC())
+	if until <= 0 {
+		return 0
+	}
+	hours := int(until.Hours())
+	if hours < 1 {
+		return 1
+	}
+	return hours
+}
+
+func humanizeOwnerLabel(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	trimmed = strings.ReplaceAll(trimmed, "_", " ")
+	trimmed = strings.ReplaceAll(trimmed, "-", " ")
+	parts := strings.Fields(trimmed)
+	for index, part := range parts {
+		runes := []rune(strings.ToLower(part))
+		if len(runes) == 0 {
+			continue
+		}
+		runes[0] = unicode.ToUpper(runes[0])
+		parts[index] = string(runes)
+	}
+	return strings.Join(parts, " ")
 }
 
 func inferBusinessTeamExecution(normalized string) (string, []string, bool) {
@@ -2141,6 +2363,191 @@ func buildWorkflowGroupDraft(home OrganizationHomePayload, teamName, requestCont
 	}
 }
 
+func buildCompactExecutionWorkstreams(teamName string, targetOutputs []string) []TeamLeadExecutionWorkstream {
+	return []TeamLeadExecutionWorkstream{
+		{
+			Label:         "Planning lane",
+			OwnerLabel:    fmt.Sprintf("%s lead", teamName),
+			Status:        "ACTIVE",
+			Summary:       "Turn the request into a bounded plan, sequencing, and output contract before the rest of the team expands the work.",
+			NextStep:      "Confirm the scope, sequence the deliverables, and hand the package to the focused builder.",
+			TargetOutputs: compactOutputSlice(targetOutputs, 0),
+		},
+		{
+			Label:         "Production lane",
+			OwnerLabel:    "Focused builder",
+			Status:        "NEXT",
+			Summary:       "Produce the main retained outputs for the team without inflating the roster or losing the review trail.",
+			NextStep:      "Create the first retained deliverable package and keep it ready for review.",
+			TargetOutputs: compactOutputSlice(targetOutputs, 1),
+		},
+		{
+			Label:         "Review lane",
+			OwnerLabel:    "Delivery reviewer",
+			Status:        "NEXT",
+			Summary:       "Check the retained package for readiness, risks, and handoff clarity before the team closes the loop.",
+			NextStep:      "Review the retained outputs, call out gaps, and decide whether the package is ready to hand off.",
+			TargetOutputs: compactOutputSlice(targetOutputs, len(targetOutputs)-1),
+		},
+	}
+}
+
+func buildCreativeExecutionWorkstreams(teamName string, targetOutputs []string) []TeamLeadExecutionWorkstream {
+	return []TeamLeadExecutionWorkstream{
+		{
+			Label:         "Creative direction lane",
+			OwnerLabel:    fmt.Sprintf("%s lead", teamName),
+			Status:        "ACTIVE",
+			Summary:       "Shape the visual direction, prompt inputs, and acceptance notes before generation starts.",
+			NextStep:      "Lock the concept direction and hand the approved prompt package to the generation specialist.",
+			TargetOutputs: compactOutputSlice(targetOutputs, 1),
+		},
+		{
+			Label:         "Artifact generation lane",
+			OwnerLabel:    "Image generation specialist",
+			Status:        "NEXT",
+			Summary:       "Generate the image artifact and keep the first strong candidate reviewable inside the retained package.",
+			NextStep:      "Produce the first reviewable artifact candidate and attach it to the workflow package.",
+			TargetOutputs: compactOutputSlice(targetOutputs, 0),
+		},
+		{
+			Label:         "Review lane",
+			OwnerLabel:    "Artifact reviewer",
+			Status:        "NEXT",
+			Summary:       "Check the generated artifact against the brief and decide whether the team should hand off or iterate.",
+			NextStep:      "Approve or refine the generated artifact before closing the lane.",
+			TargetOutputs: compactOutputSlice(targetOutputs, 0),
+		},
+	}
+}
+
+func buildMultiTeamExecutionWorkstreams(targetOutputs []string) []TeamLeadExecutionWorkstream {
+	return []TeamLeadExecutionWorkstream{
+		{
+			Label:         "Planning lane",
+			OwnerLabel:    "Planning lane lead",
+			Status:        "ACTIVE",
+			Summary:       "Define deploy posture, scope, acceptance, and the output contract that the other lanes will work against.",
+			NextStep:      "Lock the scope and acceptance criteria, then publish the retained planning package.",
+			TargetOutputs: compactOutputSlice(targetOutputs, 0),
+		},
+		{
+			Label:         "Validation lane",
+			OwnerLabel:    "Validation lane lead",
+			Status:        "NEXT",
+			Summary:       "Run the runtime and environment proof sequence against the bounded plan instead of widening the ask.",
+			NextStep:      "Turn the retained plan into a concrete validation checklist and capture the first proof pass.",
+			TargetOutputs: compactOutputSlice(targetOutputs, 1),
+		},
+		{
+			Label:         "Review lane",
+			OwnerLabel:    "Review lane lead",
+			Status:        "NEXT",
+			Summary:       "Assess the retained planning and validation outputs, then call out remaining risk and the next owner.",
+			NextStep:      "Review the lane outputs together and name the lead that owns the next follow-through step.",
+			TargetOutputs: compactOutputSlice(targetOutputs, len(targetOutputs)-1),
+		},
+	}
+}
+
+func buildExternalWorkflowWorkstreams(target string) []TeamLeadExecutionWorkstream {
+	return []TeamLeadExecutionWorkstream{
+		{
+			Label:         "Workflow handoff lane",
+			OwnerLabel:    target,
+			Status:        "NEXT",
+			Summary:       "Shape the external automation so invocation posture and result return stay explicit.",
+			NextStep:      "Prepare the external workflow handoff and confirm the normalized result format before activation.",
+			TargetOutputs: []string{"Normalized workflow result"},
+		},
+		{
+			Label:         "Review return lane",
+			OwnerLabel:    "Soma review",
+			Status:        "NEXT",
+			Summary:       "Bring the external result back through one readable Mycelis return path instead of leaving the operator inside raw workflow detail.",
+			NextStep:      "Review the returned artifact or execution note and decide whether a follow-up action is needed.",
+			TargetOutputs: []string{"Linked artifact or execution note"},
+		},
+	}
+}
+
+func buildContinuityExecutionWorkstreams() []TeamLeadExecutionWorkstream {
+	return []TeamLeadExecutionWorkstream{
+		{
+			Label:         "Completed work lane",
+			OwnerLabel:    "Retained outputs reviewer",
+			Status:        "COMPLETE",
+			Summary:       "Use the durable outputs to confirm which work is already done before anyone starts rebuilding the package.",
+			NextStep:      "Keep the finished retained outputs linked to the package so the next handoff starts from durable evidence.",
+			TargetOutputs: []string{"Completed work snapshot"},
+		},
+		{
+			Label:         "Continuity briefing lane",
+			OwnerLabel:    "Team Lead continuity",
+			Status:        "ACTIVE",
+			Summary:       "Summarize the retained package so the next operator move is obvious after a reboot, reload, or interruption.",
+			NextStep:      "Publish the continuity summary that ties the finished outputs to the remaining work.",
+			TargetOutputs: []string{"Retained package continuity summary"},
+		},
+		{
+			Label:         "Next-step handoff lane",
+			OwnerLabel:    "Next lane lead",
+			Status:        "NEXT",
+			Summary:       "Assign the remaining work to the right lead and keep the handoff explicit instead of flattening it into chat history.",
+			NextStep:      "Name the next owner and continue from the recorded checkpoint instead of rebuilding finished work.",
+			TargetOutputs: []string{"Remaining work checklist"},
+		},
+	}
+}
+
+func buildContinuityExecutionWorkstreamsFromPackage(group CollaborationGroup, outputs []artifacts.Artifact, nextOwner string) []TeamLeadExecutionWorkstream {
+	titles := retainedOutputTitles(outputs, 3)
+	coordinator := retainedCoordinatorLabel(group)
+	groupName := strings.TrimSpace(group.Name)
+	if groupName == "" {
+		groupName = "retained package"
+	}
+	return []TeamLeadExecutionWorkstream{
+		{
+			Label:         "Completed work lane",
+			OwnerLabel:    coordinator,
+			Status:        "COMPLETE",
+			Summary:       fmt.Sprintf("Use durable outputs like %s as the completed baseline already captured in %s.", humanJoin(titles), groupName),
+			NextStep:      fmt.Sprintf("Keep %s linked to %s so the restart point stays anchored in retained work.", humanJoin(retainedOutputTitles(outputs, 2)), groupName),
+			TargetOutputs: compactOutputSlice(titles, 0),
+		},
+		{
+			Label:         "Continuity briefing lane",
+			OwnerLabel:    coordinator,
+			Status:        "ACTIVE",
+			Summary:       fmt.Sprintf("Turn %s into a readable continuity brief so the rebooted workspace can resume without rebuilding finished work.", groupName),
+			NextStep:      fmt.Sprintf("Publish the retained package summary for %s and highlight %s as the next owner.", groupName, nextOwner),
+			TargetOutputs: compactOutputSlice(titles, 1),
+		},
+		{
+			Label:         "Next-step handoff lane",
+			OwnerLabel:    nextOwner,
+			Status:        "NEXT",
+			Summary:       fmt.Sprintf("Hand the retained package to %s with the finished outputs and the remaining step made explicit.", nextOwner),
+			NextStep:      fmt.Sprintf("Continue from %s after %s reviews the retained outputs.", titles[0], nextOwner),
+			TargetOutputs: compactOutputSlice(titles, len(titles)-1),
+		},
+	}
+}
+
+func compactOutputSlice(targetOutputs []string, index int) []string {
+	if len(targetOutputs) == 0 {
+		return []string{}
+	}
+	if index < 0 {
+		index = 0
+	}
+	if index >= len(targetOutputs) {
+		index = len(targetOutputs) - 1
+	}
+	return []string{targetOutputs[index]}
+}
+
 func humanJoin(items []string) string {
 	items = normalizeExecutionCapabilityList(items)
 	switch len(items) {
@@ -2153,6 +2560,13 @@ func humanJoin(items []string) string {
 	default:
 		return strings.Join(items[:len(items)-1], ", ") + ", and " + items[len(items)-1]
 	}
+}
+
+func maxInt(left, right int) int {
+	if left > right {
+		return left
+	}
+	return right
 }
 
 func normalizeExecutionCapabilityList(items []string) []string {

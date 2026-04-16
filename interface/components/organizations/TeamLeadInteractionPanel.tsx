@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, RefreshCcw } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
-import type { TeamLeadExecutionContract, TeamLeadGuidanceRequest, TeamLeadGuidanceResponse, TeamLeadGuidedAction, TeamLeadWorkflowGroupDraft } from "@/lib/organizations";
+import type {
+    TeamLeadExecutionContract,
+    TeamLeadExecutionWorkstream,
+    TeamLeadGuidanceRequest,
+    TeamLeadGuidanceResponse,
+    TeamLeadGuidedAction,
+    TeamLeadWorkflowGroupDraft,
+} from "@/lib/organizations";
 
 type RequestState = "idle" | "loading" | "ready" | "error";
 type PersistedWorkspaceState = {
@@ -25,6 +32,7 @@ type GuidedExecutionContract = TeamLeadExecutionContract & {
     coordination_model?: string;
     recommended_team_count?: number;
     recommended_team_member_limit?: number;
+    workstreams?: TeamLeadExecutionWorkstream[];
 };
 
 export type SomaGuidanceUpdate = {
@@ -605,6 +613,11 @@ function normalizeExecutionContract(
             .map((entry) => rewriteGuidanceText(sanitizeExecutionContractText(entry, ""), somaName, teamLeadName))
             .filter((entry) => entry.length > 0)
         : [];
+    const workstreams = Array.isArray(contract.workstreams)
+        ? contract.workstreams
+            .map((entry) => normalizeExecutionWorkstream(entry, somaName, teamLeadName))
+            .filter((entry): entry is TeamLeadExecutionWorkstream => Boolean(entry))
+        : [];
 
     return {
         execution_mode: executionMode,
@@ -616,6 +629,7 @@ function normalizeExecutionContract(
         team_name: sanitizeExecutionContractText(contract.team_name, ""),
         external_target: sanitizeExecutionContractText(contract.external_target, ""),
         target_outputs: targetOutputs,
+        workstreams,
         workflow_group: normalizeWorkflowGroupDraft(contract.workflow_group, somaName, teamLeadName),
         recommended_team_shape: sanitizeExecutionContractText(contract.recommended_team_shape, ""),
         coordination_model: sanitizeExecutionContractText(contract.coordination_model, ""),
@@ -646,6 +660,7 @@ function normalizeWorkflowGroupDraft(
     }
 
     return {
+        group_id: sanitizeExecutionContractText(draft.group_id, ""),
         name: rewriteGuidanceText(sanitizeExecutionContractText(draft.name, "Temporary workflow group"), somaName, teamLeadName),
         goal_statement: rewriteGuidanceText(sanitizeExecutionContractText(draft.goal_statement, "Coordinate a focused workflow."), somaName, teamLeadName),
         work_mode: workMode,
@@ -708,6 +723,40 @@ function sanitizeExecutionContractText(value: unknown, fallback: string) {
     }
 
     return normalized;
+}
+
+function normalizeExecutionWorkstream(
+    value: unknown,
+    somaName: string,
+    teamLeadName: string,
+): TeamLeadExecutionWorkstream | undefined {
+    if (!value || typeof value !== "object") {
+        return undefined;
+    }
+
+    const workstream = value as Partial<TeamLeadExecutionWorkstream>;
+    const label = rewriteGuidanceText(sanitizeExecutionContractText(workstream.label, ""), somaName, teamLeadName);
+    const ownerLabel = rewriteGuidanceText(sanitizeExecutionContractText(workstream.owner_label, ""), somaName, teamLeadName);
+    const summary = rewriteGuidanceText(sanitizeExecutionContractText(workstream.summary, ""), somaName, teamLeadName);
+    const nextStep = rewriteGuidanceText(sanitizeExecutionContractText(workstream.next_step, ""), somaName, teamLeadName);
+    const targetOutputs = Array.isArray(workstream.target_outputs)
+        ? workstream.target_outputs
+            .map((entry) => rewriteGuidanceText(sanitizeExecutionContractText(entry, ""), somaName, teamLeadName))
+            .filter((entry) => entry.length > 0)
+        : [];
+
+    if (!label || !ownerLabel || !summary || !nextStep) {
+        return undefined;
+    }
+
+    return {
+        label,
+        owner_label: ownerLabel,
+        status: sanitizeExecutionContractText(workstream.status, ""),
+        summary,
+        next_step: nextStep,
+        target_outputs: targetOutputs,
+    };
 }
 
 function classifyRequestScope(value: string): "compact" | "broad" {
@@ -854,6 +903,45 @@ function ExecutionContractCard({ contract }: { contract: TeamLeadExecutionContra
                     </div>
                 </div>
             ) : null}
+            {richContract.workstreams && richContract.workstreams.length > 0 ? (
+                <div className="mt-4">
+                    <p className="text-sm font-medium text-cortex-text-main">Working together now</p>
+                    <div className="mt-3 space-y-3">
+                        {richContract.workstreams.map((workstream) => (
+                            <div key={`${workstream.label}:${workstream.owner_label}`} className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full border border-cortex-primary/25 bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-primary">
+                                        {workstream.label}
+                                    </span>
+                                    {workstream.status ? (
+                                        <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                                            {workstream.status}
+                                        </span>
+                                    ) : null}
+                                    <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
+                                        {workstream.owner_label}
+                                    </span>
+                                </div>
+                                <p className="mt-3 text-sm leading-6 text-cortex-text-muted">{workstream.summary}</p>
+                                <p className="mt-3 text-sm font-medium text-cortex-text-main">Next step</p>
+                                <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{workstream.next_step}</p>
+                                {workstream.target_outputs && workstream.target_outputs.length > 0 ? (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {workstream.target_outputs.map((output) => (
+                                            <span
+                                                key={`${workstream.label}:${output}`}
+                                                className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted"
+                                            >
+                                                {output}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
             {(richContract.recommended_team_shape || richContract.coordination_model || typeof richContract.recommended_team_count === "number" || typeof richContract.recommended_team_member_limit === "number") ? (
                 <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
                     <p className="text-xs font-mono uppercase tracking-[0.18em] text-cortex-primary">Compact orchestration hints</p>
@@ -899,6 +987,9 @@ function TemporaryWorkflowLaunchCard({
     onLaunch: () => void;
 }) {
     const launchable = draft.work_mode !== "resume_continuity";
+    const continuityHref = !launchable && draft.group_id
+        ? `/groups?group_id=${encodeURIComponent(draft.group_id)}`
+        : null;
     return (
         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
             <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
@@ -939,9 +1030,19 @@ function TemporaryWorkflowLaunchCard({
                     ) : null}
                 </div>
             ) : (
-                <p className="mt-4 text-sm text-cortex-text-muted">
-                    This continuity path is review-first. Reopen the retained package and continue from the recorded checkpoint instead of launching a new temporary group.
-                </p>
+                <div className="mt-4 space-y-3">
+                    <p className="text-sm text-cortex-text-muted">
+                        This continuity path is review-first. Reopen the retained package and continue from the recorded checkpoint instead of launching a new temporary group.
+                    </p>
+                    {continuityHref ? (
+                        <Link
+                            href={continuityHref}
+                            className="inline-flex rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-2 text-sm font-medium text-cortex-text-main hover:border-cortex-primary/20"
+                        >
+                            Open retained package
+                        </Link>
+                    ) : null}
+                </div>
             )}
             {launchedGroup ? (
                 <p className="mt-3 text-sm text-cortex-primary">

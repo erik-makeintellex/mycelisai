@@ -278,7 +278,7 @@ The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hos
 | `uv run inv ci.service-check` | Verify the currently running local stack with `lifecycle.health`, plus optional live-backend governed Soma browser proof |
 | `uv run inv ci.entrypoint-check` | Verify the supported invoke runner matrix and reject unsupported bare aliases |
 | `uv run inv ci.toolchain-check` | Report toolchain versions and optionally enforce Go lock policy |
-| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with optional `--runtime-posture`, `--service-health`, and `--live-backend` proof for deployment/runtime changes |
+| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with optional `--runtime-posture`, `--service-health`, and `--live-backend` proof for deployment/runtime changes; `--runtime-posture` reads process env plus `.env.compose` / `.env` and fails when no explicit supported AI endpoint contract is configured |
 | `uv run inv ci.deploy` | Build + Docker + K8s deploy |
 
 ### Other Tasks

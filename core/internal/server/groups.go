@@ -28,6 +28,7 @@ var validGroupWorkModes = map[string]struct{}{
 	"propose_only":          {},
 	"execute_with_approval": {},
 	"execute_bounded":       {},
+	"resume_continuity":     {},
 }
 
 var validGroupStatuses = map[string]struct{}{
