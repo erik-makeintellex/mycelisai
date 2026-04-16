@@ -413,3 +413,98 @@ def test_release_preflight_runs_service_check_when_requested(monkeypatch):
 
     ci.release_preflight.body(ctx, e2e=False, strict_toolchain=True, service_health=True, live_backend=True)
     assert service_calls == [{"live_backend": True}]
+
+
+def test_runtime_posture_check_skips_ai_probe_when_no_explicit_endpoint_is_configured(monkeypatch):
+    headroom_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        ci.cache_tasks,
+        "ensure_disk_headroom",
+        lambda **kwargs: headroom_calls.append(kwargs),
+    )
+    for env_name in (
+        "MYCELIS_COMPOSE_OLLAMA_HOST",
+        "MYCELIS_K8S_TEXT_ENDPOINT",
+        "MYCELIS_K8S_MEDIA_ENDPOINT",
+        "MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT",
+    ):
+        monkeypatch.delenv(env_name, raising=False)
+
+    ci._runtime_posture_check(FakeContext({}))
+
+    assert headroom_calls == [{"min_free_gb": 12, "reason": "release preflight posture"}]
+
+
+def test_runtime_posture_check_rejects_loopback_ai_endpoint(monkeypatch):
+    monkeypatch.setattr(ci.cache_tasks, "ensure_disk_headroom", lambda **_kwargs: None)
+    monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://127.0.0.1:11434")
+
+    with pytest.raises(SystemExit):
+        ci._runtime_posture_check(FakeContext({}))
+
+
+def test_runtime_posture_check_probes_compose_ai_endpoint_with_fallback(monkeypatch):
+    monkeypatch.setattr(ci.cache_tasks, "ensure_disk_headroom", lambda **_kwargs: None)
+    monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://10.0.0.5:11434")
+
+    probe_urls: list[str] = []
+
+    def fake_probe(url: str, timeout: float = 3.0):
+        probe_urls.append(url)
+        if url.endswith("/api/tags"):
+            return 404, "not found"
+        return 401, "unauthorized"
+
+    monkeypatch.setattr(ci, "_probe_http_endpoint", fake_probe)
+
+    ci._runtime_posture_check(FakeContext({}))
+
+    assert probe_urls == [
+        "http://10.0.0.5:11434/api/tags",
+        "http://10.0.0.5:11434/v1/models",
+    ]
+
+
+def test_runtime_posture_check_probes_k8s_ai_endpoint(monkeypatch):
+    monkeypatch.setattr(ci.cache_tasks, "ensure_disk_headroom", lambda **_kwargs: None)
+    monkeypatch.setenv("MYCELIS_K8S_TEXT_ENDPOINT", "http://10.0.0.6:11434/v1")
+
+    probe_urls: list[str] = []
+
+    def fake_probe(url: str, timeout: float = 3.0):
+        probe_urls.append(url)
+        return 401, "unauthorized"
+
+    monkeypatch.setattr(ci, "_probe_http_endpoint", fake_probe)
+
+    ci._runtime_posture_check(FakeContext({}))
+
+    assert probe_urls == [
+        "http://10.0.0.6:11434/v1/models",
+    ]
+
+
+def test_release_preflight_runs_runtime_posture_when_requested(monkeypatch):
+    monkeypatch.setattr(ci.toolchain_check, "body", lambda _ctx, **_kwargs: None)
+    baseline_calls: list[dict[str, object]] = []
+    runtime_calls: list[str] = []
+    monkeypatch.setattr(ci.baseline, "body", lambda _ctx, **kwargs: baseline_calls.append(kwargs))
+    monkeypatch.setattr(ci, "_runtime_posture_check", lambda _ctx: runtime_calls.append("runtime"))
+
+    ctx = FakeContext(
+        {
+            "git status --porcelain": FakeResult(stdout=""),
+        }
+    )
+
+    ci.release_preflight.body(
+        ctx,
+        e2e=False,
+        strict_toolchain=True,
+        service_health=False,
+        live_backend=False,
+        runtime_posture=True,
+    )
+
+    assert runtime_calls == ["runtime"]
+    assert baseline_calls == [{"e2e": False}]

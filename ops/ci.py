@@ -10,7 +10,13 @@ Usage:
     uv run inv ci.deploy        # Build + Docker + K8s deploy (requires cluster)
 """
 
+import os
+import ipaddress
 import time
+from contextlib import suppress
+from urllib.parse import urljoin, urlparse
+import urllib.error
+import urllib.request
 from invoke import task, Collection
 from .config import (
     CORE_DIR,
@@ -29,6 +35,101 @@ from . import quality
 def _task_env(extra=None):
     ensure_managed_cache_dirs()
     return managed_cache_env(extra=extra)
+
+
+def _configured_ai_endpoints() -> list[tuple[str, str, str]]:
+    endpoints: list[tuple[str, str, str]] = []
+    for env_name, label in (
+        ("MYCELIS_COMPOSE_OLLAMA_HOST", "compose Ollama host"),
+        ("MYCELIS_K8S_TEXT_ENDPOINT", "k8s text endpoint"),
+        ("MYCELIS_K8S_MEDIA_ENDPOINT", "k8s media endpoint"),
+        ("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT", "local Ollama provider endpoint"),
+    ):
+        raw = (os.environ.get(env_name, "") or "").strip()
+        if raw:
+            endpoints.append((env_name, label, raw))
+    return endpoints
+
+
+def _probe_paths_for_endpoint(env_name: str, raw: str) -> tuple[str, str]:
+    parsed = urlparse(raw)
+    if env_name == "MYCELIS_COMPOSE_OLLAMA_HOST" or parsed.path.rstrip("/").endswith("/api"):
+        return ("/api/tags", "/v1/models")
+    return ("/models", "/api/tags")
+
+
+def _is_loopback_or_unspecified_host(host: str) -> bool:
+    normalized = (host or "").strip().lower()
+    if not normalized:
+        return True
+    if normalized == "localhost":
+        return True
+    try:
+        address = ipaddress.ip_address(normalized)
+    except ValueError:
+        return False
+    return address.is_loopback or address.is_unspecified
+
+
+def _probe_http_endpoint(url: str, timeout: float = 3.0) -> tuple[int, str]:
+    try:
+        request = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            return response.status, body
+    except urllib.error.HTTPError as exc:
+        body = ""
+        with suppress(Exception):
+            body = exc.read().decode("utf-8", errors="replace")
+        return exc.code, body or str(exc)
+    except Exception as exc:
+        return 0, str(exc)
+
+
+def _runtime_posture_check(c):
+    print("=== RUNTIME POSTURE ===")
+    cache_tasks.ensure_disk_headroom(min_free_gb=12, reason="release preflight posture")
+
+    endpoints = _configured_ai_endpoints()
+    if not endpoints:
+        print("  No explicit AI endpoints configured; skipping endpoint reachability probe.")
+        return
+
+    failures: list[str] = []
+    for env_name, label, raw in endpoints:
+        parsed = urlparse(raw)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            failures.append(f"{env_name}: invalid endpoint URL '{raw}'")
+            print(f"  [FAIL] {label}: invalid endpoint URL '{raw}'")
+            continue
+
+        host = parsed.hostname or ""
+        if _is_loopback_or_unspecified_host(host):
+            failures.append(f"{env_name}: loopback or unspecified host '{host}' is not allowed")
+            print(f"  [FAIL] {label}: loopback or unspecified host '{host}' is not allowed")
+            continue
+
+        probe_paths = _probe_paths_for_endpoint(env_name, raw)
+        reachable = False
+        for probe_path in probe_paths:
+            probe_url = urljoin(raw.rstrip("/") + "/", probe_path.lstrip("/"))
+            status, _body = _probe_http_endpoint(probe_url)
+            if status in {200, 401, 403}:
+                print(f"  [OK]   {label}: {probe_url} [{status}]")
+                reachable = True
+                break
+            print(f"  [WARN] {label}: {probe_url} [{status}]")
+
+        if not reachable:
+            failures.append(f"{env_name}: no AI probe path responded successfully")
+
+    if failures:
+        raise SystemExit(
+            "RUNTIME POSTURE CHECK FAILED: "
+            + "; ".join(failures)
+        )
+
+    print("RUNTIME POSTURE PASSED")
 
 
 @task
@@ -403,14 +504,23 @@ def entrypoint_check(c):
         "strict_toolchain": "Fail on Go lock mismatch (default: False).",
         "service_health": "Require lifecycle.health against the running local stack (default: False).",
         "live_backend": "Also run the live-backend workspace Playwright contract when service-health is enabled (default: False).",
+        "runtime_posture": "Also check tighter disk headroom and explicit AI endpoint reachability when configured (default: False).",
     }
 )
-def release_preflight(c, e2e=True, strict_toolchain=False, service_health=False, live_backend=False):
+def release_preflight(
+    c,
+    e2e=True,
+    strict_toolchain=False,
+    service_health=False,
+    live_backend=False,
+    runtime_posture=False,
+):
     """
     Enforce release preflight gate:
     - clean working tree
     - toolchain check
     - strict baseline validation
+    - optional runtime posture check for storage and explicit AI endpoints
     - optional live service-health / live-backend proof
     """
     print("=== RELEASE PREFLIGHT ===")
@@ -426,6 +536,8 @@ def release_preflight(c, e2e=True, strict_toolchain=False, service_health=False,
         raise SystemExit("RELEASE PREFLIGHT FAILED: clean-tree requirement not met.")
 
     toolchain_check(c, strict=strict_toolchain)
+    if runtime_posture:
+        _runtime_posture_check(c)
     baseline(c, e2e=e2e)
     if service_health:
         service_check(c, live_backend=live_backend)
