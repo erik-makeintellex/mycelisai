@@ -45,6 +45,22 @@ INTERFACE_PORT = int(os.environ.get("MYCELIS_INTERFACE_PORT", "3000"))
 def is_windows():
     return platform.system() == "Windows"
 
+
+@lru_cache(maxsize=1)
+def running_in_wsl() -> bool:
+    if os.environ.get("WSL_DISTRO_NAME") or os.environ.get("WSL_INTEROP"):
+        return True
+
+    for probe in ("/proc/sys/kernel/osrelease", "/proc/version"):
+        try:
+            text = Path(probe).read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if "microsoft" in text.lower():
+            return True
+
+    return False
+
 def powershell(command: str) -> str:
     """Build a PowerShell invocation that skips the user profile.
 

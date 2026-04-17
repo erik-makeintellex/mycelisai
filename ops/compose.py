@@ -20,6 +20,7 @@ from .config import (
     docker_command,
     docker_host_mode,
     docker_host_path,
+    running_in_wsl,
 )
 
 
@@ -220,7 +221,7 @@ def _inspect_wsl_ollama_relay_labels() -> dict[str, str] | None:
 
 
 def _stop_wsl_ollama_relay():
-    if docker_host_mode() != "wsl":
+    if not (docker_host_mode() == "wsl" or running_in_wsl()):
         return
     _docker_run(["rm", "-f", WSL_OLLAMA_RELAY_NAME], check=False)
 
@@ -269,7 +270,7 @@ def _ensure_wsl_ollama_relay(target_host: str, target_port: int, relay_port: int
 
 def _prepare_wsl_ollama_host(env_values: dict[str, str]) -> dict[str, str]:
     values = dict(env_values)
-    if docker_host_mode() != "wsl":
+    if not (docker_host_mode() == "wsl" or running_in_wsl()):
         return values
 
     configured = _clean_env_value(values.get("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434"))
@@ -355,7 +356,9 @@ def _validate_compose_env(env_values: dict[str, str]):
 
 
 def _compose_runtime_env(env_values: dict[str, str] | None = None) -> dict[str, str] | None:
-    if docker_host_mode() != "wsl":
+    host_mode = docker_host_mode()
+    wsl_shell = running_in_wsl()
+    if host_mode != "wsl" and not wsl_shell:
         return None
 
     values = _compose_effective_env(env_values)
@@ -366,14 +369,17 @@ def _compose_runtime_env(env_values: dict[str, str] | None = None) -> dict[str, 
     passthrough_keys = sorted(values.keys())
     for key in passthrough_keys:
         env[key] = values[key]
-    env["MYCELIS_OUTPUT_HOST_PATH"] = docker_host_path(resolved_host_path)
-    passthrough_entries = [entry for entry in env.get("WSLENV", "").split(":") if entry]
-    if "MYCELIS_OUTPUT_HOST_PATH" not in passthrough_keys:
-        passthrough_keys.append("MYCELIS_OUTPUT_HOST_PATH")
-    for key in passthrough_keys:
-        if key not in passthrough_entries:
-            passthrough_entries.append(key)
-    env["WSLENV"] = ":".join(passthrough_entries)
+    env["MYCELIS_OUTPUT_HOST_PATH"] = (
+        docker_host_path(resolved_host_path) if host_mode == "wsl" else str(resolved_host_path)
+    )
+    if host_mode == "wsl":
+        passthrough_entries = [entry for entry in env.get("WSLENV", "").split(":") if entry]
+        if "MYCELIS_OUTPUT_HOST_PATH" not in passthrough_keys:
+            passthrough_keys.append("MYCELIS_OUTPUT_HOST_PATH")
+        for key in passthrough_keys:
+            if key not in passthrough_entries:
+                passthrough_entries.append(key)
+        env["WSLENV"] = ":".join(passthrough_entries)
     return env
 
 

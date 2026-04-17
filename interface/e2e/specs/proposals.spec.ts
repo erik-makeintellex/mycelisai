@@ -24,7 +24,14 @@ function resolveBackendLogTargets(filename: string) {
 function removeExistingTargets(paths: string[]) {
     for (const candidate of paths) {
         if (fs.existsSync(candidate)) {
-            fs.rmSync(candidate, { force: true });
+            try {
+                fs.rmSync(candidate, { force: true });
+            } catch (error) {
+                const code = (error as NodeJS.ErrnoException).code;
+                if (code !== 'EACCES' && code !== 'EPERM') {
+                    throw error;
+                }
+            }
         }
     }
 }

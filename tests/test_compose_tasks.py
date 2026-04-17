@@ -52,6 +52,7 @@ def test_compose_effective_env_prefers_runtime_override(monkeypatch):
 
 def test_compose_runtime_env_passes_overrides_into_wsl(tmp_path, monkeypatch):
     monkeypatch.setattr(compose, "docker_host_mode", lambda: "wsl")
+    monkeypatch.setattr(compose, "running_in_wsl", lambda: False)
     monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://192.168.50.156:11434")
 
     env = compose._compose_runtime_env(
@@ -67,6 +68,25 @@ def test_compose_runtime_env_passes_overrides_into_wsl(tmp_path, monkeypatch):
     assert env["MYCELIS_OUTPUT_HOST_PATH"] == docker_host_path(tmp_path)
     assert "MYCELIS_COMPOSE_OLLAMA_HOST" in env["WSLENV"]
     assert "MYCELIS_OUTPUT_HOST_PATH" in env["WSLENV"]
+
+
+def test_compose_runtime_env_passes_overrides_inside_direct_wsl_shell(tmp_path, monkeypatch):
+    monkeypatch.setattr(compose, "docker_host_mode", lambda: "native")
+    monkeypatch.setattr(compose, "running_in_wsl", lambda: True)
+    monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://127.0.0.1:11435")
+
+    env = compose._compose_runtime_env(
+        {
+            "MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434",
+            "MYCELIS_OUTPUT_HOST_PATH": str(tmp_path),
+            "MYCELIS_API_KEY": "test-key",
+        }
+    )
+
+    assert env is not None
+    assert env["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://127.0.0.1:11435"
+    assert env["MYCELIS_OUTPUT_HOST_PATH"] == str(tmp_path)
+    assert "WSLENV" not in env or "MYCELIS_COMPOSE_OLLAMA_HOST" not in env.get("WSLENV", "")
 
 
 def test_prepare_wsl_ollama_host_uses_reachable_configured_target(monkeypatch):
@@ -145,6 +165,31 @@ def test_prepare_wsl_ollama_host_reuses_existing_matching_relay(monkeypatch):
     )
 
     assert values["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://host.docker.internal:11435"
+
+
+def test_prepare_wsl_ollama_host_runs_inside_direct_wsl_shell(monkeypatch):
+    calls: list[tuple[str, int, int]] = []
+
+    monkeypatch.setattr(compose, "docker_host_mode", lambda: "native")
+    monkeypatch.setattr(compose, "running_in_wsl", lambda: True)
+    monkeypatch.setattr(compose, "_inspect_wsl_ollama_relay_labels", lambda: None)
+    monkeypatch.setattr(
+        compose,
+        "_wsl_http_available",
+        lambda url: url == "http://127.0.0.1:11434/api/tags" or url == "http://127.0.0.1:11434",
+    )
+    monkeypatch.setattr(
+        compose,
+        "_ensure_wsl_ollama_relay",
+        lambda host, target_port, relay_port: calls.append((host, target_port, relay_port)),
+    )
+
+    values = compose._prepare_wsl_ollama_host(
+        {"MYCELIS_COMPOSE_OLLAMA_HOST": "http://host.docker.internal:11434"}
+    )
+
+    assert values["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://host.docker.internal:11435"
+    assert calls == [("127.0.0.1", 11434, 11435)]
 
 
 def test_require_compose_env_file_has_clear_guidance(tmp_path, monkeypatch):

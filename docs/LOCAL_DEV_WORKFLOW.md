@@ -304,7 +304,7 @@ Use this as the canonical resume path when active development moves to WSL/Linux
 WSL/Linux notes:
 - treat `uv run inv ...` as the only normal execution path; raw `npx`, direct Playwright, and PowerShell wrappers are fallback troubleshooting paths only
 - when Windows no longer has a native `docker` binary, `uv run inv compose.*` can drive Docker through WSL automatically; set `MYCELIS_WSL_DISTRO` if the default WSL distro is not the one that owns Docker
-- on that Windows + WSL Docker path, `compose.up` and `compose.health` can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST` so bridge containers can still reach a Windows-hosted Ollama service through `host.docker.internal`
+- on that Windows + WSL Docker path, `compose.up` and `compose.health` can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST`, including when the tasks are invoked from inside the Docker-owning WSL distro, so bridge containers can still reach a Windows-hosted Ollama service through `host.docker.internal`
 - use `MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace` for Compose-backed live browser specs when the spec checkout differs from the running backend worktree
 - `psql` is required for `db.*` tasks, but pure `compose.*` workflows run migrations and health checks through the Postgres container
 - `host.docker.internal` is usually correct for Docker Desktop + WSL, but native Linux Docker hosts may need another hostname or reachable service address instead
