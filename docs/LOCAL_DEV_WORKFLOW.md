@@ -9,6 +9,7 @@
 > **Lifecycle Readiness:** `uv run inv lifecycle.up ...` now waits for Core `/healthz` readiness and fails fast if the API never becomes healthy.
 > **Lifecycle Teardown:** `uv run inv lifecycle.down` now uses bounded cleanup timeouts and waits for Core/Frontend ports to close before reporting success.
 > **Startup Diagnostics:** Background Core startup output is captured in `workspace/logs/core-startup.log`.
+> **Docs Sync:** Runtime, validation, API, and memory/governance changes are not complete until the matching docs are reviewed and updated in the same slice.
 
 ## TOC
 

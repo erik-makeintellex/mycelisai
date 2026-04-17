@@ -227,7 +227,7 @@ Use that file for:
 Do not duplicate the full live checklist in this README. Keep the implementation truth in the state file and update it in the same slice as any architecture, release-target, or UI-surface change.
 
 Current operator experience summary:
-- a new operator lands in AI Organization setup, not a blank assistant thread
+- a new operator lands in AI Organization setup, not a blank workspace/chat
 - Soma is the default workspace route on first load and after AI Organization creation
 - the default AI Organization workspace now includes one primary Soma interaction surface with mode switching inside the same panel instead of parallel front doors
 - the default Soma conversation hides raw broadcast and direct-council routing controls until Advanced mode is intentionally opened
@@ -346,19 +346,21 @@ Use these as the top detailed references when you need the deeper framework cont
    - canonical operator workflow contract for AI Organization creation, Soma-primary workspace behavior, visibility boundaries, and screen-to-API mapping
 6. [V8 Memory Layer And Reflection Delivery Contract](docs/architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md)
    - canonical memory-layer contract for `SOMA_MEMORY`, `AGENT_MEMORY`, `PROJECT_MEMORY`, `REFLECTION_MEMORY`, candidate-first reflection, and promotion guardrails
-7. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
+7. [V8 Trusted Memory Arbitration And Team Vector Contract](docs/architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md)
+   - trusted memory control plane for Soma personal continuity, team-shared vector memory, governed doctrine, evidence anchors, and arbitration order
+8. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
    - canonical map of which detailed planning doc owns which part of the framework
-8. [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
+9. [System Architecture V7](docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
    - detailed runtime, storage, NATS, deployment, and service-boundary memory until V8 replacements land
-9. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+10. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
    - detailed workflow, run, manifest, recurring-plan, and activation memory
-10. [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
+11. [Delivery Governance And Testing V7](docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
    - detailed acceptance, gate, and proof requirements for implementation slices
-11. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
+12. [Team Execution And Global State Protocol V7](docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
    - detailed state-file, coordination, and execution-discipline memory for multi-slice work
-12. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
+13. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
    - detailed operator experience, simplification, and anti-complexity memory for the UI layer
-13. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+14. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
    - detailed UI transaction/state expectations for operator-visible behavior
 
 Rule:
@@ -390,6 +392,7 @@ Agents implementing V8 must review these areas first:
 
 Particular attention belongs on:
 - release-target alignment between README, V8.1, V8.2, and `V8_DEV_STATE.md`
+- trusted memory alignment between memory-layer docs, governance docs, user memory/resources docs, and the in-app docs manifest
 - execution slices
 - team execution protocol
 - delivery governance rules
@@ -655,6 +658,9 @@ Every implementation slice must update:
 - `README.md`
 - `V8_DEV_STATE.md`
 - architecture-library authority documents when target, execution, UI, or delivery rules change
+- user-facing docs when operator meaning, workflow wording, memory/governance behavior, or product posture changes
+- `docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes
+- `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md` when tasking, validation, or operational behavior changes
 - documentation manifest when a canonical doc should be visible in the in-app docs page
 - docs tests when the contract they enforce changes
 
@@ -663,7 +669,8 @@ Synchronization rule:
 - V8.1 is the current release target
 - V8.2 is the final production target
 - `V8_DEV_STATE.md` is the actual implementation scoreboard
-- slices that change architecture, release posture, operator wording, or documentation authority must keep README, the owning docs, `docsManifest.ts`, and `tests/test_docs_links.py` synchronized in the same change
+- every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required"
+- slices that change architecture, release posture, operator wording, API meaning, or documentation authority must keep README, the owning docs, `docsManifest.ts`, and `tests/test_docs_links.py` synchronized in the same change
 - slice close-out should explicitly report tests run, docs updated, and docs reviewed unchanged for the touched scope
 
 The architecture-library remains the authoritative detailed documentation surface until the V8 library replaces the remaining V7 migration inputs.

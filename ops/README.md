@@ -19,6 +19,7 @@
 - Compatibility probe only: `uvx --from invoke inv -l`.
 - Do not use bare `uvx inv ...`.
 - App-tied management logic stays in Python task modules; PowerShell is wrapper-only when the host needs it.
+- Task, runtime, or validation changes are not complete until the matching docs are reviewed and updated in the same slice.
 
 ## Components
 This directory contains the logic for the **Service Release Standard 1.0**.
@@ -197,6 +198,7 @@ Delivery-focused validation, runner checks, and release preflight.
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
 - GitHub validation workflows should keep dependency/bootstrap steps workflow-native (`actions/setup-*`, `npm ci`, Playwright browser install), then hand real build/test execution back to the same `uv run inv ...` task surfaces so local and CI validation stay aligned
 - Push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens; use local `uv run inv ...` proof plus PR/manual workflow runs as the active validation path
+- Delivery reporting should include the commands run plus the docs changed and the touched docs reviewed unchanged.
 
 ### `misc.py` (Team Coordination)
 Central architect sync path and utility task surfaces.
@@ -208,3 +210,4 @@ Central architect sync path and utility task surfaces.
 - **Never tag `latest`** for production.
 - **Always pinning** dependencies in `charts/`.
 - **Prefer repo-managed caches** under `workspace/tool-cache` for Invoke-driven work so local validation does not silently refill `C:`.
+- **Do not land implementation drift against the docs stack.** Review and update README, state, testing/ops docs, API reference, and owning canonical or user docs whenever the slice changes their meaning.

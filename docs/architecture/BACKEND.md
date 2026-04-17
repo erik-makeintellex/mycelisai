@@ -591,11 +591,25 @@ type Proof struct {
 
 **`log_entries`** (Migration 001) — id, team_id, event, content (JSONB), created_at
 
-**`sitreps`** (Migration 008) — id, team_id FK, period_start, period_end, content (TEXT), context_vectors (vector(768)), created_at
+**`context_vectors`** (Migration 008) — shared pgvector semantic recall substrate for scoped durable memory, governed deployment context, promoted reflection, and SitRep/conversation embeddings
 
-**`working_memory`** (Migration 008) — id, team_id FK, context, created_at, expires_at (TTL)
+**`sitreps`** (Migration 008) — id, team_id FK, period_start, period_end, content (TEXT), created_at; summarized warm-history artifacts that can also be semantically indexed
 
-**`agent_state`** (Migration 018) — agent_id (TEXT), key, value, mission_id FK (CASCADE), expires_at (TTL), PK(agent_id, key)
+**`working_memory`** (Migration 008) — legacy short-lived working context with TTL semantics
+
+**`agent_state`** (Migration 018) — legacy mission-scoped agent key/value state with optional TTL
+
+**`agent_memories`** (Migration 019) — scoped durable fact/preference/goal memory with team/agent/run/visibility metadata
+
+**`conversation_summaries`** (Migration 021) — durable summarized continuity records with semantic linkage back into shared recall
+
+**`temp_memory_channels`** (Migration 033) — restart-safe temporary continuity checkpoints for lead/team working state
+
+Trusted memory posture:
+- `SOMA_MEMORY` is Soma personal durable continuity
+- `AGENT_MEMORY` is the canonical team-shared execution lane
+- governed context (`customer_context`, `company_knowledge`, `user_private_context`, `soma_operating_context`) and promoted `reflection_synthesis` stay distinct from ordinary chat memory
+- `LearningCandidate` in Managed Exchange is the candidate-first boundary before durable promotion
 
 #### Output
 
@@ -633,6 +647,9 @@ type Proof struct {
 | 018 | Artifacts + agent state |
 | 019 | Agent memory extensions |
 | 020 | service_manifests → teams FK cascade fix |
+| 021 | Conversation summaries + semantic continuity linkage |
+| 033 | Restart-safe temporary continuity channels |
+| 035 | Managed exchange fields/schemas/channels including `LearningCandidate` |
 
 ---
 

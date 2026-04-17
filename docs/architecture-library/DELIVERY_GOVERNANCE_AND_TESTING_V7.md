@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-03-09
+> Last Updated: 2026-04-17
 > Scope: Delivery slices, evidence requirements, documentation discipline, and product-aligned testing.
 
 Related:
@@ -12,6 +12,7 @@ Related:
 - [Execution And Manifest Library V7](EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
 - [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
 - [UI And Operator Experience V7](UI_AND_OPERATOR_EXPERIENCE_V7.md)
+- [V8 Trusted Memory Arbitration And Team Vector Contract](V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md)
 
 Supporting specialized docs:
 - [Testing](../TESTING.md)
@@ -59,6 +60,10 @@ Minimum candidates:
 - `docs/README.md`
 - `interface/lib/docsManifest.ts` when the documentation should be visible in the in-app docs page
 - this architecture library when the change alters target, architecture, execution, UI, or delivery rules
+- `docs/API_REFERENCE.md` when API behavior or payload meaning changes
+
+Documentation review rule:
+- every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required"
 
 ## 3.1 Feature Status Markers
 
@@ -107,6 +112,13 @@ Prove:
 
 Prove:
 - blocked/degraded/retry/rollback behavior is safe and understandable
+
+### 4.6 Trusted memory tests
+
+When a slice changes memory posture, promotion rules, or recall precedence, prove:
+- candidate-first promotion behavior
+- precedence/arbitration behavior when memories conflict
+- operator-visible trust or governance outcomes for the changed path
 
 ## 5. UI-Specific Rule
 

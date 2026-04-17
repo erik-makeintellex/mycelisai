@@ -15,7 +15,7 @@ Current tabs:
 |-----|---------|
 | Connected Tools | Installed MCP servers and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
-| Deployment Context | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate vector-backed stores |
+| Deployment Context | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate governed context lanes |
 | Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
 | AI Engines | Global AI engine configuration and health |
 | Role Library | Reusable specialist-role definitions |
@@ -85,6 +85,8 @@ Operators should be able to answer "what entered the system, how trusted is it, 
 
 Deployment Context is the governed intake surface for private/user-owned content and deployment-shaping knowledge that should influence future Soma reasoning without being treated as ordinary Soma memory.
 
+It is not the same as team-shared execution memory. Team-shared continuity belongs in `AGENT_MEMORY`, while Deployment Context is for governed source material and promoted doctrine.
+
 Typical inputs:
 - private records or diary/journal notes the user explicitly wants Soma to use
 - finance, legal, health, household, or business references tied to target goal sets
@@ -97,7 +99,7 @@ Typical inputs:
 - reflection/synthesis observations such as distilled lessons, inferred patterns, contradictions, shifts in user trajectory, and meta-observations about what is changing over time
 
 Operational behavior:
-- every load creates a durable document artifact plus vector-backed chunks in the governed context store
+- every load creates a durable document artifact plus vector-backed chunks in governed context lanes within the shared recall substrate
 - each entry carries `knowledge_class`, visibility, sensitivity, trust, and provenance metadata
 - uploaded text files are read into the same governed intake contract as pasted content
 - `knowledge_class=user_private_context` is for private user-owned records, diary entries, finance notes, and other sensitive references; it defaults to private visibility, restricted sensitivity, and explicit goal-set metadata
@@ -105,6 +107,7 @@ Operational behavior:
 - `knowledge_class=company_knowledge` is for approved company-authored guidance only
 - `knowledge_class=soma_operating_context` is for root-admin or delegated-owner guidance that shapes shared Soma behavior across users
 - `knowledge_class=reflection_synthesis` is the promotion target for distilled lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations; agent-driven reflection should start as a Managed Exchange `LearningCandidate` with classification, confidence, and review posture before it is promoted
+- team-shared execution memory should stay in scoped `AGENT_MEMORY`; loading a document here does not make it team memory by default
 - promotion from customer context into company knowledge should happen through a governed approval path with lineage preserved, not by rewriting the original entry in place
 - Soma operating context is stricter than ordinary deployment intake: it is normalized into admin guidance, stays globally scoped, and is intended for durable shared output/identity/stance shaping rather than personal chat preferences
 - reflection/synthesis context is separate from Soma memory and from user-private/customer/company lanes so Soma can reason about what is changing over time without mixing those meta-observations into raw source material

@@ -196,8 +196,9 @@ MYCELIS_PROFILE_CODER_PROVIDER=vllm
 Mycelis uses `nomic-embed-text` (768 dimensions) for semantic vector operations:
 
 - **Archivist auto-embed:** SitReps → `context_vectors` table (pgvector, cosine distance)
-- **Memory tools:** `remember` stores both RDBMS record + vector embedding; `recall` searches both using team-aware scope when execution context provides it
-- **Promotion boundary:** automatic planning continuity is kept in temporary continuity channels; only deliberate durable memory promotion should enter pgvector-backed recall
+- **Memory tools:** `remember` writes scoped durable memory records and recall metadata, while semantic search surfaces candidate memories across Soma/team/governed lanes using scope-aware retrieval
+- **Trusted recall boundary:** semantic relevance is not final authority by itself; governed doctrine and deterministic evidence outrank lower-order recalled memory when they conflict
+- **Promotion boundary:** automatic planning continuity stays in temporary continuity channels; durable lessons and reflection should cross the `LearningCandidate` boundary before governed promotion into long-term recall
 - **Fallback chain:** `Router.Embed()` tries each provider that implements `EmbedProvider`
 
 ## Hardware Grading

@@ -64,17 +64,17 @@ Built-in tools available to agents without external MCP servers:
 | :--- | :--- | :--- |
 | `consult_council` | NATS request-reply to a council member (30s timeout) | Admin |
 | `delegate_task` | Publish task to a team's trigger topic | Admin |
-| `search_memory` | Semantic search over durable memory with optional team/agent scope | Admin, Council |
+| `search_memory` | Semantic search over scoped durable memory across Soma, team, and governed context lanes | Admin, Council |
 | `list_teams` | Active team roster with member counts | Admin |
 | `list_missions` | Active missions from DB | Admin |
 | `get_system_status` | Goroutines, heap, LLM tokens/sec | Admin |
 | `list_available_tools` | All internal + MCP tools | Admin, Council |
 | `generate_blueprint` | Meta-Architect intent → blueprint | Architect |
 | `list_catalogue` | Agent catalogue templates | Architect, Admin |
-| `remember` | Store fact/preference/goal (RDBMS + vector) | All |
-| `recall` | Semantic + keyword recall of stored memories | All |
+| `remember` | Store scoped fact/preference/goal memory through the trusted-memory path | All |
+| `recall` | Recall stored memories, with semantic relevance treated as candidate input rather than automatic authority | All |
 | `store_artifact` | Persist code/doc/data artifact | All |
-| `publish_exchange_item` | Publish structured governed outputs or classified learning candidates into Managed Exchange | Soma, Team Leads |
+| `publish_exchange_item` | Publish structured governed outputs or classified `LearningCandidate` items into Managed Exchange before durable promotion | Soma, Team Leads |
 | `publish_signal` | Publish to any NATS topic | All |
 | `read_signals` | Subscribe and collect NATS messages | All |
 | `read_file` | Read local filesystem (32KB max) | All |
@@ -85,6 +85,12 @@ Built-in tools available to agents without external MCP servers:
 | `local_command` | Execute allowlisted local host commands (no shell interpolation) | Admin |
 
 The `CompositeToolExecutor` wraps both `InternalToolRegistry` and `mcp.ToolExecutorAdapter` behind a single `MCPToolExecutor` interface — internal tools are tried first, MCP falls back.
+
+Current memory/governance posture:
+- `AGENT_MEMORY` is the canonical team-shared execution lane
+- governed deployment context and promoted reflection remain separate from ordinary Soma memory
+- `publish_exchange_item` with `LearningCandidate` is the candidate-first boundary before durable memory promotion
+- trusted recall should yield to deterministic evidence and governed doctrine when they conflict with lower-order memory
 
 ### MCP Intent Translation Contract
 

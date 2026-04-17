@@ -280,7 +280,7 @@ In V8.1, pgvector is not just action storage. It is the semantic continuity subs
 
 Explicit memory layers:
 - `SOMA_MEMORY`: Soma-owned continuity and reviewed orchestrator facts
-- `AGENT_MEMORY`: team/agent-scoped specialist memory
+- `AGENT_MEMORY`: team-shared and specialist-shared execution memory
 - `PROJECT_MEMORY`: governed source context such as user-private records, customer context, and company knowledge
 - `REFLECTION_MEMORY`: synthesized lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations that begin as exchange candidates before promotion
 
@@ -299,7 +299,14 @@ Explicit memory layers:
 - promotion never happens through silent self-rewrite
 - interaction never promotes directly into durable memory without classification, confidence, and review posture
 - reviewed and promoted memory must preserve lineage back to raw evidence
+- recalled memory must be resolved through scope, trust, and precedence rather than similarity alone
 - promoted memory may inform continuity and retrieval, but it does not replace Response Contract, AI Engine Settings, or Runtime Capabilities
+
+Required retrieval posture:
+- `AGENT_MEMORY` is the canonical team-shared vector lane
+- Soma may read allowed team-shared memory without flattening it into organization-wide doctrine
+- governed organization memory should outrank team-shared or personal memory when they conflict
+- deterministic logs, turns, and artifacts remain higher-order evidence than recalled summaries
 
 ### 5.6 Procedure / Skill Sets
 

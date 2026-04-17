@@ -1,8 +1,6 @@
 # Governance & Policy System
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
-> 🔙 **Navigation**: [Back to README](../README.md)
-
 This document describes the current release governance model, not just the older router-guard pattern.
 
 ## Current Release Truth
@@ -32,6 +30,7 @@ This governance model also applies to durable context loading:
 - customer-provided deployment material belongs in the separate `customer_context` pgvector lane
 - approved company-authored guidance belongs in `company_knowledge`
 - admin-authored shared Soma guidance belongs in `soma_operating_context`
+- team-shared execution memory belongs in scoped `AGENT_MEMORY`; it is not implicit organization doctrine
 - distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations start as classified Managed Exchange `LearningCandidate` items, then promote into `reflection_synthesis` only after confidence and review posture are explicit
 - external research loaded into either lane must stay explicitly classified by source kind, trust class, and sensitivity posture
 
@@ -42,6 +41,12 @@ Current release boundary note:
 - future enterprise identity should support federation and local break-glass admins without bypassing governance or audit
 - future shared-Soma governance must also distinguish admin-shaped organization-level Soma context from ordinary user interaction context
 - future shared-Soma governance must reserve durable agent/output-specificity assignment to the root admin or explicitly delegated environment owner rather than letting ordinary user chats redefine shared behavior
+
+Trusted memory rule:
+- recalled memory is a candidate input, not automatic truth
+- deterministic logs, turns, artifacts, and approved governed doctrine outrank lower-order recalled memory
+- team-shared memory may guide execution inside team scope, but it must not silently override newer organization doctrine
+- Soma personal continuity may shape local style and relationship memory, but it must not outrank governed policy or verified evidence
 
 The normal operator-facing outcomes are:
 - `answer`
@@ -69,6 +74,11 @@ Current release posture:
 - `soma_operating_context` loading is stricter again because it can shape shared Soma identity, stance, and output specificity across users
 - `reflection_synthesis` loading is also treated as high-risk because it can encode sensitive meta-observations about user trajectory, contradictions, and changing work patterns
 - Managed Exchange learning-candidate capture is not the same as memory mutation; promotion from a candidate into durable memory remains the stricter governed step
+
+When conflict is detected:
+- factual or event-history conflicts should defer to deterministic evidence
+- policy or shared-behavior conflicts should defer to governed organization memory
+- lower-order recalled memory should halt mutation and raise review or proposal instead of silently winning
 
 ## Audit Model
 
@@ -104,5 +114,6 @@ Related references:
 - `docs/user/governance-trust.md`
 - `docs/licensing.md`
 - `docs/architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md`
+- `docs/architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`

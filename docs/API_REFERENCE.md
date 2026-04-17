@@ -45,8 +45,8 @@
 | `/api/v1/trust/threshold` | GET/PUT | Read/write autonomy threshold |
 | `/api/v1/sensors` | GET | Sensor library (static + dynamic) |
 | **Memory & Search** | | |
-| `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters |
-| `/api/v1/memory/deployment-context` | GET/POST | List or load governed user/private content, deployment knowledge, admin-owned Soma context, and reflection/synthesis observations into separate `user_private_context`, `customer_context`, `company_knowledge`, `soma_operating_context`, and `reflection_synthesis` pgvector stores; POST supports text content plus metadata such as `content_domain` and `target_goal_sets` |
+| `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters across Soma-personal, team-shared, and governed memory lanes |
+| `/api/v1/memory/deployment-context` | GET/POST | List or load governed user/private content, deployment knowledge, admin-owned Soma context, and reflection/synthesis observations into separate `user_private_context`, `customer_context`, `company_knowledge`, `soma_operating_context`, and `reflection_synthesis` pgvector stores; POST supports text content plus metadata such as `content_domain` and `target_goal_sets`. This is governed source/doctrine intake, not implicit team-shared `AGENT_MEMORY`. |
 | `/api/v1/memory/sitreps` | GET | Recent SitReps (filterable by team) |
 | `/api/v1/memory/stream` | GET | Live memory/log stream (polling) |
 | `/api/v1/memory/sitrep` | POST | Trigger SitRep generation |
@@ -54,7 +54,7 @@
 | `/api/v1/exchange/fields` | GET | List exchange field definitions, including learning-candidate fields such as `classification`, `memory_layer`, `confidence`, `review_required`, `promotion_target`, and `evidence_refs` |
 | `/api/v1/exchange/schemas` | GET | List exchange schemas, including `LearningCandidate` for classified reflection/learning candidates before memory promotion |
 | `/api/v1/exchange/channels` | GET | List governed exchange channels such as `organization.learning.candidates` |
-| `/api/v1/exchange/items` | GET/POST | List or publish structured exchange items; `LearningCandidate` items are the candidate-first boundary before reflection memory promotion |
+| `/api/v1/exchange/items` | GET/POST | List or publish structured exchange items; `LearningCandidate` items are the candidate-first boundary before reflection, team, or governed durable-memory promotion |
 | **Governance & Proposals** | | |
 | `/api/v1/proposals` | GET/POST | Team manifestation proposals |
 | `/api/v1/proposals/{id}/approve` | POST | Approve proposal |
@@ -138,6 +138,11 @@
 | `/api/v1/context/snapshots/{id}` | GET | Full snapshot including messages array |
 | **Service Health** | | |
 | `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Comms, Group Bus monitor |
+
+Memory/governance note:
+- `AGENT_MEMORY` is the canonical team-shared execution lane
+- governed context intake is separate from ordinary Soma memory and separate from team-shared memory
+- reflection and synthesized learning should enter through `LearningCandidate` before durable promotion
 | **Host Actions (Local Command V0)** | | |
 | `/api/v1/host/status` | GET | Local host actuation status (OS/arch/workspace + effective local command allowlist) |
 | `/api/v1/host/actions` | GET | List host actions available for invocation (currently `local-command`) |

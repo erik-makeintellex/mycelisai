@@ -68,10 +68,10 @@ We do not build "software." We build **Synthetic Biology**. The system is a Latt
 - **Kubernetes (Kind 1.33)** for container orchestration, production-ready Helm charts
 - **Cognitive Registry:** Dual-source config (YAML base + DB overlay + env overrides) maps system roles (admin, architect, coder, creative, sentry, chat) to LLM provider endpoints
 - **Hippocampus (Hybrid Memory):**
-  - *Entity Store (Postgres):* Relational facts — users, missions, teams, manifests, artifacts (14+ tables, 21 migrations)
-  - *Episodic Store (pgvector):* Semantic wisdom — SitReps auto-embedded via nomic-embed-text (768-dim), cosine distance search
-  - *Working Memory:* Short-lived team context with TTL expiry
-  - *Agent State:* Key-value per agent, mission-scoped, optional TTL
+  - *Entity Store (Postgres):* relational truth — users, missions, teams, manifests, artifacts, exchange items, logs, and governed memory metadata
+  - *Semantic Recall Substrate (pgvector):* shared vector storage for `SOMA_MEMORY`, `AGENT_MEMORY`, governed project context, and promoted reflection
+  - *Temporary Continuity:* short-horizon team and lead checkpoints with TTL expiry
+  - *Governed Memory Promotion:* `LearningCandidate` exchange items, reviewed promotion, and trusted recall precedence rather than silent self-rewrite
 
 ### Layer 1: The Nervous System (Communication)
 
@@ -186,16 +186,16 @@ Execution authority:
 - `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
 - `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
 
-### Phase 12: Persistent Agent Memory & Long-Term Learning
+### Phase 12: Trusted Memory Control Plane & Long-Term Learning
 
-**Objective:** Give agents durable, cross-mission memory so they accumulate expertise over time.
+**Objective:** Turn durable memory from a loose metadata convention into a trusted control plane for Soma, teams, and governed doctrine.
 
-- **Agent Memory Store:** Extend `agent_state` table with mission-agnostic keys (no FK to missions). Agents can `remember` facts that persist across mission boundaries.
-- **Semantic Agent Memory:** Auto-embed agent observations into pgvector with agent-scoped namespace. Agents can `recall` by semantic similarity, not just exact key.
-- **Memory Consolidation Daemon:** Periodic background process that merges short-term agent_state entries into long-term sitreps using LLM compression (same Archivist pattern).
-- **Cross-Mission Context Injection:** When an agent spawns, `BuildContext()` queries its past memory store and injects relevant prior observations into the system prompt.
-- **Memory Decay / Pruning:** TTL-based expiry for low-value memories. High-trust observations persist longer. Governance rules can protect critical memories from pruning.
-- **Frontend:** Memory Explorer (`/memory`) enhanced with per-agent memory timeline, search-by-agent, and memory health indicators.
+- **Scoped Memory Lanes:** keep `SOMA_MEMORY` as Soma personal continuity, `AGENT_MEMORY` as the canonical team-shared execution lane, and governed context/reflection as separate promotion lanes
+- **Candidate-First Learning:** route durable lessons, contradictions, and repeated patterns through `LearningCandidate` before promotion
+- **Trusted Recall:** semantic similarity surfaces candidate memories, but deterministic evidence and governed doctrine outrank lower-order recall when conflicts appear
+- **Memory Control Plane:** add first-class records for anchors, verification state, supersession, and bounded growth above the shared vector substrate
+- **Compaction / Pruning:** add dedupe, supersession, and evidence-aware expiry so long-term recall stays useful instead of becoming a transcript landfill
+- **Frontend:** keep `/memory` as the operator recall surface while exposing layer, trust, and precedence posture more clearly over time
 
 ### Phase 13: Real-Time Agent Collaboration (Multi-Agent Chat)
 

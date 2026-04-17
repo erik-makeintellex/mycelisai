@@ -1214,6 +1214,42 @@ def test_v8_dev_state_declares_architecture_synchronization_rule():
     )
 
 
+def test_active_docs_require_docs_review_as_part_of_slice_completion():
+    required_snippets = {
+        ROOT / "AGENTS.md": [
+            "Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, or canonical terminology must include a documentation review in the same slice.",
+            "When API behavior or payload meaning changes, review `docs/API_REFERENCE.md` in the same slice.",
+        ],
+        README: [
+            "every implementation slice must include a docs review for the touched surface, even when the result is \"reviewed, no content change required\"",
+            "`docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes",
+        ],
+        ROOT / "docs" / "TESTING.md": [
+            "feature work is also not done until the touched docs are reviewed and updated where meaning changed",
+            "end-of-slice reporting should name both the evidence commands run and the docs updated or reviewed unchanged for the touched scope",
+        ],
+        ROOT / "docs" / "architecture" / "OPERATIONS.md": [
+            "Implementation slices that change runtime, tasking, validation, API meaning, or operator behavior must review and update the owning docs in the same change rather than leaving docs drift for later cleanup.",
+        ],
+        ROOT / "ops" / "README.md": [
+            "Task, runtime, or validation changes are not complete until the matching docs are reviewed and updated in the same slice.",
+            "Delivery reporting should include the commands run plus the docs changed and the touched docs reviewed unchanged.",
+        ],
+    }
+
+    missing: list[str] = []
+    for path, snippets in required_snippets.items():
+        text = path.read_text(encoding="utf-8")
+        for snippet in snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, (
+        "Active docs are missing the docs-review/update contract for implementation slices:\n"
+        + "\n".join(missing)
+    )
+
+
 def test_v8_2_declares_development_alignment():
     text = V8_2_FULL_ARCHITECTURE.read_text(encoding="utf-8")
 

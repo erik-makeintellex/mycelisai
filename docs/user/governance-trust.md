@@ -35,6 +35,7 @@ That profile is read when Soma plans work, chooses an execution path, and decide
 This same model also applies to governed deployment knowledge:
 - loading customer-provided deployment material into the separate context store is a governed action
 - loading approved company-authored knowledge is stricter than loading customer context
+- team-shared execution memory belongs in scoped `AGENT_MEMORY`; loading a governed document does not silently make it team memory
 - external/web research used as future context should stay explicitly classified and reviewable
 
 ## Capability Risk
@@ -54,7 +55,23 @@ Examples:
 - load customer deployment brief into `customer_context` -> governed, medium-risk by default
 - load private user diary/finance/record material into `user_private_context` -> governed, high-risk by default, private/restricted unless explicitly scoped otherwise
 - load approved company-authored rollout playbook into `company_knowledge` -> governed, higher-risk and more likely to require approval
+- promote a distilled pattern or contradiction into `reflection_synthesis` -> governed and review-shaped rather than a casual memory write
 - web-fed research promoted into durable context -> governed and shaped by external-data rules
+
+## Trusted Memory Posture
+
+Recalled memory is not automatic truth.
+
+The intended precedence is:
+1. deterministic logs, turns, artifacts, and explicit execution evidence
+2. governed organization memory such as `company_knowledge`, `soma_operating_context`, and approved `reflection_synthesis`
+3. scoped team-shared `AGENT_MEMORY`
+4. Soma personal `SOMA_MEMORY`
+
+That means:
+- team-shared memory can guide execution inside its scope
+- Soma may read team memory without turning it into organization doctrine
+- lower-order recalled memory should not silently override newer governed policy or verified evidence
 
 ## Reviewing Proposals
 
@@ -107,5 +124,7 @@ What is still future work:
 Related references:
 - `docs/governance.md`
 - `docs/licensing.md`
+- `docs/architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md`
+- `docs/architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
 - `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`

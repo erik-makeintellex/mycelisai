@@ -49,6 +49,7 @@ Lifecycle tasks must not report success until Core `/healthz` is actually ready;
 Background Core startup must write to `workspace/logs/core-startup.log` so lifecycle failures have a deterministic diagnostic surface.
 Lifecycle teardown must use bounded cleanup subprocesses, sweep repo-local Interface worker residue, and wait for ports to close before reporting success.
 Interface-focused Invoke and CI tasks must execute from the `interface/` working directory and reuse the same `npm`/`node` entrypoints on Windows and Linux rather than depending on host-shell `cd ... &&` wrappers.
+Implementation slices that change runtime, tasking, validation, API meaning, or operator behavior must review and update the owning docs in the same change rather than leaving docs drift for later cleanup.
 
 > **Tip:** After activating the project virtualenv yourself, `inv` can still be used as a convenience, but the canonical repo contract remains `uv run inv ...`.
 

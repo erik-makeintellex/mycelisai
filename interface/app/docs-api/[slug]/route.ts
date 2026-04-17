@@ -16,8 +16,8 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
-import path from "path";
 import { DOC_BY_SLUG } from "@/lib/docsManifest";
+import { resolveDocFilePath } from "@/lib/docsPathResolver";
 
 export async function GET(
     _req: NextRequest,
@@ -30,11 +30,8 @@ export async function GET(
         return NextResponse.json({ error: `Unknown doc slug: ${slug}` }, { status: 404 });
     }
 
-    // process.cwd() is the `interface/` directory when running `next dev`.
-    // The docs live one level up in the scratch/ project root.
-    const filePath = path.join(process.cwd(), "..", entry.path);
-
     try {
+        const filePath = resolveDocFilePath(entry.path);
         const content = await readFile(filePath, "utf-8");
         return NextResponse.json({ slug, label: entry.label, content });
     } catch (err) {

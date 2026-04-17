@@ -5,6 +5,7 @@ Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, fronten
 
 Current validation contract:
 - feature work is not done until the relevant tests are rerun against the final branch state
+- feature work is also not done until the touched docs are reviewed and updated where meaning changed
 - `uv run inv ci.baseline` is the default branch-readiness gate and now includes Playwright by default
 - use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
 - use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses the `cortex` schema only when it is already compatible with the current runtime, and otherwise bootstraps the database before proving the browser contract against the managed built server / built production server path
@@ -23,6 +24,7 @@ Current validation contract:
 - when repeated local builds or browser runs are filling the repo/cache volume, use `uv run inv cache.guard` to fail fast before another large build expands `.next`, Playwright browsers, or tool caches; remember that Docker daemon / WSL image-layer storage is a separate disk budget
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
+- end-of-slice reporting should name both the evidence commands run and the docs updated or reviewed unchanged for the touched scope
 - team-creation and orchestration changes must prove the compact-default rule: small teams by default, broad asks split into several smaller lanes, and the coordination path remains visible through Soma/Council/NATS rather than being hidden in a giant roster
 
 Canonical full-gate references:

@@ -7,7 +7,7 @@
 
 ## Overview
 
-The **Memory** page (`/memory`) is available in Advanced mode and provides a unified view of the system's three-tier memory architecture:
+The **Memory** page (`/memory`) is available in Advanced mode and provides a unified view of the system's three storage temperatures:
 
 ```
 HOT   → Live signal stream (real-time events, last N minutes)
@@ -15,7 +15,9 @@ WARM  → Structured logs, SitReps, artifacts (recent history)
 COLD  → Semantic vector store (long-term, searchable by meaning)
 ```
 
-All three tiers are populated automatically as agents work. You can also intentionally load governed private records, customer/deployment knowledge, approved company guidance, admin-shaped Soma operating context, and reflection/synthesis observations through **Resources → Deployment Context** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
+All three tiers are populated automatically as agents work. They are separate from the memory-layer model below, and the HOT/WARM/COLD temperature view is operational storage posture rather than the governing authority model.
+
+You can also intentionally load governed private records, customer/deployment knowledge, approved company guidance, admin-shaped Soma operating context, and reflection/synthesis observations through **Resources → Deployment Context** so Soma has durable goal-relevant context to reuse later without mixing it into ordinary remembered facts.
 
 ---
 
@@ -24,7 +26,7 @@ All three tiers are populated automatically as agents work. You can also intenti
 Mycelis now treats memory as several different classes with different purposes:
 
 - **`SOMA_MEMORY`**: Soma-owned continuity and reviewed orchestrator facts. Admin-shaped Soma behavior belongs in the governed `soma_operating_context` sublane, not casual chat memory.
-- **`AGENT_MEMORY`**: team/agent-scoped specialist continuity, decisions, and role-specific execution lessons.
+- **`AGENT_MEMORY`**: team-shared and specialist-shared continuity, decisions, and execution lessons. This is the canonical lane for team-shared vector memory.
 - **`PROJECT_MEMORY`**: governed source context for work, including `user_private_context`, `customer_context`, and `company_knowledge`.
 - **`REFLECTION_MEMORY`**: distilled lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations. Reflection starts as a Managed Exchange `LearningCandidate` before promotion into `reflection_synthesis`.
 - **Durable semantic memory**: reusable facts, decisions, SitReps, recipes, and intentionally promoted summaries. This is the pgvector-backed recall substrate.
@@ -34,6 +36,11 @@ Mycelis now treats memory as several different classes with different purposes:
 - **Reflection / synthesis memory**: distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations about what is changing over time. This is stored as `reflection_synthesis`, private/restricted by default, and should not be treated as raw transcript or customer content.
 - **Temporary continuity**: restart-safe planning checkpoints and in-flight working context. This stays in temporary memory channels and does **not** automatically become long-term semantic memory.
 - **Trace and audit**: conversation turns, mission events, and operational review logs used for causality, inspection, and governance. These are review surfaces, not default semantic memory.
+
+Important distinction:
+- `SOMA_MEMORY` is Soma's personal durable continuity
+- `AGENT_MEMORY` is shared team execution memory
+- governed organization doctrine belongs in `company_knowledge`, `soma_operating_context`, and approved `reflection_synthesis`, not in ordinary chat memory
 
 Rule of thumb:
 
@@ -79,6 +86,23 @@ Governed deployment knowledge is stored under dedicated vector types:
 - `reflection_synthesis` for lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations that Soma should retain as synthesis rather than transcript
 
 That lets Soma, Council, and teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed.
+
+## Trusted Recall
+
+Semantic search finds relevant memories by meaning. It does not decide final authority by itself.
+
+When multiple memories disagree, the intended precedence is:
+1. deterministic logs, turns, artifacts, and explicit run evidence
+2. governed organization memory such as `company_knowledge`, `soma_operating_context`, and approved `reflection_synthesis`
+3. team-shared `AGENT_MEMORY`
+4. Soma personal `SOMA_MEMORY`
+5. temporary continuity and unreviewed candidates
+
+That means:
+- team-shared memory can guide team execution
+- Soma can read team memory without turning it into global doctrine
+- personal continuity can shape style and relationship memory
+- lower-order recalled memory should not silently override newer governed policy or verified evidence
 
 ---
 
@@ -183,4 +207,5 @@ Important boundary:
 
 Architecture reference:
 - [V8 Memory Layer And Reflection Delivery Contract](../architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md)
+- [V8 Trusted Memory Arbitration And Team Vector Contract](../architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md)
 - [Workflow Variants And Plan Memory](workflow-variants-and-plan-memory.md)

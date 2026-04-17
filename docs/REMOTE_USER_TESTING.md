@@ -38,6 +38,11 @@ This runbook should prove the current shipped posture:
 - deployment-context loading into governed vector-backed stores
 - admin-visible output-model routing for team delivery types
 - MCP visibility and recent persisted tool activity
+
+Trusted memory boundary:
+- governed doctrine and deterministic evidence outrank team-shared `AGENT_MEMORY`
+- team-shared `AGENT_MEMORY` outranks Soma personal continuity for team execution
+- Soma personal continuity may still shape local style or relationship preference inside scope
 - optional governed external/web research when the environment has that path enabled
 - the same user journey must also work from a Windows browser against a self-hosted runtime while the AI engine runs on a Windows GPU host addressed by explicit IP or hostname
 
@@ -341,6 +346,7 @@ Expected outcome:
 - the entry is accepted as governed context
 - it appears in recent Deployment Context history
 - the UI makes clear this is governed context, not ordinary Soma memory
+- it is also clear that loading governed context does not silently create team-shared `AGENT_MEMORY`
 - private context shows private/restricted posture and target-goal metadata when provided
 - reflection/synthesis context shows a synthesis-oriented source kind such as `lesson`, `inferred_pattern`, `contradiction`, `trajectory_shift`, or `meta_observation`
 - it is clear that this context can support Soma and team leads without becoming ungoverned shared chat history

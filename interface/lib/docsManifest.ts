@@ -101,13 +101,13 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "memory-guide",
                 label: "Memory",
                 path: "docs/user/memory.md",
-                description: "Semantic search, retained knowledge, private/deployment/reflection context, and continuity rules",
+                description: "Trusted recall, `SOMA_MEMORY` and `AGENT_MEMORY`, governed context lanes, and continuity rules",
             },
             {
                 slug: "governance-trust",
                 label: "Governance & Trust",
                 path: "docs/user/governance-trust.md",
-                description: "Approval posture, risk classes, audit visibility, and operator control",
+                description: "Approval posture, risk classes, audit visibility, and trusted-memory precedence for operator control",
             },
             {
                 slug: "licensing-editions",
@@ -314,6 +314,12 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "V8 Memory Layer + Reflection",
                 path: "docs/architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md",
                 description: "Explicit Soma/agent/project/reflection memory layers, candidate-first reflection, and promotion guardrails",
+            },
+            {
+                slug: "v8-trusted-memory-arbitration-team-vector-contract",
+                label: "V8 Trusted Memory Arbitration",
+                path: "docs/architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md",
+                description: "Trusted memory control plane for Soma continuity, team-shared vector memory, governed doctrine, and anchored arbitration",
             },
             {
                 slug: "v8-home-docker-compose-runtime",

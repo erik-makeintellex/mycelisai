@@ -40,6 +40,8 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - **V8.1 Living Organization Architecture**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
+- **V8 Memory Layer + Reflection Contract**: `./architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md`
+- **V8 Trusted Memory Arbitration Contract**: `./architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
 - **V8 Teamed Agentry Workflow Advantage**: `./architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md`
 - **V8 Workflow Variants And Reboot Proof Set**: `./architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md`
 - **V8 Universal Soma And Context Model PRD**: `./architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`
@@ -59,6 +61,7 @@ Use these when the goal is product packaging, edition posture, or the paid-vs-se
 - **Governance System**: `./governance.md`
 - **Governance & Trust**: `./user/governance-trust.md`
 - **V8 Multi-User Identity + Soma Tenancy**: `./architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md`
+- **V8 Trusted Memory Arbitration Contract**: `./architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
 
 ## Testing and Release Guidance
 
@@ -112,3 +115,4 @@ Guidance rules:
 - agent/developer guidance should point to active V8 authority before V7 migration material
 - testing guidance should point to durable verification contracts rather than temporary execution notes
 - `./archive/README.md` is historical context only and should not drive active implementation
+- any slice that changes runtime, validation, API meaning, or memory/governance posture must review and update the matching docs set in the same change, including the trusted-memory contract when that posture is touched

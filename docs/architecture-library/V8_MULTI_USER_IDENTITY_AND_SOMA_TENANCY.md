@@ -155,7 +155,9 @@ Soma must have access to the memory and knowledge layers required to produce the
 
 Those layers remain distinct:
 - Soma memory
-  - remembered facts, continuity, summaries, and operating memory
+  - Soma personal continuity, remembered facts, summaries, and operating memory
+- Team-shared execution memory
+  - scoped team continuity, execution lessons, and shared working context that Soma may read when leading or supervising that team
 - User-private context
   - user-uploaded or pasted records, diary notes, finance/legal/health references, and other sensitive material loaded into governed `user_private_context` for explicit target goal sets
 - Customer context
@@ -170,11 +172,13 @@ Those layers remain distinct:
 Multi-user implications:
 - access to those stores must be policy-scoped by user, role, team, and sensitivity
 - Soma may retrieve from the right store for the current interaction, but should not bypass visibility and sensitivity policy
+- team-shared memory must remain team-scoped until deliberately promoted; it is not implicit global culture
 - private user interactions may contribute to continuity or audit only according to explicit policy, not silent global sharing
 - private user context should remain private/restricted by default and should not become company knowledge or shared Soma identity without explicit governed promotion
 - promotion into durable shared knowledge must remain approval-backed and lineage-preserving
 - admin-shaped Soma context should be writable only through explicitly governed admin paths, not through ordinary user chat
 - reflection/synthesis entries should preserve sensitivity boundaries because they may describe user trajectory or contradictions even when the raw source material is not included
+- when memories conflict, governed organization doctrine and deterministic evidence should outrank team or Soma personal memory
 
 ## Governance And Audit Requirements
 
@@ -229,6 +233,7 @@ Required next target:
 - bind shared Soma identity to organization/environment ownership instead of ad hoc per-user assistant state
 - define an explicit admin-shaped Soma context layer instead of letting baseline behavior emerge from unclassified chat history
 - enforce scoped retrieval rules across Soma memory, user-private context, customer context, company knowledge, admin-shaped Soma context, and reflection/synthesis memory
+- add trusted memory arbitration, anchor verification, and team-shared memory posture so one shared Soma can use continuity without letting opaque private memory become sovereign
 
 ## Rollout Sequence
 
@@ -261,6 +266,7 @@ Current progress:
 5. Retrieval and RAG policy
    - enforce retrieval rules per store based on principal, scope, trust, and sensitivity
    - allow Soma to use the correct store for the current task without flattening all stores into one global semantic pool
+   - define precedence so deterministic evidence and governed doctrine outrank team-shared and Soma-personal memory when they conflict
 
 6. Enterprise identity adapters
    - add SAML/OIDC federation support
@@ -275,5 +281,6 @@ Related references:
 - [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md)
 - [V8 Universal Soma And Context Model PRD](V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md)
 - [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+- [V8 Trusted Memory Arbitration And Team Vector Contract](V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md)
 - [Governance System](../governance.md)
 - [Governance & Trust](../user/governance-trust.md)
