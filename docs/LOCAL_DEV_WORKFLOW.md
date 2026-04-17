@@ -298,7 +298,7 @@ Use this as the canonical resume path when active development moves to WSL/Linux
 5. Run `uv run inv install`.
 6. For personal-owner or data-plane-first validation, use `uv run inv compose.infra-up --wait-timeout=180`, `uv run inv compose.infra-health`, `uv run inv compose.migrate`, and `uv run inv compose.storage-health`.
 7. For the normal full-stack path, use `uv run inv compose.up --build --wait-timeout=240`, then `uv run inv compose.health`.
-8. Use `uv run inv ci.baseline`, `uv run inv ci.service-check --live-backend`, and `uv run inv ci.release-preflight --service-health --live-backend` as the canonical validation gate.
+8. Use `uv run inv ci.baseline`, `uv run inv ci.service-check --live-backend`, and `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` as the canonical validation gate; the runtime-posture step reads process env plus `.env.compose` / `.env` and fails closed when no explicit supported AI endpoint is configured.
 
 WSL/Linux notes:
 - treat `uv run inv ...` as the only normal execution path; raw `npx`, direct Playwright, and PowerShell wrappers are fallback troubleshooting paths only

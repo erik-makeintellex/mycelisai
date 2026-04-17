@@ -64,6 +64,15 @@ function classifyMissionChatFailure(message: string, statusCode?: number, availa
         return 'timeout';
     }
     if (
+        (statusCode != null && statusCode >= 500 && statusCode !== 502 && statusCode !== 503 && statusCode !== 504) ||
+        lower.includes('500') ||
+        lower.includes('internal server error') ||
+        lower.includes('internal error') ||
+        lower.includes('server error')
+    ) {
+        return 'server_error';
+    }
+    if (
         statusCode === 502 ||
         statusCode === 503 ||
         lower.includes('could not reach') ||
@@ -76,15 +85,6 @@ function classifyMissionChatFailure(message: string, statusCode?: number, availa
         lower.includes('offline')
     ) {
         return 'unreachable';
-    }
-    if (
-        (statusCode != null && statusCode >= 500) ||
-        lower.includes('500') ||
-        lower.includes('internal server error') ||
-        lower.includes('internal error') ||
-        lower.includes('server error')
-    ) {
-        return 'server_error';
     }
     return 'unknown';
 }
