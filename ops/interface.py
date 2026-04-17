@@ -1,4 +1,5 @@
 import csv
+import ipaddress
 import json
 import os
 import re
@@ -740,13 +741,32 @@ def _pick_interface_port(preferred: int = INTERFACE_PORT) -> int:
         return False
 
     def _port_is_available(port: int) -> bool:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ipv4_sock:
-            ipv4_sock.bind(("127.0.0.1", port))
-            with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_loopback_sock:
-                ipv6_loopback_sock.bind(("::1", port))
-                with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as ipv6_wildcard_sock:
-                    ipv6_wildcard_sock.bind(("::", port))
-                    return True
+        bind_host = (INTERFACE_BIND_HOST or "").strip()
+        probe_host = bind_host or "127.0.0.1"
+        family = socket.AF_INET
+        if probe_host == "localhost":
+            probe_host = "127.0.0.1"
+        else:
+            try:
+                parsed_host = ipaddress.ip_address(probe_host)
+            except ValueError:
+                if ":" in probe_host:
+                    family = socket.AF_INET6
+                else:
+                    probe_host = "127.0.0.1"
+            else:
+                if parsed_host.version == 6:
+                    family = socket.AF_INET6
+        with socket.socket(family, socket.SOCK_STREAM) as probe_sock:
+            if family == socket.AF_INET6:
+                with suppress(OSError, AttributeError):
+                    probe_sock.setsockopt(
+                        socket.IPPROTO_IPV6,
+                        socket.IPV6_V6ONLY,
+                        0 if probe_host == "::" else 1,
+                    )
+            probe_sock.bind((probe_host, port))
+            return True
 
     if preferred not in (0, 3000):
         try:

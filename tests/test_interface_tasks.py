@@ -1005,6 +1005,53 @@ def test_pick_interface_port_falls_back_when_preferred_port_is_busy(monkeypatch)
     assert interface._pick_interface_port(3000) == 3100
 
 
+def test_pick_interface_port_uses_ipv6_bind_host_without_dual_binding(monkeypatch):
+    occupied_ports: set[int] = set()
+    bind_calls: list[tuple[int, tuple[str, int]]] = []
+    sockopts: list[tuple[int, int, int]] = []
+
+    class FakeSocket:
+        def __init__(self, family, *args, **kwargs):
+            self.family = family
+            self.port = 43210
+
+        def setsockopt(self, level, option, value):
+            sockopts.append((level, option, value))
+
+        def settimeout(self, *args, **kwargs):
+            return None
+
+        def connect_ex(self, address):
+            return 0 if address[1] in occupied_ports else 111
+
+        def bind(self, address):
+            bind_calls.append((self.family, address))
+            if address[1] in occupied_ports:
+                raise OSError("address in use")
+            self.port = address[1] or 43210
+
+        def getsockname(self):
+            if self.family == interface.socket.AF_INET6:
+                return ("::", self.port)
+            return ("127.0.0.1", self.port)
+
+        def close(self):
+            return None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            self.close()
+
+    monkeypatch.setattr(interface, "INTERFACE_BIND_HOST", "::")
+    monkeypatch.setattr(interface.socket, "socket", lambda family, *args, **kwargs: FakeSocket(family))
+
+    assert interface._pick_interface_port(3000) == 3100
+    assert bind_calls == [(interface.socket.AF_INET6, ("::", 3100))]
+    assert sockopts == [(interface.socket.IPPROTO_IPV6, interface.socket.IPV6_V6ONLY, 0)]
+
+
 def test_wait_for_interface_ready_fails_when_managed_server_exits(monkeypatch):
     class FakeServer:
         @staticmethod

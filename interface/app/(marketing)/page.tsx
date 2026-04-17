@@ -107,11 +107,11 @@ export default function LandingPage() {
             <div className="absolute inset-x-0 top-0 -z-10 h-[36rem] bg-[radial-gradient(circle_at_top,rgba(75,78,109,0.16),transparent_56%)]" />
 
             <nav className="sticky top-0 z-50 border-b border-cortex-border bg-cortex-bg/90 backdrop-blur">
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-                    <Link href="/" className="flex items-center gap-3">
-                        <span className="h-3 w-3 rounded-full bg-cortex-primary shadow-[0_0_16px_rgba(75,78,109,0.36)]" />
-                        <span className="text-sm font-semibold uppercase tracking-[0.22em] text-cortex-text-main">Mycelis</span>
-                    </Link>
+                    <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-6">
+                        <Link href="/" className="flex items-center gap-3">
+                            <span className="h-3 w-3 rounded-full bg-cortex-primary shadow-[0_0_16px_rgba(75,78,109,0.36)]" />
+                            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-cortex-text-main sm:text-sm sm:tracking-[0.22em]">Mycelis</span>
+                        </Link>
                     <div className="hidden items-center gap-6 text-sm text-cortex-info md:flex">
                         <Link href="#structure" className="transition-colors hover:text-cortex-text-main">
                             Structure
@@ -131,9 +131,11 @@ export default function LandingPage() {
                     </div>
                     <Link
                         href="/dashboard"
-                        className="inline-flex items-center rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-4 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary hover:text-cortex-bg"
+                        aria-label="Create AI Organization"
+                        className="inline-flex items-center rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-3 py-2 text-xs font-medium text-cortex-primary transition-colors hover:bg-cortex-primary hover:text-cortex-bg sm:px-4 sm:text-sm"
                     >
-                        Create AI Organization
+                        <span className="sm:hidden">Create</span>
+                        <span className="hidden sm:inline">Create AI Organization</span>
                     </Link>
                 </div>
             </nav>
@@ -148,7 +150,7 @@ export default function LandingPage() {
                             </div>
 
                             <div className="space-y-5">
-                                <h1 className="max-w-4xl text-5xl font-semibold leading-tight tracking-tight text-cortex-text-main md:text-7xl">
+                                <h1 className="max-w-4xl text-4xl font-semibold leading-tight tracking-tight text-cortex-text-main sm:text-5xl md:text-7xl">
                                     Build AI Organizations that think, review, and evolve.
                                 </h1>
                                 <p className="max-w-2xl text-lg leading-8 text-cortex-text-muted md:text-xl">

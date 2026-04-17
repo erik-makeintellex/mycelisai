@@ -439,7 +439,7 @@ Use this shorter sequence when you are validating a fresh checkout on another ma
 1. Clone or update the repo on the second machine.
 2. Follow [Local Development Workflow](./LOCAL_DEV_WORKFLOW.md) for the host you are using.
 3. Start the supported runtime (`uv run inv compose.up --build` on WSL/Linux/macOS, or the supported self-hosted runtime path with an explicit non-loopback AI endpoint on Windows or another host).
-4. Run `uv run inv ci.release-preflight --service-health --live-backend`.
+4. Run `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend`.
 5. Run the remote walkthrough in this document from the second machine.
 6. Confirm the current release blockers are named in `V8_DEV_STATE.md` before you declare the release ready.
 

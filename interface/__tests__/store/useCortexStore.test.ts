@@ -58,6 +58,7 @@ describe('useCortexStore', () => {
             workspaceChatPrimed: false,
             councilTarget: 'admin',
             assistantName: 'Soma',
+            theme: 'aero-light',
             mcpServers: [],
             isFetchingMCPServers: false,
             mcpActivity: [],
@@ -127,6 +128,30 @@ describe('useCortexStore', () => {
             await store.getState().fetchMissions();
 
             expect(store.getState().missions).toEqual([]);
+        });
+    });
+
+    describe('user settings fallback', () => {
+        it('persists assistant name locally when the settings endpoint is unavailable', async () => {
+            mockFetch.mockResolvedValue({ ok: false });
+
+            await expect(store.getState().updateAssistantName('Atlas')).resolves.toBe(true);
+
+            expect(store.getState().assistantName).toBe('Atlas');
+            expect(localStorage.getItem('mycelis-user-settings')).toContain('"assistantName":"Atlas"');
+        });
+
+        it('hydrates assistant name and theme from local storage when settings fetch fails', async () => {
+            localStorage.setItem('mycelis-user-settings', JSON.stringify({
+                assistantName: 'Atlas',
+                theme: 'midnight-cortex',
+            }));
+            mockFetch.mockResolvedValue({ ok: false });
+
+            await store.getState().fetchUserSettings();
+
+            expect(store.getState().assistantName).toBe('Atlas');
+            expect(store.getState().theme).toBe('midnight-cortex');
         });
     });
 
