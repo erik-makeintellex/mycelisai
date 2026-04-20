@@ -172,7 +172,7 @@ def test_build_worktree_triage_maps_changed_paths_to_installs_and_commands():
     assert "uv run inv interface.typecheck" in triage["recommended_commands"]
     assert "uv run inv interface.build" in triage["recommended_commands"]
     assert (
-        "$env:PYTHONPATH='.'; uv run pytest tests/test_core_tasks.py tests/test_ci_tasks.py tests/test_interface_tasks.py tests/test_k8s_tasks.py tests/test_lifecycle_tasks.py tests/test_misc_tasks.py -q"
+        "$env:PYTHONPATH='.'; uv run pytest tests/test_core_tasks.py tests/test_ci_tasks.py tests/test_interface_tasks.py tests/test_interface_e2e_tasks.py tests/test_interface_command_tasks.py tests/test_k8s_tasks.py tests/test_lifecycle_tasks.py tests/test_misc_tasks.py -q"
         in triage["recommended_commands"]
     )
     assert "uv run inv ci.build" in triage["recommended_commands"]

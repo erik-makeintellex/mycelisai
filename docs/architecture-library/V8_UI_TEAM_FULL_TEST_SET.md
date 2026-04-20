@@ -97,16 +97,20 @@ Run these commands sequentially. Each `uv run inv interface.e2e ...` invocation 
 
 1. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
 2. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.setup.spec.ts`
-3. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.continuity.spec.ts`
-4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.recovery.spec.ts`
-5. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.spec.ts`
-6. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts`
-7. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts`
-8. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
-9. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/mcp-connected-tools.spec.ts`
-10. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
-11. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
-12. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
+3. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.template-creation.spec.ts`
+4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.empty-start.spec.ts`
+5. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.continuity.spec.ts`
+6. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.workspace-persistence.spec.ts`
+7. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.native-vs-external.spec.ts`
+8. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.ask-class.spec.ts`
+9. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.recovery.spec.ts`
+10. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts`
+11. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts`
+12. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
+13. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/mcp-connected-tools.spec.ts`
+14. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
+15. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+16. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 
 These runs certify:
 - Soma-first entry and re-entry
@@ -746,9 +750,13 @@ Run against the deployed compose stack:
 Required stable spec set:
 
 - `e2e/specs/v8-organization-entry.setup.spec.ts`
+- `e2e/specs/v8-organization-entry.template-creation.spec.ts`
+- `e2e/specs/v8-organization-entry.empty-start.spec.ts`
 - `e2e/specs/v8-organization-entry.continuity.spec.ts`
+- `e2e/specs/v8-organization-entry.workspace-persistence.spec.ts`
+- `e2e/specs/v8-organization-entry.native-vs-external.spec.ts`
+- `e2e/specs/v8-organization-entry.ask-class.spec.ts`
 - `e2e/specs/v8-organization-entry.recovery.spec.ts`
-- `e2e/specs/v8-organization-entry.spec.ts`
 - `e2e/specs/v8-ui-testing-agentry.spec.ts`
 
 ### 6.2 Live governed browser proof

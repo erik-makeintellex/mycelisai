@@ -199,6 +199,20 @@ export function recentOrganizationOpenButton(page: Page, organizationName: strin
     });
 }
 
+export async function openTeamDesignLane(page: Page) {
+    const guidedStartButton = page.getByRole("button", { name: "Open team design lane" });
+    if (await guidedStartButton.isVisible().catch(() => false)) {
+        await guidedStartButton.click();
+        await expect(page.getByText("Choose a guided team-design action")).toBeVisible();
+        return;
+    }
+
+    const workspaceToggle = page.getByRole("button", { name: "Create teams with Soma" });
+    await expect(workspaceToggle).toBeVisible();
+    await workspaceToggle.click();
+    await expect(page.getByText("Choose a guided team-design action")).toBeVisible();
+}
+
 export async function expectNoForbiddenCopy(page: Page) {
     const workspaceText = await page.locator("body").innerText();
     expect(workspaceText).not.toContain("V8 Entry Flow");
@@ -226,6 +240,7 @@ type MockOrganizationEntryOptions = {
     organizationsSummaryResponses?: Array<{ status: number; body: unknown }>;
     createHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
     actionHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
+    chatHandler?: (requestBody: Record<string, unknown>) => { status: number; body: unknown };
     homeResponsesById?: Record<string, unknown>;
 };
 
@@ -243,6 +258,7 @@ export async function mockOrganizationEntryApis(
         organizationsSummaryResponses = [],
         createHandler,
         actionHandler,
+        chatHandler,
         homeResponsesById = {
             [createdTemplateOrganization.id]: createdTemplateOrganization,
         },
@@ -365,6 +381,38 @@ export async function mockOrganizationEntryApis(
                               "Review your organization setup",
                               "Choose the first priority",
                           ],
+                      },
+                  },
+              };
+
+        await route.fulfill({
+            status: response.status,
+            contentType: "application/json",
+            body: JSON.stringify(response.body),
+        });
+    });
+
+    await page.route("**/api/v1/chat", async (route) => {
+        const requestBody = route.request().postDataJSON() as Record<string, unknown>;
+        const response = chatHandler
+            ? chatHandler(requestBody)
+            : {
+                  status: 200,
+                  body: {
+                      ok: true,
+                      data: {
+                          meta: { source_node: "admin", timestamp: "2026-03-19T18:00:00Z" },
+                          signal_type: "chat_response",
+                          trust_score: 0.9,
+                          template_id: "chat-to-answer",
+                          mode: "answer",
+                          payload: {
+                              text: "Soma is ready to help inside this AI Organization.",
+                              ask_class: "direct_answer",
+                              consultations: [],
+                              tools_used: [],
+                              artifacts: [],
+                          },
                       },
                   },
               };

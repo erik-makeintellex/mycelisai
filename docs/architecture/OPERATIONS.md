@@ -67,11 +67,11 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 | `uv run inv core.package` | Cross-compile and package a versioned Core binary archive under `dist/` |
 | `uv run inv core.clean` | `go clean`, remove bin/ |
 
-### Interface Tasks (`ops/interface.py`)
+### Interface Tasks (`ops/interface.py`, `ops/interface_runtime.py`)
 
 | Command | Description |
 |---------|-------------|
-| `uv run inv interface.dev` | Start Turbopack dev server (stops existing first) |
+| `uv run inv interface.dev` | Start the Invoke-managed webpack-backed Next.js dev server (stops existing first) |
 | `uv run inv interface.install` | `npm install` |
 | `uv run inv interface.build` | `npm run build` (production, with one managed retry after a stale repo-local Next build lock or stale `.next/standalone` cleanup lock) |
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
@@ -83,6 +83,8 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 | `uv run inv interface.clean` | rm -rf .next cache |
 | `uv run inv interface.restart` | stop → clean → build → dev → check |
 | `uv run inv interface.check` | Smoke-test: 9 pages for 200 status, no SSR errors, no hydration issues, no `bg-white`/`bg-zinc`/`bg-slate` leaks |
+
+`ops/interface.py` remains the stable Invoke entrypoint. Runtime/browser orchestration now lives in `ops/interface_runtime.py`, shared environment and command helpers live in `ops/interface_env.py`, and repo-local process matching hints live in `ops/interface_process_support.py`.
 
 ### Database Tasks (`ops/db.py`)
 
@@ -626,8 +628,8 @@ Deployment automation rule:
 | Workflow | File | Trigger Paths | Checks |
 |----------|------|--------------|--------|
 | **Core CI** | `core-ci.yaml` | `core/**`, `ops/core.py`, `ops/config.py`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, direct coverage capture, GolangCI-Lint v1.64.5, `uv run inv core.compile` |
-| **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
-| **E2E CI** | `e2e-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed Chromium/Firefox/WebKit + mobile smoke browser matrix via `uv run inv interface.e2e` |
+| **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/interface_runtime.py`, `ops/interface_env.py`, `ops/interface_process_support.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
+| **E2E CI** | `e2e-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/interface_runtime.py`, `ops/interface_env.py`, `ops/interface_process_support.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed Chromium/Firefox/WebKit + mobile smoke browser matrix via `uv run inv interface.e2e` |
 | **Release Binaries** | `release-binaries.yaml` | tag push `v*` or manual dispatch | workflow-native Python/uv + Go bootstrap, then matrix packaging through `uv run inv core.package` and GitHub release asset upload |
 
 **Trigger:** `pull_request` to `main` and `develop`; push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens. Container/image workflows are manual-only via `workflow_dispatch`.

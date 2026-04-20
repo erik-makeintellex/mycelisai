@@ -131,12 +131,13 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - local Interface tasking now binds the UI broadly by default (`[::]:3000`) while probing it through `127.0.0.1:3000`; override with `MYCELIS_INTERFACE_BIND_HOST`, `MYCELIS_INTERFACE_HOST`, and `MYCELIS_INTERFACE_PORT` when a host needs a different split
 - frontend teardown falls back to matching both `next dev` and `next start` command lines, so built UI servers do not survive outside the lifecycle contract
 
-### `interface.py` (Frontend Build And Browser Tasks)
+### `interface.py` + `interface_runtime.py` (Frontend Build And Browser Tasks)
 - **Install**: `uv run inv interface.install`
 - **Type Check**: `uv run inv interface.typecheck`
 - **Build**: `uv run inv interface.build`
 - **Test**: `uv run inv interface.test`
 - **E2E**: `uv run inv interface.e2e`
+- `ops/interface.py` is the stable Invoke entrypoint; the task implementation lives in `ops/interface_runtime.py`, with shared command/env helpers in `ops/interface_env.py` and process matching hints in `ops/interface_process_support.py`
 - `uv run inv interface.e2e` now defaults to managed `dev` mode for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; `uv run inv interface.build` still retries once after a stale repo-local Next build lock before failing, start-mode E2E inherits that same recovery behavior, and managed `dev` runs clear an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains.
 - Live backend browser specs that assert filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the spec checkout and the running Core checkout differ; use the backend's actual workspace root, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack.
 

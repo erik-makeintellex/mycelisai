@@ -55,7 +55,7 @@ WORKTREE_AREA_RULES = (
         "exact_paths": ("pyproject.toml", "tasks.py"),
         "installs": ("uv sync --all-packages --dev",),
         "commands": (
-            "$env:PYTHONPATH='.'; uv run pytest tests/test_core_tasks.py tests/test_ci_tasks.py tests/test_interface_tasks.py tests/test_k8s_tasks.py tests/test_lifecycle_tasks.py tests/test_misc_tasks.py -q",
+            "$env:PYTHONPATH='.'; uv run pytest tests/test_core_tasks.py tests/test_ci_tasks.py tests/test_interface_tasks.py tests/test_interface_e2e_tasks.py tests/test_interface_command_tasks.py tests/test_k8s_tasks.py tests/test_lifecycle_tasks.py tests/test_misc_tasks.py -q",
             "uv run inv ci.build",
         ),
     },
