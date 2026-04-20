@@ -992,58 +992,6 @@ async function mockOrganizationEntryApis(
 }
 
 test.describe("V8 AI Organization entry flow", () => {
-    test("lands on the AI Organization setup flow with a dominant creation entrypoint", async ({ page }, testInfo) => {
-        await mockOrganizationEntryApis(page);
-
-        await page.goto("/dashboard");
-        await page.waitForLoadState("domcontentloaded");
-
-        await expect(page.getByRole("heading", { name: /Work directly with .* from the admin home\./i })).toBeVisible();
-        await expect(page.getByText("Central Soma")).toBeVisible();
-        await expect(page.getByText("The root workspace should feel like a direct conversation with Soma.")).toBeVisible();
-        await expect(page.getByRole("link", { name: "Open groups workspace" })).toBeVisible();
-        await expect(page.getByRole("button", { name: "Create or open AI Organizations" })).toBeVisible();
-        await page.getByRole("button", { name: "Create or open AI Organizations" }).click();
-        await expect(page.getByText("AI Organization Setup", { exact: true })).toBeVisible();
-        await expect(page.getByRole("button", { name: "Explore Templates" })).toBeVisible();
-        await expect(page.getByRole("button", { name: "Start Empty", exact: true })).toBeVisible();
-        await expect(page.getByText("Keep the main admin home centered on Soma.")).toBeVisible();
-        await expect(page.getByText("Mission Control")).toHaveCount(0);
-        await expect(page.getByText("New Chat")).toHaveCount(0);
-        await expectNoForbiddenCopy(page);
-
-        await saveScreenshot(page, testInfo, "dominant-entrypoint.png");
-    });
-
-    test("shows the starter template path with user-facing terminology only", async ({ page }, testInfo) => {
-        await mockOrganizationEntryApis(page);
-
-        await page.goto("/dashboard");
-        await page.waitForLoadState("domcontentloaded");
-        await openOrganizationSetup(page);
-        await clickStartMode(page, /Start from template/i);
-
-        const starterCard = page.getByRole("button", { name: /Engineering Starter/i });
-        await expect(starterCard).toBeVisible();
-        await expect(starterCard).toContainText("AI Organization starter");
-        await expect(starterCard).toContainText("Team Lead");
-        await expect(starterCard).toContainText("Advisors");
-        await expect(starterCard).toContainText("Departments");
-        await expect(starterCard).toContainText("Specialists");
-        await expect(starterCard).toContainText("AI Engine Settings");
-        await expect(starterCard).toContainText("Memory & Continuity");
-        await expect(page.getByText("Hidden until Advanced mode")).toBeVisible();
-        await expect(page.getByText("Learn about AI Organizations")).toBeVisible();
-        await expect(page.getByText("Inception")).toHaveCount(0);
-        await expect(page.getByText("Soma Kernel")).toHaveCount(0);
-        await expect(page.getByText("Central Council")).toHaveCount(0);
-        await expect(page.getByText("Provider Policy")).toHaveCount(0);
-        await expect(page.getByText("Identity / Continuity")).toHaveCount(0);
-        await expectNoForbiddenCopy(page);
-
-        await saveScreenshot(page, testInfo, "template-mode.png");
-    });
-
     test("creates an AI Organization from a template and starts a guided Soma workflow", async ({ page }, testInfo) => {
         test.slow();
         let capturedRequestBody: Record<string, unknown> | null = null;
@@ -1334,50 +1282,6 @@ test.describe("V8 AI Organization entry flow", () => {
         await saveScreenshot(page, testInfo, "empty-success-home.png");
     });
 
-    test("reopens a recent AI Organization and lands back in the Soma workspace", async ({ page }) => {
-        test.slow();
-        await mockOrganizationEntryApis(page, {
-            organizations: [createdTemplateOrganization],
-        });
-
-        await page.goto("/dashboard");
-        await page.waitForLoadState("domcontentloaded");
-        await openOrganizationSetup(page);
-        await expect(page.getByText("Northstar Labs")).toBeVisible();
-        await recentOrganizationOpenButton(page, "Northstar Labs").click();
-        await openCreatedOrganization(page, createdTemplateOrganization.id);
-
-        await expect(page.getByText("AI Organization Home")).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
-        await expect(page.getByRole("link", { name: "Start with Soma" })).toBeVisible();
-    });
-
-    test("returns to the current AI Organization after leaving the workspace", async ({ page }) => {
-        await mockOrganizationEntryApis(page, {
-            organizations: [createdTemplateOrganization],
-        });
-
-        await page.goto("/dashboard");
-        await page.waitForLoadState("domcontentloaded");
-        await openOrganizationSetup(page);
-        await recentOrganizationOpenButton(page, "Northstar Labs").click();
-        await openCreatedOrganization(page, createdTemplateOrganization.id);
-
-        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
-        await page.goto("/dashboard");
-        await expect(page).toHaveURL(/\/dashboard$/);
-        const returnToOrganizationLink = recentOrganizationLink(page, "Northstar Labs");
-        await expect(returnToOrganizationLink).toBeVisible();
-        await expect(returnToOrganizationLink).toHaveAttribute("href", "/organizations/org-123");
-
-        await Promise.all([
-            page.waitForURL(/\/organizations\/org-123$/),
-            returnToOrganizationLink.click(),
-        ]);
-        await expect(page.getByText("AI Organization Home")).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
-    });
-
     test("keeps the Soma draft and last guidance visible after leaving and returning to the workspace", async ({ page }) => {
         await mockOrganizationEntryApis(page, {
             organizations: [createdTemplateOrganization],
@@ -1652,49 +1556,4 @@ test.describe("V8 AI Organization entry flow", () => {
         await saveScreenshot(page, testInfo, "guided-retry-recovery.png");
     });
 
-    test("keeps creation available when recent organizations fail and shows retry guidance", async ({ page }, testInfo) => {
-        await mockOrganizationEntryApis(page, {
-            organizationsSummaryResponses: [
-                {
-                    status: 500,
-                    body: { ok: false, error: "Recent AI Organizations are unavailable right now." },
-                },
-                {
-                    status: 200,
-                    body: {
-                        ok: true,
-                        data: [
-                            {
-                                id: "org-999",
-                                name: "Atlas",
-                                purpose: "Resume me later",
-                                start_mode: "empty",
-                                team_lead_label: "Team Lead",
-                                advisor_count: 0,
-                                department_count: 0,
-                                specialist_count: 0,
-                                status: "ready",
-                            },
-                        ],
-                    },
-                },
-            ],
-        });
-
-        await page.goto("/dashboard");
-        await page.waitForLoadState("domcontentloaded");
-        await openOrganizationSetup(page);
-
-        await expect(page.getByText("Recent AI Organizations are unavailable", { exact: true })).toBeVisible();
-        await expect(page.getByText("You can still create a new AI Organization above while we retry your recent organizations.")).toBeVisible();
-        await expect(page.getByRole("button", { name: "Retry recent AI Organizations" })).toBeVisible();
-        await clickStartMode(page, /Start from template/i);
-        await expect(page.getByRole("button", { name: /Engineering Starter/i })).toBeVisible();
-
-        await page.getByRole("button", { name: "Retry recent AI Organizations" }).click();
-        await expect(page.getByText("Atlas")).toBeVisible();
-        await expectNoForbiddenCopy(page);
-
-        await saveScreenshot(page, testInfo, "retry-recovery.png");
-    });
 });

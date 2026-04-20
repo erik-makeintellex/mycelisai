@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-04-11
+> Last Updated: 2026-04-19
 > Owner: UI Testing Agentry Team
 > Purpose: Provide the full browser and operator-experience test set for the current bounded V8.1 release target, including Central Soma home, AI Organization context flows, settings persistence, governed execution, and deployed-runtime proof.
 > Supporting Docs: `V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_HOME_DOCKER_COMPOSE_RUNTIME.md`, `V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`, `docs/TESTING.md`
@@ -93,20 +93,25 @@ For the operator-facing UX pass, do not stop at headless Playwright or API-only 
 
 Run at least the critical Chromium matrix in headed mode against the managed Interface server:
 
+Run these commands sequentially. Each `uv run inv interface.e2e ...` invocation owns the managed Interface server lifecycle, so do not fan them out in parallel against the same WSL or repo-local workspace.
+
 1. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
-2. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.spec.ts`
-3. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts`
-4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts`
-5. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
-6. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/mcp-connected-tools.spec.ts`
-7. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
-8. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
-9. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
+2. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.setup.spec.ts`
+3. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.continuity.spec.ts`
+4. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.recovery.spec.ts`
+5. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/v8-organization-entry.spec.ts`
+6. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/teams.spec.ts`
+7. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/team-creation.spec.ts`
+8. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/settings.spec.ts`
+9. `uv run inv interface.e2e --headed --project=chromium --server-mode=start --spec=e2e/specs/mcp-connected-tools.spec.ts`
+10. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
+11. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+12. `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 
 These runs certify:
 - Soma-first entry and re-entry
 - deterministic runtime-state answers
-- AI Organization creation and re-entry
+- AI Organization setup, creation, re-entry, and retry guidance
 - team hub, guided team creation, direct temporary-workflow launch, archive/closure, retained-output review, and group specialization/review surfaces
 - live backend-stored group-output aggregation and retained review after temporary-lane closure
 - settings and Connected Tools MCP visibility
@@ -476,7 +481,7 @@ Evidence:
 
 Automated proof:
 
-- `interface/e2e/specs/direct-vs-team-output.spec.ts` is the stable mocked comparative proof for direct Soma, compact team packaging, multi-lane retained outputs, and reboot-safe resume from the retained package.
+- `interface/e2e/specs/workflow-output.direct.spec.ts`, `interface/e2e/specs/workflow-output.compact-team.spec.ts`, `interface/e2e/specs/workflow-output.multi-lane.spec.ts`, and `interface/e2e/specs/workflow-output.reload-review.spec.ts` are the stable mocked comparative proof set for direct Soma, compact team packaging, multi-lane retained outputs, and reboot-safe resume from the retained package.
 - `interface/e2e/specs/workflow-variants-live-backend.spec.ts` is the live-backend companion for direct Soma, compact-team vs multi-team shaping, and retained-output review after archive/reload.
 - `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` covers the adjacent artifact lane, including governed artifact rendering and media artifact preview/save/download behavior.
 - `interface/e2e/specs/mcp-connected-tools.spec.ts` now covers the adjacent Connected Tools proof: persisted MCP activity, expanded server tool visibility, and curated library install into the current user-owned group.
@@ -740,6 +745,9 @@ Run against the deployed compose stack:
 
 Required stable spec set:
 
+- `e2e/specs/v8-organization-entry.setup.spec.ts`
+- `e2e/specs/v8-organization-entry.continuity.spec.ts`
+- `e2e/specs/v8-organization-entry.recovery.spec.ts`
 - `e2e/specs/v8-organization-entry.spec.ts`
 - `e2e/specs/v8-ui-testing-agentry.spec.ts`
 

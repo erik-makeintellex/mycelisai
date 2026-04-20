@@ -128,4 +128,55 @@ test.describe('Docs and Runs Route Coverage', () => {
         await page.getByRole('button', { name: 'Events' }).first().click();
         await expect(page.getByText('mission.started')).toBeVisible();
     });
+
+    test('run chain route renders lineage from API payloads', async ({ page }) => {
+        const runId = 'run-chain-ui-5678';
+        const now = new Date().toISOString();
+
+        await page.route(`**/api/v1/runs/${runId}/chain**`, async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    run_id: runId,
+                    mission_id: 'mission-chain-1111',
+                    chain: [
+                        {
+                            id: runId,
+                            mission_id: 'mission-chain-1111',
+                            tenant_id: 'default',
+                            status: 'completed',
+                            run_depth: 0,
+                            started_at: now,
+                            completed_at: now,
+                            metadata: {
+                                source_kind: 'workspace_ui',
+                            },
+                        },
+                        {
+                            id: 'run-chain-child-0001',
+                            mission_id: 'mission-chain-1111',
+                            tenant_id: 'default',
+                            status: 'running',
+                            run_depth: 1,
+                            parent_run_id: runId,
+                            started_at: now,
+                            metadata: {
+                                team_id: 'team-alpha',
+                            },
+                        },
+                    ],
+                }),
+            });
+        });
+
+        await page.goto(`/runs/${runId}/chain`, { waitUntil: 'domcontentloaded' });
+
+        await expect(page.getByRole('heading', { name: 'Causal Chain' })).toBeVisible();
+        await expect(page.getByText(runId, { exact: true })).toBeVisible();
+        await expect(page.getByText('run-chain-child-0001', { exact: true })).toBeVisible();
+        await expect(page.getByText('source_kind: workspace_ui')).toBeVisible();
+        await expect(page.getByText('team_id: team-alpha')).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Run' })).toHaveAttribute('href', `/runs/${runId}`);
+    });
 });

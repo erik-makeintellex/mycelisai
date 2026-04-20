@@ -882,12 +882,15 @@ def test_start_playwright_server_dev_mode_clears_stale_next_lock(monkeypatch, tm
     monkeypatch.setattr(
         interface,
         "_spawn_interface_process",
-        lambda command, env, stdout, stderr, detached, text=True: events.append(f"spawn:{command[-1]}") or FakeProcess(),
+        lambda command, env, stdout, stderr, detached, text=True: events.append(f"spawn:{' '.join(command)}") or FakeProcess(),
     )
 
     interface._start_playwright_server({"INTERFACE_BIND_HOST": "127.0.0.1"}, port=4315, server_mode="dev")
 
-    assert events == ["cleanup-dev-lock", "spawn:4315"]
+    assert events == [
+        "cleanup-dev-lock",
+        f"spawn:node {str((interface.INTERFACE_DIR / 'node_modules' / 'next' / 'dist' / 'bin' / 'next').resolve())} dev --webpack --hostname 127.0.0.1 --port 4315",
+    ]
 
 
 def test_start_playwright_server_start_mode_skips_dev_lock_cleanup(monkeypatch, tmp_path):

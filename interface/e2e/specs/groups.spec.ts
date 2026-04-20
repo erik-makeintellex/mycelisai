@@ -268,6 +268,7 @@ test.describe('Groups workspace (/groups)', () => {
         const harness = await mockGroupsWorkspace(page);
 
         await page.goto('/groups', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('button', { name: 'Temporary Launch Sprint Drive a fast campaign launch across messaging, review, and delivery.' })).toBeVisible();
 
         await page.getByLabel('Name').fill('Regional Expansion Sprint');
         await page.getByLabel('Goal Statement').fill('Prepare outreach, pricing notes, and operator-ready launch assets for a new region.');

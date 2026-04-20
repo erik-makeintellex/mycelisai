@@ -59,6 +59,7 @@ Before the walkthrough, verify these are true on the machine hosting Mycelis:
 1. The UI is reachable on the network.
    - Default UI port: `3000`
    - The current default bind posture is LAN-friendly dual-stack listening
+   - If the stack is running inside WSL on the same Windows machine the operator is using, prove the Windows browser path through `http://localhost:3000` first before treating LAN reachability as the only valid access path
 
 2. The Core API is healthy.
    - Default API port: `8081`
@@ -104,8 +105,9 @@ uv run inv compose.health
 
 On the remote user-testing machine:
 
-1. Open the Mycelis UI with the host machine IP.
-   - Example: `http://<mycelis-host-ip>:3000`
+1. Open the Mycelis UI with the operator-facing host path.
+   - Same Windows machine talking to a WSL-hosted stack: `http://localhost:3000`
+   - Different machine on the same network: `http://<mycelis-host-ip>:3000`
 
 2. Confirm you can load the shell and the default workspace route.
 
@@ -126,7 +128,9 @@ If the environment relies on a Windows GPU inference host, confirm the browser-f
 
 Use this lane when the operator is on Windows and the product is running as a self-hosted deployment:
 
-1. Open the UI from the Windows browser using the network-reachable host name or IP.
+1. Open the UI from the Windows browser using the real operator-facing address.
+   - Same machine, WSL-hosted stack: `http://localhost:3000`
+   - Different machine or explicit LAN proof: use the network-reachable host name or IP
 2. Confirm the root Soma workspace loads with a healthy runtime and a direct `answer` path for informational prompts.
 3. Confirm a mutating prompt enters `proposal` and can be approved or cancelled.
 4. Confirm guided team creation or temporary workflow launch completes without forcing a local-only dev shortcut.

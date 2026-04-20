@@ -10,7 +10,7 @@ The goal is not only to prove that screens render. The goal is to prove that an 
 Companion artifacts:
 
 - Stable mocked browser proof: `interface/e2e/specs/v8-ui-testing-agentry.spec.ts`
-- Workflow-variant mocked proof: `interface/e2e/specs/direct-vs-team-output.spec.ts`
+- Workflow-variant mocked proof: `interface/e2e/specs/workflow-output.direct.spec.ts`, `interface/e2e/specs/workflow-output.compact-team.spec.ts`, `interface/e2e/specs/workflow-output.multi-lane.spec.ts`, and `interface/e2e/specs/workflow-output.reload-review.spec.ts`
 - Workflow-variant live backend proof: `interface/e2e/specs/workflow-variants-live-backend.spec.ts`
 - Live backend browser proof: `interface/e2e/specs/soma-governance-live.spec.ts`
 - Workspace continuity manual trust pass: `tests/ui/browser_qa_plan_workspace_chat.md`
@@ -66,11 +66,16 @@ No single test lane is enough on its own.
    - Purpose: prove the UI contract without backend flake
    - Command:
      - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
+   - Execution note:
+     - managed `interface.e2e` runs are serialized; do not launch multiple spec commands in parallel against the same WSL-managed Interface server
 
 2. Workflow-variant mocked proof
    - Purpose: prove direct Soma vs compact-team vs multi-lane shaping, retained outputs, and reboot-safe resume behavior without backend flake
    - Command:
-     - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/direct-vs-team-output.spec.ts`
+     - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/workflow-output.direct.spec.ts`
+     - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/workflow-output.compact-team.spec.ts`
+     - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/workflow-output.multi-lane.spec.ts`
+     - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/workflow-output.reload-review.spec.ts`
 
 3. Workflow-variant live backend proof
    - Purpose: prove the real `/api/v1/chat` and `/api/v1/organizations/{id}/workspace/actions` contract for direct Soma, compact-team vs multi-team shaping, and retained-output review after archive/reload

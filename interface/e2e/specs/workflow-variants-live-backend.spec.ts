@@ -91,6 +91,13 @@ async function parseJSONIfPossible<T>(response: { text(): Promise<string> }) {
     }
 }
 
+async function expectExecutionContractOutputs(page: Page, outputs: string[]) {
+    const targetOutputsSection = page.getByText('Target outputs', { exact: true }).locator('..');
+    for (const output of outputs) {
+        await expect(targetOutputsSection.getByText(output, { exact: true }).first()).toBeVisible();
+    }
+}
+
 async function gotoWithColdStartRetry(page: Page, path: string) {
     try {
         await page.goto(path, { waitUntil: 'domcontentloaded' });
@@ -193,12 +200,13 @@ async function createLiveTeamIDs(page: Page, count: number) {
 }
 
 async function createLiveGroup(page: Page, draft: TeamLeadWorkflowGroupDraft, teamIDs: string[]) {
+    const uniqueSuffix = `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
     const expiry = typeof draft.expiry_hours === 'number' && draft.expiry_hours > 0
         ? new Date(Date.now() + draft.expiry_hours * 60 * 60 * 1000).toISOString()
         : new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
     const response = await page.request.post('/api/v1/groups', {
         data: {
-            name: draft.name,
+            name: `${draft.name} ${uniqueSuffix}`,
             goal_statement: draft.goal_statement,
             work_mode: draft.work_mode,
             allowed_capabilities: draft.allowed_capabilities ?? [],
@@ -310,9 +318,7 @@ test.describe('Workflow variants live backend contract', () => {
         expect(compactContract.workflow_group?.work_mode).toBe('propose_only');
         expect((compactGuidance.headline ?? '').trim().length).toBeGreaterThan(0);
         await expect(page.getByText(compactContract.team_name!, { exact: true })).toBeVisible();
-        for (const output of compactContract.target_outputs ?? []) {
-            await expect(page.getByText(output, { exact: true })).toBeVisible();
-        }
+        await expectExecutionContractOutputs(page, compactContract.target_outputs ?? []);
 
         const compactTeamIDs = await createLiveTeamIDs(page, compactContract.target_outputs?.length ?? 3);
         const compactGroup = await createLiveGroup(page, compactContract.workflow_group!, compactTeamIDs);
@@ -341,9 +347,7 @@ test.describe('Workflow variants live backend contract', () => {
         if (multiContract.team_name) {
             await expect(page.getByText(multiContract.team_name, { exact: true })).toBeVisible();
         }
-        for (const output of multiContract.target_outputs ?? []) {
-            await expect(page.getByText(output, { exact: true })).toBeVisible();
-        }
+        await expectExecutionContractOutputs(page, multiContract.target_outputs ?? []);
 
         const multiOutputs = (multiContract.target_outputs ?? []).slice(0, 3);
         const multiTeamIDs = await createLiveTeamIDs(page, multiOutputs.length || 3);

@@ -29,8 +29,23 @@ from .cache import ensure_disk_headroom
 
 ns = Collection("interface")
 INTERFACE_DIR = ROOT_DIR / "interface"
+
+
+def _process_path_variants(path: Path) -> set[str]:
+    normalized = {
+        str(path.resolve()).lower().replace("\\", "/"),
+        str(path).lower().replace("\\", "/"),
+    }
+    extra: set[str] = set()
+    for entry in normalized:
+        if entry.startswith("/mnt/") and len(entry) > 6 and entry[5].isalpha() and entry[6] == "/":
+            extra.add(f"{entry[5]}:{entry[6:]}")
+    normalized.update(extra)
+    return {entry.rstrip("/") for entry in normalized}
+
+
 _INTERFACE_PROCESS_PATH_HINTS = tuple(
-    str(path.resolve()).lower().replace("\\", "/")
+    variant
     for path in {
         INTERFACE_DIR / ".next",
         INTERFACE_DIR / "node_modules",
@@ -38,6 +53,7 @@ _INTERFACE_PROCESS_PATH_HINTS = tuple(
         INTERFACE_DIR / "playwright-report",
         INTERFACE_DIR / "test-results",
     }
+    for variant in _process_path_variants(path)
 )
 _INTERFACE_PROCESS_COMMAND_HINTS = (
     "/.next/dev/build/postcss.js",
@@ -809,6 +825,7 @@ def _next_dev_command(bind_host: str, port: int) -> list[str]:
         "node",
         str((INTERFACE_DIR / "node_modules" / "next" / "dist" / "bin" / "next").resolve()),
         "dev",
+        "--webpack",
         "--hostname",
         bind_host,
         "--port",

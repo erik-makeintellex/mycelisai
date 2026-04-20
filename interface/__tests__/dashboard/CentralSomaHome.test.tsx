@@ -33,6 +33,7 @@ describe("CentralSomaHome", () => {
         expect(screen.getByTestId("mission-control-chat")).toBeDefined();
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
         expect(screen.getByRole("link", { name: /Open groups workspace/i }).getAttribute("href")).toBe("/groups");
+        expect(screen.getByRole("link", { name: /Return to Northstar Labs/i }).getAttribute("href")).toBe("/organizations/org-1");
     }, 15000);
 
     it("opens the AI Organization setup details from the quick action", () => {

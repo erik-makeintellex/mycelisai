@@ -88,6 +88,11 @@ test.describe('Teams Workspace (/teams)', () => {
         const drawer = page.locator('div.w-\\[480px\\]');
         await expect(drawer).toBeVisible();
         await expect(drawer.locator('text=Agent Roster')).toBeVisible();
+        await expect(drawer.getByText('Operator controls')).toBeVisible();
+        await expect(drawer.getByRole('link', { name: 'Open lead workspace' })).toHaveAttribute('href', /\/dashboard\?team_id=/);
+        await expect(drawer.getByRole('link', { name: 'View runs' })).toHaveAttribute('href', '/runs');
+        await expect(drawer.getByRole('link', { name: 'View wiring' })).toHaveAttribute('href', '/automations?tab=wiring');
+        await expect(drawer.getByRole('link', { name: 'View system' })).toHaveAttribute('href', '/system?tab=services');
         await expect(firstCard).toHaveClass(/ring-1/);
 
         await drawer.locator('button').first().click();

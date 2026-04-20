@@ -4,6 +4,33 @@ test.describe('Settings Page (/settings)', () => {
     test.skip(({ browserName }) => browserName === 'webkit', 'WebKit currently crashes on this settings surface; keep Chromium/Firefox coverage stable for now.');
 
     test.beforeEach(async ({ page }) => {
+        const settingsState = {
+            assistant_name: 'Soma',
+            theme: 'aero-light',
+        };
+        await page.route('**/api/v1/user/settings', async (route) => {
+            if (route.request().method() === 'GET') {
+                await route.fulfill({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ ok: true, data: settingsState }),
+                });
+                return;
+            }
+
+            const body = route.request().postDataJSON() as Record<string, unknown>;
+            if (typeof body.assistant_name === 'string') {
+                settingsState.assistant_name = body.assistant_name;
+            }
+            if (body.theme === 'aero-light' || body.theme === 'midnight-cortex' || body.theme === 'system') {
+                settingsState.theme = body.theme;
+            }
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ ok: true, data: settingsState }),
+            });
+        });
         await page.goto('/settings');
         await page.waitForLoadState('domcontentloaded');
     });

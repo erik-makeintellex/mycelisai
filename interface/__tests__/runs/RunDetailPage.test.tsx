@@ -169,4 +169,14 @@ describe('RunDetailPage (/runs/[id])', () => {
         expect(anchor).toBeDefined();
         expect(anchor?.getAttribute('href')).toBe('/dashboard');
     });
+
+    it('renders a chain link to /runs/[id]/chain', async () => {
+        await act(async () => {
+            render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
+        });
+
+        const chainLink = screen.getByText('Chain').closest('a');
+        expect(chainLink).toBeDefined();
+        expect(chainLink?.getAttribute('href')).toBe('/runs/test-run-123-abcd-5678/chain');
+    });
 });

@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
-import { ArrowLeft, Zap, MessageSquare, List } from 'lucide-react';
+import { ArrowLeft, Zap, MessageSquare, List, GitBranch } from 'lucide-react';
 
 const RunTimeline = dynamic(
     () => import('@/components/runs/RunTimeline'),
@@ -18,6 +19,7 @@ type Tab = 'conversation' | 'events';
 
 export default function RunPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<Tab>('conversation');
     const [runStatus, setRunStatus] = useState<string | undefined>(undefined);
 
@@ -55,6 +57,15 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
+
+    useEffect(() => {
+        const tab = searchParams?.get('tab');
+        if (tab === 'events') {
+            setActiveTab('events');
+        } else if (tab === 'conversation') {
+            setActiveTab('conversation');
+        }
+    }, [searchParams]);
 
     const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
         { key: 'conversation', label: 'Conversation', icon: <MessageSquare className="w-3.5 h-3.5" /> },
@@ -97,6 +108,13 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                             </button>
                         ))}
                     </div>
+                    <a
+                        href={`/runs/${id}/chain`}
+                        className="flex items-center gap-1.5 rounded-md border border-cortex-border bg-cortex-surface px-3 py-1 text-[10px] font-mono font-bold text-cortex-text-muted hover:text-cortex-primary transition-colors"
+                    >
+                        <GitBranch className="w-3.5 h-3.5" />
+                        Chain
+                    </a>
                 </div>
                 <RunTimeline runId={id} />
             </div>
@@ -158,6 +176,14 @@ export default function RunPage({ params }: { params: Promise<{ id: string }> })
                         </button>
                     ))}
                 </div>
+
+                <a
+                    href={`/runs/${id}/chain`}
+                    className="flex items-center gap-1.5 rounded-md border border-cortex-border bg-cortex-surface px-3 py-1 text-[10px] font-mono font-bold text-cortex-text-muted hover:text-cortex-primary transition-colors"
+                >
+                    <GitBranch className="w-3.5 h-3.5" />
+                    Chain
+                </a>
             </div>
 
             {/* Conversation content */}

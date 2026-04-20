@@ -19,7 +19,10 @@ It also proves that an important plan can survive a full environment reboot thro
 Use this together with:
 - `docs/architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md`
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`
-- `interface/e2e/specs/direct-vs-team-output.spec.ts`
+- `interface/e2e/specs/workflow-output.direct.spec.ts`
+- `interface/e2e/specs/workflow-output.compact-team.spec.ts`
+- `interface/e2e/specs/workflow-output.multi-lane.spec.ts`
+- `interface/e2e/specs/workflow-output.reload-review.spec.ts`
 
 ## Shared Objective
 

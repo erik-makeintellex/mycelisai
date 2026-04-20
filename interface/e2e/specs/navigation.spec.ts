@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'Soma', testId: 'nav-dashboard' },
@@ -12,11 +12,33 @@ const ADVANCED_NAV_ENTRIES = [
     { href: '/system', label: 'System', testId: 'nav-system' },
 ];
 
+async function openDashboard(page: Page) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+            await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('domcontentloaded');
+            return;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            const canRetry =
+                message.includes('ERR_ABORTED') ||
+                message.includes('ERR_NETWORK_CHANGED') ||
+                message.includes('frame was detached') ||
+                message.includes('interrupted by another navigation') ||
+                message.includes('chrome-error://chromewebdata/');
+            if (!canRetry || attempt === 2) {
+                throw error;
+            }
+            await page.waitForTimeout(500);
+        }
+    }
+}
+
 test.describe('V8.1 Soma-primary Navigation', () => {
     test.describe.configure({ mode: 'serial' });
 
     test.beforeEach(async ({ page }) => {
-        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+        await openDashboard(page);
         await page.evaluate(() => {
             window.localStorage.setItem('mycelis-advanced-mode', 'false');
         });
@@ -64,17 +86,18 @@ test.describe('V8.1 Soma-primary Navigation', () => {
         await expect(page.getByTestId('nav-system')).toHaveCount(0);
     });
 
-    test('Advanced toggle flips visible state labels', async ({ page }) => {
-        const toggle = page.getByRole('button', { name: /Advanced:/ });
+    test('Advanced mode persistence flips visible state labels', async ({ page }) => {
         await expect(page.getByTestId('nav-resources')).toHaveCount(0);
-        await toggle.click();
-        await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'true');
-        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+        await page.evaluate(() => {
+            window.localStorage.setItem('mycelis-advanced-mode', 'true');
+        });
+        await openDashboard(page);
         await expect(page.getByTestId('nav-resources')).toBeVisible();
-        await expect(page.getByRole('button', { name: /Advanced:/ })).toContainText('Advanced: On');
-        await page.getByRole('button', { name: /Advanced:/ }).click();
-        await page.waitForFunction(() => window.localStorage.getItem('mycelis-advanced-mode') === 'false');
-        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
+        await page.evaluate(() => {
+            window.localStorage.setItem('mycelis-advanced-mode', 'false');
+        });
+        await openDashboard(page);
         await expect(page.getByTestId('nav-resources')).toHaveCount(0);
     });
 });

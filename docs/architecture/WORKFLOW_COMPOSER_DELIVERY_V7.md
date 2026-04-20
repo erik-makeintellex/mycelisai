@@ -46,8 +46,8 @@ This prerequisite is mandatory so manifested workflows remain auditable and agen
 
 - Team C Scheduler remains critical-path for repeat/scheduled execution behavior.
 - Active Automations tab still blocked behind Team C completion.
-- Causal Chain UI remains pending (`/runs/[id]/chain` UI not yet shipped).
-- created-team workspace and channel inspector are not yet delivered.
+- Causal Chain UI route is shipped; workflow-level browser depth and composer-linked proof still need expansion.
+- created-team workspace remains incomplete; selected-team inspector/operator controls are shipped, but scoped communications proof is still missing.
 - module-binding UX across internal/MCP/third-party API adapters is not yet unified.
 - Worktree discipline is not yet standardized across in-flight slices.
 
@@ -279,14 +279,14 @@ Exit criteria:
 
 ## Sprint N+2
 
-- Ship Causal Chain UI end-to-end.
+- Deepen Causal Chain browser and composer-linked proof end-to-end.
 - Connect composer monitor events to run timeline and chain views.
 - Ship created-team workspace and communications inspector.
 - Add retry/failure overlays for node-level debugging.
 
 Exit criteria:
 
-- `/runs/[id]/chain` is production-usable.
+- `/runs/[id]/chain` remains production-usable while composer-linked traversal stays covered.
 - chain traversal is validated by e2e tests.
 
 ## Sprint N+3

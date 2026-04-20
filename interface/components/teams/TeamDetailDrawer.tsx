@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { X, ChevronDown, ChevronRight, Wrench, Radio } from 'lucide-react';
 import type { TeamDetailEntry, TeamDetailAgentEntry } from '@/store/useCortexStore';
 
@@ -28,6 +29,7 @@ interface TeamDetailDrawerProps {
 export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProps) {
     const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
     const leadLabel = `${team.name} lead`;
+    const leadWorkspaceHref = `/dashboard?team_id=${encodeURIComponent(team.id)}`;
 
     return (
         <div className="absolute right-0 top-0 bottom-0 w-[480px] z-40 bg-cortex-surface border-l border-cortex-border shadow-2xl flex flex-col">
@@ -69,6 +71,43 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                     </div>
                     <div className="text-xs text-cortex-text-muted leading-5">
                         This team opens around a focused lead entity first. That lead can work from team context and coordinate back through Soma when broader organization memory, RAG context, or cross-team direction is needed.
+                    </div>
+                </div>
+
+                <div className="rounded-lg bg-cortex-bg border border-cortex-border p-3 space-y-3">
+                    <div>
+                        <div className="text-[10px] font-mono uppercase text-cortex-text-muted">
+                            Operator controls
+                        </div>
+                        <div className="text-xs text-cortex-text-muted leading-5 mt-1">
+                            Jump from the inspector into the lead workspace, review runs, or inspect the wiring and system surface tied to this team.
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <Link
+                            href={leadWorkspaceHref}
+                            className="inline-flex items-center justify-center gap-1 rounded border border-cortex-border px-2.5 py-2 text-[10px] font-mono text-cortex-text-main hover:bg-cortex-surface"
+                        >
+                            Open lead workspace
+                        </Link>
+                        <Link
+                            href="/runs"
+                            className="inline-flex items-center justify-center gap-1 rounded border border-cortex-border px-2.5 py-2 text-[10px] font-mono text-cortex-text-main hover:bg-cortex-surface"
+                        >
+                            View runs
+                        </Link>
+                        <Link
+                            href="/automations?tab=wiring"
+                            className="inline-flex items-center justify-center gap-1 rounded border border-cortex-border px-2.5 py-2 text-[10px] font-mono text-cortex-text-main hover:bg-cortex-surface"
+                        >
+                            View wiring
+                        </Link>
+                        <Link
+                            href="/system?tab=services"
+                            className="inline-flex items-center justify-center gap-1 rounded border border-cortex-border px-2.5 py-2 text-[10px] font-mono text-cortex-text-main hover:bg-cortex-surface"
+                        >
+                            View system
+                        </Link>
                     </div>
                 </div>
 

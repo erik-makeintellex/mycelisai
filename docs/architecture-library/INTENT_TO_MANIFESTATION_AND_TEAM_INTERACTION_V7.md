@@ -290,8 +290,8 @@ Current gaps (`REQUIRED`/`NEXT`):
 | Run/event lineage | `COMPLETE` | mission runs/events and timeline APIs are live |
 | Trigger execution model | `COMPLETE` | guarded trigger engine delivered |
 | Scheduler recurring execution | `NEXT` | design locked, runtime/UI pending |
-| Causal chain operator UI | `REQUIRED` | backend support exists, operator surface pending |
-| Created-team communications workspace | `REQUIRED` | new surface and aggregation APIs required |
+| Causal chain operator UI | `IN_REVIEW` | `/runs/[id]/chain` route and focused tests are shipped; broader workflow/browser depth still needs expansion |
+| Created-team communications workspace | `ACTIVE` | inspector operator controls are shipped; scoped communications workspace and aggregation APIs are still required |
 | Unified Action Module registry UX | `REQUIRED` | contract exists in architecture direction, execution path needs productization |
 
 ## 13. Proof Requirements
