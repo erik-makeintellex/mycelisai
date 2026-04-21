@@ -264,7 +264,8 @@ Use this path when you want:
 
 ### Windows Native
 
-This remains a supported main development path:
+This remains a supported source-validation and host-specific debugging path.
+If the host is Windows and you are doing day-to-day code changes, prefer a WSL worktree plus the Compose path above, then use the Windows browser against `http://localhost:3000` as the first operator proof.
 
 ```powershell
 Copy-Item .env.example .env
@@ -275,7 +276,7 @@ uv run inv lifecycle.health
 ```
 
 Use this path when you want:
-- the normal Windows desktop development experience
+- explicit validation of the Windows-local source or Kubernetes path
 - direct validation of the local Kubernetes path (`k3d` preferred, `MYCELIS_K8S_BACKEND=kind` fallback)
 - a Windows operator/browser station that reaches a self-hosted runtime and an explicit Windows-hosted AI endpoint
 

@@ -146,6 +146,11 @@ uv run inv lifecycle.health
 
 Developer source mode is not a deployment method. It is the implementation lane for changing the product.
 
+Windows host note:
+- if the machine is Windows, prefer running the source workflow from a WSL worktree when possible
+- use the Windows browser against `http://localhost:3000` as the first operator-facing check for that WSL-hosted stack
+- keep the Windows-native source path for explicit host-local Kubernetes validation or host-specific troubleshooting
+
 ## AI Endpoint Rules
 
 Keep AI endpoints explicit in every runtime.

@@ -127,7 +127,7 @@ Use this compact slice when you need to prove the current media/output lane with
 Use this lane when you need repeatable proof that the self-hosted product works the way a Windows operator actually uses it:
 
 - the browser session runs on Windows
-- the UI is reached over the network, not through a local-only shortcut
+- the UI is reached from Windows through the same host path an operator would really use
 - the runtime is Compose or self-hosted Kubernetes
 - the AI engine runs on a Windows GPU host or equivalent self-hosted service reached by explicit IP or hostname
 
@@ -138,10 +138,14 @@ Required setup:
 2. Bring the stack up with the supported runtime task path.
 3. Confirm `compose.status` or the relevant Kubernetes health proof shows the UI and backend are healthy before browser work begins.
 4. Record the Windows host address used for the model service and the browser URL used for the UI.
+   - same-machine WSL-hosted stack: `http://localhost:3000` is the first valid operator path
+   - different machine or explicit LAN proof: use the network-reachable host name or IP
 
 Required proof sequence:
 
-1. Open the UI from Windows using the network-reachable host name or IP.
+1. Open the UI from Windows using the real operator-facing address.
+   - same-machine WSL-hosted stack: start with `http://localhost:3000`
+   - different machine or explicit LAN proof: use the network-reachable host name or IP
 2. Confirm Soma returns a direct `answer` for a non-mutating prompt.
 3. Confirm a mutating prompt enters `proposal` and can be approved or cancelled.
 4. Confirm guided team creation reaches a real team or temporary workflow lane.

@@ -536,7 +536,7 @@ Need help choosing the right runtime first? Start with [Deployment Method Select
   6. `uv run inv compose.up --build --wait-timeout=240`
   7. `uv run inv compose.health`
   8. open `http://localhost:3000`
-- Windows native:
+- Windows native source fallback:
   1. `copy .env.example .env`
   2. `uv run inv auth.dev-key`
   3. `uv run inv auth.break-glass-key`
@@ -546,6 +546,11 @@ Need help choosing the right runtime first? Start with [Deployment Method Select
   7. `uv run inv lifecycle.up --frontend`
   8. `uv run inv lifecycle.health`
   9. open `http://localhost:3000`
+
+Active-code rule for Windows hosts:
+- prefer a WSL worktree plus the Compose path for day-to-day code changes
+- use the Windows-side browser as the first operator proof path against that WSL-hosted stack
+- keep the Windows-native source path for explicit local-Kubernetes/source validation or host-specific debugging
 
 What the user still needs on the host:
 - Docker
@@ -558,8 +563,8 @@ What the user still needs on the host:
 ## Cross-Platform Setup
 
 Recommended host posture:
-- Windows native: best for desktop-first local development and operator workflow work; use Ollama locally or point at remote providers
-- WSL2, Linux, and macOS: prefer the Docker Compose path first for the easiest full-stack bring-up
+- WSL2, Linux, and macOS: prefer the Docker Compose path first for the easiest full-stack bring-up and treat this as the canonical active development lane
+- Windows native: best for browser/operator workflow work and explicit local-Kubernetes or host-specific source validation; use Ollama locally or point at remote providers
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate there when you intentionally want local vLLM/Diffusers
 
 Deployment guidance by target environment:
