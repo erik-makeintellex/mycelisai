@@ -67,7 +67,7 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | route-level smoke remains unit-first; live-backend/browser depth is still selective | `ACTIVE` |
 | `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites, `MCPToolRegistry.test.tsx`, `MCPLibraryBrowser.test.tsx` | `settings.spec.ts` for guided settings/profile/access/theme; Connected Tools browser depth now lives on `/resources?tab=tools` in `mcp-connected-tools.spec.ts` | `ACTIVE` |
 | `/runs`, `/runs/[id]`, `/runs/[id]/chain` | run component suites (`RunDetailPage`, timeline, cards), `RunsPage.test.tsx`, `RunChainPage.test.tsx`, `ViewChain.test.tsx` | `docs-and-runs.spec.ts` route smoke for docs plus mocked chain lineage proof; broader `/runs` workflow depth remains secondary to the MVP route gate | `ACTIVE` |
-| `/docs` in-app browser | `DocsPage.test.tsx` | `docs-and-runs.spec.ts` docs manifest/render smoke | `ACTIVE` |
+| `/docs` in-app browser | `DocsPage.test.tsx` for manifest load, internal markdown-link traversal, and readable doc-load failure states | `docs-and-runs.spec.ts` docs manifest/render smoke plus internal-link navigation | `ACTIVE` |
 | `/teams` team roster + specialization hub | `TeamsPage.test.tsx`, `pages/TeamsPage.test.tsx` | `teams.spec.ts` | `ACTIVE` |
 | `/teams/create` guided team-creation workflow | `TeamCreationPage.test.tsx`, `TeamLeadInteractionPanel.guidance-copy.test.tsx`, `TeamLeadInteractionPanel.strategy-actions.test.tsx`, `TeamLeadInteractionPanel.native-team.test.tsx`, `TeamLeadInteractionPanel.compact-team.test.tsx`, `TeamLeadInteractionPanel.external-contract.test.tsx`, `TeamLeadInteractionPanel.loading-state.test.tsx`, `TeamLeadInteractionPanel.malformed-fallback.test.tsx`, `TeamLeadInteractionPanel.retry-flow.test.tsx`, `TeamLeadInteractionPanel.persistence.test.tsx`, `TeamLeadInteractionPanel.retained-package.test.tsx`, `pages/CreateTeamPage.test.tsx` | `team-creation.spec.ts` | `ACTIVE` |
 | Legacy redirect routes (`/wiring`, `/architect`, `/approvals`, etc.) | page redirect tests present | indirect via workflow-parent specs | `COMPLETE` |
@@ -94,7 +94,7 @@ Immediate test additions required for stronger full-stack confidence:
 3. `COMPLETE` add browser proof for media artifact rendering/save/download, or a precise missing-media-engine blocker when no media engine is configured.
 4. `NEXT` add live-backend browser proof that a Soma/team workflow can use an MCP-backed capability and surface matching recent MCP activity.
 5. `NEXT` unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven.
-6. `NEXT` expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches.
+6. `COMPLETE` expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches.
 
 ### Tester Proof Slice: Output Block, Media Readiness, And Team-Managed Review
 

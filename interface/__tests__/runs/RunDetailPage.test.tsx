@@ -7,11 +7,13 @@ vi.mock('reactflow', async () => {
     return mock;
 });
 
+const runSearchParams = new URLSearchParams();
+
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
     usePathname: () => '/runs/test-run-123',
-    useSearchParams: () => new URLSearchParams(),
+    useSearchParams: () => runSearchParams,
 }));
 
 // Mock react `use` to resolve the params promise synchronously
@@ -40,6 +42,7 @@ import RunPage from '@/app/(app)/runs/[id]/page';
 describe('RunDetailPage (/runs/[id])', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        runSearchParams.forEach((_value, key) => runSearchParams.delete(key));
         // Mock fetch for the run status useEffect — return empty events (running status)
         (global.fetch as any) = vi.fn().mockResolvedValue({
             ok: true,
@@ -89,6 +92,19 @@ describe('RunDetailPage (/runs/[id])', () => {
         await act(async () => { fireEvent.click(eventsButton!.closest('button')!); });
 
         // After clicking Events, the Events tab should have active styling
+        const activeEventsTab = screen.getAllByText('Events').find(
+            (el) => el.closest('button')?.className.includes('text-cortex-primary')
+        );
+        expect(activeEventsTab).toBeDefined();
+    });
+
+    it('opens the events tab when the URL query requests it', async () => {
+        runSearchParams.set('tab', 'events');
+
+        await act(async () => {
+            render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
+        });
+
         const activeEventsTab = screen.getAllByText('Events').find(
             (el) => el.closest('button')?.className.includes('text-cortex-primary')
         );
@@ -155,6 +171,54 @@ describe('RunDetailPage (/runs/[id])', () => {
         expect(completedBadge).toBeDefined();
         // Completed badge has success color
         expect(completedBadge.className).toContain('text-cortex-success');
+    });
+
+    it('shows failed status badge when the run emits mission.failed', async () => {
+        (global.fetch as any) = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ data: [{ event_type: 'mission.failed' }] }),
+        });
+
+        await act(async () => {
+            render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
+        });
+
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 50));
+        });
+
+        expect(screen.getByText('failed')).toBeDefined();
+    });
+
+    it('shows cancelled status badge when the run emits mission.cancelled', async () => {
+        (global.fetch as any) = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ data: [{ event_type: 'mission.cancelled' }] }),
+        });
+
+        await act(async () => {
+            render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
+        });
+
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 50));
+        });
+
+        expect(screen.getByText('cancelled')).toBeDefined();
+    });
+
+    it('falls back to running status when the run status fetch fails', async () => {
+        (global.fetch as any) = vi.fn().mockRejectedValue(new Error('status-down'));
+
+        await act(async () => {
+            render(<RunPage params={Promise.resolve({ id: 'test-run-123-abcd-5678' })} />);
+        });
+
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 50));
+        });
+
+        expect(screen.getByText('running')).toBeDefined();
     });
 
     it('renders back link to /dashboard', async () => {

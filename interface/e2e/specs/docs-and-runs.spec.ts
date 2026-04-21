@@ -17,6 +17,12 @@ test.describe('Docs and Runs Route Coverage', () => {
                                     path: 'docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md',
                                     description: 'test doc',
                                 },
+                                {
+                                    slug: 'workflow-variants-doc',
+                                    label: 'Workflow Variants',
+                                    path: 'docs/user/workflow-variants-and-plan-memory.md',
+                                    description: 'linked doc',
+                                },
                             ],
                         },
                     ],
@@ -31,7 +37,19 @@ test.describe('Docs and Runs Route Coverage', () => {
                 body: JSON.stringify({
                     slug: 'ui-test-doc',
                     label: 'UI Test Doc',
-                    content: '# UI Test Heading\n\nTesting docs route rendering.',
+                    content: '# UI Test Heading\n\nTesting docs route rendering.\n\nSee [Workflow Variants](workflow-variants-and-plan-memory.md).',
+                }),
+            });
+        });
+
+        await page.route('**/docs-api/workflow-variants-doc', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    slug: 'workflow-variants-doc',
+                    label: 'Workflow Variants',
+                    content: '# Workflow Variants\n\nCompact lanes stay visible.',
                 }),
             });
         });
@@ -41,6 +59,10 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.locator('body')).toContainText('Documentation', { timeout: 20_000 });
         await expect(page.getByText('UI Test Doc').first()).toBeVisible();
         await expect(page.getByRole('heading', { name: 'UI Test Heading' })).toBeVisible();
+
+        await page.locator('.max-w-3xl').getByRole('button', { name: 'Workflow Variants' }).click();
+        await expect(page).toHaveURL(/\/docs\?doc=workflow-variants-doc$/);
+        await expect(page.getByRole('heading', { name: 'Workflow Variants' })).toBeVisible();
 
         await page.getByPlaceholder('Filter docs...').fill('missing-doc');
         await expect(page.getByText('No docs match "missing-doc"')).toBeVisible();

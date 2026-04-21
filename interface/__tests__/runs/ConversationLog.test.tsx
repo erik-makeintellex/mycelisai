@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -134,5 +134,29 @@ describe('ConversationLog', () => {
         storeState = { conversationTurns: mockTurns };
         await act(async () => { render(<ConversationLog runId="run-1" />); });
         expect(screen.getByText('ollama / qwen2.5')).toBeDefined();
+    });
+
+    it('re-fetches conversation when the operator selects an agent filter', async () => {
+        storeState = { conversationTurns: mockTurns };
+        await act(async () => { render(<ConversationLog runId="run-1" />); });
+
+        mockFetchRunConversation.mockClear();
+        fireEvent.click(screen.getByRole('button', { name: 'council-architect' }));
+
+        await waitFor(() => expect(mockFetchRunConversation).toHaveBeenCalledWith('run-1', 'council-architect'));
+    });
+
+    it('submits an interjection and clears the draft input', async () => {
+        storeState = { conversationTurns: mockTurns };
+        mockInterjectInRun.mockResolvedValue(undefined);
+
+        await act(async () => { render(<ConversationLog runId="run-1" runStatus="running" />); });
+
+        const input = screen.getByPlaceholderText('Interject in this run...') as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'Pause the destructive branch and summarize risk.' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Interject' }));
+
+        await waitFor(() => expect(mockInterjectInRun).toHaveBeenCalledWith('run-1', 'Pause the destructive branch and summarize risk.'));
+        await waitFor(() => expect(input.value).toBe(''));
     });
 });
