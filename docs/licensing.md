@@ -21,10 +21,13 @@ It is not a substitute for:
 - [Edition Model](#edition-model)
 - [Self-Hosted Release](#self-hosted-release)
 - [Self-Hosted Enterprise](#self-hosted-enterprise)
-- [Hosted Control Plane](#hosted-control-plane)
+- [Hosted Admin Control Plane](#hosted-admin-control-plane)
 - [Identity And User Management Layering](#identity-and-user-management-layering)
+- [Canonical Capability Matrix](#canonical-capability-matrix)
+- [Deployment Packaging Boundary](#deployment-packaging-boundary)
 - [Shared Soma Governance Boundary](#shared-soma-governance-boundary)
 - [MCP, Web Access, And Context Security](#mcp-web-access-and-context-security)
+- [Enterprise MCP Bundle Policy](#enterprise-mcp-bundle-policy)
 - [Third-Party Terms And Runtime Costs](#third-party-terms-and-runtime-costs)
 - [Current Repository Posture](#current-repository-posture)
 
@@ -33,7 +36,7 @@ It is not a substitute for:
 Mycelis now has a clear product-layering story:
 - a self-hosted base release
 - a self-hosted enterprise growth layer
-- a hosted control-plane/service layer
+- a hosted admin/service layer
 
 That layering has already started to appear in product and architecture surfaces such as `product_edition`, `identity_mode`, and `shared_agent_specificity_owner`.
 
@@ -44,7 +47,7 @@ This document makes the licensing and edition intent explicit so:
 
 ## Core Position
 
-Mycelis should stay usable as a self-hosted product without forcing a hosted control plane.
+Mycelis should stay usable as a self-hosted product without forcing a hosted admin control plane.
 
 At the same time, some higher-order operational layers are intended to remain modular and commercially packageable:
 - enterprise identity adapters
@@ -72,7 +75,7 @@ The intended edition model is:
    - still self-hosted at the runtime layer
    - intended to preserve local control and local break-glass recovery
 
-3. Hosted control plane
+3. Hosted admin control plane
    - a paid hosted management/service layer
    - can provide centralized identity, directory sync, admin tooling, policy posture, and fleet-style management
    - should remain modular instead of becoming a mandatory dependency for self-hosted runtime operation
@@ -84,6 +87,7 @@ The self-hosted release is the expected base edition.
 It should include:
 - local runtime operation
 - local primary admin ownership
+- local named users and manual local role/group administration
 - optional local break-glass recovery principal
 - governed Soma-first workflow
 - approvals, audit, and capability-aware policy
@@ -104,18 +108,20 @@ The self-hosted enterprise layer is the intended paid expansion for organization
 Expected enterprise-layer capabilities:
 - SAML and/or OIDC federation
 - optional SCIM lifecycle sync
-- richer role and access administration
-- stronger shared-Soma governance controls
-- broader audit/compliance administration
+- external group/claim mapping into Mycelis roles and policy posture
+- delegated admin hierarchy and richer role/access administration
+- broader audit/compliance administration and export
+- advanced policy packs and approval-chain administration
+- pinned, supported deployment packaging and curated enterprise MCP bundle profiles
 - delegated environment ownership and approval chains
 
 Important boundary:
 - enterprise self-host should still preserve local administrative recovery
 - federated identity must not remove the break-glass path for self-hosted recovery
 
-## Hosted Control Plane
+## Hosted Admin Control Plane
 
-The hosted control plane is the intended paid hosted layer for customers who want managed user administration and broader operational services.
+The hosted admin control plane is the intended paid hosted layer for customers who want managed user administration and broader operational services.
 
 Expected hosted-layer capabilities:
 - hosted user-management plane
@@ -133,13 +139,59 @@ Hosted control plane rule:
 User management is intentionally modular.
 
 That means:
-- base self-host can run with local principals
-- self-hosted enterprise can add federation and enterprise user lifecycle
-- hosted control plane can supply the management plane as a paid service
+- base self-host can run with local principals plus manual local user/role management
+- self-hosted enterprise can add federation, enterprise lifecycle, and delegated administration
+- hosted admin control plane can supply the management plane as a paid service
 
 This is the intended licensing/packaging split:
 - runtime governance and core Soma operation belong to the base product
 - advanced directory and control-plane services are eligible paid layers
+
+Rules:
+- local break-glass recovery is part of self-hosted recovery posture, not an enterprise-only entitlement
+- SSO / SAML / OIDC / SCIM belong to enterprise self-host or hosted admin layers
+- external identities must still resolve into stable local Mycelis principals for audit and policy decisions
+- paid identity layers may automate lifecycle and administration; they must not bypass governance or make the hosted admin plane a hard runtime dependency
+
+## Canonical Capability Matrix
+
+| Capability | Self-hosted release | Self-hosted enterprise | Hosted admin control plane |
+| :-- | :-- | :-- | :-- |
+| Local runtime and local operator control | included | included | additive only |
+| Local named users and manual roles/groups | included | included | sync/visibility only |
+| Local owner admin plus break-glass recovery | included | included and required with federation | required for attached self-host runtimes |
+| Core approvals, audit, policy, MCP/web governance | included | included | included |
+| Shared Soma governance and `soma_operating_context` | included | included | included |
+| SAML / OIDC / SSO | not included | included | included |
+| Optional SCIM provisioning/deprovisioning | not included | included | included |
+| External claim/group mapping | not included | included | included |
+| Delegated admin hierarchy and advanced approval chains | basic owner-only posture | included | included |
+| Compliance exports and advanced audit reporting | base audit only | included | included |
+| Centralized multi-environment administration/reporting | not included | limited/local only | included |
+| Hosted directory or user-management service | not included | not included | included |
+
+## Deployment Packaging Boundary
+
+Packaging should carry the edition contract instead of hiding it in UI posture fields alone.
+
+Current packaging direction:
+- self-hosted release: versioned Docker Compose bundle is the primary package
+- self-hosted release: binary package is a supported secondary lane for edge or small-node use
+- self-hosted enterprise: Helm/Kubernetes bundle is the primary package
+- self-hosted enterprise: Compose remains useful for evaluation or parity, not as the canonical enterprise deployment story
+- hosted admin control plane: additive management layer over self-hosted runtimes, not a separate replacement runtime
+
+Planned enforcement target:
+- edition selection should become operator-owned deployment truth, not only a persisted UI review field
+- federated or hybrid enterprise auth should fail closed when self-hosted recovery posture is missing
+- enterprise deployment bundles should require explicit license/entitlement wiring once that runtime contract is implemented
+
+Current repository truth:
+- deploy-owned edition/auth posture now resolves from env or a deployment-contract file and is surfaced read-only through `/api/v1/user/me` and `/api/v1/user/settings`
+- settings writes do not persist or override `access_management_tier`, `product_edition`, `identity_mode`, or `shared_agent_specificity_owner`
+- the repo now ships first release-packaging scaffolds: `core.package` writes archive manifest/checksum sidecars and `k8s.deploy --verify-package` produces enterprise Helm verification artifacts under `dist/helm/`
+- the repo does not yet ship a fully separate enterprise runtime bundle with license enforcement
+- documentation should therefore describe the package boundary clearly without implying finished entitlement code where it does not yet exist
 
 ## Shared Soma Governance Boundary
 
@@ -169,6 +221,28 @@ In practical terms:
 - base self-host should support governed MCP and external research usage
 - enterprise or hosted layers may add stronger administration, directory integration, and policy management around those surfaces
 
+## Enterprise MCP Bundle Policy
+
+Edition packaging must not turn MCP into a bypass around governance.
+
+Rules:
+- base self-host keeps access to the curated MCP library through the governed inspect/apply path
+- enterprise packaging may ship pinned, first-party-supported MCP bundle profiles, but those profiles must still use the same inspect/apply, audit, and activity model
+- no enterprise bundle should rely on floating `latest` package versions
+- no bundle should silently widen access to external SaaS or memory side-channels without explicit governance posture
+- credentialed external SaaS entries should require approval even from the curated library instead of being treated like local-first auto-installs
+
+Recommended bundle split:
+- prebuilt/asserted for enterprise deploy: `filesystem` as a storage/output-space contract
+- promoted enterprise curated set: `fetch`, `github`, `slack`, `postgres`, `brave-search`
+- manual self-hosted curated set: `memory`, `sqlite`, `puppeteer`, `sequential-thinking`, and media connectors until their governance/support posture is stronger
+
+Filesystem/output-space rule:
+- treat `filesystem` as a deployment contract, not a casual optional default
+- `/data` should be the mounted writable output block for deployed runtime lanes
+- `MYCELIS_WORKSPACE` should resolve inside that governed writable block
+- enterprise packaging should prefer cluster-managed storage by default, with host-mounted output as an explicit exception
+
 ## Third-Party Terms And Runtime Costs
 
 This product-edition document does not change third-party terms.
@@ -188,8 +262,8 @@ Important distinction:
 Current repo truth:
 - the product already exposes the edition story for review through `product_edition`, `identity_mode`, and `shared_agent_specificity_owner`
 - the current runtime now supports explicit local admin vs break-glass admin posture
-- the current docs define self-hosted release, self-hosted enterprise, and hosted control plane as the intended layering
-- the full enterprise adapters and hosted control plane are still implementation work, not fully delivered runtime
+- the current docs define self-hosted release, self-hosted enterprise, and hosted admin control plane as the intended layering
+- the deploy-owned runtime contract is now partially implemented for self-hosted posture and break-glass enforcement, but the full enterprise adapters, license enforcement, and hosted admin control plane are still implementation work, not fully delivered runtime
 
 Current documentation rule:
 - treat this document as the canonical licensing-and-editions posture

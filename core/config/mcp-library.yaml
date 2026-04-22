@@ -40,6 +40,7 @@ categories:
             description: "GitHub personal access token used for repository, issue, and PR access."
             required: true
             secret: true
+        deployment_boundary: "external_saas"
         tags: ["git", "code", "vcs"]
         tool_set: "development"
 
@@ -106,6 +107,7 @@ categories:
             description: "Brave Search API key for governed web-search execution."
             required: true
             secret: true
+        deployment_boundary: "external_saas"
         tags: ["search", "web"]
       - name: "fetch"
         title: "Fetch"
@@ -153,6 +155,7 @@ categories:
           - name: "SLACK_TEAM_ID"
             description: "Slack workspace or team identifier that scopes the integration."
             required: true
+        deployment_boundary: "external_saas"
         tags: ["messaging", "team"]
 
   - name: "Media & Content Generation"
@@ -197,6 +200,7 @@ categories:
             description: "Black Forest Labs API key used for FLUX image generation."
             required: true
             secret: true
+        deployment_boundary: "external_saas"
         tags: ["image", "generation", "ai"]
       - name: "elevenlabs"
         title: "ElevenLabs"
@@ -218,6 +222,7 @@ categories:
             description: "ElevenLabs API key for speech synthesis requests."
             required: true
             secret: true
+        deployment_boundary: "external_saas"
         tags: ["audio", "tts", "voice"]
       - name: "replicate"
         title: "Replicate"
@@ -239,6 +244,7 @@ categories:
             description: "Replicate API token used for hosted multimodal model execution."
             required: true
             secret: true
+        deployment_boundary: "external_saas"
         tags: ["image", "video", "audio", "generation", "ai"]
       - name: "comfyui"
         title: "ComfyUI"
@@ -280,6 +286,7 @@ categories:
             description: "OpenAI API key for DALL-E image generation."
             required: true
             secret: true
+        deployment_boundary: "external_saas"
         tags: ["image", "generation", "ai"]
 
   - name: "Utilities"

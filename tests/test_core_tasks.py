@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+import json
 import tarfile
 import zipfile
 
@@ -68,13 +69,22 @@ def test_package_builds_versioned_linux_archive(monkeypatch, tmp_path):
 
     expected_staging = tmp_path / "dist" / "mycelis-core-v0.1.0-deadbee-linux-amd64"
     expected_archive = tmp_path / "dist" / "mycelis-core-v0.1.0-deadbee-linux-amd64.tar.gz"
+    expected_manifest = tmp_path / "dist" / "mycelis-core-v0.1.0-deadbee-linux-amd64.manifest.json"
+    expected_checksum = tmp_path / "dist" / "mycelis-core-v0.1.0-deadbee-linux-amd64.tar.gz.sha256"
 
     assert ctx.cd_paths == [str(tmp_path / "core")]
     assert ctx.commands == [f"go build -v -o {expected_staging / 'server'} ./cmd/server"]
     assert expected_archive.exists()
+    assert expected_manifest.exists()
+    assert expected_checksum.exists()
     with tarfile.open(expected_archive, "r:gz") as bundle:
         names = bundle.getnames()
     assert f"{expected_staging.name}/README.txt" in names
+    assert f"{expected_staging.name}/release-manifest.json" in names
+    manifest = json.loads(expected_manifest.read_text(encoding="utf-8"))
+    assert manifest["artifact_kind"] == "self_hosted_core_binary"
+    assert manifest["status"] == "scaffold"
+    assert manifest["archive_path"] == "dist/mycelis-core-v0.1.0-deadbee-linux-amd64.tar.gz"
 
 
 def test_package_builds_versioned_windows_zip(monkeypatch, tmp_path):
@@ -87,12 +97,15 @@ def test_package_builds_versioned_windows_zip(monkeypatch, tmp_path):
 
     expected_staging = tmp_path / "dist" / "mycelis-core-v9.9.9-test-windows-amd64"
     expected_archive = tmp_path / "dist" / "mycelis-core-v9.9.9-test-windows-amd64.zip"
+    expected_manifest = tmp_path / "dist" / "mycelis-core-v9.9.9-test-windows-amd64.manifest.json"
 
     assert ctx.commands == [f"go build -v -o {expected_staging / 'server.exe'} ./cmd/server"]
     assert expected_archive.exists()
+    assert expected_manifest.exists()
     with zipfile.ZipFile(expected_archive) as bundle:
         names = bundle.namelist()
     assert f"{expected_staging.name}/README.txt" in names
+    assert f"{expected_staging.name}/release-manifest.json" in names
 
 
 def test_default_target_os_maps_platform_names(monkeypatch):

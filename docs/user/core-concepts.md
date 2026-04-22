@@ -223,9 +223,10 @@ Primary surfaces:
 - `Resources -> Connected Tools` for server/tool visibility and install flows
 - `Workspace` for actual tool usage via agent execution
 
-Baseline profile (V7):
-- `filesystem` and `fetch` are bootstrap defaults
-- `memory` is curated install
+Current baseline profile:
+- curated library installs are the supported default path
+- `filesystem` and `fetch` are common curated entries, not assumed bootstrap defaults in supported runtime lanes
+- `memory` is curated install and remains distinct from Mycelis-governed memory/context layers
 - `artifact-renderer` remains planned
 
 ---

@@ -85,6 +85,13 @@ func mcpLibraryLocality(entry *mcp.LibraryEntry) string {
 		return "unknown"
 	}
 
+	switch mcpLibraryDeploymentBoundary(entry) {
+	case "external_saas", "remote_mcp":
+		return "remote"
+	case "local_loopback", "local_first":
+		return "local"
+	}
+
 	tags := normalizeMCPEntryTags(entry.Tags)
 	if slices.Contains(tags, "remote") {
 		return "remote"
@@ -100,9 +107,69 @@ func mcpLibraryLocality(entry *mcp.LibraryEntry) string {
 	return "local"
 }
 
+func mcpLibraryDeploymentBoundary(entry *mcp.LibraryEntry) string {
+	if entry == nil {
+		return "unknown"
+	}
+
+	boundary := strings.ToLower(strings.TrimSpace(entry.DeploymentBoundary))
+	if boundary != "" {
+		return boundary
+	}
+
+	tags := normalizeMCPEntryTags(entry.Tags)
+	if slices.Contains(tags, "remote") {
+		return "remote_mcp"
+	}
+	if entry.Transport == "sse" {
+		if endpoint := strings.TrimSpace(entry.URL); endpoint != "" {
+			if isLoopbackURL(endpoint) {
+				return "local_loopback"
+			}
+			return "remote_mcp"
+		}
+	}
+	return "local_first"
+}
+
+func mcpLibraryCredentialBoundary(entry *mcp.LibraryEntry) string {
+	if entry == nil {
+		return "unknown"
+	}
+	if entry.HasRequiredSecretEnvVar() {
+		return "secret_required"
+	}
+	if len(entry.DeclaredEnvKeys()) > 0 {
+		return "operator_supplied"
+	}
+	return "none"
+}
+
+func mcpLibraryBundleVersionPosture(entry *mcp.LibraryEntry) string {
+	if entry == nil {
+		return "unknown"
+	}
+	version := strings.ToLower(strings.TrimSpace(entry.Version))
+	if version == "" || version == "latest" {
+		return "floating"
+	}
+	for _, pkg := range entry.Packages {
+		pkgVersion := strings.ToLower(strings.TrimSpace(pkg.Version))
+		if pkgVersion == "" || pkgVersion == "latest" {
+			return "floating"
+		}
+	}
+	return "pinned"
+}
+
 func mcpLibraryRiskLevel(entry *mcp.LibraryEntry) string {
 	if entry == nil {
 		return "medium"
+	}
+
+	switch mcpLibraryDeploymentBoundary(entry) {
+	case "external_saas", "remote_mcp":
+		return "high"
 	}
 
 	locality := mcpLibraryLocality(entry)
@@ -136,6 +203,72 @@ func isLoopbackURL(raw string) bool {
 	}
 	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
 	return host == "127.0.0.1" || host == "localhost" || host == "::1"
+}
+
+func buildMCPLibraryGovernanceDecision(entry *mcp.LibraryEntry, ctx mcpGovernanceContext) mcpGovernanceDecision {
+	locality := mcpLibraryLocality(entry)
+	riskLevel := mcpLibraryRiskLevel(entry)
+	deploymentBoundary := mcpLibraryDeploymentBoundary(entry)
+	credentialBoundary := mcpLibraryCredentialBoundary(entry)
+
+	decision := mcpGovernanceDecision{
+		Decision:         "allow",
+		ApprovalRequired: false,
+		ApprovalMode:     "auto_allowed",
+		ApprovalReason:   "curated_mcp_config",
+		SourceSurface:    ctx.SourceSurface,
+		ConfigScope:      ctx.ConfigScope,
+		GroupID:          ctx.GroupID,
+	}
+
+	switch {
+	case deploymentBoundary == "external_saas" && credentialBoundary == "secret_required":
+		decision.Decision = "require_approval"
+		decision.ApprovalRequired = true
+		decision.ApprovalMode = "required"
+		decision.ApprovalReason = "credentialed_external_mcp_config"
+		decision.Reasons = []string{
+			"Credentialed external SaaS MCPs require an explicit approval gate even when launched through a local stdio wrapper.",
+			"Curated-library install remains the only governed install path for this MCP configuration.",
+		}
+	case deploymentBoundary == "external_saas":
+		decision.Decision = "require_approval"
+		decision.ApprovalRequired = true
+		decision.ApprovalMode = "required"
+		decision.ApprovalReason = "external_service_mcp_config"
+		decision.Reasons = []string{
+			"External service MCP configuration still requires an explicit approval gate.",
+			"Curated-library install remains the only governed install path for this MCP configuration.",
+		}
+	case locality == "remote":
+		decision.Decision = "require_approval"
+		decision.ApprovalRequired = true
+		decision.ApprovalMode = "required"
+		decision.ApprovalReason = "remote_mcp_config"
+		decision.Reasons = []string{
+			"Remote MCP configuration still requires an explicit approval gate.",
+			"Owner-scoped settings installs auto-allow only local-first MCP configuration.",
+		}
+	case isOwnedGroupMCPConfig(ctx):
+		decision.ApprovalReason = "user_owned_mcp_config"
+		decision.Reasons = []string{
+			"Owned MCP configuration from the MCP settings page is auto-allowed for the current root/owner user group.",
+		}
+	case riskLevel == "high":
+		decision.Decision = "require_approval"
+		decision.ApprovalRequired = true
+		decision.ApprovalMode = "required"
+		decision.ApprovalReason = "capability_risk"
+		decision.Reasons = []string{
+			"This MCP configuration crosses a higher-risk boundary and still needs an explicit approval gate.",
+		}
+	default:
+		decision.Reasons = []string{
+			"Curated local-first MCP configuration is within the default policy boundary.",
+		}
+	}
+
+	return decision
 }
 
 func buildMCPConfigGovernanceDecision(ctx mcpGovernanceContext, locality, riskLevel string) mcpGovernanceDecision {
@@ -184,19 +317,25 @@ func buildMCPConfigGovernanceDecision(ctx mcpGovernanceContext, locality, riskLe
 func buildMCPLibraryInspectionReport(entry *mcp.LibraryEntry, ctx mcpGovernanceContext) map[string]any {
 	locality := mcpLibraryLocality(entry)
 	riskLevel := mcpLibraryRiskLevel(entry)
-	decision := buildMCPConfigGovernanceDecision(ctx, locality, riskLevel)
+	deploymentBoundary := mcpLibraryDeploymentBoundary(entry)
+	credentialBoundary := mcpLibraryCredentialBoundary(entry)
+	decision := buildMCPLibraryGovernanceDecision(entry, ctx)
 
 	return map[string]any{
-		"service_name":       strings.TrimSpace(entry.Name),
-		"source":             "curated_library",
-		"risk_level":         riskLevel,
-		"required_scopes":    []string{"mcp:write"},
-		"network_locality":   locality,
-		"secrets_declared":   sortedMCPLibraryEnvKeys(entry),
-		"decision":           decision.Decision,
-		"reasons":            decision.Reasons,
-		"governance":         decision,
-		"governance_context": ctx,
+		"service_name":           strings.TrimSpace(entry.Name),
+		"source":                 "curated_library",
+		"risk_level":             riskLevel,
+		"required_scopes":        []string{"mcp:write"},
+		"network_locality":       locality,
+		"deployment_boundary":    deploymentBoundary,
+		"credential_boundary":    credentialBoundary,
+		"secrets_declared":       sortedMCPLibraryEnvKeys(entry),
+		"bundle_install_path":    "curated_library_only",
+		"bundle_version_posture": mcpLibraryBundleVersionPosture(entry),
+		"decision":               decision.Decision,
+		"reasons":                decision.Reasons,
+		"governance":             decision,
+		"governance_context":     ctx,
 	}
 }
 

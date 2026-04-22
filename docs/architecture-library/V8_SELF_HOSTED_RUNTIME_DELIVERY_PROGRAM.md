@@ -114,12 +114,12 @@ Current acceptance bias:
 The currently engaged slice is the runtime-posture gate correction.
 
 Why this slice is first:
-- release acceptance currently depends on `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend`
+- release acceptance currently depends on `uv run inv ci.release-preflight --lane=release`
 - the supported Compose runtime contract is `.env.compose`-driven
 - the runtime-posture gate must therefore read the same deployment env contract and fail clearly when the supported endpoint posture is missing or invalid
 
 Current local status:
-- `IN_REVIEW` the gate now reads process env plus `.env.compose` / `.env`, includes provider-specific endpoint overrides in its probe set, and fails when no explicit supported AI endpoint contract is configured; focused task tests are green and the next proof step is the supported full release gate.
+- `IN_REVIEW` the gate now reads process env plus `.env.compose` / `.env`, includes provider-specific endpoint overrides in its probe set, exposes lane presets (`baseline`, `runtime`, `service`, `release`), and fails when no explicit supported AI endpoint contract is configured; focused task tests are green and the next proof step is the supported full release gate.
 
 Engaged ownership:
 

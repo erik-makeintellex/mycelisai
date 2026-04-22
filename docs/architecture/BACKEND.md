@@ -658,8 +658,8 @@ Trusted memory posture:
 ### Identity & Users
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/v1/user/me` | Current user profile, including normalized principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`) |
-| GET/PUT | `/api/v1/user/settings` | Read/update persisted user preferences, including assistant name and People & Access review posture (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`) |
+| GET | `/api/v1/user/me` | Current user profile, including normalized principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`) plus deploy-owned People & Access posture surfaced read-only through `settings` |
+| GET/PUT | `/api/v1/user/settings` | Read/update persisted user preferences such as assistant name/theme; GET overlays deploy-owned People & Access posture (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`), while PUT ignores/preserves those deploy-owned fields instead of persisting them |
 
 ### Chat & Council
 | Method | Path | Purpose |

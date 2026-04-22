@@ -35,6 +35,30 @@ from . import lifecycle
 from . import quality
 
 
+RELEASE_PREFLIGHT_LANES = {
+    "baseline": {
+        "runtime_posture": False,
+        "service_health": False,
+        "live_backend": False,
+    },
+    "runtime": {
+        "runtime_posture": True,
+        "service_health": False,
+        "live_backend": False,
+    },
+    "service": {
+        "runtime_posture": False,
+        "service_health": True,
+        "live_backend": False,
+    },
+    "release": {
+        "runtime_posture": True,
+        "service_health": True,
+        "live_backend": True,
+    },
+}
+
+
 def _task_env(extra=None):
     ensure_managed_cache_dirs()
     return managed_cache_env(extra=extra)
@@ -173,6 +197,63 @@ def _runtime_posture_check(c):
         )
 
     print("RUNTIME POSTURE PASSED")
+
+
+def _release_preflight_clean_tree(c):
+    status = c.run("git status --porcelain", hide=True, warn=True)
+    dirty_lines = [ln for ln in (status.stdout or "").splitlines() if ln.strip()]
+    if dirty_lines:
+        print("Working tree is not clean:")
+        preview = dirty_lines[:20]
+        for ln in preview:
+            print(f"  {ln}")
+        if len(dirty_lines) > len(preview):
+            print(f"  ... and {len(dirty_lines) - len(preview)} more")
+        raise SystemExit("RELEASE PREFLIGHT FAILED: clean-tree requirement not met.")
+
+
+def _resolve_release_preflight_lane(
+    lane,
+    *,
+    runtime_posture=False,
+    service_health=False,
+    live_backend=False,
+):
+    normalized_lane = (lane or "baseline").strip().lower()
+    if normalized_lane not in RELEASE_PREFLIGHT_LANES:
+        valid_lanes = ", ".join(sorted(RELEASE_PREFLIGHT_LANES))
+        raise SystemExit(
+            f"RELEASE PREFLIGHT FAILED: unsupported lane '{lane}'. Expected one of: {valid_lanes}."
+        )
+
+    resolved = dict(RELEASE_PREFLIGHT_LANES[normalized_lane])
+    resolved["runtime_posture"] = resolved["runtime_posture"] or runtime_posture
+    resolved["service_health"] = resolved["service_health"] or service_health or live_backend
+    resolved["live_backend"] = resolved["live_backend"] or live_backend
+    if resolved["live_backend"]:
+        resolved["service_health"] = True
+    return normalized_lane, resolved
+
+
+def _release_preflight_stages(
+    c,
+    *,
+    e2e=True,
+    strict_toolchain=False,
+    runtime_posture=False,
+    service_health=False,
+    live_backend=False,
+):
+    stages = [
+        ("clean-tree", lambda: _release_preflight_clean_tree(c)),
+        ("toolchain-check", lambda: toolchain_check.body(c, strict=strict_toolchain)),
+    ]
+    if runtime_posture:
+        stages.append(("runtime-posture", lambda: _runtime_posture_check(c)))
+    stages.append(("baseline", lambda: baseline.body(c, e2e=e2e)))
+    if service_health:
+        stages.append(("service-check", lambda: service_check.body(c, live_backend=live_backend)))
+    return stages
 
 
 @task
@@ -543,6 +624,7 @@ def entrypoint_check(c):
 
 @task(
     help={
+        "lane": "Preset gate lane: baseline, runtime, service, or release (default: baseline).",
         "e2e": "Include Playwright in baseline gate (default: True).",
         "strict_toolchain": "Fail on Go lock mismatch (default: False).",
         "service_health": "Require lifecycle.health against the running local stack (default: False).",
@@ -552,6 +634,7 @@ def entrypoint_check(c):
 )
 def release_preflight(
     c,
+    lane="baseline",
     e2e=True,
     strict_toolchain=False,
     service_health=False,
@@ -563,27 +646,29 @@ def release_preflight(
     - clean working tree
     - toolchain check
     - strict baseline validation
+    - lane presets for stronger runtime/service proof
     - optional runtime posture check for storage and explicit AI endpoints
     - optional live service-health / live-backend proof
     """
-    print("=== RELEASE PREFLIGHT ===")
-    status = c.run("git status --porcelain", hide=True, warn=True)
-    dirty_lines = [ln for ln in (status.stdout or "").splitlines() if ln.strip()]
-    if dirty_lines:
-        print("Working tree is not clean:")
-        preview = dirty_lines[:20]
-        for ln in preview:
-            print(f"  {ln}")
-        if len(dirty_lines) > len(preview):
-            print(f"  ... and {len(dirty_lines) - len(preview)} more")
-        raise SystemExit("RELEASE PREFLIGHT FAILED: clean-tree requirement not met.")
+    resolved_lane, resolved = _resolve_release_preflight_lane(
+        lane,
+        runtime_posture=runtime_posture,
+        service_health=service_health,
+        live_backend=live_backend,
+    )
+    stages = _release_preflight_stages(
+        c,
+        e2e=e2e,
+        strict_toolchain=strict_toolchain,
+        runtime_posture=resolved["runtime_posture"],
+        service_health=resolved["service_health"],
+        live_backend=resolved["live_backend"],
+    )
 
-    toolchain_check(c, strict=strict_toolchain)
-    if runtime_posture:
-        _runtime_posture_check(c)
-    baseline(c, e2e=e2e)
-    if service_health:
-        service_check(c, live_backend=live_backend)
+    print(f"=== RELEASE PREFLIGHT ({resolved_lane}) ===")
+    for index, (stage_name, runner) in enumerate(stages, start=1):
+        print(f"[{index}/{len(stages)}] {stage_name}")
+        runner()
     print("RELEASE PREFLIGHT PASSED")
 
 

@@ -3,6 +3,9 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -75,6 +78,43 @@ func TestHandleMe_HybridModeReportsBreakGlassPrincipal(t *testing.T) {
 	}
 	if user.EffectiveRole != "owner" {
 		t.Errorf("Expected effective_role owner, got %q", user.EffectiveRole)
+	}
+}
+
+func TestHandleMe_UsesDeploymentContractSettings(t *testing.T) {
+	s := newTestServer()
+	contractPath := filepath.Join(t.TempDir(), "deployment-contract.json")
+	if err := os.WriteFile(contractPath, []byte(`{
+  "access_management_tier": "enterprise",
+  "product_edition": "self_hosted_enterprise",
+  "identity_mode": "hybrid",
+  "shared_agent_specificity_owner": "delegated_owner"
+}`), 0o644); err != nil {
+		t.Fatalf("write deployment contract: %v", err)
+	}
+	t.Setenv("MYCELIS_DEPLOYMENT_CONTRACT_PATH", contractPath)
+
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var user User
+	assertJSON(t, rr, &user)
+
+	var settings map[string]any
+	if err := json.Unmarshal(user.Settings, &settings); err != nil {
+		t.Fatalf("unmarshal settings: %v", err)
+	}
+	if settings["access_management_tier"] != "enterprise" {
+		t.Errorf("Expected access_management_tier enterprise, got %#v", settings["access_management_tier"])
+	}
+	if settings["product_edition"] != "self_hosted_enterprise" {
+		t.Errorf("Expected product_edition self_hosted_enterprise, got %#v", settings["product_edition"])
+	}
+	if settings["identity_mode"] != "hybrid" {
+		t.Errorf("Expected identity_mode hybrid, got %#v", settings["identity_mode"])
+	}
+	if settings["shared_agent_specificity_owner"] != "delegated_owner" {
+		t.Errorf("Expected shared_agent_specificity_owner delegated_owner, got %#v", settings["shared_agent_specificity_owner"])
 	}
 }
 
@@ -163,50 +203,31 @@ func TestHandleUpdateSettings_AssistantNamePersists(t *testing.T) {
 	}
 }
 
-func TestHandleUpdateSettings_AccessManagementTierPersists(t *testing.T) {
+func TestHandleUpdateSettings_DoesNotPersistDeploymentContractOwnedFields(t *testing.T) {
 	s := newTestServer()
-	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
+	settingsPath := filepath.Join(t.TempDir(), "user-settings.json")
+	t.Setenv("MYCELIS_USER_SETTINGS_PATH", settingsPath)
 
-	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"access_management_tier":"enterprise"}`)
-	assertStatus(t, rr, http.StatusOK)
-
-	var settings map[string]any
-	assertJSON(t, rr, &settings)
-	if settings["access_management_tier"] != "enterprise" {
-		t.Fatalf("Expected access_management_tier enterprise, got %#v", settings["access_management_tier"])
-	}
-
-	me := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
-	assertStatus(t, me, http.StatusOK)
-
-	var user User
-	assertJSON(t, me, &user)
-	if err := json.Unmarshal(user.Settings, &settings); err != nil {
-		t.Fatalf("unmarshal settings: %v", err)
-	}
-	if settings["access_management_tier"] != "enterprise" {
-		t.Errorf("Expected access_management_tier enterprise from HandleMe, got %#v", settings["access_management_tier"])
-	}
-}
-
-func TestHandleUpdateSettings_ProductEditionIdentityAndSomaControlPersist(t *testing.T) {
-	s := newTestServer()
-	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
-
-	body := `{"product_edition":"hosted_control_plane","identity_mode":"federated","shared_agent_specificity_owner":"delegated_owner"}`
+	body := `{"theme":"midnight-cortex","access_management_tier":"enterprise","product_edition":"hosted_control_plane","identity_mode":"federated","shared_agent_specificity_owner":"delegated_owner"}`
 	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", body)
 	assertStatus(t, rr, http.StatusOK)
 
 	var settings map[string]any
 	assertJSON(t, rr, &settings)
-	if settings["product_edition"] != "hosted_control_plane" {
-		t.Fatalf("Expected product_edition hosted_control_plane, got %#v", settings["product_edition"])
+	if settings["theme"] != "midnight-cortex" {
+		t.Fatalf("Expected theme midnight-cortex, got %#v", settings["theme"])
 	}
-	if settings["identity_mode"] != "federated" {
-		t.Fatalf("Expected identity_mode federated, got %#v", settings["identity_mode"])
+	if settings["access_management_tier"] != "release" {
+		t.Fatalf("Expected access_management_tier release, got %#v", settings["access_management_tier"])
 	}
-	if settings["shared_agent_specificity_owner"] != "delegated_owner" {
-		t.Fatalf("Expected shared_agent_specificity_owner delegated_owner, got %#v", settings["shared_agent_specificity_owner"])
+	if settings["product_edition"] != "self_hosted_release" {
+		t.Fatalf("Expected product_edition self_hosted_release, got %#v", settings["product_edition"])
+	}
+	if settings["identity_mode"] != "local_only" {
+		t.Fatalf("Expected identity_mode local_only, got %#v", settings["identity_mode"])
+	}
+	if settings["shared_agent_specificity_owner"] != "root_admin" {
+		t.Fatalf("Expected shared_agent_specificity_owner root_admin, got %#v", settings["shared_agent_specificity_owner"])
 	}
 
 	me := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
@@ -217,14 +238,36 @@ func TestHandleUpdateSettings_ProductEditionIdentityAndSomaControlPersist(t *tes
 	if err := json.Unmarshal(user.Settings, &settings); err != nil {
 		t.Fatalf("unmarshal settings: %v", err)
 	}
-	if settings["product_edition"] != "hosted_control_plane" {
-		t.Errorf("Expected product_edition hosted_control_plane from HandleMe, got %#v", settings["product_edition"])
+	if settings["theme"] != "midnight-cortex" {
+		t.Errorf("Expected theme midnight-cortex from HandleMe, got %#v", settings["theme"])
 	}
-	if settings["identity_mode"] != "federated" {
-		t.Errorf("Expected identity_mode federated from HandleMe, got %#v", settings["identity_mode"])
+	if settings["access_management_tier"] != "release" {
+		t.Errorf("Expected access_management_tier release from HandleMe, got %#v", settings["access_management_tier"])
 	}
-	if settings["shared_agent_specificity_owner"] != "delegated_owner" {
-		t.Errorf("Expected shared_agent_specificity_owner delegated_owner from HandleMe, got %#v", settings["shared_agent_specificity_owner"])
+	if settings["product_edition"] != "self_hosted_release" {
+		t.Errorf("Expected product_edition self_hosted_release from HandleMe, got %#v", settings["product_edition"])
+	}
+	if settings["identity_mode"] != "local_only" {
+		t.Errorf("Expected identity_mode local_only from HandleMe, got %#v", settings["identity_mode"])
+	}
+	if settings["shared_agent_specificity_owner"] != "root_admin" {
+		t.Errorf("Expected shared_agent_specificity_owner root_admin from HandleMe, got %#v", settings["shared_agent_specificity_owner"])
+	}
+
+	raw, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read persisted settings: %v", err)
+	}
+	persisted := string(raw)
+	for _, forbidden := range []string{
+		"access_management_tier",
+		"product_edition",
+		"identity_mode",
+		"shared_agent_specificity_owner",
+	} {
+		if strings.Contains(persisted, forbidden) {
+			t.Fatalf("persisted settings unexpectedly contain %s: %s", forbidden, persisted)
+		}
 	}
 }
 

@@ -111,15 +111,18 @@ What exists now:
 - capability-aware approval posture
 - user-level governance profile
 - base audit trail and inspect-only activity view
-- a reviewable People & Access model that shows the layered product story for self-hosted release, self-hosted enterprise, and hosted control plane, plus identity posture and who controls shared Soma output specificity
+- a reviewable People & Access model that shows the layered product story for self-hosted release, self-hosted enterprise, and hosted admin control plane, plus identity posture and who controls shared Soma output specificity; that edition/auth posture is deploy-owned review state, not an ordinary user preference
 
 What is still future work:
-- full multi-user IAM with SAML/OIDC federation, optional lifecycle sync, and local break-glass admin recovery for self-hosted environments
+- full multi-user IAM with SAML/OIDC federation, optional lifecycle sync, delegated enterprise admin flows, and hosted management-plane layering
 - delegated approval chains
 - richer enterprise policy administration
 - one shared organization-owned Soma persona across many users with scoped privacy, audit, and memory/RAG access rules
 - explicit admin-owned Soma-shaping context so root/admin guidance can shape durable organization behavior without letting ordinary user chat silently redefine Soma
 - root-admin control over durable shared agent/output specificity so user-local preferences do not silently redefine organization-wide output behavior
+
+Recovery rule:
+- local break-glass recovery remains part of the self-hosted posture even when future enterprise federation is enabled
 
 Related references:
 - `docs/governance.md`

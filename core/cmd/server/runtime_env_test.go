@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestResolveDatabaseConfigDefaults(t *testing.T) {
 	t.Setenv("DB_HOST", "")
@@ -129,5 +133,49 @@ func TestLocalAuthRuntimeConfigWarnsOnDuplicateBreakGlassKey(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected duplicate-key warning, got %#v", warnings)
+	}
+}
+
+func TestLocalAuthRuntimeConfigWarnsWhenDeploymentContractRequiresBreakGlass(t *testing.T) {
+	t.Setenv("MYCELIS_API_KEY", "primary")
+	t.Setenv("MYCELIS_IDENTITY_MODE", "hybrid")
+	t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", "")
+
+	cfg := resolveLocalAuthRuntimeConfig()
+	warnings := cfg.breakGlassWarnings()
+
+	found := false
+	for _, warning := range warnings {
+		if warning == "deployment auth contract requires MYCELIS_BREAK_GLASS_API_KEY for enterprise-like recovery posture" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected deployment-contract warning, got %#v", warnings)
+	}
+}
+
+func TestResolveLocalAuthRuntimeConfigReadsDeploymentContractPath(t *testing.T) {
+	contractPath := filepath.Join(t.TempDir(), "deployment-contract.json")
+	if err := os.WriteFile(contractPath, []byte(`{"identity_mode":"federated"}`), 0o644); err != nil {
+		t.Fatalf("write deployment contract: %v", err)
+	}
+	t.Setenv("MYCELIS_DEPLOYMENT_CONTRACT_PATH", contractPath)
+	t.Setenv("MYCELIS_API_KEY", "primary")
+	t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", "")
+
+	cfg := resolveLocalAuthRuntimeConfig()
+	warnings := cfg.breakGlassWarnings()
+
+	found := false
+	for _, warning := range warnings {
+		if warning == "deployment auth contract requires MYCELIS_BREAK_GLASS_API_KEY for enterprise-like recovery posture" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected path-driven deployment-contract warning, got %#v", warnings)
 	}
 }

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR, ensure_managed_cache_dirs, is_windows, managed_cache_env
+from .packaging import relative_to_root, write_checksum_file, write_json
 
 
 def _task_env(extra=None):
@@ -37,6 +38,37 @@ def _release_staging_dir(version_tag: str, target_os: str, target_arch: str) -> 
 def _release_archive_path(version_tag: str, target_os: str, target_arch: str) -> Path:
     suffix = "zip" if target_os == "windows" else "tar.gz"
     return ROOT_DIR / "dist" / f"mycelis-core-{version_tag}-{target_os}-{target_arch}.{suffix}"
+
+
+def _release_manifest_path(version_tag: str, target_os: str, target_arch: str) -> Path:
+    return ROOT_DIR / "dist" / f"mycelis-core-{version_tag}-{target_os}-{target_arch}.manifest.json"
+
+
+def _release_manifest_payload(
+    version_tag: str,
+    target_os: str,
+    target_arch: str,
+    binary_name: str,
+    archive_path: Path | None = None,
+    checksum_path: Path | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "artifact_kind": "self_hosted_core_binary",
+        "binary_name": binary_name,
+        "notes": [
+            "This slice establishes the self-hosted binary release artifact scaffold.",
+            "Signed publication, installers, and SBOM/provenance attachments remain follow-up work.",
+        ],
+        "status": "scaffold",
+        "target_arch": target_arch,
+        "target_os": target_os,
+        "version_tag": version_tag,
+    }
+    if archive_path is not None:
+        payload["archive_path"] = relative_to_root(archive_path, root_dir=ROOT_DIR)
+    if checksum_path is not None:
+        payload["archive_checksum_path"] = relative_to_root(checksum_path, root_dir=ROOT_DIR)
+    return payload
 
 
 def _package_release_archive(staging_dir: Path, archive_path: Path, target_os: str) -> None:
@@ -88,6 +120,7 @@ def package(c, target_os="", target_arch="amd64", version_tag=""):
     binary_name = _target_binary_name(effective_target_os)
     staging_dir = _release_staging_dir(effective_version_tag, effective_target_os, target_arch)
     archive_path = _release_archive_path(effective_version_tag, effective_target_os, target_arch)
+    manifest_path = _release_manifest_path(effective_version_tag, effective_target_os, target_arch)
     binary_path = staging_dir / binary_name
 
     print(f"Packaging Core binary release for {effective_target_os}/{target_arch} as {effective_version_tag}...")
@@ -123,8 +156,29 @@ def package(c, target_os="", target_arch="amd64", version_tag=""):
         + "\n",
         encoding="utf-8",
     )
+    write_json(
+        staging_dir / "release-manifest.json",
+        _release_manifest_payload(
+            effective_version_tag,
+            effective_target_os,
+            target_arch,
+            binary_name,
+        ),
+    )
 
     _package_release_archive(staging_dir, archive_path, effective_target_os)
+    checksum_path = write_checksum_file(archive_path)
+    write_json(
+        manifest_path,
+        _release_manifest_payload(
+            effective_version_tag,
+            effective_target_os,
+            target_arch,
+            binary_name,
+            archive_path=archive_path,
+            checksum_path=checksum_path,
+        ),
+    )
     print(f"Packaged release archive: {archive_path}")
 
 @task

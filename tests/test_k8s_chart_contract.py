@@ -1,17 +1,60 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+from dataclasses import dataclass
+import json
 from pathlib import Path
+import shlex
 
+from invoke import Context
+import pytest
+
+from ops import k8s
 
 ROOT = Path(__file__).resolve().parents[1]
 VALUES = ROOT / "charts" / "mycelis-core" / "values.yaml"
 VALUES_K3D = ROOT / "charts" / "mycelis-core" / "values-k3d.yaml"
 VALUES_ENTERPRISE = ROOT / "charts" / "mycelis-core" / "values-enterprise.yaml"
 VALUES_ENTERPRISE_WINDOWS_AI = ROOT / "charts" / "mycelis-core" / "values-enterprise-windows-ai.yaml"
+CHART_LOCK = ROOT / "charts" / "mycelis-core" / "Chart.lock"
 DEPLOYMENT = ROOT / "charts" / "mycelis-core" / "templates" / "deployment.yaml"
 HELPERS = ROOT / "charts" / "mycelis-core" / "templates" / "_helpers.tpl"
 INGRESS = ROOT / "charts" / "mycelis-core" / "templates" / "ingress.yaml"
 SERVICE_ACCOUNT = ROOT / "charts" / "mycelis-core" / "templates" / "serviceaccount.yaml"
+
+
+@dataclass
+class FakeResult:
+    exited: int = 0
+    stdout: str = ""
+    stderr: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return self.exited == 0
+
+
+class FakeContext(Context):
+    def __init__(self, chart_version: str):
+        super().__init__()
+        self.chart_version = chart_version
+        self.commands: list[str] = []
+
+    def run(self, command: str, **_kwargs) -> FakeResult:
+        self.commands.append(command)
+        if " > " in command:
+            rendered_target = Path(shlex.split(command.rsplit(" > ", 1)[1])[0])
+            rendered_target.parent.mkdir(parents=True, exist_ok=True)
+            rendered_target.write_text("kind: Deployment\n", encoding="utf-8")
+        if command.startswith("helm package "):
+            destination = Path(shlex.split(command.split("--destination ", 1)[1])[0])
+            destination.mkdir(parents=True, exist_ok=True)
+            (destination / f"mycelis-core-{self.chart_version}.tgz").write_bytes(b"chart")
+        return FakeResult()
+
+    @contextmanager
+    def cd(self, _path: str):
+        yield
 
 
 def test_chart_exposes_first_enterprise_k8s_override_surfaces():
@@ -109,3 +152,52 @@ def test_chart_presets_cover_local_k3d_and_enterprise_postures():
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "Chart preset values are missing the expected deployment posture choices:\n" + "\n".join(missing)
+
+
+def test_chart_lock_pins_release_packaging_dependencies():
+    chart_lock_text = CHART_LOCK.read_text(encoding="utf-8")
+
+    assert "digest:" in chart_lock_text
+    assert "name: postgresql" in chart_lock_text
+    assert "name: nats" in chart_lock_text
+
+
+def test_verify_package_mode_requires_explicit_values_file():
+    with pytest.raises(SystemExit, match="A Helm values file is required for --verify-package"):
+        k8s.deploy.body(Context(), verify_package=True)
+
+
+def test_verify_package_mode_writes_enterprise_release_artifacts(monkeypatch, tmp_path: Path):
+    chart_dir = tmp_path / "charts" / "mycelis-core"
+    chart_dir.mkdir(parents=True)
+    (chart_dir / "Chart.yaml").write_text(
+        "apiVersion: v2\n"
+        "name: mycelis-core\n"
+        "version: 0.1.0\n",
+        encoding="utf-8",
+    )
+    (chart_dir / "values-enterprise.yaml").write_text("replicaCount: 1\n", encoding="utf-8")
+
+    ctx = FakeContext(chart_version="0.1.0")
+    monkeypatch.setattr(k8s, "ROOT_DIR", tmp_path)
+
+    manifest_path = k8s.deploy.body(
+        ctx,
+        verify_package=True,
+        values_file="charts/mycelis-core/values-enterprise.yaml",
+        release_label="manual/42",
+        package_output_dir="dist/helm/enterprise",
+    )
+
+    manifest = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    assert manifest["artifact_kind"] == "enterprise_helm_package"
+    assert manifest["preset"] == "enterprise"
+    assert manifest["release_label"] == "manual/42"
+    assert manifest["status"] == "scaffold"
+    assert manifest["values_file"] == "charts/mycelis-core/values-enterprise.yaml"
+    assert (tmp_path / manifest["chart_archive_path"]).exists()
+    assert (tmp_path / manifest["rendered_bundle_path"]).exists()
+    assert any(command.startswith("helm dependency build ") for command in ctx.commands)
+    assert any(command.startswith("helm lint ") for command in ctx.commands)
+    assert any(command.startswith("helm template ") for command in ctx.commands)
+    assert any(command.startswith("helm package ") for command in ctx.commands)

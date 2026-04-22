@@ -46,7 +46,7 @@
 Platform-first guidance:
 - WSL2/Linux/macOS should usually start with the Docker Compose path because it is the easiest full-stack bring-up and avoids the extra Kind/bridge layer.
 - when you do need local Kubernetes, prefer `k3d`; use `MYCELIS_K8S_BACKEND=kind` only when you intentionally need the older Kind flow
-- Windows native is still a supported operator/development path, but the durable runtime stories are Compose and self-hosted Kubernetes rather than a Windows-only Docker Desktop assumption.
+- Windows native is still a supported operator/development path: Windows Docker Desktop Compose is a supported self-hosted user lane, and Windows-native source/Kubernetes validation remains available when a slice needs it.
 - Optional repo-local `cognitive.*` helpers are for supported Linux GPU hosts; they are not the default setup path on Windows or macOS.
 
 ## Deployment Method Selection
@@ -300,7 +300,7 @@ Use this as the canonical resume path when active development moves to WSL/Linux
 5. Run `uv run inv install`.
 6. For personal-owner or data-plane-first validation, use `uv run inv compose.infra-up --wait-timeout=180`, `uv run inv compose.infra-health`, `uv run inv compose.migrate`, and `uv run inv compose.storage-health`.
 7. For the normal full-stack path, use `uv run inv compose.up --build --wait-timeout=240`, then `uv run inv compose.health`.
-8. Use `uv run inv ci.baseline`, `uv run inv ci.service-check --live-backend`, and `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` as the canonical validation gate; the runtime-posture step reads process env plus `.env.compose` / `.env` and fails closed when no explicit supported AI endpoint is configured.
+8. Use `uv run inv ci.baseline`, `uv run inv ci.service-check --live-backend`, and `uv run inv ci.release-preflight --lane=release` as the canonical validation gate; the release preset bundles runtime-posture, service-health, and live-backend proof, while the narrower flags remain available when you intentionally need a custom combination.
 
 WSL/Linux notes:
 - treat `uv run inv ...` as the only normal execution path; raw `npx`, direct Playwright, and PowerShell wrappers are fallback troubleshooting paths only
@@ -347,13 +347,21 @@ Defines approval thresholds, deny rules, and safety constraints.
 
 Use the shortest path that matches your host:
 
+- Windows Docker Desktop:
+  1. `copy .env.compose.example .env.compose`
+  2. `uv run inv auth.posture --compose`
+  3. `uv run inv install`
+  4. `uv run inv compose.up --build --wait-timeout=240`
+  5. `uv run inv compose.health`
+  6. open `http://localhost:3000` from the Windows browser
 - WSL2/Linux/macOS:
   1. `cp .env.compose.example .env.compose`
-  2. `uv run inv install`
-  3. `uv run inv compose.up --build`
-  4. `uv run inv compose.health`
-  5. open `http://localhost:3000`
-- Windows native:
+  2. `uv run inv auth.posture --compose`
+  3. `uv run inv install`
+  4. `uv run inv compose.up --build --wait-timeout=240`
+  5. `uv run inv compose.health`
+  6. open `http://localhost:3000`
+- Windows native source validation:
   1. `copy .env.example .env`
   2. `uv run inv install`
   3. `uv run inv k8s.up`
@@ -448,7 +456,7 @@ What it does:
 - cross-compiles a versioned Core binary
 - writes a versioned archive under `dist/`
 - includes a small release `README.txt` beside the binary
-- pair this with `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` before you hand the binary to another machine for release checkout testing
+- pair this with `uv run inv ci.release-preflight --lane=release` before you hand the binary to another machine for release checkout testing
 - use [Remote User Testing](./REMOTE_USER_TESTING.md) for the second-machine walkthrough sequence and [Testing](./TESTING.md) for the authoritative gate order
 
 Canonical automation:
@@ -705,7 +713,7 @@ profiles:
 |:--|:--|
 | **Core** | |
 | `uv run inv core.compile` | Compile Go binary only |
-| `uv run inv core.package` | Package a versioned Core binary archive under `dist/` |
+| `uv run inv core.package` | Package a versioned Core binary archive under `dist/`, plus manifest/checksum sidecars |
 | `uv run inv core.build` | Compile Go binary + Docker image |
 | `uv run inv core.test` | Go unit tests (`go test ./...`) |
 | `uv run inv core.run` | Start backend (foreground) |
@@ -729,7 +737,7 @@ profiles:
 | **Infrastructure** | |
 | `uv run inv k8s.init` | Create preferred local Kubernetes cluster (`k3d` when available, Kind fallback) |
 | `uv run inv k8s.up` | Canonical cluster bring-up: init → deploy → wait |
-| `uv run inv k8s.deploy` | Helm deploy to cluster |
+| `uv run inv k8s.deploy` | Helm deploy to cluster, or `--verify-package` to lint/render/package a release bundle under `dist/helm/` without cluster rollout |
 | `uv run inv k8s.wait` | Wait for readiness gates (PostgreSQL → NATS → Core API) |
 | `uv run inv k8s.bridge` | Port-forward NATS, PG, API |
 | `uv run inv k8s.status` | Local Kubernetes health check |

@@ -358,6 +358,16 @@ def test_release_preflight_fails_on_dirty_tree_before_baseline():
     assert ctx.commands == ["git status --porcelain"]
 
 
+def test_release_preflight_rejects_unknown_lane_before_running_checks():
+    ctx = FakeContext({})
+
+    with pytest.raises(SystemExit) as excinfo:
+        ci.release_preflight.body(ctx, lane="enterprise")
+
+    assert "unsupported lane 'enterprise'" in str(excinfo.value)
+    assert ctx.commands == []
+
+
 def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
     monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)
@@ -381,6 +391,42 @@ def test_release_preflight_runs_toolchain_and_baseline_when_clean(monkeypatch):
     assert "git status --porcelain" in ctx.commands
     assert "go version" in ctx.commands
     assert "go test ./... -count=1" in ctx.commands
+
+
+def test_release_preflight_release_lane_runs_runtime_and_service_stages(monkeypatch):
+    stage_order: list[str] = []
+    baseline_calls: list[dict[str, object]] = []
+    service_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(
+        ci.toolchain_check,
+        "body",
+        lambda _ctx, **kwargs: stage_order.append(f"toolchain:{kwargs['strict']}"),
+    )
+    monkeypatch.setattr(ci, "_runtime_posture_check", lambda _ctx: stage_order.append("runtime"))
+    monkeypatch.setattr(
+        ci.baseline,
+        "body",
+        lambda _ctx, **kwargs: (stage_order.append("baseline"), baseline_calls.append(kwargs)),
+    )
+    monkeypatch.setattr(
+        ci.service_check,
+        "body",
+        lambda _ctx, **kwargs: (stage_order.append("service"), service_calls.append(kwargs)),
+    )
+
+    ctx = FakeContext(
+        {
+            "git status --porcelain": FakeResult(stdout=""),
+        }
+    )
+
+    ci.release_preflight.body(ctx, lane="release", e2e=False, strict_toolchain=True)
+
+    assert ctx.commands == ["git status --porcelain"]
+    assert stage_order == ["toolchain:True", "runtime", "baseline", "service"]
+    assert baseline_calls == [{"e2e": False}]
+    assert service_calls == [{"live_backend": True}]
 
 
 def test_release_preflight_runs_service_check_when_requested(monkeypatch):
@@ -409,9 +455,32 @@ def test_release_preflight_runs_service_check_when_requested(monkeypatch):
     )
 
     monkeypatch.setattr(ci.interface_tasks.e2e, "body", lambda _ctx, **_kwargs: None)
-    monkeypatch.setattr(ci.interface_tasks, "_cleanup_repo_local_interface_processes", lambda: [])
 
     ci.release_preflight.body(ctx, e2e=False, strict_toolchain=True, service_health=True, live_backend=True)
+    assert service_calls == [{"live_backend": True}]
+
+
+def test_release_preflight_live_backend_flag_implies_service_check(monkeypatch):
+    monkeypatch.setattr(ci.toolchain_check, "body", lambda _ctx, **_kwargs: None)
+    monkeypatch.setattr(ci.baseline, "body", lambda _ctx, **_kwargs: None)
+    runtime_calls: list[str] = []
+    service_calls: list[dict[str, object]] = []
+    monkeypatch.setattr(ci, "_runtime_posture_check", lambda _ctx: runtime_calls.append("runtime"))
+    monkeypatch.setattr(
+        ci.service_check,
+        "body",
+        lambda _ctx, **kwargs: service_calls.append(kwargs),
+    )
+
+    ctx = FakeContext(
+        {
+            "git status --porcelain": FakeResult(stdout=""),
+        }
+    )
+
+    ci.release_preflight.body(ctx, e2e=False, live_backend=True)
+
+    assert runtime_calls == []
     assert service_calls == [{"live_backend": True}]
 
 

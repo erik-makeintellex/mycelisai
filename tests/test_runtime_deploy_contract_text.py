@@ -8,6 +8,14 @@ README = ROOT / "README.md"
 TESTING = ROOT / "docs" / "TESTING.md"
 OPERATIONS = ROOT / "docs" / "architecture" / "OPERATIONS.md"
 DEPLOYMENT_METHODS = ROOT / "docs" / "user" / "deployment-methods.md"
+LICENSING = ROOT / "docs" / "licensing.md"
+RESOURCES = ROOT / "docs" / "user" / "resources.md"
+CORE_CONCEPTS = ROOT / "docs" / "user" / "core-concepts.md"
+GOVERNANCE_TRUST = ROOT / "docs" / "user" / "governance-trust.md"
+LOCAL_DEV_WORKFLOW = ROOT / "docs" / "LOCAL_DEV_WORKFLOW.md"
+REMOTE_USER_TESTING = ROOT / "docs" / "REMOTE_USER_TESTING.md"
+API_REFERENCE = ROOT / "docs" / "API_REFERENCE.md"
+BACKEND_ARCH = ROOT / "docs" / "architecture" / "BACKEND.md"
 DOCKER_COMPOSE = ROOT / "docker-compose.yml"
 
 
@@ -118,6 +126,107 @@ def test_user_docs_explain_deployment_method_selection_by_target_environment():
     assert not missing, "Deployment method selection doc is missing required guidance:\n" + "\n".join(missing)
 
 
+def test_active_docs_cover_supported_user_access_lanes():
+    snippets = [
+        (
+            README,
+            [
+                "Windows Docker Desktop Compose",
+                "Windows + WSL Docker Compose",
+                "Linux server/self-hosted release",
+                "open `http://localhost:3000` from the Windows browser",
+                "open `http://<server-hostname-or-ip>:3000` from the operator machine",
+            ],
+        ),
+        (
+            TESTING,
+            [
+                "Windows Docker Desktop and same-machine WSL-hosted stacks use the Windows browser with `http://localhost:3000` as the first operator path",
+                "Linux self-hosted server or cluster reached through the real remote host/IP/hostname",
+                "the browser opens the UI through the same operator-facing address the delivered environment will actually use",
+            ],
+        ),
+        (
+            DEPLOYMENT_METHODS,
+            [
+                "Supported user access lanes:",
+                "Windows Docker Desktop",
+                "Windows + WSL Docker",
+                "Linux server/self-hosted release",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Supported user access lanes are missing from active docs:\n" + "\n".join(missing)
+
+
+def test_licensing_docs_define_release_enterprise_and_hosted_admin_boundaries():
+    snippets = [
+        (
+            LICENSING,
+            [
+                "local named users and manual local role/group administration",
+                "optional local break-glass recovery principal",
+                "SAML and/or OIDC federation",
+                "optional SCIM lifecycle sync",
+                "Hosted admin control plane",
+                "local break-glass recovery is part of self-hosted recovery posture",
+                "promoted enterprise curated set: `fetch`, `github`, `slack`, `postgres`, `brave-search`",
+            ],
+        ),
+        (
+            README,
+            [
+                "hosted admin control plane",
+                "full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows",
+            ],
+        ),
+        (
+            GOVERNANCE_TRUST,
+            [
+                "hosted admin control plane",
+                "local break-glass recovery remains part of the self-hosted posture",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Licensing/edition boundary docs are missing required contract snippets:\n" + "\n".join(missing)
+
+
+def test_connected_tools_docs_no_longer_claim_bootstrap_defaults_for_filesystem_and_fetch():
+    resources_text = RESOURCES.read_text(encoding="utf-8")
+    core_concepts_text = CORE_CONCEPTS.read_text(encoding="utf-8")
+
+    forbidden_snippets = [
+        "`filesystem`: bootstrap default",
+        "`fetch`: bootstrap default",
+        "`filesystem` and `fetch` are bootstrap defaults",
+    ]
+
+    still_present = []
+    for snippet in forbidden_snippets:
+        if snippet in resources_text:
+            still_present.append(f"docs/user/resources.md still contains `{snippet}`")
+        if snippet in core_concepts_text:
+            still_present.append(f"docs/user/core-concepts.md still contains `{snippet}`")
+
+    assert not still_present, "Connected Tools docs still describe deprecated bootstrap defaults:\n" + "\n".join(still_present)
+
+
 def test_k8s_docs_cover_promoted_values_file_contract():
     snippets = [
         (
@@ -157,3 +266,75 @@ def test_k8s_docs_cover_promoted_values_file_contract():
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "Kubernetes preset-values contract is missing from active docs:\n" + "\n".join(missing)
+
+
+def test_release_preflight_docs_prefer_lane_preset():
+    snippets = [
+        (README, ["uv run inv ci.release-preflight --lane=release"]),
+        (
+            TESTING,
+            [
+                "uv run inv ci.release-preflight --lane=release",
+                "lane presets are `baseline`, `runtime`, `service`, and `release`",
+            ],
+        ),
+        (
+            OPERATIONS,
+            [
+                "--lane=baseline|runtime|service|release",
+                "`--lane=release` is the recommended full runtime/operator gate",
+            ],
+        ),
+        (LOCAL_DEV_WORKFLOW, ["uv run inv ci.release-preflight --lane=release"]),
+        (REMOTE_USER_TESTING, ["uv run inv ci.release-preflight --lane=release"]),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Release-preflight lane contract is missing from active docs:\n" + "\n".join(missing)
+
+
+def test_identity_docs_describe_deploy_owned_people_access_contract():
+    snippets = [
+        (
+            API_REFERENCE,
+            [
+                "deploy-owned People & Access contract surfaced read-only",
+                "PUT ignores/preserves those deploy-owned fields instead of persisting them",
+            ],
+        ),
+        (
+            BACKEND_ARCH,
+            [
+                "deploy-owned People & Access posture surfaced read-only",
+                "PUT ignores/preserves those deploy-owned fields instead of persisting them",
+            ],
+        ),
+        (
+            LICENSING,
+            [
+                "deploy-owned edition/auth posture now resolves from env or a deployment-contract file",
+                "settings writes do not persist or override",
+            ],
+        ),
+        (
+            GOVERNANCE_TRUST,
+            [
+                "deploy-owned review state, not an ordinary user preference",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Deploy-owned People & Access contract docs are missing required wording:\n" + "\n".join(missing)

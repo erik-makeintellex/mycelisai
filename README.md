@@ -209,7 +209,7 @@ Excluded from the V8.1 release target:
 - unrestricted capability controls
 - autonomous memory mutation or silent self-rewrite
 - advanced raw architecture/configuration panels in the default operator flow
-- full enterprise multi-user IAM, SAML/SSO, and break-glass admin recovery
+- full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows
 
 Release rule:
 - if a surface belongs to V8.2 but not the V8.1 MVP, it should remain out of the default release surface until explicitly promoted
@@ -242,7 +242,7 @@ Current operator experience summary:
 - Team Leads remain visible as the operational leaders Soma works through
 - a visible `Soma just did this` strip now ties the last action to engaged teams, generated outputs, and updated support panels
 - Departments now show visible specialist-role summaries instead of only counts in the default workspace
-- People & Access now also exposes a reviewable deployment-access model so investors and operators can see the layered product story clearly: self-hosted release, self-hosted enterprise, or hosted control plane, plus the intended identity mode and who controls shared Soma output specificity
+- People & Access now also exposes a reviewable deploy-owned access model so investors and operators can see the layered product story clearly: self-hosted release, self-hosted enterprise, or hosted admin control plane, plus the intended identity mode and who controls shared Soma output specificity
 - basic system confidence checks remain visible in the default workspace; operators do not need Advanced mode just to verify core service state
 - the Soma workspace keeps the in-progress request draft and the last guided outcome visible when the operator leaves and returns to the same AI Organization
 - the organization-wide AI Engine and Response Style chosen during setup shape Soma's initial working posture, while the assistant name remains operator-configurable
@@ -508,7 +508,7 @@ Documentation rule:
 - `uv run inv ci.baseline` now includes Playwright by default; use `--no-e2e` only for intentionally narrower local debugging
 - default release-candidate browser coverage is MVP-aligned; legacy V7 or raw-endpoint-only specs should stay outside the default gate unless a slice explicitly revives them
 - live-backend browser checks are still required when proxy/runtime contracts change
-- live service issues belong in the release story too: use `uv run inv ci.service-check` for running-stack verification and `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` when a branch changes service/runtime contracts
+- live service issues belong in the release story too: use `uv run inv ci.service-check` for running-stack verification and `uv run inv ci.release-preflight --lane=release` when a branch changes service/runtime contracts; the narrower flags remain available for custom proof
 
 ## Testing Gate
 
@@ -527,15 +527,36 @@ For a new user who wants the quickest supported path to a running service:
 
 Need help choosing the right runtime first? Start with [Deployment Method Selection](docs/user/deployment-methods.md).
 
+- Supported user runtime lanes:
+  - Windows Docker Desktop Compose: supported single-host self-hosted runtime; use the Windows browser on that machine and start with `http://localhost:3000`
+  - Windows + WSL Docker Compose: supported single-host self-hosted runtime; use the Windows browser as the first operator proof path and start with `http://localhost:3000`
+  - Linux server/self-hosted release: supported release lane; operators should open the UI through the same hostname/IP they will really use remotely, such as `http://<server-hostname-or-ip>:3000`
+
+- Windows Docker Desktop:
+  1. `copy .env.compose.example .env.compose`
+  2. `uv run inv auth.posture --compose`
+  3. `uv run inv install`
+  4. optional data-plane proof: `uv run inv compose.infra-up --wait-timeout=180`
+  5. optional long-term storage proof after migration: `uv run inv compose.migrate`, `uv run inv compose.storage-health`
+  6. `uv run inv compose.up --build --wait-timeout=240`
+  7. `uv run inv compose.health`
+  8. open `http://localhost:3000` from the Windows browser
 - WSL2/Linux/macOS:
   1. `cp .env.compose.example .env.compose`
   2. `uv run inv auth.posture --compose`
   3. `uv run inv install`
   4. optional data-plane proof: `uv run inv compose.infra-up --wait-timeout=180`
-  5. optional long-term storage proof after migration: `uv run inv compose.storage-health`
+  5. optional long-term storage proof after migration: `uv run inv compose.migrate`, `uv run inv compose.storage-health`
   6. `uv run inv compose.up --build --wait-timeout=240`
   7. `uv run inv compose.health`
-  8. open `http://localhost:3000`
+  8. open `http://localhost:3000` on the same machine, or `http://<host-ip>:3000` from another client
+- Linux server/self-hosted release:
+  1. `cp .env.compose.example .env.compose`
+  2. `uv run inv auth.posture --compose`
+  3. `uv run inv install`
+  4. `uv run inv compose.up --build --wait-timeout=240`
+  5. `uv run inv compose.health`
+  6. open `http://<server-hostname-or-ip>:3000` from the operator machine
 - Windows native source fallback:
   1. `copy .env.example .env`
   2. `uv run inv auth.dev-key`
@@ -564,7 +585,9 @@ What the user still needs on the host:
 
 Recommended host posture:
 - WSL2, Linux, and macOS: prefer the Docker Compose path first for the easiest full-stack bring-up and treat this as the canonical active development lane
-- Windows native: best for browser/operator workflow work and explicit local-Kubernetes or host-specific source validation; use Ollama locally or point at remote providers
+- Windows Docker Desktop: supported single-host Compose runtime and Windows-browser operator lane on one machine
+- Windows native source mode: best for explicit local-Kubernetes or host-specific source validation; use Ollama locally or point at remote providers
+- Linux server hosts: use Compose or self-hosted Kubernetes, then prove the UI through the same stable host/IP/hostname operators will use remotely
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate there when you intentionally want local vLLM/Diffusers
 
 Deployment guidance by target environment:
@@ -579,14 +602,32 @@ Promoted Kubernetes preset files:
 - `charts/mycelis-core/values-enterprise-windows-ai.yaml`: enterprise-shaped self-hosted cluster with an explicit Windows-hosted AI endpoint
 
 Recommended easiest setup path by host:
+- Windows Docker Desktop:
+  1. `copy .env.compose.example .env.compose`
+  2. `uv run inv auth.posture --compose`
+  3. `uv run inv install`
+  4. optional data-plane proof: `uv run inv compose.infra-up --wait-timeout=180`
+  5. optional long-term storage proof after migration: `uv run inv compose.migrate`, `uv run inv compose.storage-health`
+  6. `uv run inv compose.up --build --wait-timeout=240`
+  7. `uv run inv compose.health`
+  8. open `http://localhost:3000` from the Windows browser
 - WSL2/Linux/macOS:
   1. `cp .env.compose.example .env.compose`
-  2. `uv run inv install`
-  3. optional data-plane proof: `uv run inv compose.infra-up --wait-timeout=180`
-  4. optional long-term storage proof after migration: `uv run inv compose.storage-health`
-  5. `uv run inv compose.up --build --wait-timeout=240`
-  6. `uv run inv compose.health`
-- Windows native:
+  2. `uv run inv auth.posture --compose`
+  3. `uv run inv install`
+  4. optional data-plane proof: `uv run inv compose.infra-up --wait-timeout=180`
+  5. optional long-term storage proof after migration: `uv run inv compose.migrate`, `uv run inv compose.storage-health`
+  6. `uv run inv compose.up --build --wait-timeout=240`
+  7. `uv run inv compose.health`
+  8. open `http://localhost:3000` on the same machine, or `http://<host-ip>:3000` from another client
+- Linux server/self-hosted release:
+  1. `cp .env.compose.example .env.compose`
+  2. `uv run inv auth.posture --compose`
+  3. `uv run inv install`
+  4. `uv run inv compose.up --build --wait-timeout=240`
+  5. `uv run inv compose.health`
+  6. open `http://<server-hostname-or-ip>:3000` from the operator machine
+- Windows native source validation:
   1. `copy .env.example .env`
   2. `uv run inv install`
   3. `uv run inv k8s.up` (`k3d` preferred when installed; use `MYCELIS_K8S_BACKEND=kind` for the legacy fallback)
@@ -626,7 +667,7 @@ The canonical product-layer and licensing posture now lives in [docs/licensing.m
 Use that document when you need the precise edition story for:
 - self-hosted release
 - self-hosted enterprise
-- hosted control plane
+- hosted admin control plane
 - modular user-management and identity packaging
 - shared Soma governance boundaries that must stay consistent across paid variants
 
@@ -644,17 +685,25 @@ There is one canonical Core binary-release path now:
   - `uv run inv core.build`
 - versioned binary archive:
   - `uv run inv core.package`
+  - emits the archive plus a sidecar manifest and checksum in `dist/`
   - example cross-target packaging:
     - `uv run inv core.package --target-os=windows --target-arch=amd64 --version-tag=v0.1.0`
 
+Release-packaging verification:
+- enterprise/self-hosted Helm verification package:
+  - `uv run inv k8s.deploy --verify-package --values-file=charts/mycelis-core/values-enterprise.yaml --release-label=enterprise`
+  - writes rendered/package artifacts, manifest, and checksums under `dist/helm/`
+
 Release automation:
+- `.github/workflows/release.yaml`
+- manual packaging workflow for enterprise/self-hosted Helm verification artifacts under `dist/helm/`
 - `.github/workflows/release-binaries.yaml`
 - runs on `v*` tag pushes
 - also supports manual `workflow_dispatch`
-- publishes versioned archives from `dist/` as GitHub release assets
+- publishes versioned binary archives plus their manifest/checksum sidecars from `dist/` as GitHub release assets
 
 Initial release handoff rule:
-- before tagging or handing off a second-machine checkout, run `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend`
+- before tagging or handing off a second-machine checkout, run `uv run inv ci.release-preflight --lane=release`
 - keep current release blockers explicit in `V8_DEV_STATE.md`; the latest state board is the authority for whether an issue is blocking initial user testing or release lock
 - use [Testing](docs/TESTING.md) and [Remote User Testing](docs/REMOTE_USER_TESTING.md) as the operator-facing proof sequence for the handoff machine
 

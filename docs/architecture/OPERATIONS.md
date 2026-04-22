@@ -64,7 +64,7 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 | `uv run inv core.stop` | Kill running Core process (taskkill on Windows, pkill on Linux) |
 | `uv run inv core.restart` | stop + run |
 | `uv run inv core.smoke` | `go run ./cmd/smoke/main.go` (governance smoke tests) |
-| `uv run inv core.package` | Cross-compile and package a versioned Core binary archive under `dist/` |
+| `uv run inv core.package` | Cross-compile and package a versioned Core binary archive under `dist/`, plus manifest/checksum sidecars for release handoff |
 | `uv run inv core.clean` | `go clean`, remove bin/ |
 
 ### Interface Tasks (`ops/interface.py`, `ops/interface_runtime.py`)
@@ -231,7 +231,7 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 |---------|-------------|
 | `uv run inv k8s.init` | Create the preferred local Kubernetes cluster (`k3d` when available, Kind fallback) |
 | `uv run inv k8s.up` | Canonical local-cluster bring-up: init -> deploy -> wait (PostgreSQL -> NATS -> Core API) |
-| `uv run inv k8s.deploy` | Build Core, load or import the Docker image into the active local backend, helm upgrade (injects secrets from .env) |
+| `uv run inv k8s.deploy` | Build Core, load or import the Docker image into the active local backend, helm upgrade (injects secrets from .env); `--verify-package` runs dependency build/lint/render/package and writes artifacts under `dist/helm/` without cluster rollout |
 | `uv run inv k8s.wait` | Wait for rollout readiness gates (PostgreSQL -> NATS -> Core API) |
 | `uv run inv k8s.bridge` | Port-forward NATS:4222, HTTP:8080, PG:5432 and verify the local forwards actually bind before reporting success |
 | `uv run inv k8s.status` | Check Docker, the preferred local Kubernetes backend, pod status, PVC status |
@@ -243,6 +243,7 @@ Kubernetes operator contract:
 - use explicit reachable AI endpoints for deployed text or media engines instead of localhost assumptions
 - `uv run inv k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT` from the shell or `.env` and forwards them into the Helm chart as operator-owned runtime config
 - `uv run inv k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`, resolves repo-relative preset paths, and fails fast if the requested values file does not exist
+- `uv run inv k8s.deploy --verify-package` is the release-packaging verification path for promoted Helm values; it writes rendered manifests, packaged chart artifacts, and checksum/manifest sidecars under `dist/helm/`
 - the `values-enterprise-windows-ai` preset is intentionally fail-closed: `uv run inv k8s.deploy` / `uv run inv k8s.up` require `MYCELIS_K8S_TEXT_ENDPOINT` to point at the real Windows-hosted AI service before rollout begins
 - the Helm chart applies `MYCELIS_K8S_TEXT_ENDPOINT` through provider-specific env overrides (`MYCELIS_PROVIDER_<PROVIDER_ID>_ENDPOINT`) so deployed providers can target a Windows-hosted or otherwise external self-hosted AI service without editing chart source
 - for the current GPU-attached Windows-host topology, use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`
@@ -281,7 +282,7 @@ The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hos
 | `uv run inv ci.service-check` | Verify the currently running local stack with `lifecycle.health`, plus optional live-backend governed Soma browser proof |
 | `uv run inv ci.entrypoint-check` | Verify the supported invoke runner matrix and reject unsupported bare aliases |
 | `uv run inv ci.toolchain-check` | Report toolchain versions and optionally enforce Go lock policy |
-| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with optional `--runtime-posture`, `--service-health`, and `--live-backend` proof for deployment/runtime changes; `--runtime-posture` reads process env plus `.env.compose` / `.env` and fails when no explicit supported AI endpoint contract is configured |
+| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with `--lane=baseline|runtime|service|release` presets; `--lane=release` is the recommended full runtime/operator gate, while the legacy `--runtime-posture`, `--service-health`, and `--live-backend` flags remain available for narrower/manual proof |
 | `uv run inv ci.deploy` | Build + Docker + K8s deploy |
 
 ### Other Tasks
@@ -630,7 +631,8 @@ Deployment automation rule:
 | **Core CI** | `core-ci.yaml` | `core/**`, `ops/core.py`, `ops/config.py`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, direct coverage capture, GolangCI-Lint v1.64.5, `uv run inv core.compile` |
 | **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/interface_runtime.py`, `ops/interface_env.py`, `ops/interface_process_support.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
 | **E2E CI** | `e2e-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/interface_runtime.py`, `ops/interface_env.py`, `ops/interface_process_support.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed Chromium/Firefox/WebKit + mobile smoke browser matrix via `uv run inv interface.e2e` |
-| **Release Binaries** | `release-binaries.yaml` | tag push `v*` or manual dispatch | workflow-native Python/uv + Go bootstrap, then matrix packaging through `uv run inv core.package` and GitHub release asset upload |
+| **Release Packaging** | `release.yaml` | manual dispatch | workflow-native Python/uv + Helm verification packaging through `uv run inv k8s.deploy --verify-package` for promoted enterprise values files, then artifact upload from `dist/helm/` |
+| **Release Binaries** | `release-binaries.yaml` | tag push `v*` or manual dispatch | workflow-native Python/uv + Go bootstrap, then matrix packaging through `uv run inv core.package` and GitHub release asset upload for the archive plus manifest/checksum sidecars |
 
 **Trigger:** `pull_request` to `main` and `develop`; push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens. Container/image workflows are manual-only via `workflow_dispatch`.
 

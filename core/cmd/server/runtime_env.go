@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/mycelis/core/internal/server"
 )
 
 type databaseRuntimeConfig struct {
@@ -22,6 +24,7 @@ type localAuthRuntimeConfig struct {
 	BreakGlassAPIKey   string
 	BreakGlassUsername string
 	BreakGlassUserID   string
+	DeploymentContract server.DeploymentContract
 }
 
 func resolveDatabaseConfig() databaseRuntimeConfig {
@@ -70,11 +73,15 @@ func resolveLocalAuthRuntimeConfig() localAuthRuntimeConfig {
 		BreakGlassAPIKey:   envOrDefault("MYCELIS_BREAK_GLASS_API_KEY", ""),
 		BreakGlassUsername: envOrDefault("MYCELIS_BREAK_GLASS_USERNAME", "recovery-admin"),
 		BreakGlassUserID:   envOrDefault("MYCELIS_BREAK_GLASS_USER_ID", "00000000-0000-0000-0000-000000000001"),
+		DeploymentContract: server.ResolveDeploymentContract(),
 	}
 }
 
 func (cfg localAuthRuntimeConfig) breakGlassWarnings() []string {
 	warnings := make([]string, 0, 3)
+	if cfg.DeploymentContract.RequiresBreakGlassRecovery() && strings.TrimSpace(cfg.BreakGlassAPIKey) == "" {
+		warnings = append(warnings, "deployment auth contract requires MYCELIS_BREAK_GLASS_API_KEY for enterprise-like recovery posture")
+	}
 	if strings.TrimSpace(cfg.BreakGlassAPIKey) != "" {
 		keyConfigured := true
 		usernameConfigured := strings.TrimSpace(os.Getenv("MYCELIS_BREAK_GLASS_USERNAME")) != ""

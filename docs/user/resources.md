@@ -41,11 +41,11 @@ What you can do:
 
 MCP servers expose tool capabilities agents can invoke during execution.
 
-Baseline status (V7):
-- `filesystem`: bootstrap default
-- `fetch`: bootstrap default
-- `memory`: curated install (available, not default bootstrap)
-- `artifact-renderer`: planned
+Current baseline posture:
+- curated library installs are the default path
+- `filesystem` and `fetch` are common curated entries, not assumed bootstrap defaults in the supported runtime lanes
+- `memory` remains curated install and should not be treated as equivalent to Mycelis-governed memory/context lanes
+- `artifact-renderer` remains planned
 
 Key outcome:
 Operators should be able to determine "what the system can access" directly from this tab.
@@ -55,10 +55,12 @@ Current posture:
 - `/api/v1/mcp/library/apply` is the one-call API for applying a curated potential source: it returns `installed` with server/tools/governance when allowed, or `requires_approval` with the inspection report when a policy boundary is still required
 - local-first current-group configuration can install directly when policy allows
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
+- credentialed external SaaS entries such as Slack, GitHub, hosted search, and hosted media should now be expected to require approval rather than behaving like low-risk local tools
 - `fetch`/research capability is how governed external context can be added without treating web access as unrestricted trust
 - the same Connected Tools surface should make the workflow legible end to end: add from the curated library, confirm the server is connected, and inspect recent persisted MCP activity plus live in-session usage showing which server/tool agents are using
 - the curated MCP library is now being standardized around the MCP registry `server.json` concepts so future registrations stay recognizable outside Mycelis too: each entry should carry a canonical server name, version, published package + transport metadata, repository/homepage metadata when known, and typed environment-variable declarations instead of only a local command block
-- Connected Tools should also make package-version policy visible instead of hiding it in install internals; the current curated catalog mostly tracks upstream `latest`, and the next interoperability slice should preserve enough metadata to round-trip against published `server.json` records without flattening Mycelis governance-specific fields
+- Connected Tools should also make package-version policy visible instead of hiding it in install internals; the current library now also carries deployment-boundary and bundle-posture metadata, while the next interoperability slice should preserve enough metadata to round-trip against published `server.json` records without flattening Mycelis governance-specific fields
+- enterprise packaging may later ship pinned supported bundle profiles for entries such as `filesystem`, `fetch`, `github`, `slack`, `postgres`, and `brave-search`, but free self-hosted deployments should still be able to install curated entries manually through the same governed path
 
 ## Exchange
 

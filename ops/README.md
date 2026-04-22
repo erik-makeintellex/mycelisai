@@ -59,6 +59,7 @@ Handles the atomic deployment to local Kubernetes, with `k3d` preferred and Kind
 - **Backend selection**: local Kubernetes now prefers `k3d` when available; set `MYCELIS_K8S_BACKEND=kind` when you intentionally need the older Kind workflow.
 - **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host without editing chart source.
 - **Preset values contract**: `k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`; repo-relative paths such as `charts/mycelis-core/values-k3d.yaml` are resolved from the repo root and the task fails fast if the requested values file does not exist.
+- **Verification packaging**: `k8s.deploy --verify-package` is the release-packaging path for promoted values files; it renders, lints, packages, and writes manifest/checksum artifacts under `dist/helm/` without contacting a cluster.
 - **Enterprise Windows-AI guardrail**: the `values-enterprise-windows-ai` preset fails closed unless `MYCELIS_K8S_TEXT_ENDPOINT` is set to the real Windows GPU host endpoint.
 - Chart/runtime config alignment: the deployed Core image resolves startup config from `/core/config`, so the chart mount path and container workdir must stay in sync for bootstrap bundles to load.
 
@@ -90,7 +91,7 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
 - **Compile**: `uv run inv core.compile` (repo-local binary only).
-- **Package**: `uv run inv core.package` (versioned cross-target binary archive under `dist/`).
+- **Package**: `uv run inv core.package` (versioned cross-target binary archive under `dist/`, plus manifest/checksum sidecars).
 - **Build**: `uv run inv core.build` (Returns immutable image tag; no `latest` aliasing).
 
 ### `auth.py` (Local Operator Auth)
@@ -194,7 +195,8 @@ Delivery-focused validation, runner checks, and release preflight.
 - **Entrypoint Check**: `uv run inv ci.entrypoint-check`
 - **Baseline**: `uv run inv ci.baseline` (includes Playwright by default; use `--no-e2e` only for intentionally narrower local debugging)
 - **Service Check**: `uv run inv ci.service-check --live-backend`
-- **Release Preflight**: `uv run inv ci.release-preflight --strict-toolchain --runtime-posture --service-health --live-backend`
+- **Release Preflight**: `uv run inv ci.release-preflight --lane=release`
+- **Lane presets**: `baseline`, `runtime`, `service`, `release` (legacy flags still supported for custom proof)
 - **Runtime Posture Gate**: `--runtime-posture` adds a 12 GiB disk-headroom check, reads explicit AI endpoints from process env plus `.env.compose` / `.env`, and fails closed when no supported non-loopback endpoint contract is configured before baseline proof runs.
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
 - GitHub validation workflows should keep dependency/bootstrap steps workflow-native (`actions/setup-*`, `npm ci`, Playwright browser install), then hand real build/test execution back to the same `uv run inv ...` task surfaces so local and CI validation stay aligned

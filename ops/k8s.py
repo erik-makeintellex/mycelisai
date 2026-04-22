@@ -1,4 +1,5 @@
 import os
+import shlex
 import socket
 import subprocess
 import shutil
@@ -8,6 +9,8 @@ from pathlib import Path
 from invoke import task, Collection
 from .config import CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
 from .core import build as core_build
+from .packaging import relative_to_root, resolve_repo_path, slugify_label, write_checksum_file, write_json
+from .version import get_version
 
 
 def _k8s_backend() -> str:
@@ -97,20 +100,96 @@ def _wait_for_local_port(port: int, label: str, timeout_seconds: int = 30, inter
     return False
 
 
-def _resolve_k8s_values_file() -> Path | None:
-    raw_value = os.environ.get("MYCELIS_K8S_VALUES_FILE", "").strip()
+def _chart_dir() -> Path:
+    return ROOT_DIR / "charts" / "mycelis-core"
+
+
+def _chart_version() -> str:
+    chart_yaml = _chart_dir() / "Chart.yaml"
+    for raw_line in chart_yaml.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line.startswith("version:"):
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
+    raise SystemExit(f"Unable to determine Helm chart version from {chart_yaml}")
+
+
+def _resolve_k8s_values_file(explicit_path: str = "") -> Path | None:
+    raw_value = explicit_path.strip() or os.environ.get("MYCELIS_K8S_VALUES_FILE", "").strip()
     if not raw_value:
         return None
 
-    candidate = Path(raw_value).expanduser()
-    if candidate.is_absolute():
-        resolved = candidate.resolve()
-    else:
-        resolved = (ROOT_DIR / candidate).resolve()
-
+    resolved = resolve_repo_path(raw_value, root_dir=ROOT_DIR)
     if not resolved.exists():
         raise SystemExit(f"MYCELIS_K8S_VALUES_FILE does not exist: {resolved}")
     return resolved
+
+
+def _resolve_package_output_dir(raw_path: str = "") -> Path:
+    destination = resolve_repo_path(raw_path, root_dir=ROOT_DIR) if raw_path.strip() else (ROOT_DIR / "dist" / "helm")
+    destination.mkdir(parents=True, exist_ok=True)
+    return destination
+
+
+def _verify_and_package_chart(
+    c,
+    *,
+    values_file: Path,
+    release_label: str,
+    package_output_dir: str,
+) -> Path:
+    chart_dir = _chart_dir()
+    output_dir = _resolve_package_output_dir(package_output_dir)
+    preset_name = values_file.stem.removeprefix("values-") or "default"
+    release_slug = slugify_label(release_label)
+    rendered_path = output_dir / f"mycelis-core-{preset_name}-{release_slug}.rendered.yaml"
+    manifest_path = output_dir / f"mycelis-core-{preset_name}-{release_slug}.manifest.json"
+    chart_version = _chart_version()
+    chart_package_path = output_dir / f"mycelis-core-{chart_version}.tgz"
+
+    quoted_chart_dir = shlex.quote(str(chart_dir))
+    quoted_values_file = shlex.quote(str(values_file))
+    quoted_output_dir = shlex.quote(str(output_dir))
+    quoted_rendered_path = shlex.quote(str(rendered_path))
+    quoted_release_label = shlex.quote(release_label)
+
+    print(f"Verifying enterprise Helm package for preset '{preset_name}' as {release_label}...")
+    c.run(f"helm dependency build {quoted_chart_dir}")
+    c.run(f"helm lint {quoted_chart_dir} --values {quoted_values_file}")
+    c.run(
+        f"helm template mycelis-core {quoted_chart_dir} --namespace {NAMESPACE} --values {quoted_values_file} > {quoted_rendered_path}"
+    )
+    c.run(
+        f"helm package {quoted_chart_dir} --destination {quoted_output_dir} --app-version {quoted_release_label}"
+    )
+
+    if not rendered_path.exists():
+        raise SystemExit(f"Helm template verification did not produce the rendered bundle: {rendered_path}")
+    if not chart_package_path.exists():
+        raise SystemExit(f"Helm package verification did not produce the chart archive: {chart_package_path}")
+
+    rendered_checksum_path = write_checksum_file(rendered_path)
+    chart_checksum_path = write_checksum_file(chart_package_path)
+    write_json(
+        manifest_path,
+        {
+            "artifact_kind": "enterprise_helm_package",
+            "chart_archive_checksum_path": relative_to_root(chart_checksum_path, root_dir=ROOT_DIR),
+            "chart_archive_path": relative_to_root(chart_package_path, root_dir=ROOT_DIR),
+            "chart_version": chart_version,
+            "notes": [
+                "This slice verifies Helm dependency hydration, lint, template rendering, and chart packaging for a concrete enterprise preset.",
+                "Registry publication, signed provenance, and a full installer bundle remain follow-up work.",
+            ],
+            "preset": preset_name,
+            "release_label": release_label,
+            "rendered_bundle_checksum_path": relative_to_root(rendered_checksum_path, root_dir=ROOT_DIR),
+            "rendered_bundle_path": relative_to_root(rendered_path, root_dir=ROOT_DIR),
+            "status": "scaffold",
+            "values_file": relative_to_root(values_file, root_dir=ROOT_DIR),
+        },
+    )
+    print(f"Packaged enterprise Helm verification bundle: {manifest_path}")
+    return manifest_path
 
 
 def _deployment_posture(backend: str, values_file: Path | None) -> str:
@@ -185,12 +264,32 @@ def init(c):
     print("Infrastructure Ready for Helm.")
 
 
-@task
-def deploy(c):
+@task(
+    help={
+        "values_file": "Optional Helm values file path. Overrides MYCELIS_K8S_VALUES_FILE when set.",
+        "verify_package": "Run enterprise Helm lint/template/package verification without cluster deployment.",
+        "release_label": "Artifact label for Helm packaging metadata. Defaults to the computed repo version.",
+        "package_output_dir": "Directory for Helm verification artifacts. Defaults to dist/helm.",
+    }
+)
+def deploy(c, values_file="", verify_package=False, release_label="", package_output_dir=""):
     """
     Deploys the core using Helm (Hardened Security).
     Uses Immutable Identity Tagging.
     """
+    resolved_values_file = _resolve_k8s_values_file(values_file)
+    if verify_package:
+        if not resolved_values_file:
+            raise SystemExit(
+                "A Helm values file is required for --verify-package. Pass --values-file or set MYCELIS_K8S_VALUES_FILE."
+            )
+        return _verify_and_package_chart(
+            c,
+            values_file=resolved_values_file,
+            release_label=release_label or get_version(c),
+            package_output_dir=package_output_dir,
+        )
+
     # 1. Build Artifact (Delegated to Core)
     tag = core_build.body(c)
     
@@ -222,7 +321,7 @@ def deploy(c):
     api_key = os.getenv("MYCELIS_API_KEY", "")
     k8s_text_endpoint = os.getenv("MYCELIS_K8S_TEXT_ENDPOINT", "").strip()
     k8s_media_endpoint = os.getenv("MYCELIS_K8S_MEDIA_ENDPOINT", "").strip()
-    values_file = _resolve_k8s_values_file()
+    values_file = resolved_values_file
     if not api_key:
         raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
     if values_file and "windows-ai" in values_file.name.lower() and not k8s_text_endpoint:

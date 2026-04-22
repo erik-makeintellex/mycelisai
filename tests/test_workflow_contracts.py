@@ -50,5 +50,20 @@ def test_release_binaries_workflow_uses_core_package_task():
 
     assert "workflow_dispatch" in workflow
     assert 'tags: ["v*"]' in workflow
+    assert 'id: release' in workflow
     assert "uv run inv core.package" in workflow
+    assert "--version-tag=${{ steps.release.outputs.label }}" in workflow
     assert "softprops/action-gh-release" in workflow
+
+
+def test_release_workflow_verifies_enterprise_packaging_before_optional_image_publish():
+    workflow = _read(".github/workflows/release.yaml")
+
+    assert "verify-enterprise-packaging" in workflow
+    assert "azure/setup-helm@v4" in workflow
+    assert "uv run inv k8s.deploy" in workflow
+    assert "--verify-package" in workflow
+    assert "values-enterprise.yaml" in workflow
+    assert "values-enterprise-windows-ai.yaml" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "if: inputs.publish_images == true" in workflow

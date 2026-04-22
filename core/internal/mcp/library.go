@@ -47,6 +47,7 @@ type LibraryEntry struct {
 	Homepage             string            `json:"homepage,omitempty" yaml:"homepage,omitempty"`
 	Tags                 []string          `json:"tags" yaml:"tags"`
 	ToolSet              string            `json:"tool_set,omitempty" yaml:"tool_set,omitempty"` // suggested tool set name
+	DeploymentBoundary   string            `json:"deployment_boundary,omitempty" yaml:"deployment_boundary,omitempty"`
 }
 
 // LibraryCategory groups related MCP servers.
@@ -146,4 +147,18 @@ func (entry *LibraryEntry) DeclaredEnvKeys() []string {
 		keys = append(keys, trimmed)
 	}
 	return keys
+}
+
+// HasRequiredSecretEnvVar reports whether the entry declares any required secret credential.
+func (entry *LibraryEntry) HasRequiredSecretEnvVar() bool {
+	for _, spec := range entry.EnvironmentVariables {
+		if !spec.Required || !spec.Secret {
+			continue
+		}
+		if strings.TrimSpace(spec.Name) == "" {
+			continue
+		}
+		return true
+	}
+	return false
 }

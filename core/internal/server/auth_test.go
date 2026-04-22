@@ -131,6 +131,21 @@ func TestAuthMiddleware_QueryTokenFallback(t *testing.T) {
 	assertStatus(t, rr, http.StatusOK)
 }
 
+func TestAuthMiddleware_FailsClosedWhenDeploymentContractRequiresBreakGlass(t *testing.T) {
+	t.Setenv("MYCELIS_IDENTITY_MODE", "federated")
+	t.Setenv("MYCELIS_BREAK_GLASS_API_KEY", "")
+
+	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assertStatus(t, rr, http.StatusServiceUnavailable)
+}
+
 func TestAuthMiddleware_HealthzExempt(t *testing.T) {
 	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

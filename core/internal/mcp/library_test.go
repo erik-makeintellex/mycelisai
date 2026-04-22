@@ -42,7 +42,7 @@ func TestLoadLibrary_ValidYAML(t *testing.T) {
 func TestLoadLibrary_StandardEntriesRemainLocalFirst(t *testing.T) {
 	lib := loadStandardLibraryForTest(t)
 
-	for _, name := range []string{"filesystem", "fetch", "github"} {
+	for _, name := range []string{"filesystem", "fetch"} {
 		entry := lib.FindByName(name)
 		if entry == nil {
 			t.Fatalf("expected to find %q in standard library", name)
@@ -55,6 +55,23 @@ func TestLoadLibrary_StandardEntriesRemainLocalFirst(t *testing.T) {
 		}
 		if entry.Command == "" {
 			t.Fatalf("%s command is empty", name)
+		}
+	}
+}
+
+func TestLoadLibrary_StandardCredentialedEntriesDeclareExternalBoundary(t *testing.T) {
+	lib := loadStandardLibraryForTest(t)
+
+	for _, name := range []string{"github", "brave-search", "slack", "flux", "elevenlabs", "replicate", "dall-e"} {
+		entry := lib.FindByName(name)
+		if entry == nil {
+			t.Fatalf("expected to find %q in standard library", name)
+		}
+		if entry.DeploymentBoundary != "external_saas" {
+			t.Fatalf("%s deployment_boundary = %q, want external_saas", name, entry.DeploymentBoundary)
+		}
+		if !entry.HasRequiredSecretEnvVar() {
+			t.Fatalf("%s should declare a required secret credential", name)
 		}
 	}
 }
@@ -256,5 +273,18 @@ func TestLibraryEntry_DeclaredEnvKeys_DeduplicatesLegacyAndTypedEnv(t *testing.T
 	keys := entry.DeclaredEnvKeys()
 	if len(keys) != 3 {
 		t.Fatalf("len(keys) = %d, want 3", len(keys))
+	}
+}
+
+func TestLibraryEntry_HasRequiredSecretEnvVar(t *testing.T) {
+	entry := LibraryEntry{
+		EnvironmentVariables: []LibraryEnvVar{
+			{Name: "PUBLIC_URL", Required: true},
+			{Name: "API_TOKEN", Required: true, Secret: true},
+		},
+	}
+
+	if !entry.HasRequiredSecretEnvVar() {
+		t.Fatal("expected required secret env var to be detected")
 	}
 }

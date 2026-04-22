@@ -219,7 +219,7 @@ Practical consequence:
 Current release truth:
 - the free-node release ships user-level governance foundations, not full enterprise IAM
 - the current auth/runtime is still closer to single-user local operation than multi-user enterprise identity
-- the current Settings -> People & Access surface now exposes the intended product layering for review: `product_edition`, `identity_mode`, and `shared_agent_specificity_owner` can be persisted as a visible contract even though the underlying enterprise adapters and hosted control-plane services are still future implementation work
+- the current Settings -> People & Access surface now exposes the intended product layering for review: `product_edition`, `identity_mode`, and `shared_agent_specificity_owner` are now deploy-owned fields surfaced read-only through the user-settings contract even though the underlying enterprise adapters and hosted admin control plane services are still future implementation work
 - the runtime now also normalizes the authenticated caller into explicit principal metadata on `/api/v1/user/me`: `principal_type`, `auth_source`, `effective_role`, and `break_glass` distinguish ordinary local admin posture from the self-hosted hybrid/federated recovery path
 - current self-hosted recovery posture is now explicit instead of inferred: `MYCELIS_API_KEY` maps to the named primary local admin, while optional `MYCELIS_BREAK_GLASS_API_KEY` maps to a separate break-glass recovery principal
 - the first private user context lane now exists in the governed deployment-context store as `user_private_context`: it is separate from ordinary Soma memory, `customer_context`, `company_knowledge`, and `soma_operating_context`, and is intended for user-provided private records tied to explicit target goal sets
@@ -229,7 +229,7 @@ Current release truth:
 Required next target:
 - formalize principal, auth-source, and role mapping contracts
 - add SAML/OIDC-capable identity adapters
-- add local break-glass admin support for self-host
+- extend the current local break-glass recovery posture into the future federated/self-hosted enterprise admin contract
 - bind shared Soma identity to organization/environment ownership instead of ad hoc per-user assistant state
 - define an explicit admin-shaped Soma context layer instead of letting baseline behavior emerge from unclassified chat history
 - enforce scoped retrieval rules across Soma memory, user-private context, customer context, company knowledge, admin-shaped Soma context, and reflection/synthesis memory

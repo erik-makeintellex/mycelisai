@@ -34,17 +34,7 @@ type localAuthIdentityConfig struct {
 	BreakGlassAPIKey   string
 	BreakGlassUserID   string
 	BreakGlassUsername string
-}
-
-func normalizeIdentityModeSetting(v string) string {
-	switch strings.TrimSpace(strings.ToLower(v)) {
-	case "hybrid":
-		return "hybrid"
-	case "federated":
-		return "federated"
-	default:
-		return "local_only"
-	}
+	DeploymentContract DeploymentContract
 }
 
 func resolveLocalAuthIdentityConfig(primaryAPIKey string) localAuthIdentityConfig {
@@ -55,6 +45,7 @@ func resolveLocalAuthIdentityConfig(primaryAPIKey string) localAuthIdentityConfi
 		BreakGlassAPIKey:   strings.TrimSpace(os.Getenv("MYCELIS_BREAK_GLASS_API_KEY")),
 		BreakGlassUserID:   envOrDefaultIdentity("MYCELIS_BREAK_GLASS_USER_ID", "00000000-0000-0000-0000-000000000001"),
 		BreakGlassUsername: envOrDefaultIdentity("MYCELIS_BREAK_GLASS_USERNAME", "recovery-admin"),
+		DeploymentContract: ResolveDeploymentContract(),
 	}
 	return cfg
 }
@@ -94,6 +85,16 @@ func (cfg localAuthIdentityConfig) identityForToken(token string) *RequestIdenti
 	}
 }
 
+func (cfg localAuthIdentityConfig) authConfigurationError() string {
+	if !cfg.DeploymentContract.RequiresBreakGlassRecovery() {
+		return ""
+	}
+	if strings.TrimSpace(cfg.BreakGlassAPIKey) == "" {
+		return "deployment auth contract requires MYCELIS_BREAK_GLASS_API_KEY for enterprise-like recovery posture"
+	}
+	return ""
+}
+
 // IdentityFromContext extracts the RequestIdentity from the request context.
 // Returns nil if no identity is present (unauthenticated request).
 func IdentityFromContext(ctx context.Context) *RequestIdentity {
@@ -116,6 +117,13 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 		// Exempt: CORS preflight
 		if r.Method == "OPTIONS" {
 			next.ServeHTTP(w, r)
+			return
+		}
+
+		if configError := identityConfig.authConfigurationError(); configError != "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]string{"error": configError})
 			return
 		}
 

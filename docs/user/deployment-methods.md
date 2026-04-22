@@ -24,13 +24,18 @@ Choose the runtime by deployment target, not by whichever tool is already open.
 | Local Helm and Kubernetes validation in WSL/Linux | `k3d` | Best local proof for chart behavior before a real cluster |
 | Customer-managed or enterprise-managed cluster | Enterprise self-hosted Kubernetes | Best fit for real cluster policy, ingress, registry, storage, and secret management |
 | Edge node, Raspberry Pi style control node, small Linux box | Packaged binary or node-attached service | Lightweight host footprint with remote AI service support |
-| Active code changes and UI/backend iteration | Developer source mode | Best fit for implementation work, not for production-style deployment |
+| Active code changes and UI/backend iteration | WSL worktree + Docker Compose first, source-mode fallback when needed | Best fit for implementation work, not for production-style deployment |
 
 Quick rule:
 - if the question is "how do I run Mycelis on one host?" use Docker Compose
 - if the question is "how do I prove the Helm chart or cluster behavior locally?" use `k3d`
 - if the question is "how would a customer deploy this on their own cluster?" use the Helm chart for enterprise self-hosted Kubernetes
 - if the question is "how do I place a lightweight node on small hardware?" use the packaged binary path and keep AI remote
+
+Supported user access lanes:
+- Windows Docker Desktop: run the supported Compose stack on Windows and open `http://localhost:3000` from the Windows browser on that same machine
+- Windows + WSL Docker: run the supported Compose stack from WSL, then use the Windows browser as the first operator proof path through `http://localhost:3000`
+- Linux server/self-hosted release: run the supported self-hosted stack on the Linux host and open the UI through the same hostname/IP operators will really use remotely, such as `http://<server-hostname-or-ip>:3000`
 
 ## Docker Compose Single Host
 
@@ -40,9 +45,34 @@ Typical fit:
 - home-lab or personal owner deployment
 - demos and partner evaluation
 - one machine running the full stack
+- Windows Docker Desktop single-machine runtime with the Windows browser on the same host
+- Windows + WSL Docker with the Windows browser as the first operator proof path
+- Linux server bring-up where remote clients should use the published host/IP or ingress address
 - WSL2, Linux, or macOS bring-up where local Kubernetes would add unnecessary overhead
 
 Recommended path:
+
+Windows Docker Desktop:
+
+```powershell
+Copy-Item .env.compose.example .env.compose
+uv run inv auth.posture --compose
+uv run inv install
+uv run inv compose.up --build --wait-timeout=240
+uv run inv compose.health
+```
+
+WSL2/Linux/macOS:
+
+```bash
+cp .env.compose.example .env.compose
+uv run inv auth.posture --compose
+uv run inv install
+uv run inv compose.up --build --wait-timeout=240
+uv run inv compose.health
+```
+
+Linux server/self-hosted release:
 
 ```bash
 cp .env.compose.example .env.compose
@@ -53,6 +83,10 @@ uv run inv compose.health
 ```
 
 Use this path first unless you specifically need cluster behavior.
+Use the same operator-facing address you will really support after delivery:
+- Windows Docker Desktop on the same machine: `http://localhost:3000`
+- Windows browser against a WSL-hosted stack: start with `http://localhost:3000`, then prove the host/IP path for second-machine access
+- Linux server/self-hosted release: use `http://<server-hostname-or-ip>:3000` or the published ingress address from the operator machine
 
 ## Local Kubernetes With k3d
 
@@ -116,6 +150,14 @@ uv run inv k8s.up
 The Windows-AI preset is intentionally not self-filling.
 If `MYCELIS_K8S_TEXT_ENDPOINT` is missing, `k8s.deploy` and `k8s.up` fail closed instead of pretending the placeholder endpoint is deployable.
 
+Package-verification shortcut:
+
+```bash
+uv run inv k8s.deploy --verify-package --values-file=charts/mycelis-core/values-enterprise.yaml --release-label=enterprise
+```
+
+Use that verification path when you need lint/render/package proof and artifact output under `dist/helm/` before touching a live cluster.
+
 ## Edge Or Small Node Deployments
 
 Choose a packaged binary or node-attached service when the target host is a small Linux node, Raspberry Pi style device, or lightweight cluster member.
@@ -132,7 +174,7 @@ Guidance:
 
 ## Developer Source Mode
 
-Use the source-run lifecycle path when you are changing code, debugging, or iterating on UI/backend behavior.
+Use the source-run lifecycle path when you are changing code, debugging, or iterating on UI/backend behavior and specifically need repo-local source or Kubernetes validation.
 
 Recommended path:
 
@@ -144,10 +186,10 @@ uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
 ```
 
-Developer source mode is not a deployment method. It is the implementation lane for changing the product.
+Developer source mode is not a deployment method. It is the implementation lane for changing the product when Compose-backed development proof is not the right slice.
 
 Windows host note:
-- if the machine is Windows, prefer running the source workflow from a WSL worktree when possible
+- if the machine is Windows, prefer a WSL worktree plus Docker Compose for day-to-day code changes
 - use the Windows browser against `http://localhost:3000` as the first operator-facing check for that WSL-hosted stack
 - keep the Windows-native source path for explicit host-local Kubernetes validation or host-specific troubleshooting
 
@@ -172,5 +214,7 @@ Before user testing or UI testing, prove the lane you picked:
 - Docker Compose: `uv run inv compose.status` and `uv run inv compose.health`
 - local Kubernetes: `uv run inv k8s.status` and `uv run inv lifecycle.health`
 - enterprise self-hosted Kubernetes: render or deploy the Helm chart with the real values, then prove ingress, readiness, storage, and the explicit AI endpoint on the target cluster
-- Windows operator testing: open the UI from Windows over the network and confirm the runtime reaches the explicit Windows AI host instead of a loopback-only address
-- release gate: `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` (`--runtime-posture` reads process env plus `.env.compose` / `.env` and fails if the deployment does not declare an explicit supported AI endpoint)
+- Windows Docker Desktop: open the UI from the Windows browser on the same machine through `http://localhost:3000`, then confirm the runtime reaches the explicit Windows AI host instead of a loopback-only deployment assumption
+- Windows browser against a WSL-hosted stack: start with `http://localhost:3000` on that same Windows machine, then use the host/IP path for second-machine or LAN proof
+- Linux server/self-hosted release: open the UI from the operator machine through the same host/IP/hostname that will be used remotely, not `localhost` on the server
+- release gate: `uv run inv ci.release-preflight --lane=release` (recommended preset for runtime-posture + service-health + live-backend proof; the legacy flags remain available when you need a narrower/manual combination)

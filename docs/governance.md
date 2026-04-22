@@ -37,7 +37,7 @@ This governance model also applies to durable context loading:
 Current release boundary note:
 - this is still a free-node governance foundation, not a full multi-user IAM system
 - the target multi-user contract is one shared organization-owned Soma persona plus many governed human principals, not one unrelated Soma per end user
-- the current People & Access surface now makes the edition/identity story reviewable without pretending the full enterprise control plane already exists: operators can inspect self-hosted release, self-hosted enterprise, or hosted-control-plane posture alongside identity mode and shared Soma output-specificity ownership
+- the current People & Access surface now makes the edition/identity story reviewable without pretending the full enterprise control plane already exists: operators can inspect self-hosted release, self-hosted enterprise, or hosted admin control plane posture alongside identity mode and shared Soma output-specificity ownership
 - future enterprise identity should support federation and local break-glass admins without bypassing governance or audit
 - future shared-Soma governance must also distinguish admin-shaped organization-level Soma context from ordinary user interaction context
 - future shared-Soma governance must reserve durable agent/output-specificity assignment to the root admin or explicitly delegated environment owner rather than letting ordinary user chats redefine shared behavior

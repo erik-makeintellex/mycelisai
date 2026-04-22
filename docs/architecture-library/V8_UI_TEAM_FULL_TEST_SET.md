@@ -799,7 +799,7 @@ Required proof set:
 Pass condition:
 
 - the browser session reaches the product from Windows
-- the runtime is self-hosted and not Docker Desktop-dependent
+- the runtime is self-hosted through a supported delivery lane: Windows Docker Desktop Compose, Docker-in-WSL Compose, or self-hosted Kubernetes
 - the AI endpoint is explicit and non-loopback
 - the operator can complete Soma, governance, team creation, and retained-output review in one repeatable lane
 - a failed AI host is surfaced as a visible blocker and recovery is verified after the endpoint returns

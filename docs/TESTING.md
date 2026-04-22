@@ -19,14 +19,37 @@ Current validation contract:
 - when the validation target is the Helm/self-hosted Kubernetes path, prefer a promoted preset through `MYCELIS_K8S_VALUES_FILE` such as `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`
 - when the validation target is the enterprise Windows-AI preset, `k8s.deploy` / `k8s.up` should fail closed unless `MYCELIS_K8S_TEXT_ENDPOINT` points at the real Windows GPU host
 - when the validation target is local Kubernetes, prefer `k3d` as the repo-local backend and use `MYCELIS_K8S_BACKEND=kind` only when you intentionally need the older Kind path
-- when the validation target is the Windows self-hosted operator lane, prove the field topology directly: a Windows browser/client opens the UI over the network, the runtime runs in Compose or self-hosted Kubernetes, and the AI engine lives on a Windows GPU host reached by explicit IP or hostname rather than `localhost`
-- use `uv run inv ci.release-preflight --runtime-posture --service-health --live-backend` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence; `--runtime-posture` now reads process env plus `.env.compose` / `.env` and fails closed when no explicit supported AI endpoint is configured
+- when the validation target is a supported self-hosted user lane, prove the field topology directly: Windows Docker Desktop and same-machine WSL-hosted stacks use the Windows browser with `http://localhost:3000` as the first operator path, second-machine or Linux-server proof uses the real host/IP/hostname, the runtime runs in Compose or self-hosted Kubernetes, and the AI engine lives on an explicit non-loopback host rather than `localhost`
+- use `uv run inv ci.release-preflight --lane=release` when a branch changes proxy/runtime/service contracts and needs both clean-tree proof and live service/browser evidence; the lane presets are `baseline`, `runtime`, `service`, and `release`, and `--runtime-posture` still reads process env plus `.env.compose` / `.env` and fails closed when no explicit supported AI endpoint is configured
 - when repeated local builds or browser runs are filling the repo/cache volume, use `uv run inv cache.guard` to fail fast before another large build expands `.next`, Playwright browsers, or tool caches; remember that Docker daemon / WSL image-layer storage is a separate disk budget
 - when live browser proof asserts backend-written files from a different worktree than the running Core backend, set `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) to the backend's actual workspace root before running the spec, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
 - end-of-slice reporting should name both the evidence commands run and the docs updated or reviewed unchanged for the touched scope
 - team-creation and orchestration changes must prove the compact-default rule: small teams by default, broad asks split into several smaller lanes, and the coordination path remains visible through Soma/Council/NATS rather than being hidden in a giant roster
 - Invoke-managed Playwright runs own a shared Interface server lifecycle; run `uv run inv interface.e2e ...` commands one at a time for a given workspace and port, especially from the WSL-managed path, instead of launching multiple specs in parallel from separate shells
+
+## User Interaction Delivery Gate
+
+Supported release/user lanes:
+- Windows Docker Desktop with the Windows browser on the same machine
+- Windows browser against a WSL-hosted Compose stack on the same machine
+- Linux self-hosted server or cluster reached through the real remote host/IP/hostname
+
+Every accepted user-interaction proof set must verify:
+- the browser opens the UI through the same operator-facing address the delivered environment will actually use
+- Soma returns a direct `answer` for a non-mutating prompt
+- a mutating prompt enters `proposal` and can be approved or cancelled
+- guided team creation or a temporary workflow lane completes and remains reviewable
+- retained outputs stay visible after refresh/reload
+- AI-host failure produces a visible blocker and recovery restores the same lane without changing the delivery address
+
+Minimum release evidence for these lanes:
+- `uv run inv compose.status` or the equivalent Kubernetes health/status proof for the deployed lane
+- `uv run inv compose.health` or the equivalent live service health proof
+- `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
+- `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
+- `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
+- `uv run inv ci.release-preflight --lane=release` when the slice changes deployment/runtime/operator-access behavior
 
 Canonical full-gate references:
 - use this document for the ordered release-style testing pass across repo baseline, stable browser proof, live service/browser proof, and compose-aware runtime proof
@@ -128,7 +151,7 @@ Use this lane when you need repeatable proof that the self-hosted product works 
 
 - the browser session runs on Windows
 - the UI is reached from Windows through the same host path an operator would really use
-- the runtime is Compose or self-hosted Kubernetes
+- the runtime is Windows Docker Desktop Compose, Docker-in-WSL Compose, or self-hosted Kubernetes
 - the AI engine runs on a Windows GPU host or equivalent self-hosted service reached by explicit IP or hostname
 
 Required setup:
@@ -138,13 +161,13 @@ Required setup:
 2. Bring the stack up with the supported runtime task path.
 3. Confirm `compose.status` or the relevant Kubernetes health proof shows the UI and backend are healthy before browser work begins.
 4. Record the Windows host address used for the model service and the browser URL used for the UI.
-   - same-machine WSL-hosted stack: `http://localhost:3000` is the first valid operator path
+   - same-machine Windows Docker Desktop or WSL-hosted stack: `http://localhost:3000` is the first valid operator path
    - different machine or explicit LAN proof: use the network-reachable host name or IP
 
 Required proof sequence:
 
 1. Open the UI from Windows using the real operator-facing address.
-   - same-machine WSL-hosted stack: start with `http://localhost:3000`
+   - same-machine Windows Docker Desktop or WSL-hosted stack: start with `http://localhost:3000`
    - different machine or explicit LAN proof: use the network-reachable host name or IP
 2. Confirm Soma returns a direct `answer` for a non-mutating prompt.
 3. Confirm a mutating prompt enters `proposal` and can be approved or cancelled.
@@ -166,7 +189,7 @@ Recommended evidence targets:
 Pass condition:
 
 - the browser path works from Windows
-- the runtime is self-hosted and not Docker Desktop-dependent
+- the runtime is self-hosted through a supported delivery lane: Windows Docker Desktop Compose, Docker-in-WSL Compose, or self-hosted Kubernetes
 - the AI engine endpoint is explicit and non-loopback
 - the operator can complete a normal user journey, a governed mutation, and a retention/recovery check in the same lane
 - failure of the AI host is visible and recoverable instead of being hidden by browser-only success
@@ -282,7 +305,7 @@ uv run inv compose.infra-health      # Data-plane-only health proof: PostgreSQL 
 uv run inv compose.storage-health    # Post-migration long-term storage proof: pgvector, memory/context, artifacts, exchange, continuity
 uv run inv compose.up --build --wait-timeout=240    # Supported home-runtime bring-up without Kind on a fresh or slower host
 uv run inv compose.health        # Deep health proof for the compose stack
-uv run inv ci.release-preflight --runtime-posture --service-health --live-backend  # Clean-tree + runtime posture + baseline + live service/browser proof
+uv run inv ci.release-preflight --lane=release  # Clean-tree + runtime posture + baseline + live service/browser proof
 ```
 
 Runner matrix:
@@ -518,7 +541,7 @@ Focused additions still planned for the MVP media/team-output lane:
 - **Config:** `interface/playwright.config.ts`
 - **Base URL:** `http://127.0.0.1:3000` by default for local browser traffic (`INTERFACE_HOST` / `INTERFACE_PORT` override supported)
 - **Bind Host:** the managed Next.js server binds to `[::]:3000` by default so IPv4 localhost, IPv6 localhost, and LAN clients can all reach the UI (`INTERFACE_BIND_HOST` / `MYCELIS_INTERFACE_BIND_HOST` override supported)
-- **Windows Client Expectation:** when the runtime is hosted in WSL on a Windows machine, the primary operator proof is a Windows browser reaching the UI on that same machine, usually via `http://localhost:3000`; for second-machine or broader self-hosted proof, use the network-reachable host name or IP
+- **Windows Client Expectation:** when the runtime is hosted by Windows Docker Desktop or WSL on a Windows machine, the primary operator proof is a Windows browser reaching the UI on that same machine, usually via `http://localhost:3000`; for second-machine or broader self-hosted proof, use the network-reachable host name or IP
 - **Browser Projects:** `chromium`, `firefox`, `webkit`, `mobile-chromium`
 - **Server Lifecycle:** `uv run inv interface.e2e` starts/stops the managed Next.js app and now defaults to the managed `dev` server for stable mocked browser proof; use `--server-mode=start` when you need the built production Interface server path for stricter or live-backend proof. Start-mode runs refresh the production bundle before the managed server launches and retry once after a stale repo-local Next build lock, a stale `.next/standalone` cleanup lock, or incomplete built-server packaging
 - **Managed Dev Runtime:** the Invoke-managed `dev` server now uses webpack-backed `next dev` for browser stability in WSL and other local mocked E2E runs.
