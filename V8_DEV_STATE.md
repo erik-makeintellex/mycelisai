@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](README.md) | [Docs Home](docs/README.md)
 
-> Updated: 2026-04-21
+> Updated: 2026-04-23
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `V7_DEV_STATE.md` (legacy migration input)
 
@@ -30,6 +30,9 @@ Use `V7_DEV_STATE.md` only as a migration input and historical checkpoint source
 - `ACTIVE` current WSL proof bring-up order is `.env.compose` -> `uv run inv auth.posture --compose` -> `uv run inv install` -> optional `uv run inv compose.infra-up --wait-timeout=180` / `uv run inv compose.infra-health` -> `uv run inv compose.migrate` -> `uv run inv compose.storage-health` -> `uv run inv compose.up --build --wait-timeout=240` -> `uv run inv compose.health`.
 - `ACTIVE` current WSL proof gate is `uv run inv ci.baseline`, `uv run inv ci.service-check --live-backend`, and `uv run inv ci.release-preflight --lane=release`. The release-preflight lane presets are now `baseline`, `runtime`, `service`, and `release`, while the older flags remain available for narrow/manual proof. Compose-backed live browser specs that assert filesystem outputs should set `MYCELIS_BACKEND_WORKSPACE_ROOT=workspace/docker-compose/data/workspace` when the spec checkout differs from the running backend worktree.
 - `ACTIVE` the guarded `wsl.validate` proof lane now bootstraps `.env.compose` from the tracked example when a clean proof checkout has none yet, creates the configured Compose output-block host path when it is missing, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, focused live-backend Soma/team/groups/workspace browser checks, and the Windows `http://localhost:3000` GUI probe in one task-owned pass.
+- `COMPLETE` the latest clean WSL proof pass from the `mother-brain` checkout is green on the runtime lane: `uv run inv ci.release-preflight --lane=runtime --no-e2e`, `uv run inv compose.up --wait-timeout=240`, `uv run inv compose.health`, `uv run inv compose.storage-health`, Windows-side `http://localhost:3000` reachability, and live Chromium `soma-governance-live.spec.ts`, `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts` all passed from the refreshed WSL checkout.
+- `COMPLETE` workspace-relative file/tool requests now treat leading `workspace/` as an alias for the configured workspace root instead of nesting a second `workspace` path under `MYCELIS_WORKSPACE`; the live Compose-backed workspace browser assertions were updated to match that runtime contract.
+- `IN_REVIEW` the guarded `wsl.refresh` lane still depends on working git auth inside the WSL proof checkout; manual refresh remains the fallback until that auth-helper setup is fully automated.
 - `ACTIVE` the supported install/bootstrap path now provisions the managed Playwright Chromium binary as part of `uv run inv install` / `uv run inv interface.install`, so a fresh proof checkout can reach the repo-owned browser certification lane without a separate manual browser install step.
 - `ACTIVE` supported user/runtime delivery lanes remain explicit and first-class: Windows Docker Desktop Compose on one machine, Docker-in-WSL Compose with the Windows browser using `http://localhost:3000` as the first operator path, and Linux self-hosted release through the same remote host/IP/hostname operators will really use after delivery.
 - `ACTIVE` accepted user-interaction proof for those lanes must exercise the real operator-facing address, direct Soma answer flow, governed proposal approval/cancel flow, team/workflow creation, retained-output review after refresh, and visible recovery when the configured AI host fails.
@@ -183,19 +186,19 @@ Management contract:
 - no host-convenience workaround may rewrite the canonical Compose or self-hosted Kubernetes contract
 - when delivery truth changes, update this state file plus the canonical runtime-delivery doc in `docs/architecture-library/V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md`
 
-## Current Target State (2026-04-21)
+## Current Target State (2026-04-23)
 
 Use this board for current MVP continuation coordination. Runtime-delivery truth remains required, but the active release center is now workflow-complete operator proof, healthy git packaging, and a branch that can be pushed from clean committed state.
 
 | Team / Lane | Status | Current Target | Dependencies / Handoffs | Next Action |
 | --- | --- | --- | --- | --- |
-| Delivery Management | `ACTIVE` | Keep `main` pushable from clean committed checkpoints and reject mixed local drift. | Receives status and blockers from every lane. | Package the current workflow-coverage + state update slice into one clean commit and push it so `origin/main` catches up to the current MVP proof spine. |
+| Delivery Management | `ACTIVE` | Keep `main` pushable from clean committed checkpoints and reject mixed local drift. | Receives status and blockers from every lane. | Keep packaging focused state/doc/runtime updates into clean commits so the WSL proof checkout can refresh directly from `origin/main` without local hand-editing. |
 | Workflow Coverage + UX Certification | `ACTIVE` | Map the real operator workflows and singular execution actions to committed unit/browser proof, not only route smoke. | Depends on current UI/testing contracts and WSL-managed proof discipline. | Continue from the new `/docs` and `/runs` audit by deepening browser proof for run review/interjection/retry paths and keeping the headed Chromium MVP matrix current. |
 | AI Organization + Team Design | `IN_REVIEW` | Keep the Soma-first organization-entry, guided team design, temporary workflow launch, archive, and retained-output review paths stable. | Depends on managed Interface runtime and the Groups proof lane. | Extend the currently green focused mocked/browser proof toward more live runtime outcome checks instead of only lane-entry assertions. |
 | Direct Soma + Governance | `IN_REVIEW` | Keep direct answer, governed proposal, confirm/cancel, and continuity behavior stable through the live operator path. | Depends on Compose/live-backend health and governed chat/runtime contracts. | Widen failure/recovery proof after the current packaging slice, especially guided retry recovery and Windows-browser-against-WSL validation. |
 | Connected Tools + MCP Workflow | `IN_REVIEW` | Keep library install, connected-server visibility, and MCP activity readable to operators. | Depends on Connected Tools UI, audit/activity proof, and live runtime health. | Add the missing live workflow proof that a real Soma/team lane uses an MCP-backed capability and surfaces matching recent activity. |
-| Runtime + Self-Hosted Posture | `ACTIVE` | Keep Compose/WSL/Windows browser topology truthful and prevent desktop-local shortcuts from creeping back into the MVP contract. | Feeds live-backend browser proof and operator-facing docs. | Re-run the broader service-check/release-preflight acceptance path after the current UI/testing packaging slice lands cleanly. |
-| Docs + State Authority | `ACTIVE` | Keep `V8_DEV_STATE.md`, `docs/TESTING.md`, and related authority docs aligned to the actual proof surface and active MVP plan. | Depends on every touched slice. | Record every accepted coverage/status change in the same commit window as the code and keep the in-app docs contract synchronized when canonical docs move. |
+| Runtime + Self-Hosted Posture | `ACTIVE` | Keep Compose/WSL/Windows browser topology truthful and prevent desktop-local shortcuts from creeping back into the MVP contract. | Feeds live-backend browser proof and operator-facing docs. | Re-run the full release lane after the next proof-hardening slice and keep the WSL relay/runtime posture aligned with the documented Windows-browser operator path. |
+| Docs + State Authority | `ACTIVE` | Keep `V8_DEV_STATE.md`, `docs/TESTING.md`, and related authority docs aligned to the actual proof surface and active MVP plan. | Depends on every touched slice. | Record the green WSL runtime proof, workspace-path contract, and remaining WSL git-auth caveat in the same committed handoff slice so the next agentry restart begins from written repo truth. |
 
 Cross-team management rule:
 - Keep runtime truth and browser-first product truth aligned; neither is allowed to drift into "works locally" convenience language.
@@ -215,7 +218,7 @@ MVP continuation sequence:
 4. `NEXT` keep the Windows-browser-against-WSL/operator topology honest as the self-hosted MVP story, not as an afterthought.
 5. `NEXT` only after those proof lanes are stable, widen back into broader continuity/team-run/runtime expansion work.
 
-## Immediate Execution Plan (2026-04-21)
+## Immediate Execution Plan (2026-04-23)
 
 This is the engaged compact team and the exact proof-producing sequence for the next MVP slice.
 
@@ -223,24 +226,32 @@ This is the engaged compact team and the exact proof-producing sequence for the 
 | --- | --- | --- | --- |
 | Team Lead / Delivery Manager | `ACTIVE` | keep the branch clean enough to push and keep the MVP board centered on proof-producing work | accepted slice summary with commit, proof, docs, and remaining risk |
 | UI Workflow Engineer | `ACTIVE` | tighten user-shaped workflow proof for docs browsing, run review, interjection, and workflow follow-through | focused test additions plus a smaller remaining-risk list |
-| Runtime / Release Engineer | `ACTIVE` | preserve the WSL-managed browser/runtime contract while the proof surface moves | repeatable WSL evidence commands and no stale-server drift |
-| Docs / State Owner | `ACTIVE` | update `V8_DEV_STATE.md` and testing docs to reflect the real MVP continuation plan | synchronized state/testing docs and explicit next-step board |
-| Release Verification | `NEXT` | rerun the broader committed-state proof after this packaging slice lands | current targeted WSL proof now, broader headed/live proof next |
+| Runtime / Release Engineer | `ACTIVE` | preserve the WSL-managed browser/runtime contract while the proof surface moves | repeatable WSL evidence commands, correct workspace-path semantics, and no stale-server drift |
+| Docs / State Owner | `ACTIVE` | update `V8_DEV_STATE.md` and authority docs to reflect the real WSL proof and handoff posture | synchronized state/testing/ops docs and explicit next-step board |
+| Release Verification | `NEXT` | rerun the broader committed-state proof after the next proof-hardening slice lands | current targeted WSL runtime proof is green; broader headed/live proof next |
 
 Execution order:
-1. `ACTIVE` package the current `/docs` + `/runs` workflow coverage hardening and state/doc updates into one clean commit.
-2. `ACTIVE` verify the touched slice from WSL using focused Vitest, typecheck, and browser proof before push.
-3. `ACTIVE` push the updated `main` branch so the healthy pull target includes the focused org-entry/runtime split plus the new workflow-coverage audit.
-4. `NEXT` start the next MVP proof lane with deeper `/runs` browser behavior, the skipped guided retry/recovery path, and live MCP-backed workflow correlation.
-5. `NEXT` follow that slice with the broader headed Chromium MVP certification pass and the Windows self-hosted browser check.
+1. `ACTIVE` package the latest WSL runtime-proof results, workspace alias contract, and handoff caveats into one clean commit.
+2. `ACTIVE` keep the WSL proof checkout refreshed from git-backed commits instead of manual source copying, while the remaining WSL git-auth setup gap is still explicit.
+3. `ACTIVE` start the next MVP proof lane with deeper `/runs` browser behavior, the skipped guided Soma retry/recovery path, and live MCP-backed workflow correlation.
+4. `NEXT` follow that slice with the broader headed Chromium MVP certification pass and the Windows self-hosted browser check.
+5. `NEXT` close the remaining `wsl.refresh` auth/setup gap so the guarded handoff path is fully hands-off from Windows through WSL proof.
 
 Immediate blocker rule:
 - `BLOCKED` any slice that reintroduces a mixed dirty tree or leaves docs/state behind the accepted proof surface.
 - `IN_REVIEW` `/runs` is now better covered for singular user actions, but broader browser/live-depth proof is still the next real gap rather than a solved lane.
 - `IN_REVIEW` live MCP workflow correlation remains a known MVP gap and should stay explicit until real browser/runtime proof exists.
 
-## Current Review (2026-04-21)
+## Current Review (2026-04-23)
 
+Review summary:
+1. `COMPLETE` `main` now carries the latest WSL-proofed runtime fix for workspace-relative file/tool paths: requests beginning with `workspace/` normalize against the configured workspace root instead of producing a doubled `workspace/workspace/...` path under the Compose-mounted `/data/workspace`.
+2. `COMPLETE` the latest authoritative WSL proof run from `/home/erik/Projects/mycelisai/scratch` is green on the committed runtime lane: `uv run inv ci.release-preflight --lane=runtime --no-e2e`, `uv run inv compose.up --wait-timeout=240`, `uv run inv compose.health`, `uv run inv compose.storage-health`, Windows-side `curl.exe -I http://localhost:3000`, and live Chromium `soma-governance-live.spec.ts`, `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts`.
+3. `IN_REVIEW` the WSL Compose relay/runtime contract is now behaving the way the docs say it should: the product runtime is hosted from the WSL proof checkout, the first operator-facing address is still the Windows browser at `http://localhost:3000`, and the AI endpoint remains an explicit non-loopback host contract instead of a hidden desktop-local shortcut.
+4. `IN_REVIEW` the guarded Windows-to-WSL handoff path is close but not fully closed: `wsl.validate` is trustworthy for proof once the proof checkout is current, but `wsl.refresh` still depends on working git auth inside the WSL checkout and may require a manual refresh until that setup is automated.
+5. `NEXT` the next MVP-centered proof lane remains unchanged: deepen `/runs` browser workflow coverage, unskip and keep green the guided Soma retry/recovery lane, add live MCP-backed workflow correlation proof, then rerun the broader headed Chromium certification pass from committed state.
+
+## Prior Review (2026-04-21)
 Review summary:
 1. `ACTIVE` local `main` is now ahead of `origin/main` with two clean committed MVP-stabilization slices already packaged (`7e15c49` and `6396493`), and the current branch-health update is packaging the next focused workflow-coverage slice so the push target stays healthy instead of accumulating more local drift.
 2. `COMPLETE` the organization-entry/browser-coverage cleanup is now materially landed from clean state: the old umbrella spec was split into focused creation, empty-start, persistence, native-vs-external, ask-class, and recovery slices, and the `ops/interface` task/runtime boundary was decomposed into `interface.py`, `interface_runtime.py`, `interface_env.py`, and `interface_process_support.py`.

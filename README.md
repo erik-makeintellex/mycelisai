@@ -81,6 +81,7 @@ Windows dev + WSL proof rule:
 - refresh the WSL proof checkout from git after a Windows-side commit/push instead of copying source or generated artifacts across the boundary
 - do not share one long-lived generated environment across Windows and WSL; recreate `.venv`, `interface/node_modules`, and `interface/.next` in the WSL proof checkout before trusting results
 - use the dedicated WSL task lane when you want the guarded handoff/proof flow from Windows: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
+- `uv run inv wsl.refresh` assumes the WSL proof checkout already has working git auth configured; if that helper path is not set up yet, refresh the WSL checkout manually from git rather than copying source across the host boundary
 - `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, ensures the configured Compose output-block host path exists, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, focused live-backend browser workflows, and the Windows-side GUI probe in one guarded pass
 
 Bootstrap reminder:
@@ -105,6 +106,7 @@ Tasking note:
 - `uv run inv k8s.init` / `k8s.up` / `k8s.deploy` now prefer `k3d` as the local Kubernetes backend when it is available, while keeping `MYCELIS_K8S_BACKEND=kind` as the explicit fallback for older local workflows
 - `uv run inv ci.release-preflight --runtime-posture` now adds a tighter runtime gate before baseline proof: 12 GiB disk headroom, explicit AI-endpoint discovery from process env plus `.env.compose` / `.env`, fail-closed behavior when no supported non-loopback endpoint contract is configured, and WSL-host probe mirroring for `host.docker.internal` so the Windows-local Ollama contract can still be verified before the Compose relay starts
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
+- workspace-relative file/tool requests may use `workspace/...` as a readable alias for the configured workspace root; runtime normalization strips that leading alias instead of nesting a second `workspace` directory under `MYCELIS_WORKSPACE`
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, point it at a host-reachable endpoint such as `http://host.docker.internal:11434`, and let Compose map that value into the provider-specific runtime overrides inside Core
 - when Docker runs inside WSL and the AI engine is on the same Windows host, keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer can relay that through the WSL host so bridge containers do not need direct access to the Windows LAN IP
 
@@ -575,6 +577,7 @@ Active-code rule for Windows hosts:
 - use the Windows repo as the day-to-day editing and push surface
 - refresh the WSL `mother-brain` proof checkout from git after each committed Windows-side slice instead of copying files or generated artifacts between hosts
 - use `uv run inv wsl.status` to confirm branch/commit drift and `uv run inv wsl.refresh` when you want the guarded git-only proof-checkout reset from Windows
+- if `wsl.refresh` cannot authenticate from the WSL checkout yet, do the refresh there with normal git credentials and keep the boundary git-backed rather than copying files between Windows and WSL
 - use `uv run inv wsl.validate` after refresh when you want the WSL proof checkout to self-seed `.env.compose` from the tracked example if needed, create the configured Compose output-block host path, load the same Compose auth/proxy env into the managed Interface proof path, run release-preflight plus Compose health/storage proof, and then certify the live Soma, team-creation, groups, and workspace browser flows before probing `http://localhost:3000` from Windows
 - run the full build/test/runtime proof from WSL, then use the Windows-side browser as the first operator proof path against that WSL-hosted stack
 - keep the Windows-native source path only for explicit local-Kubernetes/source validation or host-specific debugging

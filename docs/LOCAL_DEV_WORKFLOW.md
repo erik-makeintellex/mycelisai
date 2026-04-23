@@ -329,6 +329,7 @@ Recommended handoff tasks from the Windows repo:
 - `uv run inv wsl.refresh --branch <name>`
 - `uv run inv wsl.validate`
 - `uv run inv wsl.cycle --branch <name>`
+- `wsl.refresh` assumes the WSL proof checkout already has working git auth configured; when it does not, refresh there manually with normal git credentials and keep the handoff git-backed instead of copying files across hosts
 - `wsl.validate` preserves an existing WSL `.env.compose`, but when the clean proof checkout has none yet it seeds one from `.env.compose.example`, creates the configured Compose output-block host path if it is missing, and then runs release-preflight, Compose health/storage proof, the live Soma/team/groups/workspace browser checks, and the final Windows-side `http://localhost:3000` probe
 
 These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree.
@@ -576,6 +577,7 @@ Persistent storage contract:
 - Kubernetes should mount the PVC at `/data`
 - manifested files and MCP filesystem access should use `MYCELIS_WORKSPACE=/data/workspace`
 - artifact blobs should use `DATA_DIR=/data/artifacts`
+- runtime file/tool requests may use `workspace/...` as an alias for the configured workspace root; the backend strips that leading alias so Compose-backed `/data/workspace` and repo-local `./workspace` both resolve predictably
 - Compose output blocks use `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` with `MYCELIS_OUTPUT_HOST_PATH` pointing at the host directory mounted as Core `/data`; use `cluster_generated` for chart/PVC-owned cluster output storage
 - when `local_hosted` is selected, create the host directory first. The Invoke compose task resolves the path with Python `pathlib`, including `~`, environment variables, Windows drive paths, Linux paths, macOS paths, and paths with spaces
 

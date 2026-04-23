@@ -37,6 +37,7 @@ Proof-checkout contract:
 - keep destructive cleanup such as `git reset --hard` and `git clean -fdx` scoped to the dedicated WSL proof checkout
 - when the runtime is hosted from WSL on the same Windows machine, the required operator-facing browser path is the Windows browser at `http://localhost:3000`
 - use `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when you want the guarded Windows-dev -> WSL-proof task path instead of a manual handoff
+- `uv run inv wsl.refresh` assumes the WSL proof checkout already has working git auth; if that auth helper is not configured yet, refresh manually from git inside WSL and keep the boundary commit/push/fetch based instead of copying source trees
 - `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, focused live-backend browser workflows, and the Windows GUI probe
 
 Deployment selection rule:
@@ -152,6 +153,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - `ops/interface.py` is the stable Invoke entrypoint; the task implementation lives in `ops/interface_runtime.py`, with shared command/env helpers in `ops/interface_env.py` and process matching hints in `ops/interface_process_support.py`
 - `uv run inv interface.e2e` now defaults to managed `dev` mode for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; `uv run inv interface.build` still retries once after a stale repo-local Next build lock before failing, start-mode E2E inherits that same recovery behavior, and managed `dev` runs clear an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains.
 - Live backend browser specs that assert filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the spec checkout and the running Core checkout differ; use the backend's actual workspace root, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack.
+- Runtime file/tool requests may also use `workspace/...` as a friendly alias for the configured workspace root; the backend normalizes that prefix away so Compose-backed `/data/workspace` and repo-local `./workspace` do not produce doubled `workspace/workspace/...` paths.
 
 ### `test.py` (Root Test Aliases)
 - **All**: `uv run inv test.all`
