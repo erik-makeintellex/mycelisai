@@ -298,7 +298,7 @@ The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hos
 | `.dockerignore` | root Docker build-context exclusions | Excludes Interface build/test outputs so repo-root Docker builds do not ingest stale `.next`, coverage, or browser artifacts |
 | `ops/misc.py` | `clean.legacy` | Remove legacy Makefiles |
 | `ops/misc.py` | `clean.generated`, `clean.reports`, `clean.wsl-handoff`, `clean.windows-dev-residue`, `clean.disk-status` | Repo-safe generated artifact cleanup plus host-boundary storage reporting |
-| `ops/wsl_runtime.py` | `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle` | Guarded Windows-dev -> WSL-proof handoff, refresh, and validation tasks; `wsl.validate` bootstraps `.env.compose` from the tracked example when needed and then runs release-preflight, Compose health/storage proof, live browser workflows, and the Windows GUI probe |
+| `ops/wsl_runtime.py` | `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle` | Guarded Windows-dev -> WSL-proof handoff, refresh, and validation tasks; `wsl.validate` bootstraps `.env.compose` from the tracked example when needed, creates the configured Compose output-block host path, and then runs release-preflight, Compose health/storage proof, live browser workflows, and the Windows GUI probe |
 | `ops/misc.py` | `team.architecture-sync`, `team.worktree-triage` | central architect sync plus local worktree/task triage helpers |
 
 Key coordination example: `uv run inv team.architecture-sync`

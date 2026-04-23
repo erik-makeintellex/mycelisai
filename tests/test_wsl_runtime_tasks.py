@@ -87,6 +87,7 @@ def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
     )
     monkeypatch.setattr(wsl_runtime, "_print_repo_state", lambda *args, **kwargs: None)
     monkeypatch.setattr(wsl_runtime, "_ensure_wsl_compose_env", lambda **_kwargs: None)
+    monkeypatch.setattr(wsl_runtime, "_ensure_wsl_output_block_path", lambda **_kwargs: None)
 
     shell_calls: list[str] = []
     probe_calls: list[str] = []
@@ -138,6 +139,23 @@ def test_ensure_wsl_compose_env_bootstraps_from_example(monkeypatch):
     wsl_runtime._ensure_wsl_compose_env(distro="mother-brain", checkout="/home/erik/Projects/mycelisai/scratch")
 
     assert shell_calls == ["cp .env.compose.example .env.compose"]
+
+
+def test_ensure_wsl_output_block_path_creates_configured_directory(monkeypatch):
+    monkeypatch.setattr(wsl_runtime, "_configured_checkout", lambda checkout="": "/home/erik/Projects/mycelisai/scratch")
+
+    shell_calls: list[str] = []
+    monkeypatch.setattr(
+        wsl_runtime,
+        "_run_wsl_shell",
+        lambda command, **_kwargs: shell_calls.append(command),
+    )
+
+    wsl_runtime._ensure_wsl_output_block_path(distro="mother-brain", checkout="/home/erik/Projects/mycelisai/scratch")
+
+    assert len(shell_calls) == 1
+    assert "MYCELIS_OUTPUT_HOST_PATH" in shell_calls[0]
+    assert "workspace/docker-compose/data" in shell_calls[0]
 
 
 def test_cycle_runs_refresh_then_validate(monkeypatch):

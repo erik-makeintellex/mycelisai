@@ -297,6 +297,30 @@ def _ensure_wsl_compose_env(*, distro: str = "", checkout: str = "") -> None:
     _run_wsl_shell("cp .env.compose.example .env.compose", distro=distro, checkout=selected_checkout)
 
 
+def _ensure_wsl_output_block_path(*, distro: str = "", checkout: str = "") -> None:
+    selected_checkout = _configured_checkout(checkout)
+    command = """python3 - <<'PY'
+from pathlib import Path
+import os
+
+values = {}
+for raw_line in Path('.env.compose').read_text(encoding='utf-8').splitlines():
+    line = raw_line.strip()
+    if not line or line.startswith('#') or '=' not in raw_line:
+        continue
+    key, value = raw_line.split('=', 1)
+    values[key.strip()] = value.strip().strip('"').strip("'")
+
+raw_path = values.get('MYCELIS_OUTPUT_HOST_PATH', './workspace/docker-compose/data').strip()
+path = Path(os.path.expandvars(os.path.expanduser(raw_path)))
+if not path.is_absolute():
+    path = (Path.cwd() / path).resolve()
+path.mkdir(parents=True, exist_ok=True)
+print(f"WSL output block path: {path}")
+PY"""
+    _run_wsl_shell(command, distro=distro, checkout=selected_checkout)
+
+
 @task
 def status(_c, distro="", checkout="", remote=""):
     """
@@ -432,6 +456,7 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
     print()
 
     _ensure_wsl_compose_env(distro=selected_distro, checkout=selected_checkout)
+    _ensure_wsl_output_block_path(distro=selected_distro, checkout=selected_checkout)
 
     commands = (
         "uv run inv install",
