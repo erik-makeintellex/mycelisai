@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -20,6 +21,26 @@ import (
 // Phase 0 security: workspace sandbox for file tools
 const maxWriteSize = 1 << 20 // 1 MB
 
+func normalizeWorkspaceRelativePath(rawPath string) string {
+	trimmed := strings.TrimSpace(rawPath)
+	if trimmed == "" || filepath.IsAbs(trimmed) {
+		return trimmed
+	}
+
+	normalized := strings.ReplaceAll(trimmed, "\\", "/")
+	normalized = path.Clean(normalized)
+	normalized = strings.TrimPrefix(normalized, "./")
+
+	switch normalized {
+	case ".", "workspace":
+		return "."
+	}
+	if strings.HasPrefix(normalized, "workspace/") {
+		normalized = strings.TrimPrefix(normalized, "workspace/")
+	}
+	return filepath.FromSlash(normalized)
+}
+
 func validateToolPath(rawPath string) (string, error) {
 	workspace := os.Getenv("MYCELIS_WORKSPACE")
 	if workspace == "" {
@@ -34,7 +55,7 @@ func validateToolPath(rawPath string) (string, error) {
 	if filepath.IsAbs(rawPath) {
 		absTarget = filepath.Clean(rawPath)
 	} else {
-		absTarget = filepath.Clean(filepath.Join(absWorkspace, rawPath))
+		absTarget = filepath.Clean(filepath.Join(absWorkspace, normalizeWorkspaceRelativePath(rawPath)))
 	}
 
 	rel, err := filepath.Rel(absWorkspace, absTarget)

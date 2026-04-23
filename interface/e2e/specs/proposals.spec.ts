@@ -18,7 +18,7 @@ function resolveBackendWorkspaceRoots() {
 }
 
 function resolveBackendLogTargets(filename: string) {
-    return resolveBackendWorkspaceRoots().map((workspaceRoot) => path.join(workspaceRoot, 'workspace', 'logs', filename));
+    return resolveBackendWorkspaceRoots().map((workspaceRoot) => path.join(workspaceRoot, 'logs', filename));
 }
 
 function removeExistingTargets(paths: string[]) {
