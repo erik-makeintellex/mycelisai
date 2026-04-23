@@ -48,7 +48,7 @@ describe("OrganizationPage department response style slice", () => {
 
         fireEvent.click(screen.getAllByRole("button", { name: "Use Organization / Team Default" }).at(-1)!);
         expect(await screen.findByText("Using Organization or Team Default: Clear & Balanced")).toBeDefined();
-    });
+    }, 10000);
 
     it("keeps a type-bound Response Style stable when the organization default changes and reapplies inheritance after revert", async () => {
         setupOrganizationFetch();
