@@ -447,3 +447,16 @@ def test_stop_runs_tree_kill_and_repo_cleanup_on_windows(monkeypatch):
     assert cleaned == ["cleanup"]
 
 
+def test_install_provisions_npm_and_playwright(monkeypatch):
+    commands: list[str] = []
+
+    monkeypatch.setattr(interface, "run_interface_command", lambda _ctx, command, **_kwargs: commands.append(command))
+
+    interface.install.body(FakeContext())
+
+    assert commands == [
+        "npm install",
+        "npx playwright install chromium",
+    ]
+
+

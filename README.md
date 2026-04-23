@@ -587,6 +587,9 @@ What the user still needs on the host:
 - PostgreSQL tooling (`psql`)
 - an available AI provider endpoint such as local Ollama
 
+Bootstrap note:
+- `uv run inv install` now provisions the supported Core + Interface dependency set plus the managed Playwright Chromium binary needed for the repo’s supported browser-proof lane.
+
 ## Cross-Platform Setup
 
 Recommended host posture:

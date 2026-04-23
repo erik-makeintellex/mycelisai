@@ -46,6 +46,8 @@ def install(c, optional_engines=False):
 
     print("Installing Interface dependencies...")
     c.run("npm install --prefix interface", env=env)
+    print("Installing Playwright Chromium browser...")
+    c.run("npx --prefix interface playwright install chromium", env=env)
 
     if optional_engines:
         print("Installing optional cognitive engine dependencies...")

@@ -51,6 +51,7 @@ Deployment selection rule:
 
 - Use `uv run inv install --optional-engines` when you also want the local `cognitive/` extras.
 - Use `uv run inv cognitive.install` if you want only the optional local engine dependencies.
+- The supported install path now also provisions the managed Playwright Chromium binary so fresh checkouts can run the repo-owned browser proof lane without a separate manual browser install step.
 - The root `uv.lock` is tracked for reproducible Python automation; update it intentionally with `uv lock` after dependency changes and verify with `uv lock --check` before release handoff.
 
 ### `version.py` (Identity)
@@ -143,6 +144,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 
 ### `interface.py` + `interface_runtime.py` (Frontend Build And Browser Tasks)
 - **Install**: `uv run inv interface.install`
+- `interface.install` now provisions npm dependencies plus the managed Playwright Chromium binary used by `interface.e2e`
 - **Type Check**: `uv run inv interface.typecheck`
 - **Build**: `uv run inv interface.build`
 - **Test**: `uv run inv interface.test`

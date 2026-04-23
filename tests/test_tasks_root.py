@@ -52,6 +52,7 @@ def test_root_collection_registers_expected_namespaces():
         "relay",
         "team",
         "test",
+        "wsl",
     ]
 
 
@@ -74,7 +75,12 @@ def test_root_collection_exports_expected_task_surface():
         "ci.service-check",
         "ci.test",
         "ci.toolchain-check",
+        "clean.disk-status",
+        "clean.generated",
         "clean.legacy",
+        "clean.reports",
+        "clean.windows-dev-residue",
+        "clean.wsl-handoff",
         "cognitive.install",
         "cognitive.llm",
         "cognitive.media",
@@ -142,6 +148,10 @@ def test_root_collection_exports_expected_task_surface():
         "test.all",
         "test.coverage",
         "test.e2e",
+        "wsl.cycle",
+        "wsl.refresh",
+        "wsl.status",
+        "wsl.validate",
     ]
 
 
@@ -154,6 +164,7 @@ def test_install_skips_optional_engines_by_default(capsys):
         "uv sync --all-packages --dev",
         "go mod download",
         "npm install --prefix interface",
+        "npx --prefix interface playwright install chromium",
     ]
     assert ctx.cd_paths == ["core"]
     output = capsys.readouterr().out
@@ -169,6 +180,7 @@ def test_install_can_include_optional_engines():
         "uv sync --all-packages --dev",
         "go mod download",
         "npm install --prefix interface",
+        "npx --prefix interface playwright install chromium",
         "uv sync",
     ]
     assert ctx.cd_paths == ["core", "cognitive"]

@@ -688,6 +688,8 @@ def install(c):
     """Install Interface dependencies."""
     print("Installing Interface Dependencies...")
     run_interface_command(c, "npm install")
+    print("Installing Playwright Chromium browser...")
+    run_interface_command(c, "npx playwright install chromium")
 
 @task
 def build(c):
