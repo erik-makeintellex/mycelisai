@@ -284,7 +284,7 @@ The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hos
 | `uv run inv ci.service-check` | Verify the currently running local stack with `lifecycle.health`, plus optional live-backend governed Soma browser proof |
 | `uv run inv ci.entrypoint-check` | Verify the supported invoke runner matrix and reject unsupported bare aliases |
 | `uv run inv ci.toolchain-check` | Report toolchain versions and optionally enforce Go lock policy |
-| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with `--lane=baseline|runtime|service|release` presets; `--lane=release` is the recommended full runtime/operator gate, while the legacy `--runtime-posture`, `--service-health`, and `--live-backend` flags remain available for narrower/manual proof |
+| `uv run inv ci.release-preflight` | Enforce release gate: clean tree + runner/toolchain checks + strict baseline, with `--lane=baseline|runtime|service|release` presets; `--lane=release` is the recommended full runtime/operator gate, the legacy `--runtime-posture`, `--service-health`, and `--live-backend` flags remain available for narrower/manual proof, and WSL-host runtime posture mirrors `host.docker.internal` through WSL localhost during host-side probing before Compose relay startup |
 | `uv run inv ci.deploy` | Build + Docker + K8s deploy |
 
 ### Other Tasks

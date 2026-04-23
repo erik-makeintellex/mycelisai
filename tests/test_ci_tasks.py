@@ -609,6 +609,7 @@ def test_runtime_posture_check_rejects_loopback_ai_endpoint(monkeypatch):
 def test_runtime_posture_check_probes_compose_ai_endpoint_with_fallback(monkeypatch):
     monkeypatch.setattr(ci.cache_tasks, "ensure_disk_headroom", lambda **_kwargs: None)
     monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://10.0.0.5:11434")
+    monkeypatch.setattr(ci, "running_in_wsl", lambda: False)
 
     probe_urls: list[str] = []
 
@@ -625,6 +626,30 @@ def test_runtime_posture_check_probes_compose_ai_endpoint_with_fallback(monkeypa
     assert probe_urls == [
         "http://10.0.0.5:11434/api/tags",
         "http://10.0.0.5:11434/v1/models",
+    ]
+
+
+def test_runtime_posture_check_probes_wsl_localhost_mirror_for_host_docker_internal(monkeypatch):
+    monkeypatch.setattr(ci.cache_tasks, "ensure_disk_headroom", lambda **_kwargs: None)
+    monkeypatch.setenv("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434")
+    monkeypatch.setattr(ci, "running_in_wsl", lambda: True)
+
+    probe_urls: list[str] = []
+
+    def fake_probe(url: str, timeout: float = 3.0):
+        probe_urls.append(url)
+        if url.startswith("http://host.docker.internal:11434/"):
+            return 0, "connection refused"
+        return 200, "{}"
+
+    monkeypatch.setattr(ci, "_probe_http_endpoint", fake_probe)
+
+    ci._runtime_posture_check(FakeContext({}))
+
+    assert probe_urls == [
+        "http://host.docker.internal:11434/api/tags",
+        "http://host.docker.internal:11434/v1/models",
+        "http://127.0.0.1:11434/api/tags",
     ]
 
 

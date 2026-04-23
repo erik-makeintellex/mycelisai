@@ -25,6 +25,7 @@ from .config import (
     ROOT_DIR,
     ensure_managed_cache_dirs,
     managed_cache_env,
+    running_in_wsl,
 )
 from . import db as db_tasks
 from . import cache as cache_tasks
@@ -123,6 +124,29 @@ def _probe_paths_for_endpoint(env_name: str, raw: str) -> tuple[str, str]:
     return ("/models", "/api/tags")
 
 
+def _probe_urls_for_endpoint(env_name: str, raw: str) -> list[str]:
+    probe_paths = _probe_paths_for_endpoint(env_name, raw)
+    urls = [urljoin(raw.rstrip("/") + "/", probe_path.lstrip("/")) for probe_path in probe_paths]
+
+    parsed = urlparse(raw)
+    if (
+        env_name == "MYCELIS_COMPOSE_OLLAMA_HOST"
+        and running_in_wsl()
+        and (parsed.hostname or "").strip().lower() == "host.docker.internal"
+    ):
+        local_base = f"{parsed.scheme}://127.0.0.1:{parsed.port or (443 if parsed.scheme == 'https' else 80)}"
+        urls.extend(urljoin(local_base.rstrip("/") + "/", probe_path.lstrip("/")) for probe_path in probe_paths)
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for url in urls:
+        if url in seen:
+            continue
+        seen.add(url)
+        deduped.append(url)
+    return deduped
+
+
 def _is_loopback_or_unspecified_host(host: str) -> bool:
     normalized = (host or "").strip().lower()
     if not normalized:
@@ -176,10 +200,8 @@ def _runtime_posture_check(c):
             print(f"  [FAIL] {label}: loopback or unspecified host '{host}' is not allowed")
             continue
 
-        probe_paths = _probe_paths_for_endpoint(env_name, raw)
         reachable = False
-        for probe_path in probe_paths:
-            probe_url = urljoin(raw.rstrip("/") + "/", probe_path.lstrip("/"))
+        for probe_url in _probe_urls_for_endpoint(env_name, raw):
             status, _body = _probe_http_endpoint(probe_url)
             if status in {200, 401, 403}:
                 print(f"  [OK]   {label}: {probe_url} [{status}]")
