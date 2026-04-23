@@ -1,7 +1,7 @@
-# Mycelis Cortex UI
+# Mycelis Interface
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-The frontend for the current V8 operator product. Built with Next.js 16, React 19, Tailwind v4, ReactFlow 11, and Zustand 5.
+The frontend for the current Soma-first Mycelis operator product. Built with Next.js 16, React 19, Tailwind v4, ReactFlow 11, and Zustand 5.
 
 ## TOC
 
@@ -20,7 +20,7 @@ The frontend for the current V8 operator product. Built with Next.js 16, React 1
 | Framework | Next.js 16.1.6 (Turbopack) | App Router, SSR, API routes |
 | State | Zustand 5.0.11 | Atomic store (`useCortexStore`) — single source of truth |
 | Graph | ReactFlow 11.11.4 | DAG visualization (agent nodes, data wires) |
-| Styling | Tailwind CSS v4 | Utility-first midnight theme (lifted contrast), custom animations |
+| Styling | Tailwind CSS v4 | Utility-first aero-light default theme, midnight alternate, custom animations |
 | Icons | Lucide React | Consistent icon set |
 
 ## Architecture
@@ -89,7 +89,7 @@ The older graph-centric workflow still exists as an advanced surface rather than
 | `components/wiring/DataWire.tsx` | Custom graph edge for wiring/editor surfaces |
 | `components/stream/NatsWaterfall.tsx` | Route-local signal waterfall used in advanced surfaces |
 | `components/shell/ShellLayout.tsx` | Shell layout: ZoneA + ZoneB + ZoneD |
-| `app/globals.css` | Midnight Cortex palette (`cortex-*` tokens), animations, ReactFlow overrides |
+| `app/globals.css` | Mycelis Interface theme tokens (`cortex-*` compatibility names), aero-light and midnight palettes, animations, ReactFlow overrides |
 
 ## Development
 
@@ -106,7 +106,7 @@ uv run inv interface.clean     # Clear .next build cache
 uv run inv interface.restart   # Full restart: stop → clean → build → dev → check
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the Cortex UI.
+Open [http://localhost:3000](http://localhost:3000) to see the Mycelis Interface.
 
 ### Pages
 
@@ -123,7 +123,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the Cortex UI.
 
 ## Design Tokens
 
-Cortex palette defined via `@theme` in `app/globals.css`:
+Mycelis Interface theme tokens are defined via `@theme` and runtime `data-theme` overrides in `app/globals.css`. The default product theme is `aero-light`; `midnight-cortex` remains an alternate. The `cortex-*` token names are retained as compatibility names across existing components:
 
 | Token | Hex | Usage |
 | :--- | :--- | :--- |

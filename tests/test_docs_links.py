@@ -183,6 +183,48 @@ def test_repo_readmes_expose_project_navigation():
     assert not missing, "README-style pages are missing project navigation:\n" + "\n".join(missing)
 
 
+def test_archive_readme_keeps_v7_material_as_migration_input_not_active_authority():
+    text = (ROOT / "docs" / "archive" / "README.md").read_text(encoding="utf-8")
+    active_section_match = re.search(
+        r"## Active Implementation Sources\s*\n(.*?)(?=^## )",
+        text,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    assert active_section_match, "Archive README must keep an explicit active-source pointer section"
+
+    active_section = active_section_match.group(1)
+    assert "V8_DEV_STATE.md" in active_section
+    assert "V8_RUNTIME_CONTRACTS.md" in active_section
+    assert "_V7.md" not in active_section and "V7_DEV_STATE.md" not in active_section, (
+        "docs/archive/README.md must not elevate V7 docs as active implementation sources"
+    )
+
+    required_migration_input_snippets = [
+        "## Migration Inputs",
+        "V7-labeled architecture-library docs are historical migration inputs, not active implementation authorities",
+    ]
+    missing = [snippet for snippet in required_migration_input_snippets if snippet not in text]
+    assert not missing, "Archive README is missing V7 migration-input framing:\n" + "\n".join(missing)
+
+
+def test_interface_readme_names_aero_light_as_default_theme_not_midnight():
+    text = (ROOT / "interface" / "README.md").read_text(encoding="utf-8")
+
+    required_snippets = [
+        "Utility-first aero-light default theme, midnight alternate, custom animations",
+        "The default product theme is `aero-light`; `midnight-cortex` remains an alternate.",
+    ]
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, "Interface README is missing current theme-default language:\n" + "\n".join(missing)
+
+    forbidden_snippets = [
+        "Utility-first midnight theme",
+        "Midnight Cortex palette",
+    ]
+    present = [snippet for snippet in forbidden_snippets if snippet in text]
+    assert not present, "Interface README still describes midnight as the default theme:\n" + "\n".join(present)
+
+
 def test_readme_has_fresh_agent_review_sequence():
     text = README.read_text(encoding="utf-8")
     assert "## Fresh Agent Start Here" in text, "README must expose a fresh-agent review section near the top"

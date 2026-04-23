@@ -5,6 +5,7 @@
 
 - [Archive Purpose](#archive-purpose)
 - [Active Implementation Sources](#active-implementation-sources)
+- [Migration Inputs](#migration-inputs)
 - [Migration Rule](#migration-rule)
 - [Recently Archived](#recently-archived)
 - [Draft Archive Rule](#draft-archive-rule)
@@ -26,9 +27,15 @@ Active implementation sources are:
 3. `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 4. `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`
 5. `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
-6. `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
-7. `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
-8. `docs/architecture/OPERATIONS.md`
+6. `docs/architecture/OPERATIONS.md`
+
+## Migration Inputs
+
+The V7-labeled architecture-library docs are historical migration inputs, not active implementation authorities:
+1. `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
+2. `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
+
+Use them only to understand inherited intent or migration context unless current V8 docs explicitly re-promote specific content.
 
 ## Migration Rule
 

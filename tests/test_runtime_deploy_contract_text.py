@@ -368,6 +368,23 @@ def test_active_docs_reference_guarded_wsl_handoff_tasks():
     assert not missing, "Guarded WSL handoff/proof tasks are missing from active docs:\n" + "\n".join(missing)
 
 
+def test_windows_edit_wsl_proof_contract_does_not_turn_wsl_into_day_to_day_worktree():
+    text = LOCAL_DEV_WORKFLOW.read_text(encoding="utf-8")
+
+    required_snippets = [
+        "For day-to-day Windows development, keep the Windows repo as the edit/review/push surface.",
+        "Use this as the canonical deployment-mimic proof path when Windows editing is ready for authoritative build, API, UI, runtime, or release-style validation:",
+        "keep the WSL `mother-brain` checkout git-backed and disposable for deployment-mimic proof",
+        "These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree.",
+    ]
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+
+    assert not missing, "Local dev workflow is missing the Windows-edit/WSL-proof contract:\n" + "\n".join(missing)
+    assert "prefer a WSL worktree plus the Compose path above" not in text, (
+        "docs/LOCAL_DEV_WORKFLOW.md must not make a WSL worktree the day-to-day Windows edit surface"
+    )
+
+
 def test_identity_docs_describe_deploy_owned_people_access_contract():
     snippets = [
         (

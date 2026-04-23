@@ -17,7 +17,7 @@
 - [Deployment Method Selection](#deployment-method-selection)
 - [Configuration Reference](#configuration-reference)
 - [Recommended Host Paths](#recommended-host-paths)
-- [WSL/Linux Codex Handoff](#wsllinux-codex-handoff)
+- [WSL/Linux Proof Checkout Handoff](#wsllinux-proof-checkout-handoff)
 - [Quick Start Paths](#quick-start-paths)
 - [First-Time Setup](#first-time-setup)
 - [Daily Startup Sequence](#daily-startup-sequence)
@@ -265,7 +265,7 @@ Use this path when you want:
 ### Windows Native
 
 This remains a supported source-validation and host-specific debugging path.
-If the host is Windows and you are doing day-to-day code changes, prefer a WSL worktree plus the Compose path above, then use the Windows browser against `http://localhost:3000` as the first operator proof.
+For day-to-day Windows development, keep the Windows repo as the edit/review/push surface. Use the Windows browser against `http://localhost:3000` as the operator path, whether the runtime is Windows Docker Desktop, Windows-native source validation, or a same-machine WSL proof stack.
 
 ```powershell
 Copy-Item .env.example .env
@@ -276,6 +276,7 @@ uv run inv lifecycle.health
 ```
 
 Use this path when you want:
+- normal Windows editing, review, and git operations before handing proof to WSL
 - explicit validation of the Windows-local source or Kubernetes path
 - direct validation of the local Kubernetes path (`k3d` preferred, `MYCELIS_K8S_BACKEND=kind` fallback)
 - a Windows operator/browser station that reaches a self-hosted runtime and an explicit Windows-hosted AI endpoint
@@ -289,11 +290,11 @@ If you switch host environments:
 - recreate `interface/node_modules`
 - recreate `interface/.next`
 
-## WSL/Linux Codex Handoff
+## WSL/Linux Proof Checkout Handoff
 
-Use this as the canonical resume path when active development moves to WSL/Linux/macOS:
+Use this as the canonical deployment-mimic proof path when Windows editing is ready for authoritative build, API, UI, runtime, or release-style validation:
 
-1. Start from a WSL-native clone or worktree, not a mixed Windows-generated environment.
+1. Start from the git-refreshed WSL `mother-brain` checkout, not a copied Windows source tree or mixed Windows-generated environment.
 2. Recreate `.venv`, `interface/node_modules`, and `interface/.next` if the checkout was ever used from Windows.
 3. Copy `.env.compose.example` to `.env.compose` and set `MYCELIS_COMPOSE_OLLAMA_HOST` deliberately for the real model host.
 4. Run `uv run inv auth.posture --compose`.
@@ -311,11 +312,13 @@ WSL/Linux notes:
 - `host.docker.internal` is usually correct for Docker Desktop + WSL, but native Linux Docker hosts may need another hostname or reachable service address instead
 
 Safest posture:
-- use a separate clone or worktree per host environment when you actively move between Windows and WSL
+- keep the Windows repo as the editing/review/push surface
+- keep the WSL `mother-brain` checkout git-backed and disposable for deployment-mimic proof
+- do not copy source trees or generated artifacts between hosts
 
 ### Host-Boundary Storage Contract
 
-Treat the Windows repo as the editing/source tree and the WSL-native checkout as the build/test/runtime tree.
+Treat the Windows repo as the editing/source tree and the WSL-native checkout as the deployment-mimic build/test/runtime proof tree.
 
 - Windows should keep tracked source, docs, and `.git`, but it should not keep heavy generated artifacts after the edit cycle ends.
 - Run `uv run inv clean.windows-dev-residue` from the Windows checkout when you want to reclaim repo-local build/test residue and return that checkout to a source-only posture.

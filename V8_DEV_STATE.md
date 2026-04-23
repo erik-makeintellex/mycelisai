@@ -188,17 +188,17 @@ Management contract:
 
 ## Current Target State (2026-04-23)
 
-Use this board for current MVP continuation coordination. Runtime-delivery truth remains required, but the active release center is now workflow-complete operator proof, healthy git packaging, and a branch that can be pushed from clean committed state.
+Use this board for current MVP continuation coordination. Runtime-delivery truth remains required, and the active release center is now workflow-complete operator proof plus repeatable WSL handoff automation from committed repo state.
 
 | Team / Lane | Status | Current Target | Dependencies / Handoffs | Next Action |
 | --- | --- | --- | --- | --- |
-| Delivery Management | `ACTIVE` | Keep `main` pushable from clean committed checkpoints and reject mixed local drift. | Receives status and blockers from every lane. | Keep packaging focused state/doc/runtime updates into clean commits so the WSL proof checkout can refresh directly from `origin/main` without local hand-editing. |
+| Delivery Management | `IN_REVIEW` | Keep `main` pushable from clean committed checkpoints and reject mixed local drift. | Receives status and blockers from every lane. | Do not reopen handoff/state-sync as the active product lane; keep commits focused while the next proof work proceeds. |
 | Workflow Coverage + UX Certification | `ACTIVE` | Map the real operator workflows and singular execution actions to committed unit/browser proof, not only route smoke. | Depends on current UI/testing contracts and WSL-managed proof discipline. | Continue from the new `/docs` and `/runs` audit by deepening browser proof for run review/interjection/retry paths and keeping the headed Chromium MVP matrix current. |
 | AI Organization + Team Design | `IN_REVIEW` | Keep the Soma-first organization-entry, guided team design, temporary workflow launch, archive, and retained-output review paths stable. | Depends on managed Interface runtime and the Groups proof lane. | Extend the currently green focused mocked/browser proof toward more live runtime outcome checks instead of only lane-entry assertions. |
 | Direct Soma + Governance | `IN_REVIEW` | Keep direct answer, governed proposal, confirm/cancel, and continuity behavior stable through the live operator path. | Depends on Compose/live-backend health and governed chat/runtime contracts. | Widen failure/recovery proof after the current packaging slice, especially guided retry recovery and Windows-browser-against-WSL validation. |
 | Connected Tools + MCP Workflow | `IN_REVIEW` | Keep library install, connected-server visibility, and MCP activity readable to operators. | Depends on Connected Tools UI, audit/activity proof, and live runtime health. | Add the missing live workflow proof that a real Soma/team lane uses an MCP-backed capability and surfaces matching recent activity. |
-| Runtime + Self-Hosted Posture | `ACTIVE` | Keep Compose/WSL/Windows browser topology truthful and prevent desktop-local shortcuts from creeping back into the MVP contract. | Feeds live-backend browser proof and operator-facing docs. | Re-run the full release lane after the next proof-hardening slice and keep the WSL relay/runtime posture aligned with the documented Windows-browser operator path. |
-| Docs + State Authority | `ACTIVE` | Keep `V8_DEV_STATE.md`, `docs/TESTING.md`, and related authority docs aligned to the actual proof surface and active MVP plan. | Depends on every touched slice. | Record the green WSL runtime proof, workspace-path contract, and remaining WSL git-auth caveat in the same committed handoff slice so the next agentry restart begins from written repo truth. |
+| Runtime + Self-Hosted Posture | `ACTIVE` | Keep Compose/WSL/Windows browser topology truthful and prevent desktop-local shortcuts from creeping back into the MVP contract. | Feeds live-backend browser proof and operator-facing docs. | Close WSL git auth for `wsl.refresh`, then re-run the full release lane after the next proof-hardening slice while preserving the Windows-browser operator path. |
+| Docs + State Authority | `IN_REVIEW` | Keep `V8_DEV_STATE.md`, `docs/TESTING.md`, and related authority docs aligned to the actual proof surface and active MVP plan. | Depends on every touched slice. | Treat the green WSL runtime proof, workspace-path contract, and remaining WSL git-auth caveat as captured truth; only update docs/state again when the next proof slice changes meaning. |
 
 Cross-team management rule:
 - Keep runtime truth and browser-first product truth aligned; neither is allowed to drift into "works locally" convenience language.
@@ -209,10 +209,10 @@ Cross-team management rule:
 Current scope guard:
 - `ACTIVE` the MVP center is now operator-shaped workflows and singular execution outcomes: direct Soma answer, governed mutation, organization entry/re-entry, team design, temporary workflow review, Connected Tools activity, docs navigation, and run inspection.
 - `ACTIVE` runtime truth remains non-negotiable: Compose/WSL/Windows browser topology and explicit external AI endpoints must not regress while UX/testing work continues.
-- `NEXT` only two browser-proof gaps currently outrank polish work: deeper `/runs` workflow proof and live MCP-backed workflow correlation.
+- `NEXT` proof gaps currently outrank polish work: WSL git auth for `wsl.refresh`, deeper `/runs` workflow proof, guided retry/recovery, live MCP-backed workflow correlation, and broader headed certification from committed state.
 
 MVP continuation sequence:
-1. `ACTIVE` keep packaging the current proof work into clean committed/pushable checkpoints.
+1. `ACTIVE` close the WSL git-auth/setup gap so `wsl.refresh` can update the proof checkout without manual refresh.
 2. `ACTIVE` deepen workflow proof where the current contract is still unit-heavy or mocked-heavy (`/runs`, guided retry/recovery, live MCP correlation).
 3. `NEXT` re-run the broader headed Chromium certification lane from committed state after each proof-hardening batch.
 4. `NEXT` keep the Windows-browser-against-WSL/operator topology honest as the self-hosted MVP story, not as an afterthought.
@@ -224,18 +224,18 @@ This is the engaged compact team and the exact proof-producing sequence for the 
 
 | Role | Status | Immediate Ownership | Deliverable |
 | --- | --- | --- | --- |
-| Team Lead / Delivery Manager | `ACTIVE` | keep the branch clean enough to push and keep the MVP board centered on proof-producing work | accepted slice summary with commit, proof, docs, and remaining risk |
+| Team Lead / Delivery Manager | `IN_REVIEW` | keep the branch clean enough to push and keep the MVP board centered on proof-producing work | accepted slice summary with commit, proof, docs, and remaining risk |
 | UI Workflow Engineer | `ACTIVE` | tighten user-shaped workflow proof for docs browsing, run review, interjection, and workflow follow-through | focused test additions plus a smaller remaining-risk list |
-| Runtime / Release Engineer | `ACTIVE` | preserve the WSL-managed browser/runtime contract while the proof surface moves | repeatable WSL evidence commands, correct workspace-path semantics, and no stale-server drift |
-| Docs / State Owner | `ACTIVE` | update `V8_DEV_STATE.md` and authority docs to reflect the real WSL proof and handoff posture | synchronized state/testing/ops docs and explicit next-step board |
+| Runtime / Release Engineer | `ACTIVE` | preserve the WSL-managed browser/runtime contract while the proof surface moves and close `wsl.refresh` git auth | repeatable WSL evidence commands, correct workspace-path semantics, no stale-server drift, and automated refresh |
+| Docs / State Owner | `IN_REVIEW` | keep documented truth aligned when new proof changes meaning; the WSL proof/handoff state is already captured | synchronized state/testing/ops docs and explicit next-step board |
 | Release Verification | `NEXT` | rerun the broader committed-state proof after the next proof-hardening slice lands | current targeted WSL runtime proof is green; broader headed/live proof next |
 
 Execution order:
-1. `ACTIVE` package the latest WSL runtime-proof results, workspace alias contract, and handoff caveats into one clean commit.
-2. `ACTIVE` keep the WSL proof checkout refreshed from git-backed commits instead of manual source copying, while the remaining WSL git-auth setup gap is still explicit.
+1. `COMPLETE` the latest WSL runtime-proof results, workspace alias contract, and handoff caveats are captured in current state.
+2. `ACTIVE` close the remaining `wsl.refresh` auth/setup gap so the guarded handoff path is fully hands-off from Windows through WSL proof.
 3. `ACTIVE` start the next MVP proof lane with deeper `/runs` browser behavior, the skipped guided Soma retry/recovery path, and live MCP-backed workflow correlation.
 4. `NEXT` follow that slice with the broader headed Chromium MVP certification pass and the Windows self-hosted browser check.
-5. `NEXT` close the remaining `wsl.refresh` auth/setup gap so the guarded handoff path is fully hands-off from Windows through WSL proof.
+5. `NEXT` keep the WSL proof checkout refreshed from git-backed commits instead of manual source copying once `wsl.refresh` auth is working.
 
 Immediate blocker rule:
 - `BLOCKED` any slice that reintroduces a mixed dirty tree or leaves docs/state behind the accepted proof surface.
@@ -249,7 +249,8 @@ Review summary:
 2. `COMPLETE` the latest authoritative WSL proof run from `/home/erik/Projects/mycelisai/scratch` is green on the committed runtime lane: `uv run inv ci.release-preflight --lane=runtime --no-e2e`, `uv run inv compose.up --wait-timeout=240`, `uv run inv compose.health`, `uv run inv compose.storage-health`, Windows-side `curl.exe -I http://localhost:3000`, and live Chromium `soma-governance-live.spec.ts`, `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts`.
 3. `IN_REVIEW` the WSL Compose relay/runtime contract is now behaving the way the docs say it should: the product runtime is hosted from the WSL proof checkout, the first operator-facing address is still the Windows browser at `http://localhost:3000`, and the AI endpoint remains an explicit non-loopback host contract instead of a hidden desktop-local shortcut.
 4. `IN_REVIEW` the guarded Windows-to-WSL handoff path is close but not fully closed: `wsl.validate` is trustworthy for proof once the proof checkout is current, but `wsl.refresh` still depends on working git auth inside the WSL checkout and may require a manual refresh until that setup is automated.
-5. `NEXT` the next MVP-centered proof lane remains unchanged: deepen `/runs` browser workflow coverage, unskip and keep green the guided Soma retry/recovery lane, add live MCP-backed workflow correlation proof, then rerun the broader headed Chromium certification pass from committed state.
+5. `COMPLETE` the current handoff/state-sync cleanup is no longer the active next-action lane: the green WSL proof, workspace alias contract, and manual-refresh caveat are captured as current state instead of being left as restart work.
+6. `NEXT` the remaining MVP-centered work is ordered around real proof gaps: close WSL git auth for `wsl.refresh`, deepen `/runs` browser workflow coverage, unskip and keep green the guided Soma retry/recovery lane, add live MCP-backed workflow correlation proof, then rerun the broader headed Chromium certification pass from committed state.
 
 ## Prior Review (2026-04-21)
 Review summary:
@@ -845,9 +846,9 @@ Evidence:
 
 ## Immediate Next Actions
 
-1. `REQUIRED` push the current branch from a clean committed state.
-   - keep `main` as the healthy pull target instead of carrying another local-only proof batch
-   - do not reopen a wide mixed worktree before the current workflow-coverage/state slice is packaged
+1. `REQUIRED` close WSL git auth for `wsl.refresh`.
+   - keep the Windows-to-WSL handoff git-backed instead of artifact-backed
+   - make manual refresh the exception rather than the expected proof path
 2. `NEXT` deepen `/runs` browser proof from route smoke into real operator workflow coverage.
    - verify tab selection, run-state transitions, interjection, and failure/retry messaging through browser-visible proof
    - keep the existing tighter unit coverage as the foundation, not the finish line
