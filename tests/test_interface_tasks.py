@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from invoke import Context
 
+from ops import interface_env
 from ops import interface_runtime as interface
 
 
@@ -458,5 +459,27 @@ def test_install_provisions_npm_and_playwright(monkeypatch):
         "npm install",
         "npx playwright install chromium",
     ]
+
+
+def test_interface_env_loads_compose_overrides_after_root_env(monkeypatch, tmp_path):
+    (tmp_path / ".env").write_text(
+        "MYCELIS_API_KEY=root-key\nMYCELIS_API_HOST=root-host\nPORT=8081\n",
+        encoding="utf-8",
+    )
+    (tmp_path / ".env.compose").write_text(
+        "MYCELIS_API_KEY=compose-key\nMYCELIS_API_HOST=compose-host\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(interface_env, "ROOT_DIR", tmp_path)
+    monkeypatch.delenv("MYCELIS_API_KEY", raising=False)
+    monkeypatch.delenv("MYCELIS_API_HOST", raising=False)
+    monkeypatch.delenv("PORT", raising=False)
+
+    interface_env._load_env()
+
+    assert interface_env.os.environ["MYCELIS_API_KEY"] == "compose-key"
+    assert interface_env.os.environ["MYCELIS_API_HOST"] == "compose-host"
+    assert "PORT" not in interface_env.os.environ
 
 

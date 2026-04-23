@@ -37,7 +37,7 @@ Proof-checkout contract:
 - keep destructive cleanup such as `git reset --hard` and `git clean -fdx` scoped to the dedicated WSL proof checkout
 - when the runtime is hosted from WSL on the same Windows machine, the required operator-facing browser path is the Windows browser at `http://localhost:3000`
 - use `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when you want the guarded Windows-dev -> WSL-proof task path instead of a manual handoff
-- `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, then runs release-preflight, Compose health/storage proof, focused live-backend browser workflows, and the Windows GUI probe
+- `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, focused live-backend browser workflows, and the Windows GUI probe
 
 Deployment selection rule:
 - Docker Compose is the default single-host self-hosted runtime

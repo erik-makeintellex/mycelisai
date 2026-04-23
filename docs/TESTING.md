@@ -35,7 +35,7 @@ Proof checkout rule:
 - keep destructive `git reset --hard` / `git clean -fdx` style cleanup scoped to that dedicated WSL proof checkout, not the active Windows dev repo
 - when the runtime is hosted by WSL on the same Windows machine, the operator-facing browser proof must use the Windows browser at `http://localhost:3000`
 - the guarded Windows-side handoff/proof helpers are `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
-- `uv run inv wsl.validate` now self-seeds `.env.compose` from `.env.compose.example` when the clean WSL proof checkout does not already have one, creates the configured Compose output-block host path when it is missing, then runs release-preflight, Compose health/storage proof, live Soma/team/groups/workspace browser workflows, and the Windows-side GUI probe
+- `uv run inv wsl.validate` now self-seeds `.env.compose` from `.env.compose.example` when the clean WSL proof checkout does not already have one, creates the configured Compose output-block host path when it is missing, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, live Soma/team/groups/workspace browser workflows, and the Windows-side GUI probe
 - `uv run inv install` now provisions the managed Playwright Chromium binary as part of the supported Interface/browser test toolchain, so a fresh checkout does not need a separate manual browser install before `uv run inv interface.e2e`
 
 ## User Interaction Delivery Gate
@@ -565,7 +565,7 @@ Focused additions still planned for the MVP media/team-output lane:
 - **Managed Dev Runtime:** the Invoke-managed `dev` server now uses webpack-backed `next dev` for browser stability in WSL and other local mocked E2E runs.
 - **Task Cleanup:** `uv run inv interface.e2e` stops any stale listener on `:3000` before and after each run, launches a managed local Next.js server, defaults Playwright to `--workers=1`, sweeps repo-local Next/Vitest/Playwright worker residue, clears an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains, and fails closed if the managed server exits or a stale port prevents it from owning the browser target
 - **Managed Browsers:** default task runs expect Playwright browser binaries under `workspace/tool-cache/playwright`
-- **Live Backend Mode:** `uv run inv interface.e2e --live-backend --server-mode=start ...` loads proxy auth env and enables specs that require a real Core backend
+- **Live Backend Mode:** `uv run inv interface.e2e --live-backend --server-mode=start ...` loads proxy auth env from the repo env files (`.env`, then `.env.compose`) and enables specs that require a real Core backend
 - **Browser-Visible UX Pass:** use `--headed --project=chromium --server-mode=start` for the operator-facing certification sweep so the same run exercises the real browser window, current production bundle, and actual rendered recovery states
 - **Accessibility Gate:** `@axe-core/playwright` is a required dev dependency; accessibility specs must fail when violated, not skip because the package is missing
 - **Dark mode compliance:** Every spec includes `no bg-white` assertion
