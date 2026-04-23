@@ -35,6 +35,7 @@ Proof checkout rule:
 - keep destructive `git reset --hard` / `git clean -fdx` style cleanup scoped to that dedicated WSL proof checkout, not the active Windows dev repo
 - when the runtime is hosted by WSL on the same Windows machine, the operator-facing browser proof must use the Windows browser at `http://localhost:3000`
 - the guarded Windows-side handoff/proof helpers are `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
+- `uv run inv wsl.validate` now self-seeds `.env.compose` from `.env.compose.example` when the clean WSL proof checkout does not already have one, then runs release-preflight, Compose health/storage proof, live Soma/team/groups/workspace browser workflows, and the Windows-side GUI probe
 
 ## User Interaction Delivery Gate
 

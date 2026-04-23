@@ -86,6 +86,7 @@ def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
         lambda **_kwargs: {"branch": "main", "commit": "abc123", "dirty": 0},
     )
     monkeypatch.setattr(wsl_runtime, "_print_repo_state", lambda *args, **kwargs: None)
+    monkeypatch.setattr(wsl_runtime, "_ensure_wsl_compose_env", lambda **_kwargs: None)
 
     shell_calls: list[str] = []
     probe_calls: list[str] = []
@@ -104,9 +105,39 @@ def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
         "uv run inv auth.posture --compose",
         "uv run inv compose.up --build --wait-timeout=240",
         "uv run inv compose.health",
+        "uv run inv compose.storage-health",
         "uv run inv interface.e2e --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=start",
+        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts --live-backend --workers=1 --server-mode=start",
+        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts --live-backend --workers=1 --server-mode=start",
+        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts --live-backend --workers=1 --server-mode=start",
     ]
     assert probe_calls == ["http://localhost:3000"]
+
+
+def test_ensure_wsl_compose_env_bootstraps_from_example(monkeypatch):
+    monkeypatch.setattr(wsl_runtime, "_configured_checkout", lambda checkout="": "/home/erik/Projects/mycelisai/scratch")
+
+    run_calls: list[list[str]] = []
+    shell_calls: list[str] = []
+
+    def fake_run(command, **_kwargs):
+        run_calls.append(command)
+        if "test -f .env.compose" in command:
+            return wsl_runtime.CommandResult(command=command, returncode=1, stdout="", stderr="")
+        if "test -f .env.compose.example" in command:
+            return wsl_runtime.CommandResult(command=command, returncode=0, stdout="", stderr="")
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(wsl_runtime, "_run_command", fake_run)
+    monkeypatch.setattr(
+        wsl_runtime,
+        "_run_wsl_shell",
+        lambda command, **_kwargs: shell_calls.append(command),
+    )
+
+    wsl_runtime._ensure_wsl_compose_env(distro="mother-brain", checkout="/home/erik/Projects/mycelisai/scratch")
+
+    assert shell_calls == ["cp .env.compose.example .env.compose"]
 
 
 def test_cycle_runs_refresh_then_validate(monkeypatch):

@@ -276,6 +276,27 @@ def _probe_windows_gui(url: str, timeout_seconds: float = 10.0) -> None:
     print(f"Windows GUI probe: {url} [{status}]")
 
 
+def _ensure_wsl_compose_env(*, distro: str = "", checkout: str = "") -> None:
+    selected_checkout = _configured_checkout(checkout)
+    env_exists = _run_command(
+        _wsl_command("bash", "-lc", "test -f .env.compose", distro=distro, checkout=selected_checkout),
+        check=False,
+    )
+    if env_exists.returncode == 0:
+        print("WSL compose env: using existing .env.compose")
+        return
+
+    example_exists = _run_command(
+        _wsl_command("bash", "-lc", "test -f .env.compose.example", distro=distro, checkout=selected_checkout),
+        check=False,
+    )
+    if example_exists.returncode != 0:
+        raise SystemExit("WSL proof checkout is missing .env.compose and .env.compose.example.")
+
+    print("WSL compose env: bootstrapping .env.compose from .env.compose.example")
+    _run_wsl_shell("cp .env.compose.example .env.compose", distro=distro, checkout=selected_checkout)
+
+
 @task
 def status(_c, distro="", checkout="", remote=""):
     """
@@ -410,13 +431,19 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
     print(f"Windows GUI probe URL: {selected_gui_url}")
     print()
 
+    _ensure_wsl_compose_env(distro=selected_distro, checkout=selected_checkout)
+
     commands = (
         "uv run inv install",
         f"uv run inv ci.release-preflight --lane={selected_lane} --no-e2e",
         "uv run inv auth.posture --compose",
         f"uv run inv compose.up --build --wait-timeout={selected_wait_timeout}",
         "uv run inv compose.health",
+        "uv run inv compose.storage-health",
         "uv run inv interface.e2e --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=start",
+        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts --live-backend --workers=1 --server-mode=start",
+        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts --live-backend --workers=1 --server-mode=start",
+        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts --live-backend --workers=1 --server-mode=start",
     )
     for command in commands:
         print(f"[WSL] {command}")

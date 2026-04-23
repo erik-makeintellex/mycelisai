@@ -329,6 +329,7 @@ Recommended handoff tasks from the Windows repo:
 - `uv run inv wsl.refresh --branch <name>`
 - `uv run inv wsl.validate`
 - `uv run inv wsl.cycle --branch <name>`
+- `wsl.validate` preserves an existing WSL `.env.compose`, but when the clean proof checkout has none yet it seeds one from `.env.compose.example` before running release-preflight, Compose health/storage proof, the live Soma/team/groups/workspace browser checks, and the final Windows-side `http://localhost:3000` probe
 
 These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree.
 

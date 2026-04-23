@@ -81,6 +81,7 @@ Windows dev + WSL proof rule:
 - refresh the WSL proof checkout from git after a Windows-side commit/push instead of copying source or generated artifacts across the boundary
 - do not share one long-lived generated environment across Windows and WSL; recreate `.venv`, `interface/node_modules`, and `interface/.next` in the WSL proof checkout before trusting results
 - use the dedicated WSL task lane when you want the guarded handoff/proof flow from Windows: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
+- `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, then runs release-preflight, Compose health/storage proof, focused live-backend browser workflows, and the Windows-side GUI probe in one guarded pass
 
 Bootstrap reminder:
 - treat `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the canonical V7->V8 migration and bootstrap contract, not just another planning note
@@ -574,6 +575,7 @@ Active-code rule for Windows hosts:
 - use the Windows repo as the day-to-day editing and push surface
 - refresh the WSL `mother-brain` proof checkout from git after each committed Windows-side slice instead of copying files or generated artifacts between hosts
 - use `uv run inv wsl.status` to confirm branch/commit drift and `uv run inv wsl.refresh` when you want the guarded git-only proof-checkout reset from Windows
+- use `uv run inv wsl.validate` after refresh when you want the WSL proof checkout to self-seed `.env.compose` from the tracked example if needed, run release-preflight plus Compose health/storage proof, and then certify the live Soma, team-creation, groups, and workspace browser flows before probing `http://localhost:3000` from Windows
 - run the full build/test/runtime proof from WSL, then use the Windows-side browser as the first operator proof path against that WSL-hosted stack
 - keep the Windows-native source path only for explicit local-Kubernetes/source validation or host-specific debugging
 
