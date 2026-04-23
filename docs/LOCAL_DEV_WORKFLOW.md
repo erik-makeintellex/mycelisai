@@ -313,6 +313,52 @@ WSL/Linux notes:
 Safest posture:
 - use a separate clone or worktree per host environment when you actively move between Windows and WSL
 
+### Host-Boundary Storage Contract
+
+Treat the Windows repo as the editing/source tree and the WSL-native checkout as the build/test/runtime tree.
+
+- Windows should keep tracked source, docs, and `.git`, but it should not keep heavy generated artifacts after the edit cycle ends.
+- Run `uv run inv clean.windows-dev-residue` from the Windows checkout when you want to reclaim repo-local build/test residue and return that checkout to a source-only posture.
+- Run `uv run inv clean.generated` from the active checkout when you want the full repo-safe reclaim path for generated artifacts.
+- Run `uv run inv clean.reports` when you only want to drop test-result/report folders without clearing install caches.
+- Run `uv run inv clean.wsl-handoff` before reusing a Windows-touched checkout from WSL; it removes the cross-host-sensitive generated directories without touching runtime data.
+- Use git to move source between the Windows editing tree and the WSL validation tree. Do not copy full generated trees back and forth.
+
+Recommended handoff tasks from the Windows repo:
+- `uv run inv wsl.status`
+- `uv run inv wsl.refresh --branch <name>`
+- `uv run inv wsl.validate`
+- `uv run inv wsl.cycle --branch <name>`
+
+These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree.
+
+Generated paths intentionally covered by the cleanup helpers:
+- `.venv`
+- `interface/node_modules`
+- `interface/.next`
+- `workspace/tool-cache`
+- `interface/test-results`
+- `interface/playwright-report`
+- `.pytest_cache`
+- `core/bin`
+
+Runtime safety rule:
+- `workspace/docker-compose/data` is not part of repo-safe cleanup and stays untouched by the cleanup helpers.
+
+### Low-Disk Recovery
+
+When free space gets tight, reclaim space in this order:
+
+1. Run `uv run inv clean.disk-status` to see how much repo-local generated data is still present.
+2. Run `uv run inv clean.generated` in the checkout that accumulated the artifacts.
+3. Shut WSL down with `wsl --shutdown` so deleted space becomes eligible for VHD compaction.
+4. Compact the WSL VHD from an elevated PowerShell if the VHD itself still stays inflated after cleanup.
+
+WSL VHD guidance:
+- Keep the active distro on a spacious volume such as `D:` when possible.
+- Use `wsl --manage <distro> --move <target-dir>` when you need to relocate a distro off a tight system drive.
+- Repo cleanup alone does not reclaim Docker image layers or WSL VHD slack space; shutdown and host-level compaction are separate steps.
+
 ### `core/config/templates/*.yaml` — Bootstrap Template Bundles
 
 | File | Purpose |

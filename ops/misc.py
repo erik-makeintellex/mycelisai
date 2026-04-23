@@ -1,5 +1,9 @@
-from invoke import task, Collection
-from .config import ROOT_DIR
+import shutil
+from pathlib import Path
+
+from invoke import Collection, task
+
+from .config import ROOT_DIR, is_windows
 
 WORKTREE_REVIEW_TARGETS = (
     "README.md",
@@ -21,6 +25,29 @@ WORKTREE_BASELINE_INSTALLS = (
 WORKTREE_BASELINE_COMMANDS = (
     "uv run inv ci.entrypoint-check",
     "uv run inv ci.baseline",
+)
+
+GENERATED_ARTIFACT_TARGETS = (
+    ROOT_DIR / ".venv",
+    ROOT_DIR / "interface" / "node_modules",
+    ROOT_DIR / "interface" / ".next",
+    ROOT_DIR / "workspace" / "tool-cache",
+    ROOT_DIR / "interface" / "test-results",
+    ROOT_DIR / "interface" / "playwright-report",
+    ROOT_DIR / ".pytest_cache",
+    ROOT_DIR / "core" / "bin",
+)
+
+REPORT_ARTIFACT_TARGETS = (
+    ROOT_DIR / "interface" / "test-results",
+    ROOT_DIR / "interface" / "playwright-report",
+    ROOT_DIR / ".pytest_cache",
+)
+
+WSL_HANDOFF_TARGETS = (
+    ROOT_DIR / ".venv",
+    ROOT_DIR / "interface" / "node_modules",
+    ROOT_DIR / "interface" / ".next",
 )
 
 WORKTREE_AREA_RULES = (
@@ -76,12 +103,101 @@ WORKTREE_AREA_RULES = (
     },
 )
 
+def _repo_relative(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(ROOT_DIR.resolve())).replace("\\", "/")
+    except ValueError:
+        return str(path)
+
+
+def _assert_repo_managed_target(path: Path) -> Path:
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(ROOT_DIR.resolve())
+    except ValueError as exc:
+        raise SystemExit(f"CLEANUP FAILED: refusing to touch non-repo path: {path}") from exc
+    return resolved
+
+
+def _artifact_size_bytes(path: Path) -> int:
+    if not path.exists():
+        return 0
+    if path.is_file():
+        return path.stat().st_size
+
+    total = 0
+    for child in path.rglob("*"):
+        if child.is_file():
+            try:
+                total += child.stat().st_size
+            except OSError:
+                continue
+    return total
+
+
+def _format_size_bytes(size_bytes: int) -> str:
+    units = ("B", "KB", "MB", "GB", "TB")
+    value = float(size_bytes)
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{size_bytes} B"
+
+
+def _remove_repo_targets(targets: tuple[Path, ...]) -> tuple[list[str], list[str]]:
+    removed: list[str] = []
+    missing: list[str] = []
+    for target in targets:
+        managed_target = _assert_repo_managed_target(target)
+        label = _repo_relative(target)
+        if not managed_target.exists():
+            missing.append(label)
+            continue
+        if managed_target.is_file():
+            managed_target.unlink()
+        else:
+            shutil.rmtree(managed_target)
+        removed.append(label)
+    return removed, missing
+
+
+def _report_repo_targets(targets: tuple[Path, ...]) -> list[dict[str, object]]:
+    report: list[dict[str, object]] = []
+    for target in targets:
+        managed_target = _assert_repo_managed_target(target)
+        exists = managed_target.exists()
+        report.append(
+            {
+                "path": _repo_relative(target),
+                "exists": exists,
+                "bytes": _artifact_size_bytes(managed_target) if exists else 0,
+            }
+        )
+    return report
+
+
+def _print_cleanup_summary(removed: list[str], missing: list[str]) -> None:
+    if removed:
+        print("Removed:")
+        for path in removed:
+            print(f"  - {path}")
+    else:
+        print("Removed:")
+        print("  - none")
+
+    if missing:
+        print("Already clean:")
+        for path in missing:
+            print(f"  - {path}")
+
+
 # -- CLEAN --
 @task
 def legacy(c):
     """Remove legacy build files."""
     legacy_files = [
-        ROOT_DIR / "Makefile", 
+        ROOT_DIR / "Makefile",
         ROOT_DIR / "Makefile.legacy",
     ]
     for p in legacy_files:
@@ -89,8 +205,78 @@ def legacy(c):
             p.unlink()
             print(f"Removed {p}")
 
+
+@task(name="generated")
+def clean_generated(c):
+    """Remove repo-local generated artifacts that should not persist across host boundaries."""
+    removed, missing = _remove_repo_targets(GENERATED_ARTIFACT_TARGETS)
+    print("=== CLEAN GENERATED ===")
+    _print_cleanup_summary(removed, missing)
+    print("Runtime data note:")
+    print("  - workspace/docker-compose/data is intentionally untouched.")
+    print("Workflow note:")
+    print("  - keep heavy build/test artifacts in the WSL checkout; keep the Windows repo source-only.")
+
+
+@task(name="reports")
+def clean_reports(c):
+    """Remove lightweight test/report artifacts without clearing install caches."""
+    removed, missing = _remove_repo_targets(REPORT_ARTIFACT_TARGETS)
+    print("=== CLEAN REPORTS ===")
+    _print_cleanup_summary(removed, missing)
+
+
+@task(name="wsl-handoff")
+def clean_wsl_handoff(c):
+    """Reset cross-host generated artifacts before handing the repo off to WSL."""
+    removed, missing = _remove_repo_targets(WSL_HANDOFF_TARGETS)
+    print("=== CLEAN WSL HANDOFF ===")
+    _print_cleanup_summary(removed, missing)
+    print("Next step:")
+    print("  - use a WSL-native checkout for uv/npm/build/test/compose work.")
+
+
+@task(name="windows-dev-residue")
+def clean_windows_dev_residue(c):
+    """Remove heavy repo-local artifacts from the Windows editing checkout."""
+    if not is_windows():
+        raise SystemExit(
+            "clean.windows-dev-residue is Windows-only. Use clean.generated from the WSL checkout instead."
+        )
+    removed, missing = _remove_repo_targets(GENERATED_ARTIFACT_TARGETS)
+    print("=== CLEAN WINDOWS DEV RESIDUE ===")
+    _print_cleanup_summary(removed, missing)
+    print("Windows source-only reminder:")
+    print("  - edit and commit here if needed, but run install/build/test/compose from the WSL checkout.")
+
+
+@task(name="disk-status")
+def clean_disk_status(c):
+    """Report repo-local generated artifact usage and host-boundary cleanup guidance."""
+    report = _report_repo_targets(GENERATED_ARTIFACT_TARGETS)
+    total_bytes = sum(int(item["bytes"]) for item in report)
+
+    print("=== CLEAN DISK STATUS ===")
+    for item in report:
+        presence = "present" if item["exists"] else "missing"
+        print(
+            f"  - {item['path']}: {presence} ({_format_size_bytes(int(item['bytes']))})"
+        )
+    print(f"Repo-local generated total: {_format_size_bytes(total_bytes)}")
+    print("Storage boundary:")
+    print("  - Windows should stay source-only; heavy artifacts belong in the WSL checkout.")
+    print("  - Docker image/volume usage and WSL VHD slack space are outside repo cleanup.")
+    print("Low-disk reminder:")
+    print("  - run clean.generated first, then `wsl --shutdown`, then compact the WSL VHD from an elevated PowerShell when needed.")
+
+
 ns_clean = Collection("clean")
 ns_clean.add_task(legacy)
+ns_clean.add_task(clean_generated)
+ns_clean.add_task(clean_reports)
+ns_clean.add_task(clean_wsl_handoff)
+ns_clean.add_task(clean_windows_dev_residue)
+ns_clean.add_task(clean_disk_status)
 
 def _unique_strings(items):
     ordered = []
@@ -194,6 +380,10 @@ def worktree_triage(c):
     print("\nDependency reset:")
     for command in WORKTREE_BASELINE_INSTALLS:
         print(f"  - {command}")
+
+    if is_windows():
+        print("\nWindows host note:")
+        print("  - treat this checkout as source-only and run heavy validation from the WSL checkout.")
 
     if triage["priority_installs"]:
         print("\nPriority install checks:")

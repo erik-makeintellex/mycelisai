@@ -25,10 +25,18 @@
 This directory contains the logic for the **Service Release Standard 1.0**.
 
 Recommended host posture:
-- WSL2/Linux/macOS: prefer `uv run inv compose.up --build` as the easiest supported full-stack bring-up
+- Windows repo: canonical editing, review, and git-push surface for active development
+- WSL `mother-brain` checkout backed by `D:\wsl-distro`: canonical deployment-mimic proof lane for install, build, API/UI test, Compose runtime, and release-style validation
 - Windows native: keep the runtime story anchored to Compose or self-hosted Kubernetes; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
+
+Proof-checkout contract:
+- the Windows repo is not the authoritative proof environment; use it to edit, review, and push
+- after a Windows-side commit/push, refresh the WSL proof checkout from git before running authoritative evidence
+- keep destructive cleanup such as `git reset --hard` and `git clean -fdx` scoped to the dedicated WSL proof checkout
+- when the runtime is hosted from WSL on the same Windows machine, the required operator-facing browser path is the Windows browser at `http://localhost:3000`
+- use `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when you want the guarded Windows-dev -> WSL-proof task path instead of a manual handoff
 
 Deployment selection rule:
 - Docker Compose is the default single-host self-hosted runtime

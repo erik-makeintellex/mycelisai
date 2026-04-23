@@ -3,6 +3,8 @@
 
 Use this runbook when you want to walk through Mycelis from a different machine on the same network and prove the current user-facing product story end to end.
 
+For release-style proof, use a clean WSL deployment-mimic checkout refreshed from git as the validation host. Keep the Windows root repo as the dev/staging worktree instead of treating it as the deployment-mimic runtime.
+
 ## TOC
 
 - [Purpose](#purpose)
@@ -57,6 +59,10 @@ Current boundary:
 
 Before the walkthrough, verify these are true on the machine hosting Mycelis:
 
+0. The validation host is the correct checkout.
+   - release-style validation runs from the clean WSL deployment-mimic checkout, not from the Windows dev worktree
+   - if the Windows root repo contains in-progress edits, push them to git first and refresh the WSL checkout before starting the proof run
+
 1. The UI is reachable on the network.
    - Default UI port: `3000`
    - The current default bind posture is LAN-friendly dual-stack listening
@@ -109,6 +115,7 @@ On the remote user-testing machine:
 1. Open the Mycelis UI with the operator-facing host path.
    - Same Windows machine talking to a Windows Docker Desktop or WSL-hosted stack: `http://localhost:3000`
    - Different machine on the same network: `http://<mycelis-host-ip>:3000`
+   - for the same-machine WSL-hosted lane, verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch before starting the guided workflow
 
 2. Confirm you can load the shell and the default workspace route.
 
@@ -138,6 +145,9 @@ Use this lane when the operator is on Windows and the product is running as a se
 5. Confirm archived temporary groups retain their outputs and stay reviewable after refresh.
 6. Confirm a missing or unreachable Windows AI host produces a visible blocker, not a silent fallback to `localhost`.
 7. Restore the AI host and confirm the same browser session can continue working without a full reinstallation or desktop-only reset.
+8. If the very first fresh Soma request times out on a newly started stack but the warmed rerun succeeds, classify it as `cold_start_first_request` instead of a clean first-pass success.
+   - record the first timeout, then do one warm rerun after the stack is responsive
+   - do not silently relabel the run as a clean first-pass success
 
 ## Walkthrough
 
@@ -174,6 +184,7 @@ Expected outcome:
 - response starts quickly
 - the first two prompts return a deterministic runtime/roster summary instead of a generic provider apology
 - no mutation proposal is shown for this informational ask
+- if a freshly started stack shows one first-request timeout before the runtime warms, capture it as `cold_start_first_request` and continue with one explicit warm rerun instead of hiding it
 
 ### 3. Soma Creates Or Refines A Team
 
@@ -447,17 +458,20 @@ This remote user test should be considered successful when all of these are true
 
 Use this shorter sequence when you are validating a fresh checkout on another machine before a first release handoff:
 
-1. Clone or update the repo on the second machine.
-2. Follow [Local Development Workflow](./LOCAL_DEV_WORKFLOW.md) for the host you are using.
-3. Start the supported runtime (`uv run inv compose.up --build` on WSL/Linux/macOS, or the supported self-hosted runtime path with an explicit non-loopback AI endpoint on Windows or another host).
-4. Run `uv run inv ci.release-preflight --lane=release`.
-5. Run the remote walkthrough in this document from the second machine.
-6. Confirm the current release blockers are named in `V8_DEV_STATE.md` before you declare the release ready.
+1. Push the candidate changes from the Windows dev/staging repo to git.
+2. Refresh the clean WSL deployment-mimic checkout from git.
+3. Follow [Local Development Workflow](./LOCAL_DEV_WORKFLOW.md) for the host you are using.
+4. Start the supported runtime (`uv run inv compose.up --build` on WSL/Linux/macOS, or the supported self-hosted runtime path with an explicit non-loopback AI endpoint on Windows or another host).
+5. Run `uv run inv ci.release-preflight --lane=release`.
+6. For the same-machine WSL-hosted lane, verify `http://localhost:3000` from Windows with both a simple HTTP probe and a real browser launch.
+7. Run the remote walkthrough in this document from the second machine or Windows browser lane.
+8. Confirm the current release blockers are named in `V8_DEV_STATE.md` before you declare the release ready.
 
 Initial-release gate rule:
 - treat `V8_DEV_STATE.md` as the live blocker board
 - do not promote a release if the remote walkthrough finds a fresh Soma chat, proposal/confirm, guided team creation, context intake, or artifact/output review defect
 - record media-engine gaps as environment notes unless the target machine is explicitly configured for live media generation
+- record a first-request-only warmup failure as `cold_start_first_request`; it stays a release note until the cold path is healthy, even if the warm rerun passes
 
 ## Failure Notes To Capture
 
@@ -468,6 +482,7 @@ When something goes wrong, record:
 - exact banner/card/error text
 - whether refresh/retry changed the result
 - whether the issue was remote-network only or reproducible from the host machine too
+- whether the issue is a `cold_start_first_request`, a steady-state regression, or an environment/setup gap
 
 ## Recommended Evidence Capture
 

@@ -74,11 +74,13 @@ Fresh-agent review rule:
 - [V8 Development State](V8_DEV_STATE.md) is the live implementation scoreboard.
 - V7 documents remain migration inputs until replaced, but they do not override the V8 bootstrap and release truth.
 
-WSL/Linux Codex handoff rule:
-- treat WSL/Linux/macOS as the canonical active development path unless the slice is explicitly Windows-native or Kubernetes-specific
-- use `.env.compose` plus the Compose task path first, not the Windows Kind/lifecycle flow
-- trust the same Invoke task names and architecture docs across hosts, but treat older Windows PowerShell snippets and fallback evidence as historical troubleshooting notes rather than the normal command syntax
-- when switching from a Windows working copy, recreate `.venv`, `interface/node_modules`, and `interface/.next` before trusting results
+Windows dev + WSL proof rule:
+- treat the Windows repo as the active edit, review, and git-push surface for day-to-day development work
+- treat the `mother-brain` WSL checkout backed by `D:\\wsl-distro` as the authoritative deployment-mimic proof checkout for install, build, test, runtime bring-up, and release-style validation
+- use `.env.compose` plus the Compose task path first in that WSL proof checkout, not the Windows Kind/lifecycle flow, unless the slice is explicitly Windows-native or Kubernetes-specific
+- refresh the WSL proof checkout from git after a Windows-side commit/push instead of copying source or generated artifacts across the boundary
+- do not share one long-lived generated environment across Windows and WSL; recreate `.venv`, `interface/node_modules`, and `interface/.next` in the WSL proof checkout before trusting results
+- use the dedicated WSL task lane when you want the guarded handoff/proof flow from Windows: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
 
 Bootstrap reminder:
 - treat `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the canonical V7->V8 migration and bootstrap contract, not just another planning note
@@ -569,9 +571,11 @@ Need help choosing the right runtime first? Start with [Deployment Method Select
   9. open `http://localhost:3000`
 
 Active-code rule for Windows hosts:
-- prefer a WSL worktree plus the Compose path for day-to-day code changes
-- use the Windows-side browser as the first operator proof path against that WSL-hosted stack
-- keep the Windows-native source path for explicit local-Kubernetes/source validation or host-specific debugging
+- use the Windows repo as the day-to-day editing and push surface
+- refresh the WSL `mother-brain` proof checkout from git after each committed Windows-side slice instead of copying files or generated artifacts between hosts
+- use `uv run inv wsl.status` to confirm branch/commit drift and `uv run inv wsl.refresh` when you want the guarded git-only proof-checkout reset from Windows
+- run the full build/test/runtime proof from WSL, then use the Windows-side browser as the first operator proof path against that WSL-hosted stack
+- keep the Windows-native source path only for explicit local-Kubernetes/source validation or host-specific debugging
 
 What the user still needs on the host:
 - Docker
@@ -584,7 +588,8 @@ What the user still needs on the host:
 ## Cross-Platform Setup
 
 Recommended host posture:
-- WSL2, Linux, and macOS: prefer the Docker Compose path first for the easiest full-stack bring-up and treat this as the canonical active development lane
+- Windows repo: canonical editing, review, and git-push surface for active contributors
+- WSL `mother-brain` checkout backed by `D:\\wsl-distro`: canonical deployment-mimic proof lane for build, test, Compose runtime, and release-style validation
 - Windows Docker Desktop: supported single-host Compose runtime and Windows-browser operator lane on one machine
 - Windows native source mode: best for explicit local-Kubernetes or host-specific source validation; use Ollama locally or point at remote providers
 - Linux server hosts: use Compose or self-hosted Kubernetes, then prove the UI through the same stable host/IP/hostname operators will use remotely
@@ -636,8 +641,8 @@ Recommended easiest setup path by host:
 
 Cross-host artifact rule:
 - do not bounce the same working copy back and forth between Windows Python/Node artifacts and WSL/Linux/macOS artifacts
+- safest posture is one Windows dev repo plus one clean WSL proof checkout that is refreshed from git, not by copying files
 - if you switch host environment, recreate repo-local generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
-- safest posture is one clone or worktree per host environment when you regularly use both Windows and WSL
 
 Local engine rule:
 - Windows and macOS should treat Ollama or a remote OpenAI-compatible provider as the normal local-engine story
@@ -653,12 +658,18 @@ Agents implementing V8 should follow this process:
 2. review the layered architecture truth in README, the owning architecture doc, and `V8_DEV_STATE.md`
 3. review V7 architecture-library documentation as migration input when a V8 replacement has not fully landed yet
 4. identify migration targets and required contract updates
-5. implement incremental runtime or documentation updates
-6. verify with tests and execution gates
+5. implement incremental runtime or documentation updates in the Windows dev repo
+6. commit and push the Windows-side slice before authoritative proof, then refresh the WSL proof checkout from git
+   - expected handoff shape: `git push` from Windows -> `git fetch --prune`, `git checkout`, `git reset --hard`, and `git clean -fdx` in the WSL proof checkout
+   - keep that destructive reset/clean behavior scoped to the dedicated WSL proof checkout, not the active Windows dev repo
+7. run authoritative build, API, UI, and runtime proof from the WSL `mother-brain` checkout
+   - use the WSL proof checkout for install, backend tests, interface tests/build, Compose bring-up, browser automation, and release-style gates
+   - when the runtime is hosted in WSL on the same Windows machine, use the Windows browser at `http://localhost:3000` as the required operator-facing access path
+8. verify with tests and execution gates
 - if the machine is low on free space, prefer the repo task path in this order: `uv run inv lifecycle.down`, `uv run inv cache.status`, then `uv run inv cache.clean`
 - heavy repo-managed build/test paths now run a disk-headroom preflight automatically; if it fails, reclaim space before retrying instead of pushing through partial builds
    - if you are setting up a new development machine, treat cache placement as part of the build config, not an afterthought: Windows should stamp user-level cache vars early, and Linux/macOS should point project/user cache roots at the volume you actually want repeated builds and browser runs to consume
-7. update `V8_DEV_STATE.md` with current status and evidence
+9. update `V8_DEV_STATE.md` with current status and evidence
 
 ## Licensing & Editions
 

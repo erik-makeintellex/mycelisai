@@ -217,6 +217,76 @@ def test_e2e_dev_mode_skips_build(monkeypatch):
     ]
 
 
+def test_e2e_live_backend_start_mode_marks_env_and_refreshes_built_bundle(monkeypatch):
+    ctx = FakeContext()
+    events: list[str] = []
+    env_requests: list[tuple[bool, int]] = []
+    streamed_env: dict[str, str] = {}
+
+    class FakeServer:
+        pid = 7373
+
+        @staticmethod
+        def poll():
+            return None
+
+    monkeypatch.setattr(interface, "INTERFACE_PORT", 4318)
+    monkeypatch.setattr(interface, "_pick_interface_port", lambda preferred=interface.INTERFACE_PORT: 4318)
+    monkeypatch.setattr(interface, "stop", lambda _c, port=interface.INTERFACE_PORT: events.append(f"stop:{port}"))
+    monkeypatch.setattr(interface, "build", lambda _c: events.append("build"))
+    monkeypatch.setattr(
+        interface,
+        "_build_playwright_env",
+        lambda *, live_backend, port: env_requests.append((live_backend, port)) or {
+            "PLAYWRIGHT_SKIP_WEBSERVER": "1",
+            "PLAYWRIGHT_LIVE_BACKEND": "1" if live_backend else "0",
+            "INTERFACE_HOST": "127.0.0.1",
+            "INTERFACE_BIND_HOST": interface.INTERFACE_BIND_HOST,
+            "INTERFACE_PORT": str(port),
+        },
+    )
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: events.append("cleanup") or [])
+    monkeypatch.setattr(interface, "_cleanup_managed_interface_listeners", lambda: events.append("sweep") or [])
+    monkeypatch.setattr(interface, "_cleanup_playwright_server_log", lambda: events.append("cleanup-log"))
+    monkeypatch.setattr(interface, "_reconcile_managed_server_endpoint", lambda env, chosen_port, server: (env, chosen_port))
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: events.append(f"kill:{pid}"))
+    monkeypatch.setattr(interface.time, "sleep", lambda _n: None)
+
+    def fake_start(env, port=interface.INTERFACE_PORT, server_mode="start"):
+        events.append(f"start:{port}:{server_mode}")
+        return FakeServer()
+
+    monkeypatch.setattr(interface, "_start_playwright_server", fake_start)
+    monkeypatch.setattr(
+        interface,
+        "_run_playwright_command_streaming",
+        lambda command, extra_env=None: streamed_env.update(extra_env or {}) or interface.CommandResult(exited=0, stdout="", stderr=""),
+    )
+
+    interface.e2e.body(
+        ctx,
+        project="chromium",
+        spec="e2e/specs/soma-governance-live.spec.ts",
+        live_backend=True,
+        server_mode="start",
+    )
+
+    assert env_requests == [(True, 4318)]
+    assert streamed_env["PLAYWRIGHT_LIVE_BACKEND"] == "1"
+    assert streamed_env["INTERFACE_PORT"] == "4318"
+    assert events == [
+        "stop:4318",
+        "sweep",
+        "build",
+        "start:4318:start",
+        "kill:7373",
+        "stop:4318",
+        "cleanup",
+        "sweep",
+        "cleanup-log",
+    ]
+
+
 def test_e2e_cleans_dynamic_managed_port_before_and_after_run(monkeypatch):
     ctx = FakeContext()
     events: list[str] = []

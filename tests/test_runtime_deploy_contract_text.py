@@ -299,6 +299,75 @@ def test_release_preflight_docs_prefer_lane_preset():
     assert not missing, "Release-preflight lane contract is missing from active docs:\n" + "\n".join(missing)
 
 
+def test_remote_user_testing_doc_covers_wsl_deployment_mimic_windows_browser_and_cold_start_notes():
+    text = REMOTE_USER_TESTING.read_text(encoding="utf-8")
+
+    required_snippets = [
+        "clean WSL deployment-mimic checkout refreshed from git as the validation host",
+        "Windows root repo as the dev/staging worktree",
+        "verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch",
+        "classify it as `cold_start_first_request` instead of a clean first-pass success",
+        "do not silently relabel the run as a clean first-pass success",
+        "whether the issue is a `cold_start_first_request`, a steady-state regression, or an environment/setup gap",
+    ]
+
+    missing = [snippet for snippet in required_snippets if snippet not in text]
+    assert not missing, "Remote user testing doc is missing WSL-proof/browser/cold-start guidance:\n" + "\n".join(missing)
+
+
+def test_active_docs_reference_guarded_wsl_handoff_tasks():
+    snippets = [
+        (
+            README,
+            [
+                "`uv run inv wsl.status`",
+                "`uv run inv wsl.refresh`",
+                "`uv run inv wsl.validate`",
+                "`uv run inv wsl.cycle`",
+            ],
+        ),
+        (
+            TESTING,
+            [
+                "`uv run inv wsl.status`",
+                "`uv run inv wsl.refresh`",
+                "`uv run inv wsl.validate`",
+                "`uv run inv wsl.cycle`",
+            ],
+        ),
+        (
+            OPERATIONS,
+            [
+                "`wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`",
+            ],
+        ),
+        (
+            LOCAL_DEV_WORKFLOW,
+            [
+                "`uv run inv wsl.status`",
+                "`uv run inv wsl.refresh --branch <name>`",
+                "`uv run inv wsl.validate`",
+                "`uv run inv wsl.cycle --branch <name>`",
+            ],
+        ),
+        (
+            REMOTE_USER_TESTING,
+            [
+                "use a clean WSL deployment-mimic checkout refreshed from git as the validation host",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Guarded WSL handoff/proof tasks are missing from active docs:\n" + "\n".join(missing)
+
+
 def test_identity_docs_describe_deploy_owned_people_access_contract():
     snippets = [
         (

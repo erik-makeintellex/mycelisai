@@ -6,6 +6,8 @@ Mycelis employs a **5-Tier Testing Strategy** covering backend handlers, fronten
 Current validation contract:
 - feature work is not done until the relevant tests are rerun against the final branch state
 - feature work is also not done until the touched docs are reviewed and updated where meaning changed
+- the Windows repo is the edit/review/push surface; authoritative build, API, UI, runtime, and release-style proof must run from the WSL `mother-brain` checkout backed by `D:\wsl-distro`
+- the expected engineering handoff is git-backed: commit and push from Windows, then refresh the WSL proof checkout from git before running authoritative evidence
 - `uv run inv ci.baseline` is the default branch-readiness gate and now includes Playwright by default
 - use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
 - use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses the `cortex` schema only when it is already compatible with the current runtime, and otherwise bootstraps the database before proving the browser contract against the managed built server / built production server path
@@ -27,6 +29,12 @@ Current validation contract:
 - end-of-slice reporting should name both the evidence commands run and the docs updated or reviewed unchanged for the touched scope
 - team-creation and orchestration changes must prove the compact-default rule: small teams by default, broad asks split into several smaller lanes, and the coordination path remains visible through Soma/Council/NATS rather than being hidden in a giant roster
 - Invoke-managed Playwright runs own a shared Interface server lifecycle; run `uv run inv interface.e2e ...` commands one at a time for a given workspace and port, especially from the WSL-managed path, instead of launching multiple specs in parallel from separate shells
+
+Proof checkout rule:
+- use the Windows repo for editing and git operations, then refresh the WSL proof checkout from git before trusting release evidence
+- keep destructive `git reset --hard` / `git clean -fdx` style cleanup scoped to that dedicated WSL proof checkout, not the active Windows dev repo
+- when the runtime is hosted by WSL on the same Windows machine, the operator-facing browser proof must use the Windows browser at `http://localhost:3000`
+- the guarded Windows-side handoff/proof helpers are `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
 
 ## User Interaction Delivery Gate
 
@@ -50,6 +58,13 @@ Minimum release evidence for these lanes:
 - `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 - `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
 - `uv run inv ci.release-preflight --lane=release` when the slice changes deployment/runtime/operator-access behavior
+
+Authoritative engineering posture for the Windows + WSL lane:
+1. edit and review in the Windows repo
+2. commit and push the slice from Windows
+3. refresh the WSL `mother-brain` proof checkout from git
+4. run the full build/test/runtime proof from WSL
+5. open `http://localhost:3000` from the Windows browser against that WSL-hosted stack and complete the operator workflow there
 
 Canonical full-gate references:
 - use this document for the ordered release-style testing pass across repo baseline, stable browser proof, live service/browser proof, and compose-aware runtime proof
@@ -153,6 +168,7 @@ Use this lane when you need repeatable proof that the self-hosted product works 
 - the UI is reached from Windows through the same host path an operator would really use
 - the runtime is Windows Docker Desktop Compose, Docker-in-WSL Compose, or self-hosted Kubernetes
 - the AI engine runs on a Windows GPU host or equivalent self-hosted service reached by explicit IP or hostname
+- for the source-based deployment-mimic lane, the stack is brought up from the WSL `mother-brain` proof checkout and the Windows repo remains the edit/push surface only
 
 Required setup:
 

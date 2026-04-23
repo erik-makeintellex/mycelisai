@@ -429,6 +429,38 @@ def test_release_preflight_release_lane_runs_runtime_and_service_stages(monkeypa
     assert service_calls == [{"live_backend": True}]
 
 
+def test_release_preflight_release_lane_keeps_baseline_e2e_enabled_by_default(monkeypatch):
+    stage_order: list[str] = []
+    baseline_calls: list[dict[str, object]] = []
+    service_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(ci.toolchain_check, "body", lambda _ctx, **_kwargs: stage_order.append("toolchain"))
+    monkeypatch.setattr(ci, "_runtime_posture_check", lambda _ctx: stage_order.append("runtime"))
+    monkeypatch.setattr(
+        ci.baseline,
+        "body",
+        lambda _ctx, **kwargs: (stage_order.append("baseline"), baseline_calls.append(kwargs)),
+    )
+    monkeypatch.setattr(
+        ci.service_check,
+        "body",
+        lambda _ctx, **kwargs: (stage_order.append("service"), service_calls.append(kwargs)),
+    )
+
+    ctx = FakeContext(
+        {
+            "git status --porcelain": FakeResult(stdout=""),
+        }
+    )
+
+    ci.release_preflight.body(ctx, lane="release")
+
+    assert ctx.commands == ["git status --porcelain"]
+    assert stage_order == ["toolchain", "runtime", "baseline", "service"]
+    assert baseline_calls == [{"e2e": True}]
+    assert service_calls == [{"live_backend": True}]
+
+
 def test_release_preflight_runs_service_check_when_requested(monkeypatch):
     monkeypatch.setattr(ci.logging_tasks.check_schema, "body", lambda _ctx, **_kwargs: None)
     monkeypatch.setattr(ci.logging_tasks.check_topics, "body", lambda _ctx, **_kwargs: None)

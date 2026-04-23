@@ -126,6 +126,8 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
   - prefer Invoke-managed build/test/browser tasks over raw tool commands so cache roots, browser binaries, telemetry suppression, and worker cleanup stay consistent
   - use `uv run inv cache.status` before large validation runs when free space is tight, then `uv run inv cache.clean` as the first repo-safe reclaim path
   - use `uv run inv cache.guard` when you want a hard preflight on repo/cache disk headroom; it covers the repo/cache volume and intentionally does not pretend to measure Docker daemon image-layer storage
+  - keep the Windows editing checkout source-only whenever possible and run install/build/test/runtime work from the WSL-native checkout
+  - use `uv run inv clean.disk-status` and `uv run inv clean.generated` before resorting to manual repo deletions; they only target approved generated paths and do not touch `workspace/docker-compose/data`
 
 ### Deployment Guidance Across Host Architectures
 
@@ -295,9 +297,19 @@ The repo-local `cognitive.*` helper lane is intended for supported Linux GPU hos
 | `ops/cache.py` | `cache.status`, `cache.clean`, `cache.apply-user-policy` | Managed cache reporting, cleanup, and Windows user-policy stamping |
 | `.dockerignore` | root Docker build-context exclusions | Excludes Interface build/test outputs so repo-root Docker builds do not ingest stale `.next`, coverage, or browser artifacts |
 | `ops/misc.py` | `clean.legacy` | Remove legacy Makefiles |
+| `ops/misc.py` | `clean.generated`, `clean.reports`, `clean.wsl-handoff`, `clean.windows-dev-residue`, `clean.disk-status` | Repo-safe generated artifact cleanup plus host-boundary storage reporting |
+| `ops/wsl_runtime.py` | `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle` | Guarded Windows-dev -> WSL-proof handoff, refresh, and validation tasks |
 | `ops/misc.py` | `team.architecture-sync`, `team.worktree-triage` | central architect sync plus local worktree/task triage helpers |
 
 Key coordination example: `uv run inv team.architecture-sync`
+
+Storage note:
+- `clean.generated` removes only approved repo-local generated paths: `.venv`, `interface/node_modules`, `interface/.next`, `workspace/tool-cache`, `interface/test-results`, `interface/playwright-report`, `.pytest_cache`, and `core/bin`
+- `clean.reports` is the lighter-weight reclaim path for test-result/report folders only
+- `clean.wsl-handoff` is the cross-host reset path before a Windows-used checkout is resumed from WSL
+- `clean.windows-dev-residue` is the Windows-only reclaim helper that restores the editing checkout to a source-only posture
+- `clean.disk-status` reports repo-local generated usage, but Docker image/volume usage and WSL VHD slack space still require `wsl --shutdown` and elevated host-side compaction when the distro disk stays large
+- when the system drive is tight, prefer moving the active WSL distro to a larger volume with `wsl --manage <distro> --move <target-dir>` instead of letting repeated build/test churn accumulate on `C:`
 
 ### Config Module (`ops/config.py`)
 
