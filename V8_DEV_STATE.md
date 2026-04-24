@@ -210,12 +210,12 @@ Cross-team management rule:
 Current scope guard:
 - `ACTIVE` the MVP center is now operator-shaped workflows and singular execution outcomes: direct Soma answer, governed mutation, organization entry/re-entry, team design, temporary workflow review, Connected Tools activity, docs navigation, and run inspection.
 - `ACTIVE` runtime truth remains non-negotiable: Compose/WSL/Windows browser topology and explicit external AI endpoints must not regress while UX/testing work continues.
-- `NEXT` proof gaps currently outrank polish work and stay ordered: WSL `wsl.validate` from the refreshed proof checkout, deeper `/runs` workflow proof, guided retry/recovery, and broader headed certification from committed state.
+- `NEXT` proof gaps currently outrank polish work and stay ordered: keep the focused `/runs` and guided retry/recovery browser proofs green, refresh the WSL proof checkout from the committed slice, run `wsl.validate`, and then rerun broader headed certification from committed state.
 
 MVP continuation sequence:
 1. `ACTIVE` validate the WSL git-auth repair/report path so `wsl.refresh` can update the proof checkout without manual source handoff.
 2. `ACTIVE` run `uv run inv wsl.validate` from the refreshed WSL proof checkout before treating browser-gap or certification evidence as authoritative.
-3. `ACTIVE` deepen workflow proof where the current contract is still unit-heavy or mocked-heavy (`/runs`, guided retry/recovery).
+3. `COMPLETE` focused browser proof now covers `/runs` list-to-detail review, conversation/interjection, failure evidence, chain navigation, and guided Soma retry/recovery.
 4. `NEXT` re-run the broader headed Chromium certification lane from committed state after each proof-hardening batch.
 5. `NEXT` keep the Windows-browser-against-WSL/operator topology honest as the self-hosted MVP story, not as an afterthought.
 6. `NEXT` only after those proof lanes are stable, widen back into broader continuity/team-run/runtime expansion work.
@@ -235,14 +235,14 @@ This is the engaged compact team and the exact proof-producing sequence for the 
 Execution order:
 1. `COMPLETE` the latest WSL runtime-proof results, workspace alias contract, and handoff caveats are captured in current state.
 2. `ACTIVE` validate the remaining `wsl.refresh` auth repair/report path so the guarded handoff path is fully hands-off from Windows through WSL proof when host credentials are available and actionable when they are not.
-3. `ACTIVE` run `uv run inv wsl.validate` from the refreshed proof checkout before accepting browser-gap or certification evidence.
-4. `ACTIVE` start the next MVP proof lane with deeper `/runs` browser behavior and the skipped guided Soma retry/recovery path.
+3. `ACTIVE` run `uv run inv wsl.validate` from the refreshed proof checkout before accepting the new browser-gap evidence as authoritative.
+4. `COMPLETE` deepen `/runs` browser behavior and unskip the guided Soma retry/recovery path.
 5. `NEXT` follow that slice with the broader headed Chromium MVP certification pass and the Windows self-hosted browser check.
 6. `NEXT` keep the WSL proof checkout refreshed from git-backed commits instead of manual source copying; use `wsl.refresh` remediation guidance when host auth still blocks fetch.
 
 Immediate blocker rule:
 - `BLOCKED` any slice that reintroduces a mixed dirty tree or leaves docs/state behind the accepted proof surface.
-- `IN_REVIEW` `/runs` now has focused mocked browser proof for list state, conversation filtering, operator interjection, event retry, terminal failure evidence, and chain lineage; live-depth proof remains the next real gap rather than a solved lane.
+- `COMPLETE` `/runs` now has focused mocked browser proof for list-to-detail review, conversation filtering, operator interjection, event retry, terminal failure evidence, and chain navigation with parent/child metadata; live-depth proof remains a broader future lane rather than a focused browser-gap blocker.
 - `COMPLETE` live MCP workflow correlation is now green from the refreshed WSL proof checkout: `interface/e2e/specs/mcp-connected-tools.spec.ts` creates a temporary MCP-only team lane, broadcasts a read-only ask, polls `/api/v1/mcp/activity` for matching team/agent `read_file` activity, and verifies Connected Tools shows that correlation with `PLAYWRIGHT_LIVE_BACKEND`.
 
 ## Current Review (2026-04-23)
@@ -254,7 +254,7 @@ Review summary:
 4. `IN_REVIEW` the guarded Windows-to-WSL handoff path is close but not fully closed: `wsl.validate` is trustworthy for proof once the proof checkout is current, and `wsl.refresh` now repairs GitHub HTTPS auth through a repo-local Git Credential Manager helper when possible, preserves generated WSL runtime/cache roots during source cleanup, or fails with SSH/HTTPS guidance before reset/clean when host auth is still blocked.
 5. `COMPLETE` the current handoff/state-sync cleanup is no longer the active next-action lane: the green WSL proof, workspace alias contract, and guarded auth remediation path are captured as current state instead of being left as restart work.
 6. `COMPLETE` the focused Windows-side browser proof for this slice is green from single-owner managed Interface runs: `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/docs-and-runs.spec.ts` passed with 3 tests, and `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/mcp-connected-tools.spec.ts` passed with 2 tests and 1 expected live-backend skip.
-7. `NEXT` the remaining MVP-centered work is ordered around real proof gaps: run `wsl.validate` from the refreshed proof checkout, keep the new `/runs` browser workflow proof green, unskip and keep green the guided Soma retry/recovery lane, then rerun the broader headed Chromium certification pass from committed state.
+7. `NEXT` the remaining MVP-centered work is ordered around committed-state proof: run `wsl.validate` from the refreshed proof checkout, keep the new `/runs` and guided Soma retry/recovery browser workflow proofs green, then rerun the broader headed Chromium certification pass from committed state.
 
 ## Prior Review (2026-04-21)
 Review summary:
@@ -262,9 +262,9 @@ Review summary:
 2. `COMPLETE` the organization-entry/browser-coverage cleanup is now materially landed from clean state: the old umbrella spec was split into focused creation, empty-start, persistence, native-vs-external, ask-class, and recovery slices, and the `ops/interface` task/runtime boundary was decomposed into `interface.py`, `interface_runtime.py`, `interface_env.py`, and `interface_process_support.py`.
 3. `COMPLETE` the `/docs` workflow gap called out in the testing contract is now closed locally: unit proof covers manifest failure, selected-doc failure, and internal markdown-link traversal, while browser proof now follows an internal docs link through the in-app manifest instead of only rendering one static doc.
 4. `IN_REVIEW` `/runs` singular user-action proof is now materially tighter in the unit layer: the run page now has explicit tests for query-selected tabs, failed/cancelled/running status handling, fetch-failure fallback, conversation agent-filter refetch, and operator interjection submission/clear behavior. The remaining gap is broader browser/live run-review proof, not basic state handling.
-5. `IN_REVIEW` the current testing/docs contract is now more honest: `docs/TESTING.md` records `/docs` internal-link/failure coverage as complete and leaves the bigger remaining MVP gaps where they belong, namely deeper `/runs` browser proof and the still-skipped guided retry/recovery lane.
+5. `COMPLETE` the testing/docs contract is now more honest: `docs/TESTING.md` records `/docs` internal-link/failure coverage as complete, and the follow-up focused browser slice has now closed the `/runs` depth and guided retry/recovery browser gaps.
 6. `COMPLETE` current focused WSL proof for this audit slice is green: `cd interface; npx vitest run __tests__/pages/DocsPage.test.tsx __tests__/runs/RunDetailPage.test.tsx --reporter=dot --maxWorkers=1`, `cd interface; npx vitest run __tests__/runs/ConversationLog.test.tsx __tests__/runs/RunTimeline.test.tsx --reporter=dot --maxWorkers=1`, `uv run inv interface.typecheck`, and `uv run inv interface.e2e --project=chromium --workers=1 --spec=interface/e2e/specs/docs-and-runs.spec.ts` all pass from the current local slice.
-7. `NEXT` the next MVP-centered proof lane is now clear and ordered: run `wsl.validate` from the refreshed proof checkout, deepen `/runs` real browser workflow proof, unskip/keep green the guided Soma retry/recovery path, then rerun the broader headed Chromium certification lane from committed state.
+7. `NEXT` the next MVP-centered proof lane is now clear and ordered: run `wsl.validate` from the refreshed proof checkout with the focused `/runs` and guided Soma retry/recovery proofs green, then rerun the broader headed Chromium certification lane from committed state.
 
 ## Prior Review (2026-04-09)
 
@@ -272,7 +272,7 @@ Review summary:
 1. `ACTIVE` browser-first UX proof is now the governing closeout lane for the RC path: headed Chromium runs against the live Compose UI are the authoritative check for Soma-first entry, guided setup, team/group management, and governed chat behavior.
 2. `IN_REVIEW` the current organization-entry fix is real product work rather than a test-only patch: the Central Soma dashboard action now opens the hidden AI Organization setup panel directly, and focused unit proof is green while the broader headed browser flow continues from the updated live behavior.
 3. `IN_REVIEW` the first MCP standardization slice is now implemented locally and green in focused proof: the curated library schema now carries version/package metadata, repository/homepage fields for known official entries, and typed environment-variable declarations, the Connected Tools browser renders that standardized metadata plus visible version policy, and the operator docs/API reference now describe the catalog as a registry-aligned surface rather than a purely local install list.
-4. `IN_REVIEW` the browser-first organization-entry lane now has both creation and continuity certified in headed Chromium; the next browser-first gaps are the currently skipped guided-failure retry lane and any deeper team/workflow scenarios that still rely on stale assumptions.
+4. `COMPLETE` the browser-first organization-entry lane now has creation, continuity, and guided-failure retry certified in Chromium; deeper team/workflow scenarios that still rely on stale assumptions remain separate future work.
 5. `IN_REVIEW` temporary groups now support both manual and Soma-launched bounded execution lanes: archive with retained output review already existed, and guided team creation can now create a temporary workflow group directly from the returned execution contract and reopen it in the Groups workspace for focused coordination.
 6. `IN_REVIEW` guided team creation is now split cleanly from the Teams roster itself and no longer stops at planning-only output: `/teams` is the direct hub for roster review, lead-entry, and template specialization, while `/teams/create` is the guided Soma lane for shaping new teams from organization context, expected outputs, and execution-path guidance, then launching the recommended temporary workflow group when appropriate. Focused route/component tests are green and headed Chromium browser proof is green for both the Teams hub and the guided team-creation page.
 7. `NEXT` continue MCP standardization with deeper interoperability follow-through: move beyond visible repository/homepage and version-policy metadata into an explicit package pinning contract and future import/export compatibility with published MCP `server.json` records before widening the registration surface.
@@ -848,19 +848,24 @@ Evidence:
 2. `cd interface; npx tsc --noEmit` -> pass.
 3. `cd interface; $env:PLAYWRIGHT_LIVE_BACKEND='1'; $env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3000'; $env:MYCELIS_BACKEND_WORKSPACE_ROOT='workspace/docker-compose/data/workspace'; npx playwright test e2e/specs/proposals.spec.ts --project=chromium --workers=1 --timeout=120000` -> pass (`4` passed).
 4. `cd interface; $env:PLAYWRIGHT_LIVE_BACKEND='1'; $env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3000'; $env:MYCELIS_BACKEND_WORKSPACE_ROOT='workspace/docker-compose/data/workspace'; npx playwright test --project=chromium --workers=1 --timeout=120000` -> pass (`81` passed, `10` skipped).
+5. `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec=e2e/specs/docs-and-runs.spec.ts` -> pass (`3` passed) with `/runs` list-to-detail, interjection, failure evidence, and chain navigation proof.
+6. `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec=e2e/specs/v8-organization-entry.recovery.spec.ts` -> pass (`2` passed) with guided Soma retry/recovery unskipped.
+7. `uv run inv interface.typecheck` -> pass.
+8. `cd interface; npx vitest run __tests__/pages/RunsPage.test.tsx __tests__/runs/RunDetailPage.test.tsx __tests__/runs/ConversationLog.test.tsx __tests__/runs/RunTimeline.test.tsx __tests__/pages/OrganizationPage.team-design-flow.test.tsx __tests__/organizations/TeamLeadInteractionPanel.retry-flow.test.tsx --reporter=dot --maxWorkers=1` -> pass (`43` passed).
+9. `$env:PYTHONPATH='.'; uv run pytest tests/test_runtime_deploy_contract_text.py tests/test_docs_links.py -q` -> pass (`63` passed).
 
 ## Immediate Next Actions
 
 1. `REQUIRED` validate WSL git auth repair/report behavior for `wsl.refresh`.
    - keep the Windows-to-WSL handoff git-backed instead of artifact-backed
    - make manual source handoff unnecessary; when host auth is blocked, fail with actionable SSH/HTTPS guidance
-2. `REQUIRED` run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting browser-gap or certification evidence.
+2. `REQUIRED` run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting the new browser-gap evidence as authoritative.
    - prove release-preflight, Compose health/storage, live Soma/team/groups/workspace browser workflows, and the Windows `http://localhost:3000` probe from the git-refreshed checkout
    - use the `wsl.refresh` auth guidance instead of copying source if WSL fetch is still blocked
-3. `IN_REVIEW` keep `/runs` browser proof green beyond route smoke.
-   - current focused proof verifies list state, detail conversation filtering, operator interjection, event retry/failure messaging, and chain lineage through browser-visible coverage
+3. `COMPLETE` keep `/runs` browser proof green beyond route smoke.
+   - current focused proof verifies list-to-detail review, detail conversation filtering, operator interjection, event retry/failure messaging, and chain navigation with parent/child metadata through browser-visible coverage
    - keep the existing tighter unit coverage as the foundation for future live-backend depth
-4. `NEXT` unskip and keep green the guided Soma retry/recovery browser scenario.
+4. `COMPLETE` unskip and keep green the guided Soma retry/recovery browser scenario.
    - preserve organization context when a guided action fails
    - prove the retry path from the live UI contract rather than leaving it as a known skipped branch
 5. `COMPLETE` live MCP-backed workflow correlation proof is green from the refreshed WSL proof checkout.

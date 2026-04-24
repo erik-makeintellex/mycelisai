@@ -68,9 +68,10 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.getByText('No docs match "missing-doc"')).toBeVisible();
     });
 
-    test('runs browser proof covers list state, interjection, event retry, and failure evidence', async ({ page }) => {
+    test('runs browser proof covers list to detail review, interjection, failure evidence, and chain navigation', async ({ page }) => {
         const runId = 'run-ui-active-1234';
         const failedRunId = 'run-ui-failed-9999';
+        const childRunId = 'run-ui-child-0001';
         const missionId = 'mission-ui-7777';
         const now = new Date().toISOString();
         let showTerminalEvents = false;
@@ -242,6 +243,45 @@ test.describe('Docs and Runs Route Coverage', () => {
             });
         });
 
+        await page.route(`**/api/v1/runs/${runId}/chain**`, async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    run_id: runId,
+                    mission_id: missionId,
+                    chain: [
+                        {
+                            id: runId,
+                            mission_id: missionId,
+                            tenant_id: 'default',
+                            status: 'failed',
+                            run_depth: 0,
+                            started_at: now,
+                            completed_at: now,
+                            metadata: {
+                                source_kind: 'workspace_ui',
+                                team_id: 'admin-core',
+                            },
+                        },
+                        {
+                            id: childRunId,
+                            mission_id: missionId,
+                            tenant_id: 'default',
+                            status: 'running',
+                            run_depth: 1,
+                            parent_run_id: runId,
+                            started_at: now,
+                            metadata: {
+                                source_kind: 'automation_trigger',
+                                team_id: 'delivery',
+                            },
+                        },
+                    ],
+                }),
+            });
+        });
+
         await page.goto('/runs', { waitUntil: 'domcontentloaded' });
 
         await expect(page.locator('span:has-text("Runs")').first()).toBeVisible();
@@ -275,9 +315,26 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.getByText('Failed to load events (503)')).toBeVisible();
         await page.getByRole('button', { name: 'Retry' }).click();
         await expect(page.getByText('mission.failed')).toBeVisible();
+        await expect(page.getByText('tool.failed')).toBeVisible();
+        await expect(page.getByText('planner').first()).toBeVisible();
+        await expect(page.getByText('Planner validation provider timed out; operator retry is available.')).toBeVisible();
         await expect(page.getByText('Mission stopped after retry budget was exhausted.')).toBeVisible();
         await expect(page.getByText('failed').first()).toBeVisible();
         await expect(page.getByText('mission.started')).toBeVisible();
+
+        await page.getByRole('link', { name: 'Chain' }).click();
+        await expect(page).toHaveURL(new RegExp(`/runs/${runId}/chain$`));
+        await expect(page.getByRole('heading', { name: 'Causal Chain' })).toBeVisible();
+        await expect(page.getByText('2 runs')).toBeVisible();
+        await expect(page.getByText(runId, { exact: true })).toBeVisible();
+        await expect(page.getByText(childRunId, { exact: true })).toBeVisible();
+        await expect(page.getByText('depth 0')).toBeVisible();
+        await expect(page.getByText('depth 1')).toBeVisible();
+        await expect(page.getByText(`parent ${runId}`)).toBeVisible();
+        await expect(page.getByText('source_kind: workspace_ui')).toBeVisible();
+        await expect(page.getByText('source_kind: automation_trigger')).toBeVisible();
+        await expect(page.getByText('team_id: delivery')).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Run' })).toHaveAttribute('href', `/runs/${runId}`);
     });
 
     test('run chain route renders lineage from API payloads', async ({ page }) => {

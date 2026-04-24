@@ -6,6 +6,7 @@ import {
     mockOrganizationEntryApis,
     openCreatedOrganization,
     openOrganizationSetup,
+    openTeamDesignLane,
     saveScreenshot,
 } from "../support/organization-entry";
 
@@ -59,7 +60,7 @@ test.describe("V8 AI Organization entry flow - recovery", () => {
         await saveScreenshot(page, testInfo, "retry-recovery.png");
     });
 
-    test.skip("preserves organization context when a guided Soma action fails and then succeeds on retry", async ({ page }, testInfo) => {
+    test("preserves organization context when a guided Soma action fails and then succeeds on retry", async ({ page }, testInfo) => {
         let actionAttempts = 0;
 
         await mockOrganizationEntryApis(page, {
@@ -113,6 +114,7 @@ test.describe("V8 AI Organization entry flow - recovery", () => {
             page.getByRole("button", { name: "Create AI Organization", exact: true }).last().click(),
         ]);
         await openCreatedOrganization(page, createdTemplateOrganization.id);
+        await openTeamDesignLane(page);
         await page.getByRole("button", { name: /Run a quick strategy check/i }).click();
 
         await expect(page.getByText("Soma guidance is unavailable", { exact: true })).toBeVisible();

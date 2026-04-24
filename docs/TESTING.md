@@ -44,7 +44,7 @@ Proof checkout rule:
 Release-proof sequencing rule:
 1. validate WSL git auth repair/report behavior for `wsl.refresh` so the proof checkout can refresh from git without source copying when host credentials are available and fail actionably when they are not
 2. run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence
-3. close focused browser proof gaps next, currently `/runs` workflow depth and guided Soma retry/recovery
+3. keep the newly closed focused browser proof gaps green: `/runs` workflow depth and guided Soma retry/recovery both have focused Chromium proof in production `start` mode
 4. rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL
 
 ## User Interaction Delivery Gate
@@ -115,7 +115,7 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
 | `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | route-level smoke remains unit-first; live-backend/browser depth is still selective | `ACTIVE` |
 | `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites, `MCPToolRegistry.test.tsx`, `MCPLibraryBrowser.test.tsx` | `settings.spec.ts` for guided settings/profile/access/theme; Connected Tools browser depth now lives on `/resources?tab=tools` in `mcp-connected-tools.spec.ts` | `ACTIVE` |
-| `/runs`, `/runs/[id]`, `/runs/[id]/chain` | run component suites (`RunDetailPage`, timeline, cards), `RunsPage.test.tsx`, `RunChainPage.test.tsx`, `ViewChain.test.tsx` | `docs-and-runs.spec.ts` covers docs navigation plus mocked `/runs` list state, detail conversation filtering, operator interjection, event retry/failure evidence, and chain lineage proof | `ACTIVE` |
+| `/runs`, `/runs/[id]`, `/runs/[id]/chain` | run component suites (`RunDetailPage`, timeline, cards), `RunsPage.test.tsx`, `RunChainPage.test.tsx`, `ViewChain.test.tsx` | `docs-and-runs.spec.ts` covers docs navigation plus mocked `/runs` list state, detail conversation filtering, operator interjection, event retry/failure evidence, and chain navigation with parent/child metadata proof | `ACTIVE` |
 | `/docs` in-app browser | `DocsPage.test.tsx` for manifest load, internal markdown-link traversal, and readable doc-load failure states | `docs-and-runs.spec.ts` docs manifest/render smoke plus internal-link navigation | `ACTIVE` |
 | `/teams` team roster + specialization hub | `TeamsPage.test.tsx`, `pages/TeamsPage.test.tsx` | `teams.spec.ts` | `ACTIVE` |
 | `/teams/create` guided team-creation workflow | `TeamCreationPage.test.tsx`, `TeamLeadInteractionPanel.guidance-copy.test.tsx`, `TeamLeadInteractionPanel.strategy-actions.test.tsx`, `TeamLeadInteractionPanel.native-team.test.tsx`, `TeamLeadInteractionPanel.compact-team.test.tsx`, `TeamLeadInteractionPanel.external-contract.test.tsx`, `TeamLeadInteractionPanel.loading-state.test.tsx`, `TeamLeadInteractionPanel.malformed-fallback.test.tsx`, `TeamLeadInteractionPanel.retry-flow.test.tsx`, `TeamLeadInteractionPanel.persistence.test.tsx`, `TeamLeadInteractionPanel.retained-package.test.tsx`, `pages/CreateTeamPage.test.tsx` | `team-creation.spec.ts` | `ACTIVE` |
@@ -142,7 +142,7 @@ Immediate test additions required for stronger full-stack confidence:
 2. `COMPLETE` add a browser proof for direct Soma output vs team-managed output package delivery.
 3. `COMPLETE` add browser proof for media artifact rendering/save/download, or a precise missing-media-engine blocker when no media engine is configured.
 4. `COMPLETE` live-backend browser proof now verifies that a Soma/team workflow can use an MCP-backed capability and surface matching recent MCP activity.
-5. `NEXT` unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven.
+5. `COMPLETE` unskipped and kept green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven.
 6. `COMPLETE` expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches.
 
 ### Tester Proof Slice: Output Block, Media Readiness, And Team-Managed Review
@@ -356,7 +356,7 @@ Signal/channel standard:
 - Current focused agent parsing/preflight check: `cd core && go test ./internal/swarm -run "TestParseConversationPayload_|TestParseToolCall|TestAutofillToolArguments|TestShouldCouncilPreflight|TestCouncilPreflightMember" -count=1`
 - Current focused stream-normalization check: `cd interface && npx vitest run __tests__/lib/signalNormalize.test.ts __tests__/store/useCortexStore.mission-chat-send.test.ts __tests__/store/useCortexStore.mission-chat-scope.test.ts --reporter=dot`
 - Current focused docs/runs page check: `cd interface && npx vitest run __tests__/pages/DocsPage.test.tsx __tests__/pages/RunsPage.test.tsx __tests__/runs/RunDetailPage.test.tsx --reporter=dot`
-- Current focused docs/runs browser check: `cd interface && npx playwright test e2e/specs/docs-and-runs.spec.ts --project=chromium`
+- Current focused docs/runs browser check: `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec=e2e/specs/docs-and-runs.spec.ts`
 - Current focused store-utils check: `cd interface && npx vitest run __tests__/store/cortexStoreUtils.test.ts __tests__/store/useCortexStore.data-fetch.test.ts __tests__/store/useCortexStore.mission-draft-sync.test.ts --reporter=dot`
 - Current focused Workspace chat contract check: `cd interface && npx vitest run __tests__/dashboard/MissionControlChat.header.test.tsx __tests__/dashboard/MissionControlChat.flow.test.tsx __tests__/dashboard/MissionControlChat.error-states.test.tsx __tests__/dashboard/MissionControlChat.ui-states.test.tsx __tests__/lib/labels.test.ts --reporter=dot`
 - Current focused execution feedback check: `cd interface && npx vitest run __tests__/dashboard/CouncilCallErrorCard.test.tsx __tests__/dashboard/DegradedModeBanner.test.tsx --reporter=dot`
@@ -372,6 +372,7 @@ Signal/channel standard:
 - Current focused teams workspace contract check: `cd interface && npx vitest run __tests__/pages/TeamsPage.test.tsx __tests__/pages/CreateTeamPage.test.tsx __tests__/teams/TeamsPage.test.tsx __tests__/teams/TeamCreationPage.test.tsx __tests__/organizations/TeamLeadInteractionPanel.guidance-copy.test.tsx __tests__/organizations/TeamLeadInteractionPanel.strategy-actions.test.tsx __tests__/organizations/TeamLeadInteractionPanel.native-team.test.tsx --reporter=dot`
 - Current focused teams workspace browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/teams.spec.ts`
 - Current focused guided team-creation browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts`
+- Current focused guided Soma retry/recovery browser proof: `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec=e2e/specs/v8-organization-entry.recovery.spec.ts`
 - Current focused UI testing agentry browser proof: `uv run inv interface.e2e --project=chromium --spec=e2e/specs/v8-ui-testing-agentry.spec.ts`
 - Current focused Windows self-hosted browser proof: `MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434 uv run inv compose.up --build --wait-timeout=240` followed by `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 - Current focused direct-vs-team and media-output browser proof: `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/workflow-output.direct.spec.ts`, `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/workflow-output.compact-team.spec.ts`, `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/workflow-output.multi-lane.spec.ts`, `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/workflow-output.reload-review.spec.ts`, and `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/soma-media-artifacts.spec.ts`; if the Windows Invoke-managed server wrapper is unhealthy, use a single already-started Interface listener and run the PowerShell fallback from `interface/`: `$env:PLAYWRIGHT_SKIP_WEBSERVER='1'; $env:PLAYWRIGHT_PORT='3100'; npx playwright test e2e/specs/workflow-output.direct.spec.ts e2e/specs/workflow-output.compact-team.spec.ts e2e/specs/workflow-output.multi-lane.spec.ts e2e/specs/workflow-output.reload-review.spec.ts e2e/specs/soma-media-artifacts.spec.ts --project=chromium --workers=1 --timeout=60000`.
