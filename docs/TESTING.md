@@ -110,7 +110,7 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/dashboard` AI Organization re-entry and status overview | `DashboardPage.test.tsx`, dashboard/store suites | `missions.spec.ts`, `navigation.spec.ts`, accessibility baseline | `ACTIVE` |
 | `/groups` standing + temporary collaboration workspace | `GroupsPage.test.tsx`, `GroupManagementPanel.test.tsx` | `groups.spec.ts`, plus live-backend retained-output aggregation proof via `groups-live-backend.spec.ts` | `ACTIVE` |
 | `/automations` | `AutomationsPage.test.tsx`, automations component suites | `layout.spec.ts`, `proposals.spec.ts` | `ACTIVE` |
-| `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial), `mcp-connected-tools.spec.ts` for Connected Tools registry/library/activity visibility and empty-state activation guidance | `ACTIVE` |
+| `/resources` (+ redirects from `/catalogue`, `/marketplace`) | `ResourcesPage.test.tsx`, redirect page tests | `catalogue.spec.ts` (partial), `mcp-connected-tools.spec.ts` for Connected Tools registry/library/activity visibility, idempotent library install, and empty-state activation guidance | `ACTIVE` |
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
 | `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | route-level smoke remains unit-first; live-backend/browser depth is still selective | `ACTIVE` |
 | `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites, `MCPToolRegistry.test.tsx`, `MCPLibraryBrowser.test.tsx` | `settings.spec.ts` for guided settings/profile/access/theme; Connected Tools browser depth now lives on `/resources?tab=tools` in `mcp-connected-tools.spec.ts` | `ACTIVE` |
@@ -441,7 +441,7 @@ Disallowed testing posture:
 | `core/internal/server/governance_test.go` | Policy CRUD, pending approvals, resolve approve/reject |
 | `core/internal/server/telemetry_test.go` | Runtime telemetry, trust threshold GET/PUT/range |
 | `core/internal/server/mission_test.go` | Mission CRUD, intent commit TX, negotiate, sensor configs, blueprint extraction |
-| `core/internal/server/mcp_test.go` | MCP install validation, list, delete, tool call, library |
+| `core/internal/server/mcp_test.go`, `core/internal/mcp/service_test.go` | MCP install validation, idempotent server-name upsert, list, delete, tool call, library |
 | `core/internal/server/mcp_toolsets_test.go` | MCP tool set list/create/update/delete paths + nil guards |
 | `core/internal/server/memory_search_test.go` | Memory search, sitreps, sensors |
 | `core/internal/server/proposals_test.go` | Proposal CRUD, approve/reject, conflict detection |

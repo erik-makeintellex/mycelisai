@@ -72,6 +72,16 @@ func (s *Service) Install(ctx context.Context, cfg ServerConfig) (*ServerConfig,
 	err = s.DB.QueryRowContext(ctx, `
 		INSERT INTO mcp_servers (name, transport, command, args, env, url, headers)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (name) DO UPDATE
+		SET transport = EXCLUDED.transport,
+		    command = EXCLUDED.command,
+		    args = EXCLUDED.args,
+		    env = EXCLUDED.env,
+		    url = EXCLUDED.url,
+		    headers = EXCLUDED.headers,
+		    status = 'installed',
+		    error_message = NULL,
+		    updated_at = NOW()
 		RETURNING id, name, transport, command, args, env, url, headers, status, error_message, created_at, updated_at
 	`, cfg.Name, cfg.Transport, cfg.Command, argsJSON, envJSON, cfg.URL, headersJSON).Scan(
 		&result.ID, &result.Name, &result.Transport, &result.Command,

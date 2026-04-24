@@ -75,15 +75,31 @@ func TestService_Install_HappyPath(t *testing.T) {
 	}
 }
 
-func TestService_Install_DuplicateName(t *testing.T) {
+func TestService_Install_DuplicateNameUpsertsExistingServer(t *testing.T) {
 	svc, mock := newTestService(t)
+	now := time.Now()
 
 	mock.ExpectQuery("INSERT INTO mcp_servers").
-		WillReturnError(sql.ErrConnDone) // simulate constraint violation
+		WithArgs("filesystem", "stdio", "npx", sqlmock.AnyArg(), sqlmock.AnyArg(), "", sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows(serverColumns()).
+			AddRow(testServerID, "filesystem", "stdio", "npx",
+				`["-y","@modelcontextprotocol/server-filesystem","/data/workspace"]`, `{}`, "", `{}`,
+				"installed", nil, now, now))
 
-	_, err := svc.Install(context.Background(), ServerConfig{Name: "dup", Transport: "stdio", Command: "echo"})
-	if err == nil {
-		t.Fatal("expected error for duplicate name")
+	result, err := svc.Install(context.Background(), ServerConfig{
+		Name:      "filesystem",
+		Transport: "stdio",
+		Command:   "npx",
+		Args:      []string{"-y", "@modelcontextprotocol/server-filesystem", "/data/workspace"},
+	})
+	if err != nil {
+		t.Fatalf("Install duplicate upsert: %v", err)
+	}
+	if result.ID != testServerID {
+		t.Fatalf("ID = %s, want existing %s", result.ID, testServerID)
+	}
+	if result.Status != "installed" {
+		t.Fatalf("Status = %q, want installed", result.Status)
 	}
 }
 
