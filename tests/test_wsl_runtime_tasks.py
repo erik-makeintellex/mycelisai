@@ -165,6 +165,26 @@ def test_fetch_wsl_remote_reports_actionable_ssh_auth_guidance(monkeypatch):
         raise AssertionError("expected actionable WSL git auth failure")
 
 
+def test_clean_wsl_proof_checkout_preserves_runtime_cache_roots(monkeypatch):
+    calls: list[tuple[str, ...]] = []
+    monkeypatch.setattr(wsl_runtime, "_run_wsl_git", lambda *args, **_kwargs: calls.append(args))
+
+    wsl_runtime._clean_wsl_proof_checkout(distro="mother-brain", checkout="/repo")
+
+    assert calls == [
+        (
+            "clean",
+            "-fdx",
+            "-e",
+            "workspace/tool-cache/",
+            "-e",
+            "workspace/logs/",
+            "-e",
+            "workspace/docker-compose/",
+        )
+    ]
+
+
 def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
     monkeypatch.setattr(wsl_runtime, "_require_windows_dev_host", lambda: None)
     monkeypatch.setattr(wsl_runtime, "_configured_distro", lambda distro="": "mother-brain")

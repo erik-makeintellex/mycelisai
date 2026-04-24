@@ -81,7 +81,7 @@ Windows dev + WSL proof rule:
 - refresh the WSL proof checkout from git after a Windows-side commit/push instead of copying source or generated artifacts across the boundary
 - do not share one long-lived generated environment across Windows and WSL; recreate `.venv`, `interface/node_modules`, and `interface/.next` in the WSL proof checkout before trusting results
 - use the dedicated WSL task lane when you want the guarded handoff/proof flow from Windows: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
-- `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; keep the handoff git-backed rather than copying source across the host boundary
+- `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; its source cleanup preserves generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots so permission-owned runtime/cache mounts do not block the git handoff; keep the handoff git-backed rather than copying source across the host boundary
 - `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, ensures the configured Compose output-block host path exists, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, focused live-backend browser workflows, and the Windows-side GUI probe in one guarded pass
 
 Bootstrap reminder:
@@ -668,7 +668,7 @@ Agents implementing V8 should follow this process:
 4. identify migration targets and required contract updates
 5. implement incremental runtime or documentation updates in the Windows dev repo
 6. commit and push the Windows-side slice before authoritative proof, then refresh the WSL proof checkout from git
-   - expected handoff shape: `git push` from Windows -> `git fetch --prune`, `git checkout`, `git reset --hard`, and `git clean -fdx` in the WSL proof checkout
+   - expected handoff shape: `git push` from Windows -> `git fetch --prune`, `git checkout`, `git reset --hard`, and `git clean -fdx` in the WSL proof checkout while preserving generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots
    - keep that destructive reset/clean behavior scoped to the dedicated WSL proof checkout, not the active Windows dev repo
 7. run authoritative build, API, UI, and runtime proof from the WSL `mother-brain` checkout
    - use the WSL proof checkout for install, backend tests, interface tests/build, Compose bring-up, browser automation, and release-style gates

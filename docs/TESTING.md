@@ -33,7 +33,7 @@ Current validation contract:
 
 Proof checkout rule:
 - use the Windows repo for editing and git operations, then refresh the WSL proof checkout from git before trusting release evidence
-- keep destructive `git reset --hard` / `git clean -fdx` style cleanup scoped to that dedicated WSL proof checkout, not the active Windows dev repo
+- keep destructive `git reset --hard` / source cleanup scoped to that dedicated WSL proof checkout, not the active Windows dev repo; `wsl.refresh` preserves generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots during `git clean` so permission-owned runtime/cache mounts do not block source refresh
 - when the runtime is hosted by WSL on the same Windows machine, the operator-facing browser proof must use the Windows browser at `http://localhost:3000`
 - the guarded Windows-side handoff/proof helpers are `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
 - `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; keep the handoff git-backed instead of copying source trees

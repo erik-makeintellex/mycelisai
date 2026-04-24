@@ -19,6 +19,11 @@ DEFAULT_WSL_REMOTE = os.environ.get("MYCELIS_WSL_PROOF_REMOTE", "origin")
 DEFAULT_GUI_URL = os.environ.get("MYCELIS_WSL_PROOF_GUI_URL", "http://localhost:3000")
 DEFAULT_RELEASE_LANE = os.environ.get("MYCELIS_WSL_PROOF_RELEASE_LANE", "runtime")
 DEFAULT_COMPOSE_WAIT_TIMEOUT = os.environ.get("MYCELIS_WSL_PROOF_COMPOSE_WAIT_TIMEOUT", "240")
+WSL_REFRESH_CLEAN_EXCLUDES = (
+    "workspace/tool-cache/",
+    "workspace/logs/",
+    "workspace/docker-compose/",
+)
 GIT_AUTH_FAILURE_MARKERS = (
     "authentication failed",
     "could not read username",
@@ -279,6 +284,13 @@ def _fetch_wsl_remote_with_auth_repair(remote: str, *, distro: str = "", checkou
 
     detail = _command_detail(result)
     raise SystemExit(f"WSL git fetch failed for remote '{remote}'.\n{detail}")
+
+
+def _clean_wsl_proof_checkout(*, distro: str = "", checkout: str = "") -> None:
+    exclude_args: list[str] = []
+    for path in WSL_REFRESH_CLEAN_EXCLUDES:
+        exclude_args.extend(["-e", path])
+    _run_wsl_git("clean", "-fdx", *exclude_args, distro=distro, checkout=checkout)
 
 
 def _current_local_branch(*, require_attached: bool = True) -> str:
@@ -569,7 +581,7 @@ def refresh(_c, branch="", ref="", distro="", checkout="", remote=""):
             checkout=selected_checkout,
         )
 
-    _run_wsl_git("clean", "-fdx", distro=selected_distro, checkout=selected_checkout)
+    _clean_wsl_proof_checkout(distro=selected_distro, checkout=selected_checkout)
 
     refreshed_state = _collect_wsl_state(distro=selected_distro, checkout=selected_checkout)
     print()

@@ -34,10 +34,10 @@ Recommended host posture:
 Proof-checkout contract:
 - the Windows repo is not the authoritative proof environment; use it to edit, review, and push
 - after a Windows-side commit/push, refresh the WSL proof checkout from git before running authoritative evidence
-- keep destructive cleanup such as `git reset --hard` and `git clean -fdx` scoped to the dedicated WSL proof checkout
+- keep destructive cleanup such as `git reset --hard` and source `git clean` scoped to the dedicated WSL proof checkout; `wsl.refresh` preserves generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots so permission-owned runtime/cache mounts do not block source refresh
 - when the runtime is hosted from WSL on the same Windows machine, the required operator-facing browser path is the Windows browser at `http://localhost:3000`
 - use `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when you want the guarded Windows-dev -> WSL-proof task path instead of a manual handoff
-- `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; keep the boundary commit/push/fetch based instead of copying source trees
+- `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, preserves generated WSL runtime/cache roots during source cleanup, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; keep the boundary commit/push/fetch based instead of copying source trees
 - `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, focused live-backend browser workflows, and the Windows GUI probe
 
 Deployment selection rule:

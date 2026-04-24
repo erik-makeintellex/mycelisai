@@ -332,7 +332,7 @@ Recommended handoff tasks from the Windows repo:
 - `uv run inv wsl.refresh --branch <name>`
 - `uv run inv wsl.validate`
 - `uv run inv wsl.cycle --branch <name>`
-- `wsl.refresh` assumes the WSL proof checkout already has working git auth configured; when it does not, refresh there manually with normal git credentials and keep the handoff git-backed instead of copying files across hosts
+- `wsl.refresh` uses the WSL proof checkout's git credentials, can repair GitHub HTTPS remotes with Git Credential Manager when available, and preserves generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots during source cleanup so permission-owned runtime/cache mounts do not block the git handoff
 - `wsl.validate` preserves an existing WSL `.env.compose`, but when the clean proof checkout has none yet it seeds one from `.env.compose.example`, creates the configured Compose output-block host path if it is missing, and then runs release-preflight, Compose health/storage proof, the live Soma/team/groups/workspace browser checks, and the final Windows-side `http://localhost:3000` probe
 
 These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree.
