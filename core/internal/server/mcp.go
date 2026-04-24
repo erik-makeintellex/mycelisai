@@ -498,6 +498,12 @@ func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Req
 	}
 
 	cfg := entry.ToServerConfig(req.Env)
+	runtimeCfg, err := mcp.ApplyRuntimeDefaults(cfg)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"install failed: prepare runtime defaults: %s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+	cfg = runtimeCfg
 	ctx := r.Context()
 
 	installed, err := s.MCP.Install(ctx, cfg)
@@ -568,6 +574,12 @@ func (s *AdminServer) handleMCPLibraryApply(w http.ResponseWriter, r *http.Reque
 	}
 
 	cfg := entry.ToServerConfig(req.Env)
+	runtimeCfg, err := mcp.ApplyRuntimeDefaults(cfg)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"install failed: prepare runtime defaults: %s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+	cfg = runtimeCfg
 	ctx := r.Context()
 
 	installed, err := s.MCP.Install(ctx, cfg)

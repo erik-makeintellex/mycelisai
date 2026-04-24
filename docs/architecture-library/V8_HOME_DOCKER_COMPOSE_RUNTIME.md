@@ -109,8 +109,9 @@ Minimum standards:
 - compose health must fail when the text cognitive engine is offline, even if the API is still responding
 
 Compose MCP note:
-- the slim home-runtime Core image does not bundle `npm`/`npx`, so compose disables default npm-backed MCP auto-install by default
-- this does not remove manual MCP capability; it only keeps startup logs honest for the home-runtime image
+- the home-runtime Core image bundles Node/npm/npx so curated stdio MCP servers can launch from the shipped container
+- compose still disables default npm-backed MCP auto-install by default so first boot stays quiet and explicit
+- manual `filesystem` installs are runtime-normalized to `MYCELIS_WORKSPACE`, which defaults to `/data/workspace` inside the mounted output block
 
 ## Managed Task Contract
 

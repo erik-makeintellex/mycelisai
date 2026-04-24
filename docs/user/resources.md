@@ -53,6 +53,7 @@ Operators should be able to determine "what the system can access" directly from
 Current posture:
 - curated library installs are the default path
 - `/api/v1/mcp/library/apply` is the one-call API for applying a curated potential source: it returns `installed` with server/tools/governance when allowed, or `requires_approval` with the inspection report when a policy boundary is still required
+- curated `filesystem` installs are repeat-safe and bind to the deployment workspace root, such as `/data/workspace` in the supported Docker Compose runtime
 - local-first current-group configuration can install directly when policy allows
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
 - credentialed external SaaS entries such as Slack, GitHub, hosted search, and hosted media should now be expected to require approval rather than behaving like low-risk local tools

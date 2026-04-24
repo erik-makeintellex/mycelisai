@@ -187,7 +187,8 @@ Compose runtime guardrails:
 - `compose.up` and `compose.migrate` now follow the same compatibility-aware posture as `db.migrate`: once the compose `cortex` schema already has the required late-runtime tables and columns, the tasks skip forward replay and leave reset/rebuild work to `compose.down --volumes`
 - `compose.up` prints deterministic step numbers, stage expectations, and recovery guidance on timeout so both operators and agent callers can follow the same bring-up contract
 - prefer `uv run inv compose.up --build --wait-timeout=240` on a fresh or slower host where image build and first readiness can legitimately take longer than the default wait window
-- the slim compose Core image disables default npm-backed MCP auto-bootstrap by default to keep startup logs honest; manual/external MCP connectivity remains supported
+- the compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; default npm-backed MCP auto-bootstrap stays disabled by default to keep startup logs honest
+- manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root, so the Compose path binds them to `/data/workspace` inside the mounted output block
 
 ### Clean Run Discipline for Runtime and Integration Checks
 

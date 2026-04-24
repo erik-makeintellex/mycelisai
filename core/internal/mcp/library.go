@@ -114,7 +114,7 @@ func (entry *LibraryEntry) ToServerConfig(envOverrides map[string]string) Server
 		Name:      entry.Name,
 		Transport: entry.Transport,
 		Command:   entry.Command,
-		Args:      entry.Args,
+		Args:      append([]string(nil), entry.Args...),
 		Env:       env,
 		URL:       entry.URL,
 	}

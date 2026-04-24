@@ -425,18 +425,13 @@ func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool 
 			continue
 		}
 		cfg := entry.ToServerConfig(nil)
-		// For filesystem, resolve the workspace root from the same contract used by
-		// the internal file tools so manifested files land on mounted workspace storage.
 		if name == "filesystem" {
-			workspaceRoot := resolveFilesystemWorkspaceRoot()
-			if err := os.MkdirAll(workspaceRoot, 0o755); err != nil {
-				log.Printf("[mcp] bootstrap: failed to create workspace root %s: %v", workspaceRoot, err)
+			var err error
+			cfg, err = ApplyRuntimeDefaults(cfg)
+			if err != nil {
+				log.Printf("[mcp] bootstrap: failed to prepare filesystem workspace root %s: %v", ResolveFilesystemWorkspaceRoot(), err)
 			}
-			// Replace the last arg (the mount path) with the resolved directory
-			if len(cfg.Args) >= 3 {
-				cfg.Args[len(cfg.Args)-1] = workspaceRoot
-			}
-			log.Printf("[mcp] bootstrap: filesystem mount path: %s", workspaceRoot)
+			log.Printf("[mcp] bootstrap: filesystem mount path: %s", ResolveFilesystemWorkspaceRoot())
 		}
 		log.Printf("[mcp] bootstrap: installing %s (command: %s %v)", name, cfg.Command, cfg.Args)
 		installed, err := s.Install(ctx, cfg)
@@ -475,7 +470,26 @@ func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool 
 	}
 }
 
-func resolveFilesystemWorkspaceRoot() string {
+// ApplyRuntimeDefaults adapts curated library install config to the active
+// runtime's mounted storage contract before the server is persisted/launched.
+func ApplyRuntimeDefaults(cfg ServerConfig) (ServerConfig, error) {
+	if cfg.Name != "filesystem" {
+		return cfg, nil
+	}
+
+	workspaceRoot := ResolveFilesystemWorkspaceRoot()
+	cfg.Args = append([]string(nil), cfg.Args...)
+	if len(cfg.Args) >= 3 {
+		cfg.Args[len(cfg.Args)-1] = workspaceRoot
+	}
+
+	if err := os.MkdirAll(workspaceRoot, 0o755); err != nil {
+		return cfg, err
+	}
+	return cfg, nil
+}
+
+func ResolveFilesystemWorkspaceRoot() string {
 	workspace := strings.TrimSpace(os.Getenv("MYCELIS_WORKSPACE"))
 	if workspace == "" {
 		return "./workspace"

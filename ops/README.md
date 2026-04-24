@@ -97,7 +97,8 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 - Compose now emits deterministic stage expectations and timeout guidance so humans and agent-run callers can tell what should happen next and which recovery command to run if a stage stalls.
 - Use `uv run inv compose.up --build --wait-timeout=240` on a fresh or slower machine when image build and first readiness can legitimately take longer than the default window.
 - `compose.health` is a usable-product gate for the home runtime, so it fails when text inference is offline even if the API still responds.
-- The slim compose Core image disables default npm-backed MCP auto-bootstrap by default to keep startup logs honest; manual/external MCP connectivity remains supported.
+- The compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; default npm-backed MCP auto-bootstrap still stays disabled by default to keep startup logs honest.
+- Manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root, which is `/data/workspace` in the supported Compose output block.
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.

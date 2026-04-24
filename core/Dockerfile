@@ -25,7 +25,9 @@ WORKDIR /app/core
 RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
 
 # Run Stage
-FROM gcr.io/distroless/base-debian12
+# Curated stdio MCP servers are launched through npm/npx, so the self-hosted
+# runtime image carries Node's package runner alongside the Go server.
+FROM node:22-bookworm-slim
 
 WORKDIR /core
 

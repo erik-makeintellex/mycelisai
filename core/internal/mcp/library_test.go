@@ -198,6 +198,22 @@ func TestLibraryEntry_ToServerConfig_Basic(t *testing.T) {
 	}
 }
 
+func TestLibraryEntry_ToServerConfig_CopiesArgs(t *testing.T) {
+	entry := LibraryEntry{
+		Name:      "filesystem",
+		Transport: "stdio",
+		Command:   "npx",
+		Args:      []string{"-y", "@mcp/server-fs", "./workspace"},
+	}
+
+	cfg := entry.ToServerConfig(nil)
+	cfg.Args[2] = "/data/workspace"
+
+	if entry.Args[2] != "./workspace" {
+		t.Fatalf("entry args mutated to %q, want original ./workspace", entry.Args[2])
+	}
+}
+
 func TestLibraryEntry_ToServerConfig_EnvOverride(t *testing.T) {
 	entry := LibraryEntry{
 		Name:      "github",

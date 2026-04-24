@@ -17,6 +17,7 @@ REMOTE_USER_TESTING = ROOT / "docs" / "REMOTE_USER_TESTING.md"
 API_REFERENCE = ROOT / "docs" / "API_REFERENCE.md"
 BACKEND_ARCH = ROOT / "docs" / "architecture" / "BACKEND.md"
 DOCKER_COMPOSE = ROOT / "docker-compose.yml"
+CORE_DOCKERFILE = ROOT / "core" / "Dockerfile"
 V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
 
 
@@ -73,6 +74,49 @@ def test_compose_runtime_maps_ai_host_into_provider_overrides():
     missing = [snippet for snippet in required_snippets if snippet not in text]
     assert not missing, "docker-compose.yml is missing provider endpoint overrides:\n" + "\n".join(missing)
     assert "      OLLAMA_HOST:" not in text, "docker-compose.yml should not inject legacy OLLAMA_HOST into Core"
+
+
+def test_compose_core_image_supports_curated_stdio_mcp_launch():
+    dockerfile = CORE_DOCKERFILE.read_text(encoding="utf-8")
+    required_dockerfile_snippets = [
+        "FROM node:22-bookworm-slim",
+        "Curated stdio MCP servers are launched through npm/npx",
+    ]
+    missing_dockerfile = [snippet for snippet in required_dockerfile_snippets if snippet not in dockerfile]
+    assert not missing_dockerfile, "core/Dockerfile is missing stdio MCP runtime support:\n" + "\n".join(missing_dockerfile)
+
+    snippets = [
+        (
+            README,
+            [
+                "the supported Core container image includes Node/npm/npx for curated stdio MCP servers",
+                "manual `filesystem` library install must be able to launch and bind to the configured `/data/workspace` output block",
+            ],
+        ),
+        (
+            OPERATIONS,
+            [
+                "the compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container",
+                "manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root",
+            ],
+        ),
+        (
+            TESTING,
+            [
+                "the deployed Core image can launch the curated `filesystem` stdio MCP server through `npx`",
+                "runtime workspace normalization for filesystem installs",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Curated stdio MCP runtime packaging contract is missing from active docs:\n" + "\n".join(missing)
 
 
 def test_k8s_docs_prefer_k3d_with_kind_fallback():
