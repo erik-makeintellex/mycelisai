@@ -853,13 +853,14 @@ Evidence:
 7. `uv run inv interface.typecheck` -> pass.
 8. `cd interface; npx vitest run __tests__/pages/RunsPage.test.tsx __tests__/runs/RunDetailPage.test.tsx __tests__/runs/ConversationLog.test.tsx __tests__/runs/RunTimeline.test.tsx __tests__/pages/OrganizationPage.team-design-flow.test.tsx __tests__/organizations/TeamLeadInteractionPanel.retry-flow.test.tsx --reporter=dot --maxWorkers=1` -> pass (`43` passed).
 9. `$env:PYTHONPATH='.'; uv run pytest tests/test_runtime_deploy_contract_text.py tests/test_docs_links.py -q` -> pass (`63` passed).
+10. `uv run inv wsl.refresh` followed by `uv run inv wsl.validate --lane=release --compose-wait-timeout=240` at commit `54be7e0` -> pass after one transient Docker SWC download retry; WSL checkout dirty paths `0`, runtime preflight/baseline passed, Compose health/storage passed, live Soma/team/groups/workspace browser specs passed, and Windows GUI probe returned `http://localhost:3000 [200]`.
 
 ## Immediate Next Actions
 
-1. `REQUIRED` validate WSL git auth repair/report behavior for `wsl.refresh`.
+1. `COMPLETE` validate WSL git auth repair/report behavior for `wsl.refresh`.
    - keep the Windows-to-WSL handoff git-backed instead of artifact-backed
    - make manual source handoff unnecessary; when host auth is blocked, fail with actionable SSH/HTTPS guidance
-2. `REQUIRED` run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting the new browser-gap evidence as authoritative.
+2. `COMPLETE` run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting the new browser-gap evidence as authoritative.
    - prove release-preflight, Compose health/storage, live Soma/team/groups/workspace browser workflows, and the Windows `http://localhost:3000` probe from the git-refreshed checkout
    - use the `wsl.refresh` auth guidance instead of copying source if WSL fetch is still blocked
 3. `COMPLETE` keep `/runs` browser proof green beyond route smoke.
