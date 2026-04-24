@@ -421,6 +421,7 @@ def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification(
                     "Release-proof sequencing rule:",
                     "validate WSL git auth repair/report behavior for `wsl.refresh`",
                     "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence",
+                    "that task intentionally runs `ci.release-preflight --lane=runtime --no-e2e` first",
                     "close focused browser proof gaps next, currently `/runs` workflow depth and guided Soma retry/recovery",
                     "rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL",
                 ],
@@ -428,6 +429,8 @@ def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification(
             (
                 V8_DEV_STATE,
                 [
+                    "guarded `uv run inv wsl.validate --lane=release` path from the refreshed `mother-brain` checkout",
+                    "maps `--lane=service` and `--lane=release` to `ci.release-preflight --lane=runtime --no-e2e`",
                     "WSL `wsl.validate` from the refreshed proof checkout, deeper `/runs` workflow proof, guided retry/recovery, and broader headed certification from committed state",
                     "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting browser-gap or certification evidence",
                     "live MCP workflow correlation is now green from the refreshed WSL proof checkout",

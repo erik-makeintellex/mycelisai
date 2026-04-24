@@ -224,6 +224,35 @@ def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
     assert probe_calls == ["http://localhost:3000"]
 
 
+def test_validate_release_lane_uses_runtime_preflight_before_compose_owned_gates(monkeypatch):
+    monkeypatch.setattr(wsl_runtime, "_require_windows_dev_host", lambda: None)
+    monkeypatch.setattr(wsl_runtime, "_configured_distro", lambda distro="": "mother-brain")
+    monkeypatch.setattr(wsl_runtime, "_configured_checkout", lambda checkout="": "/home/erik/Projects/mycelisai/scratch")
+    monkeypatch.setattr(
+        wsl_runtime,
+        "_collect_wsl_state",
+        lambda **_kwargs: {"branch": "main", "commit": "abc123", "dirty": 0},
+    )
+    monkeypatch.setattr(wsl_runtime, "_print_repo_state", lambda *args, **kwargs: None)
+    monkeypatch.setattr(wsl_runtime, "_ensure_wsl_compose_env", lambda **_kwargs: None)
+    monkeypatch.setattr(wsl_runtime, "_ensure_wsl_output_block_path", lambda **_kwargs: None)
+    monkeypatch.setattr(wsl_runtime, "_probe_windows_gui", lambda _url: None)
+
+    shell_calls: list[str] = []
+    monkeypatch.setattr(
+        wsl_runtime,
+        "_run_wsl_shell",
+        lambda command, **_kwargs: shell_calls.append(command),
+    )
+
+    wsl_runtime.validate.body(Context(), lane="release")
+
+    assert "uv run inv ci.release-preflight --lane=runtime --no-e2e" in shell_calls
+    assert "uv run inv ci.release-preflight --lane=release --no-e2e" not in shell_calls
+    assert "uv run inv compose.health" in shell_calls
+    assert "uv run inv compose.storage-health" in shell_calls
+
+
 def test_ensure_wsl_compose_env_bootstraps_from_example(monkeypatch):
     monkeypatch.setattr(wsl_runtime, "_configured_checkout", lambda checkout="": "/home/erik/Projects/mycelisai/scratch")
 

@@ -19,6 +19,8 @@ DEFAULT_WSL_REMOTE = os.environ.get("MYCELIS_WSL_PROOF_REMOTE", "origin")
 DEFAULT_GUI_URL = os.environ.get("MYCELIS_WSL_PROOF_GUI_URL", "http://localhost:3000")
 DEFAULT_RELEASE_LANE = os.environ.get("MYCELIS_WSL_PROOF_RELEASE_LANE", "runtime")
 DEFAULT_COMPOSE_WAIT_TIMEOUT = os.environ.get("MYCELIS_WSL_PROOF_COMPOSE_WAIT_TIMEOUT", "240")
+WSL_PROOF_LANES = {"baseline", "runtime", "service", "release"}
+WSL_COMPOSE_OWNED_LANES = {"service", "release"}
 WSL_REFRESH_CLEAN_EXCLUDES = (
     "workspace/tool-cache/",
     "workspace/logs/",
@@ -492,6 +494,12 @@ PY"""
     _run_wsl_shell(command, distro=distro, checkout=selected_checkout)
 
 
+def _wsl_preflight_lane(selected_lane: str) -> str:
+    if selected_lane in WSL_COMPOSE_OWNED_LANES:
+        return "runtime"
+    return selected_lane
+
+
 @task
 def status(_c, distro="", checkout="", remote=""):
     """
@@ -591,7 +599,7 @@ def refresh(_c, branch="", ref="", distro="", checkout="", remote=""):
 
 @task(
     help={
-        "lane": "Release-preflight lane to run inside WSL before compose/browser proof (default: runtime).",
+        "lane": "WSL proof lane. service/release run runtime preflight, then task-owned Compose/browser proof (default: runtime).",
         "distro": "WSL distro name. Defaults to MYCELIS_WSL_PROOF_DISTRO or mother-brain.",
         "checkout": "Linux-path checkout to validate. Defaults to MYCELIS_WSL_PROOF_REPO.",
         "gui_url": "Windows-side URL to probe after the WSL stack is healthy (default: http://localhost:3000).",
@@ -609,10 +617,11 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
     selected_lane = (lane or DEFAULT_RELEASE_LANE).strip() or DEFAULT_RELEASE_LANE
     selected_wait_timeout = (compose_wait_timeout or DEFAULT_COMPOSE_WAIT_TIMEOUT).strip() or DEFAULT_COMPOSE_WAIT_TIMEOUT
 
-    if selected_lane not in {"baseline", "runtime", "service", "release"}:
+    if selected_lane not in WSL_PROOF_LANES:
         raise SystemExit(
             f"Unsupported WSL proof validation lane '{selected_lane}'. Expected baseline, runtime, service, or release."
         )
+    preflight_lane = _wsl_preflight_lane(selected_lane)
 
     wsl_state = _collect_wsl_state(distro=selected_distro, checkout=selected_checkout)
     if int(wsl_state["dirty"]) > 0:
@@ -622,7 +631,14 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
 
     print("=== WSL PROOF VALIDATE ===")
     _print_repo_state("WSL proof checkout", wsl_state, path=selected_checkout, distro=selected_distro)
-    print(f"Requested release-preflight lane: {selected_lane}")
+    print(f"Requested WSL proof lane: {selected_lane}")
+    if preflight_lane != selected_lane:
+        print(
+            "Release-preflight lane inside WSL: runtime "
+            f"(the {selected_lane} service/browser gates are owned by the Compose proof sequence below)"
+        )
+    else:
+        print(f"Release-preflight lane inside WSL: {preflight_lane}")
     print(f"Windows GUI probe URL: {selected_gui_url}")
     print()
 
@@ -631,7 +647,7 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
 
     commands = (
         "uv run inv install",
-        f"uv run inv ci.release-preflight --lane={selected_lane} --no-e2e",
+        f"uv run inv ci.release-preflight --lane={preflight_lane} --no-e2e",
         "uv run inv auth.posture --compose",
         f"uv run inv compose.up --build --wait-timeout={selected_wait_timeout}",
         "uv run inv compose.health",
