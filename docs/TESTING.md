@@ -43,7 +43,7 @@ Proof checkout rule:
 Release-proof sequencing rule:
 1. validate WSL git auth repair/report behavior for `wsl.refresh` so the proof checkout can refresh from git without source copying when host credentials are available and fail actionably when they are not
 2. run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence
-3. close focused browser proof gaps next, currently `/runs` workflow depth, guided Soma retry/recovery, and live MCP-backed workflow correlation
+3. close focused browser proof gaps next, currently `/runs` workflow depth and guided Soma retry/recovery
 4. rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL
 
 ## User Interaction Delivery Gate
@@ -140,7 +140,7 @@ Immediate test additions required for stronger full-stack confidence:
 1. `COMPLETE` add a focused Connected Tools browser proof for MCP registry/library/activity visibility beyond component coverage.
 2. `COMPLETE` add a browser proof for direct Soma output vs team-managed output package delivery.
 3. `COMPLETE` add browser proof for media artifact rendering/save/download, or a precise missing-media-engine blocker when no media engine is configured.
-4. `NEXT` add live-backend browser proof that a Soma/team workflow can use an MCP-backed capability and surface matching recent MCP activity.
+4. `COMPLETE` live-backend browser proof now verifies that a Soma/team workflow can use an MCP-backed capability and surface matching recent MCP activity.
 5. `NEXT` unskip and keep green the guided Soma retry/recovery browser scenario so first-run failure handling stays proven.
 6. `COMPLETE` expand `/docs` coverage to include markdown internal-link traversal and manifest/read failure fallback branches.
 
@@ -535,7 +535,7 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/missions.spec.ts` | Dashboard load, default navigation, organization-entry actions |
 | `interface/e2e/specs/governance.spec.ts` | Approvals page, policy tab, pending section |
 | `interface/e2e/specs/catalogue.spec.ts` | Catalogue page, agent cards, create button |
-| `interface/e2e/specs/settings.spec.ts` | Settings guided setup, profile/access/theme persistence; MCP registry browser proof is still a required focused addition |
+| `interface/e2e/specs/settings.spec.ts` | Settings guided setup, profile/access/theme persistence; Connected Tools MCP browser proof now lives in `mcp-connected-tools.spec.ts` |
 | `interface/e2e/specs/layout.spec.ts` | Shell structure, zone rendering |
 | `interface/e2e/specs/navigation.spec.ts` | Route transitions, active states |
 | `interface/e2e/specs/trust_economy.spec.ts` | Automations approvals reachability |
@@ -555,9 +555,9 @@ For execution-facing UI work, Playwright coverage should prefer user stories wit
 | `interface/e2e/specs/accessibility.spec.ts` | Axe-backed accessibility baseline for key operator surfaces |
 | `interface/e2e/specs/workspace-live-backend.spec.ts` | Real Workspace contract coverage against live `/api/v1/services/status` and `/api/v1/council/members` traffic |
 
-Focused additions still planned for the MVP media/team-output lane:
+Focused additions for the MVP media/team-output lane:
 
-- `interface/e2e/specs/mcp-connected-tools.spec.ts`: Connected Tools registry/library/activity visibility and high-risk install posture.
+- `interface/e2e/specs/mcp-connected-tools.spec.ts`: Connected Tools registry/library/activity visibility, high-risk install posture, and live MCP team-lane correlation proof.
 - `interface/e2e/specs/media-output.spec.ts`: mocked image/audio/file/document artifacts, visible `Artifact result`, save action, saved path, and download references.
 - live media extension to `soma-governance-live.spec.ts` or a gated `media-output-live.spec.ts`: real artifact display/download when the media engine exists, or a precise missing-engine blocker when it does not.
 - compose output-block proof: when testing a local or Pinokio/media-hosted output directory, set `MYCELIS_OUTPUT_BLOCK_MODE=local_hosted` and `MYCELIS_OUTPUT_HOST_PATH` to the host directory mounted as Core `/data`; the Compose task resolves the path with Python `pathlib` and should fail early if the directory is missing or not a directory. For chart/Kubernetes proof, keep the output block on the cluster-managed PVC and treat host-path mounts as an explicit self-hosted exception.

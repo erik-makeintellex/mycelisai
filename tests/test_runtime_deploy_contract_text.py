@@ -417,23 +417,23 @@ def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification(
     snippets = [
         (
             TESTING,
-            [
-                "Release-proof sequencing rule:",
-                "validate WSL git auth repair/report behavior for `wsl.refresh`",
-                "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence",
-                "close focused browser proof gaps next, currently `/runs` workflow depth, guided Soma retry/recovery, and live MCP-backed workflow correlation",
-                "rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL",
-            ],
-        ),
-        (
-            V8_DEV_STATE,
-            [
-                "real-host validation for the `wsl.refresh` auth repair/report path, WSL `wsl.validate` from the refreshed proof checkout, deeper `/runs` workflow proof, guided retry/recovery, live MCP-backed workflow correlation, and broader headed certification from committed state",
-                "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting browser-gap or certification evidence",
-                "live MCP workflow correlation now has a focused browser test path in `interface/e2e/specs/mcp-connected-tools.spec.ts`",
-                "run `wsl.validate` from the refreshed proof checkout, keep the new `/runs` browser workflow proof green, unskip and keep green the guided Soma retry/recovery lane, run the live MCP-backed workflow correlation proof with `PLAYWRIGHT_LIVE_BACKEND`, then rerun the broader headed Chromium certification pass from committed state",
-            ],
-        ),
+                [
+                    "Release-proof sequencing rule:",
+                    "validate WSL git auth repair/report behavior for `wsl.refresh`",
+                    "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence",
+                    "close focused browser proof gaps next, currently `/runs` workflow depth and guided Soma retry/recovery",
+                    "rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL",
+                ],
+            ),
+            (
+                V8_DEV_STATE,
+                [
+                    "WSL `wsl.validate` from the refreshed proof checkout, deeper `/runs` workflow proof, guided retry/recovery, and broader headed certification from committed state",
+                    "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting browser-gap or certification evidence",
+                    "live MCP workflow correlation is now green from the refreshed WSL proof checkout",
+                    "run `wsl.validate` from the refreshed proof checkout, keep the new `/runs` browser workflow proof green, unskip and keep green the guided Soma retry/recovery lane, then rerun the broader headed Chromium certification pass from committed state",
+                ],
+            ),
     ]
 
     missing: list[str] = []
