@@ -28,6 +28,9 @@ export interface MCPRecentActivity {
     state: string;
     message: string;
     timestamp: string;
+    runId?: string;
+    teamId?: string;
+    agentId?: string;
 }
 
 export default function MCPServerCard({ server, onDelete, recentActivity = [] }: MCPServerCardProps) {
@@ -121,6 +124,11 @@ export default function MCPServerCard({ server, onDelete, recentActivity = [] }:
                         <p className="mt-0.5 text-[10px] text-cortex-text-muted">
                             {latestActivity.message}
                         </p>
+                        {formatActivityScope(latestActivity) && (
+                            <p className="mt-1 text-[10px] font-mono text-cortex-text-muted">
+                                {formatActivityScope(latestActivity)}
+                            </p>
+                        )}
                         <p className="mt-1 text-[10px] font-mono text-cortex-text-muted">
                             {formatTimestamp(latestActivity.timestamp)}
                         </p>
@@ -150,6 +158,11 @@ export default function MCPServerCard({ server, onDelete, recentActivity = [] }:
                                         <p className="mt-1 text-[10px] text-cortex-text-muted">
                                             {activity.message}
                                         </p>
+                                        {formatActivityScope(activity) && (
+                                            <p className="mt-1 text-[10px] font-mono text-cortex-text-muted">
+                                                {formatActivityScope(activity)}
+                                            </p>
+                                        )}
                                         <p className="mt-1 text-[10px] font-mono text-cortex-text-muted">
                                             {formatTimestamp(activity.timestamp)}
                                         </p>
@@ -201,4 +214,18 @@ function formatTimestamp(value: string): string {
         return value;
     }
     return date.toLocaleString();
+}
+
+export function formatActivityScope(activity: MCPRecentActivity): string {
+    const parts: string[] = [];
+    if (activity.teamId) {
+        parts.push(`Team ${activity.teamId}`);
+    }
+    if (activity.agentId) {
+        parts.push(`Agent ${activity.agentId}`);
+    }
+    if (activity.runId) {
+        parts.push(`Run ${activity.runId}`);
+    }
+    return parts.join(" · ");
 }

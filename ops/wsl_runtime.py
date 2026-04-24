@@ -19,6 +19,17 @@ DEFAULT_WSL_REMOTE = os.environ.get("MYCELIS_WSL_PROOF_REMOTE", "origin")
 DEFAULT_GUI_URL = os.environ.get("MYCELIS_WSL_PROOF_GUI_URL", "http://localhost:3000")
 DEFAULT_RELEASE_LANE = os.environ.get("MYCELIS_WSL_PROOF_RELEASE_LANE", "runtime")
 DEFAULT_COMPOSE_WAIT_TIMEOUT = os.environ.get("MYCELIS_WSL_PROOF_COMPOSE_WAIT_TIMEOUT", "240")
+GIT_AUTH_FAILURE_MARKERS = (
+    "authentication failed",
+    "could not read username",
+    "could not read password",
+    "terminal prompts disabled",
+    "permission denied (publickey)",
+    "could not read from remote repository",
+    "repository not found",
+    "support for password authentication was removed",
+    "no such device or address",
+)
 
 
 @dataclass
@@ -108,6 +119,25 @@ def _run_wsl_git(*args: str, distro: str = "", checkout: str = "", check: bool =
     )
 
 
+def _run_wsl_git_noninteractive(
+    *args: str,
+    distro: str = "",
+    checkout: str = "",
+    check: bool = True,
+) -> CommandResult:
+    return _run_command(
+        _wsl_command(
+            "env",
+            "GIT_TERMINAL_PROMPT=0",
+            "git",
+            *args,
+            distro=distro,
+            checkout=checkout,
+        ),
+        check=check,
+    )
+
+
 def _run_wsl_shell(command: str, *, distro: str = "", checkout: str = "", check: bool = True) -> None:
     completed = subprocess.run(
         _wsl_command("bash", "-lc", command, distro=distro, checkout=checkout),
@@ -120,6 +150,135 @@ def _run_wsl_shell(command: str, *, distro: str = "", checkout: str = "", check:
 
 def _git_output(result: CommandResult) -> str:
     return (result.stdout or "").strip()
+
+
+def _command_detail(result: CommandResult) -> str:
+    return (result.stderr or result.stdout).strip() or f"exit {result.returncode}"
+
+
+def _is_git_auth_failure(result: CommandResult) -> bool:
+    if result.returncode == 0:
+        return False
+    text = f"{result.stderr}\n{result.stdout}".lower()
+    return any(marker in text for marker in GIT_AUTH_FAILURE_MARKERS)
+
+
+def _is_github_https_remote(remote_url: str) -> bool:
+    normalized = remote_url.strip().lower()
+    return normalized.startswith("https://") and "github.com" in normalized
+
+
+def _escaped_git_helper_path(path: str) -> str:
+    return path.replace(" ", "\\ ")
+
+
+def _wsl_remote_url(remote: str, *, distro: str = "", checkout: str = "") -> str:
+    result = _run_wsl_git("remote", "get-url", remote, distro=distro, checkout=checkout, check=False)
+    remote_url = _git_output(result)
+    if result.returncode != 0 or not remote_url:
+        detail = _command_detail(result)
+        raise SystemExit(f"WSL proof checkout cannot resolve git remote '{remote}'.\n{detail}")
+    return remote_url
+
+
+def _find_windows_gcm_helper(*, distro: str = "", checkout: str = "") -> str:
+    command = r"""
+for candidate in \
+  "/mnt/c/Program Files/Git/mingw64/bin/git-credential-manager.exe" \
+  "/mnt/c/Program Files/Git/cmd/git-credential-manager.exe" \
+  "/mnt/c/Program Files (x86)/Git/mingw64/bin/git-credential-manager.exe"
+do
+  if [ -x "$candidate" ]; then
+    printf '%s\n' "$candidate"
+    exit 0
+  fi
+done
+command -v git-credential-manager 2>/dev/null || true
+"""
+    result = _run_command(
+        _wsl_command("bash", "-lc", command, distro=distro, checkout=checkout),
+        check=False,
+    )
+    if result.returncode != 0:
+        return ""
+    return _git_output(result).splitlines()[0].strip() if _git_output(result) else ""
+
+
+def _maybe_configure_wsl_gcm_helper(
+    remote_url: str,
+    *,
+    distro: str = "",
+    checkout: str = "",
+) -> bool:
+    if not _is_github_https_remote(remote_url):
+        return False
+
+    helper_path = _find_windows_gcm_helper(distro=distro, checkout=checkout)
+    if not helper_path:
+        return False
+
+    helper = _escaped_git_helper_path(helper_path)
+    _run_wsl_git("config", "--local", "credential.helper", helper, distro=distro, checkout=checkout)
+    print(f"WSL git auth: configured repo-local Git Credential Manager helper: {helper_path}")
+    return True
+
+
+def _wsl_git_auth_guidance(remote: str, remote_url: str, result: CommandResult) -> str:
+    detail = _command_detail(result)
+    if remote_url.strip().lower().startswith("git@") or remote_url.strip().lower().startswith("ssh://"):
+        repair = (
+            "This WSL checkout uses an SSH remote. Make a GitHub key available inside WSL "
+            "and verify it with `ssh -T git@github.com`, or switch only the WSL proof checkout remote "
+            "to an HTTPS GitHub URL that can use Git Credential Manager."
+        )
+    else:
+        repair = (
+            "This WSL checkout uses an HTTPS remote. Sign in through Git Credential Manager from Windows "
+            "with `git fetch {remote}` in the Windows repo, then rerun `uv run inv wsl.refresh`. "
+            "If WSL still cannot see Git for Windows, configure the proof checkout with "
+            "`git config --local credential.helper /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe`."
+        ).format(remote=remote)
+
+    return (
+        f"WSL git auth is not ready for remote '{remote}' ({remote_url}).\n"
+        f"{repair}\n"
+        "Keep the Windows-dev -> WSL-proof boundary git-backed: push from Windows, fetch/reset in WSL, "
+        "and do not copy source trees across the host boundary.\n"
+        f"Original git output:\n{detail}"
+    )
+
+
+def _fetch_wsl_remote_with_auth_repair(remote: str, *, distro: str = "", checkout: str = "") -> None:
+    remote_url = _wsl_remote_url(remote, distro=distro, checkout=checkout)
+    result = _run_wsl_git_noninteractive(
+        "fetch",
+        "--prune",
+        remote,
+        distro=distro,
+        checkout=checkout,
+        check=False,
+    )
+    if result.returncode == 0:
+        return
+
+    if _is_git_auth_failure(result) and _maybe_configure_wsl_gcm_helper(remote_url, distro=distro, checkout=checkout):
+        print("WSL git auth: retrying fetch after helper repair...")
+        result = _run_wsl_git_noninteractive(
+            "fetch",
+            "--prune",
+            remote,
+            distro=distro,
+            checkout=checkout,
+            check=False,
+        )
+        if result.returncode == 0:
+            return
+
+    if _is_git_auth_failure(result):
+        raise SystemExit(_wsl_git_auth_guidance(remote, remote_url, result))
+
+    detail = _command_detail(result)
+    raise SystemExit(f"WSL git fetch failed for remote '{remote}'.\n{detail}")
 
 
 def _current_local_branch(*, require_attached: bool = True) -> str:
@@ -384,7 +543,7 @@ def refresh(_c, branch="", ref="", distro="", checkout="", remote=""):
     _run_local_git("fetch", "--prune", selected_remote)
 
     print("Fetching remote refs in the WSL proof repo...")
-    _run_wsl_git("fetch", "--prune", selected_remote, distro=selected_distro, checkout=selected_checkout)
+    _fetch_wsl_remote_with_auth_repair(selected_remote, distro=selected_distro, checkout=selected_checkout)
 
     if target_branch == "detached":
         _ensure_remote_contains_commit(selected_remote, checkout_ref, distro=selected_distro, checkout=selected_checkout)

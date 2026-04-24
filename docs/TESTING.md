@@ -36,9 +36,15 @@ Proof checkout rule:
 - keep destructive `git reset --hard` / `git clean -fdx` style cleanup scoped to that dedicated WSL proof checkout, not the active Windows dev repo
 - when the runtime is hosted by WSL on the same Windows machine, the operator-facing browser proof must use the Windows browser at `http://localhost:3000`
 - the guarded Windows-side handoff/proof helpers are `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle`
-- `uv run inv wsl.refresh` assumes the WSL proof checkout already has working git auth; when that auth helper is not configured yet, refresh from git manually inside WSL and keep the handoff git-backed instead of copying source trees
+- `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; keep the handoff git-backed instead of copying source trees
 - `uv run inv wsl.validate` now self-seeds `.env.compose` from `.env.compose.example` when the clean WSL proof checkout does not already have one, creates the configured Compose output-block host path when it is missing, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, live Soma/team/groups/workspace browser workflows, and the Windows-side GUI probe
 - `uv run inv install` now provisions the managed Playwright Chromium binary as part of the supported Interface/browser test toolchain, so a fresh checkout does not need a separate manual browser install before `uv run inv interface.e2e`
+
+Release-proof sequencing rule:
+1. validate WSL git auth repair/report behavior for `wsl.refresh` so the proof checkout can refresh from git without source copying when host credentials are available and fail actionably when they are not
+2. run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence
+3. close focused browser proof gaps next, currently `/runs` workflow depth, guided Soma retry/recovery, and live MCP-backed workflow correlation
+4. rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL
 
 ## User Interaction Delivery Gate
 
@@ -108,7 +114,7 @@ This matrix is route-driven and code-verified against `interface/app/**`, `inter
 | `/memory` | `MemoryPage.test.tsx`, memory component suites | `memory.spec.ts` (live-backend-gated via `PLAYWRIGHT_LIVE_BACKEND`) | `ACTIVE` |
 | `/system` (+ redirects from `/telemetry`, `/matrix`) | `SystemPage.test.tsx`, redirect page tests | route-level smoke remains unit-first; live-backend/browser depth is still selective | `ACTIVE` |
 | `/settings` (+ `/settings/tools`) | `SettingsPage.test.tsx`, settings component suites, `MCPToolRegistry.test.tsx`, `MCPLibraryBrowser.test.tsx` | `settings.spec.ts` for guided settings/profile/access/theme; Connected Tools browser depth now lives on `/resources?tab=tools` in `mcp-connected-tools.spec.ts` | `ACTIVE` |
-| `/runs`, `/runs/[id]`, `/runs/[id]/chain` | run component suites (`RunDetailPage`, timeline, cards), `RunsPage.test.tsx`, `RunChainPage.test.tsx`, `ViewChain.test.tsx` | `docs-and-runs.spec.ts` route smoke for docs plus mocked chain lineage proof; broader `/runs` workflow depth remains secondary to the MVP route gate | `ACTIVE` |
+| `/runs`, `/runs/[id]`, `/runs/[id]/chain` | run component suites (`RunDetailPage`, timeline, cards), `RunsPage.test.tsx`, `RunChainPage.test.tsx`, `ViewChain.test.tsx` | `docs-and-runs.spec.ts` covers docs navigation plus mocked `/runs` list state, detail conversation filtering, operator interjection, event retry/failure evidence, and chain lineage proof | `ACTIVE` |
 | `/docs` in-app browser | `DocsPage.test.tsx` for manifest load, internal markdown-link traversal, and readable doc-load failure states | `docs-and-runs.spec.ts` docs manifest/render smoke plus internal-link navigation | `ACTIVE` |
 | `/teams` team roster + specialization hub | `TeamsPage.test.tsx`, `pages/TeamsPage.test.tsx` | `teams.spec.ts` | `ACTIVE` |
 | `/teams/create` guided team-creation workflow | `TeamCreationPage.test.tsx`, `TeamLeadInteractionPanel.guidance-copy.test.tsx`, `TeamLeadInteractionPanel.strategy-actions.test.tsx`, `TeamLeadInteractionPanel.native-team.test.tsx`, `TeamLeadInteractionPanel.compact-team.test.tsx`, `TeamLeadInteractionPanel.external-contract.test.tsx`, `TeamLeadInteractionPanel.loading-state.test.tsx`, `TeamLeadInteractionPanel.malformed-fallback.test.tsx`, `TeamLeadInteractionPanel.retry-flow.test.tsx`, `TeamLeadInteractionPanel.persistence.test.tsx`, `TeamLeadInteractionPanel.retained-package.test.tsx`, `pages/CreateTeamPage.test.tsx` | `team-creation.spec.ts` | `ACTIVE` |
@@ -214,7 +220,7 @@ Pass condition:
 - the operator can complete a normal user journey, a governed mutation, and a retention/recovery check in the same lane
 - failure of the AI host is visible and recoverable instead of being hidden by browser-only success
 
-7. `NEXT` deepen `/runs` and `/runs/[id]` browser coverage for interjection path, terminal status transitions, and retry/error states.
+7. `IN_REVIEW` keep `/runs` and `/runs/[id]` browser coverage green for interjection path, terminal status transitions, and retry/error states.
 
 Canonical UI testing agentry contract:
 - `docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`

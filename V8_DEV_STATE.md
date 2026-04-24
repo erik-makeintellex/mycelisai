@@ -32,7 +32,7 @@ Use `V7_DEV_STATE.md` only as a migration input and historical checkpoint source
 - `ACTIVE` the guarded `wsl.validate` proof lane now bootstraps `.env.compose` from the tracked example when a clean proof checkout has none yet, creates the configured Compose output-block host path when it is missing, loads that Compose env into the managed Interface proxy/browser proof path, then runs release-preflight, Compose health/storage proof, focused live-backend Soma/team/groups/workspace browser checks, and the Windows `http://localhost:3000` GUI probe in one task-owned pass.
 - `COMPLETE` the latest clean WSL proof pass from the `mother-brain` checkout is green on the runtime lane: `uv run inv ci.release-preflight --lane=runtime --no-e2e`, `uv run inv compose.up --wait-timeout=240`, `uv run inv compose.health`, `uv run inv compose.storage-health`, Windows-side `http://localhost:3000` reachability, and live Chromium `soma-governance-live.spec.ts`, `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts` all passed from the refreshed WSL checkout.
 - `COMPLETE` workspace-relative file/tool requests now treat leading `workspace/` as an alias for the configured workspace root instead of nesting a second `workspace` path under `MYCELIS_WORKSPACE`; the live Compose-backed workspace browser assertions were updated to match that runtime contract.
-- `IN_REVIEW` the guarded `wsl.refresh` lane still depends on working git auth inside the WSL proof checkout; manual refresh remains the fallback until that auth-helper setup is fully automated.
+- `IN_REVIEW` the guarded `wsl.refresh` lane now runs WSL git fetch noninteractively, attempts a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, and fails before reset/clean with SSH/HTTPS guidance when host auth is still blocked.
 - `ACTIVE` the supported install/bootstrap path now provisions the managed Playwright Chromium binary as part of `uv run inv install` / `uv run inv interface.install`, so a fresh proof checkout can reach the repo-owned browser certification lane without a separate manual browser install step.
 - `ACTIVE` supported user/runtime delivery lanes remain explicit and first-class: Windows Docker Desktop Compose on one machine, Docker-in-WSL Compose with the Windows browser using `http://localhost:3000` as the first operator path, and Linux self-hosted release through the same remote host/IP/hostname operators will really use after delivery.
 - `ACTIVE` accepted user-interaction proof for those lanes must exercise the real operator-facing address, direct Soma answer flow, governed proposal approval/cancel flow, team/workflow creation, retained-output review after refresh, and visible recovery when the configured AI host fails.
@@ -90,7 +90,7 @@ Release posture:
 - `ACTIVE` a dedicated demo-product strike team is now in flight to make Mycelis legible as an obvious product for technical partners/funders while preserving Soma capability and advanced power through advanced surfaces and documentation.
 - `COMPLETE` the first demo-product execution brief is now in place: default-vs-advanced surfaces, feature-preservation rules, a golden-path partner demo, and the UI testing checklist are defined as immediate engaged-team deliverables.
 - `ACTIVE` the MVP investor-demo lane is now explicitly centered on governed capability expansion: the active story must prove Soma’s initial value first, then show MCP-powered input/output, securable web/external research, and inspectable context-security posture without collapsing into a tooling console narrative.
-- `IN_REVIEW` the Connected Tools workflow is being tightened into one operator path instead of a static registry view: curated MCP install remains the add path, connected server cards remain the verification point, and the same surface now exposes recent persisted MCP activity plus live in-session usage so operators can see which server/tool agents are actively using even when they were not watching the stream at the moment it happened.
+- `IN_REVIEW` the Connected Tools workflow is being tightened into one operator path instead of a static registry view: curated MCP install remains the add path, connected server cards remain the verification point, and the same surface now exposes recent persisted MCP activity plus live in-session usage with team/agent/run correlation so operators can see which server/tool agents are actively using even when they were not watching the stream at the moment it happened.
 - `IN_REVIEW` MCP library/catalog standardization is now in flight for the investor and operator lanes: the curated install flow is being preserved, while the Mycelis MCP library schema, config, and UI are being upgraded toward the standard `server.json` concepts used by the official MCP registry (`name`, `version`, package/transport definitions, repository/homepage metadata when known, and typed environment-variable declarations) so future agentry registration expands through a recognizable ecosystem contract instead of a Mycelis-only schema.
 - `COMPLETE` the Connected Tools empty-state operator path is now explicit in the UI and browser proof: when no MCP servers are installed, the Resources panel directs the operator to the curated Library as the first activation step and the Chromium spec now covers both the populated-server install path and the no-server activation path.
 - `IN_REVIEW` the Connected Tools registry now separates true no-server state from registry/API failure state: failed `/api/v1/mcp/servers` calls carry `mcpServersError` and render a registry-unreachable panel instead of routing the operator to Library as though no MCP servers were installed.
@@ -196,9 +196,9 @@ Use this board for current MVP continuation coordination. Runtime-delivery truth
 | Workflow Coverage + UX Certification | `ACTIVE` | Map the real operator workflows and singular execution actions to committed unit/browser proof, not only route smoke. | Depends on current UI/testing contracts and WSL-managed proof discipline. | Continue from the new `/docs` and `/runs` audit by deepening browser proof for run review/interjection/retry paths and keeping the headed Chromium MVP matrix current. |
 | AI Organization + Team Design | `IN_REVIEW` | Keep the Soma-first organization-entry, guided team design, temporary workflow launch, archive, and retained-output review paths stable. | Depends on managed Interface runtime and the Groups proof lane. | Extend the currently green focused mocked/browser proof toward more live runtime outcome checks instead of only lane-entry assertions. |
 | Direct Soma + Governance | `IN_REVIEW` | Keep direct answer, governed proposal, confirm/cancel, and continuity behavior stable through the live operator path. | Depends on Compose/live-backend health and governed chat/runtime contracts. | Widen failure/recovery proof after the current packaging slice, especially guided retry recovery and Windows-browser-against-WSL validation. |
-| Connected Tools + MCP Workflow | `IN_REVIEW` | Keep library install, connected-server visibility, and MCP activity readable to operators. | Depends on Connected Tools UI, audit/activity proof, and live runtime health. | Add the missing live workflow proof that a real Soma/team lane uses an MCP-backed capability and surfaces matching recent activity. |
-| Runtime + Self-Hosted Posture | `ACTIVE` | Keep Compose/WSL/Windows browser topology truthful and prevent desktop-local shortcuts from creeping back into the MVP contract. | Feeds live-backend browser proof and operator-facing docs. | Close WSL git auth for `wsl.refresh`, then re-run the full release lane after the next proof-hardening slice while preserving the Windows-browser operator path. |
-| Docs + State Authority | `IN_REVIEW` | Keep `V8_DEV_STATE.md`, `docs/TESTING.md`, and related authority docs aligned to the actual proof surface and active MVP plan. | Depends on every touched slice. | Treat the green WSL runtime proof, workspace-path contract, and remaining WSL git-auth caveat as captured truth; only update docs/state again when the next proof slice changes meaning. |
+| Connected Tools + MCP Workflow | `IN_REVIEW` | Keep library install, connected-server visibility, and MCP activity readable to operators. | Depends on Connected Tools UI, audit/activity proof, and live runtime health. | Run the new live-gated `mcp-connected-tools` correlation proof against a healthy backend with filesystem MCP available, then keep the mocked Connected Tools proof green for persisted activity and install visibility. |
+| Runtime + Self-Hosted Posture | `ACTIVE` | Keep Compose/WSL/Windows browser topology truthful and prevent desktop-local shortcuts from creeping back into the MVP contract. | Feeds live-backend browser proof and operator-facing docs. | Validate the new `wsl.refresh` auth repair/report path against the real WSL checkout, run `wsl.validate` from the refreshed proof checkout, then let focused browser-gap work and broader headed certification proceed from that committed state. |
+| Docs + State Authority | `IN_REVIEW` | Keep `V8_DEV_STATE.md`, `docs/TESTING.md`, and related authority docs aligned to the actual proof surface and active MVP plan. | Depends on every touched slice. | Treat the green WSL runtime proof, workspace-path contract, and `wsl.refresh` auth repair/report behavior as captured truth; only update docs/state again when the next proof slice changes meaning. |
 
 Cross-team management rule:
 - Keep runtime truth and browser-first product truth aligned; neither is allowed to drift into "works locally" convenience language.
@@ -209,14 +209,15 @@ Cross-team management rule:
 Current scope guard:
 - `ACTIVE` the MVP center is now operator-shaped workflows and singular execution outcomes: direct Soma answer, governed mutation, organization entry/re-entry, team design, temporary workflow review, Connected Tools activity, docs navigation, and run inspection.
 - `ACTIVE` runtime truth remains non-negotiable: Compose/WSL/Windows browser topology and explicit external AI endpoints must not regress while UX/testing work continues.
-- `NEXT` proof gaps currently outrank polish work: WSL git auth for `wsl.refresh`, deeper `/runs` workflow proof, guided retry/recovery, live MCP-backed workflow correlation, and broader headed certification from committed state.
+- `NEXT` proof gaps currently outrank polish work and stay ordered: real-host validation for the `wsl.refresh` auth repair/report path, WSL `wsl.validate` from the refreshed proof checkout, deeper `/runs` workflow proof, guided retry/recovery, live MCP-backed workflow correlation, and broader headed certification from committed state.
 
 MVP continuation sequence:
-1. `ACTIVE` close the WSL git-auth/setup gap so `wsl.refresh` can update the proof checkout without manual refresh.
-2. `ACTIVE` deepen workflow proof where the current contract is still unit-heavy or mocked-heavy (`/runs`, guided retry/recovery, live MCP correlation).
-3. `NEXT` re-run the broader headed Chromium certification lane from committed state after each proof-hardening batch.
-4. `NEXT` keep the Windows-browser-against-WSL/operator topology honest as the self-hosted MVP story, not as an afterthought.
-5. `NEXT` only after those proof lanes are stable, widen back into broader continuity/team-run/runtime expansion work.
+1. `ACTIVE` validate the WSL git-auth repair/report path so `wsl.refresh` can update the proof checkout without manual source handoff.
+2. `ACTIVE` run `uv run inv wsl.validate` from the refreshed WSL proof checkout before treating browser-gap or certification evidence as authoritative.
+3. `ACTIVE` deepen workflow proof where the current contract is still unit-heavy or mocked-heavy (`/runs`, guided retry/recovery, live MCP correlation).
+4. `NEXT` re-run the broader headed Chromium certification lane from committed state after each proof-hardening batch.
+5. `NEXT` keep the Windows-browser-against-WSL/operator topology honest as the self-hosted MVP story, not as an afterthought.
+6. `NEXT` only after those proof lanes are stable, widen back into broader continuity/team-run/runtime expansion work.
 
 ## Immediate Execution Plan (2026-04-23)
 
@@ -226,21 +227,22 @@ This is the engaged compact team and the exact proof-producing sequence for the 
 | --- | --- | --- | --- |
 | Team Lead / Delivery Manager | `IN_REVIEW` | keep the branch clean enough to push and keep the MVP board centered on proof-producing work | accepted slice summary with commit, proof, docs, and remaining risk |
 | UI Workflow Engineer | `ACTIVE` | tighten user-shaped workflow proof for docs browsing, run review, interjection, and workflow follow-through | focused test additions plus a smaller remaining-risk list |
-| Runtime / Release Engineer | `ACTIVE` | preserve the WSL-managed browser/runtime contract while the proof surface moves and close `wsl.refresh` git auth | repeatable WSL evidence commands, correct workspace-path semantics, no stale-server drift, and automated refresh |
+| Runtime / Release Engineer | `ACTIVE` | preserve the WSL-managed browser/runtime contract while the proof surface moves and validate `wsl.refresh` auth repair/report behavior | repeatable WSL evidence commands, correct workspace-path semantics, no stale-server drift, and automated refresh |
 | Docs / State Owner | `IN_REVIEW` | keep documented truth aligned when new proof changes meaning; the WSL proof/handoff state is already captured | synchronized state/testing/ops docs and explicit next-step board |
 | Release Verification | `NEXT` | rerun the broader committed-state proof after the next proof-hardening slice lands | current targeted WSL runtime proof is green; broader headed/live proof next |
 
 Execution order:
 1. `COMPLETE` the latest WSL runtime-proof results, workspace alias contract, and handoff caveats are captured in current state.
-2. `ACTIVE` close the remaining `wsl.refresh` auth/setup gap so the guarded handoff path is fully hands-off from Windows through WSL proof.
-3. `ACTIVE` start the next MVP proof lane with deeper `/runs` browser behavior, the skipped guided Soma retry/recovery path, and live MCP-backed workflow correlation.
-4. `NEXT` follow that slice with the broader headed Chromium MVP certification pass and the Windows self-hosted browser check.
-5. `NEXT` keep the WSL proof checkout refreshed from git-backed commits instead of manual source copying once `wsl.refresh` auth is working.
+2. `ACTIVE` validate the remaining `wsl.refresh` auth repair/report path so the guarded handoff path is fully hands-off from Windows through WSL proof when host credentials are available and actionable when they are not.
+3. `ACTIVE` run `uv run inv wsl.validate` from the refreshed proof checkout before accepting browser-gap or certification evidence.
+4. `ACTIVE` start the next MVP proof lane with deeper `/runs` browser behavior, the skipped guided Soma retry/recovery path, and live MCP-backed workflow correlation.
+5. `NEXT` follow that slice with the broader headed Chromium MVP certification pass and the Windows self-hosted browser check.
+6. `NEXT` keep the WSL proof checkout refreshed from git-backed commits instead of manual source copying; use `wsl.refresh` remediation guidance when host auth still blocks fetch.
 
 Immediate blocker rule:
 - `BLOCKED` any slice that reintroduces a mixed dirty tree or leaves docs/state behind the accepted proof surface.
-- `IN_REVIEW` `/runs` is now better covered for singular user actions, but broader browser/live-depth proof is still the next real gap rather than a solved lane.
-- `IN_REVIEW` live MCP workflow correlation remains a known MVP gap and should stay explicit until real browser/runtime proof exists.
+- `IN_REVIEW` `/runs` now has focused mocked browser proof for list state, conversation filtering, operator interjection, event retry, terminal failure evidence, and chain lineage; live-depth proof remains the next real gap rather than a solved lane.
+- `IN_REVIEW` live MCP workflow correlation now has a focused browser test path in `interface/e2e/specs/mcp-connected-tools.spec.ts`: the live-gated case creates a temporary MCP-only team lane, broadcasts a read-only ask, polls `/api/v1/mcp/activity` for matching team/agent `read_file` activity, and verifies Connected Tools shows that correlation. It remains a runtime validation item until the live backend pass runs with `PLAYWRIGHT_LIVE_BACKEND`.
 
 ## Current Review (2026-04-23)
 
@@ -248,9 +250,10 @@ Review summary:
 1. `COMPLETE` `main` now carries the latest WSL-proofed runtime fix for workspace-relative file/tool paths: requests beginning with `workspace/` normalize against the configured workspace root instead of producing a doubled `workspace/workspace/...` path under the Compose-mounted `/data/workspace`.
 2. `COMPLETE` the latest authoritative WSL proof run from `/home/erik/Projects/mycelisai/scratch` is green on the committed runtime lane: `uv run inv ci.release-preflight --lane=runtime --no-e2e`, `uv run inv compose.up --wait-timeout=240`, `uv run inv compose.health`, `uv run inv compose.storage-health`, Windows-side `curl.exe -I http://localhost:3000`, and live Chromium `soma-governance-live.spec.ts`, `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts`.
 3. `IN_REVIEW` the WSL Compose relay/runtime contract is now behaving the way the docs say it should: the product runtime is hosted from the WSL proof checkout, the first operator-facing address is still the Windows browser at `http://localhost:3000`, and the AI endpoint remains an explicit non-loopback host contract instead of a hidden desktop-local shortcut.
-4. `IN_REVIEW` the guarded Windows-to-WSL handoff path is close but not fully closed: `wsl.validate` is trustworthy for proof once the proof checkout is current, but `wsl.refresh` still depends on working git auth inside the WSL checkout and may require a manual refresh until that setup is automated.
-5. `COMPLETE` the current handoff/state-sync cleanup is no longer the active next-action lane: the green WSL proof, workspace alias contract, and manual-refresh caveat are captured as current state instead of being left as restart work.
-6. `NEXT` the remaining MVP-centered work is ordered around real proof gaps: close WSL git auth for `wsl.refresh`, deepen `/runs` browser workflow coverage, unskip and keep green the guided Soma retry/recovery lane, add live MCP-backed workflow correlation proof, then rerun the broader headed Chromium certification pass from committed state.
+4. `IN_REVIEW` the guarded Windows-to-WSL handoff path is close but not fully closed: `wsl.validate` is trustworthy for proof once the proof checkout is current, and `wsl.refresh` now repairs GitHub HTTPS auth through a repo-local Git Credential Manager helper when possible or fails with SSH/HTTPS guidance before reset/clean when host auth is still blocked.
+5. `COMPLETE` the current handoff/state-sync cleanup is no longer the active next-action lane: the green WSL proof, workspace alias contract, and guarded auth remediation path are captured as current state instead of being left as restart work.
+6. `COMPLETE` the focused Windows-side browser proof for this slice is green from single-owner managed Interface runs: `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/docs-and-runs.spec.ts` passed with 3 tests, and `uv run inv interface.e2e --project=chromium --workers=1 --spec=e2e/specs/mcp-connected-tools.spec.ts` passed with 2 tests and 1 expected live-backend skip.
+7. `NEXT` the remaining MVP-centered work is ordered around real proof gaps: validate `wsl.refresh` against the real WSL checkout, run `wsl.validate` from the refreshed proof checkout, keep the new `/runs` browser workflow proof green, unskip and keep green the guided Soma retry/recovery lane, run the live MCP-backed workflow correlation proof with `PLAYWRIGHT_LIVE_BACKEND`, then rerun the broader headed Chromium certification pass from committed state.
 
 ## Prior Review (2026-04-21)
 Review summary:
@@ -260,7 +263,7 @@ Review summary:
 4. `IN_REVIEW` `/runs` singular user-action proof is now materially tighter in the unit layer: the run page now has explicit tests for query-selected tabs, failed/cancelled/running status handling, fetch-failure fallback, conversation agent-filter refetch, and operator interjection submission/clear behavior. The remaining gap is broader browser/live run-review proof, not basic state handling.
 5. `IN_REVIEW` the current testing/docs contract is now more honest: `docs/TESTING.md` records `/docs` internal-link/failure coverage as complete and leaves the bigger remaining MVP gaps where they belong, namely deeper `/runs` browser proof, live MCP-backed workflow correlation, and the still-skipped guided retry/recovery lane.
 6. `COMPLETE` current focused WSL proof for this audit slice is green: `cd interface; npx vitest run __tests__/pages/DocsPage.test.tsx __tests__/runs/RunDetailPage.test.tsx --reporter=dot --maxWorkers=1`, `cd interface; npx vitest run __tests__/runs/ConversationLog.test.tsx __tests__/runs/RunTimeline.test.tsx --reporter=dot --maxWorkers=1`, `uv run inv interface.typecheck`, and `uv run inv interface.e2e --project=chromium --workers=1 --spec=interface/e2e/specs/docs-and-runs.spec.ts` all pass from the current local slice.
-7. `NEXT` the next MVP-centered proof lane is now clear and ordered: deepen `/runs` real browser workflow proof, unskip/keep green the guided Soma retry/recovery path, add the missing live MCP-backed workflow correlation proof, then rerun the broader headed Chromium certification lane from committed state.
+7. `NEXT` the next MVP-centered proof lane is now clear and ordered: validate `wsl.refresh` against the real WSL checkout, run `wsl.validate` from the refreshed proof checkout, deepen `/runs` real browser workflow proof, unskip/keep green the guided Soma retry/recovery path, add the missing live MCP-backed workflow correlation proof, then rerun the broader headed Chromium certification lane from committed state.
 
 ## Prior Review (2026-04-09)
 
@@ -846,36 +849,39 @@ Evidence:
 
 ## Immediate Next Actions
 
-1. `REQUIRED` close WSL git auth for `wsl.refresh`.
+1. `REQUIRED` validate WSL git auth repair/report behavior for `wsl.refresh`.
    - keep the Windows-to-WSL handoff git-backed instead of artifact-backed
-   - make manual refresh the exception rather than the expected proof path
-2. `NEXT` deepen `/runs` browser proof from route smoke into real operator workflow coverage.
-   - verify tab selection, run-state transitions, interjection, and failure/retry messaging through browser-visible proof
-   - keep the existing tighter unit coverage as the foundation, not the finish line
-3. `NEXT` unskip and keep green the guided Soma retry/recovery browser scenario.
+   - make manual source handoff unnecessary; when host auth is blocked, fail with actionable SSH/HTTPS guidance
+2. `REQUIRED` run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting browser-gap or certification evidence.
+   - prove release-preflight, Compose health/storage, live Soma/team/groups/workspace browser workflows, and the Windows `http://localhost:3000` probe from the git-refreshed checkout
+   - use the `wsl.refresh` auth guidance instead of copying source if WSL fetch is still blocked
+3. `IN_REVIEW` keep `/runs` browser proof green beyond route smoke.
+   - current focused proof verifies list state, detail conversation filtering, operator interjection, event retry/failure messaging, and chain lineage through browser-visible coverage
+   - keep the existing tighter unit coverage as the foundation for future live-backend depth
+4. `NEXT` unskip and keep green the guided Soma retry/recovery browser scenario.
    - preserve organization context when a guided action fails
    - prove the retry path from the live UI contract rather than leaving it as a known skipped branch
-4. `NEXT` add the missing live MCP-backed workflow correlation proof.
+5. `NEXT` add the missing live MCP-backed workflow correlation proof.
    - show that a real Soma/team workflow uses an MCP-backed capability
    - show that the matching recent MCP activity is visible back to the operator
-5. `NEXT` rerun the broader headed Chromium MVP certification pass from committed state after the next proof-hardening slice lands.
+6. `NEXT` rerun the broader headed Chromium MVP certification pass from committed state after the next proof-hardening slice lands.
    - keep managed `uv run inv interface.e2e ...` invocations serialized from WSL
    - treat browser-visible proof as the release-center check, not only unit/type safety
-6. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
+7. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
    - verify the Windows browser can still reach the WSL/Compose-hosted UI
    - keep explicit non-loopback AI endpoint posture intact as docs/tests/runtime evolve
-7. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
+8. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
    - `README.md`
    - `docs/TESTING.md`
    - `docs/LOCAL_DEV_WORKFLOW.md`
    - `docs/architecture/OPERATIONS.md`
    - `ops/README.md`
    - `interface/lib/docsManifest.ts` whenever the in-app docs surface changes
-8. `REQUIRED` keep all new validation checkpoints, blocker transitions, and accepted proof results recorded here in `V8_DEV_STATE.md` in the same delivery window.
-9. `NEXT` continue the workflow-complete verification lane from the current durable workflow/testing contracts.
+9. `REQUIRED` keep all new validation checkpoints, blocker transitions, and accepted proof results recorded here in `V8_DEV_STATE.md` in the same delivery window.
+10. `NEXT` continue the workflow-complete verification lane from the current durable workflow/testing contracts.
    - keep mapping primary user workflows to explicit automated proof
    - tighten any slice that proves only immediate interaction instead of user-visible outcome
-10. `NEXT` keep the current MCP/team/media/output-value lanes outcome-shaped.
+11. `NEXT` keep the current MCP/team/media/output-value lanes outcome-shaped.
    - extend direct-vs-team/media/browser proof into more live configured provider/runtime checks
    - keep retained outputs, previews, downloads, and operator-readable recent activity as the visible success contract
 

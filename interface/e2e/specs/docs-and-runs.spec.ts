@@ -68,11 +68,41 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.getByText('No docs match "missing-doc"')).toBeVisible();
     });
 
-    test.skip('runs list route and run detail tabs render from API payloads', async ({ page }) => {
-        const runId = 'run-ui-1234';
+    test('runs browser proof covers list state, interjection, event retry, and failure evidence', async ({ page }) => {
+        const runId = 'run-ui-active-1234';
+        const failedRunId = 'run-ui-failed-9999';
+        const missionId = 'mission-ui-7777';
         const now = new Date().toISOString();
+        let showTerminalEvents = false;
+        let failNextEventRequest = false;
+        let conversationTurns = [
+            {
+                id: 'turn-ui-1',
+                run_id: runId,
+                session_id: 'session-ui-1',
+                agent_id: 'admin',
+                team_id: 'admin-core',
+                turn_index: 1,
+                role: 'assistant',
+                content: 'Soma is coordinating the active run.',
+                provider_id: 'local',
+                model_used: 'operator-proof',
+                created_at: now,
+            },
+            {
+                id: 'turn-ui-2',
+                run_id: runId,
+                session_id: 'session-ui-1',
+                agent_id: 'planner',
+                team_id: 'delivery',
+                turn_index: 2,
+                role: 'assistant',
+                content: 'Planner is preparing validation steps.',
+                created_at: now,
+            },
+        ];
 
-        await page.route('**/api/v1/runs*', async (route) => {
+        await page.route(/\/api\/v1\/runs(?:\?.*)?$/, async (route) => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -81,9 +111,20 @@ test.describe('Docs and Runs Route Coverage', () => {
                     data: [
                         {
                             id: runId,
-                            mission_id: 'mission-ui-7777',
+                            mission_id: missionId,
                             status: 'running',
                             started_at: now,
+                            tenant_id: 'default',
+                            run_depth: 0,
+                        },
+                        {
+                            id: failedRunId,
+                            mission_id: 'mission-ui-failed',
+                            status: 'failed',
+                            started_at: now,
+                            completed_at: now,
+                            tenant_id: 'default',
+                            run_depth: 0,
                         },
                     ],
                 }),
@@ -91,63 +132,151 @@ test.describe('Docs and Runs Route Coverage', () => {
         });
 
         await page.route(`**/api/v1/runs/${runId}/events**`, async (route) => {
+            if (failNextEventRequest) {
+                failNextEventRequest = false;
+                showTerminalEvents = true;
+                await route.fulfill({
+                    status: 503,
+                    contentType: 'application/json',
+                    body: JSON.stringify({ ok: false, error: 'run timeline temporarily unavailable' }),
+                });
+                return;
+            }
+
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
                     ok: true,
-                    data: [
-                        {
-                            id: 'evt-ui-1',
-                            run_id: runId,
-                            event_type: 'mission.started',
-                            severity: 'info',
-                            source_agent: 'admin',
-                            source_team: 'admin-core',
-                            payload: { mission_id: 'mission-ui-7777' },
-                            emitted_at: now,
-                        },
-                    ],
+                    data: showTerminalEvents
+                        ? [
+                              {
+                                  id: 'evt-ui-1',
+                                  run_id: runId,
+                                  tenant_id: 'default',
+                                  event_type: 'mission.started',
+                                  severity: 'info',
+                                  source_agent: 'admin',
+                                  source_team: 'admin-core',
+                                  payload: { mission_id: missionId },
+                                  emitted_at: now,
+                              },
+                              {
+                                  id: 'evt-ui-2',
+                                  run_id: runId,
+                                  tenant_id: 'default',
+                                  event_type: 'tool.failed',
+                                  severity: 'error',
+                                  source_agent: 'planner',
+                                  source_team: 'delivery',
+                                  payload: { error: 'Planner validation provider timed out; operator retry is available.' },
+                                  emitted_at: now,
+                              },
+                              {
+                                  id: 'evt-ui-3',
+                                  run_id: runId,
+                                  tenant_id: 'default',
+                                  event_type: 'mission.failed',
+                                  severity: 'error',
+                                  source_agent: 'admin',
+                                  source_team: 'admin-core',
+                                  payload: { error: 'Mission stopped after retry budget was exhausted.' },
+                                  emitted_at: now,
+                              },
+                          ]
+                        : [
+                              {
+                                  id: 'evt-ui-1',
+                                  run_id: runId,
+                                  tenant_id: 'default',
+                                  event_type: 'mission.started',
+                                  severity: 'info',
+                                  source_agent: 'admin',
+                                  source_team: 'admin-core',
+                                  payload: { mission_id: missionId },
+                                  emitted_at: now,
+                              },
+                          ],
                 }),
             });
         });
 
         await page.route(`**/api/v1/runs/${runId}/conversation**`, async (route) => {
+            const url = new URL(route.request().url());
+            const agentFilter = url.searchParams.get('agent');
+            const turns = agentFilter
+                ? conversationTurns.filter((turn) => turn.agent_id === agentFilter)
+                : conversationTurns;
+
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
                     ok: true,
-                    data: {
-                        turns: [
-                            {
-                                id: 'turn-ui-1',
-                                run_id: runId,
-                                session_id: 'session-ui-1',
-                                agent_id: 'admin',
-                                team_id: 'admin-core',
-                                turn_index: 1,
-                                role: 'assistant',
-                                content: 'assistant response from run',
-                                created_at: now,
-                            },
-                        ],
-                    },
+                    data: { turns },
                 }),
+            });
+        });
+
+        await page.route(`**/api/v1/runs/${runId}/interject`, async (route) => {
+            const requestBody = route.request().postDataJSON() as { message?: string };
+            conversationTurns = [
+                ...conversationTurns,
+                {
+                    id: 'turn-ui-interjection',
+                    run_id: runId,
+                    session_id: 'session-ui-1',
+                    agent_id: 'operator',
+                    team_id: 'admin-core',
+                    turn_index: 3,
+                    role: 'interjection',
+                    content: requestBody.message ?? '',
+                    created_at: now,
+                },
+            ];
+
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ ok: true }),
             });
         });
 
         await page.goto('/runs', { waitUntil: 'domcontentloaded' });
 
         await expect(page.locator('span:has-text("Runs")').first()).toBeVisible();
+        await expect(page.getByText('1 active')).toBeVisible();
+        await expect(page.getByText(runId, { exact: true })).toBeVisible();
+        await expect(page.getByText(failedRunId, { exact: true })).toBeVisible();
+        await expect(page.getByText('running').first()).toBeVisible();
+        await expect(page.getByText('failed').first()).toBeVisible();
+
         const runRow = page.locator(`button:has-text("${runId}")`).first();
         await expect(runRow).toBeVisible();
         await runRow.click();
 
         await expect(page).toHaveURL(new RegExp(`/runs/${runId}$`));
-        await expect(page.getByText('assistant response from run')).toBeVisible();
+        await expect(page.getByText('Soma is coordinating the active run.')).toBeVisible();
+        await expect(page.getByText('Planner is preparing validation steps.')).toBeVisible();
+        await expect(page.getByText('running').first()).toBeVisible();
+        await expect(page.getByPlaceholder('Interject in this run...')).toBeVisible();
 
+        await page.getByRole('button', { name: 'planner' }).click();
+        await expect(page.getByText('Planner is preparing validation steps.')).toBeVisible();
+        await expect(page.getByText('Soma is coordinating the active run.')).not.toBeVisible();
+
+        await page.getByPlaceholder('Interject in this run...').fill('Pause this run and retry with a smaller validation step.');
+        await page.getByRole('button', { name: 'Interject' }).click();
+        await expect(page.getByText('Operator Interjection')).toBeVisible();
+        await expect(page.getByText('Pause this run and retry with a smaller validation step.')).toBeVisible();
+
+        failNextEventRequest = true;
         await page.getByRole('button', { name: 'Events' }).first().click();
+        await expect(page.getByText('Failed to load events (503)')).toBeVisible();
+        await page.getByRole('button', { name: 'Retry' }).click();
+        await expect(page.getByText('mission.failed')).toBeVisible();
+        await expect(page.getByText('Mission stopped after retry budget was exhausted.')).toBeVisible();
+        await expect(page.getByText('failed').first()).toBeVisible();
         await expect(page.getByText('mission.started')).toBeVisible();
     });
 

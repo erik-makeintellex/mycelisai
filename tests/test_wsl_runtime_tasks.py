@@ -76,6 +76,95 @@ def test_refresh_refuses_when_windows_checkout_is_dirty(monkeypatch):
         raise AssertionError("expected refresh refusal for dirty Windows checkout")
 
 
+def test_fetch_wsl_remote_repairs_github_https_auth_with_windows_gcm(monkeypatch):
+    fetch_results = [
+        wsl_runtime.CommandResult(
+            command=["git", "fetch"],
+            returncode=128,
+            stdout="",
+            stderr="fatal: could not read Username for 'https://github.com': terminal prompts disabled",
+        ),
+        wsl_runtime.CommandResult(command=["git", "fetch"], returncode=0, stdout="", stderr=""),
+    ]
+    config_calls: list[tuple[str, ...]] = []
+    fetch_calls: list[tuple[str, ...]] = []
+
+    def fake_run_wsl_git(*args, **_kwargs):
+        if args == ("remote", "get-url", "origin"):
+            return wsl_runtime.CommandResult(
+                command=["git", *args],
+                returncode=0,
+                stdout="https://github.com/example/private-repo.git\n",
+                stderr="",
+            )
+        if args[:3] == ("config", "--local", "credential.helper"):
+            config_calls.append(args)
+            return wsl_runtime.CommandResult(command=["git", *args], returncode=0, stdout="", stderr="")
+        raise AssertionError(f"unexpected git command: {args}")
+
+    def fake_run_wsl_git_noninteractive(*args, **_kwargs):
+        fetch_calls.append(args)
+        return fetch_results.pop(0)
+
+    monkeypatch.setattr(wsl_runtime, "_run_wsl_git", fake_run_wsl_git)
+    monkeypatch.setattr(wsl_runtime, "_run_wsl_git_noninteractive", fake_run_wsl_git_noninteractive)
+    monkeypatch.setattr(
+        wsl_runtime,
+        "_find_windows_gcm_helper",
+        lambda **_kwargs: "/mnt/c/Program Files/Git/mingw64/bin/git-credential-manager.exe",
+    )
+
+    wsl_runtime._fetch_wsl_remote_with_auth_repair("origin", distro="mother-brain", checkout="/repo")
+
+    assert fetch_calls == [
+        ("fetch", "--prune", "origin"),
+        ("fetch", "--prune", "origin"),
+    ]
+    assert config_calls == [
+        (
+            "config",
+            "--local",
+            "credential.helper",
+            "/mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe",
+        )
+    ]
+
+
+def test_fetch_wsl_remote_reports_actionable_ssh_auth_guidance(monkeypatch):
+    monkeypatch.setattr(
+        wsl_runtime,
+        "_run_wsl_git",
+        lambda *args, **_kwargs: wsl_runtime.CommandResult(
+            command=["git", *args],
+            returncode=0,
+            stdout="git@github.com:example/private-repo.git\n",
+            stderr="",
+        )
+        if args == ("remote", "get-url", "origin")
+        else (_ for _ in ()).throw(AssertionError(f"unexpected git command: {args}")),
+    )
+    monkeypatch.setattr(
+        wsl_runtime,
+        "_run_wsl_git_noninteractive",
+        lambda *args, **_kwargs: wsl_runtime.CommandResult(
+            command=["git", *args],
+            returncode=128,
+            stdout="",
+            stderr="git@github.com: Permission denied (publickey).\nfatal: Could not read from remote repository.",
+        ),
+    )
+
+    try:
+        wsl_runtime._fetch_wsl_remote_with_auth_repair("origin", distro="mother-brain", checkout="/repo")
+    except SystemExit as exc:
+        message = str(exc)
+        assert "WSL git auth is not ready" in message
+        assert "ssh -T git@github.com" in message
+        assert "do not copy source trees" in message
+    else:
+        raise AssertionError("expected actionable WSL git auth failure")
+
+
 def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
     monkeypatch.setattr(wsl_runtime, "_require_windows_dev_host", lambda: None)
     monkeypatch.setattr(wsl_runtime, "_configured_distro", lambda distro="": "mother-brain")

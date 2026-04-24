@@ -13,6 +13,7 @@ Companion artifacts:
 - Workflow-variant mocked proof: `interface/e2e/specs/workflow-output.direct.spec.ts`, `interface/e2e/specs/workflow-output.compact-team.spec.ts`, `interface/e2e/specs/workflow-output.multi-lane.spec.ts`, and `interface/e2e/specs/workflow-output.reload-review.spec.ts`
 - Workflow-variant live backend proof: `interface/e2e/specs/workflow-variants-live-backend.spec.ts`
 - Live backend browser proof: `interface/e2e/specs/soma-governance-live.spec.ts`
+- Connected Tools MCP proof: `interface/e2e/specs/mcp-connected-tools.spec.ts` covers stable persisted activity/install visibility and includes a `PLAYWRIGHT_LIVE_BACKEND`-gated team-lane correlation case
 - Workspace continuity manual trust pass: `tests/ui/browser_qa_plan_workspace_chat.md`
 - Workflow variants + reboot resume manual pass: `tests/ui/browser_qa_workflow_variants_reboot.md`
 
@@ -87,12 +88,19 @@ No single test lane is enough on its own.
    - Command:
      - `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 
-5. Manual trust and disruption pass
+5. Connected Tools MCP activity proof
+   - Purpose: prove persisted MCP activity, install visibility, and the live-gated team-lane-to-activity correlation path
+   - Command:
+     - `uv run inv interface.e2e --project=chromium --spec=e2e/specs/mcp-connected-tools.spec.ts`
+   - Live correlation command:
+     - `uv run inv interface.e2e --live-backend --server-mode=start --project=chromium --spec=e2e/specs/mcp-connected-tools.spec.ts`
+
+6. Manual trust and disruption pass
    - Purpose: verify interruption, recovery feel, wording quality, and operator trust
    - Prompt baseline:
      - `tests/ui/browser_qa_plan_workspace_chat.md`
 
-6. Manual workflow-shape and reboot pass
+7. Manual workflow-shape and reboot pass
    - Purpose: compare direct Soma, compact-team, and multi-lane behavior on one objective and verify reboot-safe resume through retained outputs
    - Prompt baseline:
      - `tests/ui/browser_qa_workflow_variants_reboot.md`

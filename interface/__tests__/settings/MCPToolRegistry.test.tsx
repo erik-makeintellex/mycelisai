@@ -150,6 +150,7 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/Recent MCP Activity/i)).toBeDefined();
         expect(screen.getByText(/filesystem-server · read_file/i)).toBeDefined();
         expect(screen.getByText(/Read workspace brief successfully/i)).toBeDefined();
+        expect(screen.getByText(/Team alpha · Agent soma-admin · Run run-1/i)).toBeDefined();
     });
 
     it('returns to installed view with guidance after library install', () => {

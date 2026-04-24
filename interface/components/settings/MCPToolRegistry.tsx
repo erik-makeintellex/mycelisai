@@ -45,6 +45,9 @@ export default function MCPToolRegistry() {
             state: entry.state,
             message: entry.message || entry.summary,
             timestamp: entry.timestamp,
+            runId: entry.run_id,
+            teamId: entry.team_id,
+            agentId: entry.agent_id,
         }));
         const liveActivity = streamLogs
             .filter((signal) => signal.source_kind === "mcp")
@@ -65,6 +68,9 @@ export default function MCPToolRegistry() {
                     state,
                     message: preview,
                     timestamp: signal.timestamp ?? new Date().toISOString(),
+                    runId: signal.run_id,
+                    teamId: signal.team_id,
+                    agentId: signal.agent_id,
                 };
             });
         const merged = [...liveActivity, ...persistedActivity];
@@ -247,6 +253,11 @@ export default function MCPToolRegistry() {
                                                 </span>
                                             </div>
                                             <p className="mt-1 text-[10px] text-cortex-text-muted">{activity.message}</p>
+                                            {formatActivityScope(activity) && (
+                                                <p className="mt-1 text-[10px] font-mono text-cortex-text-muted">
+                                                    {formatActivityScope(activity)}
+                                                </p>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -304,4 +315,18 @@ function WorkflowStep({ title, children }: { title: string; children: React.Reac
             <p className="mt-2 text-xs leading-5 text-cortex-text-main">{children}</p>
         </div>
     );
+}
+
+function formatActivityScope(activity: MCPRecentActivity): string {
+    const parts: string[] = [];
+    if (activity.teamId) {
+        parts.push(`Team ${activity.teamId}`);
+    }
+    if (activity.agentId) {
+        parts.push(`Agent ${activity.agentId}`);
+    }
+    if (activity.runId) {
+        parts.push(`Run ${activity.runId}`);
+    }
+    return parts.join(" · ");
 }

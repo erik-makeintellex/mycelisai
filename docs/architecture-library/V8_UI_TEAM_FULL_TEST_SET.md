@@ -488,7 +488,7 @@ Automated proof:
 - `interface/e2e/specs/workflow-output.direct.spec.ts`, `interface/e2e/specs/workflow-output.compact-team.spec.ts`, `interface/e2e/specs/workflow-output.multi-lane.spec.ts`, and `interface/e2e/specs/workflow-output.reload-review.spec.ts` are the stable mocked comparative proof set for direct Soma, compact team packaging, multi-lane retained outputs, and reboot-safe resume from the retained package.
 - `interface/e2e/specs/workflow-variants-live-backend.spec.ts` is the live-backend companion for direct Soma, compact-team vs multi-team shaping, and retained-output review after archive/reload.
 - `interface/e2e/specs/v8-ui-testing-agentry.spec.ts` covers the adjacent artifact lane, including governed artifact rendering and media artifact preview/save/download behavior.
-- `interface/e2e/specs/mcp-connected-tools.spec.ts` now covers the adjacent Connected Tools proof: persisted MCP activity, expanded server tool visibility, and curated library install into the current user-owned group.
+- `interface/e2e/specs/mcp-connected-tools.spec.ts` now covers the adjacent Connected Tools proof: persisted MCP activity, expanded server tool visibility, curated library install into the current user-owned group, visible team/agent/run correlation metadata, and a `PLAYWRIGHT_LIVE_BACKEND`-gated temporary team-lane proof for matching MCP activity.
 - `tests/ui/browser_qa_workflow_variants_reboot.md` is the manual comparative pass for direct Soma vs compact team vs multi-lane workflow, plus reboot-safe resume from retained outputs.
 
 ### Workflow 8: Governed mutation proposal

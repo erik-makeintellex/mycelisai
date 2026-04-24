@@ -17,6 +17,7 @@ REMOTE_USER_TESTING = ROOT / "docs" / "REMOTE_USER_TESTING.md"
 API_REFERENCE = ROOT / "docs" / "API_REFERENCE.md"
 BACKEND_ARCH = ROOT / "docs" / "architecture" / "BACKEND.md"
 DOCKER_COMPOSE = ROOT / "docker-compose.yml"
+V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
 
 
 def test_compose_testing_contract_points_to_explicit_non_loopback_ai_hosts():
@@ -366,6 +367,39 @@ def test_active_docs_reference_guarded_wsl_handoff_tasks():
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "Guarded WSL handoff/proof tasks are missing from active docs:\n" + "\n".join(missing)
+
+
+def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification():
+    snippets = [
+        (
+            TESTING,
+            [
+                "Release-proof sequencing rule:",
+                "validate WSL git auth repair/report behavior for `wsl.refresh`",
+                "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence",
+                "close focused browser proof gaps next, currently `/runs` workflow depth, guided Soma retry/recovery, and live MCP-backed workflow correlation",
+                "rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL",
+            ],
+        ),
+        (
+            V8_DEV_STATE,
+            [
+                "real-host validation for the `wsl.refresh` auth repair/report path, WSL `wsl.validate` from the refreshed proof checkout, deeper `/runs` workflow proof, guided retry/recovery, live MCP-backed workflow correlation, and broader headed certification from committed state",
+                "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting browser-gap or certification evidence",
+                "live MCP workflow correlation now has a focused browser test path in `interface/e2e/specs/mcp-connected-tools.spec.ts`",
+                "run `wsl.validate` from the refreshed proof checkout, keep the new `/runs` browser workflow proof green, unskip and keep green the guided Soma retry/recovery lane, run the live MCP-backed workflow correlation proof with `PLAYWRIGHT_LIVE_BACKEND`, then rerun the broader headed Chromium certification pass from committed state",
+            ],
+        ),
+    ]
+
+    missing: list[str] = []
+    for path, required_snippets in snippets:
+        text = path.read_text(encoding="utf-8")
+        for snippet in required_snippets:
+            if snippet not in text:
+                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+
+    assert not missing, "Release-proof sequencing docs drifted from the active Slice 4 order:\n" + "\n".join(missing)
 
 
 def test_windows_edit_wsl_proof_contract_does_not_turn_wsl_into_day_to_day_worktree():
