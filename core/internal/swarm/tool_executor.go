@@ -99,8 +99,15 @@ func NewScopedToolExecutor(inner *CompositeToolExecutor, mcpRefs []mcp.ToolRef, 
 }
 
 // FindToolByName delegates to the inner composite executor, then checks MCP tools
-// against the agent's allow-list. Internal tools always pass through.
+// against the agent's allow-list. Internal tools pass through unless the agent
+// has an explicit MCP allow-list and that MCP tool name is also available.
 func (s *ScopedToolExecutor) FindToolByName(ctx context.Context, name string) (uuid.UUID, string, error) {
+	if !s.allowAll {
+		if serverID, toolName, ok := s.findAllowedMCPTool(ctx, name); ok {
+			return serverID, toolName, nil
+		}
+	}
+
 	serverID, toolName, err := s.inner.FindToolByName(ctx, name)
 	if err != nil {
 		return uuid.Nil, "", err
@@ -116,6 +123,37 @@ func (s *ScopedToolExecutor) FindToolByName(ctx context.Context, name string) (u
 		return serverID, toolName, nil
 	}
 
+	if s.mcpToolAllowed(serverID, toolName) {
+		return serverID, toolName, nil
+	}
+
+	serverName := s.serverNames[serverID]
+	if serverName == "" {
+		serverName = serverID.String()
+	}
+
+	return uuid.Nil, "", fmt.Errorf("tool %q (server %q) not authorized for this agent", toolName, serverName)
+}
+
+func (s *ScopedToolExecutor) findAllowedMCPTool(ctx context.Context, name string) (uuid.UUID, string, bool) {
+	if s == nil || s.inner == nil || s.inner.mcp == nil {
+		return uuid.Nil, "", false
+	}
+	serverID, toolName, err := s.inner.mcp.FindToolByName(ctx, name)
+	if err != nil || serverID == uuid.Nil {
+		return uuid.Nil, "", false
+	}
+	if !s.mcpToolAllowed(serverID, toolName) {
+		return uuid.Nil, "", false
+	}
+	return serverID, toolName, true
+}
+
+func (s *ScopedToolExecutor) mcpToolAllowed(serverID uuid.UUID, toolName string) bool {
+	if s.allowAll {
+		return true
+	}
+
 	serverName := s.serverNames[serverID]
 	if serverName == "" {
 		serverName = serverID.String() // fallback to UUID string
@@ -123,11 +161,11 @@ func (s *ScopedToolExecutor) FindToolByName(ctx context.Context, name string) (u
 
 	for _, ref := range s.allowedMCP {
 		if ref.MatchesTool(serverName, toolName) {
-			return serverID, toolName, nil
+			return true
 		}
 	}
 
-	return uuid.Nil, "", fmt.Errorf("tool %q (server %q) not authorized for this agent", toolName, serverName)
+	return false
 }
 
 // CallTool delegates to the inner composite executor.

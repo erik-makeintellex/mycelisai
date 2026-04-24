@@ -120,6 +120,32 @@ func TestScopedToolExecutor_InternalToolsAlwaysPass(t *testing.T) {
 	}
 }
 
+func TestScopedToolExecutor_ExplicitMCPAllowlistPrefersMCPNameCollision(t *testing.T) {
+	fsServerID := uuid.New()
+	internalReg := NewInternalToolRegistry(InternalToolDeps{})
+	internalReg.tools["read_file"] = &InternalTool{
+		Name:        "read_file",
+		Description: "internal file reader",
+		Handler:     func(ctx context.Context, args map[string]any) (string, error) { return "internal", nil },
+	}
+	mock := &mockMCPExecutor{tools: map[string]uuid.UUID{"read_file": fsServerID}}
+	composite := NewCompositeToolExecutor(internalReg, mock)
+
+	refs := []mcp.ToolRef{{ServerName: "filesystem", ToolName: "*"}}
+	scoped := NewScopedToolExecutor(composite, refs, map[uuid.UUID]string{fsServerID: "filesystem"})
+
+	serverID, toolName, err := scoped.FindToolByName(context.Background(), "read_file")
+	if err != nil {
+		t.Fatalf("read_file should resolve to allowed MCP tool: %v", err)
+	}
+	if serverID != fsServerID {
+		t.Fatalf("serverID = %v, want MCP filesystem server %v", serverID, fsServerID)
+	}
+	if toolName != "read_file" {
+		t.Fatalf("toolName = %q, want read_file", toolName)
+	}
+}
+
 func TestScopedToolExecutor_DeniedDifferentServer(t *testing.T) {
 	fsServerID := uuid.New()
 	ghServerID := uuid.New()

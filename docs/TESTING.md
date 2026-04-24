@@ -441,7 +441,7 @@ Disallowed testing posture:
 | `core/internal/server/governance_test.go` | Policy CRUD, pending approvals, resolve approve/reject |
 | `core/internal/server/telemetry_test.go` | Runtime telemetry, trust threshold GET/PUT/range |
 | `core/internal/server/mission_test.go` | Mission CRUD, intent commit TX, negotiate, sensor configs, blueprint extraction |
-| `core/internal/server/mcp_test.go`, `core/internal/mcp/service_test.go`, `core/internal/mcp/library_test.go` | MCP install validation, idempotent server-name upsert, runtime workspace normalization for filesystem installs, list, delete, tool call, library |
+| `core/internal/server/mcp_test.go`, `core/internal/mcp/service_test.go`, `core/internal/mcp/library_test.go`, `core/internal/swarm/tool_executor_test.go` | MCP install validation, idempotent server-name upsert, runtime workspace normalization for filesystem installs, MCP-scoped name-collision resolution, list, delete, tool call, library |
 | `core/internal/server/mcp_toolsets_test.go` | MCP tool set list/create/update/delete paths + nil guards |
 | `core/internal/server/memory_search_test.go` | Memory search, sitreps, sensors |
 | `core/internal/server/proposals_test.go` | Proposal CRUD, approve/reject, conflict detection |
