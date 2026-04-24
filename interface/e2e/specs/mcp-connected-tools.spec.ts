@@ -320,7 +320,7 @@ async function createCorrelationGroup(page: Page, teamID: string) {
     const expiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     const response = await page.request.post("/api/v1/groups", {
         data: {
-            name: "Slice 3 MCP Correlation Group",
+            name: `Slice 3 MCP Correlation Group ${teamID}`,
             goal_statement: "Prove that a real team lane can use an MCP-backed capability and surface recent MCP activity.",
             work_mode: "read_only",
             allowed_capabilities: ["artifact.review"],
