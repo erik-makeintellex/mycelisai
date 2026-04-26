@@ -25,7 +25,7 @@ test.describe("Workflow output reload and retained review", () => {
 
             const text = content.includes("Resume the release-readiness work")
                 ? "Already done: planning lane package, validation checklist, and review summary are retained. Remaining: confirm the live Windows operator validation pass. Next owner: Review lane lead."
-                : "Use the self-hosted Kubernetes lane with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks.";
+                : "Use the supported Docker Compose lane first with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks. Keep Kubernetes as the modular scale-up proof lane.";
 
             await route.fulfill({
                 status: 200,
@@ -179,7 +179,7 @@ test.describe("Workflow output reload and retained review", () => {
         );
         await expect(
             page.getByText(
-                "Use the self-hosted Kubernetes lane with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks.",
+                "Use the supported Docker Compose lane first with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks. Keep Kubernetes as the modular scale-up proof lane.",
             ),
         ).toBeVisible();
 

@@ -105,6 +105,7 @@ Tasking note:
 - the `charts/mycelis-core/values-enterprise-windows-ai.yaml` preset now fails closed unless `MYCELIS_K8S_TEXT_ENDPOINT` is set to a real Windows-hosted AI endpoint; do not treat the placeholder value as deployable
 - `uv run inv k8s.init` / `k8s.up` / `k8s.deploy` now prefer `k3d` as the local Kubernetes backend when it is available, while keeping `MYCELIS_K8S_BACKEND=kind` as the explicit fallback for older local workflows
 - `uv run inv ci.release-preflight --runtime-posture` now adds a tighter runtime gate before baseline proof: 12 GiB disk headroom, explicit AI-endpoint discovery from process env plus `.env.compose` / `.env`, fail-closed behavior when no supported non-loopback endpoint contract is configured, and WSL-host probe mirroring for `host.docker.internal` so the Windows-local Ollama contract can still be verified before the Compose relay starts
+- `uv run inv quality.max-lines` now enforces the source-tree `300` LOC no-regression contract by default; existing oversized files are tracked in `ops/quality_legacy_caps.txt` and should only move downward as modules are split.
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
 - workspace-relative file/tool requests may use `workspace/...` as a readable alias for the configured workspace root; runtime normalization strips that leading alias instead of nesting a second `workspace` directory under `MYCELIS_WORKSPACE`
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, point it at a host-reachable endpoint such as `http://host.docker.internal:11434`, and let Compose map that value into the provider-specific runtime overrides inside Core
@@ -191,6 +192,8 @@ The current release target is [V8.1 Living Organization Architecture](docs/archi
 
 V8.1 defines the MVP release we are aligning implementation to now: a Soma-primary AI Organization system with bounded automation visibility, memory and continuity visibility, inheritance contracts, and safe organization structure surfaces.
 
+Development has already started moving toward V8.2. That work should keep flowing, but it must stay modular: each V8.2-aligned slice should advance one named boundary, keep default V8.1 surfaces simple unless explicitly promoted, and preserve the current release proof lane.
+
 Included in the V8.1 release target:
 - AI Organization creation and Soma-primary workspace flow
 - a primary Soma conversation surface for discussing plans, samples, and delivery intent
@@ -219,6 +222,7 @@ Excluded from the V8.1 release target:
 
 Release rule:
 - if a surface belongs to V8.2 but not the V8.1 MVP, it should remain out of the default release surface until explicitly promoted
+- if V8.2 work is needed before V8.1 release lock, keep it behind a stable module boundary such as runtime/deployment, memory/learning, team/workflow, capability/MCP, advanced UI, or governance/trust
 
 ## Current Implementation State
 

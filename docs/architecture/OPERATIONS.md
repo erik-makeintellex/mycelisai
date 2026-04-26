@@ -226,7 +226,7 @@ Stopping containers is necessary but not sufficient. The operator or agent must 
 |---------|-------------|
 | `uv run inv logging.check-schema` | Verify runtime event literals map to declared event constants and docs coverage |
 | `uv run inv logging.check-topics` | Fail when production code hardcodes `swarm.*` subjects outside allowed constants files |
-| `uv run inv quality.max-lines --limit 350` | Enforce the hot-path `<=350 LOC` policy with temporary no-regression legacy caps |
+| `uv run inv quality.max-lines --limit 300` | Enforce the source-tree `<=300 LOC` policy with temporary no-regression legacy caps |
 
 ### Kubernetes Tasks (`ops/k8s.py`)
 

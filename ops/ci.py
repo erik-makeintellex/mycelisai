@@ -442,9 +442,9 @@ def baseline(c, e2e=True):
     except SystemExit:
         errors.append("logging topic check failed")
 
-    print("[3/7] quality.max-lines --limit=350")
+    print("[3/7] quality.max-lines --limit=300")
     try:
-        quality.max_lines.body(c, limit=350, paths=quality.DEFAULT_HOT_PATHS, strict=False)
+        quality.max_lines.body(c, limit=300, paths=quality.DEFAULT_SOURCE_PATHS, strict=False)
         print("  OK")
     except SystemExit:
         errors.append("quality max-lines check failed")

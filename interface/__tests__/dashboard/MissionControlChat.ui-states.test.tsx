@@ -37,6 +37,15 @@ describe('MissionControlChat UI states', () => {
         expect(screen.getByPlaceholderText(/Ask Soma/i)).toBeDefined();
     });
 
+    it('keeps the message history in the bounded scroll region', async () => {
+        render(<MissionControlChat simpleMode />);
+        await settleMissionControlChat();
+
+        expect(screen.getByTestId('mission-chat').className).toContain('min-h-0');
+        expect(screen.getByTestId('mission-chat-scroll').className).toContain('min-h-0');
+        expect(screen.getByTestId('mission-chat-scroll').className).toContain('overflow-y-auto');
+    });
+
     it('shows a selected team placeholder in simple Soma mode', async () => {
         useCortexStore.setState({
             selectedTeamId: 'marketing-team',

@@ -9,7 +9,7 @@
 | Phase | Status | Theme |
 | --- | --- | --- |
 | `P0` | COMPLETE | Operational foundation and gate discipline |
-| `P1` | ACTIVE | Logging, error handling, and hot-path cleanup under `<=350` LOC policy |
+| `P1` | ACTIVE | Logging, error handling, and source-tree cleanup under the `<=300` LOC no-regression policy |
 | `P2` | BLOCKED | Meta-agent-owned manifest pipeline |
 | `P3` | BLOCKED | Workflow-composer onboarding and execution-facing UI |
 | `P4` | BLOCKED | Release hardening + final regression caps |
@@ -31,7 +31,7 @@
 - Required `uv run inv` commands:
   - Target contract after gate pass: `uv run inv logging.check-schema`
   - Target contract after gate pass: `uv run inv logging.check-topics`
-  - Target contract after gate pass: `uv run inv quality.max-lines --limit 350`
+  - Target contract after gate pass: `uv run inv quality.max-lines --limit 300`
   - Target contract after gate pass: `uv run inv lifecycle.memory-restart --build --frontend`
   - Compatibility probe only: `uvx --from invoke inv -l`
   - Current execution note: this workspace verified bare `uvx inv -l` fails with `Package inv does not provide any executables`; operator evidence must be captured with `uv run inv ...`
@@ -67,7 +67,7 @@
 
 ## P1 Action Card
 
-- Objective: standardize operator-facing logging and error handling in the highest-risk execution paths while reducing hot-path files toward the global `350` LOC policy under the temporary no-regression caps tracked in `ops/quality_legacy_caps.txt`.
+- Objective: standardize operator-facing logging and error handling in the highest-risk execution paths while reducing oversized source files toward the global `300` LOC policy under the temporary no-regression caps tracked in `ops/quality_legacy_caps.txt`.
 - Scoped files:
   - `docs/logging.md`
   - `core/internal/swarm/agent.go`
@@ -86,12 +86,12 @@
 - Required `uv run inv` commands:
   - `uv run inv logging.check-schema`
   - `uv run inv logging.check-topics`
-  - `uv run inv quality.max-lines --limit 350`
+  - `uv run inv quality.max-lines --limit 300`
   - `uv run inv ci.baseline`
 - Tests:
   - `uv run inv logging.check-schema`
   - `uv run inv logging.check-topics`
-  - `uv run inv quality.max-lines --limit 350`
+  - `uv run inv quality.max-lines --limit 300`
   - `uv run inv ci.baseline`
   - targeted package and UI tests for each scoped error-handling or decomposition area
 - Acceptance criteria:
@@ -110,7 +110,7 @@
   - Commands:
     - `uv run inv logging.check-schema`
     - `uv run inv logging.check-topics`
-    - `uv run inv quality.max-lines --limit 350`
+    - `uv run inv quality.max-lines --limit 300`
     - `uv run inv ci.baseline`
   - Gate result: `ACTIVE`
 

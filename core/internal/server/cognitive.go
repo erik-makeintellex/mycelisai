@@ -197,6 +197,16 @@ func isRuntimeStateQuestion(text string) bool {
 	return false
 }
 
+func isSearchCapabilityQuestion(text string) bool {
+	lower := strings.ToLower(strings.Join(strings.Fields(strings.TrimSpace(text)), " "))
+	if lower == "" {
+		return false
+	}
+	searchTerms := []string{"search", "web request", "web requests", "web search", "make requests", "browse", "internet", "brave", "searxng", "shared sources"}
+	capabilityTerms := []string{"can you", "are you able", "able to", "do you have", "current", "status", "instantiate", "own api", "tokens", "token"}
+	return requestContainsAny(lower, searchTerms) && requestContainsAny(lower, capabilityTerms)
+}
+
 func normalizeChatRequestMessages(messages []chatRequestMessage) ([]chatRequestMessage, []string) {
 	idx := latestUserMessageIndex(messages)
 	if idx < 0 {
@@ -928,6 +938,84 @@ func (s *AdminServer) respondRuntimeStateSummary(w http.ResponseWriter, r *http.
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
 }
 
+func (s *AdminServer) buildSearchCapabilityAnswer() string {
+	status := s.searchCapabilityStatus()
+	lines := []string{"Current Mycelis search capability:"}
+	provider := strings.TrimSpace(status.Provider)
+	if provider == "" {
+		provider = "disabled"
+	}
+	availability := "enabled"
+	if !status.Enabled {
+		availability = "disabled"
+	} else if !status.Configured {
+		availability = "selected but not fully configured"
+	}
+	lines = append(lines, fmt.Sprintf("- Provider: %s (%s).", provider, availability))
+	if status.SupportsLocalSources {
+		lines = append(lines, "- Local shared-source search is available through Soma's web_search tool.")
+	}
+	if status.SupportsPublicWeb {
+		lines = append(lines, "- Public web search is available when the selected provider is configured.")
+	}
+	if status.DirectSomaInteraction {
+		lines = append(lines, fmt.Sprintf("- Soma direct interaction: ask Soma to use %s for governed search requests.", status.SomaToolName))
+	}
+	if !status.RequiresHostedAPIToken {
+		lines = append(lines, "- Hosted Brave tokens are not required for the Mycelis-owned path; use local_sources or self-hosted SearXNG.")
+	} else {
+		lines = append(lines, "- Brave still requires the curated brave-search MCP server and BRAVE_API_KEY.")
+	}
+	if status.Blocker != nil {
+		lines = append(lines, fmt.Sprintf("- Current blocker: %s", status.Blocker.Message))
+		if strings.TrimSpace(status.Blocker.NextAction) != "" {
+			lines = append(lines, fmt.Sprintf("- Next action: %s", status.Blocker.NextAction))
+		}
+	} else if len(status.NextActions) > 0 {
+		lines = append(lines, fmt.Sprintf("- Next action: %s", status.NextActions[0]))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (s *AdminServer) respondSearchCapabilitySummary(w http.ResponseWriter, r *http.Request) {
+	auditEventID, _ := s.createAuditEvent(
+		protocol.TemplateChatToAnswer, "admin",
+		"Search capability summary",
+		map[string]any{
+			"actor":         "Soma",
+			"user":          auditUserLabelFromRequest(r),
+			"ask_class":     string(protocol.AskClassDirectAnswer),
+			"action":        "answer_delivered",
+			"result_status": "completed",
+			"source_kind":   "system",
+		},
+	)
+
+	chatPayload := protocol.ChatResponsePayload{
+		Text:     s.buildSearchCapabilityAnswer(),
+		AskClass: protocol.AskClassDirectAnswer,
+		Provenance: &protocol.AnswerProvenance{
+			ResolvedIntent:  "answer",
+			PermissionCheck: "pass",
+			PolicyDecision:  "allow",
+			AuditEventID:    auditEventID,
+		},
+	}
+	payloadBytes, _ := json.Marshal(chatPayload)
+	envelope := protocol.CTSEnvelope{
+		Meta: protocol.CTSMeta{
+			SourceNode: "admin",
+			Timestamp:  time.Now(),
+		},
+		SignalType: protocol.SignalChatResponse,
+		TrustScore: protocol.TrustScoreCognitive,
+		Payload:    payloadBytes,
+		TemplateID: protocol.TemplateChatToAnswer,
+		Mode:       protocol.ModeAnswer,
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
+}
+
 func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID string, rolePlan []string, approval *protocol.ApprovalPolicy, profile *protocol.GovernanceProfileSnapshot, display proposalDisplayContract) *protocol.ChatProposal {
 	deduped := uniqueOrderedTools(mutTools)
 	return &protocol.ChatProposal{
@@ -1447,6 +1535,10 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	latestUserText := latestUserMessageContent(req.Messages)
 	if isRuntimeStateQuestion(latestUserText) {
 		s.respondRuntimeStateSummary(w, r, req.OrganizationID, req.TeamID, req.TeamName)
+		return
+	}
+	if isSearchCapabilityQuestion(latestUserText) {
+		s.respondSearchCapabilitySummary(w, r)
 		return
 	}
 

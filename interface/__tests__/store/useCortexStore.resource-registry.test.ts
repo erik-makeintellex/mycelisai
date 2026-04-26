@@ -116,6 +116,36 @@ describe('useCortexStore resource registry', () => {
             expect(mockFetch).toHaveBeenCalledWith('/api/v1/mcp/activity?limit=12');
             expect(useCortexStore.getState().mcpActivity).toEqual(activity);
         });
+
+        it('stores Mycelis Search capability status from API', async () => {
+            const status = {
+                provider: 'searxng',
+                enabled: true,
+                configured: true,
+                supports_local_sources: false,
+                supports_public_web: true,
+                soma_tool_name: 'web_search',
+                direct_soma_interaction: true,
+                requires_hosted_api_token: false,
+                max_results: 8,
+            };
+            mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true, data: status }) });
+
+            await useCortexStore.getState().fetchSearchCapability();
+
+            expect(mockFetch).toHaveBeenCalledWith('/api/v1/search/status');
+            expect(useCortexStore.getState().searchCapability).toEqual(status);
+            expect(useCortexStore.getState().searchCapabilityError).toBeNull();
+        });
+
+        it('records Mycelis Search capability status failures', async () => {
+            mockFetch.mockResolvedValue({ ok: false, status: 503 });
+
+            await useCortexStore.getState().fetchSearchCapability();
+
+            expect(useCortexStore.getState().searchCapability).toBeNull();
+            expect(useCortexStore.getState().searchCapabilityError).toContain('HTTP 503');
+        });
     });
 
     describe('trust and governance state', () => {

@@ -586,7 +586,7 @@ def test_canonical_task_docs_cover_required_invoke_commands():
             "uv run inv interface.typecheck",
             "uv run inv lifecycle.memory-restart",
             "uv run inv logging.check-schema",
-            "uv run inv quality.max-lines --limit 350",
+            "uv run inv quality.max-lines --limit 300",
             "uv run inv ci.service-check",
             "uv run inv ci.entrypoint-check",
             "uv run inv team.architecture-sync",

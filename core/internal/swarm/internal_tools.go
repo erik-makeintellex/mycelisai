@@ -15,6 +15,7 @@ import (
 	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/memory"
+	"github.com/mycelis/core/internal/searchcap"
 	"github.com/nats-io/nats.go"
 )
 
@@ -96,6 +97,7 @@ type InternalToolRegistry struct {
 	comms     *comms.Gateway
 	db        *sql.DB
 	exchange  *exchange.Service
+	search    *searchcap.Service
 	somaRef   *Soma
 }
 
@@ -110,6 +112,7 @@ type InternalToolDeps struct {
 	Comms     *comms.Gateway
 	DB        *sql.DB
 	Exchange  *exchange.Service
+	Search    *searchcap.Service
 }
 
 // NewInternalToolRegistry creates and populates the built-in tool set.
@@ -125,6 +128,7 @@ func NewInternalToolRegistry(deps InternalToolDeps) *InternalToolRegistry {
 		comms:     deps.Comms,
 		db:        deps.DB,
 		exchange:  deps.Exchange,
+		search:    deps.Search,
 	}
 	r.registerAll()
 	return r

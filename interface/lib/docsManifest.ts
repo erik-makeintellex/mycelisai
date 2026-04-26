@@ -331,7 +331,13 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-self-hosted-runtime-delivery-program",
                 label: "V8 Self-Hosted Runtime Delivery",
                 path: "docs/architecture-library/V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md",
-                description: "Compact delivery-team contract for deployable Compose and self-hosted Kubernetes runtime work",
+                description: "Compact delivery-team contract for V8.1 Compose proof and modular V8.2 self-hosted Kubernetes runtime work",
+            },
+            {
+                slug: "v8-mycelis-search-capability-delivery",
+                label: "V8 Mycelis Search Capability",
+                path: "docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md",
+                description: "Delivery-team contract for owned local-source search, optional SearXNG, optional hosted search, and capability/MCP testing gates",
             },
             {
                 slug: "v8-enterprise-self-hosted-kubernetes-delivery-plan",

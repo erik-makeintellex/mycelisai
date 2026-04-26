@@ -46,6 +46,8 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Workflow Variants And Reboot Proof Set**: `./architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md`
 - **V8 Universal Soma And Context Model PRD**: `./architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`
 - **V8 Home Docker Compose Runtime**: `./architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
+- **V8 Self-Hosted Runtime Delivery Program**: `./architecture-library/V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md`
+- **V8 Mycelis Search Capability Delivery Plan**: `./architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md`
 - **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`
 - **V8 MVP Media, Team Output, And Template Registry**: `./architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`
 - **V8.2 Production Architecture Target**: `../v8-2.md`
@@ -114,5 +116,6 @@ Guidance rules:
 - user guidance should stay focused on using the product, not implementation internals
 - agent/developer guidance should point to active V8 authority before V7 migration material
 - testing guidance should point to durable verification contracts rather than temporary execution notes
+- V8.2-aligned work should stay modular and name its owning boundary before it changes runtime, memory, workflow, capability, UI, or governance behavior
 - `./archive/README.md` is historical context only and should not drive active implementation
 - any slice that changes runtime, validation, API meaning, or memory/governance posture must review and update the matching docs set in the same change, including the trusted-memory contract when that posture is touched

@@ -1,15 +1,12 @@
-import socket
 import subprocess
-import time
-import json
-import os
-import shlex
 from pathlib import Path
-from typing import Callable
-from urllib.parse import urlparse
 
 from invoke import task, Collection
 
+from . import compose_env
+from . import compose_probe
+from . import compose_storage
+from . import compose_wsl_relay
 from . import db as db_tasks
 from .config import (
     API_HOST,
@@ -29,407 +26,177 @@ COMPOSE_ENV_FILE = ROOT_DIR / ".env.compose"
 COMPOSE_ENV_EXAMPLE = ROOT_DIR / ".env.compose.example"
 COMPOSE_PROJECT = "mycelis-home"
 DEFAULT_OUTPUT_HOST_PATH = ROOT_DIR / "workspace" / "docker-compose" / "data"
-OUTPUT_BLOCK_MODES = {"local_hosted", "cluster_generated"}
+OUTPUT_BLOCK_MODES = compose_env.OUTPUT_BLOCK_MODES
 WSL_OLLAMA_RELAY_NAME = f"{COMPOSE_PROJECT}-ollama-relay"
 WSL_OLLAMA_RELAY_IMAGE = "alpine:3.21"
 DEFAULT_WSL_OLLAMA_RELAY_PORT = 11435
-COMPOSE_RUNTIME_OVERRIDE_KEYS = {
-    "CORS_ORIGIN",
-    "DATA_DIR",
-    "DB_HOST",
-    "DB_NAME",
-    "DB_PASSWORD",
-    "DB_PORT",
-    "DB_USER",
-    "MYCELIS_API_KEY",
-    "MYCELIS_BOOTSTRAP_TEMPLATE_ID",
-    "MYCELIS_COMPOSE_CORE_PORT",
-    "MYCELIS_COMPOSE_INTERFACE_PORT",
-    "MYCELIS_COMPOSE_NATS_MONITOR_PORT",
-    "MYCELIS_COMPOSE_NATS_PORT",
-    "MYCELIS_COMPOSE_OLLAMA_HOST",
-    "MYCELIS_COMPOSE_POSTGRES_PORT",
-    "MYCELIS_COMPOSE_WSL_OLLAMA_RELAY_PORT",
-    "MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP",
-    "MYCELIS_OUTPUT_BLOCK_MODE",
-    "MYCELIS_OUTPUT_HOST_PATH",
-    "MYCELIS_WORKSPACE",
-    "NATS_URL",
-    "POSTGRES_DB",
-    "POSTGRES_PASSWORD",
-    "POSTGRES_USER",
-}
+COMPOSE_RUNTIME_OVERRIDE_KEYS = compose_env.COMPOSE_RUNTIME_OVERRIDE_KEYS
 
 
 def _compose_command(*args: str) -> list[str]:
-    return docker_command(
-        "compose",
-        "--project-name",
+    return compose_env.compose_command(
+        ROOT_DIR,
         COMPOSE_PROJECT,
-        "--env-file",
-        docker_host_path(COMPOSE_ENV_FILE),
-        "-f",
-        docker_host_path(COMPOSE_FILE),
+        COMPOSE_ENV_FILE,
+        COMPOSE_FILE,
+        docker_command,
+        docker_host_path,
         *args,
-        cwd=ROOT_DIR,
     )
 
 
 def _require_compose_env_file():
-    if COMPOSE_ENV_FILE.exists():
-        return
-    raise SystemExit(
-        f"Missing {COMPOSE_ENV_FILE.name}. Copy {COMPOSE_ENV_EXAMPLE.name} to "
-        f"{COMPOSE_ENV_FILE.name} and set MYCELIS_API_KEY before running compose tasks."
-    )
+    return compose_env.require_compose_env_file(COMPOSE_ENV_FILE, COMPOSE_ENV_EXAMPLE)
 
 
 def _load_compose_env() -> dict[str, str]:
-    _require_compose_env_file()
-    values: dict[str, str] = {}
-    for raw_line in COMPOSE_ENV_FILE.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip()
-    return values
+    return compose_env.load_compose_env(COMPOSE_ENV_FILE, _require_compose_env_file)
 
 
 def _compose_effective_env(env_values: dict[str, str] | None = None) -> dict[str, str]:
-    values = dict(env_values or _load_compose_env())
-    for key in COMPOSE_RUNTIME_OVERRIDE_KEYS:
-        override = os.environ.get(key)
-        if override is None:
-            continue
-        cleaned = _clean_env_value(override)
-        if cleaned:
-            values[key] = cleaned
-    return values
+    return compose_env.compose_effective_env(env_values, _load_compose_env)
 
 
 def _wsl_exec_command(*args: str) -> list[str]:
-    command = ["wsl.exe"]
-    distro = os.environ.get("MYCELIS_WSL_DISTRO", "").strip()
-    if distro:
-        command.extend(["-d", distro])
-    command.extend(["--exec", *args])
-    return command
+    return compose_env.wsl_exec_command(*args)
 
 
 def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
-    try:
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
-    except (ConnectionRefusedError, TimeoutError, OSError):
-        return False
+    return compose_env.port_open(port, host=host, timeout=timeout)
 
 
 def _normalize_bool(value: str) -> bool:
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    return compose_env.normalize_bool(value)
 
 
 def _looks_like_container_loopback(url: str) -> bool:
-    candidate = url.strip().lower()
-    for prefix in ("http://", "https://"):
-        if candidate.startswith(prefix):
-            candidate = candidate[len(prefix):]
-            break
-    candidate = candidate.split("/", 1)[0]
-    host = candidate.split(":", 1)[0]
-    return host in {"127.0.0.1", "localhost", "0.0.0.0"}
+    return compose_env.looks_like_container_loopback(url)
 
 
 def _clean_env_value(value: str) -> str:
-    return value.strip().strip('"').strip("'")
+    return compose_env.clean_env_value(value)
 
 
 def _resolve_host_path(path_value: str) -> Path:
-    raw_path = _clean_env_value(path_value)
-    expanded = os.path.expandvars(os.path.expanduser(raw_path))
-    return Path(expanded).resolve(strict=False)
+    return compose_env.resolve_host_path(path_value)
 
 
 def _parse_network_endpoint(url: str) -> tuple[str, int]:
-    parsed = urlparse(url.strip())
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise SystemExit(
-            "Invalid .env.compose MYCELIS_COMPOSE_OLLAMA_HOST: "
-            f"{url}. Use an http(s) endpoint such as http://host.docker.internal:11434."
-        )
-    port = parsed.port or (443 if parsed.scheme == "https" else 80)
-    return parsed.hostname, port
+    return compose_env.parse_network_endpoint(url)
 
 
 def _wsl_http_available(url: str) -> bool:
-    probe = url.rstrip("/") + "/api/tags"
-    try:
-        result = subprocess.run(
-            _wsl_exec_command(
-                "sh",
-                "-lc",
-                f"curl -fsS --max-time 5 -o /dev/null {shlex.quote(probe)}",
-            ),
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
-    except subprocess.TimeoutExpired:
-        return False
-    return result.returncode == 0
+    return compose_env.wsl_http_available(url, _wsl_exec_command)
 
 
 def _wsl_ollama_relay_port(env_values: dict[str, str]) -> int:
-    raw = _clean_env_value(
-        env_values.get("MYCELIS_COMPOSE_WSL_OLLAMA_RELAY_PORT", str(DEFAULT_WSL_OLLAMA_RELAY_PORT))
-    )
-    try:
-        return int(raw)
-    except ValueError as exc:
-        raise SystemExit(
-            "Invalid .env.compose MYCELIS_COMPOSE_WSL_OLLAMA_RELAY_PORT: "
-            f"{raw!r} must be an integer port."
-        ) from exc
+    return compose_env.wsl_ollama_relay_port(env_values, DEFAULT_WSL_OLLAMA_RELAY_PORT)
 
 
 def _docker_run(args: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(
-        docker_command(*args, cwd=ROOT_DIR),
-        capture_output=True,
-        text=True,
+    return compose_wsl_relay.docker_run(
+        args,
+        docker_command=docker_command,
+        root_dir=ROOT_DIR,
+        check=check,
     )
-    if check and result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "unknown docker error"
-        raise SystemExit(f"Docker command failed: {' '.join(args)} ({detail})")
-    return result
 
 
 def _inspect_wsl_ollama_relay_labels() -> dict[str, str] | None:
-    result = _docker_run(
-        ["inspect", WSL_OLLAMA_RELAY_NAME, "--format", "{{json .Config.Labels}}"],
-        check=False,
+    return compose_wsl_relay.inspect_labels(
+        relay_name=WSL_OLLAMA_RELAY_NAME,
+        docker_runner=_docker_run,
     )
-    if result.returncode != 0:
-        return None
-    raw = result.stdout.strip()
-    if not raw:
-        return {}
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        return None
 
 
 def _stop_wsl_ollama_relay():
-    if not (docker_host_mode() == "wsl" or running_in_wsl()):
-        return
-    _docker_run(["rm", "-f", WSL_OLLAMA_RELAY_NAME], check=False)
+    compose_wsl_relay.stop(
+        relay_name=WSL_OLLAMA_RELAY_NAME,
+        docker_runner=_docker_run,
+        docker_host_mode=docker_host_mode,
+        running_in_wsl=running_in_wsl,
+    )
 
 
 def _ensure_wsl_ollama_relay(target_host: str, target_port: int, relay_port: int):
-    labels = _inspect_wsl_ollama_relay_labels()
-    expected = {
-        "mycelis.relay.target_host": target_host,
-        "mycelis.relay.target_port": str(target_port),
-        "mycelis.relay.listen_port": str(relay_port),
-    }
-    if labels and all(labels.get(key) == value for key, value in expected.items()):
-        return
-
-    _stop_wsl_ollama_relay()
-    relay_cmd = (
-        "apk add --no-cache socat >/dev/null && "
-        f"exec socat TCP-LISTEN:{relay_port},fork,reuseaddr,bind=0.0.0.0 "
-        f"TCP:{target_host}:{target_port}"
+    compose_wsl_relay.ensure(
+        target_host,
+        target_port,
+        relay_port,
+        relay_name=WSL_OLLAMA_RELAY_NAME,
+        relay_image=WSL_OLLAMA_RELAY_IMAGE,
+        inspect_relay_labels=_inspect_wsl_ollama_relay_labels,
+        stop_relay=_stop_wsl_ollama_relay,
+        docker_runner=_docker_run,
     )
-    result = _docker_run(
-        [
-            "run",
-            "-d",
-            "--rm",
-            "--name",
-            WSL_OLLAMA_RELAY_NAME,
-            "--network",
-            "host",
-            "--label",
-            f"mycelis.relay.target_host={target_host}",
-            "--label",
-            f"mycelis.relay.target_port={target_port}",
-            "--label",
-            f"mycelis.relay.listen_port={relay_port}",
-            WSL_OLLAMA_RELAY_IMAGE,
-            "sh",
-            "-lc",
-            relay_cmd,
-        ]
-    )
-    if not result.stdout.strip():
-        raise SystemExit("Failed to start the WSL Ollama relay container.")
-    time.sleep(2)
 
 
 def _prepare_wsl_ollama_host(env_values: dict[str, str]) -> dict[str, str]:
-    values = dict(env_values)
-    if not (docker_host_mode() == "wsl" or running_in_wsl()):
-        return values
-
-    configured = _clean_env_value(values.get("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434"))
-    configured_host, configured_port = _parse_network_endpoint(configured)
-    relay_port = _wsl_ollama_relay_port(values)
-    labels = _inspect_wsl_ollama_relay_labels()
-    if labels and labels.get("mycelis.relay.listen_port") == str(relay_port):
-        target_port = labels.get("mycelis.relay.target_port", "")
-        target_host = labels.get("mycelis.relay.target_host", "")
-        if target_port == str(configured_port) and target_host in {configured_host, "127.0.0.1"}:
-            print(
-                "  WSL Ollama relay: "
-                f"http://host.docker.internal:{relay_port} -> {target_host}:{target_port}"
-            )
-            values["MYCELIS_COMPOSE_OLLAMA_HOST"] = f"http://host.docker.internal:{relay_port}"
-            return values
-
-    relay_target_host = configured_host
-    relay_target_port = configured_port
-    if not _wsl_http_available(configured):
-        localhost_candidate = f"http://127.0.0.1:{configured_port}"
-        if _wsl_http_available(localhost_candidate):
-            relay_target_host = "127.0.0.1"
-        else:
-            raise SystemExit(
-                "WSL Docker could not reach the configured MYCELIS_COMPOSE_OLLAMA_HOST and "
-                "no mirrored localhost Ollama fallback was reachable from WSL. "
-                "Verify the Windows Ollama service is running and reachable from the Docker-owning WSL distro."
-            )
-
-    _ensure_wsl_ollama_relay(relay_target_host, relay_target_port, relay_port)
-    print(
-        "  WSL Ollama relay: "
-        f"http://host.docker.internal:{relay_port} -> {relay_target_host}:{relay_target_port}"
+    return compose_wsl_relay.prepare_host(
+        env_values,
+        docker_host_mode=docker_host_mode,
+        running_in_wsl=running_in_wsl,
+        clean_env_value=_clean_env_value,
+        parse_network_endpoint=_parse_network_endpoint,
+        relay_port=_wsl_ollama_relay_port,
+        inspect_relay_labels=_inspect_wsl_ollama_relay_labels,
+        wsl_http_available=_wsl_http_available,
+        ensure_relay=_ensure_wsl_ollama_relay,
     )
-    values["MYCELIS_COMPOSE_OLLAMA_HOST"] = f"http://host.docker.internal:{relay_port}"
-    return values
 
 
 def _validate_output_block_config(env_values: dict[str, str]):
-    mode_explicit = "MYCELIS_OUTPUT_BLOCK_MODE" in env_values
-    mode = _clean_env_value(env_values.get("MYCELIS_OUTPUT_BLOCK_MODE", "local_hosted")).lower()
-    if mode not in OUTPUT_BLOCK_MODES:
-        raise SystemExit(
-            "Invalid .env.compose MYCELIS_OUTPUT_BLOCK_MODE: "
-            f"{mode}. Use one of: {', '.join(sorted(OUTPUT_BLOCK_MODES))}."
-        )
-
-    path_explicit = "MYCELIS_OUTPUT_HOST_PATH" in env_values
-    raw_path = _clean_env_value(env_values.get("MYCELIS_OUTPUT_HOST_PATH", ""))
-    if not raw_path:
-        if mode == "local_hosted" and mode_explicit:
-            raise SystemExit(
-                "MYCELIS_OUTPUT_HOST_PATH is required when MYCELIS_OUTPUT_BLOCK_MODE=local_hosted. "
-                "Set it to the host directory Docker should mount as Core /data."
-            )
-        raw_path = str(DEFAULT_OUTPUT_HOST_PATH)
-
-    host_path = _resolve_host_path(raw_path)
-    if host_path.exists() and not host_path.is_dir():
-        raise SystemExit(
-            "Invalid .env.compose MYCELIS_OUTPUT_HOST_PATH: "
-            f"{host_path} exists but is not a directory."
-        )
-    if not host_path.exists():
-        if mode == "local_hosted" and (mode_explicit or path_explicit):
-            raise SystemExit(
-                "Invalid .env.compose MYCELIS_OUTPUT_HOST_PATH: "
-                f"{host_path} does not exist. Create the directory first so Docker mounts the intended output block."
-            )
-        host_path.mkdir(parents=True, exist_ok=True)
+    return compose_env.validate_output_block_config(
+        env_values,
+        DEFAULT_OUTPUT_HOST_PATH,
+        output_block_modes=OUTPUT_BLOCK_MODES,
+    )
 
 
 def _validate_compose_env(env_values: dict[str, str]):
-    ollama_host = env_values.get("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434").strip()
-    if ollama_host and _looks_like_container_loopback(ollama_host):
-        raise SystemExit(
-            "Invalid .env.compose MYCELIS_COMPOSE_OLLAMA_HOST for Docker Compose: "
-            f"{ollama_host}. Use a host-reachable address such as "
-            "http://host.docker.internal:11434 or another container/service hostname."
-        )
-    _validate_output_block_config(env_values)
+    return compose_env.validate_compose_env(env_values, _validate_output_block_config)
 
 
 def _compose_runtime_env(env_values: dict[str, str] | None = None) -> dict[str, str] | None:
-    host_mode = docker_host_mode()
-    wsl_shell = running_in_wsl()
-    if host_mode != "wsl" and not wsl_shell:
-        return None
-
-    values = _compose_effective_env(env_values)
-    raw_host_path = _clean_env_value(values.get("MYCELIS_OUTPUT_HOST_PATH", ""))
-    resolved_host_path = _resolve_host_path(raw_host_path) if raw_host_path else DEFAULT_OUTPUT_HOST_PATH
-
-    env = os.environ.copy()
-    passthrough_keys = sorted(values.keys())
-    for key in passthrough_keys:
-        env[key] = values[key]
-    env["MYCELIS_OUTPUT_HOST_PATH"] = (
-        docker_host_path(resolved_host_path) if host_mode == "wsl" else str(resolved_host_path)
+    return compose_env.compose_runtime_env(
+        env_values,
+        docker_host_mode,
+        running_in_wsl,
+        _compose_effective_env,
+        DEFAULT_OUTPUT_HOST_PATH,
+        docker_host_path,
     )
-    if host_mode == "wsl":
-        passthrough_entries = [entry for entry in env.get("WSLENV", "").split(":") if entry]
-        if "MYCELIS_OUTPUT_HOST_PATH" not in passthrough_keys:
-            passthrough_keys.append("MYCELIS_OUTPUT_HOST_PATH")
-        for key in passthrough_keys:
-            if key not in passthrough_entries:
-                passthrough_entries.append(key)
-        env["WSLENV"] = ":".join(passthrough_entries)
-    return env
 
 
 def _print_step(step: int, total: int, title: str, expectation: str | None = None):
-    print(f"[{step}/{total}] {title}")
-    if expectation:
-        print(f"  Expect: {expectation}")
+    return compose_probe.print_step(step, total, title, expectation)
 
 
 def _failure_guidance(message: str, *next_steps: str) -> str:
-    lines = [message]
-    if next_steps:
-        lines.append("Next steps:")
-        lines.extend(f"- {step}" for step in next_steps)
-    return "\n".join(lines)
+    return compose_probe.failure_guidance(message, *next_steps)
 
 
 def _wait_for_port(port: int, label: str, timeout_seconds: int = 60) -> bool:
-    deadline = time.time() + timeout_seconds
-    while time.time() < deadline:
-        if _port_open(port):
-            return True
-        time.sleep(1)
-    print(f"  TIMEOUT waiting for {label} on localhost:{port} after {timeout_seconds}s")
-    return False
+    return compose_probe.wait_for_port(
+        port,
+        label,
+        port_open=_port_open,
+        timeout_seconds=timeout_seconds,
+    )
 
 
 def _http_get(url: str, timeout: float = 3.0, headers: dict[str, str] | None = None) -> tuple[int, str]:
-    import urllib.error
-    import urllib.request
-
-    try:
-        req = urllib.request.Request(url, headers=headers or {})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status, resp.read().decode("utf-8", errors="replace")
-    except urllib.error.HTTPError as exc:
-        return exc.code, str(exc)
-    except Exception as exc:
-        return 0, str(exc)
+    return compose_probe.http_get(url, timeout=timeout, headers=headers)
 
 
 def _wait_for_http_ok(url: str, label: str, timeout_seconds: int = 60, headers: dict[str, str] | None = None) -> bool:
-    deadline = time.time() + timeout_seconds
-    while time.time() < deadline:
-        status, _body = _http_get(url, timeout=5.0, headers=headers)
-        if status == 200:
-            return True
-        time.sleep(1)
-    print(f"  TIMEOUT waiting for {label} at {url} after {timeout_seconds}s")
-    return False
+    return compose_probe.wait_for_http_ok(
+        url,
+        label,
+        http_getter=_http_get,
+        timeout_seconds=timeout_seconds,
+        headers=headers,
+    )
 
 
 def _run_compose(
@@ -437,94 +204,57 @@ def _run_compose(
     check: bool = True,
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(args, text=True, capture_output=True, env=env)
-    if result.stdout:
-        print(result.stdout.rstrip())
-    if result.stderr:
-        print(result.stderr.rstrip())
-    if check and result.returncode != 0:
-        raise SystemExit(f"Compose command failed: {' '.join(args)}")
-    return result
+    return compose_probe.run_compose(args, check=check, env=env)
 
 
 def _expect_stage(
-    check: Callable[..., bool],
+    check,
     *args,
     failure: str,
     next_steps: list[str],
     **kwargs,
 ):
-    if check(*args, **kwargs):
-        return
-    raise SystemExit(_failure_guidance(failure, *next_steps))
+    return compose_probe.expect_stage(
+        check,
+        *args,
+        failure=failure,
+        next_steps=next_steps,
+        failure_guidance=_failure_guidance,
+        **kwargs,
+    )
 
 
 def _compose_db_user(env_values: dict[str, str]) -> str:
-    return _clean_env_value(env_values.get("DB_USER") or env_values.get("POSTGRES_USER") or "mycelis")
+    return compose_storage.compose_db_user(env_values, _clean_env_value)
 
 
 def _compose_db_name(env_values: dict[str, str]) -> str:
-    return _clean_env_value(env_values.get("DB_NAME") or env_values.get("POSTGRES_DB") or "cortex")
+    return compose_storage.compose_db_name(env_values, _clean_env_value)
 
 
 def _run_compose_psql(sql: str, env_values: dict[str, str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        _compose_command(
-            "exec",
-            "-T",
-            "postgres",
-            "psql",
-            "-t",
-            "-A",
-            "-h",
-            "127.0.0.1",
-            "-U",
-            _compose_db_user(env_values),
-            "-d",
-            _compose_db_name(env_values),
-            "-c",
-            sql,
-        ),
-        text=True,
-        capture_output=True,
-        env=_compose_runtime_env(env_values),
+    return compose_storage.run_compose_psql(
+        sql,
+        env_values,
+        compose_command=_compose_command,
+        compose_runtime_env=_compose_runtime_env,
+        db_user=_compose_db_user,
+        db_name=_compose_db_name,
     )
 
 
 def _compose_query_succeeds(sql: str, env_values: dict[str, str] | None = None) -> bool:
     env_values = env_values or _compose_effective_env()
-    result = _run_compose_psql(sql, env_values)
-    return result.returncode == 0 and "1" in result.stdout.split()
+    return compose_storage.compose_query_succeeds(sql, env_values, _run_compose_psql)
 
 
 def _compose_check_results(checks: tuple[tuple[str, str], ...], env_values: dict[str, str]) -> list[tuple[str, bool]]:
-    values = []
-    for index, (label, sql) in enumerate(checks, start=1):
-        exists_sql = sql.strip().rstrip(";")
-        escaped_label = label.replace("'", "''")
-        values.append(f"({index}, '{escaped_label}', EXISTS({exists_sql}))")
-    query = (
-        "WITH checks(ord, label, ok) AS (VALUES "
-        + ", ".join(values)
-        + ") SELECT label || E'\\t' || CASE WHEN ok THEN 'ok' ELSE 'missing' END FROM checks ORDER BY ord;"
+    return compose_storage.compose_check_results(
+        checks,
+        env_values,
+        run_psql=_run_compose_psql,
+        failure_guidance=_failure_guidance,
     )
-    result = _run_compose_psql(query, env_values)
-    if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "unknown psql error"
-        raise SystemExit(_failure_guidance(
-            f"Compose PostgreSQL check failed: {detail}",
-            "Run 'uv run inv compose.infra-health' to confirm the data plane is reachable.",
-            "Run 'uv run inv compose.logs postgres' to inspect database service logs.",
-        ))
-
-    parsed: list[tuple[str, bool]] = []
-    for raw_line in result.stdout.splitlines():
-        line = raw_line.strip()
-        if not line or "\t" not in line:
-            continue
-        label, state = line.split("\t", 1)
-        parsed.append((label, state == "ok"))
-    return parsed
 
 
 def _compose_schema_bootstrapped(env_values: dict[str, str] | None = None) -> bool:
@@ -532,61 +262,8 @@ def _compose_schema_bootstrapped(env_values: dict[str, str] | None = None) -> bo
     return all(ok for _label, ok in _compose_check_results(db_tasks.SCHEMA_COMPATIBILITY_CHECKS, env_values))
 
 
-COMPOSE_LONG_TERM_STORAGE_CHECKS = (
-    (
-        "pgvector extension",
-        "SELECT 1 FROM pg_extension WHERE extname = 'vector';",
-    ),
-    (
-        "semantic context vectors",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'context_vectors';",
-    ),
-    (
-        "durable agent memory",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'agent_memories';",
-    ),
-    (
-        "conversation continuity",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_turns';",
-    ),
-    (
-        "retained artifacts",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'artifacts';",
-    ),
-    (
-        "temporary continuity",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'temp_memory_channels';",
-    ),
-    (
-        "collaboration groups",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'collaboration_groups';",
-    ),
-    (
-        "managed exchange channels",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exchange_channels';",
-    ),
-    (
-        "managed exchange items",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exchange_items';",
-    ),
-    (
-        "conversation templates",
-        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conversation_templates';",
-    ),
-)
-
-
-COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = {
-    "semantic context vectors": ("008_context_engine.up.sql",),
-    "durable agent memory": ("019_agent_memories.up.sql", "037_scoped_memory_visibility.up.sql"),
-    "conversation continuity": ("030_conversation_turns.up.sql",),
-    "retained artifacts": ("018_artifacts.up.sql",),
-    "temporary continuity": ("033_temp_memory_channels.up.sql",),
-    "collaboration groups": ("034_collaboration_groups.up.sql",),
-    "managed exchange channels": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
-    "managed exchange items": ("035_managed_exchange.up.sql", "036_managed_exchange_security.up.sql"),
-    "conversation templates": ("038_conversation_templates.up.sql",),
-}
+COMPOSE_LONG_TERM_STORAGE_CHECKS = compose_storage.COMPOSE_LONG_TERM_STORAGE_CHECKS
+COMPOSE_STORAGE_MIGRATIONS_BY_CHECK = compose_storage.COMPOSE_STORAGE_MIGRATIONS_BY_CHECK
 
 
 def _compose_storage_check_results(env_values: dict[str, str]) -> list[tuple[str, bool]]:
@@ -594,128 +271,61 @@ def _compose_storage_check_results(env_values: dict[str, str]) -> list[tuple[str
 
 
 def _compose_host_port(env_values: dict[str, str], key: str, default: str) -> int:
-    try:
-        return int(env_values.get(key, default))
-    except ValueError as exc:
-        raise SystemExit(f"Invalid .env.compose {key}: {env_values.get(key)!r} must be an integer port.") from exc
+    return compose_storage.compose_host_port(env_values, key, default)
 
 
 def _print_data_plane_connection_guidance(env_values: dict[str, str]):
-    postgres_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_POSTGRES_PORT", "5432")
-    nats_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_PORT", "4222")
-    nats_monitor_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_MONITOR_PORT", "8222")
-    db_user = _compose_db_user(env_values)
-    db_name = _compose_db_name(env_values)
-
-    print("\nData service connection settings:")
-    print("  Same compose project app containers:")
-    print("    DB_HOST=postgres")
-    print("    DB_PORT=5432")
-    print("    NATS_URL=nats://nats:4222")
-    print("  Host-native clients:")
-    print("    DB_HOST=127.0.0.1")
-    print(f"    DB_PORT={postgres_port}")
-    print(f"    NATS_URL=nats://127.0.0.1:{nats_port}")
-    print("  Separate Docker Compose app project:")
-    print("    DB_HOST=host.docker.internal")
-    print(f"    DB_PORT={postgres_port}")
-    print(f"    NATS_URL=nats://host.docker.internal:{nats_port}")
-    print("  Credentials:")
-    print(f"    DB_USER={db_user}")
-    print("    DB_PASSWORD=<from .env.compose; not printed>")
-    print(f"    DB_NAME={db_name}")
-    print(f"    NATS monitor=http://127.0.0.1:{nats_monitor_port}/varz")
+    compose_storage.print_data_plane_connection_guidance(
+        env_values,
+        host_port=_compose_host_port,
+        db_user=_compose_db_user,
+        db_name=_compose_db_name,
+    )
 
 
 def _run_compose_migration_file(migration: Path, env_values: dict[str, str]):
-    result = _run_compose(
-        _compose_command(
-            "exec",
-            "-T",
-            "postgres",
-            "psql",
-            "-v",
-            "ON_ERROR_STOP=1",
-            "-h",
-            "127.0.0.1",
-            "-U",
-            _compose_db_user(env_values),
-            "-d",
-            _compose_db_name(env_values),
-            "-f",
-            f"/migrations/{migration.name}",
-        ),
-        check=False,
-        env=_compose_runtime_env(env_values),
+    compose_storage.run_compose_migration_file(
+        migration,
+        env_values,
+        run_compose=_run_compose,
+        compose_command=_compose_command,
+        compose_runtime_env=_compose_runtime_env,
+        db_user=_compose_db_user,
+        db_name=_compose_db_name,
     )
-    if result.returncode != 0:
-        raise SystemExit(f"Compose migration failed: {migration.name}")
 
 
 def _run_missing_compose_storage_migrations(env_values: dict[str, str]) -> bool:
-    missing = [label for label, ok in _compose_storage_check_results(env_values) if not ok]
-    migration_names: list[str] = []
-    for label in missing:
-        for migration_name in COMPOSE_STORAGE_MIGRATIONS_BY_CHECK.get(label, ()):
-            if migration_name not in migration_names:
-                migration_names.append(migration_name)
-
-    if not migration_names:
-        return False
-
-    migrations_by_name = {migration.name: migration for migration in db_tasks._migration_files()}
-    print("Applying missing long-term storage migrations:")
-    for migration_name in migration_names:
-        migration = migrations_by_name.get(migration_name)
-        if migration is None:
-            raise SystemExit(f"Missing migration file required for Compose storage bootstrap: {migration_name}")
-        print(f"  - {migration_name}")
-        _run_compose_migration_file(migration, env_values)
-    return True
+    return compose_storage.run_missing_compose_storage_migrations(
+        env_values,
+        storage_check_results=_compose_storage_check_results,
+        migration_files=db_tasks._migration_files,
+        run_migration_file=_run_compose_migration_file,
+    )
 
 
 def _run_compose_migrations(strict: bool = False):
-    env_values = _compose_effective_env()
-    if not strict and _compose_schema_bootstrapped(env_values):
-        print(
-            "Compose schema already appears compatible with the current runtime; "
-            "skipping forward migration replay."
-        )
-        print(
-            "Use 'uv run inv compose.down --volumes' for a truly fresh compose rebuild "
-            "when you need to replay the canonical migration stack end-to-end."
-        )
-        _run_missing_compose_storage_migrations(env_values)
-        return
-
-    for migration in db_tasks._migration_files():
-        _run_compose_migration_file(migration, env_values)
+    compose_storage.run_compose_migrations(
+        strict,
+        effective_env=_compose_effective_env,
+        schema_bootstrapped=_compose_schema_bootstrapped,
+        run_missing_storage_migrations=_run_missing_compose_storage_migrations,
+        migration_files=db_tasks._migration_files,
+        run_migration_file=_run_compose_migration_file,
+    )
 
 
 def _wait_for_postgres_ready(timeout_seconds: int = 90, env_values: dict[str, str] | None = None) -> bool:
     env_values = env_values or _compose_effective_env()
-    deadline = time.time() + timeout_seconds
-    while time.time() < deadline:
-        result = _run_compose(
-            _compose_command(
-                "exec",
-                "-T",
-                "postgres",
-                "pg_isready",
-                "-h",
-                "127.0.0.1",
-                "-U",
-                _compose_db_user(env_values),
-                "-d",
-                _compose_db_name(env_values),
-            ),
-            check=False,
-            env=_compose_runtime_env(env_values),
-        )
-        if result.returncode == 0:
-            return True
-        time.sleep(2)
-    return False
+    return compose_storage.wait_for_postgres_ready(
+        timeout_seconds,
+        env_values,
+        run_compose=_run_compose,
+        compose_command=_compose_command,
+        compose_runtime_env=_compose_runtime_env,
+        db_user=_compose_db_user,
+        db_name=_compose_db_name,
+    )
 
 
 @task(
@@ -984,19 +594,15 @@ def status(c):
     env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     print("=== Mycelis Compose Status ===\n")
-    _run_compose(_compose_command("ps"), check=False, env=_compose_runtime_env(env_values))
-
-    checks = [
-        ("PostgreSQL", int(env_values.get("MYCELIS_COMPOSE_POSTGRES_PORT", "5432"))),
-        ("NATS", int(env_values.get("MYCELIS_COMPOSE_NATS_PORT", "4222"))),
-        ("NATS Monitor", int(env_values.get("MYCELIS_COMPOSE_NATS_MONITOR_PORT", "8222"))),
-        ("Core API", int(env_values.get("MYCELIS_COMPOSE_CORE_PORT", str(API_PORT)))),
-        ("Frontend", int(env_values.get("MYCELIS_COMPOSE_INTERFACE_PORT", str(INTERFACE_PORT)))),
-    ]
-    print()
-    for label, port in checks:
-        state = "UP" if _port_open(port) else "DOWN"
-        print(f"  {label:<14}: {state} [:{port}]")
+    compose_probe.print_status(
+        env_values,
+        run_compose=_run_compose,
+        compose_command=_compose_command,
+        compose_runtime_env=_compose_runtime_env,
+        port_open=_port_open,
+        api_port=API_PORT,
+        interface_port=INTERFACE_PORT,
+    )
 
 
 @task
@@ -1006,50 +612,18 @@ def infra_health(c):
     _require_compose_env_file()
     env_values = _compose_effective_env()
     _validate_compose_env(env_values)
-    postgres_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_POSTGRES_PORT", "5432")
-    nats_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_PORT", "4222")
-    nats_monitor_port = _compose_host_port(env_values, "MYCELIS_COMPOSE_NATS_MONITOR_PORT", "8222")
 
     print("=== Mycelis Compose Data Plane Health ===\n")
-    failures: list[str] = []
-
-    if _port_open(postgres_port):
-        print(f"  [OK] {'PostgreSQL port':<18} 127.0.0.1:{postgres_port}")
-    else:
-        print(f"  [FAIL] {'PostgreSQL port':<18} 127.0.0.1:{postgres_port}")
-        failures.append("PostgreSQL host port is not reachable.")
-
-    if _wait_for_postgres_ready(timeout_seconds=5, env_values=env_values):
-        print(f"  [OK] {'PostgreSQL query':<18} {_compose_db_user(env_values)}@postgres/{_compose_db_name(env_values)}")
-    else:
-        print(f"  [FAIL] {'PostgreSQL query':<18} {_compose_db_user(env_values)}@postgres/{_compose_db_name(env_values)}")
-        failures.append("PostgreSQL container did not accept a query with the configured DB user/name.")
-
-    if _port_open(nats_port):
-        print(f"  [OK] {'NATS port':<18} nats://127.0.0.1:{nats_port}")
-    else:
-        print(f"  [FAIL] {'NATS port':<18} nats://127.0.0.1:{nats_port}")
-        failures.append("NATS host port is not reachable.")
-
-    nats_monitor_url = f"http://127.0.0.1:{nats_monitor_port}/varz"
-    status_code, body = _http_get(nats_monitor_url, timeout=5.0)
-    if status_code == 200:
-        print(f"  [OK] {'NATS monitor':<18} {nats_monitor_url}")
-    else:
-        print(f"  [FAIL] {'NATS monitor':<18} {nats_monitor_url} [{status_code}]")
-        failures.append(f"NATS monitor did not answer /varz: {body}")
-
-    if failures:
-        print("\nIssues:")
-        for failure in failures:
-            print(f"  - {failure}")
-        print("\nNext steps:")
-        print("  - Run 'uv run inv compose.status' to inspect service/container state.")
-        print("  - Run 'uv run inv compose.logs postgres' or 'uv run inv compose.logs nats' for service logs.")
-        raise SystemExit(1)
-
-    _print_data_plane_connection_guidance(env_values)
-    print("\nData plane healthy. Core/Interface may remain down for infra-only testing.")
+    compose_probe.run_infra_health(
+        env_values,
+        compose_host_port=_compose_host_port,
+        port_open=_port_open,
+        wait_for_postgres_ready=_wait_for_postgres_ready,
+        http_getter=_http_get,
+        compose_db_user=_compose_db_user,
+        compose_db_name=_compose_db_name,
+        print_data_plane_connection_guidance=_print_data_plane_connection_guidance,
+    )
 
 
 @task
@@ -1061,25 +635,10 @@ def storage_health(c):
     _validate_compose_env(env_values)
 
     print("=== Mycelis Compose Long-Term Storage Health ===\n")
-    failures: list[str] = []
-    for label, ok in _compose_storage_check_results(env_values):
-        if ok:
-            print(f"  [OK] {label}")
-        else:
-            print(f"  [FAIL] {label}")
-            failures.append(label)
-
-    if failures:
-        print("\nIssues:")
-        for failure in failures:
-            print(f"  - Missing or unavailable: {failure}")
-        print("\nNext steps:")
-        print("  - Run 'uv run inv compose.migrate' to apply canonical schema migrations.")
-        print("  - Run 'uv run inv compose.logs postgres' if migrations or storage checks fail.")
-        print("  - Use 'uv run inv compose.down --volumes' only when an intentional destructive schema reset is required.")
-        raise SystemExit(1)
-
-    print("\nLong-term storage ready for semantic memory, continuity, artifacts, managed exchange, and template recall.")
+    compose_probe.run_storage_health(
+        env_values,
+        compose_storage_check_results=_compose_storage_check_results,
+    )
 
 
 @task
@@ -1090,63 +649,16 @@ def health(c):
     env_values = _compose_effective_env()
     _validate_compose_env(env_values)
     env_values = _prepare_wsl_ollama_host(env_values)
-    api_key = env_values.get("MYCELIS_API_KEY", "")
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-
-    checks = [
-        ("Core health", f"http://{API_HOST}:{API_PORT}/healthz", None),
-        ("Template Engine", f"http://{API_HOST}:{API_PORT}/api/v1/templates", headers),
-        ("Brains API", f"http://{API_HOST}:{API_PORT}/api/v1/brains", headers),
-        ("Telemetry", f"http://{API_HOST}:{API_PORT}/api/v1/telemetry/compute", headers),
-        ("Frontend", f"http://{INTERFACE_HOST}:{INTERFACE_PORT}/", None),
-        ("NATS Monitor", f"http://127.0.0.1:{env_values.get('MYCELIS_COMPOSE_NATS_MONITOR_PORT', '8222')}/varz", None),
-    ]
 
     print("=== Mycelis Compose Health ===\n")
-    failures: list[str] = []
-    for label, url, request_headers in checks:
-        status, body = _http_get(url, timeout=5.0, headers=request_headers)
-        if status == 200:
-            print(f"  [OK] {label:<18} {url}")
-        else:
-            print(f"  [FAIL] {label:<18} {url} [{status}]")
-            failures.append(f"{label}: {body}")
-
-    cognitive_status, cognitive_body = _http_get(
-        f"http://{API_HOST}:{API_PORT}/api/v1/cognitive/status",
-        timeout=5.0,
-        headers=headers,
+    compose_probe.run_health(
+        env_values,
+        http_getter=_http_get,
+        api_host=API_HOST,
+        api_port=API_PORT,
+        interface_host=INTERFACE_HOST,
+        interface_port=INTERFACE_PORT,
     )
-    if cognitive_status != 200:
-        print(f"  [FAIL] {'Cognitive Engine':<18} http://{API_HOST}:{API_PORT}/api/v1/cognitive/status [{cognitive_status}]")
-        failures.append(f"Cognitive Engine: {cognitive_body}")
-    else:
-        try:
-            payload = json.loads(cognitive_body)
-        except json.JSONDecodeError as exc:
-            print(f"  [FAIL] {'Cognitive Engine':<18} http://{API_HOST}:{API_PORT}/api/v1/cognitive/status [invalid-json]")
-            failures.append(f"Cognitive Engine: invalid JSON response ({exc})")
-        else:
-            text_state = str(payload.get("text", {}).get("status", "offline")).lower()
-            media_state = str(payload.get("media", {}).get("status", "offline")).lower()
-            if text_state == "online":
-                print(f"  [OK] {'Cognitive Engine':<18} text={text_state}")
-            else:
-                print(f"  [FAIL] {'Cognitive Engine':<18} text={text_state}")
-                failures.append(
-                    "Cognitive Engine: text inference is not online. "
-                    "Check OLLAMA_HOST or your configured provider reachability."
-                )
-            if media_state != "online":
-                print(f"  [NOTE] {'Media Engine':<18} media={media_state}")
-
-    if failures:
-        print("\nIssues:")
-        for failure in failures:
-            print(f"  - {failure}")
-        raise SystemExit(1)
-
-    print("\nAll compose endpoints healthy.")
 
 
 @task(help={"service": "Optional compose service name.", "tail": "Number of log lines to show (default: 200)."})

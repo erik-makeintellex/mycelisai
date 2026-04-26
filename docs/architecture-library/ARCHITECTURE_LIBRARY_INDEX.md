@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-04-17
+> Last Updated: 2026-04-26
 > Purpose: Maintain one precise, durable documentation surface for product target, runtime structure, UI contract, and delivery proof.
 
 ## TOC
@@ -32,6 +32,8 @@ This index is now intentionally narrower:
 - [V8.2 Full Production Architecture](../../v8-2.md) is the canonical full production architecture and full actuation target.
 - [V8 Development State](../../V8_DEV_STATE.md) is the live implementation scoreboard.
 
+V8.2 work may proceed before V8.1 release lock when it is modular and proof-producing. Keep each slice attached to one owning contract area, keep non-promoted V8.2 capability out of the default V8.1 operator surface, and update `V8_DEV_STATE.md` when a module boundary changes status.
+
 ## Canonical Documents
 
 | Document | Load When | Focus |
@@ -55,7 +57,8 @@ This index is now intentionally narrower:
 | [V8 Memory Layer And Reflection Delivery Contract](V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md) | planning memory layers, reflection synthesis, exchange-backed learning candidates, or memory promotion | explicit `SOMA_MEMORY`, `AGENT_MEMORY`, `PROJECT_MEMORY`, `REFLECTION_MEMORY`, candidate-first reflection, and promotion guardrails |
 | [V8 Trusted Memory Arbitration And Team Vector Contract](V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md) | defining Soma personal memory, team-shared vector memory, governed swarm doctrine, anchor verification, or memory arbitration | trusted memory control plane, evidence anchors, precedence rules, and bounded-growth policy |
 | [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) | supporting the single-host compose runtime | compose tasking, persistence, monitoring, and operator expectations |
-| [V8 Self-Hosted Runtime Delivery Program](V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md) | coordinating the compact delivery team for real deployment work | delivery target, team ownership, management cadence, and acceptance gates for Compose and self-hosted Kubernetes |
+| [V8 Self-Hosted Runtime Delivery Program](V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md) | coordinating the compact delivery team for real deployment work while V8.2 runtime modules continue | release-gating Compose proof, modular Kubernetes scale-up work, team ownership, management cadence, and acceptance gates |
+| [V8 Mycelis Search Capability Delivery Plan](V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md) | putting the architecture/runtime/interface/validation teams together around owned search capability | Mycelis Search API, local-source search, optional SearXNG, optional Brave, and capability/MCP delivery gates |
 | [V8 Enterprise Self-Hosted Kubernetes Delivery Plan](V8_ENTERPRISE_SELF_HOSTED_KUBERNETES_DELIVERY_PLAN.md) | turning the Helm/Kubernetes lane into an enterprise-compatible deployment contract | local `k3d` validation, chart promotion rules, compact team ownership, and acceptance gates |
 | [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) | validating a personal-owner Compose deployment from data-plane-only startup through near-enterprise product workflows | data-plane-only Postgres/NATS launch, owner configuration, app bring-up, workflow proof, recovery, and evidence matrix |
 | [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) | planning user-output-first media/team demos, Ollama role routing, or DB-backed conversation templates | model-role routing, media-engine boundary, team-managed output proof, and conversation-template registry |
@@ -84,18 +87,20 @@ This index is now intentionally narrower:
 17. Use [V8 Memory Layer And Reflection Delivery Contract](V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md) when defining memory-layer boundaries, reflection candidates, or promotion rules.
 18. Use [V8 Trusted Memory Arbitration And Team Vector Contract](V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md) when defining Soma personal continuity, team-shared vector memory, governed swarm doctrine, or trusted memory arbitration.
 19. Use [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) when validating the supported single-host compose path.
-20. Use [V8 Self-Hosted Runtime Delivery Program](V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md) when coordinating the active compact team delivering Compose and self-hosted Kubernetes runtime truth.
-21. Use [V8 Enterprise Self-Hosted Kubernetes Delivery Plan](V8_ENTERPRISE_SELF_HOSTED_KUBERNETES_DELIVERY_PLAN.md) when coordinating `k3d` local validation, enterprise chart readiness, and promoted cluster deployment rules.
-22. Use [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) when validating data-plane-only Postgres/NATS startup, owner endpoint/credential configuration, and near-enterprise Compose workflow proof.
-23. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
-24. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
-25. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
-26. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production target rather than the current release.
+20. Use [V8 Self-Hosted Runtime Delivery Program](V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md) when coordinating the active compact team delivering Compose release proof and modular self-hosted Kubernetes runtime truth.
+21. Use [V8 Mycelis Search Capability Delivery Plan](V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md) when coordinating owned search capability, local-source search, optional SearXNG, optional hosted search, and capability/MCP testing gates.
+22. Use [V8 Enterprise Self-Hosted Kubernetes Delivery Plan](V8_ENTERPRISE_SELF_HOSTED_KUBERNETES_DELIVERY_PLAN.md) when coordinating `k3d` local validation, enterprise chart readiness, and promoted cluster deployment rules.
+23. Use [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) when validating data-plane-only Postgres/NATS startup, owner endpoint/credential configuration, and near-enterprise Compose workflow proof.
+24. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
+25. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
+26. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
+27. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production target rather than the current release.
 
 Execution governance reminder:
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md) and [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) remain authoritative migration inputs for delivery discipline.
 - Apply the V8 bootstrap pipeline from [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) whenever configuration, templates, or runtime state are involved.
 - Update [V8_DEV_STATE.md](../../V8_DEV_STATE.md) whenever release posture or validation truth changes.
+- For V8.2-aligned slices, name the module boundary being advanced before implementation begins: runtime/deployment, memory/learning, team/workflow, capability/MCP, advanced UI, or governance/trust.
 
 ## Supporting Specialized Docs
 

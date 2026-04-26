@@ -6,9 +6,20 @@ from invoke import Collection, task
 
 from .config import ROOT_DIR
 
-DEFAULT_HOT_PATHS = "core/internal/swarm,interface/store/useCortexStore.ts"
+DEFAULT_SOURCE_PATHS = "core,interface,ops,tests,scripts,agents,cli,sdk/python/src,cognitive/src"
+DEFAULT_HOT_PATHS = DEFAULT_SOURCE_PATHS
 DEFAULT_EXTENSIONS = {".go", ".py", ".ts", ".tsx"}
-DEFAULT_EXCLUDE_DIRS = {".git", ".next", ".venv", "node_modules", "dist", "build", "coverage"}
+DEFAULT_EXCLUDE_DIRS = {
+    ".git",
+    ".next",
+    ".venv",
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "test-results",
+    "playwright-report",
+}
 LEGACY_CAPS_PATH = ROOT_DIR / "ops" / "quality_legacy_caps.txt"
 
 
@@ -80,14 +91,14 @@ def _load_legacy_caps(path: Path = LEGACY_CAPS_PATH) -> dict[str, int]:
 
 @task(
     help={
-        "limit": "Maximum allowed lines per file (default: 350).",
-        "paths": "Comma-separated paths to scan (default: hot paths).",
+        "limit": "Maximum allowed lines per file (default: 300).",
+        "paths": "Comma-separated paths to scan (default: main source tree).",
         "strict": "Ignore legacy caps and fail on every over-limit file.",
     }
 )
-def max_lines(_c, limit=350, paths=DEFAULT_HOT_PATHS, strict=False):
+def max_lines(_c, limit=300, paths=DEFAULT_SOURCE_PATHS, strict=False):
     """
-    Enforce maximum file length with temporary no-regression caps for legacy hot paths.
+    Enforce maximum file length with temporary no-regression caps for legacy files.
     """
     roots = _parse_paths(paths)
     if not roots:

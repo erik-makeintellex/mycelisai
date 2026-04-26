@@ -24,8 +24,8 @@ test.describe("Workflow output direct answer", () => {
                         mode: "answer",
                         payload: {
                             text: content.includes("shortest practical recommendation")
-                                ? "Use the self-hosted Kubernetes lane with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks."
-                                : "Use the self-hosted Kubernetes lane with an explicit Windows AI endpoint.",
+                                ? "Use the supported Docker Compose lane first with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks. Keep Kubernetes as the modular scale-up proof lane."
+                                : "Use the supported Docker Compose lane first with an explicit Windows AI endpoint.",
                             tools_used: [],
                             consultations: [],
                             artifacts: [],
@@ -43,7 +43,7 @@ test.describe("Workflow output direct answer", () => {
 
         await expect(
             page.getByText(
-                "Use the self-hosted Kubernetes lane with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks.",
+                "Use the supported Docker Compose lane first with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks. Keep Kubernetes as the modular scale-up proof lane.",
             ),
         ).toBeVisible();
         await expect(page.getByRole("heading", { name: "Talk with Soma" })).toBeVisible();

@@ -45,6 +45,7 @@ If you leave the organization workspace and come back later, the current guided 
 Team workspaces are different from the root Soma workspace:
 - the root workspace is Soma-first and organization-wide
 - the root Soma home also carries a live interaction stream so an admin can review active team output without leaving the main chat surface
+- the root Soma chat should stay in a bounded panel and scroll message history internally, so long conversations do not push the live stream and review panels farther down the page
 - that stream can be filtered by multiple teams and by available output aspects such as status, results, artifacts, tools, governance, and errors
 - the `Teams` page is where admins review available teams, open focused lead workspaces, and define the reusable member templates Soma should apply when creating new team members
 - the dedicated guided team-creation workflow now lives at `/teams/create`, so detailed team creation is a step-by-step Soma lane instead of a dense roster-side form
@@ -130,10 +131,18 @@ Soma is expected to execute, not just explain, whenever execution is available.
 
 Preferred path:
 1. use internal capabilities
-2. use onboarded MCP tools when they are the shortest safe path
+2. use onboarded MCP tools when they are the shortest safe path, including `brave-search` for governed web search and `fetch` for explicit URL retrieval when those servers are installed
 3. propose/confirm for governed mutation paths
 
 If a tool call fails, Soma should recover inline (retry, reroute, or proposal fallback) without making you retype the request.
+
+Web/research behavior:
+- if you ask Soma whether it can search or make web requests, Soma should answer from current Mycelis Search capability status instead of falling back to provider boilerplate
+- `local_sources` lets Soma search governed user-shared and deployment context without hosted search tokens
+- `searxng` lets Soma use public web search through a self-hosted endpoint when configured through `MYCELIS_SEARCH_PROVIDER=searxng` and `MYCELIS_SEARXNG_ENDPOINT`
+- if `brave-search` is installed and configured with `BRAVE_API_KEY`, Soma and web-capable specialists may use it for search
+- if `fetch` is installed and you provide a URL, Soma and web-capable specialists may use it to retrieve page content
+- if the needed server or credential is missing, Soma should name the missing MCP server/env var and point you to Connected Tools instead of claiming web requests are impossible
 
 Direct drafting behavior:
 - if you ask for plain chat content such as a short letter, email, note, or message,

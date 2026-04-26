@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-04-16
+> Last Updated: 2026-04-24
 > Purpose: Define the compact delivery team, management contract, and acceptance gates for the deployable self-hosted runtime.
 
 ## TOC
@@ -30,13 +30,18 @@ Canonical deployment posture:
 - Windows-specific notes are host-connectivity guidance only; they are not the canonical runtime model
 - `localhost`, `127.0.0.1`, and `0.0.0.0` are not valid AI-engine assumptions for containerized deployments
 
+Layering rule:
+- V8.1 remains the release gate for the default operator path.
+- V8.2 runtime work is already in flow and should continue when it is modular, deployment-proof-oriented, and isolated behind explicit Compose/Kubernetes/config contracts.
+- Runtime work must not drag distributed execution, broad actuation, or advanced control panels into the default V8.1 surface before explicit promotion.
+
 ## Focused Team
 
 Keep the active delivery team compact and role-specific.
 
 | Role | Ownership | Success Condition |
 | --- | --- | --- |
-| Team Lead / Delivery Manager | scope, sequencing, blockers, acceptance, state updates | one active delivery target, explicit owners, no hidden blockers, clean handoffs |
+| Team Lead / Delivery Manager | scope, sequencing, blockers, acceptance, state updates | one release-gating target, explicit owners, no hidden blockers, clean modular handoffs |
 | Platform Architect | deployment contract, topology rules, config/secrets/network/storage decisions | Compose and Kubernetes assumptions match real self-hosted deployment reality |
 | Backend / Runtime Engineer | provider wiring, runtime config, health checks, external AI endpoint behavior | runtime treats external AI services as normal endpoints, not desktop-local shortcuts |
 | Ops / Deployment Engineer | Compose, Helm, env contracts, volumes, recovery, operator runbooks | deployments can be brought up, checked, and repaired with documented task/ops flows |
@@ -48,7 +53,8 @@ Pull specialist support only when blocked:
 
 ## Management Contract
 
-- one delivery target at a time: `deployable self-hosted runtime with external AI host support`
+- one release-gating delivery target at a time: `deployable self-hosted runtime with external AI host support`
+- modular V8.2 runtime slices may proceed in parallel when they preserve that release gate and do not mix unrelated module boundaries
 - one board: `NEXT`, `ACTIVE`, `IN_REVIEW`, `COMPLETE`, `BLOCKED`
 - one owner per slice
 - every slice must declare:
@@ -85,12 +91,12 @@ Required handoff order:
 
 | Team / Lane | Status | Current Target | Dependencies / Handoffs | Next Action |
 | --- | --- | --- | --- | --- |
-| Delivery Management | `ACTIVE` | Keep one active delivery target, explicit ownership, and acceptance tied to deployable runtime proof. | Receives status from every lane. | Hold the board to runtime delivery only; reject work that does not move Compose or self-hosted Kubernetes closer to deployable truth. |
+| Delivery Management | `ACTIVE` | Keep one release-gating delivery target, explicit ownership, and acceptance tied to deployable runtime proof. | Receives status from every lane. | Hold runtime work to deployable truth while allowing bounded V8.2 modules only when they preserve the V8.1 proof lane. |
 | Runtime Contract + Architecture | `ACTIVE` | Lock the canonical deployment story to Linux-first Compose and self-hosted Kubernetes with external AI services reached by explicit host/IP or operator-supplied hostname. | Feeds Backend, Ops, Validation, and docs. | Audit remaining canonical docs for desktop-local or Windows-only runtime assumptions and correct them. |
 | Backend / Runtime Integration | `ACTIVE` | Keep provider configuration, health checks, and runtime behavior aligned to external AI endpoints instead of local loopback assumptions. | Depends on Runtime Contract + Architecture. | Tighten remaining runtime/config surfaces so external Ollama or other self-hosted AI endpoints are first-class configuration. |
 | Compose Deployment | `ACTIVE` | Keep the Compose path deployable from Linux or WSL-hosted Docker without Docker Desktop assumptions, with explicit external AI host configuration. | Depends on Runtime Contract + Architecture and Backend / Runtime Integration. | Continue proving `compose.up`, `compose.status`, and `compose.health` against the supported self-hosted topology. |
-| Kubernetes / Helm Deployment | `NEXT` | Define the self-hosted Kubernetes contract for external AI services, secrets, bootstrap config, storage, and operator recovery. | Reuses the same runtime contract as Compose. | Convert the external-AI-host and retained-storage assumptions into explicit Helm and operator guidance. |
-| Validation + Release Proof | `ACTIVE` | Make service-health, browser proof, and docs-link proof certify deployable runtime behavior instead of development-only convenience. | Depends on Compose and Backend lanes; later on Kubernetes. | Keep Compose proof current now, then add the Kubernetes acceptance checklist once its contract is documented. |
+| Kubernetes / Helm Deployment | `ACTIVE` | Promote the self-hosted Kubernetes contract for external AI services, secrets, bootstrap config, storage, and operator recovery without displacing Compose as the first release proof lane. | Reuses the same runtime contract as Compose. | Continue the `k3d`, promoted-values, external-AI-host, and chart-render proof slices as modular V8.2 runtime work. |
+| Validation + Release Proof | `ACTIVE` | Make service-health, browser proof, and docs-link proof certify deployable runtime behavior instead of development-only convenience. | Depends on Compose and Backend lanes; Kubernetes proof proceeds as a modular scale-up lane. | Keep Compose proof current, then fold Kubernetes evidence into acceptance without claiming V8.1 default-surface promotion too early. |
 | Operator Handoff Docs | `ACTIVE` | Keep canonical docs and in-app docs aligned to the same deployment story. | Depends on every lane. | Update state, architecture docs, and docs manifest whenever deployment meaning changes. |
 
 ## Acceptance Gates
@@ -109,30 +115,29 @@ Current acceptance bias:
 - require proof for every slice
 - avoid dev-only assumptions becoming architecture truth
 
-## Engaged Next Slice
+## Engaged Flow
 
-The currently engaged slice is the runtime-posture gate correction.
+The previously engaged runtime-posture gate correction has landed locally and remains `IN_REVIEW` until the broader supported proof chain accepts it. Current work should keep that gate intact while allowing modular V8.2 runtime slices to continue.
 
-Why this slice is first:
-- release acceptance currently depends on `uv run inv ci.release-preflight --lane=release`
-- the supported Compose runtime contract is `.env.compose`-driven
-- the runtime-posture gate must therefore read the same deployment env contract and fail clearly when the supported endpoint posture is missing or invalid
-
-Current local status:
-- `IN_REVIEW` the gate now reads process env plus `.env.compose` / `.env`, includes provider-specific endpoint overrides in its probe set, exposes lane presets (`baseline`, `runtime`, `service`, `release`), and fails when no explicit supported AI endpoint contract is configured; focused task tests are green and the next proof step is the supported full release gate.
+Current engaged flow:
+- Compose remains the first release-proof runtime lane for V8.1.
+- Kubernetes / Helm work is now `ACTIVE` as the modular V8.2 scale-up lane, with `k3d`, promoted values, external AI endpoint wiring, and chart render/lint proof kept behind deployment contracts.
+- Validation must prove each runtime module independently before treating it as release-supporting evidence.
 
 Engaged ownership:
 
 | Role | Status | Immediate Action | Acceptance |
 | --- | --- | --- | --- |
-| Team Lead / Delivery Manager | `ACTIVE` | keep this as the only active release-blocking slice until proof lands | no competing target displaces the gate correction before acceptance |
-| Platform Architect | `ACTIVE` | lock `.env.compose` / `.env` precedence and required non-loopback endpoint rules for the gate | gate behavior matches the supported runtime topology |
-| Backend / Runtime Engineer | `ACTIVE` | update `ops/ci.py` so runtime-posture reads deployment env files and reports missing/invalid endpoint posture as failure | focused task tests pass and the gate behavior is explicit |
-| Validation / Release Engineer | `NEXT` | run the supported proof chain once the gate is corrected | `ci.baseline`, `ci.service-check --live-backend`, and release-preflight all pass against the supported runtime |
-| Operator Handoff Docs | `NEXT` | synchronize testing/ops/state docs to the corrected gate contract | touched docs name the same command and env posture |
+| Team Lead / Delivery Manager | `ACTIVE` | keep V8.1 release proof centered while allowing bounded V8.2 runtime modules | no competing target displaces the Compose/WSL release proof lane |
+| Platform Architect | `ACTIVE` | keep `.env.compose` / `.env`, external endpoint, Compose, and Kubernetes contracts consistent | deployment assumptions match the supported runtime topology |
+| Backend / Runtime Engineer | `IN_REVIEW` | keep runtime-posture gate behavior explicit and extend only through named config/provider boundaries | focused task tests and runtime checks stay green |
+| Ops / Deployment Engineer | `ACTIVE` | continue modular Kubernetes/Helm proof without weakening Compose deployability | `k3d`, promoted values, chart render/lint, and operator guidance stay synchronized |
+| Validation / Release Engineer | `NEXT` | run supported Compose/WSL proof first, then accept Kubernetes evidence as scale-up proof | proof results clearly state which lane they certify |
+| Operator Handoff Docs | `ACTIVE` | synchronize state, runtime docs, testing docs, and in-app docs when deployment meaning changes | touched docs name the same command, env posture, and module boundary |
 
 Exit condition:
-1. runtime-posture reads the supported env contract
+1. runtime-posture continues to read the supported env contract
 2. missing or loopback-only endpoint posture fails fast
 3. docs name the same contract
 4. the supported Compose proof path is green
+5. Kubernetes/Helm proof is recorded as modular V8.2 scale-up evidence until explicitly promoted

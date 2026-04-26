@@ -1,6 +1,6 @@
 import { extractApiData } from '@/lib/apiContracts';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
-import type { MCPActivityEntry, MCPGovernanceDecision, MCPInstallResult, MCPServerWithTools, MCPLibraryCategory, MCPTool } from '@/store/cortexStoreTypes';
+import type { MCPActivityEntry, MCPGovernanceDecision, MCPInstallResult, MCPServerWithTools, MCPLibraryCategory, MCPTool, SearchCapabilityStatus } from '@/store/cortexStoreTypes';
 
 interface MCPLibraryInspectionResponse {
     decision?: string;
@@ -36,6 +36,7 @@ export function createCortexMcpSlice(
     | 'fetchMCPTools'
     | 'fetchMCPLibrary'
     | 'installFromLibrary'
+    | 'fetchSearchCapability'
 > {
     return {
         fetchMCPServers: async () => {
@@ -113,6 +114,35 @@ export function createCortexMcpSlice(
             }
         },
 
+        fetchSearchCapability: async () => {
+            set({ isFetchingSearchCapability: true, searchCapabilityError: null });
+            try {
+                const res = await fetch('/api/v1/search/status');
+                if (res.ok) {
+                    const payload = await res.json();
+                    const data = extractApiData<SearchCapabilityStatus | unknown>(payload);
+                    set({
+                        searchCapability: isSearchCapabilityStatus(data) ? data : null,
+                        isFetchingSearchCapability: false,
+                        searchCapabilityError: isSearchCapabilityStatus(data) ? null : 'Search capability status was not readable.',
+                    });
+                } else {
+                    set({
+                        searchCapability: null,
+                        isFetchingSearchCapability: false,
+                        searchCapabilityError: `Search capability status unreachable (HTTP ${res.status})`,
+                    });
+                }
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'network error';
+                set({
+                    searchCapability: null,
+                    isFetchingSearchCapability: false,
+                    searchCapabilityError: `Search capability status unreachable (${message})`,
+                });
+            }
+        },
+
         installFromLibrary: async (name: string, env?: Record<string, string>): Promise<MCPInstallResult> => {
             try {
                 const inspectRes = await fetch('/api/v1/mcp/library/inspect', {
@@ -159,4 +189,12 @@ export function createCortexMcpSlice(
             }
         },
     };
+}
+
+function isSearchCapabilityStatus(value: unknown): value is SearchCapabilityStatus {
+    return typeof value === 'object'
+        && value !== null
+        && typeof (value as SearchCapabilityStatus).provider === 'string'
+        && typeof (value as SearchCapabilityStatus).enabled === 'boolean'
+        && typeof (value as SearchCapabilityStatus).configured === 'boolean';
 }

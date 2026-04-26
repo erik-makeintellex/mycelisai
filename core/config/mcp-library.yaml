@@ -109,6 +109,7 @@ categories:
             secret: true
         deployment_boundary: "external_saas"
         tags: ["search", "web"]
+        tool_set: "research"
       - name: "fetch"
         title: "Fetch"
         description: "Fetch and convert web pages to markdown for analysis"

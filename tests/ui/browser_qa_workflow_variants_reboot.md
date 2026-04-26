@@ -49,6 +49,8 @@ Give me the shortest practical recommendation for how to validate this Windows s
 - terminal state is `answer`
 - output stays inline in Soma
 - no team or temporary workflow group is created
+- recommendation starts from the supported Docker Compose lane with an explicit Windows AI endpoint
+- Kubernetes is framed as the modular scale-up proof lane, not the first shared-user trial path
 - response is concrete enough to act on
 
 ### Evidence

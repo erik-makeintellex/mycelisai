@@ -46,6 +46,8 @@
 | `/api/v1/sensors` | GET | Sensor library (static + dynamic) |
 | **Memory & Search** | | |
 | `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters across Soma-personal, team-shared, and governed memory lanes |
+| `/api/v1/search/status` | GET | Current Mycelis Search provider posture for UI/Soma capability answers, including provider, configured/enabled flags, direct `web_search` support, token requirements, and blocker/next-action copy |
+| `/api/v1/search` | POST | Governed Mycelis Search API over `local_sources`, optional self-hosted `searxng`, optional hosted search/MCP bridge posture, or structured disabled-provider blockers |
 | `/api/v1/memory/deployment-context` | GET/POST | List or load governed user/private content, deployment knowledge, admin-owned Soma context, and reflection/synthesis observations into separate `user_private_context`, `customer_context`, `company_knowledge`, `soma_operating_context`, and `reflection_synthesis` pgvector stores; POST supports text content plus metadata such as `content_domain` and `target_goal_sets`. This is governed source/doctrine intake, not implicit team-shared `AGENT_MEMORY`. |
 | `/api/v1/memory/sitreps` | GET | Recent SitReps (filterable by team) |
 | `/api/v1/memory/stream` | GET | Live memory/log stream (polling) |

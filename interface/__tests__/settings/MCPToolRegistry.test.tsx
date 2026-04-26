@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import type { MCPServerWithTools } from '@/store/useCortexStore';
+
+type MockMCPServerCardProps = {
+    server: MCPServerWithTools;
+    onDelete: (id: string) => void;
+};
+
+type MockMCPLibraryBrowserProps = {
+    onInstalled?: (name: string) => void;
+};
 
 // Mock child components to isolate MCPToolRegistry
 vi.mock('@/components/settings/MCPServerCard', () => ({
     __esModule: true,
-    default: ({ server, onDelete }: any) => (
+    default: ({ server, onDelete }: MockMCPServerCardProps) => (
         <div data-testid={`server-card-${server.id}`}>
             <span>{server.name}</span>
             <button data-testid={`delete-${server.id}`} onClick={() => onDelete(server.id)}>
@@ -17,7 +27,7 @@ vi.mock('@/components/settings/MCPServerCard', () => ({
 vi.mock('@/components/settings/MCPLibraryBrowser', () => ({
     __esModule: true,
     default: () => <div data-testid="library-browser">Library Browser</div>,
-    MCPLibraryBrowserBody: ({ onInstalled }: any) => (
+    MCPLibraryBrowserBody: ({ onInstalled }: MockMCPLibraryBrowserProps) => (
         <div data-testid="library-browser">
             <button onClick={() => onInstalled?.('filesystem')}>Mock Install</button>
             Library Browser
@@ -27,7 +37,6 @@ vi.mock('@/components/settings/MCPLibraryBrowser', () => ({
 
 import MCPToolRegistry from '@/components/settings/MCPToolRegistry';
 import { useCortexStore } from '@/store/useCortexStore';
-import type { MCPServerWithTools } from '@/store/useCortexStore';
 
 const mockServers: MCPServerWithTools[] = [
     {
@@ -64,20 +73,38 @@ describe('MCPToolRegistry', () => {
             isFetchingMCPActivity: false,
             fetchMCPServers: vi.fn(),
             fetchMCPActivity: vi.fn(),
+            fetchSearchCapability: vi.fn(),
             deleteMCPServer: vi.fn(),
             streamLogs: [],
             isStreamConnected: false,
             initializeStream: vi.fn(),
+            searchCapability: null,
+            isFetchingSearchCapability: false,
+            searchCapabilityError: null,
         });
     });
 
     it('renders the installed server list', () => {
         const initializeStream = vi.fn();
         const fetchMCPActivity = vi.fn();
+        const fetchSearchCapability = vi.fn();
         useCortexStore.setState({
             mcpServers: mockServers,
             initializeStream,
             fetchMCPActivity,
+            fetchSearchCapability,
+            searchCapability: {
+                provider: 'searxng',
+                enabled: true,
+                configured: true,
+                supports_local_sources: false,
+                supports_public_web: true,
+                soma_tool_name: 'web_search',
+                direct_soma_interaction: true,
+                requires_hosted_api_token: false,
+                max_results: 8,
+                next_actions: ['Ask Soma to search the public web through the self-hosted SearXNG provider.'],
+            },
         });
 
         render(<MCPToolRegistry />);
@@ -95,6 +122,10 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/Connected Tools Workflow/i)).toBeDefined();
         expect(initializeStream).toHaveBeenCalledTimes(1);
         expect(fetchMCPActivity).toHaveBeenCalledTimes(1);
+        expect(fetchSearchCapability).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
+        expect(screen.getByText('Soma search is ready')).toBeDefined();
+        expect(screen.getByText(/No hosted Brave token required/i)).toBeDefined();
 
         // "Installed" tab should be active by default, showing server count badge
         expect(screen.getByText('2')).toBeDefined();
@@ -151,6 +182,33 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/filesystem-server · read_file/i)).toBeDefined();
         expect(screen.getByText(/Read workspace brief successfully/i)).toBeDefined();
         expect(screen.getByText(/Team alpha · Agent soma-admin · Run run-1/i)).toBeDefined();
+    });
+
+    it('shows search capability blockers as operator guidance', () => {
+        useCortexStore.setState({
+            searchCapability: {
+                provider: 'disabled',
+                enabled: false,
+                configured: false,
+                supports_local_sources: false,
+                supports_public_web: false,
+                soma_tool_name: 'web_search',
+                direct_soma_interaction: true,
+                requires_hosted_api_token: false,
+                max_results: 8,
+                blocker: {
+                    code: 'search_provider_disabled',
+                    message: 'Mycelis Search is disabled.',
+                    next_action: 'Set MYCELIS_SEARCH_PROVIDER=local_sources for governed local-source search or searxng for self-hosted web search.',
+                },
+            },
+        });
+
+        render(<MCPToolRegistry />);
+
+        expect(screen.getByText('Soma search needs configuration')).toBeDefined();
+        expect(screen.getByText('Mycelis Search is disabled.')).toBeDefined();
+        expect(screen.getByText(/Soma direct: web_search/i)).toBeDefined();
     });
 
     it('returns to installed view with guidance after library install', () => {

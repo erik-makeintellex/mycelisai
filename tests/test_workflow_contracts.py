@@ -36,6 +36,109 @@ def test_e2e_workflow_contract_matches_stable_matrix():
     assert "start Core, then `uv run inv interface.e2e --live-backend`" not in operations_doc
 
 
+def test_user_workflow_specs_match_current_shared_trial_expectations():
+    manual_plan = _read("tests/ui/browser_qa_workflow_variants_reboot.md")
+    remote_testing = _read("docs/REMOTE_USER_TESTING.md")
+
+    workflow_specs = {
+        "direct": _read("interface/e2e/specs/workflow-output.direct.spec.ts"),
+        "compact": _read("interface/e2e/specs/workflow-output.compact-team.spec.ts"),
+        "multi_lane": _read("interface/e2e/specs/workflow-output.multi-lane.spec.ts"),
+        "reload_review": _read("interface/e2e/specs/workflow-output.reload-review.spec.ts"),
+    }
+
+    for spec_path in [
+        "interface/e2e/specs/workflow-output.direct.spec.ts",
+        "interface/e2e/specs/workflow-output.compact-team.spec.ts",
+        "interface/e2e/specs/workflow-output.multi-lane.spec.ts",
+        "interface/e2e/specs/workflow-output.reload-review.spec.ts",
+    ]:
+        assert spec_path in manual_plan
+
+    assert "Soma-first operator workflow" in remote_testing
+    assert "deployment-context loading into governed vector-backed stores" in remote_testing
+    assert "MCP visibility and recent persisted tool activity" in remote_testing
+    assert "safe current actuation proof is governed file output, governed context loading, MCP-backed tool usage, and reviewable audit/activity behavior" in remote_testing
+
+    assert "supported Docker Compose lane" in manual_plan
+    assert "Kubernetes is framed as the modular scale-up proof lane" in manual_plan
+    assert "Use the supported Docker Compose lane first with an explicit Windows AI endpoint" in workflow_specs["direct"]
+    assert "Keep Kubernetes as the modular scale-up proof lane" in workflow_specs["direct"]
+    assert "Use the self-hosted Kubernetes lane with an explicit Windows AI endpoint" not in workflow_specs["direct"]
+
+    assert "Create temporary workflow group" in workflow_specs["compact"]
+    assert "Archive temporary group" in workflow_specs["compact"]
+    assert "Validation checklist" in workflow_specs["compact"]
+    assert "Risk review" in workflow_specs["compact"]
+
+    assert "Planning lane package" in workflow_specs["multi_lane"]
+    assert "Validation lane checklist" in workflow_specs["multi_lane"]
+    assert "Review lane summary" in workflow_specs["multi_lane"]
+
+    assert "Resume the release-readiness work from the retained package" in workflow_specs["reload_review"]
+    assert "Already done: planning lane package, validation checklist, and review summary are retained" in workflow_specs["reload_review"]
+
+
+def test_soma_web_capability_contract_uses_governed_mcp_search_and_fetch():
+    admin = _read("core/config/teams/admin.yaml")
+    council = _read("core/config/teams/council.yaml")
+    template = _read("core/config/templates/v8-migration-standing-team-bridge.yaml")
+    library = _read("core/config/mcp-library.yaml")
+    resources_doc = _read("docs/user/resources.md")
+    soma_doc = _read("docs/user/soma-chat.md")
+
+    for manifest in (admin, template):
+        assert "mcp:fetch/*" in manifest
+        assert "mcp:brave-search/*" in manifest
+        assert "BRAVE_API_KEY" in manifest
+        assert "You can perform web search or URL\n      retrieval only through installed governed tools" in manifest or "You can perform web search or URL\n          retrieval only through installed governed tools" in manifest
+        assert "Browse the internet, search the web, or access URLs directly" not in manifest
+
+    assert "mcp:brave-search/*" in council
+    assert "Prefer `brave-search` for search and `fetch` for supplied" in council
+
+    assert 'name: "brave-search"' in library
+    assert 'tool_set: "research"' in library
+    assert "BRAVE_API_KEY" in library
+
+    assert "`brave-search` provides governed web search" in resources_doc
+    assert "`brave-search` for governed web search and `fetch` for explicit URL retrieval" in soma_doc
+
+
+def test_mycelis_search_delivery_plan_assigns_teams_and_testing_gates():
+    plan = _read("docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md")
+    index = _read("docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md")
+    docs_home = _read("docs/README.md")
+    manifest = _read("interface/lib/docsManifest.ts")
+    state = _read("V8_DEV_STATE.md")
+
+    required_teams = [
+        "Architecture Lead",
+        "Runtime Development",
+        "Data/Memory Development",
+        "Interface Development",
+        "Ops/Runtime Delivery",
+        "Validation",
+    ]
+    for team in required_teams:
+        assert team in plan
+
+    for required in [
+        "Soma -> Mycelis Search API -> local_sources | searxng | brave | disabled",
+        "MYCELIS_SEARCH_PROVIDER=disabled|local_sources|searxng|brave",
+        "MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080",
+        "asking \"can you search the web?\" returns capability status, not a blanket no",
+        "local-source search works without Brave or any hosted token",
+    ]:
+        assert required in plan
+
+    canonical_path = "docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md"
+    assert "V8 Mycelis Search Capability Delivery Plan" in index
+    assert "V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md" in docs_home
+    assert canonical_path in manifest
+    assert canonical_path in state
+
+
 def test_active_architecture_docs_use_managed_interface_build_command():
     mcp_doc = _read("docs/architecture/MCP_SERVICE_CONFIGURATION_LOCAL_FIRST_V7.md")
     action_doc = _read("docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md")

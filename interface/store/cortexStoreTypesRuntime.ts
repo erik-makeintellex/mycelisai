@@ -32,7 +32,7 @@ export interface SignalDetail {
     message: string;
     timestamp: string;
     topic?: string;
-    payload?: any;
+    payload?: unknown;
     source_kind?: string;
     source_channel?: string;
     payload_kind?: string;
@@ -184,4 +184,25 @@ export interface ServiceHealthStatus {
     status: 'online' | 'offline' | 'degraded';
     detail?: string;
     latency_ms?: number;
+}
+
+export interface SearchCapabilityBlocker {
+    code: string;
+    message: string;
+    next_action: string;
+}
+
+export interface SearchCapabilityStatus {
+    provider: 'disabled' | 'local_sources' | 'searxng' | 'brave' | string;
+    enabled: boolean;
+    configured: boolean;
+    supports_local_sources: boolean;
+    supports_public_web: boolean;
+    soma_tool_name: string;
+    direct_soma_interaction: boolean;
+    requires_hosted_api_token: boolean;
+    searxng_endpoint_configured?: boolean;
+    max_results: number;
+    blocker?: SearchCapabilityBlocker;
+    next_actions?: string[];
 }

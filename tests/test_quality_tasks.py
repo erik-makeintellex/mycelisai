@@ -30,6 +30,18 @@ interface/store/useCortexStore.ts=2396
     assert caps["interface/store/useCortexStore.ts"] == 2396
 
 
+def test_default_quality_paths_cover_main_source_tree():
+    paths = set(quality.DEFAULT_SOURCE_PATHS.split(","))
+
+    assert {"core", "interface", "ops", "tests"}.issubset(paths)
+
+
+def test_generated_sources_are_skipped():
+    assert quality._should_skip(Path("core/pkg/pb/swarm/swarm.pb.go"))
+    assert quality._should_skip(Path("sdk/python/src/relay/proto/swarm_pb2.py"))
+    assert quality._should_skip(Path("sdk/python/src/relay/proto/swarm_pb2_grpc.py"))
+
+
 def test_max_lines_fails_without_cap(monkeypatch, tmp_path: Path):
     src = tmp_path / "big.py"
     _write_lines(src, 12)

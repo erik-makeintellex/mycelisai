@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Wrench, BookOpen, Activity, Radio } from "lucide-react";
+import { Wrench, BookOpen, Activity, Radio, Search, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import MCPServerCard, { type MCPRecentActivity } from "./MCPServerCard";
 import { MCPLibraryBrowserBody } from "./MCPLibraryBrowser";
@@ -16,10 +16,14 @@ export default function MCPToolRegistry() {
     const isFetchingActivity = useCortexStore((s) => s.isFetchingMCPActivity);
     const fetchMCPServers = useCortexStore((s) => s.fetchMCPServers);
     const fetchMCPActivity = useCortexStore((s) => s.fetchMCPActivity);
+    const fetchSearchCapability = useCortexStore((s) => s.fetchSearchCapability);
     const deleteMCPServer = useCortexStore((s) => s.deleteMCPServer);
     const streamLogs = useCortexStore((s) => s.streamLogs);
     const isStreamConnected = useCortexStore((s) => s.isStreamConnected);
     const initializeStream = useCortexStore((s) => s.initializeStream);
+    const searchCapability = useCortexStore((s) => s.searchCapability);
+    const isFetchingSearchCapability = useCortexStore((s) => s.isFetchingSearchCapability);
+    const searchCapabilityError = useCortexStore((s) => s.searchCapabilityError);
 
     const [activeTab, setActiveTab] = useState<Tab>("installed");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
@@ -29,7 +33,8 @@ export default function MCPToolRegistry() {
     useEffect(() => {
         fetchMCPServers();
         fetchMCPActivity();
-    }, [fetchMCPActivity, fetchMCPServers]);
+        fetchSearchCapability();
+    }, [fetchMCPActivity, fetchMCPServers, fetchSearchCapability]);
 
     useEffect(() => {
         initializeStream();
@@ -186,6 +191,12 @@ export default function MCPToolRegistry() {
                             </div>
                         </div>
 
+                        <SearchCapabilityCard
+                            status={searchCapability}
+                            isLoading={isFetchingSearchCapability}
+                            error={searchCapabilityError}
+                        />
+
                         {isEmptyInstalledState && (
                             <div className="rounded-xl border border-cortex-warning/25 bg-cortex-warning/10 px-4 py-3">
                                 <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-warning">
@@ -304,6 +315,77 @@ export default function MCPToolRegistry() {
 
                 {activeTab === "library" && <MCPLibraryBrowserBody onInstalled={handleInstalled} />}
             </div>
+        </div>
+    );
+}
+
+function SearchCapabilityCard({
+    status,
+    isLoading,
+    error,
+}: {
+    status: ReturnType<typeof useCortexStore.getState>["searchCapability"];
+    isLoading: boolean;
+    error: string | null;
+}) {
+    const provider = status?.provider ?? "unknown";
+    const ready = Boolean(status?.enabled && status?.configured);
+    const headline = error
+        ? "Search capability status unavailable"
+        : isLoading && !status
+        ? "Checking search capability"
+        : ready
+        ? "Soma search is ready"
+        : "Soma search needs configuration";
+    const detail = error
+        ? error
+        : status?.blocker?.message
+        ?? status?.next_actions?.[0]
+        ?? "Soma can route governed search through the configured Mycelis Search provider.";
+    const tokenText = status?.requires_hosted_api_token
+        ? "Brave MCP requires BRAVE_API_KEY."
+        : "No hosted Brave token required for local_sources or self-hosted SearXNG.";
+
+    return (
+        <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 rounded-lg border p-2 ${ready ? "border-cortex-success/30 bg-cortex-success/10" : "border-cortex-warning/30 bg-cortex-warning/10"}`}>
+                        <Search className={`h-4 w-4 ${ready ? "text-cortex-success" : "text-cortex-warning"}`} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                            Mycelis Search Capability
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-cortex-text-main">{headline}</p>
+                        <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{detail}</p>
+                    </div>
+                </div>
+                <span className="self-start rounded-full border border-cortex-border bg-cortex-bg px-2 py-1 text-[10px] font-mono uppercase text-cortex-text-muted">
+                    {provider}
+                </span>
+            </div>
+            <div className="mt-4 grid gap-2 md:grid-cols-3">
+                <CapabilityPill active={Boolean(status?.direct_soma_interaction)} label={`Soma direct: ${status?.soma_tool_name ?? "web_search"}`} />
+                <CapabilityPill active={Boolean(status?.supports_local_sources)} label="Shared sources" />
+                <CapabilityPill active={Boolean(status?.supports_public_web)} label="Public web" />
+            </div>
+            <div className="mt-3 flex items-center gap-2 text-[11px] text-cortex-text-muted">
+                {status?.requires_hosted_api_token ? (
+                    <AlertTriangle className="h-3.5 w-3.5 text-cortex-warning" />
+                ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-cortex-success" />
+                )}
+                {tokenText}
+            </div>
+        </div>
+    );
+}
+
+function CapabilityPill({ active, label }: { active: boolean; label: string }) {
+    return (
+        <div className={`rounded-lg border px-3 py-2 text-[11px] font-mono ${active ? "border-cortex-success/25 bg-cortex-success/10 text-cortex-text-main" : "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted"}`}>
+            {label}
         </div>
     );
 }

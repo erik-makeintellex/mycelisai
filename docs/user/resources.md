@@ -57,7 +57,9 @@ Current posture:
 - local-first current-group configuration can install directly when policy allows
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
 - credentialed external SaaS entries such as Slack, GitHub, hosted search, and hosted media should now be expected to require approval rather than behaving like low-risk local tools
-- `fetch`/research capability is how governed external context can be added without treating web access as unrestricted trust
+- `brave-search` provides governed web search when installed with `BRAVE_API_KEY`; `fetch` retrieves explicit URLs for analysis, and together they form the default curated research toolset without making web access unrestricted trust
+- `Mycelis Search Capability` shows the active Soma search posture directly in Connected Tools: the selected provider, whether Soma can call `web_search`, whether local shared sources or public web are supported, and whether the current path needs hosted Brave credentials
+- self-hosted search does not have to depend on Brave tokens: `local_sources` searches governed Mycelis context, while `searxng` can provide public web search through an operator-owned endpoint
 - the same Connected Tools surface should make the workflow legible end to end: add from the curated library, confirm the server is connected, and inspect recent persisted MCP activity plus live in-session usage showing which server/tool agents are using, including team, agent, and run labels when the runtime supplies them
 - the curated MCP library is now being standardized around the MCP registry `server.json` concepts so future registrations stay recognizable outside Mycelis too: each entry should carry a canonical server name, version, published package + transport metadata, repository/homepage metadata when known, and typed environment-variable declarations instead of only a local command block
 - curated MCP install is repeat-safe by server name; reapplying an allowed entry updates and reconnects the existing server instead of creating duplicate registry state

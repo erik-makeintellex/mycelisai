@@ -27,6 +27,7 @@ import (
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/runs"
+	"github.com/mycelis/core/internal/searchcap"
 	"github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/state"
 	"github.com/mycelis/core/internal/swarm"
@@ -81,6 +82,7 @@ type AdminServer struct {
 	LoopExecution       *LoopExecutionTracker
 	LoopScheduler       *LoopScheduler
 	TemplateBundlesPath string
+	Search              *searchcap.Service
 }
 
 func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, ex *exchange.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
@@ -251,6 +253,8 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	// Phase 5.3: RAG Memory & Sensory
 	mux.HandleFunc("GET /api/v1/memory/search", s.HandleMemorySearch)
+	mux.HandleFunc("GET /api/v1/search/status", s.HandleSearchStatus)
+	mux.HandleFunc("POST /api/v1/search", s.HandleSearch)
 	mux.HandleFunc("GET /api/v1/memory/sitreps", s.HandleListSitReps)
 	mux.HandleFunc("/api/v1/memory/deployment-context", s.HandleDeploymentContext)
 	mux.HandleFunc("/api/v1/memory/temp", s.HandleTempMemory)

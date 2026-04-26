@@ -264,7 +264,7 @@ Scope:
 - prioritize no-regression extraction over feature addition
 
 Proof targets:
-- `uv run inv quality.max-lines --limit 350`
+- `uv run inv quality.max-lines --limit 300`
 - `uv run inv ci.baseline`
 
 ### 10.4 Stream D - Slice 7 team workspace contract (`BLOCKED -> NEXT once prerequisites land`)

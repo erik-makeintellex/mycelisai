@@ -32,6 +32,7 @@ import type {
     ProposalData,
     SensorNode,
     ServiceHealthStatus,
+    SearchCapabilityStatus,
     SignalDetail,
     StreamSignal,
     TeamDetail,
@@ -102,6 +103,9 @@ export interface CortexResourcesContract {
     mcpTools: MCPTool[];
     mcpLibrary: MCPLibraryCategory[];
     isFetchingMCPLibrary: boolean;
+    searchCapability: SearchCapabilityStatus | null;
+    isFetchingSearchCapability: boolean;
+    searchCapabilityError: string | null;
     fetchMissions: () => Promise<void>;
     selectArtifact: (artifact: CTSEnvelope | null) => void;
     approveArtifact: (id: string) => void;
@@ -128,6 +132,7 @@ export interface CortexResourcesContract {
     fetchMCPTools: () => Promise<void>;
     fetchMCPLibrary: () => Promise<void>;
     installFromLibrary: (name: string, env?: Record<string, string>) => Promise<MCPInstallResult>;
+    fetchSearchCapability: () => Promise<void>;
 }
 
 export interface CortexMissionChatContract {

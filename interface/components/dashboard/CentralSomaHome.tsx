@@ -103,7 +103,10 @@ export default function CentralSomaHome({
                         </div>
                     ) : null}
                 </div>
-                <div className="min-h-[680px] overflow-hidden rounded-3xl border border-cortex-border bg-cortex-bg">
+                <div
+                    data-testid="central-soma-chat-frame"
+                    className="h-[72vh] min-h-[560px] max-h-[760px] overflow-hidden rounded-3xl border border-cortex-border bg-cortex-bg"
+                >
                     <MissionControlChat simpleMode autoFocus />
                 </div>
             </div>

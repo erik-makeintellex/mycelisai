@@ -11,7 +11,7 @@ import { deriveMissionChatState } from '@/store/cortexStoreChatWorkflow';
 import { loadPersistedChat } from '@/store/cortexStoreUtils';
 
 type StripActions<T> = {
-    [K in keyof T as T[K] extends (...args: any[]) => any ? never : K]: T[K];
+    [K in keyof T as T[K] extends (...args: infer _Args) => unknown ? never : K]: T[K];
 };
 
 const initialMissionChat = loadPersistedChat(null);
@@ -68,6 +68,9 @@ const initialResourcesState: StripActions<CortexResourcesContract> = {
     mcpTools: [],
     mcpLibrary: [],
     isFetchingMCPLibrary: false,
+    searchCapability: null,
+    isFetchingSearchCapability: false,
+    searchCapabilityError: null,
 };
 
 const initialMissionChatContractState: StripActions<CortexMissionChatContract> = {

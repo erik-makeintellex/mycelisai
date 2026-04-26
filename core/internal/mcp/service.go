@@ -455,7 +455,7 @@ func (s *Service) BootstrapDefaults(ctx context.Context, library *Library, pool 
 	if s.ToolSets != nil {
 		defaultSets := []ToolSet{
 			{Name: "workspace", Description: "File I/O and workspace management", ToolRefs: []string{"mcp:filesystem/*"}},
-			{Name: "research", Description: "Web fetch and search tools", ToolRefs: []string{"mcp:fetch/*"}},
+			{Name: "research", Description: "Web fetch and search tools", ToolRefs: []string{"mcp:fetch/*", "mcp:brave-search/*"}},
 		}
 		for _, ts := range defaultSets {
 			existing, _ := s.ToolSets.FindByName(ctx, ts.Name)

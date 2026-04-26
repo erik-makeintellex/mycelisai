@@ -37,6 +37,7 @@ import (
 	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/runs"
+	"github.com/mycelis/core/internal/searchcap"
 	"github.com/mycelis/core/internal/server"
 	mycelis_signal "github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/swarm"
@@ -495,6 +496,8 @@ func main() {
 		}
 		log.Printf("Communications Gateway Active. %d/%d providers configured.", ready, len(providers))
 	}
+	searchService := searchcap.NewService(searchcap.ConfigFromEnv(), cogRouter, memService)
+	log.Printf("Mycelis Search capability provider: %s", searchService.Provider())
 	if nc != nil {
 		internalTools = swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
 			NC:        nc,
@@ -506,6 +509,7 @@ func main() {
 			Comms:     commsGateway,
 			DB:        sharedDB,
 			Exchange:  exchangeService,
+			Search:    searchService,
 		})
 	}
 
@@ -675,6 +679,7 @@ func main() {
 	// Create Admin Server (V7: pass eventStore + runsManager for Event Spine routes)
 	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, exchangeService, eventStore, runsManager)
 	adminSrv.Comms = commsGateway
+	adminSrv.Search = searchService
 	// V7: wire conversation store into AdminServer for transcript browsing + interjection
 	if convStore != nil {
 		adminSrv.Conversations = convStore

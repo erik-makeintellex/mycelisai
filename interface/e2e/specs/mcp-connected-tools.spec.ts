@@ -39,6 +39,23 @@ type MockConnectedToolsOptions = {
         agent_id?: string;
         timestamp: string;
     }>;
+    searchStatus?: {
+        provider: string;
+        enabled: boolean;
+        configured: boolean;
+        supports_local_sources: boolean;
+        supports_public_web: boolean;
+        soma_tool_name: string;
+        direct_soma_interaction: boolean;
+        requires_hosted_api_token: boolean;
+        max_results: number;
+        blocker?: {
+            code: string;
+            message: string;
+            next_action: string;
+        };
+        next_actions?: string[];
+    };
 };
 
 async function mockConnectedToolsApis(page: Page, options: MockConnectedToolsOptions = {}) {
@@ -90,6 +107,18 @@ async function mockConnectedToolsApis(page: Page, options: MockConnectedToolsOpt
             timestamp: "2026-04-11T12:10:00Z",
         },
     ];
+    const searchStatus = options.searchStatus ?? {
+        provider: "searxng",
+        enabled: true,
+        configured: true,
+        supports_local_sources: false,
+        supports_public_web: true,
+        soma_tool_name: "web_search",
+        direct_soma_interaction: true,
+        requires_hosted_api_token: false,
+        max_results: 8,
+        next_actions: ["Ask Soma to search the public web through the self-hosted SearXNG provider."],
+    };
     const library = [
         {
             name: "Research",
@@ -140,6 +169,10 @@ async function mockConnectedToolsApis(page: Page, options: MockConnectedToolsOpt
 
     await page.route("**/api/v1/mcp/activity?limit=12", async (route) => {
         await fulfillJSON(route, 200, { ok: true, data: activity });
+    });
+
+    await page.route("**/api/v1/search/status", async (route) => {
+        await fulfillJSON(route, 200, { ok: true, data: searchStatus });
     });
 
     await page.route("**/api/v1/mcp/library", async (route) => {
@@ -407,6 +440,11 @@ test.describe("Connected Tools MCP workflow", () => {
 
         await expect(page.getByRole("button", { name: "Connected Tools" })).toBeVisible();
         await expect(page.getByText("Connected Tools Workflow")).toBeVisible();
+        await expect(page.getByText("Mycelis Search Capability")).toBeVisible();
+        await expect(page.getByText("Soma search is ready")).toBeVisible();
+        await expect(page.getByText("Soma direct: web_search")).toBeVisible();
+        await expect(page.getByText("Public web", { exact: true })).toBeVisible();
+        await expect(page.getByText("No hosted Brave token required for local_sources or self-hosted SearXNG.")).toBeVisible();
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();
         await expect(page.getByText("filesystem · read_file")).toBeVisible();
         await expect(page.getByText("Soma used filesystem.read_file while preparing the launch brief.").first()).toBeVisible();
@@ -455,9 +493,30 @@ test.describe("Connected Tools MCP workflow", () => {
     });
 
     test("shows the bootstrap-disabled empty state and sends the operator to the library", async ({ page }) => {
-        await mockConnectedToolsApis(page, { servers: [], activity: [] });
+        await mockConnectedToolsApis(page, {
+            servers: [],
+            activity: [],
+            searchStatus: {
+                provider: "disabled",
+                enabled: false,
+                configured: false,
+                supports_local_sources: false,
+                supports_public_web: false,
+                soma_tool_name: "web_search",
+                direct_soma_interaction: true,
+                requires_hosted_api_token: false,
+                max_results: 8,
+                blocker: {
+                    code: "search_provider_disabled",
+                    message: "Mycelis Search is disabled.",
+                    next_action: "Set MYCELIS_SEARCH_PROVIDER=local_sources for governed local-source search or searxng for self-hosted web search.",
+                },
+            },
+        });
         await openConnectedTools(page);
 
+        await expect(page.getByText("Soma search needs configuration")).toBeVisible();
+        await expect(page.getByText("Mycelis Search is disabled.")).toBeVisible();
         await expect(page.getByText("No MCP servers installed.", { exact: true })).toBeVisible({ timeout: 20_000 });
         await expect(page.getByRole("button", { name: "OPEN LIBRARY" })).toBeVisible();
 

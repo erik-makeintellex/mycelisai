@@ -1088,7 +1088,7 @@ export default function MissionControlChat({
     };
 
     return (
-        <div className="h-full flex flex-col" data-testid="mission-chat">
+        <div className="flex h-full min-h-0 flex-col" data-testid="mission-chat">
             {/* Header */}
             <div className="h-10 px-4 border-b border-cortex-border flex items-center gap-2 flex-shrink-0 bg-cortex-surface/50">
                 {showAdvancedRouting && broadcastMode ? (
@@ -1170,7 +1170,11 @@ export default function MissionControlChat({
             )}
 
             {/* Chat log */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2.5 scrollbar-thin scrollbar-thumb-cortex-border">
+            <div
+                ref={scrollRef}
+                data-testid="mission-chat-scroll"
+                className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-2.5 scrollbar-thin scrollbar-thumb-cortex-border"
+            >
                 {missionChatFailure && (
                     <CouncilCallErrorCard
                         failure={missionChatFailure}

@@ -129,8 +129,8 @@ Enforces logging contract quality checks before delivery.
 - **Topics**: `uv run inv logging.check-topics` (no hardcoded `swarm.*` outside constants)
 
 ### `quality.py` (Code Hygiene Gates)
-Enforces max-lines policy on hot-path files with temporary no-regression caps.
-- **Max Lines**: `uv run inv quality.max-lines --limit 350`
+Enforces max-lines policy across the main source tree with temporary no-regression caps for legacy oversized files.
+- **Max Lines**: `uv run inv quality.max-lines --limit 300`
 
 ### `lifecycle.py` (Local Stack Control)
 Owns deterministic local bring-up, teardown, and deep health checks.

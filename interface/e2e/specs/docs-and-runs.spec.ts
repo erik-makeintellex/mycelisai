@@ -313,7 +313,7 @@ test.describe('Docs and Runs Route Coverage', () => {
         failNextEventRequest = true;
         await page.getByRole('button', { name: 'Events' }).first().click();
         await expect(page.getByText('Failed to load events (503)')).toBeVisible();
-        await page.getByRole('button', { name: 'Retry' }).click();
+        await page.getByRole('button', { name: 'Retry' }).nth(1).click();
         await expect(page.getByText('mission.failed')).toBeVisible();
         await expect(page.getByText('tool.failed')).toBeVisible();
         await expect(page.getByText('planner').first()).toBeVisible();
