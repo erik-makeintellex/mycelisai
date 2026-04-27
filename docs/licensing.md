@@ -153,6 +153,9 @@ Rules:
 - external identities must still resolve into stable local Mycelis principals for audit and policy decisions
 - paid identity layers may automate lifecycle and administration; they must not bypass governance or make the hosted admin plane a hard runtime dependency
 
+Canonical module:
+- [V8.2 User Management And Enterprise Auth Module](architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md) defines the detailed provider abstraction, edition strategy, Mycelis-owned authorization model, approval-authority mapping, user context visibility, backend foundation, and validation plan for enterprise auth work.
+
 ## Canonical Capability Matrix
 
 | Capability | Self-hosted release | Self-hosted enterprise | Hosted admin control plane |

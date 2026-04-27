@@ -309,12 +309,8 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md",
                 description: "Target contract for SAML/SSO, break-glass admins, modular IAM, and one shared Soma persona",
             },
-            {
-                slug: "v8-memory-layer-reflection-delivery",
-                label: "V8 Memory Layer + Reflection",
-                path: "docs/architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md",
-                description: "Explicit Soma/agent/project/reflection memory layers, candidate-first reflection, and promotion guardrails",
-            },
+            { slug: "v8-2-user-management-enterprise-auth", label: "V8.2 User Management + Enterprise Auth", path: "docs/architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md", description: "Enterprise-ready user management, pluggable auth providers, SSO/SAML/OIDC, internal RBAC, approval authority, and SCIM target posture" },
+            { slug: "v8-memory-layer-reflection-delivery", label: "V8 Memory Layer + Reflection", path: "docs/architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md", description: "Explicit Soma/agent/project/reflection memory layers, candidate-first reflection, and promotion guardrails" },
             {
                 slug: "v8-trusted-memory-arbitration-team-vector-contract",
                 label: "V8 Trusted Memory Arbitration",

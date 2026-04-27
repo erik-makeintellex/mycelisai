@@ -74,6 +74,7 @@ export default function RunTimeline({ runId }: Props) {
             const body = await res.json();
             const list: MissionEvent[] = body.data ?? body ?? [];
             setEvents(list);
+            setError(null);
             if (list.length > 0 && !startedAt) {
                 setStartedAt(list[0].emitted_at);
             }

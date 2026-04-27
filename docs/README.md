@@ -45,6 +45,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Teamed Agentry Workflow Advantage**: `./architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md`
 - **V8 Workflow Variants And Reboot Proof Set**: `./architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md`
 - **V8 Universal Soma And Context Model PRD**: `./architecture-library/V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`
+- **V8.2 User Management And Enterprise Auth Module**: `./architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md`
 - **V8 Home Docker Compose Runtime**: `./architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
 - **V8 Self-Hosted Runtime Delivery Program**: `./architecture-library/V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md`
 - **V8 Mycelis Search Capability Delivery Plan**: `./architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md`
@@ -63,6 +64,7 @@ Use these when the goal is product packaging, edition posture, or the paid-vs-se
 - **Governance System**: `./governance.md`
 - **Governance & Trust**: `./user/governance-trust.md`
 - **V8 Multi-User Identity + Soma Tenancy**: `./architecture-library/V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md`
+- **V8.2 User Management And Enterprise Auth Module**: `./architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md`
 - **V8 Trusted Memory Arbitration Contract**: `./architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
 
 ## Testing and Release Guidance

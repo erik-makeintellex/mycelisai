@@ -227,6 +227,7 @@ Current release truth:
 - the first reflection/synthesis lane now exists in the governed deployment-context store as `reflection_synthesis`: it is separate from ordinary Soma memory, user-private records, customer context, company knowledge, and admin-shaped Soma context, and is intended for durable synthesized lessons, patterns, contradictions, trajectory shifts, and meta-observations
 
 Required next target:
+- use [V8.2 User Management And Enterprise Auth Module](V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md) as the detailed provider/RBAC/approval-authority contract for enterprise auth implementation
 - formalize principal, auth-source, and role mapping contracts
 - add SAML/OIDC-capable identity adapters
 - extend the current local break-glass recovery posture into the future federated/self-hosted enterprise admin contract

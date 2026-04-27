@@ -63,9 +63,10 @@ Review these in order before touching code or planning state:
 16. [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md)
 17. [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md)
 18. [V8 MVP Media, Team Output, And Template Registry](docs/architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md)
-19. [V8 Development State](V8_DEV_STATE.md)
-20. [V7 Development State (Historical)](V7_DEV_STATE.md)
-21. [Docs Manifest](interface/lib/docsManifest.ts)
+19. [V8.2 User Management And Enterprise Auth Module](docs/architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md)
+20. [V8 Development State](V8_DEV_STATE.md)
+21. [V7 Development State (Historical)](V7_DEV_STATE.md)
+22. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent review rule:
 - README is the primary architecture inception document for active development.
@@ -218,7 +219,7 @@ Excluded from the V8.1 release target:
 - unrestricted capability controls
 - autonomous memory mutation or silent self-rewrite
 - advanced raw architecture/configuration panels in the default operator flow
-- full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows
+- full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows; the V8.2 target module is [V8.2 User Management And Enterprise Auth Module](docs/architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md)
 
 Release rule:
 - if a surface belongs to V8.2 but not the V8.1 MVP, it should remain out of the default release surface until explicitly promoted
