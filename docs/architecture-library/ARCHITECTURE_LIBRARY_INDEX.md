@@ -28,11 +28,11 @@ This index is now intentionally narrower:
 ## Layered Truth
 
 - [README](../../README.md) is the primary inception document for active development.
-- [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the current release architecture.
-- [V8.2 Full Production Architecture](../../v8-2.md) is the canonical full production architecture and full actuation target.
+- [V8.2 Full Production Architecture](../../v8-2.md) is the canonical full production architecture, full actuation target, and current B2+ delivery frame.
+- [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
 - [V8 Development State](../../V8_DEV_STATE.md) is the live implementation scoreboard.
 
-V8.2 work may proceed before V8.1 release lock when it is modular and proof-producing. Keep each slice attached to one owning contract area, keep non-promoted V8.2 capability out of the default V8.1 operator surface, and update `V8_DEV_STATE.md` when a module boundary changes status.
+V8.2/B2+ work may proceed when it is modular and proof-producing. Keep each slice attached to one owning contract area, keep non-promoted capability out of the default Soma-primary operator surface, and update `V8_DEV_STATE.md` when a module boundary changes status.
 
 ## Canonical Documents
 
@@ -48,7 +48,7 @@ V8.2 work may proceed before V8.1 release lock when it is modular and proof-prod
 | [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) | shaping new V8 runtime contracts | inception, kernel, council, provider policy, and continuity contracts |
 | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | planning configuration sources, templates, bootstrap behavior, or inheritance | V7-to-V8 bootstrap migration, template vs instantiated organization, and precedence rules |
 | [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) | changing first-run flow, AI Organization creation, Soma-primary workspace, or screen-to-API mapping | canonical V8 operator PRD, source-of-truth layering, and UI/API contracts |
-| [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) | defining the current release architecture | current release architecture for loops, continuity, capabilities, and bounded automations |
+| [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) | checking the V8.1 foundation and compatibility baseline | baseline architecture for loops, continuity, capabilities, and bounded automations |
 | [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) | defining how team creation should stay compact by default | compact team shape guidance, broad-ask splitting, and Soma/Council orchestration over NATS |
 | [V8 Teamed Agentry Workflow Advantage](V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md) | deciding when a team actually beats one strong context-rich agent | workflow variants, team-vs-single-agent boundary, and complex patterns where teamed agentry wins |
 | [V8 Workflow Variants And Reboot Proof Set](V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md) | demonstrating the same objective across direct Soma, compact team, and multi-lane workflow shapes | comparative workflow proof and reboot-safe resume validation |
@@ -65,7 +65,7 @@ V8.2 work may proceed before V8.1 release lock when it is modular and proof-prod
 | [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) | planning user-output-first media/team demos, Ollama role routing, or DB-backed conversation templates | model-role routing, media-engine boundary, team-managed output proof, and conversation-template registry |
 | [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) | defining what browser validation must prove | Soma-first browser proof contract for answers, governed actions, continuity, and audit visibility |
 | [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) | running the complete UI validation set | browser workflows, compose/runtime proof, evidence packaging, and verdict rules |
-| [V8.2 Full Production Architecture](../../v8-2.md) | checking whether a surface belongs to the full target rather than the current release | Full Production Architecture (Canonical Target) for distributed execution, governed learning, and actuation scope |
+| [V8.2 Full Production Architecture](../../v8-2.md) | checking the active B2+ delivery frame and full target | Full Production Architecture (Canonical Target) for distributed execution, governed learning, and actuation scope |
 
 ## How To Use This Library
 
@@ -79,7 +79,7 @@ V8.2 work may proceed before V8.1 release lock when it is modular and proof-prod
 8. Use [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md) when defining the new canonical V8 runtime contracts during migration.
 9. Use [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) when translating V7 assumptions through the template -> instantiation -> inheritance -> precedence pipeline.
 10. Use [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md) when defining first-run flow, Soma-primary workspace behavior, advanced-mode boundaries, or screen-to-API mapping.
-11. Use [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) when checking the current release architecture.
+11. Use [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) when checking the foundation and compatibility baseline.
 12. Use [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) when shaping team defaults, broad-ask decomposition, or Soma/Council coordination over NATS.
 13. Use [V8 Teamed Agentry Workflow Advantage](V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md) when deciding whether a request should stay direct Soma, become a compact team, or split into several coordinated lanes.
 14. Use [V8 Workflow Variants And Reboot Proof Set](V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md) when you need one concrete demonstration set that compares direct Soma, compact teams, multi-lane workflows, and reboot-safe resume behavior.
@@ -96,7 +96,7 @@ V8.2 work may proceed before V8.1 release lock when it is modular and proof-prod
 25. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
 26. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
 27. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
-28. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the canonical full production target rather than the current release.
+28. Use [V8.2 Full Production Architecture](../../v8-2.md) when checking whether a surface belongs to the active B2+ delivery frame or canonical full production target.
 
 Execution governance reminder:
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md) and [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) remain authoritative migration inputs for delivery discipline.

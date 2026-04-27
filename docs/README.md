@@ -39,7 +39,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-- **V8.1 Living Organization Architecture**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
+- **V8.1 Living Organization Baseline**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 - **V8 Memory Layer + Reflection Contract**: `./architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md`
 - **V8 Trusted Memory Arbitration Contract**: `./architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
 - **V8 Teamed Agentry Workflow Advantage**: `./architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md`
@@ -51,7 +51,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Mycelis Search Capability Delivery Plan**: `./architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md`
 - **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`
 - **V8 MVP Media, Team Output, And Template Registry**: `./architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`
-- **V8.2 Production Architecture Target**: `../v8-2.md`
+- **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../v8-2.md`
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
 - **Logging Standard**: `./logging.md`
@@ -118,6 +118,6 @@ Guidance rules:
 - user guidance should stay focused on using the product, not implementation internals
 - agent/developer guidance should point to active V8 authority before V7 migration material
 - testing guidance should point to durable verification contracts rather than temporary execution notes
-- V8.2-aligned work should stay modular and name its owning boundary before it changes runtime, memory, workflow, capability, UI, or governance behavior
+- V8.2/B2+-aligned work should stay modular and name its owning boundary before it changes runtime, memory, workflow, capability, UI, user/auth, or governance behavior
 - `./archive/README.md` is historical context only and should not drive active implementation
 - any slice that changes runtime, validation, API meaning, or memory/governance posture must review and update the matching docs set in the same change, including the trusted-memory contract when that posture is touched

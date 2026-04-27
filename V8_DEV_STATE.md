@@ -41,18 +41,18 @@ Use `V7_DEV_STATE.md` only as a migration input and historical checkpoint source
 
 ## Layered Architecture Truth
 
-Development is progressing toward the V8.2 full production target.
+Development is now operating in the V8.2/B2+ delivery frame while preserving the V8.1 Soma-primary compatibility baseline.
 
-- V8.1 is the current bounded release target.
-- V8.2 is the distributed, learning, capability-enabled, and actuation target beyond the current release.
-- Modular runtime delivery is one active bridge into that V8.2 target, not a reason to blur the V8.1 release boundary.
-- `README.md` is the primary inception summary that must distinguish those two layers and point to this live implementation state.
+- V8.2/B2+ is the active delivery target.
+- V8.2 is the distributed, learning, capability-enabled, and actuation target being advanced through bounded modules.
+- V8.1 remains the foundation and compatibility baseline for the default Soma-primary operator surface.
+- `README.md` is the primary inception summary that must distinguish target, baseline, and live implementation state.
 
 Flow rule:
-- V8.1 remains the release gate and default operator-surface boundary.
-- V8.2 work is already allowed to proceed when it is modular, proof-producing, and kept behind stable contracts rather than pushed into the default MVP surface prematurely.
-- V8.2-aligned slices must declare which boundary they advance: runtime/deployment, memory/learning, team/workflow, capability/MCP, UI/advanced surface, or governance/trust.
-- A V8.2 slice may be `ACTIVE` while V8.1 remains the release target only if it does not weaken the current MVP proof lane, does not introduce default-surface complexity without promotion, and updates the owning docs/state in the same slice.
+- the default operator surface remains simple, Soma-first, and compatibility-protected.
+- V8.2/B2+ work is allowed to proceed when it is modular, proof-producing, and kept behind stable contracts rather than pushed into the default surface prematurely.
+- V8.2-aligned slices must declare which boundary they advance: runtime/deployment, memory/learning, team/workflow, capability/MCP, UI/advanced surface, user/auth, or governance/trust.
+- A V8.2 slice may be `ACTIVE` only if it does not weaken the current proof lane, does not introduce default-surface complexity without promotion, and updates the owning docs/state in the same slice.
 
 Release posture:
 - `ACTIVE` current posture is `V1 MVP Release Candidate`.
@@ -163,8 +163,8 @@ Every slice must:
 
 Execution completion rule:
 - a slice is not complete unless tests pass, documentation is updated where meaning changed, and architecture alignment is verified
-- README, V8.1, V8.2, and this state file must remain synchronized when implementation or release meaning changes
-- no silent divergence is allowed between current implementation, current release target, and full architecture target
+- README, V8.2, the V8.1 baseline, and this state file must remain synchronized when implementation or delivery meaning changes
+- no silent divergence is allowed between current implementation, active delivery target, compatibility baseline, and full architecture target
 
 State reporting rule:
 - `COMPLETE` records accepted delivered work
@@ -200,7 +200,7 @@ Management contract:
 
 ## Current Target State (2026-04-23)
 
-Use this board for current MVP continuation coordination and modular V8.2 flow control. Runtime-delivery truth remains required, V8.1 remains the release gate, and V8.2-aligned lanes may proceed only when they preserve clean module boundaries and proof-producing handoffs.
+Use this board for current B2+ delivery coordination and modular V8.2 flow control. Runtime-delivery truth remains required, the V8.1 Soma-primary baseline remains compatibility-protected, and V8.2-aligned lanes may proceed only when they preserve clean module boundaries and proof-producing handoffs.
 
 | Team / Lane | Status | Current Target | Dependencies / Handoffs | Next Action |
 | --- | --- | --- | --- | --- |
@@ -210,7 +210,7 @@ Use this board for current MVP continuation coordination and modular V8.2 flow c
 | Direct Soma + Governance | `IN_REVIEW` | Keep direct answer, governed proposal, confirm/cancel, and continuity behavior stable through the live operator path. | Depends on Compose/live-backend health and governed chat/runtime contracts. | Widen failure/recovery proof after the current packaging slice, especially guided retry recovery and Windows-browser-against-WSL validation. |
 | Connected Tools + MCP Workflow | `COMPLETE` | Keep library install, connected-server visibility, and MCP activity readable to operators. | Depends on Connected Tools UI, audit/activity proof, and live runtime health. | Latest WSL live proof is green; keep the mocked Connected Tools proof and live `mcp-connected-tools` correlation proof in the regression set while the next workflow gaps proceed. |
 | Runtime + Self-Hosted Posture | `ACTIVE` | Keep Compose/WSL/Windows browser topology truthful and prevent desktop-local shortcuts from creeping back into the MVP contract. | Feeds live-backend browser proof and operator-facing docs. | Validate the new `wsl.refresh` auth repair/report path against the real WSL checkout, run `wsl.validate` from the refreshed proof checkout, then let focused browser-gap work and broader headed certification proceed from that committed state. |
-| V8.2 Modular Flow | `ACTIVE` | Let already-started V8.2 work continue as bounded modules without displacing the V8.1 release gate. | Depends on architecture index, V8.2 target doc, and owning runtime/memory/workflow/capability/governance contracts. | Keep each V8.2 slice tied to one explicit module boundary, one proof lane, and one promotion rule for whether it stays advanced/non-default or enters the MVP surface. |
+| V8.2 Modular Flow | `ACTIVE` | Let V8.2/B2+ work continue as bounded modules without weakening the V8.1 compatibility baseline. | Depends on architecture index, V8.2 target doc, and owning runtime/memory/workflow/capability/user-auth/governance contracts. | Keep each V8.2 slice tied to one explicit module boundary, one proof lane, and one promotion rule for whether it stays advanced/non-default or enters the default operator surface. |
 | Docs + State Authority | `IN_REVIEW` | Keep `V8_DEV_STATE.md`, `docs/TESTING.md`, and related authority docs aligned to the actual proof surface and active MVP plan. | Depends on every touched slice. | Treat the green WSL runtime proof, workspace-path contract, and `wsl.refresh` auth repair/report behavior as captured truth; only update docs/state again when the next proof slice changes meaning. |
 
 Cross-team management rule:
@@ -223,7 +223,7 @@ Cross-team management rule:
 Current scope guard:
 - `ACTIVE` the MVP center is now operator-shaped workflows and singular execution outcomes: direct Soma answer, governed mutation, organization entry/re-entry, team design, temporary workflow review, Connected Tools activity, docs navigation, and run inspection.
 - `ACTIVE` runtime truth remains non-negotiable: Compose/WSL/Windows browser topology and explicit external AI endpoints must not regress while UX/testing work continues.
-- `ACTIVE` V8.2 modular flow may continue in parallel when each slice is bounded to a named module boundary, keeps advanced/full-target capabilities out of the default V8.1 surface until promoted, and preserves current proof gates.
+- `ACTIVE` V8.2 modular flow may continue in parallel when each slice is bounded to a named module boundary, keeps advanced/full-target capabilities out of the default operator surface until promoted, and preserves current proof gates.
 - `NEXT` proof gaps currently outrank polish work and stay ordered: keep the focused `/runs` and guided retry/recovery browser proofs green, refresh the WSL proof checkout from the committed slice, run `wsl.validate`, and then rerun broader headed certification from committed state.
 
 MVP continuation sequence:

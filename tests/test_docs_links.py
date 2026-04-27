@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
@@ -276,8 +275,8 @@ def test_readme_exposes_layered_architecture_truth():
     text = README.read_text(encoding="utf-8")
 
     required_sections = [
-        "## Final Production Architecture (V8.2)",
-        "## Current Release Target (V8.1)",
+        "## Active Delivery Target (V8.2 B2+)",
+        "## V8.1 Foundation And Compatibility Baseline",
         "## Current Implementation State",
     ]
     missing_sections = [section for section in required_sections if section not in text]
@@ -286,8 +285,8 @@ def test_readme_exposes_layered_architecture_truth():
     required_snippets = [
         "v8-2.md",
         "full actuation architecture",
-        "V8.1 is the current release target",
-        "V8.2 is the full production target",
+        "V8.2 B2+ is the active delivery target",
+        "V8.1 remains the foundation and compatibility baseline",
         "Actual implementation state lives in [V8_DEV_STATE.md](V8_DEV_STATE.md).",
     ]
     missing_snippets = [snippet for snippet in required_snippets if snippet not in text]
@@ -1152,7 +1151,8 @@ def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
         "distributed execution target state",
         "learning, capability, and actuation target state",
         "Not all elements described here are implemented yet.",
-        "V8.1 remains the current bounded release target",
+        "V8.2/B2+ is the active delivery frame",
+        "V8.1 living organization architecture remains the Soma-primary compatibility baseline",
         "default operator experience remains Soma-primary, intent-first, and simple by default",
         "advanced architecture/runtime control exists as a separate non-default layer for deep users",
     ]
@@ -1197,18 +1197,18 @@ def test_layered_docs_align_on_advanced_surface_contract():
     assert not missing, "Layered docs are missing the advanced-surface contract:\n" + "\n".join(missing)
 
 
-def test_v8_docs_keep_current_release_and_full_target_distinct():
+def test_v8_docs_keep_v8_1_baseline_and_v8_2_b2_target_distinct():
     index_text = (ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md").read_text(encoding="utf-8")
     v8_1_text = V8_1_LIVING_ARCHITECTURE.read_text(encoding="utf-8")
     state_text = V8_DEV_STATE.read_text(encoding="utf-8")
 
     required_index_snippets = [
-        "current release architecture",
-        "canonical full production architecture and full actuation target",
+        "foundation and compatibility baseline",
+        "canonical full production architecture, full actuation target, and current B2+ delivery frame",
     ]
     missing_index_snippets = [snippet for snippet in required_index_snippets if snippet not in index_text]
     assert not missing_index_snippets, (
-        "Architecture library index is missing the current-vs-target distinction: "
+            "Architecture library index is missing the baseline-vs-B2+ target distinction: "
         f"{missing_index_snippets}"
     )
 
@@ -1223,9 +1223,9 @@ def test_v8_docs_keep_current_release_and_full_target_distinct():
     )
 
     required_state_snippets = [
-        "Development is progressing toward the V8.2 full production target.",
-        "V8.1 is the current bounded release target.",
-        "V8.2 is the distributed, learning, capability-enabled, and actuation target beyond the current release.",
+        "Development is now operating in the V8.2/B2+ delivery frame while preserving the V8.1 Soma-primary compatibility baseline.",
+        "V8.2/B2+ is the active delivery target.",
+        "V8.1 remains the foundation and compatibility baseline for the default Soma-primary operator surface.",
     ]
     missing_state_snippets = [snippet for snippet in required_state_snippets if snippet not in state_text]
     assert not missing_state_snippets, (
@@ -1298,7 +1298,7 @@ def test_v8_2_declares_development_alignment():
     required_snippets = [
         "## Development Alignment",
         "V8.2 is the full target.",
-        "Implementation progresses incrementally from the current V8.1 release toward this architecture.",
+        "Implementation progresses incrementally from the V8.1 compatibility baseline through bounded B2+ modules toward this architecture.",
         "Documentation must always reflect:",
         "- what is implemented",
         "- what is planned",

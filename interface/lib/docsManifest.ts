@@ -275,7 +275,7 @@ export const DOC_MANIFEST: DocSection[] = [
             },
             {
                 slug: "v8-1-living-organization-architecture",
-                label: "Current Release Architecture (V8.1)",
+                label: "V8.1 Living Organization Baseline",
                 path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
                 description: "Current bounded release architecture for loops, continuity, capabilities, and bounded automations",
             },
@@ -327,7 +327,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-self-hosted-runtime-delivery-program",
                 label: "V8 Self-Hosted Runtime Delivery",
                 path: "docs/architecture-library/V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md",
-                description: "Compact delivery-team contract for V8.1 Compose proof and modular V8.2 self-hosted Kubernetes runtime work",
+                description: "Compact delivery-team contract for Soma-primary compatibility proof and modular V8.2/B2+ self-hosted runtime work",
             },
             {
                 slug: "v8-mycelis-search-capability-delivery",

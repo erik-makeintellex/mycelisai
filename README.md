@@ -3,14 +3,14 @@
 Mycelis is an AI Organization platform for creating, operating, and evolving governed multi-role systems through a Soma-primary operator experience.
 
 This README is the primary development-swarm inception document. It defines the top-level architecture truth split for active work:
-- final production architecture target
-- current release target
+- active V8.2/B2+ delivery target
+- V8.1 foundation and compatibility baseline
 - current implementation state
 
 Canonical ownership reminder:
 - `README.md` = development-swarm inception and layered truth
-- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` = current release architecture
-- `v8-2.md` = canonical full actuation / production target
+- `v8-2.md` = canonical V8.2 full actuation / production target and current B2+ delivery frame
+- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` = V8.1 foundation and compatibility baseline
 - `V8_DEV_STATE.md` = actual implementation truth
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` = UX/operator truth
 
@@ -20,8 +20,8 @@ Canonical ownership reminder:
 - [User Guidance](#user-guidance)
 - [Agent Guidance](#agent-guidance)
 - [What Mycelis Is](#what-mycelis-is)
-- [Final Production Architecture (V8.2)](#final-production-architecture-v82)
-- [Current Release Target (V8.1)](#current-release-target-v81)
+- [Active Delivery Target (V8.2 B2+)](#active-delivery-target-v82-b2)
+- [V8.1 Foundation And Compatibility Baseline](#v81-foundation-and-compatibility-baseline)
 - [Current Implementation State](#current-implementation-state)
 - [Compact Team Orchestration](#compact-team-orchestration)
 - [Default And Advanced Surfaces](#default-and-advanced-surfaces)
@@ -48,8 +48,8 @@ Review these in order before touching code or planning state:
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [README](README.md)
-4. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
-5. [V8.2 Production Architecture Target](v8-2.md)
+4. [V8.2 Production Architecture Target](v8-2.md)
+5. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
 6. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
 7. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
 8. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
@@ -70,8 +70,8 @@ Review these in order before touching code or planning state:
 
 Fresh-agent review rule:
 - README is the primary architecture inception document for active development.
-- [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the current release target.
-- [V8.2 Production Architecture Target](v8-2.md) is the canonical full production target and full actuation architecture.
+- [V8.2 Production Architecture Target](v8-2.md) is the canonical full production target, full actuation architecture, and current B2+ delivery frame.
+- [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
 - [V8 Development State](V8_DEV_STATE.md) is the live implementation scoreboard.
 - V7 documents remain migration inputs until replaced, but they do not override the V8 bootstrap and release truth.
 
@@ -164,11 +164,11 @@ In architecture terms, Mycelis is built around:
 - advisory and specialist layers beneath that orchestrator
 - auditable execution, automation, memory, and continuity contracts
 
-## Final Production Architecture (V8.2)
+## Active Delivery Target (V8.2 B2+)
 
-The final production architecture target is [V8.2 Production Architecture Target](v8-2.md), the full actuation architecture for Mycelis.
+The active delivery target is [V8.2 Production Architecture Target](v8-2.md), the full actuation architecture for Mycelis. The repo is now operating in a V8.2/B2+ delivery frame: work may advance V8.2 modules directly, provided each module keeps a named boundary, proof lane, and promotion rule.
 
-V8.2 is the distributed end-state we are building toward:
+V8.2 is the distributed end-state and active architecture frame we are building through:
 - distributed execution across a control plane and execution nodes
 - an active learning system that can evaluate, promote, and reuse reviewed learning safely
 - a capability system that governs what execution surfaces agents may use
@@ -182,20 +182,20 @@ V8.2 summary:
 - multi-user enterprise identity grows from that foundation: federated users, local break-glass admins, and one shared organization-owned Soma persona must coexist without fragmenting memory, RAG, privacy, or audit
 
 Explicit distinction:
-- V8.1 is the current release target
-- V8.2 is the full production target and full actuation architecture
+- V8.2 B2+ is the active delivery target and full production architecture frame
+- V8.1 remains the foundation and compatibility baseline for the current Soma-primary operator surface
 
-V8.2 is not the current MVP release surface. It is the final production architecture truth the rest of the docs must converge toward.
+V8.2 B2+ does not mean every full-production feature is implemented or promoted into the default UI. It means active work should speak from the V8.2 architecture, keep B2+ modules explicit, and preserve the simple Soma-first operator flow until a capability is intentionally promoted.
 
-## Current Release Target (V8.1)
+## V8.1 Foundation And Compatibility Baseline
 
-The current release target is [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md).
+[V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator experience, not the place to add new B2+ target scope.
 
-V8.1 defines the MVP release we are aligning implementation to now: a Soma-primary AI Organization system with bounded automation visibility, memory and continuity visibility, inheritance contracts, and safe organization structure surfaces.
+V8.1 defines the operator baseline we must not regress: a Soma-primary AI Organization system with bounded automation visibility, memory and continuity visibility, inheritance contracts, and safe organization structure surfaces.
 
-Development has already started moving toward V8.2. That work should keep flowing, but it must stay modular: each V8.2-aligned slice should advance one named boundary, keep default V8.1 surfaces simple unless explicitly promoted, and preserve the current release proof lane.
+V8.2/B2+ work should keep flowing, but it must stay modular: each V8.2-aligned slice should advance one named boundary, keep default operator surfaces simple unless explicitly promoted, and preserve the current proof lane.
 
-Included in the V8.1 release target:
+Included in the V8.1 compatibility baseline:
 - AI Organization creation and Soma-primary workspace flow
 - a primary Soma conversation surface for discussing plans, samples, and delivery intent
 - startup and runtime checks that keep Soma bound to an available AI Engine or surface explicit setup guidance before generic interaction failures
@@ -212,18 +212,18 @@ Included in the V8.1 release target:
 - intentional empty states, retry guidance, and partial-failure-safe workspace panels
 - Loop Profiles, Runtime Capabilities, semantic continuity, and Procedure / Skill Sets defined as architecture truth even where implementation is still partial
 
-Excluded from the V8.1 release target:
+B2+ modules that now belong to the active V8.2 frame but still require explicit proof/promotion:
 - distributed multi-host execution
 - editable automations
 - broad live actuation
-- unrestricted capability controls
-- autonomous memory mutation or silent self-rewrite
-- advanced raw architecture/configuration panels in the default operator flow
-- full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows; the V8.2 target module is [V8.2 User Management And Enterprise Auth Module](docs/architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md)
+- governed capability controls beyond current approved paths
+- reviewed memory promotion and learning behavior beyond bounded visibility
+- advanced architecture/runtime panels outside the default operator flow
+- full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows; the target module is [V8.2 User Management And Enterprise Auth Module](docs/architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md)
 
-Release rule:
-- if a surface belongs to V8.2 but not the V8.1 MVP, it should remain out of the default release surface until explicitly promoted
-- if V8.2 work is needed before V8.1 release lock, keep it behind a stable module boundary such as runtime/deployment, memory/learning, team/workflow, capability/MCP, advanced UI, or governance/trust
+Promotion rule:
+- if a surface belongs to V8.2/B2+ but is not ready for the default operator experience, it should remain behind an explicit module boundary or advanced surface until promoted
+- B2+ work must name its boundary: runtime/deployment, memory/learning, team/workflow, capability/MCP, advanced UI, user/auth, or governance/trust
 
 ## Current Implementation State
 
@@ -284,7 +284,7 @@ source-of-truth layers remain separate:
 - bundle/file configuration for reproducible organization defaults and automation truth
 - deployment/env overrides for environment-specific provider/media/runtime wiring
 - runtime state for the live resolved organization and service posture
-- README, V8.1, V8.2, and `V8_DEV_STATE.md` for architecture, release, and implementation truth
+- README, V8.2, the V8.1 baseline, and `V8_DEV_STATE.md` for architecture, delivery, compatibility, and implementation truth
 
 Managed exchange note:
 - channels, typed schemas, structured fields, threads, and normalized artifacts are now part of runtime truth for advanced orchestration
@@ -302,7 +302,7 @@ Managed exchange security note:
 Contract rule:
 - the default UX must stay simple and intent-first
 - the advanced architecture/runtime surface must stay separate, make inheritance legible, and make config origin legible
-- the advanced layer must not replace bundle/file/env/runtime truth or collapse the Soma-primary MVP into a config dashboard
+- the advanced layer must not replace bundle/file/env/runtime truth or collapse the Soma-primary operator flow into a config dashboard
 
 ## Compact Team Orchestration
 
@@ -316,7 +316,7 @@ Team creation should stay compact by default:
 The user-facing rule is simple: if the work is broad, the product should split it cleanly instead of scaling a single roster until it becomes hard to understand or test.
 
 Implementation note:
-- V8.1 currently ships the default operator surface plus bounded guided controls and inspect-only detail where explicitly called out in `V8_DEV_STATE.md`
+- the current B2+ frame still preserves the V8.1 Soma-primary default operator surface plus bounded guided controls and inspect-only detail where explicitly called out in `V8_DEV_STATE.md`
 - the advanced architecture/runtime surface is now defined as a contract, but it is not fully implemented yet
 
 ## Architecture Terms To Operator Terms
@@ -348,7 +348,7 @@ Use these as the top detailed references when you need the deeper framework cont
 1. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
    - canonical runtime layer contract for organization, Soma, Team Leads, advisors, provider-policy scope, and continuity
 2. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
-   - canonical V8.1 release architecture for loops, learning, semantic continuity, capabilities, and the current Soma-primary release posture
+   - canonical V8.1 baseline architecture for loops, learning, semantic continuity, capabilities, and the Soma-primary compatibility posture
 3. [V8.2 Production Architecture Target](v8-2.md)
    - final production architecture target for distributed execution, active learning, capability-backed execution, and editable automations
 4. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
@@ -377,7 +377,7 @@ Use these as the top detailed references when you need the deeper framework cont
 Rule:
 - when framework behavior, bootstrap posture, organization shape, or operator model is unclear, load the owning detailed doc above before making assumptions
 - keep README as the entrypoint and inception summary, but treat the documents in this section as the deeper memory surface for framework specifics
-- current MVP UI release posture is Soma-primary by default; `Resources`, `Memory`, and `System` are advanced support routes rather than default operator entrypoints
+- current B2+ UI delivery posture remains Soma-primary by default; `Resources`, `Memory`, and `System` are advanced support routes rather than default operator entrypoints
 
 ## Feature Status Standard
 
@@ -402,7 +402,7 @@ Agents implementing V8 must review these areas first:
 - `V7_DEV_STATE.md` when historical migration evidence is needed
 
 Particular attention belongs on:
-- release-target alignment between README, V8.1, V8.2, and `V8_DEV_STATE.md`
+- delivery-target alignment between README, V8.2, the V8.1 baseline, and `V8_DEV_STATE.md`
 - trusted memory alignment between memory-layer docs, governance docs, user memory/resources docs, and the in-app docs manifest
 - execution slices
 - team execution protocol
@@ -484,21 +484,22 @@ A slice is not complete unless:
 Deployment/runtime boundary:
 - README is the primary architecture inception document for active work
 - `v8-2.md` is the canonical full architecture target
-- V8.1 is the current release target
+- V8.2 B2+ is the active delivery target
+- V8.1 is the foundation and compatibility baseline
 - `V8_DEV_STATE.md` is the source of actual implementation truth
 - deployment env overrides configure infrastructure and profile defaults, but they do not replace bundle-defined runtime organization truth
 
 Development contract:
 - `README.md` is the primary architecture inception document
 - `v8-2.md` is the canonical full architecture
-- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` is the current release target
+- `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` is the V8.1 foundation and compatibility baseline
 - `V8_DEV_STATE.md` is the source of actual implementation truth
 - all slices must update these surfaces when implementation, release posture, or target meaning changes
 
 Completion rule:
 - code and tests alone do not finish a slice
 - if implementation changes meaning, the slice must also update the owning docs, verify architecture alignment, and record the resulting state
-- no slice should complete with silent divergence between implementation, V8.1 release scope, V8.2 target scope, and `V8_DEV_STATE.md`
+- no slice should complete with silent divergence between implementation, the V8.2/B2+ delivery target, the V8.1 compatibility baseline, and `V8_DEV_STATE.md`
 - end-of-slice reporting must explicitly state which tests ran, which docs changed, and which scoped docs were reviewed but left unchanged
 - branches are not ready to merge until the relevant validation is rerun against the final code state for that branch
 
@@ -729,7 +730,7 @@ Release automation:
 
 Initial release handoff rule:
 - before tagging or handing off a second-machine checkout, run `uv run inv ci.release-preflight --lane=release`
-- keep current release blockers explicit in `V8_DEV_STATE.md`; the latest state board is the authority for whether an issue is blocking initial user testing or release lock
+- keep current delivery blockers explicit in `V8_DEV_STATE.md`; the latest state board is the authority for whether an issue is blocking initial user testing or release lock
 - use [Testing](docs/TESTING.md) and [Remote User Testing](docs/REMOTE_USER_TESTING.md) as the operator-facing proof sequence for the handoff machine
 
 ## Documentation Responsibilities
@@ -746,8 +747,8 @@ Every implementation slice must update:
 
 Synchronization rule:
 - README is the primary architecture inception doc for active development
-- V8.1 is the current release target
-- V8.2 is the final production target
+- V8.2 B2+ is the active delivery target and full production architecture frame
+- V8.1 is the foundation and compatibility baseline for the Soma-primary operator surface
 - `V8_DEV_STATE.md` is the actual implementation scoreboard
 - every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required"
 - slices that change architecture, release posture, operator wording, API meaning, or documentation authority must keep README, the owning docs, `docsManifest.ts`, and `tests/test_docs_links.py` synchronized in the same change
@@ -757,9 +758,9 @@ The architecture-library remains the authoritative detailed documentation surfac
 
 ## Status
 
-Mycelis is currently shipping toward a V8.1 Soma-primary MVP while aligning its long-range architecture to the V8.2 distributed, learning, capability-governed production target.
+Mycelis is now operating in a V8.2/B2+ delivery frame while preserving the V8.1 Soma-primary operator baseline.
 
 The V7 system still provides important migration input and substrate memory.
-The V8.1 release defines what belongs in the current MVP.
-The V8.2 PRD defines where the product is ultimately headed.
+The V8.1 architecture defines the compatibility baseline and default operator posture.
+The V8.2 PRD defines the active full architecture and B2+ delivery frame.
 `V8_DEV_STATE.md` records what is actually complete, active, next, or blocked right now.
