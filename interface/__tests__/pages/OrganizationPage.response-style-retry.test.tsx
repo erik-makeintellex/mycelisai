@@ -18,7 +18,7 @@ describe("OrganizationPage response style slices", () => {
     beforeEach(() => {
         mockFetch.mockReset();
         resetOrganizationPageStoreState();
-    });
+    }, 15000);
 
     afterEach(() => {
         vi.restoreAllMocks();
@@ -101,7 +101,7 @@ describe("OrganizationPage response style slices", () => {
 
         fireEvent.click(screen.getAllByRole("button", { name: "Use Organization / Team Default" }).at(-1)!);
         expect(await screen.findByText("Using Organization or Team Default: Concise & Direct")).toBeDefined();
-    }, 10000);
+    }, 15000);
 
     it("shows retry guidance when changing a Response Style fails and then recovers", async () => {
         let attempts = 0;

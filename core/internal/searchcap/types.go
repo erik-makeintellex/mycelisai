@@ -9,6 +9,7 @@ const (
 	ProviderDisabled     = "disabled"
 	ProviderLocalSources = "local_sources"
 	ProviderSearXNG      = "searxng"
+	ProviderLocalAPI     = "local_api"
 	ProviderBrave        = "brave"
 )
 
@@ -17,9 +18,10 @@ type Embedder interface {
 }
 
 type Config struct {
-	Provider        string
-	SearXNGEndpoint string
-	MaxResults      int
+	Provider         string
+	SearXNGEndpoint  string
+	LocalAPIEndpoint string
+	MaxResults       int
 }
 
 type Request struct {

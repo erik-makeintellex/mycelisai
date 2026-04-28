@@ -87,6 +87,7 @@ Handles the supported Docker Compose single-host runtime for home-lab and demo u
 - **Logs**: `uv run inv compose.logs`
 - Compose uses `.env.compose` so host/container assumptions stay separate from the local-Kubernetes `.env` path.
 - Compose uses `MYCELIS_COMPOSE_OLLAMA_HOST` instead of raw `OLLAMA_HOST` so host-machine Ollama bind settings cannot override the container runtime accidentally, and maps that value into provider-specific endpoint overrides inside Core.
+- Compose passes `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, and `MYCELIS_SEARCH_MAX_RESULTS` into Core for governed search; use `local_sources` for token-free governed local-source search, `searxng` for operator-owned metasearch, or `local_api` for an operator-owned HTTP search endpoint instead of treating Brave as mandatory.
 - Compose rejects loopback compose Ollama values because `localhost`, `127.0.0.1`, and `0.0.0.0` point back at the Core container instead of the operator host.
 - Compose `infra-up` is the data-plane-only preflight for personal-owner deployments where PostgreSQL/NATS should be reachable before app services are launched.
 - Compose `storage-health` is the matching post-migration proof that the long-term Mycelis Postgres store is present before claiming RAG, retained outputs, or continuity are available.

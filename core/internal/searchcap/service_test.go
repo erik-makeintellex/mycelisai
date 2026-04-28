@@ -95,3 +95,91 @@ func TestServiceSearXNGForbiddenExplainsJSONFormat(t *testing.T) {
 		t.Fatalf("Blocker = %+v", resp.Blocker)
 	}
 }
+
+func TestConfigFromEnvAcceptsSelfHostedLocalAPI(t *testing.T) {
+	t.Setenv("MYCELIS_SEARCH_PROVIDER", "self_hosted")
+	t.Setenv("MYCELIS_SEARCH_LOCAL_API_ENDPOINT", "http://search.local/api/search")
+	t.Setenv("MYCELIS_SEARCH_MAX_RESULTS", "3")
+
+	cfg := ConfigFromEnv()
+
+	if cfg.Provider != ProviderLocalAPI {
+		t.Fatalf("Provider = %q, want %q", cfg.Provider, ProviderLocalAPI)
+	}
+	if cfg.LocalAPIEndpoint != "http://search.local/api/search" {
+		t.Fatalf("LocalAPIEndpoint = %q", cfg.LocalAPIEndpoint)
+	}
+	if cfg.MaxResults != 3 {
+		t.Fatalf("MaxResults = %d, want 3", cfg.MaxResults)
+	}
+}
+
+func TestServiceLocalAPINormalizesJSONResults(t *testing.T) {
+	svc := NewService(Config{Provider: ProviderLocalAPI, LocalAPIEndpoint: "http://search.local/api/search", MaxResults: 5}, nil, nil)
+	svc.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path != "/api/search" {
+			t.Fatalf("path = %q, want /api/search", r.URL.Path)
+		}
+		if r.URL.Query().Get("q") != "mycelis search" || r.URL.Query().Get("query") != "mycelis search" {
+			t.Fatalf("query params = %q", r.URL.RawQuery)
+		}
+		if r.URL.Query().Get("max_results") != "2" {
+			t.Fatalf("max_results = %q", r.URL.Query().Get("max_results"))
+		}
+		if r.URL.Query().Get("allowed_domains") != "example.test" || r.URL.Query().Get("blocked_domains") != "blocked.test" {
+			t.Fatalf("domain filters = %q", r.URL.RawQuery)
+		}
+		if r.Header.Get("X-Mycelis-Team-ID") != "team-1" || r.Header.Get("X-Mycelis-Run-ID") != "run-1" {
+			t.Fatalf("missing scope headers: %+v", r.Header)
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(`{"results":[{"title":"Result A","url":"https://example.test/a","snippet":"Snippet A","score":0.75,"provider":"local","token":"secret"},{"title":"Result B","url":"https://example.test/b","content":"Snippet B"},{"title":"Result C","url":"https://example.test/c"}]}`)),
+		}, nil
+	})}
+
+	resp, err := svc.Search(context.Background(), Request{
+		Query: "mycelis search", SourceScope: "web", MaxResults: 2,
+		AllowedDomains: []string{"example.test"}, BlockedDomains: []string{"blocked.test"},
+		TeamID: "team-1", RunID: "run-1",
+	})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if resp.Status != "ok" || resp.Count != 2 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Results[0].SourceKind != "local_api" || resp.Results[0].TrustClass != "bounded_external" || resp.Results[0].SensitivityClass != "public" {
+		t.Fatalf("result = %+v", resp.Results[0])
+	}
+	if resp.Results[0].Score != 0.75 {
+		t.Fatalf("Score = %v, want 0.75", resp.Results[0].Score)
+	}
+	if _, ok := resp.Results[0].ProviderMetadata["token"]; ok {
+		t.Fatalf("ProviderMetadata leaked raw token: %+v", resp.Results[0].ProviderMetadata)
+	}
+	if resp.Results[1].Snippet != "Snippet B" {
+		t.Fatalf("Snippet = %q, want Snippet B", resp.Results[1].Snippet)
+	}
+}
+
+func TestServiceLocalAPIRejectsRelativeEndpoint(t *testing.T) {
+	svc := NewService(Config{Provider: ProviderLocalAPI, LocalAPIEndpoint: "/api/search"}, nil, nil)
+
+	if _, err := svc.Search(context.Background(), Request{Query: "mycelis search", SourceScope: "web"}); err == nil {
+		t.Fatalf("expected relative local API endpoint to be rejected")
+	}
+}
+
+func TestServiceLocalAPIMissingEndpointBlocks(t *testing.T) {
+	svc := NewService(Config{Provider: ProviderLocalAPI}, nil, nil)
+
+	resp, err := svc.Search(context.Background(), Request{Query: "mycelis search", SourceScope: "web"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if resp.Blocker == nil || resp.Blocker.Code != "missing_local_api_endpoint" {
+		t.Fatalf("Blocker = %+v", resp.Blocker)
+	}
+}

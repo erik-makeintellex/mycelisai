@@ -1213,8 +1213,8 @@ def test_v8_docs_keep_v8_1_baseline_and_v8_2_b2_target_distinct():
     )
 
     required_v8_1_snippets = [
-        "This is the current release architecture.",
-        "canonical full production architecture and full actuation target beyond the current release",
+        "This is the V8.1 foundation and compatibility baseline.",
+        "active V8.2/B2+ delivery frame, canonical full production architecture, and full actuation target",
     ]
     missing_v8_1_snippets = [snippet for snippet in required_v8_1_snippets if snippet not in v8_1_text]
     assert not missing_v8_1_snippets, (
@@ -1222,11 +1222,7 @@ def test_v8_docs_keep_v8_1_baseline_and_v8_2_b2_target_distinct():
         f"{missing_v8_1_snippets}"
     )
 
-    required_state_snippets = [
-        "Development is now operating in the V8.2/B2+ delivery frame while preserving the V8.1 Soma-primary compatibility baseline.",
-        "V8.2/B2+ is the active delivery target.",
-        "V8.1 remains the foundation and compatibility baseline for the default Soma-primary operator surface.",
-    ]
+    required_state_snippets = ["Development is now operating in the V8.2/B2+ delivery frame while preserving the V8.1 Soma-primary compatibility baseline.", "V8.2/B2+ is the active delivery target.", "V8.1 remains the foundation and compatibility baseline for the default Soma-primary operator surface.", "## Parallel Execution Overlay (2026-04-27)", "Backend/Auth Architecture", "Frontend/Auth UX", "Workflow Testing", "Runtime/MCP/Web Capability"]
     missing_state_snippets = [snippet for snippet in required_state_snippets if snippet not in state_text]
     assert not missing_state_snippets, (
         "V8 dev state is missing the current-release vs full-target distinction: "

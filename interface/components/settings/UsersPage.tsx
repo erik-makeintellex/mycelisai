@@ -139,7 +139,7 @@ export default function UsersPage() {
     const currentUserRole = currentUser?.role ?? "owner";
     const showsEnterpriseDirectory = accessManagementTier === "enterprise";
     const canManageEnterpriseDirectory = showsEnterpriseDirectory && currentUserRole === "owner";
-    const canManageAccessModel = currentUserRole === "owner";
+    const canManageAccessModel = false;
 
     const refreshCurrentUser = async () => {
         setSyncing(true);
@@ -264,7 +264,7 @@ export default function UsersPage() {
                         <h3 className="text-sm font-semibold text-cortex-text-main uppercase tracking-wider">Deployment Access Model</h3>
                     </div>
                     <p className="text-sm leading-6 text-cortex-text-muted">
-                        Investor review and future rollout should show one clear layered story: base self-hosting, self-hosted enterprise add-on, and a hosted control-plane layer that can sit on top without replacing the governed runtime.
+                        This deployment-owned posture is reported from runtime configuration. Base self-hosting, self-hosted enterprise, and hosted control-plane layers stay visible here without making edition or identity mode user-editable.
                     </p>
                 </div>
 
@@ -347,7 +347,7 @@ export default function UsersPage() {
                         className="px-3 py-2 rounded border border-cortex-primary/30 text-cortex-primary text-xs font-mono hover:bg-cortex-primary/10 disabled:opacity-50"
                         data-testid="save-access-model"
                     >
-                        {savingAccessModel ? "Saving..." : "Save access model"}
+                        {savingAccessModel ? "Saving..." : "Deployment-owned"}
                     </button>
                 </div>
             </section>

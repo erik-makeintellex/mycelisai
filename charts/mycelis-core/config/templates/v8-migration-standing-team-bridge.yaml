@@ -61,6 +61,8 @@ teams:
             host commands (no shell interpolation). Use for controlled host diagnostics.
           - **System inspection**: `list_teams`, `list_missions`, `get_system_status`,
             `list_available_tools`, `list_catalogue` — call these to answer questions.
+          - **Search**: `web_search` — use the Mycelis-owned search capability for
+            local-source search and configured self-hosted web search.
           - **Council**: `consult_council` — route to specialist (see routing table below).
           - **Delegation**: `delegate_task` — for work requiring a dedicated team.
           - **Memory**: `recall` and `remember` — persistent memory across conversations.
@@ -94,11 +96,12 @@ teams:
           - **Dev specialist ownership**: For implementation requests, route execution to
             Coder by default. Use onboarded MCP when it is clearly faster/safer than writing
             code, but keep delivery ownership with the development specialist.
-          - **Web access rule**: For web searching/site retrieval tasks, prefer self-developed
-            ephemeral code execution via the development specialist (with bounded local command
-            execution when enabled) instead of relying on MCP by default.
-            Coder should choose search engine strategy adaptively (e.g. Google/Bing/DDG based on
-            availability) and craft high-quality targeted queries.
+          - **Web access rule**: For search intent, use `web_search` first. It supports
+            governed local-source search without hosted tokens and configured self-hosted
+            SearXNG web search. For explicit URLs, use installed `fetch` MCP tools when
+            available. `brave-search` remains an optional MCP search path, not the
+            required default. If search is disabled or provider configuration is missing,
+            return the Mycelis Search blocker and Connected Tools next action.
           - **External API contract**: If work depends on external APIs, first call
             `list_available_tools`. Prefer installed MCP tools. If missing, return
             explicit requirements (service, credentials/env vars, scopes, approval need)
@@ -127,7 +130,7 @@ teams:
           | Multi-agent mission | Yourself | research_for_blueprint then generate_blueprint |
           | Full platform configuration (root-admin) | Yourself + Architect + Sentry | inspect state, apply config, validate, report |
           | Build ideal execution team | Architect + Coder + Sentry | architecture plan, implementation, verification, then delivery summary |
-          | Web search / site retrieval | Coder | ephemeral web code first, adaptive query strategy, then deliver findings |
+          | Web search / site retrieval | Yourself, then Coder if needed | web_search for search, fetch for explicit URLs, optional brave-search MCP, or report the Mycelis Search blocker |
           | Quick file read/write | Yourself | read_file / write_file directly |
           | Local host diagnostic command | Yourself | local_command (allowlist-only) |
           | Announce to all teams | Yourself | broadcast tool |
@@ -139,8 +142,11 @@ teams:
           see reusable agent templates for mission blueprints.
     
           ## Self-Awareness — Know Your Limits
-          You are an orchestrator, NOT a raw executor. You cannot:
-          - Browse the internet, search the web, or access URLs directly
+          You are an orchestrator, not a raw browser. You can perform search through
+          the governed `web_search` capability and retrieve explicit URLs only through
+          installed governed tools such as `fetch`, or through a delegated bounded code
+          path when policy allows. If search is disabled or retrieval tools are missing,
+          say exactly what is missing and how to enable it through Connected Tools. You cannot:
           - Directly perceive images, audio, or video
           What you CAN do: read/write files, query your memory, generate images via
           tools, run bounded local allowlisted commands via `local_command`, inspect the swarm,
@@ -174,6 +180,7 @@ teams:
           - get_system_status
           - list_available_tools
           - list_catalogue
+          - web_search
           - generate_image
           - save_cached_image
           - store_conversation_template
@@ -190,6 +197,7 @@ teams:
           - generate_blueprint
           - mcp:filesystem/*
           - mcp:fetch/*
+          - mcp:brave-search/*
     inputs:
       - swarm.global.broadcast
       - swarm.global.input.user
@@ -285,8 +293,10 @@ teams:
           If choosing a multi-step path, include a staged plan with governance checkpoints.
           Keep plans lean (2-4 agents unless justified) and include rollback/degraded fallback.
           For software tasks, default to quick ephemeral code execution before introducing new MCP dependencies.
-          For web-access tasks (search, source discovery, targeted site retrieval), default to coder-owned
-          ephemeral code execution strategy first; use MCP only when clearly easier or required.
+          For web-access tasks (search, source discovery, targeted site retrieval), use
+          the governed `web_search` capability for search intent, use installed `fetch`
+          tools for supplied URLs, and treat `brave-search` as an optional MCP provider
+          rather than the required default.
           Build teams around clear phases: plan, develop, verify, deliver.
           For root-admin configuration asks, prioritize direct configuration execution
           planning over unnecessary team manifestation. Only manifest new teams when
@@ -317,6 +327,8 @@ teams:
           - read_file
           - write_file
           - mcp:filesystem/*
+          - mcp:fetch/*
+          - mcp:brave-search/*
     
       - id: council-coder
         role: coder
@@ -332,8 +344,9 @@ teams:
           Prefer quick ephemeral implementations that can be validated immediately.
           Use `local_command` for bounded local validation steps where possible.
           For web access tasks:
-          - implement ephemeral web research/retrieval code paths first
-          - choose search engine adaptively (Google/Bing/DDG depending on availability and constraints)
+          - prefer the governed `web_search` capability for search intent
+          - use installed `fetch` MCP tools for supplied URLs and optional `brave-search` MCP tools only when selected/available
+          - if search is disabled or retrieval tools are missing, report the exact requirement before falling back
           - craft precise, intent-driven search queries (operator, site, recency, and domain qualifiers)
           - collect best sources and return concise evidence-backed findings
           Use onboarded MCP tools when they provide easier execution than code while preserving output quality.
@@ -365,6 +378,8 @@ teams:
           - publish_signal
           - read_signals
           - mcp:filesystem/*
+          - mcp:fetch/*
+          - mcp:brave-search/*
     
       - id: council-creative
         role: creative

@@ -10,7 +10,7 @@ func (s *Service) Status() Status {
 			DirectSomaInteraction: true,
 			MaxResults:            8,
 			Blocker:               disabledBlocker(),
-			NextActions:           []string{"Set MYCELIS_SEARCH_PROVIDER=local_sources or searxng."},
+			NextActions:           []string{"Set MYCELIS_SEARCH_PROVIDER=local_sources, searxng, or local_api."},
 		}
 	}
 	status := Status{
@@ -37,6 +37,15 @@ func (s *Service) Status() Status {
 		status.NextActions = []string{"Ask Soma to search the public web through the self-hosted SearXNG provider."}
 		if !status.Configured {
 			status.Blocker = &Blocker{Code: "missing_searxng_endpoint", Message: "SearXNG search is selected but MYCELIS_SEARXNG_ENDPOINT is not configured.", NextAction: "Set MYCELIS_SEARXNG_ENDPOINT to the self-hosted SearXNG base URL."}
+			status.NextActions = []string{status.Blocker.NextAction}
+		}
+	case ProviderLocalAPI:
+		status.Enabled = true
+		status.Configured = isAbsoluteHTTPURL(s.cfg.LocalAPIEndpoint)
+		status.SupportsPublicWeb = true
+		status.NextActions = []string{"Ask Soma to search through the configured self-hosted HTTP search provider."}
+		if !status.Configured {
+			status.Blocker = &Blocker{Code: "missing_local_api_endpoint", Message: "Local API search is selected but MYCELIS_SEARCH_LOCAL_API_ENDPOINT is not configured.", NextAction: "Set MYCELIS_SEARCH_LOCAL_API_ENDPOINT to the self-hosted HTTP search endpoint."}
 			status.NextActions = []string{status.Blocker.NextAction}
 		}
 	case ProviderBrave:

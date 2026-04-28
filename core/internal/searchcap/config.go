@@ -14,8 +14,9 @@ func ConfigFromEnv() Config {
 		}
 	}
 	return Config{
-		Provider:        normalizeProvider(os.Getenv("MYCELIS_SEARCH_PROVIDER")),
-		SearXNGEndpoint: strings.TrimRight(strings.TrimSpace(os.Getenv("MYCELIS_SEARXNG_ENDPOINT")), "/"),
-		MaxResults:      maxResults,
+		Provider:         normalizeProvider(os.Getenv("MYCELIS_SEARCH_PROVIDER")),
+		SearXNGEndpoint:  strings.TrimRight(strings.TrimSpace(os.Getenv("MYCELIS_SEARXNG_ENDPOINT")), "/"),
+		LocalAPIEndpoint: strings.TrimSpace(os.Getenv("MYCELIS_SEARCH_LOCAL_API_ENDPOINT")),
+		MaxResults:       maxResults,
 	}
 }

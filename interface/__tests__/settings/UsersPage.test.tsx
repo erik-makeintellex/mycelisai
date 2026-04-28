@@ -72,43 +72,8 @@ describe("UsersPage", () => {
         expect(screen.getByRole("link", { name: /Open groups workspace/i }).getAttribute("href")).toBe("/groups");
     });
 
-    it("lets an owner save the review edition, identity mode, and shared Soma output owner", async () => {
+    it("keeps deployment-owned access model fields read-only even for owners", async () => {
         mockMeResponse({ role: "admin", accessManagementTier: "release" });
-        mockFetch
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    ok: true,
-                    data: {
-                        id: "me-1",
-                        email: "me@local",
-                        role: "admin",
-                        effective_role: "owner",
-                        name: "Current User",
-                        principal_type: "local_admin",
-                        auth_source: "local_api_key",
-                        break_glass: false,
-                        settings: {
-                            access_management_tier: "release",
-                            product_edition: "self_hosted_release",
-                            identity_mode: "local_only",
-                            shared_agent_specificity_owner: "root_admin",
-                        },
-                    },
-                }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    ok: true,
-                    data: {
-                        access_management_tier: "enterprise",
-                        product_edition: "hosted_control_plane",
-                        identity_mode: "federated",
-                        shared_agent_specificity_owner: "delegated_owner",
-                    },
-                }),
-            });
 
         render(<UsersPage />);
 
@@ -116,27 +81,11 @@ describe("UsersPage", () => {
             expect(screen.getByTestId("deployment-access-model")).toBeDefined();
         });
 
-        fireEvent.click(screen.getByText("Hosted control plane"));
-        fireEvent.change(screen.getByLabelText("Identity Mode"), { target: { value: "federated" } });
-        fireEvent.change(screen.getByLabelText("Shared Agent Specificity Owner"), { target: { value: "delegated_owner" } });
-        fireEvent.click(screen.getByTestId("save-access-model"));
-
-        await waitFor(() => {
-            expect(mockFetch).toHaveBeenLastCalledWith(
-                "/api/v1/user/settings",
-                expect.objectContaining({
-                    method: "PUT",
-                    body: JSON.stringify({
-                        access_management_tier: "enterprise",
-                        product_edition: "hosted_control_plane",
-                        identity_mode: "federated",
-                        shared_agent_specificity_owner: "delegated_owner",
-                    }),
-                }),
-            );
-        });
-
-        expect(screen.getByText(/Deployment access model saved/i)).toBeDefined();
+        expect(screen.getByText("Hosted control plane").closest("button")).toHaveProperty("disabled", true);
+        expect(screen.getByLabelText("Identity Mode")).toHaveProperty("disabled", true);
+        expect(screen.getByLabelText("Shared Agent Specificity Owner")).toHaveProperty("disabled", true);
+        expect(screen.getByTestId("save-access-model")).toHaveProperty("disabled", true);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it("maps backend admin identity to owner access", async () => {

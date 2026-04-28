@@ -100,6 +100,16 @@ spec:
             - name: MYCELIS_MEDIA_ENDPOINT
               value: {{ .Values.ai.mediaEndpoint | quote }}
             {{- end }}
+            {{- with .Values.search }}
+            - name: MYCELIS_SEARCH_PROVIDER
+              value: {{ default "disabled" .provider | quote }}
+            - name: MYCELIS_SEARXNG_ENDPOINT
+              value: {{ default "" .searxngEndpoint | quote }}
+            - name: MYCELIS_SEARCH_LOCAL_API_ENDPOINT
+              value: {{ default "" .localApiEndpoint | quote }}
+            - name: MYCELIS_SEARCH_MAX_RESULTS
+              value: {{ default 8 .maxResults | quote }}
+            {{- end }}
             {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
             {{- end }}

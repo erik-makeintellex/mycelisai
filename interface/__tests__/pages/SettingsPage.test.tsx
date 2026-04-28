@@ -125,6 +125,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByText('Mission Profiles')).toBeDefined();
         expect(screen.getByText('People & Access')).toBeDefined();
         expect(screen.getByText('AI Engines')).toBeDefined();
+        expect(screen.getByText('Auth Providers')).toBeDefined();
         expect(screen.getByText('Connected Tools')).toBeDefined();
     });
 
@@ -153,6 +154,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
 
         expect(screen.queryByText('AI Engines')).toBeNull();
+        expect(screen.queryByText('Auth Providers')).toBeNull();
         expect(screen.queryByText('Connected Tools')).toBeNull();
         expect(screen.getByText('Advanced controls unlock when you need them')).toBeDefined();
         expect(screen.queryByText('Advanced controls are open')).toBeNull();
@@ -172,6 +174,23 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Open Profile' }));
         });
         expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
+    });
+
+    it('opens the enterprise auth provider scaffold from advanced settings', async () => {
+        await act(async () => {
+            render(<SettingsPage />);
+        });
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Open Auth Providers' }));
+        });
+
+        expect(screen.getByRole('tab', { name: 'Auth Providers' }).getAttribute('aria-current')).toBe('page');
+        expect(screen.getByRole('heading', { name: 'Auth Providers' })).toBeDefined();
+        expect(screen.getByText('OIDC / OAuth')).toBeDefined();
+        expect(screen.getByText('SAML')).toBeDefined();
+        expect(screen.getByText('SCIM')).toBeDefined();
+        expect(screen.getAllByText(/secret manager references/i).length).toBeGreaterThan(0);
     });
 
     it('keeps People & Access layered so base release does not expose enterprise user management by default', async () => {

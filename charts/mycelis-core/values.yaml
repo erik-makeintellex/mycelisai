@@ -110,6 +110,14 @@ ai:
   # Optional explicit media endpoint for self-hosted image or voice generation.
   mediaEndpoint: ""
 
+# Governed search provider wiring. Use searxng or local_api with an
+# operator-owned endpoint for self-hosted public web search without Brave tokens.
+search:
+  provider: disabled
+  searxngEndpoint: ""
+  localApiEndpoint: ""
+  maxResults: 8
+
 # Environment variables (Extras)
 env:
   - name: DATA_DIR

@@ -17,9 +17,7 @@ type Service struct {
 }
 
 func NewService(cfg Config, embedder Embedder, mem *memory.Service) *Service {
-	if cfg.Provider == "" {
-		cfg.Provider = ProviderDisabled
-	}
+	cfg.Provider = normalizeProvider(cfg.Provider)
 	if cfg.MaxResults <= 0 {
 		cfg.MaxResults = 8
 	}
@@ -64,6 +62,8 @@ func (s *Service) Search(ctx context.Context, req Request) (Response, error) {
 		return s.searchLocalSources(ctx, req, resp)
 	case ProviderSearXNG:
 		return s.searchSearXNG(ctx, req, resp)
+	case ProviderLocalAPI:
+		return s.searchLocalAPI(ctx, req, resp)
 	case ProviderBrave:
 		resp.Status = "blocked"
 		resp.Blocker = &Blocker{Code: "brave_mcp_required", Message: "Brave search is exposed through the governed MCP path, not the Mycelis Search API yet.", NextAction: "Install and configure the curated brave-search MCP server with BRAVE_API_KEY, or use local_sources/searxng."}

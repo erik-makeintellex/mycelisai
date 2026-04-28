@@ -8,6 +8,31 @@ test.describe('Settings Page (/settings)', () => {
             assistant_name: 'Soma',
             theme: 'aero-light',
         };
+        await page.route('**/api/v1/user/me', async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    ok: true,
+                    data: {
+                        id: 'me-1',
+                        email: 'me@local',
+                        role: 'admin',
+                        effective_role: 'owner',
+                        name: 'Current User',
+                        principal_type: 'local_admin',
+                        auth_source: 'local_api_key',
+                        break_glass: false,
+                        settings: {
+                            access_management_tier: 'release',
+                            product_edition: 'self_hosted_release',
+                            identity_mode: 'local_only',
+                            shared_agent_specificity_owner: 'root_admin',
+                        },
+                    },
+                }),
+            });
+        });
         await page.route('**/api/v1/user/settings', async (route) => {
             if (route.request().method() === 'GET') {
                 await route.fulfill({
@@ -51,17 +76,37 @@ test.describe('Settings Page (/settings)', () => {
 
     test('guided workflow controls can switch visible sections', async ({ page }) => {
         await page.getByRole('button', { name: 'Open Mission Profiles' }).click();
-        await expect(page.getByRole('tab', { name: 'Mission Profiles', selected: true })).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'Mission Profiles' })).toHaveAttribute('aria-current', 'page');
         await expect(page.getByText(/Mission Profiles/i).first()).toBeVisible();
+    });
+
+    test('Auth Providers scaffold is reachable from advanced settings', async ({ page }) => {
+        await page.evaluate(() => window.localStorage.setItem('mycelis-advanced-mode', 'true'));
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('button', { name: 'Open Auth Providers' })).toBeVisible();
+        await page.getByRole('button', { name: 'Open Auth Providers' }).click();
+        await expect(page.getByRole('tab', { name: 'Auth Providers' })).toHaveAttribute('aria-current', 'page');
+        await expect(page.getByRole('heading', { name: 'Auth Providers' })).toBeVisible();
+        await expect(page.getByText('OIDC / OAuth')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'SAML' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'SCIM' })).toBeVisible();
+        await expect(page.getByText(/No provider changes are submitted from this scaffold/i)).toBeVisible();
     });
 
     test('People & Access keeps enterprise user management out of the base release path', async ({ page }) => {
         await page.getByRole('button', { name: 'Open People & Access' }).click();
-        await expect(page.getByRole('tab', { name: 'People & Access', selected: true })).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'People & Access' })).toHaveAttribute('aria-current', 'page');
         await expect(page.getByText('Base release layer')).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Organization Access' })).toBeVisible();
         await expect(page.getByText('Enterprise User Directory')).toBeVisible();
         await expect(page.getByText(/intentionally kept out of the raw release workflow/i)).toBeVisible();
+        await expect(page.getByText(/Current principal contract: local_admin via local_api_key, effective role owner\./i)).toBeVisible();
+        await expect(page.getByRole('button', { name: /^Self-hosted release\b/i })).toBeDisabled();
+        await expect(page.getByRole('button', { name: /^Self-hosted enterprise\b/i })).toBeDisabled();
+        await expect(page.getByRole('button', { name: /^Hosted control plane\b/i })).toBeDisabled();
+        await expect(page.getByLabel('Identity Mode')).toBeDisabled();
+        await expect(page.getByLabel('Shared Agent Specificity Owner')).toBeDisabled();
+        await expect(page.getByTestId('save-access-model')).toBeDisabled();
         await expect(page.getByTestId('users-groups-section')).toBeVisible();
         await expect(page.getByTestId('users-add-button')).toHaveCount(0);
     });

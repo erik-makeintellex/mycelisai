@@ -1,16 +1,16 @@
 # V8.1 Living Organization Architecture
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
-> Status: Canonical V8.1 PRD
+> Status: Canonical V8.1 foundation and compatibility baseline
 > Last Updated: 2026-03-21
-> Purpose: Define the current bounded V8.1 release architecture for persistent execution, bounded automation, semantic continuity, learning promotion, and reproducible specialist behavior.
+> Purpose: Define the V8.1 Soma-primary baseline architecture for persistent execution, bounded automation, semantic continuity, learning promotion, and reproducible specialist behavior.
 > Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 
-This is the current release architecture.
+This is the V8.1 foundation and compatibility baseline.
 
-Use this document for the bounded V8.1 release target.
-Use `../../v8-2.md` for the canonical full production architecture and full actuation target beyond the current release.
-Not every V8.2 production target belongs in the current V8.1 release.
+Use this document when checking the default Soma-primary operator surface and baseline architecture.
+Use `../../v8-2.md` for the active V8.2/B2+ delivery frame, canonical full production architecture, and full actuation target.
+Not every V8.2/B2+ production target is implemented or promoted into the default operator surface yet.
 
 ## 1. Why V8.1 exists
 

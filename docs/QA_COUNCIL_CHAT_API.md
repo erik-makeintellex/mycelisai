@@ -158,7 +158,7 @@ Open `http://localhost:3000` in browser.
 | 5.5 | System page health surfaces | Navigate to `/system` | Quick checks and diagnostics render without layout breakage |
 | 5.6 | Wiring page loads | Navigate to `/wiring` | ArchitectChat + CircuitBoard + NatsWaterfall render without error |
 | 5.7 | Mission teams page loads | Navigate to `/missions/[id]/teams` | Team actuation view renders roster, artifacts, and summary panels |
-| 5.8 | Settings page loads | Navigate to `/settings` | 3 default tabs: Profile, Mission Profiles, People & Access; advanced mode adds AI Engines and Connected Tools |
+| 5.8 | Settings page loads | Navigate to `/settings` | 3 default tabs: Profile, Mission Profiles, People & Access; advanced mode adds AI Engines, Auth Providers, and Connected Tools |
 
 ---
 

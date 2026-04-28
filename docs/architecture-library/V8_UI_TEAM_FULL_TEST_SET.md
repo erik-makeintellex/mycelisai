@@ -4,7 +4,7 @@
 > Status: ACTIVE
 > Last Updated: 2026-04-19
 > Owner: UI Testing Agentry Team
-> Purpose: Provide the full browser and operator-experience test set for the current bounded V8.1 release target, including Central Soma home, AI Organization context flows, settings persistence, governed execution, and deployed-runtime proof.
+> Purpose: Provide the full browser and operator-experience test set for the V8.1 Soma-primary baseline and V8.2/B2+ delivery frame, including Central Soma home, AI Organization context flows, settings persistence, governed execution, and deployed-runtime proof.
 > Supporting Docs: `V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md`, `V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md`, `V8_HOME_DOCKER_COMPOSE_RUNTIME.md`, `V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`, `docs/TESTING.md`
 
 ## 1. Test Goal

@@ -95,6 +95,34 @@ def test_chart_templates_project_enterprise_k8s_surfaces_into_workload():
     assert 'define "mycelis-core.serviceAccountName"' in helpers_text
 
 
+def test_chart_projects_search_provider_env_into_workload():
+    values_text = VALUES.read_text(encoding="utf-8")
+    deployment_text = DEPLOYMENT.read_text(encoding="utf-8")
+
+    required_value_snippets = [
+        "search:",
+        "provider: disabled",
+        'searxngEndpoint: ""',
+        'localApiEndpoint: ""',
+        "maxResults: 8",
+    ]
+    missing_values = [snippet for snippet in required_value_snippets if snippet not in values_text]
+    assert not missing_values, "values.yaml is missing search provider values:\n" + "\n".join(missing_values)
+
+    required_deployment_snippets = [
+        "MYCELIS_SEARCH_PROVIDER",
+        "MYCELIS_SEARXNG_ENDPOINT",
+        "MYCELIS_SEARCH_LOCAL_API_ENDPOINT",
+        "MYCELIS_SEARCH_MAX_RESULTS",
+        'value: {{ default "disabled" .provider | quote }}',
+        'value: {{ default "" .searxngEndpoint | quote }}',
+        'value: {{ default "" .localApiEndpoint | quote }}',
+        "value: {{ default 8 .maxResults | quote }}",
+    ]
+    missing_deployment = [snippet for snippet in required_deployment_snippets if snippet not in deployment_text]
+    assert not missing_deployment, "deployment.yaml is missing search provider env projection:\n" + "\n".join(missing_deployment)
+
+
 def test_chart_adds_ingress_and_serviceaccount_templates():
     ingress_text = INGRESS.read_text(encoding="utf-8")
     assert "kind: Ingress" in ingress_text

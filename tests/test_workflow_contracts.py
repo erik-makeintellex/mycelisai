@@ -79,30 +79,38 @@ def test_user_workflow_specs_match_current_shared_trial_expectations():
     assert "Already done: planning lane package, validation checklist, and review summary are retained" in workflow_specs["reload_review"]
 
 
-def test_soma_web_capability_contract_uses_governed_mcp_search_and_fetch():
+def test_soma_web_capability_contract_uses_governed_mycelis_search_and_fetch():
     admin = _read("core/config/teams/admin.yaml")
     council = _read("core/config/teams/council.yaml")
     template = _read("core/config/templates/v8-migration-standing-team-bridge.yaml")
+    chart_admin = _read("charts/mycelis-core/config/teams/admin.yaml")
+    chart_council = _read("charts/mycelis-core/config/teams/council.yaml")
+    chart_template = _read("charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml")
     library = _read("core/config/mcp-library.yaml")
     resources_doc = _read("docs/user/resources.md")
     soma_doc = _read("docs/user/soma-chat.md")
 
-    for manifest in (admin, template):
+    for manifest in (admin, template, chart_admin, chart_template):
+        assert "web_search" in manifest
         assert "mcp:fetch/*" in manifest
         assert "mcp:brave-search/*" in manifest
-        assert "BRAVE_API_KEY" in manifest
-        assert "You can perform web search or URL\n      retrieval only through installed governed tools" in manifest or "You can perform web search or URL\n          retrieval only through installed governed tools" in manifest
+        assert "For search intent, use `web_search` first" in manifest
+        assert "Brave Search" not in manifest
         assert "Browse the internet, search the web, or access URLs directly" not in manifest
+        assert "ephemeral web code first" not in manifest
 
-    assert "mcp:brave-search/*" in council
-    assert "Prefer `brave-search` for search and `fetch` for supplied" in council
+    for manifest in (council, chart_council):
+        assert "mcp:brave-search/*" in manifest
+        assert "governed `web_search` capability for search intent" in manifest
+        assert "ephemeral web research/retrieval code paths first" not in manifest
 
     assert 'name: "brave-search"' in library
     assert 'tool_set: "research"' in library
     assert "BRAVE_API_KEY" in library
 
     assert "`brave-search` provides governed web search" in resources_doc
-    assert "`brave-search` for governed web search and `fetch` for explicit URL retrieval" in soma_doc
+    assert "`web_search` for search intent" in soma_doc
+    assert "MYCELIS_SEARCH_LOCAL_API_ENDPOINT" in soma_doc
 
 
 def test_mycelis_search_delivery_plan_assigns_teams_and_testing_gates():
@@ -124,9 +132,10 @@ def test_mycelis_search_delivery_plan_assigns_teams_and_testing_gates():
         assert team in plan
 
     for required in [
-        "Soma -> Mycelis Search API -> local_sources | searxng | brave | disabled",
-        "MYCELIS_SEARCH_PROVIDER=disabled|local_sources|searxng|brave",
+            "Soma -> Mycelis Search API -> local_sources | searxng | local_api | brave | disabled",
+        "MYCELIS_SEARCH_PROVIDER=disabled|local_sources|searxng|local_api|brave",
         "MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080",
+        "MYCELIS_SEARCH_LOCAL_API_ENDPOINT=http://search.local/api/search",
         "asking \"can you search the web?\" returns capability status, not a blanket no",
         "local-source search works without Brave or any hosted token",
     ]:

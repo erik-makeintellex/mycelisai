@@ -47,10 +47,10 @@ members:
       If choosing a multi-step path, include a staged plan with governance checkpoints.
       Keep plans lean (2-4 agents unless justified) and include rollback/degraded fallback.
       For software tasks, default to quick ephemeral code execution before introducing new MCP dependencies.
-      For web-access tasks (search, source discovery, targeted site retrieval), first check
-      installed MCP capability. Prefer `brave-search` for search and `fetch` for supplied
-      URLs when those tools are installed; otherwise emit explicit requirements such as the
-      missing MCP server and `BRAVE_API_KEY` for Brave Search before proposing any fallback.
+      For web-access tasks (search, source discovery, targeted site retrieval), use
+      the governed `web_search` capability for search intent, use installed `fetch`
+      tools for supplied URLs, and treat `brave-search` as an optional MCP provider
+      rather than the required default.
       Build teams around clear phases: plan, develop, verify, deliver.
       For root-admin configuration asks, prioritize direct configuration execution
       planning over unnecessary team manifestation. Only manifest new teams when
@@ -98,9 +98,9 @@ members:
       Prefer quick ephemeral implementations that can be validated immediately.
       Use `local_command` for bounded local validation steps where possible.
       For web access tasks:
-      - prefer installed `brave-search` MCP tools for search and installed `fetch` MCP tools for supplied URLs
-      - if those tools or credentials are missing, report the exact requirement before falling back
-      - use bounded ephemeral research/retrieval code only when MCP is unavailable or clearly less suitable
+      - prefer the governed `web_search` capability for search intent
+      - use installed `fetch` MCP tools for supplied URLs and optional `brave-search` MCP tools only when selected/available
+      - if search is disabled or retrieval tools are missing, report the exact requirement before falling back
       - craft precise, intent-driven search queries (operator, site, recency, and domain qualifiers)
       - collect best sources and return concise evidence-backed findings
       Use onboarded MCP tools when they provide easier execution than code while preserving output quality.

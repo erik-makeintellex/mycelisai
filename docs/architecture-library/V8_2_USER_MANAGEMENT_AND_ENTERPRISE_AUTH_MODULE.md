@@ -265,6 +265,9 @@ Enterprise:
 
 Keep user management outside the default Soma workspace. Default Soma interaction stays focused on direct work; identity administration belongs in Settings, admin, and security surfaces gated by role and edition.
 
+Current implementation note:
+- Settings now exposes an Advanced-mode, read-only Auth Providers scaffold for Local, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM. It is a secret-reference-only planning surface and does not activate provider adapters yet.
+
 ## Security Requirements
 
 - secure cookies and sessions

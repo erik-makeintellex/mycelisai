@@ -31,9 +31,9 @@ Canonical deployment posture:
 - `localhost`, `127.0.0.1`, and `0.0.0.0` are not valid AI-engine assumptions for containerized deployments
 
 Layering rule:
-- V8.1 remains the release gate for the default operator path.
-- V8.2 runtime work is already in flow and should continue when it is modular, deployment-proof-oriented, and isolated behind explicit Compose/Kubernetes/config contracts.
-- Runtime work must not drag distributed execution, broad actuation, or advanced control panels into the default V8.1 surface before explicit promotion.
+- V8.2/B2+ is the active delivery frame for modular runtime and platform work.
+- The V8.1 Soma-primary baseline remains compatibility-protected for the default operator path.
+- Runtime work must not drag distributed execution, broad actuation, or advanced control panels into the default Soma-primary surface before explicit promotion.
 
 ## Focused Team
 
