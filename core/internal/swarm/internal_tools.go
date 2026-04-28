@@ -24,13 +24,19 @@ const maxWriteSize = 1 << 20 // 1 MB
 
 func normalizeWorkspaceRelativePath(rawPath string) string {
 	trimmed := strings.TrimSpace(rawPath)
-	if trimmed == "" || filepath.IsAbs(trimmed) {
+	if trimmed == "" {
 		return trimmed
 	}
 
 	normalized := strings.ReplaceAll(trimmed, "\\", "/")
 	normalized = path.Clean(normalized)
 	normalized = strings.TrimPrefix(normalized, "./")
+
+	if normalized == "/workspace" || strings.HasPrefix(normalized, "/workspace/") {
+		normalized = strings.TrimPrefix(normalized, "/")
+	} else if filepath.IsAbs(trimmed) {
+		return trimmed
+	}
 
 	switch normalized {
 	case ".", "workspace":
@@ -53,10 +59,11 @@ func validateToolPath(rawPath string) (string, error) {
 	}
 
 	var absTarget string
-	if filepath.IsAbs(rawPath) {
-		absTarget = filepath.Clean(rawPath)
+	normalizedPath := normalizeWorkspaceRelativePath(rawPath)
+	if filepath.IsAbs(normalizedPath) {
+		absTarget = filepath.Clean(normalizedPath)
 	} else {
-		absTarget = filepath.Clean(filepath.Join(absWorkspace, normalizeWorkspaceRelativePath(rawPath)))
+		absTarget = filepath.Clean(filepath.Join(absWorkspace, normalizedPath))
 	}
 
 	rel, err := filepath.Rel(absWorkspace, absTarget)
