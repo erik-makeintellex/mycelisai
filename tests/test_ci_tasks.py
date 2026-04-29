@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+import os
 
 import pytest
 from invoke import Context
@@ -656,6 +657,12 @@ def test_runtime_posture_check_probes_wsl_localhost_mirror_for_host_docker_inter
 def test_runtime_posture_check_probes_k8s_ai_endpoint(monkeypatch, tmp_path):
     monkeypatch.setattr(ci.cache_tasks, "ensure_disk_headroom", lambda **_kwargs: None)
     monkeypatch.setattr(ci, "ROOT_DIR", tmp_path)
+    monkeypatch.delenv("MYCELIS_COMPOSE_OLLAMA_HOST", raising=False)
+    monkeypatch.delenv("MYCELIS_K8S_MEDIA_ENDPOINT", raising=False)
+    monkeypatch.delenv("MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENDPOINT", raising=False)
+    for key in list(os.environ):
+        if key.startswith("MYCELIS_PROVIDER_") and key.endswith("_ENDPOINT"):
+            monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("MYCELIS_K8S_TEXT_ENDPOINT", "http://10.0.0.6:11434/v1")
 
     probe_urls: list[str] = []

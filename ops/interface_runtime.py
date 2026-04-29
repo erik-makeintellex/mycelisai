@@ -448,7 +448,7 @@ def _pick_interface_port(preferred: int = INTERFACE_PORT) -> int:
         return False
 
     def _port_is_available(port: int) -> bool:
-        bind_host = (INTERFACE_BIND_HOST or "").strip()
+        bind_host = ("127.0.0.1" if is_windows() else INTERFACE_BIND_HOST).strip()
         probe_host = bind_host or "127.0.0.1"
         family = socket.AF_INET
         if probe_host == "localhost":

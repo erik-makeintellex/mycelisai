@@ -57,7 +57,8 @@ def test_e2e_starts_managed_server_and_skips_playwright_webserver(monkeypatch):
     assert env_seen["PLAYWRIGHT_SKIP_WEBSERVER"] == "1"
     assert shell_calls == [["npx", "playwright", "test", "--reporter=dot", "--project=chromium", "e2e/specs/navigation.spec.ts", "--workers=1"]]
     assert env_seen["INTERFACE_HOST"] == "127.0.0.1"
-    assert env_seen["INTERFACE_BIND_HOST"] == interface.INTERFACE_BIND_HOST
+    expected_bind_host = "127.0.0.1" if interface.is_windows() else interface.INTERFACE_BIND_HOST
+    assert env_seen["INTERFACE_BIND_HOST"] == expected_bind_host
     assert events == [
         f"stop:{port}",
         "sweep",

@@ -140,7 +140,7 @@ async function submitWorkspaceChat(page: Page, content: string) {
     const responsePromise = page.waitForResponse((response) => {
         const url = new URL(response.url());
         return response.request().method() === 'POST' && url.pathname === '/api/v1/chat';
-    }, { timeout: 60_000 });
+    }, { timeout: 120_000 });
     await input.press('Enter');
     const response = await responsePromise;
     const parsed = await parseJSONIfPossible<ChatEnvelope>(response);

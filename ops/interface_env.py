@@ -70,7 +70,9 @@ def _is_incomplete_next_build_output(result: CommandResult) -> bool:
         "pages-manifest.json",
         ".nft.json",
     )
-    return "enoent" in text and any(name in text for name in incomplete_outputs)
+    if "enoent" in text and any(name in text for name in incomplete_outputs):
+        return True
+    return ".next/types/" in text and "not found" in text
 
 
 def _is_next_standalone_cleanup_conflict(result: CommandResult) -> bool:
@@ -267,10 +269,11 @@ def _build_playwright_command(
 
 
 def _build_playwright_env(*, live_backend: bool, port: int) -> dict[str, str]:
+    bind_host = "127.0.0.1" if is_windows() else INTERFACE_BIND_HOST
     extra_env = {
         "PLAYWRIGHT_SKIP_WEBSERVER": "1",
         "INTERFACE_HOST": "127.0.0.1",
-        "INTERFACE_BIND_HOST": INTERFACE_BIND_HOST,
+        "INTERFACE_BIND_HOST": bind_host,
         "INTERFACE_PORT": str(port),
     }
     if live_backend:
