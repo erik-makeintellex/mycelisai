@@ -322,7 +322,7 @@ uv run inv cache.status          # Inspect managed repo/user cache roots before 
 uv run inv cache.clean           # Prune repo-managed caches and build artifacts when disk pressure returns
 uv run inv logging.check-schema  # Event schema + docs coverage gate
 uv run inv logging.check-topics  # Hardcoded swarm topic gate
-uv run inv quality.max-lines --limit 300  # Source-tree max-lines gate with legacy no-regression caps
+uv run inv quality.max-lines --limit 300  # Source-tree max-lines gate with legacy no-regression caps; stale caps fail
 uv run inv lifecycle.memory-restart --frontend          # Full memory reset + post-restart memory probes
 uv run inv ci.entrypoint-check   # Verify uv / uvx runner matrix
 uv run inv ci.baseline           # Canonical strict baseline (docs/logging/topics/line gates + core + interface + Playwright by default)

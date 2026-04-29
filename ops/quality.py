@@ -69,6 +69,14 @@ def _line_count(path: Path) -> int:
     return len(path.read_text(encoding="utf-8").splitlines())
 
 
+def _path_is_under(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
 def _load_legacy_caps(path: Path = LEGACY_CAPS_PATH) -> dict[str, int]:
     caps: dict[str, int] = {}
     if not path.exists():
@@ -108,6 +116,12 @@ def max_lines(_c, limit=300, paths=DEFAULT_SOURCE_PATHS, strict=False):
     files = _iter_source_files(roots)
     violations: list[str] = []
     legacy_ok: list[str] = []
+    stale_caps: list[str] = []
+
+    for rel in sorted(caps):
+        cap_path = ROOT_DIR / rel
+        if any(_path_is_under(cap_path, root) for root in roots) and not cap_path.exists():
+            stale_caps.append(rel)
 
     for path in files:
         try:
@@ -138,6 +152,12 @@ def max_lines(_c, limit=300, paths=DEFAULT_SOURCE_PATHS, strict=False):
         for item in violations:
             print(f"  {item}")
         raise SystemExit("QUALITY CHECK FAILED: file length violations found.")
+
+    if stale_caps:
+        print("Stale legacy cap entries:")
+        for item in stale_caps:
+            print(f"  {item}")
+        raise SystemExit("QUALITY CHECK FAILED: stale legacy max-line caps found.")
 
     print(f"QUALITY CHECK PASSED: scanned {len(files)} files, limit={limit}.")
 

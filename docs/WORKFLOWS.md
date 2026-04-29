@@ -628,7 +628,7 @@ For voice input, the frontend captures audio via `MediaRecorder` API, transcribe
 
 #### 8.1 — Model Matrix (`/settings/brain`)
 
-Existing page showing `ModelHealth` component. The user sees:
+Existing model settings page. The user sees:
 - List of configured LLM providers (from `llm_providers` table + `cognitive.yaml`)
 - Health probe status for each (online/offline)
 - Profile → provider mapping (architect → ollama, coder → ollama, etc.)

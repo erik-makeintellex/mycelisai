@@ -75,3 +75,17 @@ def test_max_lines_fails_when_exceeding_legacy_cap(monkeypatch, tmp_path: Path):
 
     with pytest.raises(SystemExit):
         quality.max_lines.body(None, limit=10, paths="ignored", strict=False)
+
+
+def test_max_lines_fails_when_legacy_cap_points_to_missing_scanned_file(monkeypatch, tmp_path: Path):
+    src = tmp_path / "small.py"
+    _write_lines(src, 4)
+    missing = tmp_path / "deleted.py"
+
+    monkeypatch.setattr(quality, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(quality, "_parse_paths", lambda _paths: [tmp_path])
+    monkeypatch.setattr(quality, "_iter_source_files", lambda _roots: [src])
+    monkeypatch.setattr(quality, "_load_legacy_caps", lambda: {missing.relative_to(tmp_path).as_posix(): 12})
+
+    with pytest.raises(SystemExit, match="stale legacy max-line caps"):
+        quality.max_lines.body(None, limit=10, paths="ignored", strict=False)
