@@ -85,11 +85,11 @@ export default function GroupManagementPanel({ initialSelectedGroupId = null }: 
             const nextGroups = await getData<Group[]>(groupsRes);
             setGroups(nextGroups);
             setSelectedGroupId((current) => {
-                if (current && nextGroups.some((group) => group.group_id === current)) {
-                    return current;
-                }
                 if (initialSelectedGroupId && nextGroups.some((group) => group.group_id === initialSelectedGroupId)) {
                     return initialSelectedGroupId;
+                }
+                if (current && nextGroups.some((group) => group.group_id === current)) {
+                    return current;
                 }
                 return nextGroups[0]?.group_id ?? null;
             });
@@ -102,6 +102,12 @@ export default function GroupManagementPanel({ initialSelectedGroupId = null }: 
     };
 
     useEffect(() => { void loadGroups(); }, []);
+
+    useEffect(() => {
+        if (!initialSelectedGroupId) return;
+        if (!groups.some((group) => group.group_id === initialSelectedGroupId)) return;
+        setSelectedGroupId(initialSelectedGroupId);
+    }, [groups, initialSelectedGroupId]);
 
     useEffect(() => {
         if (!selectedGroup) {
@@ -183,8 +189,11 @@ export default function GroupManagementPanel({ initialSelectedGroupId = null }: 
                 body: JSON.stringify({ status: "archived" }),
             });
             if (!res.ok) throw new Error("Could not archive the selected temporary group.");
+            const archivedGroup = await getData<Group>(res);
+            setGroups((current) => current.map((group) => group.group_id === archivedGroup.group_id ? archivedGroup : group));
+            setSelectedGroupId(archivedGroup.group_id);
+            setBroadcastMessage("");
             setNotice("Temporary group archived. Retained outputs are still available for review.");
-            await loadGroups();
         } catch (archiveError) {
             setError(archiveError instanceof Error ? archiveError.message : "Could not archive the selected temporary group.");
         } finally {
