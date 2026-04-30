@@ -461,7 +461,7 @@ def test_install_provisions_npm_and_playwright(monkeypatch):
     ]
 
 
-def test_interface_env_loads_compose_overrides_after_root_env(monkeypatch, tmp_path):
+def test_interface_env_keeps_root_env_as_secret_store(monkeypatch, tmp_path):
     (tmp_path / ".env").write_text(
         "MYCELIS_API_KEY=root-key\nMYCELIS_API_HOST=root-host\nPORT=8081\n",
         encoding="utf-8",
@@ -478,8 +478,8 @@ def test_interface_env_loads_compose_overrides_after_root_env(monkeypatch, tmp_p
 
     interface_env._load_env()
 
-    assert interface_env.os.environ["MYCELIS_API_KEY"] == "compose-key"
-    assert interface_env.os.environ["MYCELIS_API_HOST"] == "compose-host"
+    assert interface_env.os.environ["MYCELIS_API_KEY"] == "root-key"
+    assert interface_env.os.environ["MYCELIS_API_HOST"] == "root-host"
     assert "PORT" not in interface_env.os.environ
 
 

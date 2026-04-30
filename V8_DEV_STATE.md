@@ -43,6 +43,7 @@ Use `V7_DEV_STATE.md` only as a migration input and historical checkpoint source
 - `IN_REVIEW` the Interface standalone/Compose packaging path now traces repository docs into the release build so `/docs` and `/docs-api/*` can resolve canonical docs from the WSL/Compose runtime instead of failing when repo-root docs are absent from the image.
 - `IN_REVIEW` Settings advanced deep links now surface an explicit Advanced-mode notice and operator action instead of silently dropping `/settings?tab=tools`, `/settings?tab=engines`, or `/settings?tab=auth` onto Profile.
 - `IN_REVIEW` Compose release search is being promoted from disabled-by-default to a self-hosted SearXNG service wired through `MYCELIS_SEARCH_PROVIDER=searxng` and `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080`, giving Soma a Brave-token-free public `web_search` path while keeping `local_sources`, `local_api`, and disabled postures operator-selectable.
+- `ACTIVE` `.env` is the local secret store across runtime paths. `.env.compose` remains the Compose topology/runtime surface only; task loading now keeps secret-like keys from `.env` authoritative over stale Compose env values.
 
 ## Layered Architecture Truth
 

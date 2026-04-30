@@ -56,7 +56,8 @@ Windows Docker Desktop:
 
 ```powershell
 Copy-Item .env.compose.example .env.compose
-uv run inv auth.posture --compose
+uv run inv auth.dev-key
+uv run inv auth.posture
 uv run inv install
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
@@ -66,7 +67,8 @@ WSL2/Linux/macOS:
 
 ```bash
 cp .env.compose.example .env.compose
-uv run inv auth.posture --compose
+uv run inv auth.dev-key
+uv run inv auth.posture
 uv run inv install
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
@@ -76,7 +78,8 @@ Linux server/self-hosted release:
 
 ```bash
 cp .env.compose.example .env.compose
-uv run inv auth.posture --compose
+uv run inv auth.dev-key
+uv run inv auth.posture
 uv run inv install
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health

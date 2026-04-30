@@ -43,16 +43,17 @@ Default cognitive posture:
 
 ## Env Contract
 
-Compose uses `.env.compose`, not `.env`, so the home runtime can keep container-host assumptions separate from Kind/bridge assumptions.
+Compose uses `.env` as the local secret store and `.env.compose` for container topology/runtime defaults. This keeps credentials consistent across local, Compose, and proof lanes while still separating host/container assumptions from Kind/bridge assumptions.
 
-Required:
+Required in `.env`:
 - `MYCELIS_API_KEY`
+- `DB_PASSWORD`
+- `POSTGRES_PASSWORD`
 
-Important defaults:
+Important `.env.compose` defaults:
 - `DB_HOST=postgres`
 - `DB_PORT=5432`
 - `DB_USER=mycelis`
-- `DB_PASSWORD=password`
 - `DB_NAME=cortex`
 - `NATS_URL=nats://nats:4222`
 - `MYCELIS_BOOTSTRAP_TEMPLATE_ID=v8-migration-standing-team-bridge`

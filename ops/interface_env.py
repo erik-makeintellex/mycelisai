@@ -24,9 +24,8 @@ INTERFACE_DIR = ROOT_DIR / "interface"
 def _load_env():
     """Load root .env into the process environment so Next.js proxy
     can read MYCELIS_API_KEY (used to inject Authorization headers into
-    proxied /api/* requests). Loads .env first, then .env.compose so compose-
-    backed proof can override proxy/runtime auth the same way the supported
-    compose stack does. Uses override=True so repo env files win over system env.
+    proxied /api/* requests). Loads .env.compose first for topology, then .env
+    so the root secret store wins for credentials. Uses override=True so repo env files win over system env.
     Removes PORT afterwards — the root .env sets PORT for the Go Core HTTP
     listener, but Next.js would otherwise try to reuse that port instead of
     the configured interface port."""
@@ -35,8 +34,8 @@ def _load_env():
     try:
         from dotenv import load_dotenv
 
-        load_dotenv(str(ROOT_DIR / ".env"), override=True)
         load_dotenv(str(ROOT_DIR / ".env.compose"), override=True)
+        load_dotenv(str(ROOT_DIR / ".env"), override=True)
     except ImportError:
         pass  # python-dotenv not installed — env vars must be set manually
     os.environ.pop("PORT", None)

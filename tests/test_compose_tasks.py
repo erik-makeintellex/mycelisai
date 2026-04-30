@@ -21,21 +21,13 @@ def test_compose_command_includes_env_file_and_project_name():
 
 def test_load_compose_env_parses_key_values(tmp_path, monkeypatch):
     env_file = tmp_path / ".env.compose"
-    env_file.write_text(
-        "\n".join(
-            [
-                "# comment",
-                "MYCELIS_API_KEY=test-key",
-                "DB_HOST=postgres",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
+    (tmp_path / ".env").write_text("MYCELIS_API_KEY=secret-key\nDB_PASSWORD=secret-password\nDB_HOST=local-host\n", encoding="utf-8")
+    env_file.write_text("# comment\nMYCELIS_API_KEY=compose-ignored\nDB_PASSWORD=compose-ignored\nDB_HOST=postgres\n", encoding="utf-8")
     monkeypatch.setattr(compose, "COMPOSE_ENV_FILE", env_file)
 
     assert compose._load_compose_env() == {
-        "MYCELIS_API_KEY": "test-key",
+        "MYCELIS_API_KEY": "secret-key",
+        "DB_PASSWORD": "secret-password",
         "DB_HOST": "postgres",
     }
 
@@ -195,7 +187,8 @@ def test_prepare_wsl_ollama_host_runs_inside_direct_wsl_shell(monkeypatch):
 def test_require_compose_env_file_has_clear_guidance(tmp_path, monkeypatch):
     missing = tmp_path / ".env.compose"
     example = tmp_path / ".env.compose.example"
-    example.write_text("MYCELIS_API_KEY=x\n", encoding="utf-8")
+    (tmp_path / ".env").write_text("MYCELIS_API_KEY=x\n", encoding="utf-8")
+    example.write_text("MYCELIS_COMPOSE_OLLAMA_HOST=http://host.docker.internal:11434\n", encoding="utf-8")
     monkeypatch.setattr(compose, "COMPOSE_ENV_FILE", missing)
     monkeypatch.setattr(compose, "COMPOSE_ENV_EXAMPLE", example)
 
@@ -203,7 +196,7 @@ def test_require_compose_env_file_has_clear_guidance(tmp_path, monkeypatch):
         compose._require_compose_env_file()
 
     assert ".env.compose.example" in str(excinfo.value)
-    assert "MYCELIS_API_KEY" in str(excinfo.value)
+    assert "keep secrets in .env" in str(excinfo.value)
 
 
 def test_run_compose_migrations_executes_canonical_files(monkeypatch):
@@ -490,7 +483,7 @@ def test_compose_infra_up_prints_connection_guidance(monkeypatch, capsys):
     assert "NATS_URL=nats://host.docker.internal:14222" in out
     assert "DB_USER=owner" in out
     assert "secret" not in out
-    assert "DB_PASSWORD=<from .env.compose; not printed>" in out
+    assert "DB_PASSWORD=<from .env; not printed>" in out
     assert "NATS monitor=http://127.0.0.1:18222/varz" in out
 
 

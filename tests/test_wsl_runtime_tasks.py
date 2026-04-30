@@ -255,15 +255,15 @@ def test_validate_release_lane_uses_runtime_preflight_before_compose_owned_gates
 
 def test_ensure_wsl_compose_env_bootstraps_from_example(monkeypatch):
     monkeypatch.setattr(wsl_runtime, "_configured_checkout", lambda checkout="": "/home/erik/Projects/mycelisai/scratch")
-
     run_calls: list[list[str]] = []
     shell_calls: list[str] = []
 
     def fake_run(command, **_kwargs):
         run_calls.append(command)
-        if "test -f .env.compose" in command:
+        command_text = " ".join(command)
+        if "test -f .env" in command_text and ".example" not in command_text:
             return wsl_runtime.CommandResult(command=command, returncode=1, stdout="", stderr="")
-        if "test -f .env.compose.example" in command:
+        if "test -f .env.example" in command_text or "test -f .env.compose.example" in command_text:
             return wsl_runtime.CommandResult(command=command, returncode=0, stdout="", stderr="")
         raise AssertionError(f"unexpected command: {command}")
 
@@ -276,7 +276,7 @@ def test_ensure_wsl_compose_env_bootstraps_from_example(monkeypatch):
 
     wsl_runtime._ensure_wsl_compose_env(distro="mother-brain", checkout="/home/erik/Projects/mycelisai/scratch")
 
-    assert shell_calls == ["cp .env.compose.example .env.compose"]
+    assert shell_calls == ["cp .env.example .env", "cp .env.compose.example .env.compose"]
 
 
 def test_ensure_wsl_output_block_path_creates_configured_directory(monkeypatch):

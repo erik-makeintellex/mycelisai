@@ -45,13 +45,12 @@ def test_dev_key_generates_when_missing_and_syncs_example(tmp_path: Path, monkey
 
     env_text = env_file.read_text(encoding="utf-8")
     example_text = example_file.read_text(encoding="utf-8")
-    compose_text = compose_example_file.read_text(encoding="utf-8")
     assert "MYCELIS_API_KEY=mycelis-dev-" in env_text
     assert f"MYCELIS_API_KEY={auth.SAMPLE_VALUE}" in example_text
     assert f"MYCELIS_BREAK_GLASS_API_KEY={auth.BREAK_GLASS_SAMPLE_VALUE}" in example_text
     assert f"MYCELIS_LOCAL_ADMIN_USERNAME={auth.LOCAL_ADMIN_SAMPLE_USERNAME}" in example_text
     assert f"MYCELIS_BREAK_GLASS_USERNAME={auth.BREAK_GLASS_SAMPLE_USERNAME}" in example_text
-    assert f"MYCELIS_BREAK_GLASS_API_KEY={auth.BREAK_GLASS_SAMPLE_VALUE}" in compose_text
+    assert "MYCELIS_API_KEY=placeholder" in compose_example_file.read_text(encoding="utf-8")
 
 
 def test_break_glass_key_generates_and_syncs_example(tmp_path: Path, monkeypatch):
@@ -70,10 +69,9 @@ def test_break_glass_key_generates_and_syncs_example(tmp_path: Path, monkeypatch
 
     env_text = env_file.read_text(encoding="utf-8")
     example_text = example_file.read_text(encoding="utf-8")
-    compose_text = compose_example_file.read_text(encoding="utf-8")
     assert "MYCELIS_BREAK_GLASS_API_KEY=mycelis-break-glass-" in env_text
     assert f"MYCELIS_BREAK_GLASS_API_KEY={auth.BREAK_GLASS_SAMPLE_VALUE}" in example_text
-    assert f"MYCELIS_BREAK_GLASS_API_KEY={auth.BREAK_GLASS_SAMPLE_VALUE}" in compose_text
+    assert "MYCELIS_API_KEY=placeholder" in compose_example_file.read_text(encoding="utf-8")
 
 
 def test_break_glass_key_rotates_with_break_glass_prefix(tmp_path: Path, monkeypatch):

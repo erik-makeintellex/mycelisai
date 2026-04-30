@@ -61,7 +61,7 @@ services:
       PORT: "8080"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       MYCELIS_API_URL: http://127.0.0.1:8080
-      MYCELIS_API_KEY: ${MYCELIS_API_KEY:?set MYCELIS_API_KEY in .env.compose}
+      MYCELIS_API_KEY: ${MYCELIS_API_KEY:?set MYCELIS_API_KEY in .env}
       MYCELIS_BOOTSTRAP_TEMPLATE_ID: ${MYCELIS_BOOTSTRAP_TEMPLATE_ID:-v8-migration-standing-team-bridge}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
@@ -115,7 +115,7 @@ services:
       HOSTNAME: "0.0.0.0"
       MYCELIS_API_HOST: core
       MYCELIS_API_PORT: "8080"
-      MYCELIS_API_KEY: ${MYCELIS_API_KEY:?set MYCELIS_API_KEY in .env.compose}
+      MYCELIS_API_KEY: ${MYCELIS_API_KEY:?set MYCELIS_API_KEY in .env}
     depends_on:
       core:
         condition: service_healthy

@@ -101,7 +101,7 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 |---------|-------------|
 | `uv run inv auth.dev-key` | Ensure a local `MYCELIS_API_KEY` exists and keep `.env.example` on a sample value |
 | `uv run inv auth.break-glass-key` | Ensure a dedicated `MYCELIS_BREAK_GLASS_API_KEY` exists for explicit self-hosted recovery posture |
-| `uv run inv auth.posture` | Print the current local-admin and break-glass auth posture from `.env` or `.env.compose` |
+| `uv run inv auth.posture` | Print the current local-admin and break-glass auth posture from `.env`, the local secret store |
 
 ### Cache Tasks (`ops/cache.py`)
 
@@ -175,7 +175,7 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 | `uv run inv compose.logs` | Tail compose logs for the full stack or a single service |
 
 Compose runtime guardrails:
-- `.env.compose` is the supported env contract for the home-runtime path; do not reuse Kind/bridge `OLLAMA_HOST` values blindly
+- `.env` is the supported local secret store across runtime paths; `.env.compose` is the home-runtime topology contract and should not carry credentials
 - use `MYCELIS_COMPOSE_OLLAMA_HOST` for the home-runtime AI engine path so host-level `OLLAMA_HOST` bind settings do not override the compose runtime
 - the Compose stack maps `MYCELIS_COMPOSE_OLLAMA_HOST` into provider-specific runtime endpoint overrides inside Core, so deployed execution follows the same explicit provider contract as Helm instead of relying on a global host rewrite
 - governed search is deployment-time runtime config: the supported Compose release path starts a SearXNG service by default and maps `MYCELIS_SEARCH_PROVIDER=searxng` plus `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080` into Core so Soma can use `web_search` without Brave tokens; use `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, and `MYCELIS_SEARCH_MAX_RESULTS` in Compose or Helm to select disabled, local-source, self-hosted SearXNG, self-hosted local HTTP API, or optional Brave-backed search posture without editing chart source
@@ -371,7 +371,7 @@ AI endpoint rule:
 
 ```bash
 cp .env.compose.example .env.compose
-# set MYCELIS_API_KEY and adjust MYCELIS_COMPOSE_OLLAMA_HOST if needed
+# set secrets in .env and adjust MYCELIS_COMPOSE_OLLAMA_HOST in .env.compose if needed
 
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.status

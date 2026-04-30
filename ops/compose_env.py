@@ -38,6 +38,7 @@ COMPOSE_RUNTIME_OVERRIDE_KEYS = {
 }
 
 OUTPUT_BLOCK_MODES = {"local_hosted", "cluster_generated"}
+SECRET_KEY_MARKERS = ("API_KEY", "PASSWORD", "SECRET", "TOKEN")
 
 
 def compose_command(
@@ -63,23 +64,45 @@ def compose_command(
 
 
 def require_compose_env_file(compose_env_file: Path, compose_env_example: Path):
-    if compose_env_file.exists():
-        return
-    raise SystemExit(
-        f"Missing {compose_env_file.name}. Copy {compose_env_example.name} to "
-        f"{compose_env_file.name} and set MYCELIS_API_KEY before running compose tasks."
-    )
+    secret_env_file = compose_env_file.parent / ".env"
+    secret_env_example = compose_env_file.parent / ".env.example"
+    if not secret_env_file.exists():
+        raise SystemExit(
+            f"Missing {secret_env_file.name}. Copy {secret_env_example.name} to "
+            f"{secret_env_file.name} or run 'uv run inv auth.dev-key'; .env is the local secret store."
+        )
+    if not compose_env_file.exists():
+        raise SystemExit(
+            f"Missing {compose_env_file.name}. Copy {compose_env_example.name} to "
+            f"{compose_env_file.name}; keep secrets in .env."
+        )
 
 
-def load_compose_env(compose_env_file: Path, require_env_file) -> dict[str, str]:
-    require_env_file()
+def is_secret_key(key: str) -> bool:
+    normalized = key.strip().upper()
+    return any(marker in normalized for marker in SECRET_KEY_MARKERS)
+
+
+def read_env_file(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
-    for raw_line in compose_env_file.read_text(encoding="utf-8").splitlines():
+    if not path.exists():
+        return values
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
         values[key.strip()] = value.strip()
+    return values
+
+
+def load_compose_env(compose_env_file: Path, require_env_file) -> dict[str, str]:
+    require_env_file()
+    values = read_env_file(compose_env_file.parent / ".env")
+    for key, value in read_env_file(compose_env_file).items():
+        if is_secret_key(key) and values.get(key):
+            continue
+        values[key] = value
     return values
 
 
@@ -248,9 +271,6 @@ def compose_runtime_env(
 ) -> dict[str, str] | None:
     host_mode = docker_host_mode()
     wsl_shell = running_in_wsl()
-    if host_mode != "wsl" and not wsl_shell:
-        return None
-
     values = effective_env(env_values)
     raw_host_path = clean_env_value(values.get("MYCELIS_OUTPUT_HOST_PATH", ""))
     resolved_host_path = resolve_host_path(raw_host_path) if raw_host_path else default_output_host_path
@@ -259,9 +279,7 @@ def compose_runtime_env(
     passthrough_keys = sorted(values.keys())
     for key in passthrough_keys:
         env[key] = values[key]
-    env["MYCELIS_OUTPUT_HOST_PATH"] = (
-        docker_host_path(resolved_host_path) if host_mode == "wsl" else str(resolved_host_path)
-    )
+    env["MYCELIS_OUTPUT_HOST_PATH"] = docker_host_path(resolved_host_path) if host_mode == "wsl" else str(resolved_host_path)
     if host_mode == "wsl":
         passthrough_entries = [entry for entry in env.get("WSLENV", "").split(":") if entry]
         if "MYCELIS_OUTPUT_HOST_PATH" not in passthrough_keys:

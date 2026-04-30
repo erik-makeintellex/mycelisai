@@ -89,7 +89,6 @@ def _sync_auth_example(path: Path) -> None:
 
 def _sync_auth_examples() -> None:
     _sync_auth_example(ENV_EXAMPLE_PATH)
-    _sync_auth_example(ENV_COMPOSE_EXAMPLE_PATH)
 
 
 def _inspect_auth_posture(path: Path) -> dict[str, str]:

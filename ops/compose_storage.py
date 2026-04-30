@@ -168,7 +168,7 @@ def print_data_plane_connection_guidance(
     print(f"    NATS_URL=nats://host.docker.internal:{nats_port}")
     print("  Credentials:")
     print(f"    DB_USER={db_user(env_values)}")
-    print("    DB_PASSWORD=<from .env.compose; not printed>")
+    print("    DB_PASSWORD=<from .env; not printed>")
     print(f"    DB_NAME={db_name(env_values)}")
     print(f"    NATS monitor=http://127.0.0.1:{nats_monitor_port}/varz")
 

@@ -451,21 +451,21 @@ def _probe_windows_gui(url: str, timeout_seconds: float = 10.0) -> None:
 
 def _ensure_wsl_compose_env(*, distro: str = "", checkout: str = "") -> None:
     selected_checkout = _configured_checkout(checkout)
-    env_exists = _run_command(
-        _wsl_command("bash", "-lc", "test -f .env.compose", distro=distro, checkout=selected_checkout),
-        check=False,
-    )
-    if env_exists.returncode == 0:
+    exists = lambda name: _run_command(_wsl_command("bash", "-lc", f"test -f {name}", distro=distro, checkout=selected_checkout), check=False).returncode == 0
+    if exists(".env"):
+        print("WSL secret env: using existing .env")
+    else:
+        if not exists(".env.example"):
+            raise SystemExit("WSL proof checkout is missing .env and .env.example.")
+        print("WSL secret env: bootstrapping .env from .env.example")
+        _run_wsl_shell("cp .env.example .env", distro=distro, checkout=selected_checkout)
+
+    if exists(".env.compose"):
         print("WSL compose env: using existing .env.compose")
         return
 
-    example_exists = _run_command(
-        _wsl_command("bash", "-lc", "test -f .env.compose.example", distro=distro, checkout=selected_checkout),
-        check=False,
-    )
-    if example_exists.returncode != 0:
+    if not exists(".env.compose.example"):
         raise SystemExit("WSL proof checkout is missing .env.compose and .env.compose.example.")
-
     print("WSL compose env: bootstrapping .env.compose from .env.compose.example")
     _run_wsl_shell("cp .env.compose.example .env.compose", distro=distro, checkout=selected_checkout)
 

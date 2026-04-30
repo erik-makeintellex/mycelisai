@@ -11,14 +11,14 @@ def _read(relative: str) -> str:
 def test_search_runtime_env_projects_through_compose_and_helm():
     surfaces = {
         "docker-compose.yml": [
-            "MYCELIS_SEARCH_PROVIDER: ${MYCELIS_SEARCH_PROVIDER:-disabled}",
-            "MYCELIS_SEARXNG_ENDPOINT: ${MYCELIS_SEARXNG_ENDPOINT:-}",
+            "MYCELIS_SEARCH_PROVIDER: ${MYCELIS_SEARCH_PROVIDER:-searxng}",
+            "MYCELIS_SEARXNG_ENDPOINT: ${MYCELIS_SEARXNG_ENDPOINT:-http://searxng:8080}",
             "MYCELIS_SEARCH_LOCAL_API_ENDPOINT: ${MYCELIS_SEARCH_LOCAL_API_ENDPOINT:-}",
             "MYCELIS_SEARCH_MAX_RESULTS: ${MYCELIS_SEARCH_MAX_RESULTS:-8}",
         ],
         ".env.compose.example": [
-            "MYCELIS_SEARCH_PROVIDER=disabled",
-            "MYCELIS_SEARXNG_ENDPOINT=",
+            "MYCELIS_SEARCH_PROVIDER=searxng",
+            "MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080",
             "MYCELIS_SEARCH_LOCAL_API_ENDPOINT=",
             "MYCELIS_SEARCH_MAX_RESULTS=8",
         ],
