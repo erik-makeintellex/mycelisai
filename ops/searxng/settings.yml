@@ -1,0 +1,12 @@
+use_default_settings: true
+
+server:
+  bind_address: "0.0.0.0"
+  secret_key: "${SEARXNG_SECRET}"
+  limiter: false
+  image_proxy: false
+
+search:
+  formats:
+    - html
+    - json

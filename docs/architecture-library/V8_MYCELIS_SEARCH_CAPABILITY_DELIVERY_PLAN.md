@@ -81,7 +81,7 @@ MYCELIS_SEARCH_MAX_RESULTS=8
 Local development should support:
 - `disabled`: no public web search, but clear Soma blocker.
 - `local_sources`: no external service required.
-- `searxng`: optional Compose profile for self-hosted web metasearch.
+- `searxng`: default supported Compose release provider for self-hosted web metasearch, backed by the repo-owned SearXNG settings that enable JSON output.
 - `local_api`: optional operator-owned HTTP search endpoint.
 - `brave`: optional hosted-provider path requiring `BRAVE_API_KEY`.
 

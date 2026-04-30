@@ -140,7 +140,8 @@ If a tool call fails, Soma should recover inline (retry, reroute, or proposal fa
 Web/research behavior:
 - if you ask Soma whether it can search or make web requests, Soma should answer from current Mycelis Search capability status instead of falling back to provider boilerplate
 - `local_sources` lets Soma search governed user-shared and deployment context without hosted search tokens
-- `searxng` lets Soma use public web search through a self-hosted endpoint when configured through `MYCELIS_SEARCH_PROVIDER=searxng` and `MYCELIS_SEARXNG_ENDPOINT`
+- the supported Compose release path starts a self-hosted SearXNG service by default, so `MYCELIS_SEARCH_PROVIDER=searxng` and `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080` let Soma use public web search without Brave tokens
+- `searxng` can also point at another operator-owned endpoint when configured through `MYCELIS_SEARXNG_ENDPOINT`
 - `local_api` lets Soma use an operator-owned HTTP search endpoint when configured through `MYCELIS_SEARCH_PROVIDER=local_api` and `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`
 - if `brave-search` is installed and configured with `BRAVE_API_KEY`, Soma and web-capable specialists may use it for search
 - if `fetch` is installed and you provide a URL, Soma and web-capable specialists may use it to retrieve page content
