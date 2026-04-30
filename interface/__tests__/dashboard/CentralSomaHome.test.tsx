@@ -35,7 +35,11 @@ describe("CentralSomaHome", () => {
         expect(screen.getByTestId("central-soma-chat-frame").className).toContain("overflow-hidden");
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
         expect(screen.getByRole("link", { name: /Open groups workspace/i }).getAttribute("href")).toBe("/groups");
+        expect(screen.getByRole("link", { name: /Review active runs/i }).getAttribute("href")).toBe("/runs");
+        expect(screen.getByRole("link", { name: /Approval queue/i }).getAttribute("href")).toBe("/approvals");
+        expect(screen.getByRole("link", { name: /Tool readiness/i }).getAttribute("href")).toBe("/settings?tab=tools");
         expect(screen.getByRole("link", { name: /Return to Northstar Labs/i }).getAttribute("href")).toBe("/organizations/org-1");
+        expect(screen.queryByRole("link", { name: /Review Soma context model/i })).toBeNull();
     }, 15000);
 
     it("opens the AI Organization setup details from the quick action", () => {

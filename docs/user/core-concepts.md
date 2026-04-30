@@ -185,6 +185,7 @@ Typical unlocks:
 
 Collaboration groups now have their own dedicated workflow surface:
 - `Groups` for standing and temporary group creation, plus archived temporary-group review after closure
+- compact group selection in a left rail, with the selected group's data, config posture, broadcast/review workflow, and retained outputs shown in the main panes
 - focused group review, broadcast while active, output/contributing-lead summaries, and retained output visibility after archive
 - quick entry into the attached team-lead lanes
 

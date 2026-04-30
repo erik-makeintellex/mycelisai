@@ -128,10 +128,7 @@ describe("GroupManagementPanel", () => {
                 return jsonResponse({ ok: true, data: { status: "online", published_count: 2, last_group_id: "group-temp" } });
             }
             if (url === "/api/v1/groups/group-temp/status" && init?.method === "PATCH") {
-                groups[1] = {
-                    ...groups[1],
-                    status: "archived",
-                };
+                groups[1] = { ...groups[1], status: "archived" };
                 return jsonResponse({ ok: true, data: groups[1] });
             }
             if (url === "/api/v1/groups/group-standing/outputs?limit=8") {
@@ -168,9 +165,9 @@ describe("GroupManagementPanel", () => {
 
         await waitFor(() => expect(screen.getByTestId("groups-notice").textContent).toContain("Temporary group archived"));
         await waitFor(() => expect(screen.getByText("Archived temporary groups")).toBeDefined());
-        fireEvent.click(screen.getByRole("button", { name: /Temp Campaign.*Produce one campaign package/i }));
+        fireEvent.click(screen.getByTestId("groups-list-item-group-temp"));
         await waitFor(() => expect(screen.getByTestId("groups-archived-readonly-note").textContent).toContain("retained output review"));
-        await waitFor(() => expect(screen.getByTestId("groups-retained-outputs-note").textContent).toContain("Downloads remain available"));
+        expect(screen.getByTestId("groups-retained-outputs-note").textContent).toContain("Downloads remain available");
         expect(screen.getByText("Campaign summary")).toBeDefined();
         expect(screen.getByTestId("groups-output-summary").textContent).toContain("1 output");
         expect(screen.getByTestId("groups-output-summary").textContent).toContain("1 contributing lead");
@@ -212,12 +209,8 @@ describe("GroupManagementPanel", () => {
 
         mockFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
             const url = urlFromInput(input);
-            if (url === "/api/v1/groups" && (!init?.method || init.method === "GET")) {
-                return jsonResponse({ ok: true, data: groups });
-            }
-            if (url === "/api/v1/groups/monitor") {
-                return jsonResponse({ ok: true, data: { status: "online", published_count: 0 } });
-            }
+            if (url === "/api/v1/groups" && (!init?.method || init.method === "GET")) return jsonResponse({ ok: true, data: groups });
+            if (url === "/api/v1/groups/monitor") return jsonResponse({ ok: true, data: { status: "online", published_count: 0 } });
             if (url === "/api/v1/groups/group-temp/outputs?limit=8") {
                 return jsonResponse({ ok: true, data: [] });
             }
@@ -241,6 +234,7 @@ describe("GroupManagementPanel", () => {
                 work_mode: "propose_only",
                 member_user_ids: [],
                 team_ids: ["team-marketing", "team-design"],
+                allowed_capabilities: ["runs.read", "runs.propose"],
                 coordinator_profile: "marketing-lead",
                 approval_policy_ref: "",
                 status: "active",
@@ -294,6 +288,9 @@ describe("GroupManagementPanel", () => {
 
         await waitFor(() => expect(screen.getByText("Launch Brief")).toBeDefined());
         expect(screen.getByText("Asset Bundle")).toBeDefined();
+        expect(screen.getByText("Agent backend model")).toBeDefined();
+        expect(screen.getByText("Inherits organization AI Engine")).toBeDefined();
+        expect(screen.getByText("runs.read, runs.propose")).toBeDefined();
         expect(screen.getByTestId("groups-output-summary").textContent).toContain("2 outputs");
         expect(screen.getByTestId("groups-output-summary").textContent).toContain("2 contributing leads");
     });

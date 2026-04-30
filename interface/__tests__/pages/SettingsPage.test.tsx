@@ -32,6 +32,7 @@ vi.mock('@/components/settings/MCPToolRegistry', () => ({
 
 const mockSearchParams = new URLSearchParams();
 const mockAdvancedMode = vi.fn(() => true);
+const mockToggleAdvancedMode = vi.fn();
 const mockUpdateAssistantName = vi.fn(async () => true);
 const mockUpdateTheme = vi.fn(async () => true);
 vi.mock('next/navigation', () => ({
@@ -43,6 +44,7 @@ vi.mock('@/store/useCortexStore', async (importOriginal) => {
         ...actual,
         useCortexStore: (selector: any) => selector({
             advancedMode: mockAdvancedMode(),
+            toggleAdvancedMode: mockToggleAdvancedMode,
             assistantName: 'Soma',
             theme: 'aero-light',
             updateAssistantName: mockUpdateAssistantName,
@@ -100,6 +102,7 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         });
         mockUpdateAssistantName.mockClear();
         mockUpdateTheme.mockClear();
+        mockToggleAdvancedMode.mockClear();
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
@@ -174,6 +177,22 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Open Profile' }));
         });
         expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
+    });
+
+    it('explains advanced deep links instead of silently dropping requested settings tabs', async () => {
+        mockAdvancedMode.mockReturnValue(false);
+        mockSearchParams.set('tab', 'tools');
+        await act(async () => {
+            render(<SettingsPage />);
+        });
+
+        expect(screen.getByText('Connected Tools lives in Advanced mode')).toBeDefined();
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Open Connected Tools' }));
+        });
+
+        expect(mockToggleAdvancedMode).toHaveBeenCalled();
+        expect(await screen.findByTestId('mcp-tool-registry')).toBeDefined();
     });
 
     it('opens the enterprise auth provider scaffold from advanced settings', async () => {

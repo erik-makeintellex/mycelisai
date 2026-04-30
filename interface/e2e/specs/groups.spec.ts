@@ -223,7 +223,7 @@ test.describe('Groups workspace (/groups)', () => {
         await expect(page.getByRole('heading', { name: 'Temporary groups', exact: true })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Archived temporary groups', exact: true })).toBeVisible();
 
-        await page.getByRole('button', { name: 'Temporary Launch Sprint Drive a fast campaign launch across messaging, review, and delivery.' }).click();
+        await page.getByTestId('groups-list-item-group-temp-launch').click();
 
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('1 output');
@@ -233,7 +233,7 @@ test.describe('Groups workspace (/groups)', () => {
         await expect(page.getByRole('link', { name: 'Open launch-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
         await expect(page.getByRole('link', { name: 'Download' }).first()).toHaveAttribute('href', '/api/v1/artifacts/artifact-brief/download');
 
-        await page.getByRole('button', { name: 'Archived Review Sprint Archived Keep the completed temporary collaboration available for retained output review.' }).click();
+        await page.getByTestId('groups-list-item-group-temp-archived').click();
         await expect(page.getByText('Archived temporary group', { exact: true })).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('1 output');
         await expect(page.getByTestId('groups-archived-readonly-note')).toContainText('retained output review');
@@ -248,7 +248,7 @@ test.describe('Groups workspace (/groups)', () => {
 
         await page.goto('/groups', { waitUntil: 'domcontentloaded' });
 
-        await page.getByRole('button', { name: 'Temporary Launch Sprint Drive a fast campaign launch across messaging, review, and delivery.' }).click();
+        await page.getByTestId('groups-list-item-group-temp-launch').click();
         await page.getByRole('button', { name: 'Archive temporary group' }).click();
 
         await expect(page.getByTestId('groups-notice')).toContainText('Temporary group archived.');
@@ -260,7 +260,7 @@ test.describe('Groups workspace (/groups)', () => {
         await expect(page.getByTestId('groups-retained-outputs-note')).toContainText('Downloads remain available');
         await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Download' }).first()).toHaveAttribute('href', '/api/v1/artifacts/artifact-brief/download');
-        await expect(page.getByRole('button', { name: /Temporary Launch Sprint.*Archived.*Drive a fast campaign launch across messaging, review, and delivery\./ })).toBeVisible();
+        await expect(page.getByTestId('groups-list-item-group-temp-launch')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Broadcast to group' })).toHaveCount(0);
     });
 
@@ -268,7 +268,7 @@ test.describe('Groups workspace (/groups)', () => {
         const harness = await mockGroupsWorkspace(page);
 
         await page.goto('/groups', { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('button', { name: 'Temporary Launch Sprint Drive a fast campaign launch across messaging, review, and delivery.' })).toBeVisible();
+        await expect(page.getByTestId('groups-list-item-group-temp-launch')).toBeVisible();
 
         await page.getByLabel('Name').fill('Regional Expansion Sprint');
         await page.getByLabel('Goal Statement').fill('Prepare outreach, pricing notes, and operator-ready launch assets for a new region.');
@@ -283,8 +283,8 @@ test.describe('Groups workspace (/groups)', () => {
 
         await expect(page.getByTestId('groups-notice')).toContainText('Group created successfully.');
 
-        await page.getByRole('button', { name: 'Temporary Launch Sprint Drive a fast campaign launch across messaging, review, and delivery.' }).click();
-        await page.locator('textarea').nth(1).fill('Generate a launch brief, pricing checklist, and asset package for tomorrow morning review.');
+        await page.getByTestId('groups-list-item-group-temp-launch').click();
+        await page.getByLabel('Broadcast message').fill('Generate a launch brief, pricing checklist, and asset package for tomorrow morning review.');
         await page.getByRole('button', { name: 'Broadcast to group' }).click();
 
         await expect(page.getByTestId('groups-notice')).toContainText('Broadcast queued for the selected group.');

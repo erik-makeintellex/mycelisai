@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
-import { Building2, FolderPlus, Layers3, Sparkles, Users } from "lucide-react";
+import { Building2, CheckSquare, FolderPlus, ListChecks, RadioTower, Sparkles, Users, Wrench } from "lucide-react";
 import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import CentralActivityStream from "@/components/dashboard/CentralActivityStream";
@@ -91,7 +91,7 @@ export default function CentralSomaHome({
                             <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
                         ) : null}
                         <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Create or open AI Organizations" />
-                        <QuickLink href="/docs?doc=v8-universal-soma-context-model" icon={<Layers3 className="h-4 w-4" />} label="Review Soma context model" />
+                        <QuickLink href="/runs" icon={<RadioTower className="h-4 w-4" />} label="Review active runs" />
                     </div>
                     {focusedTeam ? (
                         <div className="rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3 text-sm text-cortex-text-main">
@@ -115,19 +115,37 @@ export default function CentralSomaHome({
                 <CentralActivityStream />
 
                 <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-5">
-                    <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">What this surface is for</p>
-                    <div className="mt-3 space-y-3">
-                        <CompactNote
-                            title="Talk to Soma first"
-                            detail="The dashboard should stay centered on direct Soma interaction, not a dense admin control board."
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">Management Workbench</p>
+                            <h2 className="mt-2 text-base font-semibold text-cortex-text-main">Move from conversation to action</h2>
+                        </div>
+                        <Sparkles className="h-5 w-5 text-cortex-primary" />
+                    </div>
+                    <div className="mt-4 divide-y divide-cortex-border overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg">
+                        <WorkbenchLink
+                            href="/approvals"
+                            icon={<CheckSquare className="h-4 w-4" />}
+                            title="Approval queue"
+                            detail="Review gated actions, risk decisions, and pending confirmations."
                         />
-                        <CompactNote
-                            title="Create teams through Soma"
-                            detail="Use Soma to shape teams and recurring workflows, then move into a lead workspace only when a narrower lane is useful."
+                        <WorkbenchLink
+                            href="/runs"
+                            icon={<ListChecks className="h-4 w-4" />}
+                            title="Run history"
+                            detail="Inspect active work, timelines, events, and delivered outputs."
                         />
-                        <CompactNote
-                            title="Review outputs here"
-                            detail="Soma should pull forward summaries, artifacts, download links, and team status without making the owner hunt through multiple pages first."
+                        <WorkbenchLink
+                            href="/groups"
+                            icon={<Users className="h-4 w-4" />}
+                            title="Groups and teams"
+                            detail="Select a group, inspect its teams, and manage launch lanes."
+                        />
+                        <WorkbenchLink
+                            href="/settings?tab=tools"
+                            icon={<Wrench className="h-4 w-4" />}
+                            title="Tool readiness"
+                            detail="Check connected tools, search configuration, and MCP capability status."
                         />
                     </div>
                 </div>
@@ -177,17 +195,27 @@ function QuickAction({
     );
 }
 
-function CompactNote({
+function WorkbenchLink({
+    href,
+    icon,
     title,
     detail,
 }: {
+    href: string;
+    icon: React.ReactNode;
     title: string;
     detail: string;
 }) {
     return (
-        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3">
-            <p className="text-sm font-semibold text-cortex-text-main">{title}</p>
-            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{detail}</p>
-        </div>
+        <Link
+            href={href}
+            className="grid grid-cols-[auto_1fr] gap-3 px-4 py-3 transition-colors hover:bg-cortex-surface"
+        >
+            <span className="mt-0.5 text-cortex-primary">{icon}</span>
+            <span>
+                <span className="block text-sm font-semibold text-cortex-text-main">{title}</span>
+                <span className="mt-1 block text-sm leading-6 text-cortex-text-muted">{detail}</span>
+            </span>
+        </Link>
     );
 }

@@ -90,8 +90,8 @@ services:
 
   interface:
     build:
-      context: ./interface
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: interface/Dockerfile
       args:
         MYCELIS_API_HOST: core
         MYCELIS_API_PORT: "8080"

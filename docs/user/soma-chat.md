@@ -58,7 +58,8 @@ Team workspaces are different from the root Soma workspace:
 
 Groups are a separate workflow surface:
 - use `Groups` when you want a temporary or standing collaboration lane without cluttering the root Soma home
-- each group should expose the focused lead context, recent outputs, output/contributing-lead summaries, and broadcast/review workflow for that lane
+- the Groups screen uses a compact list/detail layout: select a group from the left rail, then use the main pane for lane data, broadcast/review, outputs, and retained artifacts
+- each group should expose the focused lead context, runtime/config posture such as work mode, approval policy, capabilities, and current model-inheritance status, plus output/contributing-lead summaries
 - Soma remains the root reviewer that can summarize groups, pull forward outputs, and route you into the right team lead when needed
 
 ---

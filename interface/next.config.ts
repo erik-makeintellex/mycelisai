@@ -1,9 +1,28 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
+const projectRoot = path.resolve(__dirname, "..");
 
 const nextConfig: NextConfig = {
   output: isStaticExport ? "export" : "standalone",
+  outputFileTracingRoot: projectRoot,
+  outputFileTracingIncludes: {
+    "/docs-api/[slug]": [
+      "./README.md",
+      "../README.md",
+      "./V8_DEV_STATE.md",
+      "../V8_DEV_STATE.md",
+      "./V7_DEV_STATE.md",
+      "../V7_DEV_STATE.md",
+      "./v8-2.md",
+      "../v8-2.md",
+      "./mycelis-architecture-v7.md",
+      "../mycelis-architecture-v7.md",
+      "./docs/**/*",
+      "../docs/**/*",
+    ],
+  },
   images: {
     unoptimized: isStaticExport,
   },

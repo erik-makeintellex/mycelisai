@@ -35,6 +35,7 @@ _INTERFACE_PROCESS_PATH_HINTS = tuple(
 _INTERFACE_PROCESS_COMMAND_HINTS = (
     "/.next/dev/build/postcss.js",
     "/.next/standalone/server.js",
+    "/.next/standalone/interface/server.js",
     "/next/dist/bin/next",
     "/next/dist/server/lib/start-server.js",
     "/dist/server/lib/start-server.js",

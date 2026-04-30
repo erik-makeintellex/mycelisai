@@ -89,13 +89,22 @@ const ADVANCED_WORKFLOW_CARDS: WorkflowCardDefinition[] = [
 function SettingsContent() {
     const searchParams = useSearchParams();
     const advancedMode = useCortexStore((s) => s.advancedMode);
+    const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
     const validTabs: TabId[] = ["profile", "profiles", "users", "engines", "auth", "tools"];
     const requestedTab = (searchParams?.get("tab") as TabId | null) ?? null;
+    const requestedAdvancedTab = requestedTab && ["engines", "auth", "tools"].includes(requestedTab) ? requestedTab : null;
     const initialTab =
         requestedTab && validTabs.includes(requestedTab) && (advancedMode || !["engines", "auth", "tools"].includes(requestedTab))
             ? requestedTab
             : "profile";
     const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+    const openRequestedAdvancedTab = () => {
+        if (!requestedAdvancedTab) return;
+        if (!advancedMode) {
+            toggleAdvancedMode();
+        }
+        setActiveTab(requestedAdvancedTab);
+    };
 
     return (
         <div className="h-full flex flex-col">
@@ -109,6 +118,9 @@ function SettingsContent() {
             </div>
 
             <div className="max-w-5xl mx-auto w-full px-6 mt-6 space-y-5">
+                {requestedAdvancedTab && !advancedMode ? (
+                    <AdvancedDeepLinkNotice requestedTab={requestedAdvancedTab} onOpen={openRequestedAdvancedTab} />
+                ) : null}
                 <SettingsGuidedWorkflow advancedMode={advancedMode} activeTab={activeTab} onSelect={setActiveTab} />
 
                 {/* Tabs */}
@@ -141,6 +153,37 @@ function SettingsContent() {
                 </div>
             )}
         </div>
+    );
+}
+
+function AdvancedDeepLinkNotice({ requestedTab, onOpen }: { requestedTab: TabId; onOpen: () => void }) {
+    const labels: Record<TabId, string> = {
+        profile: "Profile",
+        profiles: "Mission Profiles",
+        users: "People & Access",
+        engines: "AI Engines",
+        auth: "Auth Providers",
+        tools: "Connected Tools",
+    };
+
+    return (
+        <section className="rounded-2xl border border-cortex-primary/25 bg-cortex-primary/10 px-4 py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-sm font-semibold text-cortex-text-main">{labels[requestedTab]} lives in Advanced mode</p>
+                    <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
+                        This link is valid, but the section is intentionally hidden until Advanced mode is on.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={onOpen}
+                    className="inline-flex items-center justify-center rounded-xl border border-cortex-primary/30 bg-cortex-bg px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
+                >
+                    Open {labels[requestedTab]}
+                </button>
+            </div>
+        </section>
     );
 }
 

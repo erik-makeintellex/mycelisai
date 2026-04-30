@@ -4,8 +4,13 @@ import process from 'node:process';
 import { spawn } from 'node:child_process';
 
 const interfaceRoot = path.resolve(import.meta.dirname, '..');
-const standaloneServer = path.join(interfaceRoot, '.next', 'standalone', 'server.js');
-const standaloneStatic = path.join(interfaceRoot, '.next', 'standalone', '.next', 'static');
+const standaloneServerCandidates = [
+    path.join(interfaceRoot, '.next', 'standalone', 'server.js'),
+    path.join(interfaceRoot, '.next', 'standalone', 'interface', 'server.js'),
+];
+const standaloneServer = standaloneServerCandidates.find((candidate) => fs.existsSync(candidate));
+const standaloneRoot = standaloneServer ? path.dirname(standaloneServer) : path.join(interfaceRoot, '.next', 'standalone');
+const standaloneStatic = path.join(standaloneRoot, '.next', 'static');
 const rootStatic = path.join(interfaceRoot, '.next', 'static');
 const nextStart = path.join(interfaceRoot, 'node_modules', 'next', 'dist', 'bin', 'next');
 const bindHost =
@@ -26,12 +31,12 @@ if (!fs.existsSync(rootStatic) && !fs.existsSync(standaloneStatic)) {
     process.exit(1);
 }
 
-if (fs.existsSync(standaloneServer) && fs.existsSync(rootStatic) && !fs.existsSync(standaloneStatic)) {
+if (standaloneServer && fs.existsSync(rootStatic) && !fs.existsSync(standaloneStatic)) {
     fs.mkdirSync(path.dirname(standaloneStatic), { recursive: true });
     fs.cpSync(rootStatic, standaloneStatic, { recursive: true });
 }
 
-const command = fs.existsSync(standaloneServer) && fs.existsSync(standaloneStatic)
+const command = standaloneServer && fs.existsSync(standaloneStatic)
     ? ['node', standaloneServer]
     : ['node', nextStart, 'start', '--hostname', bindHost, '--port', port];
 
