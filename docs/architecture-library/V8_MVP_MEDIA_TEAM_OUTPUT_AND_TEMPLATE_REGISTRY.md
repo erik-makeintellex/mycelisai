@@ -176,9 +176,35 @@ Instantiation should return a bounded ask package that Soma can use to start a d
 
 The MVP instantiation path should be non-executing by default: render the template with supplied variables, update `last_used_at`, and return the ask package plus any workflow-group draft for the caller to approve or launch through the existing group endpoint.
 
+## Protected Soma Interaction Templates
+
+Protected interaction templates are runtime decision templates, separate from DB-backed conversation templates.
+
+They classify sensitive Soma requests before execution and may produce a confirmation prompt, proposal, or non-executing conversation-template draft. They must preserve:
+
+- matched phrase theme
+- inferred action
+- source/data boundary
+- service or credential boundary
+- protection reason
+- target MCP/tool hints
+- approval posture
+
+The first protected themes are:
+
+- team manifestation
+- MCP/tool posture and enablement
+- private service or credentialed action
+- private/governed data review
+- recurring behavior or reusable template creation
+- referential review before action
+
+Protected templates must not silently execute. They can review and explain, but team launch, MCP assignment, private-service use, private-data use, credentialed actions, and recurring behavior storage must require explicit operator confirmation and then flow through the governed proposal/approval path when mutation is involved.
+
 Implementation checkpoint:
 
 - `IN_REVIEW` the backend MVP slice now has migration `038_conversation_templates`, protocol/store types, admin API routes, internal tools, standing-team manifests, and focused tests for create and non-executing instantiation.
+- `IN_REVIEW` add runtime protected interaction templates for phrase-theme matching, private boundary confirmation, and target MCP/tool hints.
 - `NEXT` expose template discovery/launch in the Soma/team UI.
 
 ## Workflow Proof Set

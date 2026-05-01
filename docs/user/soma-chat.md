@@ -39,8 +39,54 @@ Concrete central Soma phrases:
 - `Ask the active delivery teams for current blockers, compare their answers, and tell me which workflow needs attention first.`
 - `Use the host data under workspace/shared-sources to answer this question, and tell me which files or records shaped the answer.`
 - `Review the current MCP tool structure, tell me which tools are available to Soma and teams, and recommend what should be connected next.`
+- `Review my latest request, match it to related prior commands and tool metadata, tell me the action you infer, and ask me to confirm before you execute.`
+- `Create the smallest useful team for this outcome, have Council help choose the specialists and outputs, include target MCP tools, and walk me through any missing MCP enablement.`
 
 Live activity text indicates current steps (thinking, consulting, searching memory, invoking tools).
+
+## Referential Review And Confirmation
+
+Soma should treat action-oriented requests as contextual, not isolated.
+
+Before creating teams, enabling MCP servers, assigning tools, or changing capability bindings, Soma should:
+
+1. review the latest user request
+2. match related prior conversation turns and command/action metadata
+3. review registered MCP servers, available tools, and relevant installable library entries
+4. state the action it infers
+5. ask whether to proceed once or make the behavior recurring for that workflow
+
+When you confirm with wording such as `yes`, `confirm`, `proceed`, `do it`, or `one time`, Soma should bind that confirmation to the prior inferred action and continue through the governed proposal/execution path.
+
+For team manifestation, Soma should use Council or specialist context to choose the smallest useful member set, expected outputs, and target MCP/tool bindings. If a needed MCP server is missing, Soma should name the server and required `.env` variable, then point you to `Settings -> Connected Tools` or `Resources -> Connected Tools` to install, reapply, or enable it.
+
+## Protected Interaction Templates
+
+Some words should map to protected Soma behavior instead of ordinary chat.
+
+The basic theme layer recognizes common operator language:
+
+- team words: `create team`, `specialists`, `members`, `lanes`
+- tool words: `MCP`, `tools`, `web search`, `GitHub`, `fetch`, `host data`
+- private-service words: `private service`, `production service`, `private API`, `token`, `credential`
+- private-data words: `customer data`, `deployment context`, `company knowledge`, `sensitive`, `confidential`
+- recurring words: `always`, `every time`, `standing behavior`, `template`, `reuse`
+
+The template layer combines those themes with protection rules. Examples:
+
+- compact team with target tools
+- private service or credentialed action
+- private data review
+- reusable protected interaction
+- referential review before action
+
+Soma may explain these requests directly, but it must not create teams, bind tools, use credentials/private data, or store recurring behavior until it has confirmed the inferred action and the relevant proposal/approval path allows it.
+
+Good protected prompts:
+
+- `Use the private service only after you name the target service, credential boundary, allowed action, and approval needed.`
+- `Review customer data from deployment context, tell me the visibility scope, and ask before retaining any output.`
+- `Make this a reusable conversation template only after you summarize the trigger phrase, protected scope, and approval posture.`
 
 AI Organization home adds a guided Soma entrypoint:
 - type a team or delivery request and choose `Start team design`, or

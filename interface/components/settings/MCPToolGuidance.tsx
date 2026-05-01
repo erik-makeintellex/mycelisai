@@ -12,7 +12,7 @@ const somaToolPrompts = [
     },
     {
         label: "Create team",
-        prompt: "Create a temporary release-review team, keep it small, and return the retained output here.",
+        prompt: "Propose a temporary release-review team, keep it small, list target tools and outputs, and ask me to approve before launch.",
         icon: Users,
     },
     {
@@ -21,8 +21,8 @@ const somaToolPrompts = [
         icon: Users,
     },
     {
-        label: "Read host data",
-        prompt: "Use host data under workspace/shared-sources and list the files that shaped the answer.",
+        label: "Private data",
+        prompt: "Review host/private data boundaries, name the files or source scope, and ask me to confirm before using or retaining outputs.",
         icon: Search,
     },
     {
@@ -39,7 +39,7 @@ export function SomaToolPromptCard() {
                 Concrete Soma Commands
             </p>
             <p className="mt-1 text-xs leading-5 text-cortex-text-main">
-                These are the phrases the central agent should understand. Copy one into Soma, then verify the activity and tool structure below.
+                These are the phrases the central agent should understand. Answers may run directly; private data, private services, tool assignment, and team launch should ask for confirmation or approval first.
             </p>
             <div className="mt-3 grid gap-2 md:grid-cols-5">
                 {somaToolPrompts.map((item) => {

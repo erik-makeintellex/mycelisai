@@ -72,6 +72,17 @@ Useful Soma prompts from this surface:
 - `Search the web for "<topic>", summarize the strongest sources, and cite them.`
 - `Use host data under workspace/shared-sources and list the files that shaped the answer.`
 - `Review current MCP servers, tools, and recent use, then tell me which agents should have which tools.`
+- `Review my latest team request, match it to prior action context, name the MCP servers needed, and ask me to confirm before enabling or assigning tools.`
+
+When Soma infers that a team or agent needs a missing MCP server, it should guide rather than guess:
+
+1. identify whether the server is already registered
+2. name the library entry to install or reapply
+3. name required `.env` variables without showing secret values
+4. ask for confirmation before assigning the tool refs to a team/member template
+5. return to the requesting Soma workflow after the server is enabled
+
+Protected wording matters here. Requests that mention private services, credentials, customer/private data, production systems, or recurring behavior should map to protected interaction templates. Soma can review the request and explain the likely path, but it should ask for confirmation before using the service/data, binding a tool, or storing the behavior as a reusable template.
 
 ## Access Denied
 

@@ -76,6 +76,9 @@ Useful Soma prompts from this surface:
 - `Search the web for "<topic>", summarize the strongest sources, and cite them.`
 - `Use host data under workspace/shared-sources and list the files that shaped the answer.`
 - `Review current MCP servers, tools, and recent use, then tell me which agents should have which tools.`
+- `Review the private-service or private-data boundary for this action, name the needed MCP server and .env variables, and ask me to confirm before enabling or assigning tools.`
+
+When the request includes private services, credentials, production systems, customer/private data, or recurring tool behavior, Soma should use the protected interaction-template path: identify the matched theme, name the protection reason, confirm the scope, and then use the governed proposal path before action.
 
 ## Exchange
 

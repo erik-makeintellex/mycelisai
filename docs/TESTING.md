@@ -133,6 +133,17 @@ When the work changes team defaults or team shaping behavior, add proof across f
 - NATS/exchange observability: verify that multi-team orchestration stays inspectable through governed status/result/review surfaces and that lane handoffs remain visible
 - browser workflow: verify a real headed browser path can create a focused team, review the lead, and confirm the broad-ask case becomes multiple compact lanes with retained outputs rather than a monolithic roster
 
+### Protected Soma Interaction Test Contract
+
+When Soma phrase mapping, interaction templates, private data/service behavior, MCP enablement, or recurring behavior changes, add proof that:
+
+- read-only MCP/tool review remains an answer path and does not ask for mutation confirmation
+- team creation plus target tools maps to a protected confirmation path
+- private service, credential, production-system, customer/private data, and deployment-context wording maps to a protected confirmation path
+- recurring or standing behavior wording does not silently persist future behavior
+- confirmation binds to the prior inferred action and then uses the governed proposal path when mutation is involved
+- UI prompt guidance teaches new users that answers can happen directly while protected actions become confirmation/proposal steps
+
 Recommended evidence targets:
 - `uv run inv core.test`
 - `cd interface; npx vitest run __tests__/teams/TeamCreationPage.test.tsx __tests__/organizations/TeamLeadInteractionPanel.guidance-copy.test.tsx __tests__/organizations/TeamLeadInteractionPanel.strategy-actions.test.tsx __tests__/organizations/TeamLeadInteractionPanel.native-team.test.tsx --reporter=dot`
@@ -454,6 +465,7 @@ Disallowed testing posture:
 | `core/internal/server/catalogue_test.go` | Agent catalogue CRUD |
 | `core/internal/server/artifacts_test.go` | Artifact storage |
 | `core/internal/server/cognitive_test.go` | Cognitive router config |
+| `core/internal/server/cognitive_referential_review_test.go`, `core/internal/server/soma_interaction_templates.go` | Soma referential review, protected phrase-theme matching, protected private-service/private-data/recurring behavior confirmation, and read-only MCP review separation |
 | `core/internal/server/testhelpers_test.go` | Shared test helpers (`newTestServer`, `withDB`, `withGuard`, `doRequest`, `assertStatus`, `assertJSON`) |
 | `core/internal/cognitive/middleware_test.go` | LLM retry, schema validation, timeouts |
 

@@ -49,6 +49,7 @@ Use the root Soma chat when you want the simplest path:
 - "Soma, create a compact team to produce a customer-facing launch brief and keep the team to the smallest useful shape."
 - "Soma, this is a broad product-review ask; split it into small lanes and tell me what each lane will output."
 - "Soma, summarize what teams exist, what they are doing, and where their outputs are."
+- "Soma, review this request against recent commands, infer the team/action you think I want, include target MCP tools, and ask me to confirm before you launch it."
 
 Use `Teams` when you want to inspect or manage existing teams:
 
@@ -59,6 +60,8 @@ Use `Teams` when you want to inspect or manage existing teams:
 - check whether a team should be archived or kept
 
 Use `Settings -> Connected Tools` or `Resources -> Connected Tools` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Installed server cards should show the MCP structure, and Library is the reapply/edit path for curated server config.
+
+If Soma recommends tools that are not installed yet, it should walk you through the enablement path before launch: name the missing MCP server, name required `.env` variables without exposing secret values, point to the Connected Tools Library, and then bind the resulting tool refs to the team or reusable member template after you confirm.
 
 Use `Create Team` when you want a guided setup instead of filling raw fields:
 
@@ -128,6 +131,7 @@ If the request is broad, expect Soma to recommend:
 - several small teams
 - a temporary workflow group
 - a coordination plan over NATS and managed exchange
+- target MCP/tool bindings for each lane, plus missing-tool setup steps when needed
 
 Good launch prompt:
 

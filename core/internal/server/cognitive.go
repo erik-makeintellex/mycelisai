@@ -153,6 +153,30 @@ func inferMutationToolsFromText(text string) []string {
 		tools = append(tools, "delegate")
 	}
 
+	teamCreationActions := []string{"create", "build", "launch", "instantiate", "manifest", "put together", "orchestrate"}
+	teamCreationTargets := []string{"team", "teams", "specialist", "members", "lane", "lanes"}
+	if requestContainsAny(lower, teamCreationActions) && requestContainsAny(lower, teamCreationTargets) {
+		tools = append(tools, "generate_blueprint", "delegate")
+	}
+
+	mcpBindingActions := []string{"enable", "install", "connect", "associate", "configure", "assign"}
+	mcpBindingTargets := []string{"mcp", "mcps", "tool", "tools", "web search", "github", "fetch", "browser", "host data", "shared-sources"}
+	if requestContainsAny(lower, mcpBindingActions) && requestContainsAny(lower, mcpBindingTargets) {
+		tools = append(tools, "delegate")
+	}
+
+	protectedBoundaryActions := []string{"use", "access", "connect", "enable", "store", "retain", "review", "apply", "configure"}
+	protectedBoundaryTargets := []string{"private service", "internal service", "production service", "private api", "customer system", "client system", "api key", "token", "credential", "private data", "customer data", "deployment context", "company knowledge", "sensitive", "confidential"}
+	if requestContainsAny(lower, protectedBoundaryActions) && requestContainsAny(lower, protectedBoundaryTargets) {
+		tools = append(tools, "delegate")
+	}
+
+	recurringActions := []string{"store", "save", "persist", "make", "reuse", "apply"}
+	recurringTargets := []string{"recurring", "standing behavior", "conversation template", "reusable template", "from now on", "every time"}
+	if requestContainsAny(lower, recurringActions) && requestContainsAny(lower, recurringTargets) {
+		tools = append(tools, "delegate")
+	}
+
 	signalActions := []string{"publish", "emit", "send", "post"}
 	signalTargets := []string{"signal", "status", "result", "event"}
 	if requestContainsAny(lower, signalActions) && requestContainsAny(lower, signalTargets) {
@@ -1458,8 +1482,20 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	referentialReview := s.buildSomaReferentialReview(r.Context(), req.Messages)
+	if referentialReview.NeedsConfirmation {
+		logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
+		s.respondReferentialConfirmation(w, r, referentialReview)
+		return
+	}
+	if referentialReview.Confirmed {
+		req.Messages = applyConfirmedReferentialAction(req.Messages, referentialReview)
+		latestUserText = referentialReview.EffectiveRequest
+	}
+
 	logSomaConversationTurn(r.Context(), s.Conversations, sessionID, sessionTurnIndex, "user", latestUserText, chatAgentResult{})
 
+	req.Messages = prependReferentialReviewContext(req.Messages, referentialReview)
 	req.Messages = prependChatWorkspaceContext(
 		req.Messages,
 		s.buildChatWorkspaceContext(req.OrganizationID, req.TeamID, req.TeamName),

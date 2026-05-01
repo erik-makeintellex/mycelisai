@@ -29,7 +29,9 @@ export const COUNCIL_META: Record<string, { label: string; color: string }> = {
 
 export const STARTER_PROMPTS = [
     "Search the web for current product news and cite sources",
-    "Create a small temporary team for this work",
+    "Propose a small temporary team and ask me to approve",
+    "Review my request, match prior context, then ask me to confirm",
+    "Review private/service boundaries before taking action",
     "Ask the active teams for blockers and summarize",
     "Use host data from workspace/shared-sources",
 ] as const;

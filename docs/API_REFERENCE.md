@@ -160,6 +160,8 @@ Memory/governance note:
 | `/api/v1/conversation-templates` | GET/POST | List/create DB-backed reusable Soma/Council/team ask templates |
 | `/api/v1/conversation-templates/{id}` | GET/PATCH | Read/update a reusable conversation template |
 | `/api/v1/conversation-templates/{id}/instantiate` | POST | Render a template with variables and return a non-executing ask package, team ask, or temporary-group draft |
+
+Conversation-template instantiation is non-executing by default. Protected Soma interaction templates are a runtime classification layer used before action execution; they map phrase themes such as private service, private data, MCP/tool enablement, team manifestation, and recurring behavior to confirmation/proposal requirements. A protected phrase can review and explain directly, but must not launch teams, bind tools, use credentials/private data, or store recurring behavior without explicit confirmation and the relevant governed proposal path.
 | **AI Organizations (V8)** | | |
 | `/api/v1/organizations` | GET | List created AI Organization summaries for the entry flow |
 | `/api/v1/organizations` | POST | Create an AI Organization from template or empty start |

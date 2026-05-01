@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Database, Globe, Users, Wrench } from "lucide-react";
+import { ClipboardCheck, Database, Globe, Users, Wrench } from "lucide-react";
 
 const somaPromptExamples = [
+  {
+    icon: ClipboardCheck,
+    label: "Confirm action",
+    prompt:
+      "Review my latest request, match it to related prior commands and tool metadata, tell me the action you infer, and ask me to confirm before you execute.",
+  },
   {
     icon: Globe,
     label: "Web search",
@@ -24,15 +30,15 @@ const somaPromptExamples = [
   },
   {
     icon: Database,
-    label: "Use host data",
+    label: "Private data",
     prompt:
-      "Use the host data under workspace/shared-sources to answer this question, and tell me which files or records shaped the answer.",
+      "Review the private data needed for this request, name the source and visibility boundary, and ask me to confirm before using or retaining outputs.",
   },
   {
     icon: Wrench,
     label: "Review tools",
     prompt:
-      "Review the current MCP tool structure, tell me which tools are available to Soma and teams, and recommend what should be connected next.",
+      "Review the current MCP tool structure, tell me which tools are available to Soma and teams, recommend what should be connected next, and walk me through enabling missing MCP servers.",
   },
 ] as const;
 
@@ -45,7 +51,7 @@ export function SomaCapabilityGuide() {
             Say this to Soma
           </p>
           <p className="mt-1 text-sm text-cortex-text-muted">
-            Use direct verbs. Soma should search, create teams, ask teams, read host data, and review connected tools when those capabilities are configured.
+            Use direct verbs. Answers can happen directly; teams, private data, private services, recurring behavior, and tool changes should become explicit confirmation or proposal steps.
           </p>
         </div>
         <Link
@@ -55,7 +61,7 @@ export function SomaCapabilityGuide() {
           Manage tools
         </Link>
       </div>
-      <div className="mt-3 grid gap-2 lg:grid-cols-5">
+      <div className="mt-3 grid gap-2 lg:grid-cols-3 xl:grid-cols-6">
         {somaPromptExamples.map((example) => {
           const Icon = example.icon;
           return (

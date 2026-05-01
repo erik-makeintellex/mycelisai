@@ -29,6 +29,8 @@ Concrete requests Soma should understand when the matching capability is configu
 - "Ask the active teams for blockers and tell me which workflow needs attention first."
 - "Use host data under `workspace/shared-sources` and list which files shaped the answer."
 - "Review the current MCP tool structure and recommend which agents should have which tools."
+- "Review my request against prior context, infer the action, and ask me to confirm before you execute."
+- "Review private service or private data boundaries, name the protection reason, and ask before using credentials, customer data, or recurring behavior."
 
 ## Core Workflows
 

@@ -83,7 +83,8 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.getByText("Durable memory recall")).toBeDefined();
         expect(screen.getByText("Temporary planning continuity")).toBeDefined();
         expect(screen.getByText("Search the web for current product news and cite sources")).toBeDefined();
-        expect(screen.getByText("Create a small temporary team for this work")).toBeDefined();
+        expect(screen.getByText("Propose a small temporary team and ask me to approve")).toBeDefined();
+        expect(screen.getByText("Review private/service boundaries before taking action")).toBeDefined();
         expect(screen.getByText("Ask the active teams for blockers and summarize")).toBeDefined();
         expect(screen.getByText("Use host data from workspace/shared-sources")).toBeDefined();
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
