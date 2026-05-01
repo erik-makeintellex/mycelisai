@@ -6,13 +6,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 DOCS_MANIFEST = ROOT / "interface" / "lib" / "docsManifest.ts"
-PRD_INDEX = ROOT / "mycelis-architecture-v7.md"
-LEGACY_V7_DEV_STATE = ROOT / "V7_DEV_STATE.md"
-V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
+PRD_INDEX = ROOT / "architecture/mycelis-architecture-v7.md"
+LEGACY_V7_DEV_STATE = ROOT / ".state/V7_DEV_STATE.md"
+V8_DEV_STATE = ROOT / ".state/V8_DEV_STATE.md"
 V8_BOOTSTRAP_MODEL = ROOT / "docs" / "architecture-library" / "V8_CONFIG_AND_BOOTSTRAP_MODEL.md"
 V8_UI_API_CONTRACT = ROOT / "docs" / "architecture-library" / "V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md"
 V8_1_LIVING_ARCHITECTURE = ROOT / "docs" / "architecture-library" / "V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md"
-V8_2_FULL_ARCHITECTURE = ROOT / "v8-2.md"
+V8_2_FULL_ARCHITECTURE = ROOT / "architecture/v8-2.md"
 SOMA_COUNCIL_PROTOCOL = ROOT / "docs" / "architecture" / "SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md"
 UI_OPERATOR_EXPERIENCE = ROOT / "docs" / "architecture-library" / "UI_AND_OPERATOR_EXPERIENCE_V7.md"
 CANONICAL_DOCS = [
@@ -86,8 +86,8 @@ def test_docs_manifest_exposes_required_canonical_docs():
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
         "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
         "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
-        "v8-2.md",
-        "mycelis-architecture-v7.md",
+        "architecture/v8-2.md",
+        "architecture/mycelis-architecture-v7.md",
     ]
 
     missing = [path for path in required_paths if path not in text]
@@ -192,9 +192,9 @@ def test_archive_readme_keeps_v7_material_as_migration_input_not_active_authorit
     assert active_section_match, "Archive README must keep an explicit active-source pointer section"
 
     active_section = active_section_match.group(1)
-    assert "V8_DEV_STATE.md" in active_section
+    assert ".state/V8_DEV_STATE.md" in active_section
     assert "V8_RUNTIME_CONTRACTS.md" in active_section
-    assert "_V7.md" not in active_section and "V7_DEV_STATE.md" not in active_section, (
+    assert "_V7.md" not in active_section and ".state/V7_DEV_STATE.md" not in active_section, (
         "docs/archive/README.md must not elevate V7 docs as active implementation sources"
     )
 
@@ -237,7 +237,7 @@ def test_readme_has_fresh_agent_review_sequence():
         "docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md",
         "docs/architecture/OPERATIONS.md",
         "docs/TESTING.md",
-        "V7_DEV_STATE.md",
+        ".state/V7_DEV_STATE.md",
         "interface/lib/docsManifest.ts",
         "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
     ]
@@ -250,7 +250,7 @@ def test_docs_readme_promotes_v8_navigation_before_legacy_v7_inputs():
     text = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
 
     required_v8_refs = [
-        "**Active Development State**: `../V8_DEV_STATE.md`",
+        "**Active Development State**: `../.state/V8_DEV_STATE.md`",
         "**V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`",
         "**V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`",
         "**V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`",
@@ -259,7 +259,7 @@ def test_docs_readme_promotes_v8_navigation_before_legacy_v7_inputs():
     assert not missing, f"docs/README is missing required V8 navigation references: {missing}"
 
     assert "Migration inputs and historical references:" in text
-    assert text.index("**Active Development State**: `../V8_DEV_STATE.md`") < text.index("**Legacy V7 Development State**: `../V7_DEV_STATE.md`")
+    assert text.index("**Active Development State**: `../.state/V8_DEV_STATE.md`") < text.index("**Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`")
 
 
 def test_readme_has_feature_status_standard():
@@ -283,11 +283,11 @@ def test_readme_exposes_layered_architecture_truth():
     assert not missing_sections, f"README is missing required layered-truth sections: {missing_sections}"
 
     required_snippets = [
-        "v8-2.md",
+        "architecture/v8-2.md",
         "full actuation architecture",
         "V8.2 B2+ is the active delivery target",
         "V8.1 remains the foundation and compatibility baseline",
-        "Actual implementation state lives in [V8_DEV_STATE.md](V8_DEV_STATE.md).",
+        "Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).",
     ]
     missing_snippets = [snippet for snippet in required_snippets if snippet not in text]
     assert not missing_snippets, f"README is missing required layered-truth snippets: {missing_snippets}"
@@ -399,8 +399,8 @@ def test_readme_declares_development_contract():
         "- documentation is updated where meaning changed",
         "- architecture alignment is verified across the layered truth surfaces",
         "`README.md` is the primary architecture inception document",
-        "`v8-2.md` is the canonical full architecture",
-        "`V8_DEV_STATE.md` is the source of actual implementation truth",
+        "`architecture/v8-2.md` is the canonical full architecture",
+        "`.state/V8_DEV_STATE.md` is the source of actual implementation truth",
         "all slices must update these surfaces when implementation, release posture, or target meaning changes",
         "end-of-slice reporting must explicitly state which tests ran, which docs changed, and which scoped docs were reviewed but left unchanged",
     ]
@@ -917,7 +917,7 @@ def test_execution_governance_docs_reference_v8_migration_contract():
         (governance_text, "Template ≠ instantiated organization"),
         (team_text, "V8 Migration Workstreams"),
         (team_text, "template -> instantiation -> inheritance -> precedence"),
-        (team_text, "V8_DEV_STATE.md"),
+        (team_text, ".state/V8_DEV_STATE.md"),
     ]
 
     missing = []
@@ -1125,7 +1125,7 @@ def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
 
     required_index_refs = [
         "V8.2 Full Production Architecture",
-        "../../v8-2.md",
+        "../../architecture/v8-2.md",
         "Full Production Architecture (Canonical Target)",
     ]
     missing_index_refs = [snippet for snippet in required_index_refs if snippet not in index_text]
@@ -1137,7 +1137,7 @@ def test_v8_2_full_architecture_is_indexed_exposed_and_canonical():
     required_manifest_refs = [
         'slug: "v8-2-full-production-architecture"',
         'label: "Full Architecture (V8.2)"',
-        'path: "v8-2.md"',
+        'path: "architecture/v8-2.md"',
     ]
     missing_manifest_refs = [snippet for snippet in required_manifest_refs if snippet not in manifest_text]
     assert not missing_manifest_refs, (

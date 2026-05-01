@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 TESTING = ROOT / "docs" / "TESTING.md"
@@ -18,7 +17,7 @@ API_REFERENCE = ROOT / "docs" / "API_REFERENCE.md"
 BACKEND_ARCH = ROOT / "docs" / "architecture" / "BACKEND.md"
 DOCKER_COMPOSE = ROOT / "docker-compose.yml"
 CORE_DOCKERFILE = ROOT / "core" / "Dockerfile"
-V8_DEV_STATE = ROOT / "V8_DEV_STATE.md"
+V8_DEV_STATE = ROOT / ".state/V8_DEV_STATE.md"
 
 
 def test_compose_testing_contract_points_to_explicit_non_loopback_ai_hosts():
@@ -163,6 +162,8 @@ def test_user_docs_explain_deployment_method_selection_by_target_environment():
         "Enterprise Self-Hosted Kubernetes",
         "Edge Or Small Node Deployments",
         "Developer source mode is not a deployment method",
+        "Docker Compose when you want rapid local development, same-machine proof, or a quick demo loop",
+        "not as the target clustered deployment contract",
         "MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434",
         "MYCELIS_K8S_TEXT_ENDPOINT=http://<windows-ai-host>:11434/v1",
     ]
@@ -178,16 +179,16 @@ def test_active_docs_cover_supported_user_access_lanes():
             [
                 "Windows Docker Desktop Compose",
                 "Windows + WSL Docker Compose",
-                "Linux server/self-hosted release",
+                "Kubernetes / Helm clustered deployment",
                 "open `http://localhost:3000` from the Windows browser",
-                "open `http://<server-hostname-or-ip>:3000` from the operator machine",
+                "prove the real ingress/hostname/IP from the operator machine",
             ],
         ),
         (
             TESTING,
             [
-                "Windows Docker Desktop and same-machine WSL-hosted stacks use the Windows browser with `http://localhost:3000` as the first operator path",
-                "Linux self-hosted server or cluster reached through the real remote host/IP/hostname",
+                "Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof",
+                "Kubernetes / Helm clustered deployment reached through the real ingress, remote host, IP, or hostname",
                 "the browser opens the UI through the same operator-facing address the delivered environment will actually use",
             ],
         ),
@@ -197,7 +198,7 @@ def test_active_docs_cover_supported_user_access_lanes():
                 "Supported user access lanes:",
                 "Windows Docker Desktop",
                 "Windows + WSL Docker",
-                "Linux server/self-hosted release",
+                "Kubernetes / Helm clustered deployment",
             ],
         ),
     ]
@@ -447,7 +448,6 @@ def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification(
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "Release-proof sequencing docs drifted from the active Slice 4 order:\n" + "\n".join(missing)
-
 
 def test_windows_edit_wsl_proof_contract_does_not_turn_wsl_into_day_to_day_worktree():
     text = LOCAL_DEV_WORKFLOW.read_text(encoding="utf-8")

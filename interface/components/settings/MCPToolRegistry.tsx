@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Wrench, BookOpen, Activity, Radio, Search, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Wrench, BookOpen } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import MCPServerCard, { type MCPRecentActivity } from "./MCPServerCard";
 import { MCPLibraryBrowserBody } from "./MCPLibraryBrowser";
+import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard } from "./MCPToolGuidance";
 
 type Tab = "installed" | "library";
 
@@ -165,31 +166,8 @@ export default function MCPToolRegistry() {
             <div className="flex-1 overflow-y-auto">
                 {activeTab === "installed" && (
                     <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
-                        <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
-                            <div className="flex items-center gap-2">
-                                <Activity className="w-4 h-4 text-cortex-primary" />
-                                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                                    Connected Tools Workflow
-                                </p>
-                            </div>
-                            <div className="mt-3 grid gap-3 md:grid-cols-3">
-                                <WorkflowStep title="1. Add">
-                                    Install a curated MCP server from Library instead of wiring raw config by hand.
-                                </WorkflowStep>
-                                <WorkflowStep title="2. Verify">
-                                    Confirm the server is connected and that its discovered tools match what agents should use.
-                                </WorkflowStep>
-                                <WorkflowStep title="3. Watch">
-                                    Persisted recent MCP usage stays visible here, and the live stream adds in-session activity while agents are actively using tools.
-                                </WorkflowStep>
-                            </div>
-                            <div className="mt-3 flex items-center gap-2 text-[11px] text-cortex-text-muted">
-                                <Radio className={`w-3.5 h-3.5 ${isStreamConnected ? "text-cortex-success" : "text-cortex-warning"}`} />
-                                {isStreamConnected
-                                    ? "Live activity stream connected."
-                                    : "Live activity stream is reconnecting. Recent MCP use will appear once the stream is online."}
-                            </div>
-                        </div>
+                        <SomaToolPromptCard />
+                        <ConnectedToolsWorkflowCard isStreamConnected={isStreamConnected} />
 
                         <SearchCapabilityCard
                             status={searchCapability}
@@ -307,6 +285,7 @@ export default function MCPToolRegistry() {
                                 key={server.id}
                                 server={server}
                                 onDelete={deleteMCPServer}
+                                onEdit={() => setActiveTab("library")}
                                 recentActivity={recentActivityByServer.get(server.id) ?? []}
                             />
                         ))}
@@ -315,86 +294,6 @@ export default function MCPToolRegistry() {
 
                 {activeTab === "library" && <MCPLibraryBrowserBody onInstalled={handleInstalled} />}
             </div>
-        </div>
-    );
-}
-
-function SearchCapabilityCard({
-    status,
-    isLoading,
-    error,
-}: {
-    status: ReturnType<typeof useCortexStore.getState>["searchCapability"];
-    isLoading: boolean;
-    error: string | null;
-}) {
-    const provider = status?.provider ?? "unknown";
-    const ready = Boolean(status?.enabled && status?.configured);
-    const headline = error
-        ? "Search capability status unavailable"
-        : isLoading && !status
-        ? "Checking search capability"
-        : ready
-        ? "Soma search is ready"
-        : "Soma search needs configuration";
-    const detail = error
-        ? error
-        : status?.blocker?.message
-        ?? status?.next_actions?.[0]
-        ?? "Soma can route governed search through the configured Mycelis Search provider.";
-    const tokenText = status?.requires_hosted_api_token
-        ? "Brave MCP requires BRAVE_API_KEY."
-        : "No hosted Brave token required for local_sources or self-hosted SearXNG.";
-
-    return (
-        <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 rounded-lg border p-2 ${ready ? "border-cortex-success/30 bg-cortex-success/10" : "border-cortex-warning/30 bg-cortex-warning/10"}`}>
-                        <Search className={`h-4 w-4 ${ready ? "text-cortex-success" : "text-cortex-warning"}`} />
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
-                            Mycelis Search Capability
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-cortex-text-main">{headline}</p>
-                        <p className="mt-1 text-xs leading-5 text-cortex-text-muted">{detail}</p>
-                    </div>
-                </div>
-                <span className="self-start rounded-full border border-cortex-border bg-cortex-bg px-2 py-1 text-[10px] font-mono uppercase text-cortex-text-muted">
-                    {provider}
-                </span>
-            </div>
-            <div className="mt-4 grid gap-2 md:grid-cols-3">
-                <CapabilityPill active={Boolean(status?.direct_soma_interaction)} label={`Soma direct: ${status?.soma_tool_name ?? "web_search"}`} />
-                <CapabilityPill active={Boolean(status?.supports_local_sources)} label="Shared sources" />
-                <CapabilityPill active={Boolean(status?.supports_public_web)} label="Public web" />
-            </div>
-            <div className="mt-3 flex items-center gap-2 text-[11px] text-cortex-text-muted">
-                {status?.requires_hosted_api_token ? (
-                    <AlertTriangle className="h-3.5 w-3.5 text-cortex-warning" />
-                ) : (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-cortex-success" />
-                )}
-                {tokenText}
-            </div>
-        </div>
-    );
-}
-
-function CapabilityPill({ active, label }: { active: boolean; label: string }) {
-    return (
-        <div className={`rounded-lg border px-3 py-2 text-[11px] font-mono ${active ? "border-cortex-success/25 bg-cortex-success/10 text-cortex-text-main" : "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted"}`}>
-            {label}
-        </div>
-    );
-}
-
-function WorkflowStep({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-        <div className="rounded-lg border border-cortex-border bg-cortex-bg/60 px-3 py-3">
-            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-primary">{title}</p>
-            <p className="mt-2 text-xs leading-5 text-cortex-text-main">{children}</p>
         </div>
     );
 }

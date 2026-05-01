@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 // Mock child zones to isolate ShellLayout testing
 vi.mock('@/components/shell/ZoneA_Rail', () => ({
@@ -17,6 +17,10 @@ vi.mock('@/components/dashboard/DegradedModeBanner', () => ({
 vi.mock('@/components/dashboard/StatusDrawer', () => ({
     __esModule: true,
     default: () => <div data-testid="status-drawer">StatusDrawer</div>,
+}));
+vi.mock('@/components/stream/SignalDetailDrawer', () => ({
+    __esModule: true,
+    default: () => <div data-testid="signal-detail-drawer">SignalDetailDrawer</div>,
 }));
 
 const setStatusDrawerOpen = vi.fn();
@@ -59,9 +63,14 @@ describe('ShellLayout', () => {
         expect(zoneB.querySelector('[data-testid="child-content"]')).toBeDefined();
     });
 
-    it('opens status drawer from floating status button', () => {
+    it('mounts the signal detail drawer at shell level for clickable activity rows', () => {
         render(<ShellLayout />);
-        fireEvent.click(screen.getByTitle('Open Status Drawer'));
-        expect(setStatusDrawerOpen).toHaveBeenCalledWith(true);
+        expect(screen.getByTestId('signal-detail-drawer')).toBeDefined();
+    });
+
+    it('does not render a floating status button over workspace content', () => {
+        render(<ShellLayout />);
+        expect(screen.queryByTitle('Open Status Drawer')).toBeNull();
+        expect(screen.getByTestId('zone-a')).toBeDefined();
     });
 });

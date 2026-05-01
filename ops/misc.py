@@ -7,7 +7,7 @@ from .config import ROOT_DIR, is_windows
 
 WORKTREE_REVIEW_TARGETS = (
     "README.md",
-    "V8_DEV_STATE.md",
+    ".state/V8_DEV_STATE.md",
     "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
     "docs/architecture-library/V8_RUNTIME_CONTRACTS.md",
     "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
@@ -89,7 +89,7 @@ WORKTREE_AREA_RULES = (
     {
         "name": "Docs and state",
         "prefixes": ("docs/",),
-        "exact_paths": ("README.md", "V7_DEV_STATE.md", "V8_DEV_STATE.md", "mycelis-architecture-v7.md"),
+        "exact_paths": ("README.md", ".state/V7_DEV_STATE.md", ".state/V8_DEV_STATE.md", "architecture/mycelis-architecture-v7.md"),
         "installs": (),
         "commands": (
             "$env:PYTHONPATH='.'; uv run pytest tests/test_docs_links.py -q",

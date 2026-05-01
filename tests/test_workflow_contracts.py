@@ -118,7 +118,7 @@ def test_mycelis_search_delivery_plan_assigns_teams_and_testing_gates():
     index = _read("docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md")
     docs_home = _read("docs/README.md")
     manifest = _read("interface/lib/docsManifest.ts")
-    state = _read("V8_DEV_STATE.md")
+    state = _read(".state/V8_DEV_STATE.md")
 
     required_teams = [
         "Architecture Lead",

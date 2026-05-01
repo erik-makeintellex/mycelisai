@@ -9,9 +9,9 @@ This README is the primary development-swarm inception document. It defines the 
 
 Canonical ownership reminder:
 - `README.md` = development-swarm inception and layered truth
-- `v8-2.md` = canonical V8.2 full actuation / production target and current B2+ delivery frame
+- `architecture/v8-2.md` = canonical V8.2 full actuation / production target and current B2+ delivery frame
 - `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` = V8.1 foundation and compatibility baseline
-- `V8_DEV_STATE.md` = actual implementation truth
+- `.state/V8_DEV_STATE.md` = actual implementation truth
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` = UX/operator truth
 
 ## README TOC
@@ -48,7 +48,7 @@ Review these in order before touching code or planning state:
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [README](README.md)
-4. [V8.2 Production Architecture Target](v8-2.md)
+4. [V8.2 Production Architecture Target](architecture/v8-2.md)
 5. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
 6. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
 7. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
@@ -64,15 +64,15 @@ Review these in order before touching code or planning state:
 17. [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md)
 18. [V8 MVP Media, Team Output, And Template Registry](docs/architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md)
 19. [V8.2 User Management And Enterprise Auth Module](docs/architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md)
-20. [V8 Development State](V8_DEV_STATE.md)
-21. [V7 Development State (Historical)](V7_DEV_STATE.md)
+20. [V8 Development State](.state/V8_DEV_STATE.md)
+21. [V7 Development State (Historical)](.state/V7_DEV_STATE.md)
 22. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent review rule:
 - README is the primary architecture inception document for active development.
-- [V8.2 Production Architecture Target](v8-2.md) is the canonical full production target, full actuation architecture, and current B2+ delivery frame.
+- [V8.2 Production Architecture Target](architecture/v8-2.md) is the canonical full production target, full actuation architecture, and current B2+ delivery frame.
 - [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
-- [V8 Development State](V8_DEV_STATE.md) is the live implementation scoreboard.
+- [V8 Development State](.state/V8_DEV_STATE.md) is the live implementation scoreboard.
 - V7 documents remain migration inputs until replaced, but they do not override the V8 bootstrap and release truth.
 
 Windows dev + WSL proof rule:
@@ -127,11 +127,13 @@ For someone using Mycelis rather than changing the codebase, start here:
 7. [Automations](docs/user/automations.md)
 8. [Resources](docs/user/resources.md)
 9. [Memory](docs/user/memory.md)
-10. [System Status & Recovery](docs/user/system-status-recovery.md)
-11. [Run Timeline](docs/user/run-timeline.md)
+10. [Settings And Access](docs/user/settings-access.md)
+11. [System Status & Recovery](docs/user/system-status-recovery.md)
+12. [Run Timeline](docs/user/run-timeline.md)
 
 Operator guidance rule:
 - user guidance should explain how to get value from Soma, organizations, approvals, artifacts, and settings without assuming architecture knowledge
+- user guidance should include concrete Soma request wording for web search, temporary-team creation, team communication, host-data use, and MCP structure review instead of abstract capability labels only
 - the in-app `/docs` surface should expose the same canonical operator-facing documents through `interface/lib/docsManifest.ts`
 
 ## Agent Guidance
@@ -140,7 +142,7 @@ For someone implementing, reviewing, or testing Mycelis, use this authority orde
 
 1. [AGENTS.md](AGENTS.md)
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
-3. [V8 Development State](V8_DEV_STATE.md)
+3. [V8 Development State](.state/V8_DEV_STATE.md)
 4. [Testing Guide](docs/TESTING.md)
 5. [Operations](docs/architecture/OPERATIONS.md)
 6. [Docs Navigation](docs/README.md)
@@ -167,7 +169,7 @@ In architecture terms, Mycelis is built around:
 
 ## Active Delivery Target (V8.2 B2+)
 
-The active delivery target is [V8.2 Production Architecture Target](v8-2.md), the full actuation architecture for Mycelis. The repo is now operating in a V8.2/B2+ delivery frame: work may advance V8.2 modules directly, provided each module keeps a named boundary, proof lane, and promotion rule.
+The active delivery target is [V8.2 Production Architecture Target](architecture/v8-2.md), the full actuation architecture for Mycelis. The repo is now operating in a V8.2/B2+ delivery frame: work may advance V8.2 modules directly, provided each module keeps a named boundary, proof lane, and promotion rule.
 
 V8.2 is the distributed end-state and active architecture frame we are building through:
 - distributed execution across a control plane and execution nodes
@@ -228,7 +230,7 @@ Promotion rule:
 
 ## Current Implementation State
 
-Actual implementation state lives in [V8_DEV_STATE.md](V8_DEV_STATE.md).
+Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
 
 Use that file for:
 - completed slices and accepted evidence
@@ -285,7 +287,7 @@ source-of-truth layers remain separate:
 - bundle/file configuration for reproducible organization defaults and automation truth
 - deployment/env overrides for environment-specific provider/media/runtime wiring
 - runtime state for the live resolved organization and service posture
-- README, V8.2, the V8.1 baseline, and `V8_DEV_STATE.md` for architecture, delivery, compatibility, and implementation truth
+- README, V8.2, the V8.1 baseline, and `.state/V8_DEV_STATE.md` for architecture, delivery, compatibility, and implementation truth
 
 Managed exchange note:
 - channels, typed schemas, structured fields, threads, and normalized artifacts are now part of runtime truth for advanced orchestration
@@ -317,7 +319,7 @@ Team creation should stay compact by default:
 The user-facing rule is simple: if the work is broad, the product should split it cleanly instead of scaling a single roster until it becomes hard to understand or test.
 
 Implementation note:
-- the current B2+ frame still preserves the V8.1 Soma-primary default operator surface plus bounded guided controls and inspect-only detail where explicitly called out in `V8_DEV_STATE.md`
+- the current B2+ frame still preserves the V8.1 Soma-primary default operator surface plus bounded guided controls and inspect-only detail where explicitly called out in `.state/V8_DEV_STATE.md`
 - the advanced architecture/runtime surface is now defined as a contract, but it is not fully implemented yet
 
 ## Architecture Terms To Operator Terms
@@ -350,7 +352,7 @@ Use these as the top detailed references when you need the deeper framework cont
    - canonical runtime layer contract for organization, Soma, Team Leads, advisors, provider-policy scope, and continuity
 2. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
    - canonical V8.1 baseline architecture for loops, learning, semantic continuity, capabilities, and the Soma-primary compatibility posture
-3. [V8.2 Production Architecture Target](v8-2.md)
+3. [V8.2 Production Architecture Target](architecture/v8-2.md)
    - final production architecture target for distributed execution, active learning, capability-backed execution, and editable automations
 4. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
    - canonical memory for template vs instantiated organization, bootstrap resolution, inheritance, precedence, and V7-to-V8 bootstrap translation
@@ -399,11 +401,11 @@ Agents implementing V8 must review these areas first:
 - `docs/architecture/`
 - `docs/TESTING.md`
 - `docs/logging.md`
-- `V8_DEV_STATE.md`
-- `V7_DEV_STATE.md` when historical migration evidence is needed
+- `.state/V8_DEV_STATE.md`
+- `.state/V7_DEV_STATE.md` when historical migration evidence is needed
 
 Particular attention belongs on:
-- delivery-target alignment between README, V8.2, the V8.1 baseline, and `V8_DEV_STATE.md`
+- delivery-target alignment between README, V8.2, the V8.1 baseline, and `.state/V8_DEV_STATE.md`
 - trusted memory alignment between memory-layer docs, governance docs, user memory/resources docs, and the in-app docs manifest
 - execution slices
 - team execution protocol
@@ -412,7 +414,7 @@ Particular attention belongs on:
 - UI operator experience contracts
 - runtime orchestration assumptions
 - provider routing and hybrid deployment posture
-- when working in the execution/gov docs (`docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`), treat all V7 content as migration input: translate assets through `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, keep `Template ≠ instantiated organization`, and record slice state in `V8_DEV_STATE.md`
+- when working in the execution/gov docs (`docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`, `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`), treat all V7 content as migration input: translate assets through `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, keep `Template ≠ instantiated organization`, and record slice state in `.state/V8_DEV_STATE.md`
 
 ## Command Contract
 
@@ -460,6 +462,7 @@ Provider/runtime workflow reminders:
 - Interface tasking now separates the bind host from the local probe host: by default the UI binds on `[::]:3000` for dual-stack LAN reachability, while local checks and browser tooling target `127.0.0.1:3000` unless `MYCELIS_INTERFACE_BIND_HOST` / `MYCELIS_INTERFACE_HOST` override that split
 - when the stack is hosted inside WSL on a Windows machine, treat the Windows browser as the primary self-hosted operator path: first prove `http://localhost:3000` from Windows on that same machine, then use the host/IP path for second-machine or LAN-user proof
 - expect Invoke-managed Interface build/test/browser tasks to sweep repo-local Next/Vitest/Playwright worker residue after each run so old `node.exe` workers do not accumulate between sessions; `uv run inv interface.build` now retries once after a stale repo-local Next build lock before failing the task
+- expect the Interface Vitest gate to run with file parallelism disabled; the suite contains several full-page jsdom workflows, and the deterministic release gate is more valuable than parallel wall-clock speed
 - expect Invoke-managed Interface and CI tasks to execute from the `interface/` working directory through the same `npm`/`node` entrypoints on Windows and Linux rather than relying on shell-specific `cd ... &&` wrappers
 - project-owned config backstops now keep direct local commands aligned too: root `.npmrc` anchors npm/npx cache in `workspace/tool-cache`, pytest stores cache metadata in `workspace/tool-cache/pytest`, and task-managed Interface runs disable Next telemetry while routing Playwright browser binaries through the managed cache root
 
@@ -484,23 +487,23 @@ A slice is not complete unless:
 
 Deployment/runtime boundary:
 - README is the primary architecture inception document for active work
-- `v8-2.md` is the canonical full architecture target
+- `architecture/v8-2.md` is the canonical full architecture target
 - V8.2 B2+ is the active delivery target
 - V8.1 is the foundation and compatibility baseline
-- `V8_DEV_STATE.md` is the source of actual implementation truth
+- `.state/V8_DEV_STATE.md` is the source of actual implementation truth
 - deployment env overrides configure infrastructure and profile defaults, but they do not replace bundle-defined runtime organization truth
 
 Development contract:
 - `README.md` is the primary architecture inception document
-- `v8-2.md` is the canonical full architecture
+- `architecture/v8-2.md` is the canonical full architecture
 - `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md` is the V8.1 foundation and compatibility baseline
-- `V8_DEV_STATE.md` is the source of actual implementation truth
+- `.state/V8_DEV_STATE.md` is the source of actual implementation truth
 - all slices must update these surfaces when implementation, release posture, or target meaning changes
 
 Completion rule:
 - code and tests alone do not finish a slice
 - if implementation changes meaning, the slice must also update the owning docs, verify architecture alignment, and record the resulting state
-- no slice should complete with silent divergence between implementation, the V8.2/B2+ delivery target, the V8.1 compatibility baseline, and `V8_DEV_STATE.md`
+- no slice should complete with silent divergence between implementation, the V8.2/B2+ delivery target, the V8.1 compatibility baseline, and `.state/V8_DEV_STATE.md`
 - end-of-slice reporting must explicitly state which tests ran, which docs changed, and which scoped docs were reviewed but left unchanged
 - branches are not ready to merge until the relevant validation is rerun against the final code state for that branch
 
@@ -541,9 +544,9 @@ For a new user who wants the quickest supported path to a running service:
 Need help choosing the right runtime first? Start with [Deployment Method Selection](docs/user/deployment-methods.md).
 
 - Supported user runtime lanes:
-  - Windows Docker Desktop Compose: supported single-host self-hosted runtime; use the Windows browser on that machine and start with `http://localhost:3000`
-  - Windows + WSL Docker Compose: supported single-host self-hosted runtime; use the Windows browser as the first operator proof path and start with `http://localhost:3000`
-  - Linux server/self-hosted release: supported release lane; operators should open the UI through the same hostname/IP they will really use remotely, such as `http://<server-hostname-or-ip>:3000`
+  - Windows Docker Desktop Compose: rapid local development and same-machine proof; use the Windows browser on that machine and start with `http://localhost:3000`
+  - Windows + WSL Docker Compose: rapid local development and WSL proof; use the Windows browser as the first operator proof path and start with `http://localhost:3000`
+  - Kubernetes / Helm clustered deployment: target release lane for self-hosted and enterprise environments; operators should open the UI through the same ingress/hostname/IP they will really use remotely
 
 - Windows Docker Desktop:
   1. `copy .env.compose.example .env.compose`
@@ -563,13 +566,14 @@ Need help choosing the right runtime first? Start with [Deployment Method Select
   6. `uv run inv compose.up --build --wait-timeout=240`
   7. `uv run inv compose.health`
   8. open `http://localhost:3000` on the same machine, or `http://<host-ip>:3000` from another client
-- Linux server/self-hosted release:
-  1. `cp .env.compose.example .env.compose`
-  2. `uv run inv auth.posture --compose`
-  3. `uv run inv install`
-  4. `uv run inv compose.up --build --wait-timeout=240`
-  5. `uv run inv compose.health`
-  6. open `http://<server-hostname-or-ip>:3000` from the operator machine
+- Kubernetes / Helm clustered deployment:
+  1. `cp .env.example .env`
+  2. set `MYCELIS_API_KEY` in `.env`, or point the chart at an existing Kubernetes Secret
+  3. set `MYCELIS_K8S_VALUES_FILE=charts/mycelis-core/values-enterprise.yaml` or another promoted values file
+  4. set `MYCELIS_K8S_TEXT_ENDPOINT=http://<reachable-ai-host>:11434/v1` when the selected values require an external text engine
+  5. `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`
+  6. `uv run inv k8s.deploy --verify-package --values-file=charts/mycelis-core/values-enterprise.yaml --release-label=enterprise`
+  7. deploy the verified chart/values into the target cluster through the platform-owned Helm or GitOps path, then prove the real ingress/hostname/IP from the operator machine
 - Windows native source fallback:
   1. `copy .env.example .env`
   2. `uv run inv auth.dev-key`
@@ -605,22 +609,27 @@ Bootstrap note:
 
 Recommended host posture:
 - Windows repo: canonical editing, review, and git-push surface for active contributors
-- WSL `mother-brain` checkout backed by `D:\\wsl-distro`: canonical deployment-mimic proof lane for build, test, Compose runtime, and release-style validation
-- Windows Docker Desktop: supported single-host Compose runtime and Windows-browser operator lane on one machine
+- WSL `mother-brain` checkout backed by `D:\\wsl-distro`: canonical rapid proof lane for build, test, Compose runtime, and pre-cluster validation
+- Windows Docker Desktop: rapid local Compose runtime and Windows-browser operator lane on one machine
 - Windows native source mode: best for explicit local-Kubernetes or host-specific source validation; use Ollama locally or point at remote providers
-- Linux server hosts: use Compose or self-hosted Kubernetes, then prove the UI through the same stable host/IP/hostname operators will use remotely
+- Linux server or platform hosts: use Kubernetes/Helm for target deployment, then prove the UI through the same ingress/host/IP operators will use remotely
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate there when you intentionally want local vLLM/Diffusers
 
 Deployment guidance by target environment:
-- Docker Compose: default single-host self-hosted runtime for home-lab, demo, and personal owner deployments
+- Docker Compose: rapid local development, demo, and same-machine proof runtime; it is not the target clustered deployment contract
 - `k3d`: preferred local Kubernetes validation lane for Helm and cluster behavior
-- enterprise self-hosted Kubernetes: use the Helm chart on the target cluster with real registry, secret, ingress, and storage values
+- Kubernetes / Helm: target self-hosted and enterprise deployment contract using standard Kubernetes resources, promoted values, real registry, Secret, Ingress, NetworkPolicy, PVC, probe, and workload-security settings
 - packaged binary or node-attached service: fit for small Linux nodes or edge/control-host roles that should point at a remote AI service
 
 Promoted Kubernetes preset files:
 - `charts/mycelis-core/values-k3d.yaml`: local `k3d` validation
 - `charts/mycelis-core/values-enterprise.yaml`: enterprise-shaped self-hosted cluster
 - `charts/mycelis-core/values-enterprise-windows-ai.yaml`: enterprise-shaped self-hosted cluster with an explicit Windows-hosted AI endpoint
+
+Kubernetes standards gate:
+- run `uv run inv k8s.standards` for the static open-standard chart contract
+- run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` before release packaging or cluster handoff
+- the gate checks for standard Helm/Kubernetes surfaces: Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy, probes, non-root security context, image pull/digest posture, and cluster-managed output storage
 
 Recommended easiest setup path by host:
 - Windows Docker Desktop:
@@ -641,13 +650,13 @@ Recommended easiest setup path by host:
   6. `uv run inv compose.up --build --wait-timeout=240`
   7. `uv run inv compose.health`
   8. open `http://localhost:3000` on the same machine, or `http://<host-ip>:3000` from another client
-- Linux server/self-hosted release:
-  1. `cp .env.compose.example .env.compose`
-  2. `uv run inv auth.posture --compose`
-  3. `uv run inv install`
-  4. `uv run inv compose.up --build --wait-timeout=240`
-  5. `uv run inv compose.health`
-  6. open `http://<server-hostname-or-ip>:3000` from the operator machine
+- Kubernetes / Helm clustered deployment:
+  1. `cp .env.example .env`
+  2. configure `.env` as the local secret store for task-owned secrets, or use chart `existingSecret` values for cluster-owned credentials
+  3. `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`
+  4. `uv run inv k8s.deploy --verify-package --values-file=charts/mycelis-core/values-enterprise.yaml --release-label=enterprise`
+  5. deploy the verified chart into the target cluster through the platform-owned Helm/GitOps path
+  6. prove the real ingress/hostname/IP from the operator machine
 - Windows native source validation:
   1. `copy .env.example .env`
   2. `uv run inv install`
@@ -671,7 +680,7 @@ Agents implementing V8 should follow this process:
    - `uv run inv lifecycle.down` now treats repo-local Interface worker residue as part of the shutdown contract, not just bound ports
    - when the validation target is the supported home single-host stack, use `uv run inv compose.down --volumes` instead of Kind teardown so the compose runtime starts from a truly clean database/bus state
    - when repeated build/test cycles have been running for a while, clear stale runtime residue before assuming the issue is just disk: leaked Interface workers and long-lived local services can keep caches hot and hold build outputs open
-2. review the layered architecture truth in README, the owning architecture doc, and `V8_DEV_STATE.md`
+2. review the layered architecture truth in README, the owning architecture doc, and `.state/V8_DEV_STATE.md`
 3. review V7 architecture-library documentation as migration input when a V8 replacement has not fully landed yet
 4. identify migration targets and required contract updates
 5. implement incremental runtime or documentation updates in the Windows dev repo
@@ -685,7 +694,7 @@ Agents implementing V8 should follow this process:
 - if the machine is low on free space, prefer the repo task path in this order: `uv run inv lifecycle.down`, `uv run inv cache.status`, then `uv run inv cache.clean`
 - heavy repo-managed build/test paths now run a disk-headroom preflight automatically; if it fails, reclaim space before retrying instead of pushing through partial builds
    - if you are setting up a new development machine, treat cache placement as part of the build config, not an afterthought: Windows should stamp user-level cache vars early, and Linux/macOS should point project/user cache roots at the volume you actually want repeated builds and browser runs to consume
-9. update `V8_DEV_STATE.md` with current status and evidence
+9. update `.state/V8_DEV_STATE.md` with current status and evidence
 
 ## Licensing & Editions
 
@@ -731,14 +740,14 @@ Release automation:
 
 Initial release handoff rule:
 - before tagging or handing off a second-machine checkout, run `uv run inv ci.release-preflight --lane=release`
-- keep current delivery blockers explicit in `V8_DEV_STATE.md`; the latest state board is the authority for whether an issue is blocking initial user testing or release lock
+- keep current delivery blockers explicit in `.state/V8_DEV_STATE.md`; the latest state board is the authority for whether an issue is blocking initial user testing or release lock
 - use [Testing](docs/TESTING.md) and [Remote User Testing](docs/REMOTE_USER_TESTING.md) as the operator-facing proof sequence for the handoff machine
 
 ## Documentation Responsibilities
 
 Every implementation slice must update:
 - `README.md`
-- `V8_DEV_STATE.md`
+- `.state/V8_DEV_STATE.md`
 - architecture-library authority documents when target, execution, UI, or delivery rules change
 - user-facing docs when operator meaning, workflow wording, memory/governance behavior, or product posture changes
 - `docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes
@@ -750,7 +759,7 @@ Synchronization rule:
 - README is the primary architecture inception doc for active development
 - V8.2 B2+ is the active delivery target and full production architecture frame
 - V8.1 is the foundation and compatibility baseline for the Soma-primary operator surface
-- `V8_DEV_STATE.md` is the actual implementation scoreboard
+- `.state/V8_DEV_STATE.md` is the actual implementation scoreboard
 - every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required"
 - slices that change architecture, release posture, operator wording, API meaning, or documentation authority must keep README, the owning docs, `docsManifest.ts`, and `tests/test_docs_links.py` synchronized in the same change
 - slice close-out should explicitly report tests run, docs updated, and docs reviewed unchanged for the touched scope
@@ -764,4 +773,4 @@ Mycelis is now operating in a V8.2/B2+ delivery frame while preserving the V8.1 
 The V7 system still provides important migration input and substrate memory.
 The V8.1 architecture defines the compatibility baseline and default operator posture.
 The V8.2 PRD defines the active full architecture and B2+ delivery frame.
-`V8_DEV_STATE.md` records what is actually complete, active, next, or blocked right now.
+`.state/V8_DEV_STATE.md` records what is actually complete, active, next, or blocked right now.

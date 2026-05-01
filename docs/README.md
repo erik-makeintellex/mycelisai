@@ -18,13 +18,14 @@ These are the best entry points for someone using Mycelis through the product:
 - **User Docs Home**: `./user/README.md`
 - **Deployment Method Selection**: `./user/deployment-methods.md`
 - **Core Concepts**: `./user/core-concepts.md`
-- **Using Soma Chat**: `./user/soma-chat.md`
+- **Using Soma Chat**: `./user/soma-chat.md` for central chat, concrete web-search/team/host-data prompts, outputs, and recovery
 - **Workflow Variants And Plan Memory**: `./user/workflow-variants-and-plan-memory.md`
 - **Teams**: `./user/teams.md`
 - **Governance & Trust**: `./user/governance-trust.md`
 - **Automations**: `./user/automations.md`
-- **Resources**: `./user/resources.md`
+- **Resources**: `./user/resources.md` for Connected Tools, MCP structure review, workspace files, AI engines, and governed context
 - **Memory**: `./user/memory.md`
+- **Settings And Access**: `./user/settings-access.md` for profile/access posture plus Connected Tools/search management boundaries
 - **System Status & Recovery**: `./user/system-status-recovery.md`
 - **Run Timeline**: `./user/run-timeline.md`
 
@@ -34,7 +35,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 
 - **Repository Entry Point**: `../README.md`
 - **Repository Standards**: `../AGENTS.md`
-- **Active Development State**: `../V8_DEV_STATE.md`
+- **Active Development State**: `../.state/V8_DEV_STATE.md`
 - **Architecture Library Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
@@ -51,7 +52,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Mycelis Search Capability Delivery Plan**: `./architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md`
 - **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`
 - **V8 MVP Media, Team Output, And Template Registry**: `./architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`
-- **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../v8-2.md`
+- **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../architecture/v8-2.md`
 - **Operations**: `./architecture/OPERATIONS.md`
 - **Local Dev Workflow**: `./LOCAL_DEV_WORKFLOW.md`
 - **Logging Standard**: `./logging.md`
@@ -92,8 +93,8 @@ Use these only when migration-era assumptions need cross-checking:
 - **UI And Operator Experience V7**: `./architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md`
 - **Delivery Governance And Testing V7**: `./architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
 - **Team Execution And Global State Protocol V7**: `./architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
-- **V7 Architecture PRD Index**: `../mycelis-architecture-v7.md`
-- **Legacy V7 Development State**: `../V7_DEV_STATE.md`
+- **V7 Architecture PRD Index**: `../architecture/mycelis-architecture-v7.md`
+- **Legacy V7 Development State**: `../.state/V7_DEV_STATE.md`
 - **NATS Signal Standard V7**: `./architecture/NATS_SIGNAL_STANDARD_V7.md`
 - **Soma-Council Engagement Protocol V7**: `./architecture/SOMA_COUNCIL_ENGAGEMENT_PROTOCOL_V7.md`
 - **Workflow Composer Delivery Plan V7**: `./architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md`
@@ -109,7 +110,7 @@ Top detailed framework memory surfaces for active V8 work:
 3. `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 4. `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 5. `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
-6. `../V8_DEV_STATE.md`
+6. `../.state/V8_DEV_STATE.md`
 7. `./TESTING.md`
 8. `./architecture/OPERATIONS.md`
 9. `./architecture-library/SYSTEM_ARCHITECTURE_V7.md` when migration-era runtime assumptions need cross-checking

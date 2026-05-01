@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
-import { Building2, CheckSquare, FolderPlus, ListChecks, RadioTower, Sparkles, Users, Wrench } from "lucide-react";
+import { Activity, Building2, CheckSquare, FolderPlus, ListChecks, Sparkles, Users, Wrench } from "lucide-react";
 import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import CentralActivityStream from "@/components/dashboard/CentralActivityStream";
+import { SomaCapabilityGuide } from "@/components/dashboard/SomaCapabilityGuide";
 import { useCortexStore } from "@/store/useCortexStore";
 
 type LastOrganization = {
@@ -91,7 +92,7 @@ export default function CentralSomaHome({
                             <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
                         ) : null}
                         <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Create or open AI Organizations" />
-                        <QuickLink href="/runs" icon={<RadioTower className="h-4 w-4" />} label="Review active runs" />
+                        <QuickLink href="/activity" icon={<Activity className="h-4 w-4" />} label="Review workflow activity" />
                     </div>
                     {focusedTeam ? (
                         <div className="rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3 text-sm text-cortex-text-main">
@@ -102,6 +103,9 @@ export default function CentralSomaHome({
                             </p>
                         </div>
                     ) : null}
+                </div>
+                <div className="mb-4">
+                    <SomaCapabilityGuide />
                 </div>
                 <div
                     data-testid="central-soma-chat-frame"
@@ -130,10 +134,10 @@ export default function CentralSomaHome({
                             detail="Review gated actions, risk decisions, and pending confirmations."
                         />
                         <WorkbenchLink
-                            href="/runs"
+                            href="/activity"
                             icon={<ListChecks className="h-4 w-4" />}
-                            title="Run history"
-                            detail="Inspect active work, timelines, events, and delivered outputs."
+                            title="Workflow activity"
+                            detail="Review current runs and readable message-bus activity."
                         />
                         <WorkbenchLink
                             href="/groups"

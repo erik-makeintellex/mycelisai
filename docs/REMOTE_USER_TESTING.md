@@ -465,10 +465,10 @@ Use this shorter sequence when you are validating a fresh checkout on another ma
 5. Run `uv run inv ci.release-preflight --lane=release`.
 6. For the same-machine WSL-hosted lane, verify `http://localhost:3000` from Windows with both a simple HTTP probe and a real browser launch.
 7. Run the remote walkthrough in this document from the second machine or Windows browser lane.
-8. Confirm the current release blockers are named in `V8_DEV_STATE.md` before you declare the release ready.
+8. Confirm the current release blockers are named in `.state/V8_DEV_STATE.md` before you declare the release ready.
 
 Initial-release gate rule:
-- treat `V8_DEV_STATE.md` as the live blocker board
+- treat `.state/V8_DEV_STATE.md` as the live blocker board
 - do not promote a release if the remote walkthrough finds a fresh Soma chat, proposal/confirm, guided team creation, context intake, or artifact/output review defect
 - record media-engine gaps as environment notes unless the target machine is explicitly configured for live media generation
 - record a first-request-only warmup failure as `cold_start_first_request`; it stays a release note until the cold path is healthy, even if the warm rerun passes

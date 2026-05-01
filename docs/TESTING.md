@@ -20,6 +20,7 @@ Current validation contract:
 - on that Windows + WSL Docker path, the compose task layer may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host so the Core container can still reach a Windows-hosted Ollama service even when the Windows LAN IP is not directly reachable from bridge containers; that same relay path is expected to work when the operator runs the compose tasks from inside the Docker-owning WSL distro
 - when the validation target is the Helm/self-hosted Kubernetes path, use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT` to prove the deployment targets an explicit reachable AI host instead of a chart-baked or localhost default
 - when the validation target is the Helm/self-hosted Kubernetes path, prefer a promoted preset through `MYCELIS_K8S_VALUES_FILE` such as `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`
+- when the validation target is clustered deployment, run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`; Compose remains rapid local development/proof only
 - when the validation target is the enterprise Windows-AI preset, `k8s.deploy` / `k8s.up` should fail closed unless `MYCELIS_K8S_TEXT_ENDPOINT` points at the real Windows GPU host
 - when the validation target is local Kubernetes, prefer `k3d` as the repo-local backend and use `MYCELIS_K8S_BACKEND=kind` only when you intentionally need the older Kind path
 - when the validation target is a supported self-hosted user lane, prove the field topology directly: Windows Docker Desktop and same-machine WSL-hosted stacks use the Windows browser with `http://localhost:3000` as the first operator path, second-machine or Linux-server proof uses the real host/IP/hostname, the runtime runs in Compose or self-hosted Kubernetes, and the AI engine lives on an explicit non-loopback host rather than `localhost`
@@ -30,6 +31,7 @@ Current validation contract:
 - runtime file/tool requests may use `workspace/...` as a friendly alias for that backend workspace root; Compose and live-backend browser assertions should treat that as the configured root, not as a second nested `workspace` directory
 - docs, tasks, and release language must stay synchronized with the actual validation gate in the same slice
 - end-of-slice reporting should name both the evidence commands run and the docs updated or reviewed unchanged for the touched scope
+- the Interface Vitest gate is intentionally sequential (`fileParallelism: false`) so full-page jsdom workflows remain deterministic under release validation; use focused test paths for fast local iteration rather than re-enabling full-suite parallelism
 - team-creation and orchestration changes must prove the compact-default rule: small teams by default, broad asks split into several smaller lanes, and the coordination path remains visible through Soma/Council/NATS rather than being hidden in a giant roster
 - Invoke-managed Playwright runs own a shared Interface server lifecycle; run `uv run inv interface.e2e ...` commands one at a time for a given workspace and port, especially from the WSL-managed path, instead of launching multiple specs in parallel from separate shells. On Windows, the managed Playwright server binds to `127.0.0.1` so start-mode readiness checks and browser navigation stay on the same loopback family.
 
@@ -51,9 +53,9 @@ Release-proof sequencing rule:
 ## User Interaction Delivery Gate
 
 Supported release/user lanes:
-- Windows Docker Desktop with the Windows browser on the same machine
-- Windows browser against a WSL-hosted Compose stack on the same machine
-- Linux self-hosted server or cluster reached through the real remote host/IP/hostname
+- Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof
+- Windows browser against a WSL-hosted Compose stack on the same machine for rapid local proof
+- Kubernetes / Helm clustered deployment reached through the real ingress, remote host, IP, or hostname
 
 Every accepted user-interaction proof set must verify:
 - the browser opens the UI through the same operator-facing address the delivered environment will actually use
@@ -64,8 +66,8 @@ Every accepted user-interaction proof set must verify:
 - AI-host failure produces a visible blocker and recovery restores the same lane without changing the delivery address
 
 Minimum release evidence for these lanes:
-- `uv run inv compose.status` or the equivalent Kubernetes health/status proof for the deployed lane
-- `uv run inv compose.health` or the equivalent live service health proof
+- rapid Compose proof: `uv run inv compose.status` and `uv run inv compose.health`
+- clustered Kubernetes proof: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` plus the equivalent target-cluster health/status proof
 - `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts`
 - `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts`
 - `uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts`
@@ -306,7 +308,7 @@ uv run inv auth.dev-key          # Ensure the primary local-admin credential exi
 uv run inv auth.break-glass-key  # Stamp a separate break-glass recovery credential when self-hosted recovery is part of the slice
 uv run inv auth.posture          # Inspect local-admin vs break-glass auth posture before runtime/browser proof
 uv run inv core.package          # Versioned Core binary archive for release handoff (not part of the default validation gate)
-uv run inv interface.test        # Vitest unit tests (jsdom)
+uv run inv interface.test        # Vitest unit tests (jsdom, sequential file execution)
 uv run inv interface.typecheck   # TypeScript typecheck through the managed Interface task path
 uv run inv interface.e2e         # Playwright E2E tests (defaults to managed dev mode for stable mocked browser proof; use --server-mode=start for built/start-mode or live-backend proof. Invoke manages the server lifecycle, retries transient Next build output races, binds managed UI proof to 127.0.0.1 on Windows, uses serial workers by default, keeps browser cache repo-managed, cleans repo-local UI workers, and fails if it cannot own a clean managed UI server)
 uv run inv test.e2e              # Root alias for interface.e2e with the same --workers / --server-mode controls

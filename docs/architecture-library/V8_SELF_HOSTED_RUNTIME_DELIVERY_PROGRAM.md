@@ -70,7 +70,7 @@ Daily management rhythm:
 1. confirm the single active target
 2. review blockers and dependencies
 3. confirm the next proof-producing slice
-4. update `V8_DEV_STATE.md` when delivery truth changes
+4. update `.state/V8_DEV_STATE.md` when delivery truth changes
 
 ## Coordination Rules
 
@@ -94,17 +94,17 @@ Required handoff order:
 | Delivery Management | `ACTIVE` | Keep one release-gating delivery target, explicit ownership, and acceptance tied to deployable runtime proof. | Receives status from every lane. | Hold runtime work to deployable truth while allowing bounded V8.2 modules only when they preserve the V8.1 proof lane. |
 | Runtime Contract + Architecture | `ACTIVE` | Lock the canonical deployment story to Linux-first Compose and self-hosted Kubernetes with external AI services reached by explicit host/IP or operator-supplied hostname. | Feeds Backend, Ops, Validation, and docs. | Audit remaining canonical docs for desktop-local or Windows-only runtime assumptions and correct them. |
 | Backend / Runtime Integration | `ACTIVE` | Keep provider configuration, health checks, and runtime behavior aligned to external AI endpoints instead of local loopback assumptions. | Depends on Runtime Contract + Architecture. | Tighten remaining runtime/config surfaces so external Ollama or other self-hosted AI endpoints are first-class configuration. |
-| Compose Deployment | `ACTIVE` | Keep the Compose path deployable from Linux or WSL-hosted Docker without Docker Desktop assumptions, with explicit external AI host configuration. | Depends on Runtime Contract + Architecture and Backend / Runtime Integration. | Continue proving `compose.up`, `compose.status`, and `compose.health` against the supported self-hosted topology. |
-| Kubernetes / Helm Deployment | `ACTIVE` | Promote the self-hosted Kubernetes contract for external AI services, secrets, bootstrap config, storage, and operator recovery without displacing Compose as the first release proof lane. | Reuses the same runtime contract as Compose. | Continue the `k3d`, promoted-values, external-AI-host, and chart-render proof slices as modular V8.2 runtime work. |
-| Validation + Release Proof | `ACTIVE` | Make service-health, browser proof, and docs-link proof certify deployable runtime behavior instead of development-only convenience. | Depends on Compose and Backend lanes; Kubernetes proof proceeds as a modular scale-up lane. | Keep Compose proof current, then fold Kubernetes evidence into acceptance without claiming V8.1 default-surface promotion too early. |
+| Compose Rapid Proof | `ACTIVE` | Keep the Compose path useful for rapid local development, same-machine proof, and demo loops with explicit external AI host configuration. | Depends on Runtime Contract + Architecture and Backend / Runtime Integration. | Continue proving `compose.up`, `compose.status`, and `compose.health` as local proof, not target clustered deployment. |
+| Kubernetes / Helm Deployment | `ACTIVE` | Promote the self-hosted Kubernetes contract for external AI services, secrets, bootstrap config, storage, and operator recovery as the target clustered deployment lane. | Reuses the same runtime contract through standard Kubernetes resources. | Continue the `k3d`, promoted-values, external-AI-host, chart-render, and `k8s.standards` proof slices. |
+| Validation + Release Proof | `ACTIVE` | Make service-health, browser proof, docs-link proof, and Helm standards proof certify deployable runtime behavior instead of development-only convenience. | Depends on Kubernetes/Helm plus rapid Compose proof. | Keep Compose proof current for local iteration, then require Kubernetes/Helm standards evidence for clustered release readiness. |
 | Operator Handoff Docs | `ACTIVE` | Keep canonical docs and in-app docs aligned to the same deployment story. | Depends on every lane. | Update state, architecture docs, and docs manifest whenever deployment meaning changes. |
 
 ## Acceptance Gates
 
 The runtime delivery lane is only complete when all of the following are true:
 
-1. The Compose path is documented and validated as a real self-hosted deployment path.
-2. The Kubernetes / Helm path has an explicit operator contract for the same runtime assumptions.
+1. The Compose path is documented and validated as rapid local development/proof, not the target clustered deployment contract.
+2. The Kubernetes / Helm path has an explicit operator contract for the target clustered runtime assumptions.
 3. External AI providers are configured through explicit reachable endpoints, not desktop-local shortcuts.
 4. Health checks and browser proof reflect deployable runtime behavior.
 5. Canonical docs, in-app docs, and live state all tell the same story.
@@ -120,24 +120,24 @@ Current acceptance bias:
 The previously engaged runtime-posture gate correction has landed locally and remains `IN_REVIEW` until the broader supported proof chain accepts it. Current work should keep that gate intact while allowing modular V8.2 runtime slices to continue.
 
 Current engaged flow:
-- Compose remains the first release-proof runtime lane for V8.1.
-- Kubernetes / Helm work is now `ACTIVE` as the modular V8.2 scale-up lane, with `k3d`, promoted values, external AI endpoint wiring, and chart render/lint proof kept behind deployment contracts.
+- Compose remains the first rapid local proof lane for V8.1 compatibility and UI/runtime iteration.
+- Kubernetes / Helm work is now `ACTIVE` as the target clustered deployment lane, with `k3d`, promoted values, external AI endpoint wiring, chart render/lint proof, and `k8s.standards` kept behind deployment contracts.
 - Validation must prove each runtime module independently before treating it as release-supporting evidence.
 
 Engaged ownership:
 
 | Role | Status | Immediate Action | Acceptance |
 | --- | --- | --- | --- |
-| Team Lead / Delivery Manager | `ACTIVE` | keep V8.1 release proof centered while allowing bounded V8.2 runtime modules | no competing target displaces the Compose/WSL release proof lane |
+| Team Lead / Delivery Manager | `ACTIVE` | keep rapid Compose proof useful while moving deployment readiness through Kubernetes/Helm | no competing target displaces the clustered deployment contract |
 | Platform Architect | `ACTIVE` | keep `.env.compose` / `.env`, external endpoint, Compose, and Kubernetes contracts consistent | deployment assumptions match the supported runtime topology |
 | Backend / Runtime Engineer | `IN_REVIEW` | keep runtime-posture gate behavior explicit and extend only through named config/provider boundaries | focused task tests and runtime checks stay green |
-| Ops / Deployment Engineer | `ACTIVE` | continue modular Kubernetes/Helm proof without weakening Compose deployability | `k3d`, promoted values, chart render/lint, and operator guidance stay synchronized |
-| Validation / Release Engineer | `NEXT` | run supported Compose/WSL proof first, then accept Kubernetes evidence as scale-up proof | proof results clearly state which lane they certify |
+| Ops / Deployment Engineer | `ACTIVE` | continue modular Kubernetes/Helm proof without weakening rapid local Compose proof | `k3d`, promoted values, chart render/lint, `k8s.standards`, and operator guidance stay synchronized |
+| Validation / Release Engineer | `NEXT` | run supported Compose/WSL proof for iteration, then require Kubernetes standards evidence for clustered release readiness | proof results clearly state which lane they certify |
 | Operator Handoff Docs | `ACTIVE` | synchronize state, runtime docs, testing docs, and in-app docs when deployment meaning changes | touched docs name the same command, env posture, and module boundary |
 
 Exit condition:
 1. runtime-posture continues to read the supported env contract
 2. missing or loopback-only endpoint posture fails fast
 3. docs name the same contract
-4. the supported Compose proof path is green
-5. Kubernetes/Helm proof is recorded as modular V8.2 scale-up evidence until explicitly promoted
+4. the supported Compose proof path is green for rapid local proof
+5. Kubernetes/Helm proof is recorded as the target clustered deployment evidence before release readiness is claimed

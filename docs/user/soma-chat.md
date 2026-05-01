@@ -32,6 +32,14 @@ You type -> Soma reasons (ReAct, up to 10 iterations)
 2. Enter your intent in the bottom input.
 3. Press `Enter` or click send.
 
+Concrete central Soma phrases:
+
+- `Search the web for the latest changes in self-hosted AI agent products, summarize the top findings, and cite the sources you used.`
+- `Create a small temporary team to review the release-readiness risks, assign the right specialists, and bring the retained output back here for approval.`
+- `Ask the active delivery teams for current blockers, compare their answers, and tell me which workflow needs attention first.`
+- `Use the host data under workspace/shared-sources to answer this question, and tell me which files or records shaped the answer.`
+- `Review the current MCP tool structure, tell me which tools are available to Soma and teams, and recommend what should be connected next.`
+
 Live activity text indicates current steps (thinking, consulting, searching memory, invoking tools).
 
 AI Organization home adds a guided Soma entrypoint:
@@ -139,6 +147,7 @@ If a tool call fails, Soma should recover inline (retry, reroute, or proposal fa
 
 Web/research behavior:
 - if you ask Soma whether it can search or make web requests, Soma should answer from current Mycelis Search capability status instead of falling back to provider boilerplate
+- if you ask a freshness-oriented question such as latest news, current updates, or recent releases, Soma should call the configured Mycelis `web_search` capability directly before falling back to MCP-specific guidance
 - `local_sources` lets Soma search governed user-shared and deployment context without hosted search tokens
 - the supported Compose release path starts a self-hosted SearXNG service by default, so `MYCELIS_SEARCH_PROVIDER=searxng` and `MYCELIS_SEARXNG_ENDPOINT=http://searxng:8080` let Soma use public web search without Brave tokens
 - `searxng` can also point at another operator-owned endpoint when configured through `MYCELIS_SEARXNG_ENDPOINT`

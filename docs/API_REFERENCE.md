@@ -16,7 +16,7 @@
 | `/api/v1/council/{member}/chat` | POST | Chat with any council member via NATS request-reply. Returns `APIResponse<CTSEnvelope>` with trust score + provenance |
 | `/api/v1/council/members` | GET | List all addressable council members from standing teams (admin-core, council-core) |
 | **Chat & Cognitive** | | |
-| `/api/v1/chat` | POST | Legacy: chat routed through Admin agent via NATS request-reply (backward compat — prefer `/council/{member}/chat`) |
+| `/api/v1/chat` | POST | Soma/Admin chat. Runtime-state and search-capability questions answer directly; freshness-oriented search prompts call configured Mycelis `web_search` before the NATS Admin-agent path. |
 | `/api/v1/cognitive/infer` | POST | Direct cognitive inference (profile-routed) |
 | `/api/v1/cognitive/config` | GET | Read cognitive router configuration (providers, profiles, media) |
 | `/api/v1/cognitive/matrix` | GET | Alias for cognitive config (matrix view) |

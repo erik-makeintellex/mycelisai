@@ -25,18 +25,32 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 ## Canonical Docs Location
 
+- Keep user-shared root-level architecture entrypoints under `architecture/`.
 - Put new canonical planning, target-delivery, UI-target, execution-model, and delivery-governance docs under `docs/architecture-library/`.
-- Treat `mycelis-architecture-v7.md` as the stable PRD index and compatibility entrypoint, not the place to grow another giant monolithic spec.
+- Treat `architecture/mycelis-architecture-v7.md` as the stable PRD index and compatibility entrypoint, not the place to grow another giant monolithic spec.
 - If a canonical doc is meant to be readable in the in-app `/docs` page, add or update its entry in `interface/lib/docsManifest.ts` in the same change.
+
+## State Location
+
+- Keep mutable delivery state under `.state/`, with `.state/V8_DEV_STATE.md` as the active scoreboard.
+- Treat `.state/V7_DEV_STATE.md` as historical migration evidence only.
+- `.state/` is ignored for new local/session artifacts, but tracked state files already under `.state/` remain part of the repository contract.
+- Do not add transient run logs, browser reports, kubeconfigs, temporary plans, or local service snapshots to root.
 
 ## Documentation Synchronization Contract
 
 - Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, or canonical terminology must include a documentation review in the same slice.
 - Update the owning docs in the same change whenever meaning changed, not later as cleanup.
-- At minimum review `README.md`, `V8_DEV_STATE.md`, the owning canonical/user/ops docs for the touched surface, and any affected in-app docs entry in `interface/lib/docsManifest.ts`.
+- At minimum review `README.md`, `.state/V8_DEV_STATE.md`, the owning canonical/user/ops docs for the touched surface, and any affected in-app docs entry in `interface/lib/docsManifest.ts`.
 - When API behavior or payload meaning changes, review `docs/API_REFERENCE.md` in the same slice.
 - When testing or task-running behavior changes, review `docs/TESTING.md`, `docs/architecture/OPERATIONS.md`, and `ops/README.md` in the same slice.
 - Slice close-out should explicitly report which docs changed and which touched docs were reviewed but left unchanged.
+
+## Runtime Config And Proof Boundary
+
+- `.env` is the repo-local secret store across runtime paths. Use secret references in committed config and never store raw secrets in UI, logs, state files, or architecture docs.
+- `.env.compose` is for Compose topology and non-secret runtime shape; secret-like values from `.env` are authoritative over stale Compose values.
+- Windows is the source-edit and git surface. WSL is the release-proof environment for install, build, tests, Compose, and live GUI validation.
 
 ## Feature Status Standard
 

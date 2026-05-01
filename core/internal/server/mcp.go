@@ -93,7 +93,7 @@ func (s *AdminServer) handleMCPInstall(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, map[string]interface{}{
-		"server": installed,
+		"server": redactMCPServerConfig(*installed),
 		"tools":  tools,
 	})
 }
@@ -134,7 +134,7 @@ func (s *AdminServer) handleMCPList(w http.ResponseWriter, r *http.Request) {
 			tools = []mcp.ToolDef{}
 		}
 		result = append(result, serverWithTools{
-			ServerConfig: srv,
+			ServerConfig: redactMCPServerConfig(srv),
 			Tools:        tools,
 		})
 	}
@@ -527,7 +527,7 @@ func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Req
 	}
 
 	respondJSON(w, map[string]interface{}{
-		"server":     installed,
+		"server":     redactMCPServerConfig(*installed),
 		"tools":      tools,
 		"governance": inspection["governance"],
 	})
@@ -604,7 +604,7 @@ func (s *AdminServer) handleMCPLibraryApply(w http.ResponseWriter, r *http.Reque
 	respondJSON(w, map[string]any{
 		"status":            "installed",
 		"requires_approval": false,
-		"server":            installed,
+		"server":            redactMCPServerConfig(*installed),
 		"tools":             tools,
 		"inspection":        inspection,
 		"governance":        inspection["governance"],

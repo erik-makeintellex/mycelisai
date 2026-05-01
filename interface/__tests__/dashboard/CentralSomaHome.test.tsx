@@ -30,12 +30,17 @@ describe("CentralSomaHome", () => {
         render(<CentralSomaHome />);
 
         expect(screen.getByText("Work directly with Soma from the admin home.")).toBeDefined();
+        expect(screen.getByText("Say this to Soma")).toBeDefined();
+        expect(screen.getByText("Web search")).toBeDefined();
+        expect(screen.getByText("Create a team")).toBeDefined();
+        expect(screen.getByText("Use host data")).toBeDefined();
+        expect(screen.getByRole("link", { name: /Manage tools/i }).getAttribute("href")).toBe("/settings?tab=tools");
         expect(screen.getByTestId("mission-control-chat")).toBeDefined();
         expect(screen.getByTestId("central-soma-chat-frame").className).toContain("h-[72vh]");
         expect(screen.getByTestId("central-soma-chat-frame").className).toContain("overflow-hidden");
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
         expect(screen.getByRole("link", { name: /Open groups workspace/i }).getAttribute("href")).toBe("/groups");
-        expect(screen.getByRole("link", { name: /Review active runs/i }).getAttribute("href")).toBe("/runs");
+        expect(screen.getByRole("link", { name: /Review workflow activity/i }).getAttribute("href")).toBe("/activity");
         expect(screen.getByRole("link", { name: /Approval queue/i }).getAttribute("href")).toBe("/approvals");
         expect(screen.getByRole("link", { name: /Tool readiness/i }).getAttribute("href")).toBe("/settings?tab=tools");
         expect(screen.getByRole("link", { name: /Return to Northstar Labs/i }).getAttribute("href")).toBe("/organizations/org-1");

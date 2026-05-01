@@ -20,7 +20,9 @@ ENV MYCELIS_API_PORT=${MYCELIS_API_PORT}
 COPY --from=deps /app/interface/node_modules ./interface/node_modules
 COPY interface ./interface
 COPY docs ./docs
-COPY README.md V8_DEV_STATE.md V7_DEV_STATE.md v8-2.md mycelis-architecture-v7.md ./
+COPY architecture ./architecture
+COPY .state ./.state
+COPY README.md ./
 WORKDIR /app/interface
 
 # Next.js collects completely anonymous telemetry data about general usage.
@@ -46,7 +48,9 @@ RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/interface/public ./interface/public
 COPY --from=builder /app/docs ./docs
-COPY --from=builder /app/README.md /app/V8_DEV_STATE.md /app/V7_DEV_STATE.md /app/v8-2.md /app/mycelis-architecture-v7.md ./
+COPY --from=builder /app/architecture ./architecture
+COPY --from=builder /app/.state ./.state
+COPY --from=builder /app/README.md ./
 
 # Set the correct permission for prerender cache
 RUN mkdir .next

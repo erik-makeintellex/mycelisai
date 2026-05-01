@@ -117,7 +117,7 @@ The product must keep these layers distinct:
 4. runtime state
    - the live resolved organization, execution posture, and service availability
 5. state and architecture docs
-   - README, V8.1, V8.2, and `V8_DEV_STATE.md` explain target, release, and implementation truth
+   - README, V8.1, V8.2, and `.state/V8_DEV_STATE.md` explain target, release, and implementation truth
 
 Critical rule:
 - deployment/env overrides must not replace bundle-defined runtime organization truth

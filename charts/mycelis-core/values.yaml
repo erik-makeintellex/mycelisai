@@ -32,6 +32,9 @@ ingress:
   hosts: []
   tls: []
 
+networkPolicy:
+  enabled: true
+
 coreAuth:
   # Either provide apiKey (for dev) or reference an existing secret
   apiKey: ""

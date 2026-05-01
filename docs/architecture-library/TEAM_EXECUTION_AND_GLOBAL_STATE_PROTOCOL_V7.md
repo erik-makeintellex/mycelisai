@@ -12,13 +12,13 @@ Related:
 - [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 - [Intent To Manifestation And Team Interaction V7](INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md)
-- [V8 Development State](../../V8_DEV_STATE.md)
+- [V8 Development State](../../.state/V8_DEV_STATE.md)
 
 ## V8 Migration Alignment
 
 - Lane coordination must respect the V8 template -> instantiation -> inheritance -> precedence bootstrap pipeline described in `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`.
 - `Template ≠ instantiated organization`; any standing-team YAML or runtime asset must be translated through the V8 bootstrap contract before it influences live NATS coordination.
-- All lane status changes belong in `V8_DEV_STATE.md`; treat `V7_DEV_STATE.md` strictly as archival evidence when cross-checking history.
+- All lane status changes belong in `.state/V8_DEV_STATE.md`; treat `.state/V7_DEV_STATE.md` strictly as archival evidence when cross-checking history.
 - V7-named slices remain migration inputs, but team execution, governance, and QA must frame current work as V8 migration slices tied to the canonical bootstrap contract.
 
 ## 1. Team Execution Architecture
@@ -62,7 +62,7 @@ Coordination cadence:
 1. architecture issues lane directives on `internal.command`
 2. runtime/interface lanes emit progress on `signal.status` at each discrete contract checkpoint
 3. QA emits gate verdicts on `signal.result` with evidence command list and pass/fail
-4. all accepted transitions are copied into `V8_DEV_STATE.md` in the same delivery window
+4. all accepted transitions are copied into `.state/V8_DEV_STATE.md` in the same delivery window
 
 ## 2. V8 Migration Workstreams (Current)
 
@@ -110,7 +110,7 @@ Gate stack for launch candidate:
 ## 4. Global State File Maintenance Contract
 
 Canonical state file:
-- `V8_DEV_STATE.md` (`V7_DEV_STATE.md` is retained only for historical migration evidence)
+- `.state/V8_DEV_STATE.md` (`.state/V7_DEV_STATE.md` is retained only for historical migration evidence)
 
 Update triggers (must update state file when any occur):
 1. slice start (`NEXT` -> `ACTIVE`)
@@ -130,8 +130,8 @@ Required state entry fields:
 - next 24-48h actions
 
 Quality rule:
-- if a PR changes execution behavior and does not update `V8_DEV_STATE.md`, it is not review-ready.
-- if a PR changes runtime/API behavior and does not include both a UI target review/test plan reference and NATS coordination note in `V8_DEV_STATE.md`, it is not review-ready.
+- if a PR changes execution behavior and does not update `.state/V8_DEV_STATE.md`, it is not review-ready.
+- if a PR changes runtime/API behavior and does not include both a UI target review/test plan reference and NATS coordination note in `.state/V8_DEV_STATE.md`, it is not review-ready.
 
 ## 5. Deep Testing Architecture
 
@@ -192,7 +192,7 @@ Current baseline assignment:
   - prepare created-team communication inspector integration points
 - `QA/Verification`:
   - run deep-test matrix with explicit UI proof for backend/API-affecting changes
-  - record gate evidence and blockers in `V8_DEV_STATE.md`
+  - record gate evidence and blockers in `.state/V8_DEV_STATE.md`
 
 ### 7.1 Engaged snapshot (2026-03-10)
 

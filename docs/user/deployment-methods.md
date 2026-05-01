@@ -20,29 +20,29 @@ Choose the runtime by deployment target, not by whichever tool is already open.
 
 | Target environment | Recommended path | Best fit |
 | :-- | :-- | :-- |
-| One machine, home-lab, founder demo, personal owner deployment | Docker Compose | Fastest supported full-stack self-hosted runtime |
+| One machine, rapid iteration, founder demo, personal proof | Docker Compose | Fastest local full-stack development/proof runtime |
 | Local Helm and Kubernetes validation in WSL/Linux | `k3d` | Best local proof for chart behavior before a real cluster |
-| Customer-managed or enterprise-managed cluster | Enterprise self-hosted Kubernetes | Best fit for real cluster policy, ingress, registry, storage, and secret management |
+| Customer-managed, enterprise-managed, or release target cluster | Enterprise self-hosted Kubernetes | Best fit for real cluster policy, ingress, registry, storage, and secret management |
 | Edge node, Raspberry Pi style control node, small Linux box | Packaged binary or node-attached service | Lightweight host footprint with remote AI service support |
 | Active code changes and UI/backend iteration | WSL worktree + Docker Compose first, source-mode fallback when needed | Best fit for implementation work, not for production-style deployment |
 
 Quick rule:
-- if the question is "how do I run Mycelis on one host?" use Docker Compose
+- if the question is "how do I iterate quickly or prove the stack on one host?" use Docker Compose
 - if the question is "how do I prove the Helm chart or cluster behavior locally?" use `k3d`
-- if the question is "how would a customer deploy this on their own cluster?" use the Helm chart for enterprise self-hosted Kubernetes
+- if the question is "how will this be deployed for release or a customer-owned environment?" use the Helm chart for enterprise self-hosted Kubernetes
 - if the question is "how do I place a lightweight node on small hardware?" use the packaged binary path and keep AI remote
 
 Supported user access lanes:
-- Windows Docker Desktop: run the supported Compose stack on Windows and open `http://localhost:3000` from the Windows browser on that same machine
-- Windows + WSL Docker: run the supported Compose stack from WSL, then use the Windows browser as the first operator proof path through `http://localhost:3000`
-- Linux server/self-hosted release: run the supported self-hosted stack on the Linux host and open the UI through the same hostname/IP operators will really use remotely, such as `http://<server-hostname-or-ip>:3000`
+- Windows Docker Desktop: run the rapid local Compose stack on Windows and open `http://localhost:3000` from the Windows browser on that same machine
+- Windows + WSL Docker: run the rapid local Compose stack from WSL, then use the Windows browser as the first operator proof path through `http://localhost:3000`
+- Kubernetes / Helm clustered deployment: run the verified chart on the target cluster and open the UI through the same ingress, hostname, or IP operators will really use remotely
 
 ## Docker Compose Single Host
 
-Choose Docker Compose when you want the normal single-host self-hosted runtime.
+Choose Docker Compose when you want rapid local development, same-machine proof, or a quick demo loop.
 
 Typical fit:
-- home-lab or personal owner deployment
+- home-lab or personal owner proof
 - demos and partner evaluation
 - one machine running the full stack
 - Windows Docker Desktop single-machine runtime with the Windows browser on the same host
@@ -85,11 +85,11 @@ uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
 ```
 
-Use this path first unless you specifically need cluster behavior.
+Use this path first for rapid iteration, not as the target clustered deployment contract.
 Use the same operator-facing address you will really support after delivery:
 - Windows Docker Desktop on the same machine: `http://localhost:3000`
 - Windows browser against a WSL-hosted stack: start with `http://localhost:3000`, then prove the host/IP path for second-machine access
-- Linux server/self-hosted release: use `http://<server-hostname-or-ip>:3000` or the published ingress address from the operator machine
+- clustered release: use the published Kubernetes ingress/hostname/IP from the operator machine
 
 ## Local Kubernetes With k3d
 
@@ -115,7 +115,7 @@ uv run inv lifecycle.health
 Notes:
 - `k3d` is the preferred local Kubernetes backend
 - use `MYCELIS_K8S_BACKEND=kind` only when you intentionally need the older local fallback
-- this is a local validation lane, not the recommended default just to get a single machine running
+- this is a local validation lane for the clustered deployment contract, not the recommended default just to get a single machine running
 
 ## Enterprise Self-Hosted Kubernetes
 
@@ -160,6 +160,14 @@ uv run inv k8s.deploy --verify-package --values-file=charts/mycelis-core/values-
 ```
 
 Use that verification path when you need lint/render/package proof and artifact output under `dist/helm/` before touching a live cluster.
+
+Open-standard chart gate:
+
+```bash
+uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml
+```
+
+That gate keeps the deployment contract on standard Kubernetes/Helm surfaces: Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy, startup/readiness/liveness probes, non-root security context, image pull/digest posture, and cluster-managed output storage.
 
 ## Edge Or Small Node Deployments
 
@@ -214,10 +222,10 @@ Rules:
 
 Before user testing or UI testing, prove the lane you picked:
 
-- Docker Compose: `uv run inv compose.status` and `uv run inv compose.health`
-- local Kubernetes: `uv run inv k8s.status` and `uv run inv lifecycle.health`
-- enterprise self-hosted Kubernetes: render or deploy the Helm chart with the real values, then prove ingress, readiness, storage, and the explicit AI endpoint on the target cluster
+- Docker Compose rapid development/proof: `uv run inv compose.status` and `uv run inv compose.health`
+- local Kubernetes: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-k3d.yaml`, `uv run inv k8s.status`, and `uv run inv lifecycle.health`
+- enterprise self-hosted Kubernetes: run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`, render/package the Helm chart with the real values, then prove ingress, readiness, storage, and the explicit AI endpoint on the target cluster
 - Windows Docker Desktop: open the UI from the Windows browser on the same machine through `http://localhost:3000`, then confirm the runtime reaches the explicit Windows AI host instead of a loopback-only deployment assumption
 - Windows browser against a WSL-hosted stack: start with `http://localhost:3000` on that same Windows machine, then use the host/IP path for second-machine or LAN proof
-- Linux server/self-hosted release: open the UI from the operator machine through the same host/IP/hostname that will be used remotely, not `localhost` on the server
+- Kubernetes clustered release: open the UI from the operator machine through the same ingress/host/IP/hostname that will be used remotely, not `localhost` on the server
 - release gate: `uv run inv ci.release-preflight --lane=release` (recommended preset for runtime-posture + service-health + live-backend proof; the legacy flags remain available when you need a narrower/manual combination)

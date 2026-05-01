@@ -26,8 +26,8 @@ This directory contains the logic for the **Service Release Standard 1.0**.
 
 Recommended host posture:
 - Windows repo: canonical editing, review, and git-push surface for active development
-- WSL `mother-brain` checkout backed by `D:\wsl-distro`: canonical deployment-mimic proof lane for install, build, API/UI test, Compose runtime, and release-style validation
-- Windows native: keep the runtime story anchored to Compose or self-hosted Kubernetes; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL
+- WSL `mother-brain` checkout backed by `D:\wsl-distro`: canonical rapid proof lane for install, build, API/UI test, Compose runtime, and pre-cluster validation
+- Windows native: keep the runtime story anchored to rapid Compose proof or self-hosted Kubernetes validation; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 
@@ -41,8 +41,9 @@ Proof-checkout contract:
 - `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, loads that Compose env into the managed Interface proxy/browser proof path, then runs Compose-safe release-preflight, Compose health/storage proof, focused live-backend browser workflows, and the Windows GUI probe; `--lane=service` and `--lane=release` keep the runtime preflight step and let this task own the Compose service/browser proof
 
 Deployment selection rule:
-- Docker Compose is the default single-host self-hosted runtime
+- Docker Compose is the rapid local development and same-machine proof runtime
 - `k3d` is the preferred local Kubernetes validation lane for Helm behavior
+- Kubernetes / Helm is the target clustered deployment contract for self-hosted and enterprise environments
 - enterprise self-hosted Kubernetes uses the same Helm chart with real cluster values
 - packaged binaries fit small Linux nodes or edge/control-host roles that should point at a remote AI service
 - promoted chart presets now live at `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, and `charts/mycelis-core/values-enterprise-windows-ai.yaml`
@@ -61,9 +62,10 @@ Calculates the **Immutable Tag**: `v{SEMVER}-{SHA}`.
 - Git: `git rev-parse --short HEAD`.
 
 ### `k8s.py` (Deployment)
-Handles the atomic deployment to local Kubernetes, with `k3d` preferred and Kind retained as a fallback.
+Handles standards-first Kubernetes/Helm deployment automation, with `k3d` preferred for local cluster validation and Kind retained only as an older fallback.
 - **Init**: `uv run inv k8s.init` (Infra).
 - **Deploy**: `uv run inv k8s.deploy` (Core).
+- **Standards**: `uv run inv k8s.standards` verifies the static open-standard chart contract; add `--helm --values-file=<path>` to run offline Helm lint/template checks with vendored chart dependencies.
 - **Status**: `uv run inv k8s.status` (Health).
 - **Bridge**: `uv run inv k8s.bridge` now verifies the local PostgreSQL/NATS/Core port-forwards actually bind before reporting success.
 - **Recover**: `uv run inv k8s.recover` now fails closed when the cluster is unreachable and waits for rollout readiness before claiming recovery.
@@ -71,11 +73,12 @@ Handles the atomic deployment to local Kubernetes, with `k3d` preferred and Kind
 - **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host without editing chart source.
 - **Preset values contract**: `k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`; repo-relative paths such as `charts/mycelis-core/values-k3d.yaml` are resolved from the repo root and the task fails fast if the requested values file does not exist.
 - **Verification packaging**: `k8s.deploy --verify-package` is the release-packaging path for promoted values files; it renders, lints, packages, and writes manifest/checksum artifacts under `dist/helm/` without contacting a cluster.
+- **Open-standard surfaces**: the standards gate keeps the chart on standard Kubernetes resources: Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy, probes, non-root pod/container security context, image pull/digest posture, and cluster-managed output storage.
 - **Enterprise Windows-AI guardrail**: the `values-enterprise-windows-ai` preset fails closed unless `MYCELIS_K8S_TEXT_ENDPOINT` is set to the real Windows GPU host endpoint.
 - Chart/runtime config alignment: the deployed Core image resolves startup config from `/core/config`, so the chart mount path and container workdir must stay in sync for bootstrap bundles to load.
 
 ### `compose.py` (Home Runtime)
-Handles the supported Docker Compose single-host runtime for home-lab and demo use.
+Handles the rapid Docker Compose single-host runtime for development, same-machine proof, home-lab experiments, and demo use. Compose is not the target clustered deployment contract.
 - **Infra Up**: `uv run inv compose.infra-up` (postgres + nats only, Core/Interface stay down, readiness checks + owner-facing connection settings; add `--migrate` only when schema bootstrap is intentionally needed)
 - **Infra Health**: `uv run inv compose.infra-health` (PostgreSQL port/query readiness, NATS port, and NATS monitor only; no Core/UI health checks)
 - **Storage Health**: `uv run inv compose.storage-health` (post-migration PostgreSQL long-term storage gate for pgvector, semantic context vectors, durable memory, conversation continuity, artifacts, managed exchange, collaboration groups, and templates)
@@ -150,7 +153,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - `interface.install` now provisions npm dependencies plus the managed Playwright Chromium binary used by `interface.e2e`
 - **Type Check**: `uv run inv interface.typecheck`
 - **Build**: `uv run inv interface.build`
-- **Test**: `uv run inv interface.test`
+- **Test**: `uv run inv interface.test` (Vitest runs test files sequentially for deterministic full-suite proof)
 - **E2E**: `uv run inv interface.e2e`
 - `ops/interface.py` is the stable Invoke entrypoint; the task implementation lives in `ops/interface_runtime.py`, with shared command/env helpers in `ops/interface_env.py` and process matching hints in `ops/interface_process_support.py`
 - `uv run inv interface.e2e` now defaults to managed `dev` mode for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; `uv run inv interface.build` still retries once after stale repo-local Next build locks, stale `.next/standalone` cleanup locks, incomplete built-server packaging, or transient missing `.next/types` output before failing, start-mode E2E inherits that same recovery behavior, Windows managed Playwright servers bind to `127.0.0.1` for stable loopback readiness/browser navigation, and managed `dev` runs clear an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains.

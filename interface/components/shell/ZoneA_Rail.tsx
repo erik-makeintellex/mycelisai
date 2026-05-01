@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users } from 'lucide-react';
+import { Network, Settings, Home, FolderCog, Brain, Activity, Eye, EyeOff, BookOpen, Building2, Users, Radio } from 'lucide-react';
 import { readLastOrganization, subscribeLastOrganizationChange } from '@/lib/lastOrganization';
 import { useCortexStore } from '@/store/useCortexStore';
 
@@ -12,6 +12,7 @@ export function ZoneA() {
     const router = useRouter();
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
+    const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
     const [isHydrated, setIsHydrated] = useState(false);
     const [lastOrganization, setLastOrganization] = useState<{ id: string; name: string } | null>(null);
 
@@ -35,6 +36,7 @@ export function ZoneA() {
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'Soma', description: 'Home', testId: 'nav-dashboard' },
         { href: '/groups', icon: Users, label: 'Groups', description: 'Focused lanes', testId: 'nav-groups' },
+        { href: '/activity', icon: Radio, label: 'Activity', description: 'Runs & bus', testId: 'nav-activity' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,
@@ -104,6 +106,15 @@ export function ZoneA() {
                     <span className="hidden md:block ml-3 text-sm font-medium">
                         {effectiveAdvancedMode ? 'Advanced: On' : 'Advanced: Off'}
                     </span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setStatusDrawerOpen(true)}
+                    className="flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200 text-cortex-text-muted hover:text-cortex-text-main hover:bg-cortex-bg"
+                    title="Open status drawer"
+                >
+                    <Activity className="w-5 h-5 flex-shrink-0" />
+                    <span className="hidden md:block ml-3 text-sm font-medium">Status</span>
                 </button>
                 <NavItem href="/settings" icon={Settings} label="Settings" testId="nav-settings" />
             </div>

@@ -46,7 +46,7 @@ The implementation slice is incomplete until it specifies:
 | Document | Role |
 |----------|------|
 | `mycelis-architecture-v6.2.md` | Master State Authority — current schema, CTS envelope, NATS topics, Soma lifecycle |
-| `mycelis-architecture-v7.md` + `docs/architecture-library/*.md` | V7 PRD index + modular target/architecture/execution/UI/testing authority |
+| `architecture/mycelis-architecture-v7.md` + `docs/architecture-library/*.md` | V7 PRD index + modular target/architecture/execution/UI/testing authority |
 | Phase 19-B Fix Report | Intent proof pipeline corrections, confirm token flow, mutation detection |
 
 ### Locked Decisions

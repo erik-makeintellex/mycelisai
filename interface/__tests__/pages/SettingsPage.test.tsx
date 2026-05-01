@@ -179,19 +179,26 @@ describe('Settings Page (app/settings/page.tsx)', () => {
         expect(screen.getByRole('tab', { name: 'Profile' }).getAttribute('aria-current')).toBe('page');
     });
 
-    it('explains advanced deep links instead of silently dropping requested settings tabs', async () => {
+    it('explains advanced deep links without mounting connected tools until advanced mode is active', async () => {
         mockAdvancedMode.mockReturnValue(false);
         mockSearchParams.set('tab', 'tools');
-        await act(async () => {
-            render(<SettingsPage />);
-        });
+        const view = render(<SettingsPage />);
 
         expect(screen.getByText('Connected Tools lives in Advanced mode')).toBeDefined();
+        expect(screen.queryByTestId('mcp-tool-registry')).toBeNull();
+
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Open Connected Tools' }));
         });
 
         expect(mockToggleAdvancedMode).toHaveBeenCalled();
+        expect(screen.queryByTestId('mcp-tool-registry')).toBeNull();
+
+        mockAdvancedMode.mockReturnValue(true);
+        await act(async () => {
+            view.rerender(<SettingsPage />);
+        });
+
         expect(await screen.findByTestId('mcp-tool-registry')).toBeDefined();
     });
 

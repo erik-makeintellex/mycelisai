@@ -59,7 +59,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "soma-chat",
                 label: "Using Soma Chat",
                 path: "docs/user/soma-chat.md",
-                description: "Send messages, read delegation traces, and confirm governed proposals",
+                description: "Concrete Soma prompts for web search, teams, host data, MCP review, outputs, delegation traces, and governed proposals",
             },
             {
                 slug: "workflow-variants-plan-memory",
@@ -89,7 +89,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "resources-guide",
                 label: "Resources",
                 path: "docs/user/resources.md",
-                description: "Advanced tools, workspace files, AI engines, and governed private/deployment/reflection context",
+                description: "Connected Tools, MCP structure review, workspace files, AI engines, and governed private/deployment/reflection context",
             },
             {
                 slug: "teams-guide",
@@ -103,6 +103,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/user/memory.md",
                 description: "Trusted recall, `SOMA_MEMORY` and `AGENT_MEMORY`, governed context lanes, and continuity rules",
             },
+            { slug: "settings-access", label: "Settings And Access", path: "docs/user/settings-access.md", description: "Profile, People & Access, auth-provider posture, access-denied recovery, and connected-tool/search management boundaries" },
             {
                 slug: "governance-trust",
                 label: "Governance & Trust",
@@ -147,13 +148,13 @@ export const DOC_MANIFEST: DocSection[] = [
             {
                 slug: "v8-dev-state",
                 label: "V8 Dev State",
-                path: "V8_DEV_STATE.md",
+                path: ".state/V8_DEV_STATE.md",
                 description: "Live implementation scoreboard for current V8 delivery status, blockers, and evidence",
             },
             {
                 slug: "v7-dev-state",
                 label: "V7 Dev State (Historical)",
-                path: "V7_DEV_STATE.md",
+                path: ".state/V7_DEV_STATE.md",
                 description: "Historical migration checkpoint retained as legacy input, not live authority",
             },
         ],
@@ -333,7 +334,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-mycelis-search-capability-delivery",
                 label: "V8 Mycelis Search Capability",
                 path: "docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md",
-                description: "Delivery-team contract for owned local-source search, optional SearXNG, optional hosted search, and capability/MCP testing gates",
+                description: "Delivery-team contract for owned local-source search, operator-owned local API search, optional SearXNG, optional hosted/Brave search, and capability/MCP testing gates",
             },
             {
                 slug: "v8-enterprise-self-hosted-kubernetes-delivery-plan",
@@ -356,7 +357,7 @@ export const DOC_MANIFEST: DocSection[] = [
             {
                 slug: "v8-2-full-production-architecture",
                 label: "Full Architecture (V8.2)",
-                path: "v8-2.md",
+                path: "architecture/v8-2.md",
                 description: "Canonical full production architecture for distributed execution, governed learning, and actuation",
             },
             {
@@ -398,7 +399,7 @@ export const DOC_MANIFEST: DocSection[] = [
             {
                 slug: "v7-architecture-prd",
                 label: "V7 Architecture PRD Index",
-                path: "mycelis-architecture-v7.md",
+                path: "architecture/mycelis-architecture-v7.md",
                 description: "Stable compatibility entrypoint pointing to the modular architecture library",
             },
             {

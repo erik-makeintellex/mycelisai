@@ -120,12 +120,17 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText('filesystem-server')).toBeDefined();
         expect(screen.getByText('web-scraper')).toBeDefined();
         expect(screen.getByText(/Connected Tools Workflow/i)).toBeDefined();
+        expect(screen.getByText(/Concrete Soma Commands/i)).toBeDefined();
+        expect(screen.getByText(/Search web/i)).toBeDefined();
+        expect(screen.getAllByText(/Create team/i).length).toBeGreaterThan(0);
+        expect(screen.getAllByText(/Read host data/i).length).toBeGreaterThan(0);
         expect(initializeStream).toHaveBeenCalledTimes(1);
         expect(fetchMCPActivity).toHaveBeenCalledTimes(1);
         expect(fetchSearchCapability).toHaveBeenCalledTimes(1);
         expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
         expect(screen.getByText('Soma search is ready')).toBeDefined();
         expect(screen.getByText(/No hosted Brave token required/i)).toBeDefined();
+        expect(screen.getByText(/local_api/i)).toBeDefined();
 
         // "Installed" tab should be active by default, showing server count badge
         expect(screen.getByText('2')).toBeDefined();

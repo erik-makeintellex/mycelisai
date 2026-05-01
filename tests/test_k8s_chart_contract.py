@@ -67,6 +67,7 @@ def test_chart_exposes_first_enterprise_k8s_override_surfaces():
         "affinity:",
         "topologySpreadConstraints:",
         "ingress:",
+        "networkPolicy:",
         "digest:",
     ]
 

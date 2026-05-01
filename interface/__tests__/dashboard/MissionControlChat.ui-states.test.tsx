@@ -137,8 +137,8 @@ describe('MissionControlChat UI states', () => {
         await settleMissionControlChat();
 
         expect(screen.getByText('Choose a starter prompt')).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: 'Run a governed change' }));
-        expect(screen.getByDisplayValue('Run a governed change')).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: 'Search the web for current product news and cite sources' }));
+        expect(screen.getByDisplayValue('Search the web for current product news and cite sources')).toBeDefined();
     });
 
     it('shows team-specific starter prompts in simple mode when a team is selected', async () => {

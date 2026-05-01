@@ -5,7 +5,7 @@ import { ZoneA } from "./ZoneA_Rail";
 import { ZoneB } from "./ZoneB_Workspace";
 import DegradedModeBanner from "@/components/dashboard/DegradedModeBanner";
 import StatusDrawer from "@/components/dashboard/StatusDrawer";
-import { Activity } from "lucide-react";
+import SignalDetailDrawer from "@/components/stream/SignalDetailDrawer";
 import { useCortexStore } from "@/store/useCortexStore";
 import { ThemeSync } from "@/components/shell/ThemeSync";
 
@@ -14,7 +14,6 @@ interface ShellLayoutProps {
 }
 
 export function ShellLayout({ children }: ShellLayoutProps) {
-    const setStatusDrawerOpen = useCortexStore((s) => s.setStatusDrawerOpen);
     const fetchServicesStatus = useCortexStore((s) => s.fetchServicesStatus);
     const fetchUserSettings = useCortexStore((s) => s.fetchUserSettings);
     const initializeStream = useCortexStore((s) => s.initializeStream);
@@ -45,17 +44,10 @@ export function ShellLayout({ children }: ShellLayoutProps) {
                     {children}
                 </ZoneB>
 
+                <SignalDetailDrawer />
             </div>
 
             <StatusDrawer />
-            <button
-                onClick={() => setStatusDrawerOpen(true)}
-                className="fixed right-4 bottom-4 z-30 px-2.5 py-1.5 rounded-lg border border-cortex-primary/30 bg-cortex-surface text-cortex-primary hover:bg-cortex-primary/10 text-[10px] font-mono flex items-center gap-1.5"
-                title="Open Status Drawer"
-            >
-                <Activity className="w-3.5 h-3.5" />
-                Status
-            </button>
 
         </div>
     );

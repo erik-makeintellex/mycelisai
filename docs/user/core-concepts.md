@@ -182,6 +182,9 @@ Typical unlocks:
 `Settings -> People & Access` provides:
 - user management elements (role, remote-provider allowance, active/disabled state)
 - environment ownership, identity posture, and shared-Soma governance posture
+- deploy-owned edition/auth fields as read-only release posture unless the current edition enables management actions
+
+See [Settings And Access](settings-access.md) for the current operator contract around Profile, People & Access, Auth Providers, connected-tool boundaries, and access-denied recovery.
 
 Collaboration groups now have their own dedicated workflow surface:
 - `Groups` for standing and temporary group creation, plus archived temporary-group review after closure

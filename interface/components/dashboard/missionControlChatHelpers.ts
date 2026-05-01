@@ -28,10 +28,10 @@ export const COUNCIL_META: Record<string, { label: string; color: string }> = {
 };
 
 export const STARTER_PROMPTS = [
-    "Plan the next move",
-    "Review current state",
-    "Run a governed change",
-    "Create an artifact",
+    "Search the web for current product news and cite sources",
+    "Create a small temporary team for this work",
+    "Ask the active teams for blockers and summarize",
+    "Use host data from workspace/shared-sources",
 ] as const;
 
 const ASK_CLASS_BADGES: Record<string, { label: string; tone: string }> = {

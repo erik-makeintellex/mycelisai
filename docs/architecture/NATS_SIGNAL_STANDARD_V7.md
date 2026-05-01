@@ -177,4 +177,4 @@ No new channel variant becomes canonical until:
 - the subject family is documented here or in the companion channel architecture doc
 - the runtime uses constants instead of literals
 - operator-facing consumers know whether the payload is command, status, result, or telemetry
-- the change is reflected in `README.md`, `V8_DEV_STATE.md`, and the in-app docs manifest (`V7_DEV_STATE.md` remains historical only)
+- the change is reflected in `README.md`, `.state/V8_DEV_STATE.md`, and the in-app docs manifest (`.state/V7_DEV_STATE.md` remains historical only)

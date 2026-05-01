@@ -16,11 +16,13 @@ vi.mock('next/navigation', () => ({
 // Mock Zustand store
 const mockAdvancedMode = vi.fn(() => false);
 const mockToggleAdvancedMode = vi.fn();
+const mockSetStatusDrawerOpen = vi.fn();
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) => {
         const state = {
             advancedMode: mockAdvancedMode(),
             toggleAdvancedMode: mockToggleAdvancedMode,
+            setStatusDrawerOpen: mockSetStatusDrawerOpen,
         };
         return selector(state);
     },
@@ -38,6 +40,7 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     beforeEach(() => {
         mockPathname.mockReturnValue('/dashboard');
         mockAdvancedMode.mockReturnValue(false);
+        mockSetStatusDrawerOpen.mockReset();
         localStorage.clear();
     });
 
@@ -56,6 +59,11 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     it('renders Settings in footer', () => {
         render(<ZoneA />);
         expect(screen.getByText('Settings')).toBeDefined();
+    });
+
+    it('renders Status in footer without using a floating workspace control', () => {
+        render(<ZoneA />);
+        expect(screen.getByRole('button', { name: /Status/i })).toBeDefined();
     });
 
     it('shows a persistent current organization link when one was opened previously', async () => {

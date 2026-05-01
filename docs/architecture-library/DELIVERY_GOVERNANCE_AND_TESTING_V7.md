@@ -23,7 +23,7 @@ Supporting specialized docs:
 
 - Delivery governance now references `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md` as the bootstrap and V7->V8 migration contract, even when slices still operate on legacy V7 artifacts.
 - `Template ≠ instantiated organization`; all templates/YAML/runtime/DB/operator inputs must be translated through the V8 template -> instantiation -> inheritance -> precedence pipeline before they change runtime behavior.
-- `V8_DEV_STATE.md` is the authoritative queue for slice/NEXT markers; `V7_DEV_STATE.md` remains a historical reference only.
+- `.state/V8_DEV_STATE.md` is the authoritative queue for slice/NEXT markers; `.state/V7_DEV_STATE.md` remains a historical reference only.
 - Governance review should confirm that every slice uses V7 docs strictly as migration inputs and reports evidence back into the V8 state file.
 
 ## 1. Delivery Principle
@@ -54,7 +54,7 @@ When behavior changes, update the canonical docs in the same slice.
 
 Minimum candidates:
 - `README.md`
-- `V8_DEV_STATE.md` (state scoreboard; reference `V7_DEV_STATE.md` only for historical migration evidence)
+- `.state/V8_DEV_STATE.md` (state scoreboard; reference `.state/V7_DEV_STATE.md` only for historical migration evidence)
 - `docs/TESTING.md`
 - `docs/architecture/OPERATIONS.md`
 - `docs/README.md`
@@ -77,7 +77,7 @@ Use the canonical status markers below when tracking delivery in planning and st
 
 These markers should be used consistently across:
 - `README.md`
-- `V7_DEV_STATE.md`
+- `.state/V7_DEV_STATE.md`
 - target-delivery/action-card docs
 - phase/gate documentation
 

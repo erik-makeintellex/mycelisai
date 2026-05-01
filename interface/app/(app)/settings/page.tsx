@@ -139,7 +139,7 @@ function SettingsContent() {
             </div>
 
             {/* Content */}
-            {activeTab === "tools" ? (
+            {activeTab === "tools" && advancedMode ? (
                 <div className="flex-1 overflow-hidden mt-2">
                     <MCPToolRegistry />
                 </div>

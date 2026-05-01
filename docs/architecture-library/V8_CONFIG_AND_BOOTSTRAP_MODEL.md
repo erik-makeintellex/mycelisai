@@ -658,7 +658,7 @@ These assumptions must move behind the V8 bootstrap contract so that multiple or
 
 ### Acceptance for this planning slice
 
-- Task 005 in `V8_DEV_STATE.md` moves to `ACTIVE` with this written plan.
+- Task 005 in `.state/V8_DEV_STATE.md` moves to `ACTIVE` with this written plan.
 - Follow-on implementation slices must:
   1. land template serialization + loader infrastructure,
   2. replace standing-team seeding with template-instantiation calls,

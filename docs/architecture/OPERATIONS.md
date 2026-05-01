@@ -75,7 +75,7 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 | `uv run inv interface.install` | `npm install` |
 | `uv run inv interface.build` | `npm run build` (production, with one managed retry after stale repo-local Next build locks, stale `.next/standalone` cleanup locks, incomplete built-server packaging, or transient missing `.next/types` output) |
 | `uv run inv interface.lint` | `npm run lint` (ESLint) |
-| `uv run inv interface.test` | `npm run test` (Vitest) |
+| `uv run inv interface.test` | `npm run test` (Vitest with deterministic sequential file execution) |
 | `uv run inv interface.typecheck` | `npx tsc --noEmit` |
 | `uv run inv interface.test-coverage` | Vitest with V8 coverage |
 | `uv run inv interface.e2e` | `npm run e2e` (Invoke manages the Next.js server lifecycle via managed `dev` mode by default for stable mocked browser proof; use `--server-mode=start` for the built production Interface server path or live-backend proof. It still uses repo-managed Playwright browsers, defaults to `--workers=1` for repeatability, binds the managed UI server to `127.0.0.1` on Windows so readiness and browser navigation use the same loopback family, clears stale Interface listeners and repo-local worker residue before/after, clears an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains, retries once after stale Next build locks, stale `.next/standalone` cleanup locks, incomplete built-server packaging, or transient missing `.next/types` output, and fails if it cannot bring up and hold its own managed UI server; optional `--headed`, `--project=...`, `--spec=...`, `--live-backend`) |
@@ -175,6 +175,7 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 | `uv run inv compose.logs` | Tail compose logs for the full stack or a single service |
 
 Compose runtime guardrails:
+- Compose is the rapid local development and same-machine proof runtime. It is intentionally not the target clustered deployment contract; clustered release work goes through the Kubernetes/Helm chart and its promoted values.
 - `.env` is the supported local secret store across runtime paths; `.env.compose` is the home-runtime topology contract and should not carry credentials
 - use `MYCELIS_COMPOSE_OLLAMA_HOST` for the home-runtime AI engine path so host-level `OLLAMA_HOST` bind settings do not override the compose runtime
 - the Compose stack maps `MYCELIS_COMPOSE_OLLAMA_HOST` into provider-specific runtime endpoint overrides inside Core, so deployed execution follows the same explicit provider contract as Helm instead of relying on a global host rewrite
@@ -601,7 +602,7 @@ Deployment automation rule:
 | Tier | Tool | Count | Speed | Command |
 |------|------|-------|-------|---------|
 | 1 | Go unit tests | ~112 tests | <5s | `uv run inv core.test` |
-| 2 | Vitest component tests | ~114 tests | <10s | `uv run inv interface.test` |
+| 2 | Vitest component tests | full component/page suite | minutes, sequential by design | `uv run inv interface.test` |
 | 3 | Playwright E2E | 17 spec files + axe accessibility baseline | 30s–2min | `uv run inv interface.e2e` |
 | 4 | Integration tests | DB + NATS + LLM | varies | manual |
 | 5 | Governance smoke | cmd/smoke | varies | `uv run inv core.smoke` |
@@ -705,8 +706,23 @@ Validation:
 
 **Helm Chart:** `charts/mycelis-core/`
 
-This chart is the shared contract for both local `k3d` validation and enterprise self-hosted Kubernetes deployment.
+This chart is the target clustered deployment contract for self-hosted and enterprise Kubernetes.
 Local `k3d` is the validation backend; the enterprise target is the real customer or internal cluster.
+Docker Compose is rapid local development/proof only and must not become the production deployment standard.
+
+Open-standard posture:
+- Kubernetes resources stay ordinary and portable: Deployment, Service, ServiceAccount, Secret, ConfigMap, PersistentVolumeClaim, Ingress, and NetworkPolicy.
+- Workloads expose startup, readiness, and liveness probes against `/healthz`.
+- Pods run non-root with a RuntimeDefault seccomp profile, dropped capabilities, no privilege escalation, and a read-only root filesystem where the application allows it.
+- Runtime config is mounted as ConfigMap/Secret-backed chart state, with raw secrets supplied through `.env` for task-owned local automation or existing Kubernetes Secrets for real clusters.
+- Output storage defaults to cluster-managed PVC mode (`outputBlock.mode=cluster_generated`); hostPath-style local hosting is not the clustered default.
+- Image delivery uses explicit tags or digests and imagePullSecrets where the target cluster requires a private registry.
+- Search, AI endpoints, and provider wiring are explicit runtime values, not localhost assumptions or Compose-only shortcuts.
+
+Standards gate:
+- `uv run inv k8s.standards` runs static open-standard chart checks.
+- `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` also runs offline Helm lint and template checks with vendored chart dependencies.
+- Run that gate before release packaging, staging handoff, or target-cluster installation.
 
 ```yaml
 replicaCount: 1

@@ -39,6 +39,7 @@ core/bin/
 # Project specific
 *.db
 *.sqlite3
+.state/
 postgres-data/
 nats-data/
 .build/

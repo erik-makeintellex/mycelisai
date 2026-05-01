@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronRight, Trash2, Server, Wrench } from "lucide-react";
+import { ChevronRight, Trash2, Server, Wrench, Settings2 } from "lucide-react";
 import type { MCPServerWithTools } from "@/store/useCortexStore";
 
 // ── Status Dot Color ──────────────────────────────────────────
@@ -18,6 +18,7 @@ interface MCPServerCardProps {
     server: MCPServerWithTools;
     onDelete: (id: string) => void;
     recentActivity?: MCPRecentActivity[];
+    onEdit?: () => void;
 }
 
 export interface MCPRecentActivity {
@@ -33,7 +34,7 @@ export interface MCPRecentActivity {
     agentId?: string;
 }
 
-export default function MCPServerCard({ server, onDelete, recentActivity = [] }: MCPServerCardProps) {
+export default function MCPServerCard({ server, onDelete, recentActivity = [], onEdit }: MCPServerCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
@@ -136,9 +137,10 @@ export default function MCPServerCard({ server, onDelete, recentActivity = [] }:
                 </div>
             )}
 
-            {/* Expanded: Tool List */}
+            {/* Expanded: Structure + Tool List */}
             {isExpanded && (
                 <div className="px-4 pb-4 border-t border-cortex-border/50">
+                    <MCPServerStructure server={server} onEdit={onEdit} />
                     {recentActivity.length > 0 && (
                         <div className="pt-3 pb-3 border-b border-cortex-border/50">
                             <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
@@ -204,6 +206,50 @@ export default function MCPServerCard({ server, onDelete, recentActivity = [] }:
                     )}
                 </div>
             )}
+        </div>
+    );
+}
+
+function MCPServerStructure({ server, onEdit }: { server: MCPServerWithTools; onEdit?: () => void }) {
+    const envKeys = Object.keys(server.env ?? {});
+    const headerKeys = Object.keys(server.headers ?? {});
+    return (
+        <div className="pt-3 pb-3 border-b border-cortex-border/50">
+            <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                    MCP Structure
+                </p>
+                {onEdit ? (
+                    <button
+                        type="button"
+                        onClick={onEdit}
+                        className="inline-flex items-center gap-1 rounded-md border border-cortex-border bg-cortex-bg px-2 py-1 text-[10px] font-mono text-cortex-text-main hover:border-cortex-primary/30"
+                    >
+                        <Settings2 className="h-3 w-3 text-cortex-primary" />
+                        Edit in Library
+                    </button>
+                ) : null}
+            </div>
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+                <StructureField label="Transport" value={server.transport} />
+                <StructureField label="Status" value={server.status} />
+                <StructureField label="Command" value={server.command || server.url || "not declared"} wide />
+                <StructureField label="Arguments" value={server.args?.length ? server.args.join(" ") : "none"} wide />
+                <StructureField label="Environment refs" value={envKeys.length ? envKeys.join(", ") : "none"} />
+                <StructureField label="Header refs" value={headerKeys.length ? headerKeys.join(", ") : "none"} />
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-cortex-text-muted">
+                Secrets are shown only as references or redacted values. Update credentials in the repo/deployment `.env`, then reapply the curated Library entry when the server structure changes.
+            </p>
+        </div>
+    );
+}
+
+function StructureField({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+    return (
+        <div className={`rounded-lg border border-cortex-border bg-cortex-bg/60 px-2.5 py-2 ${wide ? "md:col-span-2" : ""}`}>
+            <p className="text-[9px] font-mono uppercase tracking-wider text-cortex-text-muted">{label}</p>
+            <p className="mt-1 break-words text-[11px] font-mono text-cortex-text-main">{value}</p>
         </div>
     );
 }

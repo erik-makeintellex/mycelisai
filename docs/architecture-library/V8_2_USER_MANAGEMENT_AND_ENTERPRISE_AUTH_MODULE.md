@@ -1,5 +1,5 @@
 # V8.2 User Management And Enterprise Auth Module
-> Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.2 Production Architecture](../../v8-2.md)
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.2 Production Architecture](../../architecture/v8-2.md)
 
 > Status: Canonical
 > Last Updated: 2026-04-27
@@ -365,4 +365,4 @@ Next implementation slices should proceed in this order:
 - [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
 - [V8 Trusted Memory Arbitration And Team Vector Contract](V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md)
 - [Licensing & Editions](../licensing.md)
-- [V8.2 Production Architecture](../../v8-2.md)
+- [V8.2 Production Architecture](../../architecture/v8-2.md)

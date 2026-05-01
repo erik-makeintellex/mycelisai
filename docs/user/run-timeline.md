@@ -26,6 +26,10 @@ After confirming a proposal, a pill appears in the chat:
 
 Click it to navigate to `/runs/{run_id}`. You can also navigate directly if you have the run ID.
 
+Admins can start at `/activity` when they need a cleaner operating view before drilling into a specific run. The Activity page summarizes active workflows, recent run outcomes, live stream counts, and NATS/groups bus health without exposing the lower-level System diagnostics by default.
+
+Activity is a split admin view: select a run on the left, then inspect its recorded events on the right without expanding each event card. Use the full timeline link only when you need the dedicated `/runs/{run_id}` page.
+
 ---
 
 ## Reading the Timeline
@@ -83,6 +87,7 @@ While `running`, the timeline polls for new events every 5 seconds automatically
 ## Navigation
 
 - **<- Workspace** link in the header returns to Workspace (`/dashboard`)
+- **Activity** in the main rail opens `/activity`, the admin overview for current workflows, inline run events, and readable message-bus activity
 - The run URL (`/runs/{run_id}`) is bookmarkable and shareable — anyone with access can view the same timeline
 - Each event card's expanded JSON is a complete audit record
 

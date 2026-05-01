@@ -55,7 +55,10 @@ Use `Teams` when you want to inspect or manage existing teams:
 - open the team lead workspace
 - review retained outputs
 - inspect member templates
+- review or edit template role, model, and MCP/internal tool references
 - check whether a team should be archived or kept
+
+Use `Settings -> Connected Tools` or `Resources -> Connected Tools` when you need to confirm which tool refs, direct web search posture, or MCP servers are available before assigning them to a reusable agent template. Installed server cards should show the MCP structure, and Library is the reapply/edit path for curated server config.
 
 Use `Create Team` when you want a guided setup instead of filling raw fields:
 

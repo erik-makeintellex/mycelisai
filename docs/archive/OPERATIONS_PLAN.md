@@ -264,7 +264,7 @@ Alternative if "Operations" still sounds too military: **"Workspace"** (safe fal
 | `store/useCortexStore.ts` | `CHAT_STORAGE_KEY` (needs migration), state comments |
 | `components/shell/ZoneA_Rail.tsx` | Nav label (Mission Control → Ops) |
 | `docs/archive/ia-v7-step-01.md` | Documentation |
-| `V7_DEV_STATE.md` | Reference update |
+| `.state/V7_DEV_STATE.md` | Reference update |
 | `MEMORY.md` | Auto-memory reference |
 
 **localStorage migration**: `mission-control-split` → `mycelis-ops-split`

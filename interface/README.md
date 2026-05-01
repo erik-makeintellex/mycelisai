@@ -99,7 +99,7 @@ Use the `inv` (invoke) task runner from the project root:
 uv run inv interface.dev       # Start dev server (Turbopack)
 uv run inv interface.build     # Production build
 uv run inv interface.lint      # ESLint check
-uv run inv interface.test      # Run Vitest unit tests
+uv run inv interface.test      # Run Vitest unit tests with sequential file execution
 uv run inv interface.check     # Smoke-test running server (fetches key pages, checks for errors)
 uv run inv interface.stop      # Kill dev server by port
 uv run inv interface.clean     # Clear .next build cache

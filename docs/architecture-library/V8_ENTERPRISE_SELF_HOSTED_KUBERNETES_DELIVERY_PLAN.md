@@ -27,6 +27,7 @@ Enterprise deployment readiness means:
 - the same chart can be promoted across local validation, staging, and customer-managed clusters without patching templates
 - configuration, secrets, networking, storage, and image delivery work through standard cluster contracts
 - local Kubernetes validation proves enterprise-compatible assumptions instead of only proving a developer convenience path
+- Docker Compose remains rapid local development/proof only; it is not the clustered deployment target
 
 This plan defines how to get there without turning the delivery team into a sprawling planning swarm.
 
@@ -36,7 +37,7 @@ Use these deployment modes deliberately and keep their purposes distinct.
 
 | Mode | Purpose | Canonical posture |
 | --- | --- | --- |
-| `compose_single_host` | single-owner or small-team self-hosted runtime | supported deployable runtime for home-lab, partner demos, and compact self-hosting |
+| `compose_single_host` | rapid local development, same-machine proof, and demos | useful proof/runtime loop, not the target clustered deployment contract |
 | `k3d_local_k8s` | local Kubernetes validation lane inside WSL/Linux Docker | enterprise-simulation dev/test lane, not the production target |
 | `enterprise_self_hosted_k8s` | customer-managed cluster deployment | Helm/GitOps/promoted-values contract for real enterprise clusters |
 | `edge_binary_node` | lightweight node-attached runtime helper or specialist host | binary/image variant for local-only users or edge nodes such as Raspberry Pi-class systems |
@@ -45,12 +46,13 @@ Rules:
 - `k3d_local_k8s` replaces Kind as the preferred local Kubernetes validation lane for WSL/Linux work.
 - `k3d_local_k8s` exists to simulate enterprise cluster posture locally; it is not itself the enterprise deployment target.
 - `enterprise_self_hosted_k8s` must not depend on Docker Desktop, Kind-only image loading, or localhost-only AI endpoints.
+- `enterprise_self_hosted_k8s` must stay on open Kubernetes/Helm standards: Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy, probes, workload security contexts, explicit image tags/digests, and cluster-managed output storage.
 - `edge_binary_node` is a deployment variant, not a reason to weaken the cluster deployment contract.
 
 ## Delivery Target
 
 The current delivery target is:
-- keep Compose as the supported single-host self-hosted runtime
+- keep Compose as the rapid local development/proof runtime
 - establish `k3d` as the canonical local Kubernetes validation lane
 - make the Helm chart enterprise-compatible through values, secrets, networking, storage, and image-delivery contracts
 - prove that Mycelis can be promoted into a customer-managed Kubernetes cluster without forking templates or reintroducing desktop-local assumptions
@@ -82,6 +84,7 @@ Required local enterprise-simulation behaviors:
 - no required `hostPath` assumptions for normal cluster deployment
 - no `localhost` AI provider assumptions in cluster mode
 - chart renders cleanly for promoted values files
+- `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` passes before release packaging or target-cluster handoff
 
 ## Focused Team
 
@@ -89,7 +92,7 @@ Keep the delivery team compact and specialized.
 
 | Role | Ownership | Primary surfaces | Success condition |
 | --- | --- | --- | --- |
-| Delivery Manager | scope, sequencing, blockers, state updates, gate decisions | `V8_DEV_STATE.md`, delivery docs, board cadence | one active target, explicit owners, no silent drift |
+| Delivery Manager | scope, sequencing, blockers, state updates, gate decisions | `.state/V8_DEV_STATE.md`, delivery docs, board cadence | one active target, explicit owners, no silent drift |
 | Platform Architect | deployment contract, environment promotion model, topology rules | architecture docs, chart contract, values model | local `k3d` and enterprise cluster assumptions align |
 | Chart / Runtime Engineer | Helm surfaces, config projection, storage/network/image hooks | `charts/mycelis-core/**` | chart supports enterprise-compatible overrides without template forks |
 | Ops / Deployment Engineer | local cluster automation, image flow, local-k8s tasks, runbooks | `ops/k8s.py`, `docs/LOCAL_DEV_WORKFLOW.md`, tests | local `k3d` validation is deterministic and repeatable |
@@ -130,7 +133,7 @@ PM rules:
 | Platform Contract | `ACTIVE` | Platform Architect | define `k3d` as local K8s lane and enterprise chart promotion rules | canonical plan + docs alignment |
 | Chart Enterprise Readiness | `IN_REVIEW` | Chart / Runtime Engineer | keep enterprise-friendly Helm surfaces aligned with promoted preset files | rendered chart diff + focused tests |
 | Local K8s Ops | `IN_REVIEW` | Ops / Deployment Engineer | apply promoted preset files through `MYCELIS_K8S_VALUES_FILE` and keep `k3d` tasking deterministic | deterministic local `k3d` up/deploy/status proof |
-| Validation + Release | `IN_REVIEW` | Validation / Release Engineer | keep chart render/policy/runtime proof in the repo gate and cover preset values files | local enterprise-sim render/test gate |
+| Validation + Release | `IN_REVIEW` | Validation / Release Engineer | keep chart render/policy/runtime proof in the repo gate and cover preset values files | `k8s.standards`, local enterprise-sim render/test gate |
 | Enterprise Staging Contract | `IN_REVIEW` | Shared after preceding lanes | use promoted values files to define customer-managed dependency posture | documented deploy contract for real clusters |
 
 ## Acceptance Gates
@@ -142,11 +145,13 @@ This delivery lane is only complete when all of the following are true:
 3. The runtime uses explicit reachable AI endpoints in cluster mode.
 4. Local Kubernetes proof validates enterprise-compatible assumptions: storage, ingress/service exposure, image delivery, config/secret posture, and health checks.
 5. The repo contains promoted chart values guidance for local, staging, and enterprise-managed cluster deployment.
-6. Docs, tasks, and tests all describe the same Kubernetes story.
+6. `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` passes as the open-standard Helm/Kubernetes gate.
+7. Docs, tasks, and tests all describe the same Kubernetes story.
 
 Evidence bias:
 - local `k3d` proof is required
 - render/validation proof is required
+- standards-gate proof is required
 - Compose success alone is not sufficient
 - customer-specific infrastructure is not baked into the generic chart
 
@@ -177,4 +182,4 @@ Execute in this order:
    - local `k3d`
    - enterprise-managed services
    - external AI host
-6. `NEXT` run the full local proof and update `V8_DEV_STATE.md` with the resulting delivery truth.
+6. `NEXT` run the full local proof and update `.state/V8_DEV_STATE.md` with the resulting delivery truth.

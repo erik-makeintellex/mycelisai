@@ -23,7 +23,7 @@ Archive docs are:
 
 Active implementation sources are:
 1. `README.md`
-2. `V8_DEV_STATE.md`
+2. `.state/V8_DEV_STATE.md`
 3. `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 4. `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`
 5. `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`

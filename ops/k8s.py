@@ -1,5 +1,4 @@
 import os
-import shlex
 import socket
 import subprocess
 import shutil
@@ -9,6 +8,7 @@ from pathlib import Path
 from invoke import task, Collection
 from .config import CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
 from .core import build as core_build
+from .k8s_standards import _shell_quote, standards
 from .packaging import relative_to_root, resolve_repo_path, slugify_label, write_checksum_file, write_json
 from .version import get_version
 
@@ -146,11 +146,11 @@ def _verify_and_package_chart(
     chart_version = _chart_version()
     chart_package_path = output_dir / f"mycelis-core-{chart_version}.tgz"
 
-    quoted_chart_dir = shlex.quote(str(chart_dir))
-    quoted_values_file = shlex.quote(str(values_file))
-    quoted_output_dir = shlex.quote(str(output_dir))
-    quoted_rendered_path = shlex.quote(str(rendered_path))
-    quoted_release_label = shlex.quote(release_label)
+    quoted_chart_dir = _shell_quote(chart_dir)
+    quoted_values_file = _shell_quote(values_file)
+    quoted_output_dir = _shell_quote(output_dir)
+    quoted_rendered_path = _shell_quote(rendered_path)
+    quoted_release_label = _shell_quote(release_label)
 
     print(f"Verifying enterprise Helm package for preset '{preset_name}' as {release_label}...")
     c.run(f"helm dependency build {quoted_chart_dir}")
@@ -312,7 +312,6 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
     # Load .env secrets
     import os
     from dotenv import load_dotenv
-    import shlex
     load_dotenv(os.path.join(ROOT_DIR, ".env")) # Explicit path
     
     pg_user = os.getenv("POSTGRES_USER", "mycelis")
@@ -346,14 +345,14 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
         f"--set postgresql.auth.username={pg_user} "
         f"--set postgresql.auth.password={pg_pass} "
         f"--set postgresql.auth.database={pg_db} "
-        f"--set coreAuth.apiKey={shlex.quote(api_key)} "
+        f"--set coreAuth.apiKey={_shell_quote(api_key)} "
     )
     if values_file:
-        cmd += f"--values {shlex.quote(str(values_file))} "
+        cmd += f"--values {_shell_quote(values_file)} "
     if k8s_text_endpoint:
-        cmd += f"--set-string ai.textEndpoint={shlex.quote(k8s_text_endpoint)} "
+        cmd += f"--set-string ai.textEndpoint={_shell_quote(k8s_text_endpoint)} "
     if k8s_media_endpoint:
-        cmd += f"--set-string ai.mediaEndpoint={shlex.quote(k8s_media_endpoint)} "
+        cmd += f"--set-string ai.mediaEndpoint={_shell_quote(k8s_media_endpoint)} "
     cmd += "--wait"
     c.run(cmd)
     
@@ -553,6 +552,7 @@ def reset(c):
 ns = Collection("k8s")
 ns.add_task(init)
 ns.add_task(deploy)
+ns.add_task(standards)
 ns.add_task(wait)
 ns.add_task(up)
 ns.add_task(bridge)

@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-import shlex
 
 from invoke import Context
 import pytest
@@ -99,9 +98,9 @@ def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch, tmp_path: P
 
     assert "Deployment posture: enterprise self-hosted with Windows-hosted AI" in output
     helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
-    assert "--set-string ai.textEndpoint=http://192.168.50.156:11434/v1" in helm_command
-    assert "--set-string ai.mediaEndpoint=http://192.168.50.156:8001/v1" in helm_command
-    assert f"--values {shlex.quote(str(values_file.resolve()))}" in helm_command
+    assert f"--set-string ai.textEndpoint={k8s._shell_quote('http://192.168.50.156:11434/v1')}" in helm_command
+    assert f"--set-string ai.mediaEndpoint={k8s._shell_quote('http://192.168.50.156:8001/v1')}" in helm_command
+    assert f"--values {k8s._shell_quote(values_file.resolve())}" in helm_command
 
 
 def test_deploy_requires_explicit_windows_ai_endpoint_for_enterprise_preset(monkeypatch, tmp_path: Path):
@@ -145,7 +144,7 @@ def test_deploy_includes_repo_relative_values_file(monkeypatch, tmp_path: Path):
     k8s.deploy.body(ctx)
 
     helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
-    expected_path = shlex.quote(str(values_file.resolve()))
+    expected_path = k8s._shell_quote(values_file.resolve())
     assert f"--values {expected_path}" in helm_command
 
 

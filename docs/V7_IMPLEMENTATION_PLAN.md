@@ -11,7 +11,7 @@ The large Team A/B/C/D/E execution blueprint has been archived to:
 Current authoritative execution sources are:
 - `docs/architecture-library/TARGET_DELIVERABLE_V7.md`
 - `docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md`
-- `V7_DEV_STATE.md`
+- `.state/V7_DEV_STATE.md`
 - `docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md`
 
 If a historical dependency decision must be reviewed, consult the archived copy above.
