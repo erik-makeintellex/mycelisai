@@ -3,6 +3,8 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
 const repoRoot = path.resolve(__dirname, '../../..');
+const LIVE_GOVERNANCE_TIMEOUT_MS = 180_000;
+const LIVE_CHAT_RESPONSE_TIMEOUT_MS = 120_000;
 
 function resolveBackendWorkspaceRoots() {
     // Live backend proof can run against either the repo-local Core workspace
@@ -114,7 +116,7 @@ async function submitWorkspaceChat(page: Page, content: string) {
     await input.fill(content);
     const responsePromise = page.waitForResponse(
         (response) => response.url().includes('/api/v1/chat') && response.request().method() === 'POST',
-        { timeout: 60_000 },
+        { timeout: LIVE_CHAT_RESPONSE_TIMEOUT_MS },
     );
     await input.press('Enter');
     const response = await responsePromise;
@@ -129,7 +131,7 @@ async function submitWorkspaceChat(page: Page, content: string) {
 async function waitForConfirmAction(page: Page) {
     const responsePromise = page.waitForResponse(
         (response) => response.url().includes('/api/v1/intent/confirm-action') && response.request().method() === 'POST',
-        { timeout: 60_000 },
+        { timeout: LIVE_CHAT_RESPONSE_TIMEOUT_MS },
     );
     await page.getByRole('button', { name: /Approve & Execute|Execute/i }).click();
     const response = await responsePromise;
@@ -147,6 +149,7 @@ async function responseText(response: { text(): Promise<string> }) {
 
 test.describe('Soma governed mutation live contract', () => {
     test.skip(!process.env.PLAYWRIGHT_LIVE_BACKEND, 'requires a live Core backend');
+    test.describe.configure({ timeout: LIVE_GOVERNANCE_TIMEOUT_MS });
 
     test('Scenario A: direct Soma answer works in a fresh organization', async ({ page }) => {
         test.slow();
