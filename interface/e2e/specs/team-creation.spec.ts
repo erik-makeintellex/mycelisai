@@ -205,8 +205,8 @@ test.describe('Guided Team Creation (/teams/create)', () => {
         await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
         await expect(page.getByText('Asset Bundle', { exact: true })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Open Soma admin home' })).toHaveAttribute('href', '/dashboard');
-        await expect(page.getByRole('link', { name: 'Open launch-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
-        await expect(page.getByRole('link', { name: 'Open design-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=design-lead');
+        await expect(page.getByTitle('Open launch-lead lead')).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
+        await expect(page.getByTitle('Open design-lead lead')).toHaveAttribute('href', '/dashboard?team_id=design-lead');
         await expect(page.getByRole('link', { name: 'Download' }).last()).toHaveAttribute('href', '/api/v1/artifacts/artifact-asset-bundle/download');
 
         await page.getByRole('button', { name: 'Archive temporary group' }).click();
