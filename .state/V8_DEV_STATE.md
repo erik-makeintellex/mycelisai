@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-04-30
+> Updated: 2026-05-02
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `architecture/v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `.state/V7_DEV_STATE.md` (legacy migration input)
 
@@ -48,6 +48,7 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
 - `ACTIVE` `.env` is the local secret store across runtime paths. `.env.compose` remains the Compose topology/runtime surface only; task loading now keeps secret-like keys from `.env` authoritative over stale Compose env values.
 - `IN_REVIEW` root documentation hygiene now separates durable user-shared architecture from mutable delivery state: active architecture entrypoints moved under `architecture/`, active/historical state moved under `.state/`, `.state/` is ignored for new local session artifacts, and ignored local `kubeconfig.yaml` was removed from the working root while the tracked task-owned `kind-config.yaml` remains.
 - `IN_REVIEW` clustered Kubernetes is now reasserted as the target deployment posture while Compose is framed as rapid local development/proof only. `uv run inv k8s.standards` adds a static open-standard chart gate, `--helm --values-file=charts/mycelis-core/values-enterprise.yaml` runs offline Helm lint/template proof with vendored chart dependencies, and the chart now exposes an explicit `networkPolicy.enabled` value while keeping standard Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy, probe, non-root security, image, and cluster-managed output-storage surfaces aligned.
+- `IN_REVIEW` the public front page and in-app docs index have been refreshed for the current Soma-primary, self-hosted, connected-tools/search release posture while keeping V8.1 framed as compatibility baseline rather than active target scope.
 
 ## Layered Architecture Truth
 

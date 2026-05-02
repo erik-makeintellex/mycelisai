@@ -136,7 +136,7 @@ Component files under `interface/components`: `96` (`.tsx` and `.ts`) across `27
 | Route / tab | Decision | Team Lead-first reason |
 | --- | --- | --- |
 | `/dashboard` | keep | first-run entry and AI Organization creation remain the primary operator start |
-| `/organizations/[id]` | keep | Team Lead workspace is the default V8.1 operating surface |
+| `/organizations/[id]` | keep | Team Lead workspace is the compatibility-protected Soma-primary operating surface |
 | `/automations` `active`, `triggers`, `approvals` | keep | directly support guided operation, recurring work, and governed decisions |
 | `/automations` `teams`, `wiring` | revise | keep available, but only in advanced mode so the default workflow stays simpler |
 | `/resources`, `/memory`, `/system` | revise | remain shipped as advanced support routes, not default operator navigation |

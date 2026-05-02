@@ -12,7 +12,7 @@ test.describe('Mobile Viewport', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.getByRole('link', { name: 'Create AI Organization' }).first()).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Explore Templates' }).first()).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Review Docs' }).first()).toBeVisible();
     });
 
     test('hero content renders correctly on mobile', async ({ page }) => {

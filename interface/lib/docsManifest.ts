@@ -278,7 +278,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-1-living-organization-architecture",
                 label: "V8.1 Living Organization Baseline",
                 path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
-                description: "Current bounded release architecture for loops, continuity, capabilities, and bounded automations",
+                description: "Compatibility baseline for loops, continuity, capabilities, and bounded automations",
             },
             {
                 slug: "v8-compact-team-orchestration-defaults",

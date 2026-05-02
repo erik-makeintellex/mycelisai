@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 
 import LandingPage from "@/app/(marketing)/page";
 
-describe("Landing Page (V8.1 living AI Organization model)", () => {
+describe("Landing Page (V8.2 Soma-primary AI Organization workspace)", () => {
     it("renders the living AI Organization framing with the right CTA hierarchy", () => {
         render(<LandingPage />);
 
@@ -12,11 +12,11 @@ describe("Landing Page (V8.1 living AI Organization model)", () => {
         ).toBeDefined();
         expect(
             screen.getByText(
-                /Mycelis starts with an AI Organization, keeps Soma at the center of the workspace/i,
+                /Mycelis opens with Soma at the center of a governed workspace/i,
             ),
         ).toBeDefined();
-        expect(screen.getAllByRole("link", { name: "Create AI Organization" }).length).toBeGreaterThan(0);
-        expect(screen.getAllByRole("link", { name: "Explore Templates" }).length).toBeGreaterThan(0);
+        expect(screen.getAllByRole("link", { name: "Create AI Organization" })[0]?.getAttribute("href")).toBe("/dashboard");
+        expect(screen.getAllByRole("link", { name: "Review Docs" })[0]?.getAttribute("href")).toBe("/docs");
     });
 
     it("renders the three truths and the post-creation workspace guidance", () => {

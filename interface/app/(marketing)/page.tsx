@@ -78,26 +78,26 @@ const workspaceHighlights = [
         value: "Proposal-first changes",
     },
     {
-        label: "Memory & Continuity",
-        value: "Reusable recall, clean planning",
+        label: "Tools & Search",
+        value: "Connected context, clean handoff",
     },
 ];
 
 const recentActivityPreview = [
     {
-        name: "Strategy review",
+        name: "Tool readiness",
         time: "2 minutes ago",
-        outcome: "No issues detected",
+        outcome: "Connected sources checked",
     },
     {
-        name: "Delivery check",
+        name: "Workflow review",
         time: "10 minutes ago",
-        outcome: "2 items flagged",
+        outcome: "2 actions ready",
     },
     {
-        name: "Readiness update",
+        name: "Memory update",
         time: "18 minutes ago",
-        outcome: "Soma guidance refreshed",
+        outcome: "Useful context retained",
     },
 ];
 
@@ -146,7 +146,7 @@ export default function LandingPage() {
                         <div className="space-y-8">
                             <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-4 py-1.5 text-sm font-medium text-cortex-primary">
                                 <Sparkles className="h-4 w-4" />
-                                Living AI Organization platform
+                                Self-hosted AI Organization workspace
                             </div>
 
                             <div className="space-y-5">
@@ -154,9 +154,9 @@ export default function LandingPage() {
                                     Build AI Organizations that think, review, and evolve.
                                 </h1>
                                 <p className="max-w-2xl text-lg leading-8 text-cortex-text-muted md:text-xl">
-                                    Mycelis starts with an AI Organization, keeps Soma at the center of the workspace,
-                                    and makes governed execution, memory continuity, and visible reviews feel native instead of
-                                    bolted onto a generic assistant experience.
+                                    Mycelis opens with Soma at the center of a governed workspace, then keeps teams,
+                                    connected tools, memory continuity, and visible execution state close enough for real
+                                    administrative work.
                                 </p>
                             </div>
 
@@ -169,10 +169,10 @@ export default function LandingPage() {
                                     <ArrowRight className="h-4 w-4" />
                                 </Link>
                                 <Link
-                                    href="/dashboard"
+                                    href="/docs"
                                     className="inline-flex items-center justify-center rounded-full border border-cortex-border bg-cortex-surface px-6 py-3 text-base font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/40 hover:text-cortex-primary"
                                 >
-                                    Explore Templates
+                                    Review Docs
                                 </Link>
                             </div>
 
@@ -190,7 +190,7 @@ export default function LandingPage() {
                             <div className="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top,rgba(132,220,198,0.24),transparent_60%)] blur-2xl" />
                             <div className="relative space-y-5 rounded-[2rem] border border-cortex-border bg-cortex-surface/95 p-6 shadow-[0_30px_90px_rgba(63,67,100,0.14)]">
                                 <div className="inline-flex items-center gap-2 rounded-full border border-cortex-warning/30 bg-cortex-warning/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-warning">
-                                    Illustrative preview
+                                    Current workspace shape
                                 </div>
                                 <div className="rounded-3xl border border-cortex-border bg-cortex-bg px-5 py-5">
                                     <div className="flex items-start justify-between gap-4">
@@ -202,7 +202,7 @@ export default function LandingPage() {
                                             </p>
                                         </div>
                                         <span className="rounded-full border border-cortex-success/30 bg-cortex-success/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-cortex-success">
-                                            Example state
+                                            Release path
                                         </span>
                                     </div>
                                 </div>
@@ -212,10 +212,10 @@ export default function LandingPage() {
                                         <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">Work with Soma</p>
                                         <p className="mt-3 text-lg font-semibold text-cortex-text-main">Soma for Northstar Labs</p>
                                         <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                                            Guides planning, reviews structure, and recommends the next move while keeping governance, continuity, and the wider AI Organization visible.
+                                            Guides planning, reviews structure, recommends the next move, and checks connected tools while keeping governance and continuity visible.
                                         </p>
                                         <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3 text-sm text-cortex-text-main">
-                                            What I can help with: organize priorities, review setup choices, recall durable context, and turn the next step into a practical plan.
+                                            What I can help with: organize priorities, review setup choices, search connected context, and turn the next step into a practical plan.
                                         </div>
                                     </div>
 
@@ -232,7 +232,7 @@ export default function LandingPage() {
                                         <div>
                                             <p className="text-xs font-medium uppercase tracking-[0.18em] text-cortex-primary/80">Recent Activity</p>
                                             <p className="mt-1 text-sm text-cortex-text-muted">
-                                                Your AI Organization stays visibly active through recent reviews, checks, and updates.
+                                                Your AI Organization stays visibly active through tool checks, workflow reviews, memory updates, and execution signals.
                                             </p>
                                         </div>
                                     </div>
@@ -328,8 +328,8 @@ export default function LandingPage() {
                             Create an AI Organization with clear structure, guided control, and visible activity.
                         </h2>
                         <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-cortex-text-muted">
-                            Mycelis opens with a Soma-primary workspace, governed changes, and retained continuity, not a
-                            one-off assistant prompt. Build from a template or begin empty, then shape the organization with confidence.
+                            Mycelis opens with a Soma-primary workspace, governed changes, connected tool readiness, and
+                            retained continuity. Start the workspace, then use Docs when you need deeper operating guidance.
                         </p>
                         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
                             <Link
@@ -340,10 +340,10 @@ export default function LandingPage() {
                                 <ArrowRight className="h-4 w-4" />
                             </Link>
                             <Link
-                                href="/dashboard"
+                                href="/docs"
                                 className="inline-flex items-center justify-center rounded-full border border-cortex-border bg-cortex-bg px-6 py-3 text-base font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/40 hover:text-cortex-primary"
                             >
-                                Explore Templates
+                                Review Docs
                             </Link>
                         </div>
                     </div>
