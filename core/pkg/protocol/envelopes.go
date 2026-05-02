@@ -22,9 +22,6 @@ const (
 	SignalBlueprintProposal SignalType = "blueprint_proposal" // CE-1: proposal with confirm token
 )
 
-// Trust Economy — default trust scores by node category.
-// Sensory/hardware nodes are fully trusted (they report facts).
-// Cognitive/LLM nodes must earn trust (they hallucinate).
 const (
 	TrustScoreSensory   = 1.0 // Hardware/ingress — fully trusted
 	TrustScoreCognitive = 0.5 // LLMs — trust must be earned
@@ -40,10 +37,7 @@ type CTSMeta struct {
 	TraceID    string    `json:"trace_id,omitempty"`
 }
 
-// CTSEnvelope is the mandatory wrapper for all sensor/agent outputs.
-// Any message on swarm.team.*.telemetry MUST conform to this schema.
-// TrustScore (0.0–1.0) drives the Governance Valve: envelopes above the
-// AutoExecuteThreshold bypass human approval; below it, they halt for Zone D review.
+// CTSEnvelope is the mandatory wrapper for sensor/agent outputs on telemetry channels.
 type CTSEnvelope struct {
 	Meta       CTSMeta         `json:"meta"`
 	SignalType SignalType      `json:"signal_type"`
@@ -52,8 +46,7 @@ type CTSEnvelope struct {
 	// CE-1: Orchestration template metadata (backward-compatible, omitempty)
 	TemplateID TemplateID    `json:"template_id,omitempty"`
 	Mode       ExecutionMode `json:"mode,omitempty"`
-	// V7 Event Spine: links this CTS signal to the persistent audit record in mission_events.
-	// Set by events.Store.publishCTS. Consumers use this ID to fetch full event detail.
+	// V7 Event Spine link to the persistent audit record in mission_events.
 	MissionEventID string `json:"mission_event_id,omitempty"`
 }
 

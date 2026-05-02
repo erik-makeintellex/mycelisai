@@ -36,6 +36,17 @@ type mcpActivityEntry struct {
 	Timestamp   string `json:"timestamp"`
 }
 
+type mcpPreparedLibraryRequest struct {
+	Request    mcpLibraryRequest
+	Entry      *mcp.LibraryEntry
+	Inspection map[string]any
+}
+
+type mcpLibraryInstallResult struct {
+	Server mcp.ServerConfig
+	Tools  []mcp.ToolDef
+}
+
 // handleMCPList returns all registered MCP servers with their tools.
 // GET /api/v1/mcp/servers
 func (s *AdminServer) handleMCPList(w http.ResponseWriter, r *http.Request) {
@@ -376,24 +387,11 @@ func (s *AdminServer) handleMCPLibraryInspect(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var req mcpLibraryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
+	prepared, ok := s.prepareMCPLibraryRequest(w, r)
+	if !ok {
 		return
 	}
-	if req.Name == "" {
-		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
-		return
-	}
-
-	entry := s.MCPLibrary.FindByName(req.Name)
-	if entry == nil {
-		http.Error(w, fmt.Sprintf(`{"error":"server %q not found in library"}`, req.Name), http.StatusNotFound)
-		return
-	}
-
-	inspectCtx := normalizeMCPGovernanceContext(r, req.GovernanceContext)
-	respondJSON(w, buildMCPLibraryInspectionReport(entry, inspectCtx))
+	respondJSON(w, prepared.Inspection)
 }
 
 // handleMCPLibraryInstall installs an MCP server from the curated library by name.
@@ -408,66 +406,29 @@ func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var req mcpLibraryRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
-		return
-	}
-	if req.Name == "" {
-		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
+	prepared, ok := s.prepareMCPLibraryRequest(w, r)
+	if !ok {
 		return
 	}
 
-	entry := s.MCPLibrary.FindByName(req.Name)
-	if entry == nil {
-		http.Error(w, fmt.Sprintf(`{"error":"server %q not found in library"}`, req.Name), http.StatusNotFound)
-		return
-	}
-
-	inspectCtx := normalizeMCPGovernanceContext(r, req.GovernanceContext)
-	inspection := buildMCPLibraryInspectionReport(entry, inspectCtx)
-	if decision, _ := inspection["decision"].(string); decision == "require_approval" {
+	if decision, _ := prepared.Inspection["decision"].(string); decision == "require_approval" {
 		w.WriteHeader(http.StatusAccepted)
 		respondJSON(w, map[string]any{
 			"requires_approval": true,
-			"inspection":        inspection,
+			"inspection":        prepared.Inspection,
 		})
 		return
 	}
 
-	cfg := entry.ToServerConfig(req.Env)
-	runtimeCfg, err := mcp.ApplyRuntimeDefaults(cfg)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"install failed: prepare runtime defaults: %s"}`, err.Error()), http.StatusInternalServerError)
+	result, ok := s.installMCPLibraryEntry(w, r, prepared, "install")
+	if !ok {
 		return
-	}
-	cfg = runtimeCfg
-	ctx := r.Context()
-
-	installed, err := s.MCP.Install(ctx, cfg)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"install failed: %s"}`, err.Error()), http.StatusInternalServerError)
-		return
-	}
-
-	// Connect and discover tools (best-effort)
-	if err := s.MCPPool.Connect(ctx, *installed); err != nil {
-		log.Printf("MCP library install: connect to %s failed (best-effort): %v", installed.Name, err)
-	}
-
-	tools, err := s.MCP.ListTools(ctx, installed.ID)
-	if err != nil {
-		log.Printf("MCP library install: list tools for %s failed: %v", installed.Name, err)
-		tools = []mcp.ToolDef{}
-	}
-	if tools == nil {
-		tools = []mcp.ToolDef{}
 	}
 
 	respondJSON(w, map[string]interface{}{
-		"server":     redactMCPServerConfig(*installed),
-		"tools":      tools,
-		"governance": inspection["governance"],
+		"server":     redactMCPServerConfig(result.Server),
+		"tools":      result.Tools,
+		"governance": prepared.Inspection["governance"],
 	})
 }
 
@@ -483,70 +444,92 @@ func (s *AdminServer) handleMCPLibraryApply(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	prepared, ok := s.prepareMCPLibraryRequest(w, r)
+	if !ok {
+		return
+	}
+
+	if decision, _ := prepared.Inspection["decision"].(string); decision == "require_approval" {
+		w.WriteHeader(http.StatusAccepted)
+		respondJSON(w, map[string]any{
+			"status":            "requires_approval",
+			"requires_approval": true,
+			"inspection":        prepared.Inspection,
+		})
+		return
+	}
+
+	result, ok := s.installMCPLibraryEntry(w, r, prepared, "apply")
+	if !ok {
+		return
+	}
+
+	respondJSON(w, map[string]any{
+		"status":            "installed",
+		"requires_approval": false,
+		"server":            redactMCPServerConfig(result.Server),
+		"tools":             result.Tools,
+		"inspection":        prepared.Inspection,
+		"governance":        prepared.Inspection["governance"],
+	})
+}
+
+func (s *AdminServer) prepareMCPLibraryRequest(w http.ResponseWriter, r *http.Request) (mcpPreparedLibraryRequest, bool) {
 	var req mcpLibraryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
-		return
+		return mcpPreparedLibraryRequest{}, false
 	}
 	if req.Name == "" {
 		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
-		return
+		return mcpPreparedLibraryRequest{}, false
 	}
 
 	entry := s.MCPLibrary.FindByName(req.Name)
 	if entry == nil {
 		http.Error(w, fmt.Sprintf(`{"error":"server %q not found in library"}`, req.Name), http.StatusNotFound)
-		return
+		return mcpPreparedLibraryRequest{}, false
 	}
 
 	inspectCtx := normalizeMCPGovernanceContext(r, req.GovernanceContext)
-	inspection := buildMCPLibraryInspectionReport(entry, inspectCtx)
-	if decision, _ := inspection["decision"].(string); decision == "require_approval" {
-		w.WriteHeader(http.StatusAccepted)
-		respondJSON(w, map[string]any{
-			"status":            "requires_approval",
-			"requires_approval": true,
-			"inspection":        inspection,
-		})
-		return
-	}
+	return mcpPreparedLibraryRequest{
+		Request:    req,
+		Entry:      entry,
+		Inspection: buildMCPLibraryInspectionReport(entry, inspectCtx),
+	}, true
+}
 
-	cfg := entry.ToServerConfig(req.Env)
+func (s *AdminServer) installMCPLibraryEntry(w http.ResponseWriter, r *http.Request, prepared mcpPreparedLibraryRequest, logAction string) (mcpLibraryInstallResult, bool) {
+	cfg := prepared.Entry.ToServerConfig(prepared.Request.Env)
 	runtimeCfg, err := mcp.ApplyRuntimeDefaults(cfg)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"install failed: prepare runtime defaults: %s"}`, err.Error()), http.StatusInternalServerError)
-		return
+		return mcpLibraryInstallResult{}, false
 	}
-	cfg = runtimeCfg
-	ctx := r.Context()
 
-	installed, err := s.MCP.Install(ctx, cfg)
+	installed, err := s.MCP.Install(r.Context(), runtimeCfg)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"install failed: %s"}`, err.Error()), http.StatusInternalServerError)
-		return
+		return mcpLibraryInstallResult{}, false
 	}
 
-	if err := s.MCPPool.Connect(ctx, *installed); err != nil {
-		log.Printf("MCP library apply: connect to %s failed (best-effort): %v", installed.Name, err)
+	if err := s.MCPPool.Connect(r.Context(), *installed); err != nil {
+		log.Printf("MCP library %s: connect to %s failed (best-effort): %v", logAction, installed.Name, err)
 	}
 
-	tools, err := s.MCP.ListTools(ctx, installed.ID)
+	tools, err := s.MCP.ListTools(r.Context(), installed.ID)
 	if err != nil {
-		log.Printf("MCP library apply: list tools for %s failed: %v", installed.Name, err)
+		log.Printf("MCP library %s: list tools for %s failed: %v", logAction, installed.Name, err)
 		tools = []mcp.ToolDef{}
 	}
 	if tools == nil {
 		tools = []mcp.ToolDef{}
 	}
 
-	respondJSON(w, map[string]any{
-		"status":            "installed",
-		"requires_approval": false,
-		"server":            redactMCPServerConfig(*installed),
-		"tools":             tools,
-		"inspection":        inspection,
-		"governance":        inspection["governance"],
-	})
+	return mcpLibraryInstallResult{
+		Server: *installed,
+		Tools:  tools,
+	}, true
 }
 
 // handleMCPToolsList returns a flat list of all tools across all MCP servers.

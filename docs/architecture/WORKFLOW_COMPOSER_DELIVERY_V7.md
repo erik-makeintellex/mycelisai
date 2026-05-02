@@ -114,7 +114,7 @@ Deliverables:
 Verification:
 
 - contract test matrix defined and approved by Team Q.
-- architecture docs updated (`README`, `V7_DEV_STATE`, `V7_IMPLEMENTATION_PLAN`, docs manifest).
+- architecture docs updated (`README`, `.state/V8_DEV_STATE.md`, `.state/V7_DEV_STATE.md` when historical evidence changes, docs manifest).
 
 Git discipline:
 

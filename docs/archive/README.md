@@ -7,7 +7,7 @@
 - [Active Implementation Sources](#active-implementation-sources)
 - [Migration Inputs](#migration-inputs)
 - [Migration Rule](#migration-rule)
-- [Recently Archived](#recently-archived)
+- [Cleared Historical Payloads](#cleared-historical-payloads)
 - [Draft Archive Rule](#draft-archive-rule)
 
 ## Archive Purpose
@@ -42,17 +42,16 @@ Use them only to understand inherited intent or migration context unless current
 Migration rule:
 - V7 assets may still be useful as migration inputs, but archived docs should not shape active implementation unless they are intentionally re-promoted through the current V8 documentation chain.
 
-## Recently Archived
+## Cleared Historical Payloads
 
-Recently archived (superseded by current execution and migration docs):
-1. `ia-v7-step-01.md`
-2. `v7-step-01-ui.md`
-3. `UI_OPTIMAL_WORKFLOW_PRDS_V7.md`
-4. `UI_OPTIMAL_ENGAGEMENT_ACTUATION_REVIEW_V7.md`
-5. `V7_IMPLEMENTATION_PLAN_2026-03-07.md`
-6. purged UI lane boards, execution boards, and extension-of-self planning docs now replaced by the architecture library
+Superseded V7 implementation plans, UI task boards, PRD hardening notes, and operations plans were deleted instead of retained as active repository payload.
+
+The current repository keeps only:
+1. this archive index
+2. compact phase-state remnants that are still referenced as historical context
+3. superseded drafts that tests intentionally require as compatibility markers
 
 ## Draft Archive Rule
 
 Draft archive rule:
-- superseded root-level notes or draft PRDs should move under `docs/archive/drafts/` with a superseded header instead of remaining loose at repo root
+- superseded root-level notes or draft PRDs should usually be deleted after their canonical replacement is linked, unless a test or migration contract explicitly requires a compact compatibility marker under `docs/archive/drafts/`

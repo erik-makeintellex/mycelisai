@@ -831,7 +831,7 @@ Detailed architecture and delivery planning is now locked for extension-of-self 
 | V7 architecture update with extension-of-self modes, local Ollama contract, and parallel tracks | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md` |
 | Soma symbiote architecture expanded with explicit local Ollama communication contract | `docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md` |
 | Inception "harsh-truth" guardrails codified (heartbeat budgets, single-use-case ratchet, staged self-update, sandbox-first skill injection) | `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/architecture/SECURE_GATEWAY_REMOTE_ACTUATION_PROFILE_V7.md` |
-| Integrated implementation-plan section for parallel package execution | `docs/archive/V7_IMPLEMENTATION_PLAN_2026-03-07.md` (Section 9, historical) |
+| Integrated implementation-plan section for parallel package execution | Historical V7 archive payload removed; use `.state/V8_DEV_STATE.md` and the architecture library for active delivery evidence |
 
 ### Phase 19 Foundation
 
