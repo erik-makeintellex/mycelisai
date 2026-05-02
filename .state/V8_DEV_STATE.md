@@ -56,6 +56,7 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
 - `IN_REVIEW` the first organization workspace UI extraction moved live activity, automations, and learning-insight polling into `useOrganizationLivePanelData`, reducing `OrganizationContextShell.tsx` without touching visual JSX or mutation flows.
 - `IN_REVIEW` the next source-hygiene team pass reduced additional active surfaces without behavior changes: `core/pkg/protocol/envelopes.go` is now below the 300-line limit and removed from legacy caps, `core/internal/server/mcp.go` ratcheted from 572 to 555 lines, `ops/misc.py` ratcheted from 595 to 594 lines, and `OrganizationContextShell.tsx` ratcheted from 2696 to 2588 lines through a static profile-options extraction.
 - `IN_REVIEW` stale historical archive payloads were deleted instead of retained as repo bloat: old V7 implementation, UI task, PRD hardening, operations, and MVP archive documents were removed, `docs/archive/README.md` now describes the reduced archive posture, and the remaining historical references point back to active V8 state and architecture-library evidence.
+- `IN_REVIEW` user-facing auth documentation now includes a dedicated Authentication Modes guide for local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM enablement while preserving the current release boundary that provider adapters are edition/deployment gated.
 
 ## Layered Architecture Truth
 

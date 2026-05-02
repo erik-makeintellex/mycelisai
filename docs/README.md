@@ -26,6 +26,7 @@ These are the best entry points for someone using Mycelis through the product:
 - **Resources**: `./user/resources.md` for Connected Tools, MCP structure review, workspace files, AI engines, and governed context
 - **Memory**: `./user/memory.md`
 - **Settings And Access**: `./user/settings-access.md` for profile/access posture plus Connected Tools/search management boundaries
+- **Authentication Modes**: `./user/auth-modes.md` for local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM enablement
 - **System Status & Recovery**: `./user/system-status-recovery.md`
 - **Run Timeline**: `./user/run-timeline.md`
 

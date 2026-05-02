@@ -110,6 +110,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/user/governance-trust.md",
                 description: "Approval posture, risk classes, audit visibility, and trusted-memory precedence for operator control",
             },
+            { slug: "auth-modes", label: "Authentication Modes", path: "docs/user/auth-modes.md", description: "Enable local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM posture" },
             {
                 slug: "licensing-editions",
                 label: "Licensing & Editions",
@@ -508,17 +509,6 @@ export const DOC_MANIFEST: DocSection[] = [
                 label: "V8 UI Team Full Test Set",
                 path: "docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md",
                 description: "Full UI validation set for browser workflows, runtime proof, and final verdict rules",
-            },
-        ],
-    },
-    {
-        section: "Archive",
-        docs: [
-            {
-                slug: "archive-index",
-                label: "Archive Index",
-                path: "docs/archive/README.md",
-                description: "Historical documents only and not active implementation authority",
             },
         ],
     },

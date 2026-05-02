@@ -41,6 +41,7 @@ Concrete requests Soma should understand when the matching capability is configu
 - [Resources](resources.md): private/context content, MCP tool structure, workspace files, AI engines, deployment context, and Connected Tools activity.
 - [Memory](memory.md): semantic search, retained knowledge, reflection context, and continuity boundaries.
 - [Settings And Access](settings-access.md): profile, People & Access, auth-provider posture, access-denied recovery, and connected-tool/search management boundaries.
+- [Authentication Modes](auth-modes.md): local owner auth, break-glass recovery, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM enablement.
 
 ## Setup And Recovery
 

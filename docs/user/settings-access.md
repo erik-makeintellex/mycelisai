@@ -40,7 +40,7 @@ Mycelis authorization remains internal. External identity providers may later pr
 
 ## Auth Providers
 
-Auth Providers is the setup and inspection surface for local auth, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM posture.
+Auth Providers is the setup and inspection surface for local auth, OIDC/OAuth, SAML, Entra ID, Google Workspace, GitHub, and future SCIM posture. Use [Authentication Modes](auth-modes.md) for the full enablement checklist.
 
 Current expectations:
 
@@ -50,6 +50,17 @@ Current expectations:
 - provider changes should be audited when mutation support is enabled
 
 For the current release, treat Enterprise SSO configuration as a target contract unless the deployment explicitly enables the corresponding provider flow.
+
+Mode summary:
+
+- local owner mode: set `MYCELIS_API_KEY`, local admin name/id, and `MYCELIS_IDENTITY_MODE=local_only`
+- break-glass recovery: set a separate `MYCELIS_BREAK_GLASS_API_KEY`, username, and user id for hybrid/federated recovery
+- OIDC/OAuth: configure issuer, client id, redirect URI, scopes, and secret reference; validate issuer/audience/email/domain
+- Entra ID: use OIDC first, add tenant id and group/app-role claims, then map them to internal Mycelis roles
+- Google Workspace: use OIDC/OAuth with domain restrictions and verified email mapping
+- GitHub: use OAuth/App identity for login proof only; keep GitHub tool/MCP credentials separate
+- SAML: configure metadata, entity ID, ACS URL, certificate/signature validation, NameID/email, and group claims
+- SCIM: future enterprise-only provisioning/deprovisioning, not required for Free Node or base self-hosted release
 
 ## Connected Tools And MCP
 
