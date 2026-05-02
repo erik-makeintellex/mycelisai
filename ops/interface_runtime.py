@@ -1,13 +1,9 @@
-import csv
 import ipaddress
-import json
 import os
 import re
-import shlex
 import shutil
 import subprocess
 import time
-from dataclasses import dataclass
 import urllib.error
 import urllib.request
 import socket
@@ -46,241 +42,55 @@ from .interface_env import (
     interface_task_env,
     run_interface_command,
 )
-from .interface_process_support import (
-    _INTERFACE_PROCESS_COMMAND_HINTS,
-    _INTERFACE_PROCESS_PATH_HINTS,
-)
+from . import interface_processes
 ns = Collection("interface")
 INTERFACE_DIR = ROOT_DIR / "interface"
 
 def _matches_repo_local_interface_process(name: str, command_line: str) -> bool:
-    normalized_name = (name or "").lower()
-    normalized_cmd = _normalize_process_text(command_line)
-    if normalized_name not in {"node", "node.exe", "cmd", "cmd.exe"} or not normalized_cmd:
-        return False
-    if not any(hint in normalized_cmd for hint in _INTERFACE_PROCESS_PATH_HINTS):
-        return False
-    return any(hint in normalized_cmd for hint in _INTERFACE_PROCESS_COMMAND_HINTS)
+    return interface_processes.matches_repo_local_interface_process(
+        name,
+        command_line,
+        normalize_process_text=_normalize_process_text,
+    )
 
 
 def _list_repo_local_interface_processes() -> list[dict[str, str | int]]:
-    processes: list[dict[str, str | int]] = []
-    try:
-        if is_windows():
-            candidate_pids: list[int] = []
-            for image_name in ("node.exe", "cmd.exe"):
-                tasklist_result = subprocess.run(
-                    ["tasklist", "/FO", "CSV", "/NH", "/FI", f"IMAGENAME eq {image_name}"],
-                    capture_output=True,
-                    text=True,
-                    timeout=20,
-                )
-                if tasklist_result.returncode != 0:
-                    raise RuntimeError(tasklist_result.stderr.strip() or "process query failed")
-                for row in csv.reader(tasklist_result.stdout.splitlines()):
-                    if len(row) < 2:
-                        continue
-                    listed_name = (row[0] or "").strip().lower()
-                    pid_text = (row[1] or "").strip()
-                    if listed_name != image_name or not pid_text.isdigit():
-                        continue
-                    candidate_pids.append(int(pid_text))
-            if not candidate_pids:
-                return []
-
-            deadline = time.monotonic() + 30
-            for start in range(0, len(candidate_pids), 12):
-                remaining_seconds = deadline - time.monotonic()
-                if remaining_seconds <= 0:
-                    raise RuntimeError("process query timed out")
-                pid_batch = candidate_pids[start:start + 12]
-                filter_expr = " OR ".join(f"ProcessId = {pid}" for pid in pid_batch)
-                result = subprocess.run(
-                    [
-                        "powershell",
-                        "-NoProfile",
-                        "-Command",
-                        f"Get-CimInstance Win32_Process -Filter \"{filter_expr}\" | "
-                        "Select-Object ProcessId,Name,CommandLine | "
-                        "ConvertTo-Json -Compress",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=max(1, min(8, int(remaining_seconds))),
-                )
-                if result.returncode != 0:
-                    raise RuntimeError(result.stderr.strip() or "process query failed")
-                raw = result.stdout.strip()
-                if not raw:
-                    continue
-                payload = json.loads(raw)
-                rows = payload if isinstance(payload, list) else [payload]
-                for row in rows:
-                    pid_text = row.get("ProcessId")
-                    name = row.get("Name") or ""
-                    command_line = row.get("CommandLine") or ""
-                    if not isinstance(pid_text, int):
-                        continue
-                    pid = pid_text
-                    if _matches_repo_local_interface_process(name, command_line):
-                        processes.append({"pid": pid, "name": name, "command": command_line})
-            return processes
-
-        result = subprocess.run(
-            ["ps", "-eo", "pid=,comm=,args="],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip() or "process query failed")
-        for line in result.stdout.splitlines():
-            parts = line.strip().split(None, 2)
-            if len(parts) < 2 or not parts[0].isdigit():
-                continue
-            pid = int(parts[0])
-            name = parts[1]
-            command_line = parts[2] if len(parts) > 2 else ""
-            if _matches_repo_local_interface_process(name, command_line):
-                processes.append({"pid": pid, "name": name, "command": command_line})
-    except (subprocess.SubprocessError, json.JSONDecodeError, OSError, ValueError, RuntimeError) as exc:
-        raise RuntimeError(f"interface process inspection failed: {exc}") from exc
-    return processes
+    return interface_processes.list_repo_local_interface_processes(
+        is_windows_func=is_windows,
+        normalize_process_text=_normalize_process_text,
+        run=subprocess.run,
+    )
 
 
 def _kill_pid_tree(pid: int):
-    try:
-        if is_windows():
-            subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)],
-                capture_output=True,
-                timeout=12,
-            )
-            with suppress(subprocess.SubprocessError, OSError):
-                subprocess.run(
-                    [
-                        "powershell",
-                        "-NoProfile",
-                        "-Command",
-                        f"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue",
-                    ],
-                    capture_output=True,
-                    timeout=5,
-                )
-        else:
-            subprocess.run(["kill", "-9", str(pid)], capture_output=True, timeout=5)
-    except subprocess.TimeoutExpired:
-        if is_windows():
-            with suppress(subprocess.TimeoutExpired, OSError):
-                subprocess.run(
-                    ["powershell", "-NoProfile", "-Command", f"Stop-Process -Id {pid} -Force -ErrorAction SilentlyContinue"],
-                    capture_output=True,
-                    timeout=5,
-                )
+    interface_processes.kill_pid_tree(pid, is_windows_func=is_windows, run=subprocess.run)
 
 
 def _cleanup_repo_local_interface_processes() -> list[dict[str, str | int]]:
-    try:
-        processes = _list_repo_local_interface_processes()
-    except RuntimeError as exc:
-        if "timed out" not in str(exc).lower():
-            print(f"  WARN: unable to inspect repo-local Interface residuals ({exc})")
-        return []
-    if not processes:
-        return []
-
-    print("  Cleaning repo-local Interface residuals...")
-    for proc in processes:
-        print(f"    - {proc['name']} (PID {proc['pid']})")
-        _kill_pid_tree(int(proc["pid"]))
-
-    time.sleep(0.5)
-    try:
-        remaining = _list_repo_local_interface_processes()
-    except RuntimeError as exc:
-        if "timed out" not in str(exc).lower():
-            print(f"  WARN: unable to re-check repo-local Interface residuals ({exc})")
-        return []
-    if remaining:
-        for proc in remaining:
-            _kill_pid_tree(int(proc["pid"]))
-        time.sleep(0.5)
-        try:
-            remaining = _list_repo_local_interface_processes()
-        except RuntimeError:
-            return []
-    return remaining
+    return interface_processes.cleanup_repo_local_interface_processes(
+        list_processes=_list_repo_local_interface_processes,
+        kill_pid_tree_func=_kill_pid_tree,
+        sleep=time.sleep,
+    )
 
 
 def _windows_listening_pids_for_port(port: int) -> list[int]:
-    result = subprocess.run(
-        ["netstat", "-ano", "-p", "tcp"],
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if result.returncode != 0:
-        return []
-
-    suffix = f":{port}"
-    pids: list[int] = []
-    for line in result.stdout.splitlines():
-        parts = line.split()
-        if len(parts) < 5:
-            continue
-        local_address = parts[1]
-        state = parts[3]
-        pid_text = parts[4]
-        if not local_address.endswith(suffix):
-            continue
-        if state.upper() != "LISTENING":
-            continue
-        if pid_text.isdigit():
-            pids.append(int(pid_text))
-    return pids
+    return interface_processes.windows_listening_pids_for_port(port, run=subprocess.run)
 
 
 def _windows_listening_pids_for_port_range(port_start: int, port_end: int) -> list[int]:
-    result = subprocess.run(
-        ["netstat", "-ano", "-p", "tcp"],
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if result.returncode != 0:
-        return []
-
-    pids: list[int] = []
-    for line in result.stdout.splitlines():
-        parts = line.split()
-        if len(parts) < 5:
-            continue
-        local_address = parts[1]
-        state = parts[3]
-        pid_text = parts[4]
-        if state.upper() != "LISTENING" or not pid_text.isdigit():
-            continue
-        port_text = local_address.rsplit(":", 1)[-1]
-        if not port_text.isdigit():
-            continue
-        port = int(port_text)
-        if port_start <= port <= port_end:
-            pids.append(int(pid_text))
-    return pids
+    return interface_processes.windows_listening_pids_for_port_range(port_start, port_end, run=subprocess.run)
 
 
 def _cleanup_managed_interface_listeners(port_start: int = 3100, port_end: int = 3199) -> list[int]:
-    if not is_windows():
-        return []
-    pids = sorted(set(_windows_listening_pids_for_port_range(port_start, port_end)))
-    if not pids:
-        return []
-
-    print("  Cleaning managed Interface listeners...")
-    for pid in pids:
-        _kill_pid_tree(pid)
-    time.sleep(0.5)
-    return pids
+    return interface_processes.cleanup_managed_interface_listeners(
+        port_start,
+        port_end,
+        is_windows_func=is_windows,
+        windows_listening_pids_for_port_range_func=_windows_listening_pids_for_port_range,
+        kill_pid_tree_func=_kill_pid_tree,
+        sleep=time.sleep,
+    )
 
 
 def _playwright_server_log_path() -> str:
