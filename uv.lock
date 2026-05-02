@@ -1996,6 +1996,7 @@ dev = [
     { name = "invoke" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "typer" },
 ]
 
 [package.metadata]
@@ -2018,6 +2019,7 @@ dev = [
     { name = "invoke", specifier = ">=2.2.1" },
     { name = "pytest", specifier = ">=9.0.1" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
+    { name = "typer", specifier = ">=0.21.1" },
 ]
 
 [[package]]

@@ -137,6 +137,7 @@ def test_pick_interface_port_uses_ipv6_bind_host_without_dual_binding(monkeypatc
             self.close()
 
     monkeypatch.setattr(interface, "INTERFACE_BIND_HOST", "::")
+    monkeypatch.setattr(interface, "is_windows", lambda: False)
     monkeypatch.setattr(interface.socket, "socket", lambda family, *args, **kwargs: FakeSocket(family))
 
     assert interface._pick_interface_port(3000) == 3100

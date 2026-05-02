@@ -221,7 +221,7 @@ test.describe('Groups workspace (/groups)', () => {
         await expect(page.getByRole('heading', { name: 'Create, review, and coordinate focused groups.' })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Standing groups', exact: true })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Temporary groups', exact: true })).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Archived temporary groups', exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Completed records', exact: true })).toBeVisible();
 
         await page.getByTestId('groups-list-item-group-temp-launch').click();
 
@@ -270,6 +270,7 @@ test.describe('Groups workspace (/groups)', () => {
         await page.goto('/groups', { waitUntil: 'domcontentloaded' });
         await expect(page.getByTestId('groups-list-item-group-temp-launch')).toBeVisible();
 
+        await page.getByText('Create a new group').click();
         await page.getByLabel('Name').fill('Regional Expansion Sprint');
         await page.getByLabel('Goal Statement').fill('Prepare outreach, pricing notes, and operator-ready launch assets for a new region.');
         await page.getByLabel('Work Mode').selectOption('execute_with_approval');

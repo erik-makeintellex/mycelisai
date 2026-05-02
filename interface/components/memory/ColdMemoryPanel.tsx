@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Snowflake, Brain } from "lucide-react";
-import type { SearchResult } from "./memorySelection";
+import { memoryResultScore, type SearchResult } from "./memorySelection";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -32,7 +32,7 @@ function ResultCard({
   result: SearchResult;
   onSelect: (result: SearchResult) => void;
 }) {
-  const pct = Math.round(result.similarity * 100);
+  const pct = Math.round(memoryResultScore(result) * 100);
   const preview =
     result.content.length > 200
       ? result.content.slice(0, 200) + "..."

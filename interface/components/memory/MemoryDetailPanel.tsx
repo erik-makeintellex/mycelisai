@@ -3,7 +3,7 @@
 import { Download, FileText, Search } from "lucide-react";
 import type React from "react";
 import type { Artifact } from "@/store/useCortexStore";
-import type { MemorySelection, SearchResult } from "./memorySelection";
+import { memoryResultScore, type MemorySelection, type SearchResult } from "./memorySelection";
 
 export default function MemoryDetailPanel({
   selection,
@@ -39,7 +39,7 @@ function SearchDetail({ result }: { result: SearchResult }) {
     <DetailShell
       icon={<Search className="h-4 w-4 text-cortex-info" />}
       title={result.source || "Memory result"}
-      eyebrow={`${Math.round(result.similarity * 100)}% relevance`}
+      eyebrow={`${Math.round(memoryResultScore(result) * 100)}% relevance`}
     >
       <Meta label="ID" value={result.id} />
       <Meta label="Created" value={formatDate(result.created_at)} />

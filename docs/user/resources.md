@@ -41,6 +41,10 @@ What you can do:
 
 MCP servers expose tool capabilities agents can invoke during execution.
 
+The Dashboard readiness strip summarizes search/tool posture for Soma, but
+Resources is the primary place to inspect or change MCP servers, web search
+readiness, and recent tool activity.
+
 Current baseline posture:
 - curated library installs are the default path
 - `filesystem` and `fetch` are common curated entries, not assumed bootstrap defaults in the supported runtime lanes

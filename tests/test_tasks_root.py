@@ -128,6 +128,7 @@ def test_root_collection_exports_expected_task_surface():
         "k8s.init",
         "k8s.recover",
         "k8s.reset",
+        "k8s.standards",
         "k8s.status",
         "k8s.up",
         "k8s.wait",

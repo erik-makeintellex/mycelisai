@@ -83,18 +83,6 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
         refreshing={refreshing}
         onRefresh={onRefresh}
       />
-      <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-        <CreateGroupPane
-          draft={draft}
-          notice={notice}
-          error={error}
-          approvalPrompt={approvalPrompt}
-          saving={saving}
-          onDraftChange={onDraftChange}
-          onCreateGroup={onCreateGroup}
-        />
-        <GroupConfigPane selectedGroup={selectedGroup} />
-      </div>
       <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[360px_minmax(0,1fr)]">
         <GroupRail
           buckets={buckets}
@@ -112,6 +100,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
             archiving={archiving}
             onArchive={onArchive}
           />
+          <GroupConfigPane selectedGroup={selectedGroup} />
           <GroupCommunicationPanel
             monitor={monitor}
             selectedGroup={selectedGroup}
@@ -121,6 +110,25 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
             onBroadcast={onBroadcast}
             onRefresh={onRefresh}
           />
+          <details
+            className="rounded-2xl border border-cortex-border bg-cortex-surface p-3"
+            open={!selectedGroup}
+          >
+            <summary className="cursor-pointer text-sm font-semibold uppercase tracking-[0.16em] text-cortex-text-main">
+              Create a new group
+            </summary>
+            <div className="mt-3">
+              <CreateGroupPane
+                draft={draft}
+                notice={notice}
+                error={error}
+                approvalPrompt={approvalPrompt}
+                saving={saving}
+                onDraftChange={onDraftChange}
+                onCreateGroup={onCreateGroup}
+              />
+            </div>
+          </details>
         </div>
       </div>
     </section>

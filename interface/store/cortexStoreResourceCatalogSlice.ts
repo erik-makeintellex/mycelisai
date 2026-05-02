@@ -12,6 +12,13 @@ function readArray<T>(value: unknown): T[] {
     return Array.isArray(value) ? value : [];
 }
 
+function readData<T>(value: unknown): T {
+    if (value && typeof value === "object" && "data" in value) {
+        return (value as { data: T }).data;
+    }
+    return value as T;
+}
+
 function toggleSubscribedGroup(groups: string[], group: string): string[] {
     return groups.includes(group)
         ? groups.filter((item) => item !== group)
@@ -238,7 +245,7 @@ export function createCortexResourceCatalogSlice(
                 const res = await fetch(`/api/v1/artifacts/${id}`);
                 if (res.ok) {
                     const data = await res.json();
-                    set({ selectedArtifactDetail: data });
+                    set({ selectedArtifactDetail: readData<Artifact>(data) });
                 }
             } catch {
                 // degraded mode — keep local state unchanged

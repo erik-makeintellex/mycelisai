@@ -7,6 +7,7 @@ import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/las
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import CentralActivityStream from "@/components/dashboard/CentralActivityStream";
 import { SomaCapabilityGuide } from "@/components/dashboard/SomaCapabilityGuide";
+import { SomaReadinessStrip } from "@/components/dashboard/SomaReadinessStrip";
 import { useCortexStore } from "@/store/useCortexStore";
 
 type LastOrganization = {
@@ -105,6 +106,9 @@ export default function CentralSomaHome({
                     ) : null}
                 </div>
                 <div className="mb-4">
+                    <SomaReadinessStrip />
+                </div>
+                <div className="mb-4">
                     <SomaCapabilityGuide />
                 </div>
                 <div
@@ -146,7 +150,7 @@ export default function CentralSomaHome({
                             detail="Select a group, inspect its teams, and manage launch lanes."
                         />
                         <WorkbenchLink
-                            href="/settings?tab=tools"
+                            href="/resources?tab=tools"
                             icon={<Wrench className="h-4 w-4" />}
                             title="Tool readiness"
                             detail="Check connected tools, search configuration, and MCP capability status."

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Activity, Zap, Loader2 } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 
@@ -31,7 +31,16 @@ function statusDot(status: string): string {
 }
 
 export default function RunsPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-cortex-bg" />}>
+            <RunsContent />
+        </Suspense>
+    );
+}
+
+function RunsContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const recentRuns = useCortexStore((s) => s.recentRuns);
     const isFetchingRuns = useCortexStore((s) => s.isFetchingRuns);
     const fetchRecentRuns = useCortexStore((s) => s.fetchRecentRuns);
@@ -41,7 +50,11 @@ export default function RunsPage() {
         fetchRecentRuns();
     }, [fetchRecentRuns]);
 
+    const requestedStatus = searchParams?.get("status") ?? "";
     const activeRuns = recentRuns.filter((r) => r.status === 'running');
+    const visibleRuns = requestedStatus
+        ? recentRuns.filter((run) => run.status === requestedStatus)
+        : recentRuns;
 
     return (
         <div className="min-h-screen bg-cortex-bg text-cortex-text-main">
@@ -60,7 +73,7 @@ export default function RunsPage() {
                 <div className="flex items-center gap-2">
                     <Activity className="w-3.5 h-3.5 text-cortex-primary" />
                     <span className="text-[11px] font-mono text-cortex-text-main font-bold uppercase tracking-widest">
-                        Runs
+                        {requestedStatus === "running" ? "Active Runs" : "Runs"}
                     </span>
                 </div>
 
@@ -91,14 +104,23 @@ export default function RunsPage() {
                     </div>
                 )}
 
-                {recentRuns.length > 0 && (
+                {visibleRuns.length === 0 && recentRuns.length > 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 gap-2">
+                        <Activity className="w-10 h-10 text-cortex-text-muted/20" />
+                        <p className="text-sm font-mono text-cortex-text-muted">
+                            No {requestedStatus} runs
+                        </p>
+                    </div>
+                ) : null}
+
+                {visibleRuns.length > 0 && (
                     <div className="border border-cortex-border rounded-lg overflow-hidden">
-                        {recentRuns.map((run, i) => (
+                        {visibleRuns.map((run, i) => (
                             <button
                                 key={run.id}
                                 onClick={() => router.push(`/runs/${run.id}`)}
                                 className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-cortex-border/30 transition-colors group ${
-                                    i < recentRuns.length - 1 ? 'border-b border-cortex-border/50' : ''
+                                    i < visibleRuns.length - 1 ? 'border-b border-cortex-border/50' : ''
                                 }`}
                             >
                                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusDot(run.status)}`} />

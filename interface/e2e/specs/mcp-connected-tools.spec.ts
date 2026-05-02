@@ -444,7 +444,7 @@ test.describe("Connected Tools MCP workflow", () => {
         await expect(page.getByText("Soma search is ready")).toBeVisible();
         await expect(page.getByText("Soma direct: web_search")).toBeVisible();
         await expect(page.getByText("Public web", { exact: true })).toBeVisible();
-        await expect(page.getByText("No hosted Brave token required for local_sources or self-hosted SearXNG.")).toBeVisible();
+        await expect(page.getByText("No hosted Brave token required for local_sources, local_api, or self-hosted SearXNG.")).toBeVisible();
         await expect(page.getByText("Recent MCP Activity", { exact: true })).toBeVisible();
         await expect(page.getByText("filesystem · read_file")).toBeVisible();
         await expect(page.getByText("Soma used filesystem.read_file while preparing the launch brief.").first()).toBeVisible();

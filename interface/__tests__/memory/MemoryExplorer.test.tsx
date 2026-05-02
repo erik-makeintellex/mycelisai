@@ -6,7 +6,11 @@ import { mockFetch } from "../setup";
 const mockAdvancedMode = vi.fn(() => false);
 vi.mock("@/store/useCortexStore", () => ({
   useCortexStore: (selector: any) => {
-    const state = { advancedMode: mockAdvancedMode() };
+    const state = {
+      advancedMode: mockAdvancedMode(),
+      getArtifactDetail: vi.fn().mockResolvedValue(undefined),
+      selectedArtifactDetail: null,
+    };
     return selector(state);
   },
 }));

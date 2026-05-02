@@ -192,8 +192,8 @@ describe("GroupManagementPanel", () => {
     expect(screen.getByText("runs.read, runs.propose")).toBeDefined();
     expect(
       screen
-        .getByText("Define group action lane")
-        .compareDocumentPosition(screen.getByText("Group records")) &
+        .getByText("Group records")
+        .compareDocumentPosition(screen.getByText("Define group action lane")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(

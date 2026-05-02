@@ -115,3 +115,44 @@ tests/test_lifecycle_tasks.py=601
 tests/test_misc_tasks.py=342
 tests/test_runtime_deploy_contract_text.py=507
 tests/test_wsl_runtime_tasks.py=336
+
+# Documentation, configuration, and chart caps added when repo-wide authored
+# file scanning replaced source-only scanning. These are decomposition targets,
+# not permanent exceptions.
+architecture/v8-2.md=370
+README.md=776
+charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=570
+core/config/mcp-library.yaml=342
+core/config/templates/v8-migration-standing-team-bridge.yaml=570
+docs/LOCAL_DEV_WORKFLOW.md=813
+docs/REMOTE_USER_TESTING.md=506
+docs/TESTING.md=797
+docs/WORKFLOWS.md=1105
+docs/architecture/AGENT_SOURCE_INSTANTIATION_TEMPLATE_V7.md=306
+docs/architecture/AGENTRY_TEMPLATE_MARKETPLACE_AND_CUSTOM_TEMPLATING_V7.md=330
+docs/architecture/BACKEND.md=852
+docs/architecture/OPERATIONS.md=851
+docs/architecture/OVERVIEW.md=311
+docs/architecture/SOMA_SYMBIOTE_GROWTH_AND_HOST_ACTUATION_V7.md=410
+docs/architecture/SOMA_TEAM_CHANNEL_ARCHITECTURE_V7.md=425
+docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md=405
+docs/architecture/UNIVERSAL_ACTION_INTERFACE_V7.md=442
+docs/architecture/WORKFLOW_COMPOSER_DELIVERY_V7.md=309
+docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md=371
+docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md=547
+docs/architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md=368
+docs/architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md=367
+docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md=670
+docs/architecture-library/V8_RUNTIME_CONTRACTS.md=440
+docs/architecture-library/V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md=404
+docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md=641
+docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md=867
+docs/archive/MVP_AGENTRY_PLAN.md=468
+docs/archive/OPERATIONS_PLAN.md=478
+docs/archive/PRD_PHASE12_HARDENING.md=521
+docs/archive/UI_OPTIMAL_WORKFLOW_PRDS_V7.md=372
+docs/archive/UI_TASKS.md=687
+docs/archive/V7_IMPLEMENTATION_PLAN_2026-03-07.md=2025
+docs/archive/drafts/v8-1.md=397
+docs/logging.md=344
+docs/user/soma-chat.md=309

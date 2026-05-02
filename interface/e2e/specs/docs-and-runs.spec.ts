@@ -315,7 +315,7 @@ test.describe('Docs and Runs Route Coverage', () => {
         failNextEventRequest = true;
         await page.getByRole('button', { name: 'Refresh events' }).click();
         await expect(page.getByText('Failed to load events (503)')).toBeVisible();
-        await page.getByRole('button', { name: 'Retry' }).click();
+        await page.getByRole('button', { name: 'Retry' }).last().click();
         await expect(page.getByText('mission.failed')).toBeVisible();
         await expect(page.getByText('tool.failed')).toBeVisible();
         await expect(page.getByText('planner').first()).toBeVisible();
@@ -334,7 +334,7 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.getByText('source_kind: workspace_ui')).toBeVisible();
         await expect(page.getByText('source_kind: automation_trigger')).toBeVisible();
         await expect(page.getByText('team_id: delivery')).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Run' })).toHaveAttribute('href', `/runs/${runId}`);
+        await expect(page.getByRole('link', { name: 'Run', exact: true })).toHaveAttribute('href', `/runs/${runId}`);
     });
 
     test('run chain route renders lineage from API payloads', async ({ page }) => {
@@ -385,6 +385,6 @@ test.describe('Docs and Runs Route Coverage', () => {
         await expect(page.getByText('run-chain-child-0001', { exact: true })).toBeVisible();
         await expect(page.getByText('source_kind: workspace_ui')).toBeVisible();
         await expect(page.getByText('team_id: team-alpha')).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Run' })).toHaveAttribute('href', `/runs/${runId}`);
+        await expect(page.getByRole('link', { name: 'Run', exact: true })).toHaveAttribute('href', `/runs/${runId}`);
     });
 });

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SlidersHorizontal } from "lucide-react";
 import { relativeTime, type Group } from "./groupWorkspaceTypes";
 
@@ -16,6 +17,12 @@ export function GroupConfigPane({
         <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-cortex-text-main">
           Group Config
         </h2>
+        <Link
+          href="/resources?tab=tools"
+          className="ml-auto rounded-lg border border-cortex-border px-2 py-1 text-xs text-cortex-text-muted hover:text-cortex-primary"
+        >
+          Tools
+        </Link>
       </div>
       {selectedGroup ? (
         <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">

@@ -58,7 +58,7 @@ Before creating teams, enabling MCP servers, assigning tools, or changing capabi
 
 When you confirm with wording such as `yes`, `confirm`, `proceed`, `do it`, or `one time`, Soma should bind that confirmation to the prior inferred action and continue through the governed proposal/execution path.
 
-For team manifestation, Soma should use Council or specialist context to choose the smallest useful member set, expected outputs, and target MCP/tool bindings. If a needed MCP server is missing, Soma should name the server and required `.env` variable, then point you to `Settings -> Connected Tools` or `Resources -> Connected Tools` to install, reapply, or enable it.
+For team manifestation, Soma should use Council or specialist context to choose the smallest useful member set, expected outputs, and target MCP/tool bindings. If a needed MCP server is missing, Soma should name the server and required `.env` variable, then point you to `Resources -> Connected Tools` to install, reapply, or enable it.
 
 ## Protected Interaction Templates
 

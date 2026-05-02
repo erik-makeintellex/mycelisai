@@ -158,7 +158,7 @@ function GroupRecordFilterControls({
       />
       <label className="block text-xs">
         <span className="font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
-          Keep completed records
+          Show completed records from last
         </span>
         <div className="mt-2 flex items-center gap-2">
           <input

@@ -8,6 +8,7 @@ import ColdMemoryPanel from "./ColdMemoryPanel";
 import MemoryDetailPanel from "./MemoryDetailPanel";
 import type { MemorySelection } from "./memorySelection";
 import { useCortexStore } from "@/store/useCortexStore";
+import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 
 // ── MemoryExplorer ────────────────────────────────────────────
 
@@ -18,10 +19,26 @@ export default function MemoryExplorer() {
   );
   const [selection, setSelection] = useState<MemorySelection | null>(null);
   const [signalExpanded, setSignalExpanded] = useState(false);
+  const getArtifactDetail = useCortexStore((s) => s.getArtifactDetail);
+  const selectedArtifactDetail = useCortexStore((s) => s.selectedArtifactDetail);
 
   const handleSearchRelated = useCallback((query: string) => {
     setColdSearchQuery(query);
   }, []);
+
+  const handleSelectArtifact = useCallback(
+    (artifact: Artifact) => {
+      setSelection({ kind: "artifact", artifact });
+      void getArtifactDetail(artifact.id);
+    },
+    [getArtifactDetail],
+  );
+
+  React.useEffect(() => {
+    if (!selectedArtifactDetail || selection?.kind !== "artifact") return;
+    if (selectedArtifactDetail.id !== selection.artifact.id) return;
+    setSelection({ kind: "artifact", artifact: selectedArtifactDetail });
+  }, [selectedArtifactDetail, selection]);
 
   return (
     <div className="h-full flex flex-col bg-cortex-bg text-cortex-text-main">
@@ -62,7 +79,7 @@ export default function MemoryExplorer() {
             <WarmMemoryPanel
               onSearchRelated={handleSearchRelated}
               onSelectArtifact={(artifact) =>
-                setSelection({ kind: "artifact", artifact })
+                handleSelectArtifact(artifact)
               }
             />
           </div>

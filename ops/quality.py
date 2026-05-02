@@ -6,9 +6,30 @@ from invoke import Collection, task
 
 from .config import ROOT_DIR
 
-DEFAULT_SOURCE_PATHS = "core,interface,ops,tests,scripts,agents,cli,sdk/python/src,cognitive/src"
+DEFAULT_SOURCE_PATHS = (
+    "core,interface,ops,tests,scripts,agents,cli,sdk/python/src,"
+    "cognitive/src,docs,charts,k8s,architecture,proto,README.md,"
+    "AGENTS.md,pyproject.toml"
+)
 DEFAULT_HOT_PATHS = DEFAULT_SOURCE_PATHS
-DEFAULT_EXTENSIONS = {".go", ".py", ".ts", ".tsx"}
+DEFAULT_EXTENSIONS = {
+    ".go",
+    ".py",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".md",
+    ".sql",
+    ".yaml",
+    ".yml",
+    ".json",
+    ".toml",
+    ".proto",
+    ".sh",
+    ".ps1",
+    ".tpl",
+}
 DEFAULT_EXCLUDE_DIRS = {
     ".git",
     ".next",
@@ -20,6 +41,18 @@ DEFAULT_EXCLUDE_DIRS = {
     "test-results",
     "playwright-report",
 }
+GENERATED_OR_LOCK_PATHS = {
+    "core/go.sum": "Go module checksum lockfile",
+    "scripts/qa/go.sum": "Go module checksum lockfile",
+    "interface/package-lock.json": "npm lockfile",
+    "uv.lock": "uv lockfile",
+    "charts/mycelis-core/Chart.lock": "Helm dependency lockfile",
+}
+GENERATED_SUFFIXES = (
+    ".pb.go",
+    "_pb2.py",
+    "_pb2_grpc.py",
+)
 LEGACY_CAPS_PATH = ROOT_DIR / "ops" / "quality_legacy_caps.txt"
 
 
@@ -38,10 +71,11 @@ def _parse_paths(paths: str) -> list[Path]:
 def _should_skip(path: Path) -> bool:
     if any(part in DEFAULT_EXCLUDE_DIRS for part in path.parts):
         return True
-    name = path.name
-    if name.endswith(".pb.go"):
+    rel = path.relative_to(ROOT_DIR).as_posix() if path.is_absolute() else path.as_posix()
+    if rel in GENERATED_OR_LOCK_PATHS:
         return True
-    if name.endswith("_pb2.py") or name.endswith("_pb2_grpc.py"):
+    name = path.name
+    if name.endswith(GENERATED_SUFFIXES):
         return True
     return False
 

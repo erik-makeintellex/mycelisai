@@ -55,7 +55,7 @@ export function SomaCapabilityGuide() {
           </p>
         </div>
         <Link
-          href="/settings?tab=tools"
+          href="/resources?tab=tools"
           className="rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-xs font-semibold text-cortex-text-main hover:border-cortex-primary/25"
         >
           Manage tools

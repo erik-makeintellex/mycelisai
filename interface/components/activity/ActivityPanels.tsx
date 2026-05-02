@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { RefreshCw, type LucideIcon } from "lucide-react";
 import type { MissionRun, StreamSignal } from "@/store/useCortexStore";
@@ -208,11 +209,16 @@ export function BusActivityPanel({
 }
 
 function SignalRow({ signal }: { signal: StreamSignal }) {
+  const [expanded, setExpanded] = useState(false);
   const category = signalCategory(signal);
   const message = signal.message?.trim() || signal.topic || "Event received";
   return (
-    <div className="border-b border-cortex-border/60 px-4 py-3 last:border-b-0">
-      <div className="flex items-start justify-between gap-3">
+    <article className="border-b border-cortex-border/60 px-4 py-3 last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className="flex w-full items-start justify-between gap-3 text-left"
+      >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold">
@@ -234,7 +240,25 @@ function SignalRow({ signal }: { signal: StreamSignal }) {
         <span className="shrink-0 text-[11px] font-mono text-cortex-text-muted">
           {timeAgo(signal.timestamp)}
         </span>
+      </button>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {signal.run_id ? (
+          <Link
+            href={`/runs/${encodeURIComponent(signal.run_id)}`}
+            className="rounded-lg border border-cortex-border px-2 py-1 text-[11px] font-mono text-cortex-primary hover:bg-cortex-primary/10"
+          >
+            Open run
+          </Link>
+        ) : null}
+        <span className="rounded-lg border border-cortex-border px-2 py-1 text-[11px] font-mono text-cortex-text-muted">
+          {expanded ? "Hide details" : "Show details"}
+        </span>
       </div>
-    </div>
+      {expanded ? (
+        <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-cortex-border bg-cortex-surface p-3 text-[11px] leading-5 text-cortex-text-muted">
+          {JSON.stringify(signal, null, 2)}
+        </pre>
+      ) : null}
+    </article>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { FileJson, RefreshCw } from "lucide-react";
 import type { MissionEvent, MissionRun } from "@/store/useCortexStore";
@@ -91,6 +92,8 @@ export function RunEventInspector({
 }
 
 function InlineEvent({ event }: { event: MissionEvent }) {
+  const [expanded, setExpanded] = useState(false);
+  const preview = payloadPreview(event.payload);
   return (
     <article className="border-b border-cortex-border/60 px-4 py-3 last:border-b-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -106,11 +109,23 @@ function InlineEvent({ event }: { event: MissionEvent }) {
             {timeAgo(event.emitted_at)}
           </p>
         </div>
-        <FileJson className="h-4 w-4 shrink-0 text-cortex-primary" />
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="inline-flex items-center gap-1 rounded-lg border border-cortex-border px-2 py-1 text-[11px] font-mono text-cortex-primary hover:bg-cortex-primary/10"
+        >
+          <FileJson className="h-3.5 w-3.5" />
+          {expanded ? "Hide payload" : "Payload"}
+        </button>
       </div>
-      <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2 text-[11px] leading-5 text-cortex-text-muted">
-        {payloadPreview(event.payload)}
-      </pre>
+      <p className="mt-2 line-clamp-2 text-xs leading-5 text-cortex-text-muted">
+        {preview}
+      </p>
+      {expanded ? (
+        <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap rounded-2xl border border-cortex-border bg-cortex-surface px-3 py-2 text-[11px] leading-5 text-cortex-text-muted">
+          {preview}
+        </pre>
+      ) : null}
     </article>
   );
 }

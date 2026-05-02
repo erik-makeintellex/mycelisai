@@ -199,7 +199,8 @@ describe('Settings Page (app/settings/page.tsx)', () => {
             view.rerender(<SettingsPage />);
         });
 
-        expect(await screen.findByTestId('mcp-tool-registry')).toBeDefined();
+        expect(screen.getByText('Manage MCP and search from Resources.')).toBeDefined();
+        expect(screen.getByRole('link', { name: 'Open Resources tools' }).getAttribute('href')).toBe('/resources?tab=tools');
     });
 
     it('opens the enterprise auth provider scaffold from advanced settings', async () => {
