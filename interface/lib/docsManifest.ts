@@ -164,9 +164,9 @@ export const DOC_MANIFEST: DocSection[] = [
         docs: [
             {
                 slug: "workflows",
-                label: "Workflow Spec",
+                label: "Workflow Index",
                 path: "docs/WORKFLOWS.md",
-                description: "User-facing workflow specifications and implementation authority",
+                description: "Routing index from the retired monolithic workflow spec to current Soma-first workflow authority",
             },
             {
                 slug: "swarm-operations",

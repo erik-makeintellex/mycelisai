@@ -71,44 +71,6 @@ func exchangeItemColumns() []string {
 	return []string{"id", "channel_id", "channel_name", "schema_id", "payload", "created_by", "addressed_to", "thread_id", "visibility", "sensitivity_class", "source_role", "source_team", "target_role", "target_team", "allowed_consumers", "capability_id", "trust_class", "review_required", "metadata", "summary", "created_at"}
 }
 
-// ── POST /api/v1/mcp/install ───────────────────────────────────────
-
-func TestHandleMCPInstall_NilSubsystem(t *testing.T) {
-	s := newTestServer()
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPInstall), "POST", "/api/v1/mcp/install", `{"name":"test"}`)
-	assertStatus(t, rr, http.StatusServiceUnavailable)
-}
-
-func TestHandleMCPInstall_MissingName(t *testing.T) {
-	s := newTestServer(withMCPStubs())
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPInstall), "POST", "/api/v1/mcp/install", `{"transport":"stdio","command":"echo"}`)
-	assertStatus(t, rr, http.StatusBadRequest)
-}
-
-func TestHandleMCPInstall_MissingTransport(t *testing.T) {
-	s := newTestServer(withMCPStubs())
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPInstall), "POST", "/api/v1/mcp/install", `{"name":"test"}`)
-	assertStatus(t, rr, http.StatusBadRequest)
-}
-
-func TestHandleMCPInstall_StdioNoCommand(t *testing.T) {
-	s := newTestServer(withMCPStubs())
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPInstall), "POST", "/api/v1/mcp/install", `{"name":"test","transport":"stdio"}`)
-	assertStatus(t, rr, http.StatusBadRequest)
-}
-
-func TestHandleMCPInstall_SSENoURL(t *testing.T) {
-	s := newTestServer(withMCPStubs())
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPInstall), "POST", "/api/v1/mcp/install", `{"name":"test","transport":"sse"}`)
-	assertStatus(t, rr, http.StatusBadRequest)
-}
-
-func TestHandleMCPInstall_InvalidJSON(t *testing.T) {
-	s := newTestServer(withMCPStubs())
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPInstall), "POST", "/api/v1/mcp/install", "not-json")
-	assertStatus(t, rr, http.StatusBadRequest)
-}
-
 // ── GET /api/v1/mcp/servers ────────────────────────────────────────
 
 func TestHandleMCPList_NilSubsystem(t *testing.T) {

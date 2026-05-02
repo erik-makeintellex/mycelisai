@@ -1,31 +1,18 @@
 import asyncio
 import uuid
 import time
-import os
 import logging
-from typing import Dict, Any, Callable, Optional, Union
+from typing import Any, Callable
 
 import nats
-from nats.errors import ConnectionClosedError, TimeoutError, NoRespondersError
-from nats.js.api import StreamConfig, RetentionPolicy
+from nats.errors import ConnectionClosedError, TimeoutError
 
 from google.protobuf.timestamp_pb2 import Timestamp
 from google.protobuf.struct_pb2 import Struct
-from google.protobuf import json_format
 
-# Import generated stubs
-# Assuming relative import or package structure works. 
-# In dev/hybrid mode, we might need path adjustments if installed purely as script.
-# Import generated stubs
-try:
-    from .proto.swarm.v1 import swarm_pb2
-except ImportError:
-    # Fallback for direct script execution if package not fully installed
-    import sys
-    sys.path.append(os.path.join(os.path.dirname(__file__), "proto"))
-    from swarm.v1 import swarm_pb2
+from .proto.swarm.v1 import swarm_pb2
 
-from . import persistence # Phase 3: Resilience
+from . import persistence
 
 
 logger = logging.getLogger("relay.client")
@@ -55,9 +42,7 @@ class RelayClient:
         self.js = None
         self._connected = False
         
-        # Subscription handlers: subject -> callback(MsgEnvelope)
-        self._handlers: Dict[str, Callable[[swarm_pb2.MsgEnvelope], None]] = {}
-        # Wildcard handlers might need efficient matching, for now exact match or simple prefix
+        self._handlers: dict[str, Callable[[swarm_pb2.MsgEnvelope], None]] = {}
         self._subscriptions = []
         self._heartbeat_task = None
 
@@ -67,7 +52,6 @@ class RelayClient:
             return
 
         try:
-            # Phase 3: Pass reconnect callback
             self.nc = await nats.connect(
                 self.nats_url,
                 reconnected_cb=self._on_reconnect
@@ -76,20 +60,11 @@ class RelayClient:
             self._connected = True
             logger.info(f"Relay connected to {self.nats_url} as {self.agent_id} (Team: {self.team_id})")
             
-            # Init Buffer
             persistence.init_db()
 
-            # Default Subscriptions (Inbox)
-            # 1. Agent Private: swarm.agent.{id}.>
             await self.subscribe(f"swarm.agent.{self.agent_id}.>", self._default_handler)
-            
-            # 2. Team Broadcast: swarm.team.{id}.>
-            # We join a queue group for the team to load balance? 
-            # Or broadcast? Usually broadcast for team info, Queue for tasks.
-            # Let's listen to broadcast for now.
             await self.subscribe(f"swarm.team.{self.team_id}.>", self._default_handler)
 
-            # 3. Start Heartbeat Loop
             self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
             
         except Exception as e:
@@ -127,47 +102,6 @@ class RelayClient:
                     "timestamp": time.time(),
                     "meta": {"sdk": "python-relay-v1"}
                 }
-                
-                # Publish to global heartbeat topic
-                # This bypasses the standard _publish wrapper slightly to target system topic
-                # or we can use _publish with raw target
-                
-                # Topic: swarm.global.heartbeat
-                # Use _publish to get envelope, but target specific topic
-                
-                # We need to expose a way to publish raw or custom topic via internal method
-                # reusing _publish logic
-                
-                # Let's direct publish for now to be explicit, but wrapping in envelope is safer for system standard
-                # We'll use _publish with target_team="system" concept or just raw topic override?
-                # _publish takes target_team. 
-                
-                # Let's manually construct envelope to ensure it meets system spec
-                envelope = self._create_envelope("event", Struct(fields={
-                    k:  Struct(fields={}) if isinstance(v, dict) else v # Simple Value wrapper? 
-                    # Protobuf Struct is tricky with mixed types.
-                    # Lets use the send_event helper?
-                }))
-                
-                # Actually, easier to use send_event but we need to override topic.
-                # The current send_event doesn't allow custom topic override easily.
-                # Let's modify _publish or just do it raw here.
-                
-                # Construct Payload
-                payload = swarm_pb2.EventPayload(
-                    event_type="agent.heartbeat",
-                     # For data we need a Struct.
-                     # Simplified:
-                )
-                # json_format.ParseDict(hb_data, payload.data) # If we had it imported
-                
-                # Let's just send a simple text pulse for now if Struct is annoying,
-                # OR use the existing send_event and add a special routing rule.
-                
-                # Routing Rule: If event_type == "agent.heartbeat", route to swarm.global.heartbeat
-                pass 
-
-                # Let's implement the routing rule in _publish
                 await self.send_event("agent.heartbeat", hb_data)
 
             except asyncio.CancelledError:
@@ -217,7 +151,7 @@ class RelayClient:
     async def send_text(self, 
                         content: str, 
                         recipient_id: str = None, 
-                        context: Dict[str, Any] = None,
+                        context: dict[str, Any] = None,
                         target_team: str = None):
         """Send a standard TextPayload."""
         payload = swarm_pb2.TextPayload(
@@ -229,8 +163,8 @@ class RelayClient:
 
     async def send_event(self, 
                          event_type: str, 
-                         data: Dict[str, Any], 
-                         context: Dict[str, Any] = None,
+                         data: dict[str, Any],
+                         context: dict[str, Any] = None,
                          target_team: str = None):
         """Send a standard EventPayload."""
         # Convert dict to Struct
@@ -246,7 +180,7 @@ class RelayClient:
     async def _publish(self, 
                        payload_key: str, 
                        payload_obj, 
-                       context: Dict[str, Any] = None, 
+                       context: dict[str, Any] = None,
                        recipient_id: str = None,
                        target_team: str = None):
         
@@ -282,7 +216,7 @@ class RelayClient:
             persistence.save_impulse(topic, data)
 
     async def _on_reconnect(self):
-        """Phase 3: Replay buffered events on reconnection."""
+        """Replay buffered events on reconnection."""
         logger.info("♻️  Connection Restored. Replaying Black Box Buffer...")
         count = 0
         try:

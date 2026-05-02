@@ -36,68 +36,6 @@ type mcpActivityEntry struct {
 	Timestamp   string `json:"timestamp"`
 }
 
-// handleMCPInstall registers and connects a new MCP server.
-// POST /api/v1/mcp/install
-func (s *AdminServer) handleMCPInstall(w http.ResponseWriter, r *http.Request) {
-	if s.MCP == nil || s.MCPPool == nil {
-		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
-		return
-	}
-
-	var cfg mcp.ServerConfig
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
-		return
-	}
-
-	// Validate required fields.
-	if cfg.Name == "" {
-		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
-		return
-	}
-	if cfg.Transport == "" {
-		http.Error(w, `{"error":"transport is required"}`, http.StatusBadRequest)
-		return
-	}
-	if cfg.Transport == "stdio" && cfg.Command == "" {
-		http.Error(w, `{"error":"command is required for stdio transport"}`, http.StatusBadRequest)
-		return
-	}
-	if cfg.Transport == "sse" && cfg.URL == "" {
-		http.Error(w, `{"error":"url is required for sse transport"}`, http.StatusBadRequest)
-		return
-	}
-
-	ctx := r.Context()
-
-	// Persist the server config.
-	installed, err := s.MCP.Install(ctx, cfg)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"install failed: %s"}`, err.Error()), http.StatusInternalServerError)
-		return
-	}
-
-	// Connect to the MCP server and discover tools (best-effort).
-	if err := s.MCPPool.Connect(ctx, *installed); err != nil {
-		log.Printf("MCP install: connect to %s failed (best-effort): %v", installed.Name, err)
-	}
-
-	// Fetch tools from DB (they may have been cached by Connect).
-	tools, err := s.MCP.ListTools(ctx, installed.ID)
-	if err != nil {
-		log.Printf("MCP install: list tools for %s failed: %v", installed.Name, err)
-		tools = []mcp.ToolDef{}
-	}
-	if tools == nil {
-		tools = []mcp.ToolDef{}
-	}
-
-	respondJSON(w, map[string]interface{}{
-		"server": redactMCPServerConfig(*installed),
-		"tools":  tools,
-	})
-}
-
 // handleMCPList returns all registered MCP servers with their tools.
 // GET /api/v1/mcp/servers
 func (s *AdminServer) handleMCPList(w http.ResponseWriter, r *http.Request) {

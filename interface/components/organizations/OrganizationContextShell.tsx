@@ -15,8 +15,6 @@ import type {
     OrganizationAIEngineUpdateRequest,
     OrganizationDepartmentSummary,
     OrganizationHomePayload,
-    OrganizationLearningInsightItem,
-    OrganizationLoopActivityItem,
     OrganizationOutputModelBinding,
     OrganizationOutputModelCatalogEntry,
     OrganizationOutputModelRoutingMode,
@@ -72,6 +70,7 @@ import {
     responseContractSupportItems,
     toTitleCase,
 } from "@/components/organizations/organizationSummaryHelpers";
+import { useOrganizationLivePanelData } from "@/components/organizations/useOrganizationLivePanelData";
 
 export {
     extractOutputsFromConversation,
@@ -217,18 +216,20 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const [selectedOutputModelBindings, setSelectedOutputModelBindings] = useState<Record<string, string>>({});
     const [outputModelRoutingUpdatePending, setOutputModelRoutingUpdatePending] = useState(false);
     const [outputModelRoutingUpdateError, setOutputModelRoutingUpdateError] = useState<string | null>(null);
-    const [recentActivity, setRecentActivity] = useState<OrganizationLoopActivityItem[]>([]);
-    const [activityLoading, setActivityLoading] = useState(true);
-    const [activityError, setActivityError] = useState<string | null>(null);
-    const [activityReloadToken, setActivityReloadToken] = useState(0);
-    const [automations, setAutomations] = useState<OrganizationAutomationItem[]>([]);
-    const [automationsLoading, setAutomationsLoading] = useState(true);
-    const [automationsError, setAutomationsError] = useState<string | null>(null);
-    const [automationsReloadToken, setAutomationsReloadToken] = useState(0);
-    const [learningInsights, setLearningInsights] = useState<OrganizationLearningInsightItem[]>([]);
-    const [learningInsightsLoading, setLearningInsightsLoading] = useState(true);
-    const [learningInsightsError, setLearningInsightsError] = useState<string | null>(null);
-    const [learningInsightsReloadToken, setLearningInsightsReloadToken] = useState(0);
+    const {
+        recentActivity,
+        activityLoading,
+        activityError,
+        retryActivity,
+        automations,
+        automationsLoading,
+        automationsError,
+        retryAutomations,
+        learningInsights,
+        learningInsightsLoading,
+        learningInsightsError,
+        retryLearningInsights,
+    } = useOrganizationLivePanelData(organizationId);
     const [isLaunchCrewOpen, setIsLaunchCrewOpen] = useState(false);
     const [somaWorkspaceMode, setSomaWorkspaceMode] = useState<SomaWorkspaceMode>("conversation");
     const [lastGuidanceUpdate, setLastGuidanceUpdate] = useState<SomaGuidanceUpdate | null>(null);
@@ -307,132 +308,6 @@ export default function OrganizationContextShell({ organizationId }: { organizat
             cancelled = true;
         };
     }, [organizationId, retryToken]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadActivity = async (background: boolean) => {
-            if (!background && !cancelled) {
-                setActivityLoading(true);
-            }
-
-            try {
-                const response = await fetch(`/api/v1/organizations/${organizationId}/loop-activity`, { cache: "no-store" });
-                const payload = await readJson(response);
-                if (!response.ok) {
-                    throw new Error(extractApiError(payload) || "Activity unavailable");
-                }
-                if (cancelled) {
-                    return;
-                }
-                setRecentActivity(extractApiData<OrganizationLoopActivityItem[]>(payload) ?? []);
-                setActivityError(null);
-            } catch {
-                if (cancelled) {
-                    return;
-                }
-                setActivityError("Activity unavailable");
-            } finally {
-                if (!cancelled) {
-                    setActivityLoading(false);
-                }
-            }
-        };
-
-        void loadActivity(false);
-        const intervalId = window.setInterval(() => {
-            void loadActivity(true);
-        }, 15000);
-
-        return () => {
-            cancelled = true;
-            window.clearInterval(intervalId);
-        };
-    }, [organizationId, activityReloadToken]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadAutomations = async (background: boolean) => {
-            if (!background && !cancelled) {
-                setAutomationsLoading(true);
-            }
-
-            try {
-                const response = await fetch(`/api/v1/organizations/${organizationId}/automations`, { cache: "no-store" });
-                const payload = await readJson(response);
-                if (!response.ok) {
-                    throw new Error(extractApiError(payload) || "Automations unavailable");
-                }
-                if (cancelled) {
-                    return;
-                }
-                setAutomations(extractApiData<OrganizationAutomationItem[]>(payload) ?? []);
-                setAutomationsError(null);
-            } catch {
-                if (cancelled) {
-                    return;
-                }
-                setAutomationsError("Automations unavailable");
-            } finally {
-                if (!cancelled) {
-                    setAutomationsLoading(false);
-                }
-            }
-        };
-
-        void loadAutomations(false);
-        const intervalId = window.setInterval(() => {
-            void loadAutomations(true);
-        }, 20000);
-
-        return () => {
-            cancelled = true;
-            window.clearInterval(intervalId);
-        };
-    }, [organizationId, automationsReloadToken]);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadLearningInsights = async (background: boolean) => {
-            if (!background && !cancelled) {
-                setLearningInsightsLoading(true);
-            }
-
-            try {
-                const response = await fetch(`/api/v1/organizations/${organizationId}/learning-insights`, { cache: "no-store" });
-                const payload = await readJson(response);
-                if (!response.ok) {
-                    throw new Error(extractApiError(payload) || "Memory & Continuity updates unavailable");
-                }
-                if (cancelled) {
-                    return;
-                }
-                setLearningInsights(extractApiData<OrganizationLearningInsightItem[]>(payload) ?? []);
-                setLearningInsightsError(null);
-            } catch {
-                if (cancelled) {
-                    return;
-                }
-                setLearningInsightsError("Memory & Continuity updates unavailable");
-            } finally {
-                if (!cancelled) {
-                    setLearningInsightsLoading(false);
-                }
-            }
-        };
-
-        void loadLearningInsights(false);
-        const intervalId = window.setInterval(() => {
-            void loadLearningInsights(true);
-        }, 25000);
-
-        return () => {
-            cancelled = true;
-            window.clearInterval(intervalId);
-        };
-    }, [organizationId, learningInsightsReloadToken]);
 
     useEffect(() => {
         if (activeDetailView !== "aiEngine") {
@@ -1089,7 +964,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 automations={automations}
                                 automationsLoading={automationsLoading}
                                 automationsError={automationsError}
-                                onRetryAutomations={() => setAutomationsReloadToken((value) => value + 1)}
+                                onRetryAutomations={retryAutomations}
                                 isAIEngineSelectorOpen={isAIEngineSelectorOpen}
                                 selectedAIEngineProfile={selectedAIEngineProfile}
                                 aiEngineUpdatePending={aiEngineUpdatePending}
@@ -1269,7 +1144,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 items={recentActivity}
                                 loading={activityLoading}
                                 error={activityError}
-                                onRetry={() => setActivityReloadToken((value) => value + 1)}
+                                onRetry={retryActivity}
                                 causalAction={causalStrip.action}
                             />
 
@@ -1277,7 +1152,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                 items={learningInsights}
                                 loading={learningInsightsLoading}
                                 error={learningInsightsError}
-                                onRetry={() => setLearningInsightsReloadToken((value) => value + 1)}
+                                onRetry={retryLearningInsights}
                                 causalAction={causalStrip.action}
                             />
                         </div>

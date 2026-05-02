@@ -2,197 +2,16 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	os_signal "os/signal"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/google/uuid"
-	pb "github.com/mycelis/core/pkg/pb/swarm"
-	"github.com/mycelis/core/pkg/protocol"
-	"github.com/nats-io/nats.go"
-	"google.golang.org/protobuf/proto"
-
-	_ "github.com/jackc/pgx/v5/stdlib" // Import pgx driver
-	"github.com/mycelis/core/internal/artifacts"
-	"github.com/mycelis/core/internal/bootstrap"
-	"github.com/mycelis/core/internal/catalogue"
-	"github.com/mycelis/core/internal/cognitive"
-	"github.com/mycelis/core/internal/comms"
-	"github.com/mycelis/core/internal/conversations"
-	"github.com/mycelis/core/internal/events"
-	"github.com/mycelis/core/internal/exchange"
-	"github.com/mycelis/core/internal/governance"
-	"github.com/mycelis/core/internal/inception"
-	"github.com/mycelis/core/internal/mcp"
-	"github.com/mycelis/core/internal/memory"
-	"github.com/mycelis/core/internal/overseer"
-	"github.com/mycelis/core/internal/provisioning"
-	"github.com/mycelis/core/internal/registry"
-	"github.com/mycelis/core/internal/router"
-	"github.com/mycelis/core/internal/runs"
-	"github.com/mycelis/core/internal/searchcap"
-	"github.com/mycelis/core/internal/server"
-	mycelis_signal "github.com/mycelis/core/internal/signal"
+	coreServer "github.com/mycelis/core/internal/server"
 	"github.com/mycelis/core/internal/swarm"
-	mycelis_nats "github.com/mycelis/core/internal/transport/nats"
-	"github.com/mycelis/core/internal/triggers"
+	"github.com/nats-io/nats.go"
 )
-
-func resolveWorkspaceRoot() string {
-	workspace := strings.TrimSpace(os.Getenv("MYCELIS_WORKSPACE"))
-	if workspace == "" {
-		return "./workspace"
-	}
-	return workspace
-}
-
-func ensureStorageLayout(workspaceRoot, dataDir string) error {
-	dirs := []string{
-		workspaceRoot,
-		filepath.Join(workspaceRoot, "saved-media"),
-		dataDir,
-	}
-	for _, dir := range dirs {
-		if strings.TrimSpace(dir) == "" {
-			continue
-		}
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return fmt.Errorf("create storage path %s: %w", dir, err)
-		}
-	}
-	return nil
-}
-
-func buildLegacyMemoryLogEntry(subject string, envelope *pb.MsgEnvelope) *memory.LogEntry {
-	if envelope == nil {
-		return nil
-	}
-
-	ts := time.Now().UTC()
-	if envelope.Timestamp != nil {
-		ts = envelope.Timestamp.AsTime()
-	}
-
-	msgBody := ""
-	intent := "event"
-	level := "INFO"
-	payloadKind := protocol.PayloadKindStatus
-
-	switch p := envelope.Payload.(type) {
-	case *pb.MsgEnvelope_Text:
-		msgBody = p.Text.Content
-		intent = p.Text.Intent
-		if intent == "" {
-			intent = "text"
-		}
-		payloadKind = protocol.PayloadKindStatus
-	case *pb.MsgEnvelope_Event:
-		msgBody = fmt.Sprintf("Event: %s", p.Event.EventType)
-		intent = p.Event.EventType
-		payloadKind = protocol.PayloadKindStatus
-	case *pb.MsgEnvelope_ToolCall:
-		msgBody = fmt.Sprintf("Tool Call: %s", p.ToolCall.ToolName)
-		intent = "tool_call"
-		payloadKind = protocol.PayloadKindStatus
-	case *pb.MsgEnvelope_ToolResult:
-		msgBody = fmt.Sprintf("Tool Result: %s", p.ToolResult.CallId)
-		intent = "tool_result"
-		payloadKind = protocol.PayloadKindResult
-		if p.ToolResult.IsError {
-			level = "ERROR"
-			msgBody = fmt.Sprintf("Error: %s", p.ToolResult.ErrorMessage)
-			payloadKind = protocol.PayloadKindError
-		}
-	}
-
-	entry := &memory.LogEntry{
-		TraceId:   envelope.TraceId,
-		Timestamp: ts,
-		Source:    envelope.SourceAgentId,
-		Intent:    intent,
-		Message:   msgBody,
-		Level:     level,
-		Context: protocol.OperationalLogContext{
-			ReviewScope:   protocol.LogReviewScopeCentralReview,
-			Service:       "core",
-			Component:     "legacy-bus-bridge",
-			Summary:       strings.TrimSpace(msgBody),
-			WhyItMatters:  "Legacy bus output is mirrored into centralized review so Soma and operational leads can still inspect older agent/runtime paths alongside modern signal channels.",
-			SourceKind:    protocol.SourceKindSystem,
-			SourceChannel: subject,
-			PayloadKind:   payloadKind,
-			TeamID:        envelope.TeamId,
-			AgentID:       envelope.SourceAgentId,
-			Status:        strings.ToLower(level),
-			TraceID:       envelope.TraceId,
-			ReviewChannels: []string{
-				subject,
-			},
-			Tags: []string{"legacy-envelope", intent},
-		}.ToMap(),
-	}
-	return memory.NormalizeLogEntryForReview(entry)
-}
-
-func buildMemoryLogEntryFromMessage(subject string, data []byte) *memory.LogEntry {
-	if shouldSkipMemoryLogBridge(subject) {
-		return nil
-	}
-
-	var signalEnv protocol.SignalEnvelope
-	if err := json.Unmarshal(data, &signalEnv); err == nil {
-		if signalEnv.Meta.SourceKind != "" || signalEnv.Meta.SourceChannel != "" || signalEnv.Meta.PayloadKind != "" || signalEnv.Text != "" {
-			if signalEnv.Meta.SourceChannel == "" {
-				signalEnv.Meta.SourceChannel = subject
-			}
-			return memory.NewSignalReviewLogEntry(subject, signalEnv)
-		}
-	}
-
-	if telemetryEnv, err := protocol.ValidateTelemetryMessage(data); err == nil {
-		return memory.NewTelemetryReviewLogEntry(subject, telemetryEnv)
-	}
-
-	var envelope pb.MsgEnvelope
-	if err := proto.Unmarshal(data, &envelope); err == nil {
-		return buildLegacyMemoryLogEntry(subject, &envelope)
-	}
-
-	return nil
-}
-
-func shouldSkipMemoryLogBridge(subject string) bool {
-	trimmed := strings.TrimSpace(subject)
-	if trimmed == "" {
-		return false
-	}
-	return trimmed == protocol.TopicGlobalHeartbeat || strings.Contains(strings.ToLower(trimmed), "heartbeat")
-}
-
-func connectNATSWithRetry(url, connectionName string) (*mycelis_nats.Client, error) {
-	var (
-		client *mycelis_nats.Client
-		err    error
-	)
-	for i := 1; i <= 45; i++ {
-		client, err = mycelis_nats.ConnectAs(url, connectionName)
-		if err == nil {
-			return client, nil
-		}
-		if i == 1 || i%10 == 0 {
-			log.Printf("[nats] waiting for %s at %s (attempt %d/45): %v", connectionName, url, i, err)
-		}
-		time.Sleep(2 * time.Second)
-	}
-	return nil, err
-}
 
 func main() {
 	// Action CLI mode: use the same binary to call Mycelis API endpoints.
@@ -206,539 +25,48 @@ func main() {
 
 	log.Println("Starting Mycelis Core [System]...")
 
-	// Root context with signal-based cancellation for graceful shutdown
 	ctx, stop := os_signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	// Phase 0 security: fail-closed — refuse to start without auth key
 	apiKey := os.Getenv("MYCELIS_API_KEY")
 	if apiKey == "" {
 		log.Fatal("FATAL: MYCELIS_API_KEY not set. Server refuses to start without authentication.")
 	}
 
-	// 1. Config
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
 		natsURL = nats.DefaultURL // nats://localhost:4222
 	}
 
-	// 1a. Initialize Database (Shared)
-	dbConfig := resolveDatabaseConfig()
-	dbURL := dbConfig.connectionString()
+	core := startCoreRuntime(ctx, natsURL)
+	defer core.DrainNATS()
 
-	// Open Shared DB Connection — retry up to 90s to let Postgres come up in parallel.
-	sharedDB, err := sql.Open("pgx", dbURL)
-	if err != nil {
-		log.Printf("WARN: Shared DB Init Failed: %v — running without persistence.", err)
-		sharedDB = nil
-	} else {
-		sharedDB.SetMaxOpenConns(10)
-		sharedDB.SetMaxIdleConns(5)
-		sharedDB.SetConnMaxLifetime(5 * time.Minute)
-		var pingErr error
-		for i := 1; i <= 45; i++ {
-			pingCtx, pingCancel := context.WithTimeout(ctx, 2*time.Second)
-			pingErr = sharedDB.PingContext(pingCtx)
-			pingCancel()
-			if pingErr == nil {
-				log.Println("Shared Database Connection Active.")
-				break
-			}
-			if i == 1 || i%10 == 0 {
-				log.Printf("[db] waiting for PostgreSQL (attempt %d/45): %v", i, pingErr)
-			}
-			time.Sleep(2 * time.Second)
-		}
-		if pingErr != nil {
-			log.Printf("WARN: PostgreSQL unreachable after 90s: %v — running without persistence.", pingErr)
-			sharedDB = nil
-		}
-	}
-
-	// 1b. Load Cognitive Engine
-	cogPath := "config/cognitive.yaml"
-	cogRouter, err := cognitive.NewRouter(cogPath, sharedDB)
-	if err != nil {
-		log.Printf("WARN: Cognitive Config not loaded: %v. Cognitive Engine Disabled.", err)
-		cogRouter = nil
-	} else {
-		log.Println("Cognitive Engine Active.")
-	}
-
-	// 1b. Load Governance Policy
-	policyPath := "config/policy.yaml"
-
-	guard, err := governance.NewGuard(policyPath)
-	if err != nil {
-		log.Printf("WARN: Governance Policy not loaded: %v. Allowing all.", err)
-		guard = nil
-	} else {
-		log.Println("Governance Guard Active.")
-	}
-
-	// 1c. Load Memory Service (The Cortex Memory)
-	memService, err := memory.NewService(dbURL)
-	if err != nil {
-		log.Printf("WARN: Memory System Failed: %v. Continuing without persistence.", err)
-		memService = nil
-	} else {
-		log.Println("Cortex Memory Connected.")
-		go memService.Start(ctx)
-	}
-
-	// 2. Connect to NATS
-	ncWrapper, connErr := connectNATSWithRetry(natsURL, "Mycelis Core")
-
-	// Graceful degradation: if NATS is still unreachable after 90s, run in degraded mode.
-	// Real-time features (Soma, Reactive Engine, Overseer) are disabled until NATS is available.
-	var (
-		nc               *nats.Conn
-		observerNC       *nats.Conn
-		observerNCSource string
-	)
-	if connErr != nil {
-		log.Printf("WARN: NATS unreachable after 90s: %v. Running in DEGRADED mode (no messaging).", connErr)
-	} else {
-		defer ncWrapper.Drain()
-		nc = ncWrapper.Conn
-		log.Printf("[nats] connected to %s", nc.ConnectedUrl())
-
-		if observerWrapper, observerErr := connectNATSWithRetry(natsURL, "Mycelis Observer"); observerErr != nil {
-			log.Printf("WARN: observer NATS lane unavailable: %v. Falling back to the primary NATS connection for router and memory fanout.", observerErr)
-			observerNC = nc
-			observerNCSource = "primary"
-		} else {
-			defer observerWrapper.Drain()
-			observerNC = observerWrapper.Conn
-			observerNCSource = "observer"
-			log.Printf("[nats] observer lane connected to %s", observerNC.ConnectedUrl())
-		}
-	}
-
-	// 3. Start Router (requires NATS)
-	var r *router.Router
-	if observerNC != nil {
-		r = router.NewRouter(observerNC, guard)
-		if err := r.Start(); err != nil {
-			log.Printf("WARN: Failed to start Router: %v", err)
-		}
-	} else {
-		log.Println("WARN: Router disabled (no NATS connection).")
-	}
-
-	// 4. Start Memory Subscriber (The Memory Service — requires NATS)
-	if memService != nil && observerNC != nil {
-		_, err := observerNC.Subscribe(protocol.TopicSwarmWild, func(msg *nats.Msg) {
-			if logEntry := buildMemoryLogEntryFromMessage(msg.Subject, msg.Data); logEntry != nil {
-				memService.Push(logEntry)
-			}
-		})
-		if err != nil {
-			log.Printf("Failed to subscribe Memory Service: %v", err)
-		} else {
-			log.Printf("[nats] memory subscriber attached to %s lane", observerNCSource)
-		}
-	}
-
-	// 5. Http Server
 	mux := http.NewServeMux()
-
-	// 1d. Initialize Archivist (Intelligence)
-	var archivist *memory.Archivist
-	if memService != nil && cogRouter != nil {
-		archivist = memory.NewArchivist(memService, cogRouter)
-		log.Println("Archivist Engine Active.")
-	}
-
-	// 5a. Initialize Registry Service (Reuse shared DB)
-	var regService *registry.Service
-	if sharedDB != nil {
-		regService = registry.NewService(sharedDB)
-		log.Println("Registry Service Active.")
-	}
-
-	// Phase 7.0: MCP Ingress
-	var mcpService *mcp.Service
-	var mcpPool *mcp.ClientPool
-	var mcpToolSets *mcp.ToolSetService
-	if sharedDB != nil {
-		mcpService = mcp.NewService(sharedDB)
-		mcpToolSets = mcp.NewToolSetService(sharedDB)
-		mcpService.ToolSets = mcpToolSets // wire for BootstrapDefaults seeding
-		mcpPool = mcp.NewClientPool(mcpService)
-		// Reconnect persisted servers on startup (best-effort)
-		if servers, err := mcpService.List(ctx); err == nil {
-			mcpPool.ReconnectAll(ctx, servers)
-		} else {
-			log.Printf("WARN: Failed to list MCP servers for reconnect: %v", err)
-		}
-		log.Println("MCP Ingress Active.")
-	}
-
-	// Phase 7.5: Agent Catalogue
-	var catService *catalogue.Service
-	if sharedDB != nil {
-		catService = catalogue.NewService(sharedDB)
-		log.Println("Agent Catalogue Active.")
-	}
-
-	// Phase 7.5: Artifacts (Agent Output Persistence)
-	dataDir := os.Getenv("DATA_DIR")
-	if dataDir == "" {
-		dataDir = "/data/artifacts"
-	}
-	workspaceRoot := resolveWorkspaceRoot()
-	if err := ensureStorageLayout(workspaceRoot, dataDir); err != nil {
-		log.Printf("WARN: Failed to prepare storage layout: %v", err)
-	}
-	var artService *artifacts.Service
-	if sharedDB != nil {
-		artService = artifacts.NewService(sharedDB, dataDir)
-		log.Println("Artifacts Service Active.")
-		// Ephemeral image-cache cleanup loop:
-		// generated images are cache-only unless explicitly saved.
-		go func() {
-			ticker := time.NewTicker(5 * time.Minute)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					n, err := artService.DeleteExpiredCachedImages(ctx, time.Hour)
-					if err != nil {
-						log.Printf("WARN: image cache cleanup failed: %v", err)
-						continue
-					}
-					if n > 0 {
-						log.Printf("Image cache cleanup: removed %d expired unsaved image artifact(s).", n)
-					}
-				}
-			}
-		}()
-	}
-
-	var exchangeService *exchange.Service
-	if sharedDB != nil {
-		var embedFn exchange.EmbedFunc
-		if cogRouter != nil {
-			embedFn = func(ctx context.Context, content string) ([]float64, error) {
-				return cogRouter.Embed(ctx, content, "")
-			}
-		}
-		exchangeService = exchange.NewService(sharedDB, embedFn, memService)
-		if err := exchangeService.Bootstrap(ctx); err != nil {
-			log.Printf("WARN: Managed Exchange bootstrap failed: %v", err)
-		} else {
-			log.Println("Managed Exchange Active.")
-		}
-	}
-
-	// 5b. Initialize Provisioning Engine
-	provEngine := provisioning.NewEngine(cogRouter)
-
-	templateConfigPath := "config/templates"
-	var startupTemplateBundle *bootstrap.TemplateBundle
-	startupSelection, startupRegistry, err := loadStartupBundleRegistry(templateConfigPath)
-	if err != nil {
-		log.Fatalf("FATAL: Bootstrap startup selection failed: %v", err)
-	}
-	startupTemplateBundle = startupSelection.Bundle
-	if startupTemplateBundle == nil || startupSelection.Organization == nil {
-		log.Fatal("FATAL: Bootstrap startup selection did not return a bundle-backed runtime organization")
-	}
-	log.Printf("Bootstrap Template Bundle Active: %s", startupTemplateBundle.ID)
-	log.Printf("Bootstrap Runtime Organization Active: %s", startupSelection.Organization.ID)
-
-	// 5c. Initialize Bootstrap Service (requires NATS)
-	var bootstrapSrv *bootstrap.Service
-	if nc != nil {
-		bootstrapSrv = bootstrap.NewService(sharedDB, nc)
-		bootstrapSrv.Start()
-	} else {
-		log.Println("WARN: Bootstrap Service disabled (no NATS connection).")
-	}
-
-	// Initialize Signal Stream (SSE) — always created (no NATS dependency for handler itself)
-	streamHandler := mycelis_signal.NewStreamHandler()
-
-	// Create Meta-Architect (may be nil if cogRouter is nil)
-	var metaArchitect *cognitive.MetaArchitect
-	if cogRouter != nil {
-		metaArchitect = cognitive.NewMetaArchitect(cogRouter)
-		log.Println("Meta-Architect Active.")
-	}
-
-	// 5d. Initialize Swarm Intelligence (Soma — requires NATS)
-	// Build MCP tool executor adapter for agent ReAct loop
-	var toolExec swarm.MCPToolExecutor
-	if mcpService != nil && mcpPool != nil {
-		toolExec = mcp.NewToolExecutorAdapter(mcpService, mcpPool)
-	}
-
-	// Build Internal Tool Registry (built-in tools for agents)
-	// V7 Inception Recipes: structured prompt patterns for RAG recall
-	var inceptionStore *inception.Store
-	if sharedDB != nil {
-		inceptionStore = inception.NewStore(sharedDB)
-		log.Println("V7 Inception Recipe Store Active.")
-	}
-
-	// Hoisted outside NATS block so MetaArchitect can read tool descriptions even in degraded mode.
-	var internalTools *swarm.InternalToolRegistry
-	commsGateway := comms.NewGatewayFromEnv()
-	if providers := commsGateway.ListProviders(); len(providers) > 0 {
-		ready := 0
-		for _, p := range providers {
-			if p.Configured {
-				ready++
-			}
-		}
-		log.Printf("Communications Gateway Active. %d/%d providers configured.", ready, len(providers))
-	}
-	searchService := searchcap.NewService(searchcap.ConfigFromEnv(), cogRouter, memService)
-	log.Printf("Mycelis Search capability provider: %s", searchService.Provider())
-	if nc != nil {
-		internalTools = swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
-			NC:        nc,
-			Brain:     cogRouter,
-			Mem:       memService,
-			Architect: metaArchitect,
-			Catalogue: catService,
-			Inception: inceptionStore,
-			Comms:     commsGateway,
-			DB:        sharedDB,
-			Exchange:  exchangeService,
-			Search:    searchService,
-		})
-	}
-
-	// V7 Event Spine (Team A): initialize event store + run manager before Soma
-	var eventStore *events.Store
-	var runsManager *runs.Manager
-	if sharedDB != nil {
-		runsManager = runs.NewManager(sharedDB)
-		eventStore = events.NewStore(sharedDB, nc) // nc may be nil (degraded mode ok)
-		log.Println("V7 Event Spine Active. (runs + events stores ready)")
-	}
-
-	// V7 Conversation Log: full-fidelity agent transcript persistence
-	var convStore *conversations.Store
-	if sharedDB != nil {
-		convStore = conversations.NewStore(sharedDB)
-		log.Println("V7 Conversation Store Active.")
-	}
-
-	var soma *swarm.Soma
-	if nc != nil {
-		log.Printf("Soma startup instantiating runtime organization from bootstrap template bundle %s", startupTemplateBundle.ID)
-		soma = swarm.NewSoma(nc, guard, startupRegistry, cogRouter, streamHandler, toolExec, internalTools)
-		startupRouting := resolveStartupProviderRouting(
-			startupSelection,
-			os.Getenv("MYCELIS_TEAM_PROVIDER_MAP"),
-			os.Getenv("MYCELIS_AGENT_PROVIDER_MAP"),
-		)
-		if !startupRouting.Policy.IsEmpty() {
-			soma.SetProviderPolicy(startupRouting.Policy)
-			log.Printf("Provider routing active from runtime organization policy: teams=%d agents=%d", len(startupRouting.Policy.Teams), len(startupRouting.Policy.Agents))
-		}
-		if startupRouting.IgnoredLegacyEnvMaps {
-			log.Printf("WARN: ignoring MYCELIS_TEAM_PROVIDER_MAP / MYCELIS_AGENT_PROVIDER_MAP; provider routing now comes only from the instantiated organization and the env-map compatibility path is retired")
-		}
-		// V7: wire event spine into Soma so ActivateBlueprint creates runs + emits events
-		if runsManager != nil {
-			soma.SetRunsManager(runsManager)
-		}
-		if eventStore != nil {
-			soma.SetEventEmitter(eventStore)
-		}
-		// V7: wire conversation logger into Soma so agents persist full transcripts
-		if convStore != nil {
-			soma.SetConversationLogger(convStore)
-		}
-		// MCP agent-scoped binding: build server name map + tool descriptions for per-agent filtering
-		if mcpService != nil {
-			if servers, err := mcpService.List(ctx); err == nil {
-				serverNames := make(map[uuid.UUID]string, len(servers))
-				toolDescs := make(map[string]string)
-				for _, srv := range servers {
-					serverNames[srv.ID] = srv.Name
-					if tools, err := mcpService.ListTools(ctx, srv.ID); err == nil {
-						for _, t := range tools {
-							toolDescs[t.Name] = t.Description
-						}
-					}
-				}
-				soma.SetMCPServerNames(serverNames)
-				soma.SetMCPToolDescs(toolDescs)
-			}
-		}
-		if err := soma.Start(); err != nil {
-			log.Printf("WARN: Failed to start Soma: %v", err)
-		}
-		// 5e. Swarm Routes
-		mux.HandleFunc("/api/swarm/teams", soma.HandleCreateTeam)
-		mux.HandleFunc("/api/swarm/command", soma.HandleCommand)
-		mux.HandleFunc("/api/v1/swarm/broadcast", soma.HandleBroadcast)
-	} else {
-		log.Println("WARN: Soma (Swarm) disabled (no NATS connection).")
-	}
-
-	// Routes (Bootstrap — guarded)
-	if bootstrapSrv != nil {
-		mux.HandleFunc("/api/v1/nodes/pending", bootstrapSrv.HandlePendingNodes)
-	}
-
-	// Archivist Routes
-	if archivist != nil {
-		mux.HandleFunc("/api/v1/memory/sitrep", func(w http.ResponseWriter, r *http.Request) {
-			// POST to generate, GET to list?
-			// Simple trigger for now
-			// team_id param, duration param
-			// Defaults: Mycelis Core, 24h
-			if r.Method == "POST" {
-				err := archivist.GenerateSitRep(r.Context(), "22222222-2222-2222-2222-222222222222", 24*time.Hour)
-				if err != nil {
-					http.Error(w, err.Error(), 500)
-					return
-				}
-				w.Write([]byte(`{"status": "SitRep Generated"}`))
-			} else {
-				w.WriteHeader(http.StatusMethodNotAllowed)
-			}
-		})
-	}
-
-	// Start Archivist Background Loop (DB-based periodic SitReps)
-	if archivist != nil {
-		go archivist.StartLoop(ctx, 5*time.Minute, "22222222-2222-2222-2222-222222222222")
-	}
-
-	// Start Archivist Daemon (NATS-based sliding window buffer — requires NATS)
-	if archivist != nil && observerNC != nil {
-		go archivist.StartDaemon(ctx, observerNC, "22222222-2222-2222-2222-222222222222")
-	}
-
-	// Phase 5.2: Initialize Overseer (Trust Economy Governance Valve)
-	var overseerEngine *overseer.Engine
-	if nc != nil {
-		overseerEngine = overseer.NewEngine(nc)
-
-		// Wire governance callback: route halted envelopes to SSE stream
-		// for Zone D (Deliverables Tray) human review
-		overseerEngine.SetGovernanceCallback(func(env *protocol.CTSEnvelope) {
-			if streamHandler != nil {
-				data, _ := json.Marshal(map[string]interface{}{
-					"type":        "governance_halt",
-					"source":      env.Meta.SourceNode,
-					"trust_score": env.TrustScore,
-					"timestamp":   env.Meta.Timestamp.Format(time.RFC3339),
-					"trace_id":    env.Meta.TraceID,
-				})
-				streamHandler.Broadcast(string(data))
-			}
-		})
-
-		if err := overseerEngine.Start(); err != nil {
-			log.Printf("WARN: Overseer failed to start: %v", err)
-		} else {
-			log.Println("Overseer Engine Online. Trust Economy active.")
-		}
-	} else {
-		log.Println("WARN: Overseer disabled (no NATS connection).")
-	}
-
-	// Phase 7.7: Load MCP Library (curated server registry)
-	var mcpLibrary *mcp.Library
-	mcpLibPath := "config/mcp-library.yaml"
-	if lib, err := mcp.LoadLibrary(mcpLibPath); err != nil {
-		log.Printf("WARN: MCP Library not loaded: %v", err)
-	} else {
-		mcpLibrary = lib
-		log.Println("MCP Library Active.")
-	}
-
-	// The compose home-runtime image is intentionally slim and may not include npm/npx
-	// for zero-config local MCP subprocesses. Keep manual/external MCP support active,
-	// but allow operators to disable default bootstrap noise explicitly per runtime.
-	if mcpService != nil && mcpPool != nil && mcpLibrary != nil {
-		if defaultMCPBootstrapEnabled() {
-			mcpService.BootstrapDefaults(ctx, mcpLibrary, mcpPool)
-		} else {
-			log.Println("MCP bootstrap: default server auto-install disabled by runtime environment.")
-		}
-	}
-
-	// Wire system capabilities into Meta-Architect (tools, MCP servers, library)
-	if metaArchitect != nil {
-		caps := buildSystemCapabilities(ctx, internalTools, mcpService, mcpLibrary)
-		metaArchitect.SetCapabilities(caps)
-		log.Println("Meta-Architect capabilities wired.")
-	}
-
-	// Create Admin Server (V7: pass eventStore + runsManager for Event Spine routes)
-	adminSrv := server.NewAdminServer(r, guard, memService, sharedDB, cogRouter, provEngine, regService, soma, nc, streamHandler, metaArchitect, overseerEngine, archivist, mcpService, mcpPool, mcpLibrary, catService, artService, exchangeService, eventStore, runsManager)
-	adminSrv.Comms = commsGateway
-	adminSrv.Search = searchService
-	// V7: wire conversation store into AdminServer for transcript browsing + interjection
-	if convStore != nil {
-		adminSrv.Conversations = convStore
-	}
-	// V7: wire inception store into AdminServer for recipe browsing + creation
-	if inceptionStore != nil {
-		adminSrv.Inception = inceptionStore
-	}
-	// MCP Tool Sets: wire into AdminServer for CRUD API
-	if mcpToolSets != nil {
-		adminSrv.MCPToolSets = mcpToolSets
-	}
-	adminSrv.RegisterRoutes(mux)
-	adminSrv.StartLoopScheduler(ctx)
-
-	// V7 Team B: Trigger Engine — evaluates rules against CTS event stream.
-	// Requires: sharedDB (for trigger_rules table) + eventStore + runsManager.
-	if sharedDB != nil && eventStore != nil && runsManager != nil {
-		triggerStore := triggers.NewStore(sharedDB)
-		triggerEngine := triggers.NewEngine(triggerStore, eventStore, runsManager, nc)
-		adminSrv.Triggers = triggerStore
-		adminSrv.TriggerEngine = triggerEngine
-		go func() {
-			if err := triggerEngine.Start(ctx); err != nil {
-				log.Printf("[triggers] engine start error: %v", err)
-			}
-		}()
-		log.Println("V7 Trigger Engine Active.")
-	} else {
-		log.Println("WARN: Trigger Engine disabled (missing DB, events, or runs).")
-	}
-
-	// Wire DB into reactive engine so it can re-subscribe active profiles after
-	// a NATS reconnect. Then reactivate any profiles that were active in the DB
-	// at startup (covers the case where profiles were set before this boot).
-	if adminSrv.Reactive != nil && sharedDB != nil {
-		adminSrv.Reactive.SetDB(sharedDB)
-		go func() {
-			if err := adminSrv.Reactive.ReactivateFromDB(ctx); err != nil {
-				log.Printf("[reactive] startup reactivation: %v", err)
-			} else {
-				log.Println("[reactive] active profile subscriptions restored.")
-			}
-		}()
-	}
+	product := startProductRuntime(ctx, mux, core)
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	// CORS Middleware
 	corsOrigin := os.Getenv("CORS_ORIGIN")
 	if corsOrigin == "" {
 		corsOrigin = "http://localhost:3000"
 	}
 
-	// Phase 0: auth middleware wraps the mux, CORS wraps the authed mux
-	authedMux := server.AuthMiddleware(apiKey, mux)
+	srv := newHTTPServer(port, apiKey, corsOrigin, mux)
+	startGracefulShutdown(ctx, srv, product)
+
+	log.Printf("HTTP Server listening on :%s", port)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("HTTP Server failed: %v", err)
+	}
+
+	log.Println("Mycelis Core shutdown complete.")
+}
+
+func newHTTPServer(port, apiKey, corsOrigin string, mux *http.ServeMux) *http.Server {
+	authedMux := coreServer.AuthMiddleware(apiKey, mux)
 	corsMux := http.HandlerFunc(func(w http.ResponseWriter, hr *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", corsOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
@@ -752,12 +80,13 @@ func main() {
 		authedMux.ServeHTTP(w, hr)
 	})
 
-	// Graceful shutdown
-	srv := &http.Server{
+	return &http.Server{
 		Addr:    ":" + port,
 		Handler: corsMux,
 	}
+}
 
+func startGracefulShutdown(ctx context.Context, srv *http.Server, runtime *productRuntime) {
 	go func() {
 		<-ctx.Done()
 		log.Println("Shutdown signal received. Draining...")
@@ -765,79 +94,33 @@ func main() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		if soma != nil {
-			soma.Shutdown()
+		if runtime != nil && runtime.Soma != nil {
+			runtime.Soma.Shutdown()
 		}
 
-		if adminSrv.TriggerEngine != nil {
-			adminSrv.TriggerEngine.Stop()
+		if runtime != nil && runtime.Admin != nil {
+			if runtime.Admin.TriggerEngine != nil {
+				runtime.Admin.TriggerEngine.Stop()
+			}
+			runtime.Admin.StopLoopScheduler()
 		}
-		adminSrv.StopLoopScheduler()
 
-		if mcpPool != nil {
-			mcpPool.ShutdownAll()
+		if runtime != nil && runtime.MCPPool != nil {
+			runtime.MCPPool.ShutdownAll()
 		}
 
 		if err := srv.Shutdown(shutdownCtx); err != nil {
 			log.Printf("HTTP shutdown error: %v", err)
 		}
 	}()
-
-	log.Printf("HTTP Server listening on :%s", port)
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("HTTP Server failed: %v", err)
-	}
-
-	log.Println("Mycelis Core shutdown complete.")
 }
 
-// buildSystemCapabilities assembles the live system context that the
-// Meta-Architect uses to generate resource-aware mission blueprints.
-func buildSystemCapabilities(ctx context.Context, tools *swarm.InternalToolRegistry, mcpSvc *mcp.Service, lib *mcp.Library) *cognitive.SystemCapabilities {
-	caps := &cognitive.SystemCapabilities{}
+type productRuntime struct {
+	Admin   *coreServer.AdminServer
+	Soma    *swarm.Soma
+	MCPPool mcpPoolShutdowner
+}
 
-	// 1. Internal tool descriptions
-	if tools != nil {
-		caps.InternalTools = tools.ListDescriptions()
-	}
-
-	// 2. Installed MCP servers + their discovered tools
-	if mcpSvc != nil {
-		servers, err := mcpSvc.List(ctx)
-		if err == nil {
-			for _, srv := range servers {
-				toolNames := []string{}
-				if defs, err := mcpSvc.ListTools(ctx, srv.ID); err == nil {
-					for _, t := range defs {
-						toolNames = append(toolNames, t.Name)
-					}
-				}
-				caps.MCPServers = append(caps.MCPServers, cognitive.MCPServerCapability{
-					Name:   srv.Name,
-					Status: "installed",
-					Tools:  toolNames,
-				})
-			}
-		}
-	}
-
-	// 3. Library entries (available for install)
-	if lib != nil {
-		for _, cat := range lib.Categories {
-			for _, entry := range cat.Servers {
-				reqEnv := make([]string, 0, len(entry.Env))
-				for k := range entry.Env {
-					reqEnv = append(reqEnv, k)
-				}
-				caps.MCPServers = append(caps.MCPServers, cognitive.MCPServerCapability{
-					Name:        entry.Name,
-					Description: entry.Description,
-					Status:      "available",
-					RequiredEnv: reqEnv,
-				})
-			}
-		}
-	}
-
-	return caps
+type mcpPoolShutdowner interface {
+	ShutdownAll()
 }

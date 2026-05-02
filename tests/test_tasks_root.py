@@ -77,7 +77,6 @@ def test_root_collection_exports_expected_task_surface():
         "ci.toolchain-check",
         "clean.disk-status",
         "clean.generated",
-        "clean.legacy",
         "clean.reports",
         "clean.windows-dev-residue",
         "clean.wsl-handoff",

@@ -192,20 +192,6 @@ def _print_cleanup_summary(removed: list[str], missing: list[str]) -> None:
             print(f"  - {path}")
 
 
-# -- CLEAN --
-@task
-def legacy(c):
-    """Remove legacy build files."""
-    legacy_files = [
-        ROOT_DIR / "Makefile",
-        ROOT_DIR / "Makefile.legacy",
-    ]
-    for p in legacy_files:
-        if p.exists():
-            p.unlink()
-            print(f"Removed {p}")
-
-
 @task(name="generated")
 def clean_generated(c):
     """Remove repo-local generated artifacts that should not persist across host boundaries."""
@@ -271,7 +257,6 @@ def clean_disk_status(c):
 
 
 ns_clean = Collection("clean")
-ns_clean.add_task(legacy)
 ns_clean.add_task(clean_generated)
 ns_clean.add_task(clean_reports)
 ns_clean.add_task(clean_wsl_handoff)
