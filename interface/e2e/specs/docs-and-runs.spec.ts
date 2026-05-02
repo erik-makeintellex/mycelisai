@@ -75,7 +75,7 @@ test.describe('Docs and Runs Route Coverage', () => {
         const missionId = 'mission-ui-7777';
         const now = new Date().toISOString();
         let showTerminalEvents = false;
-        let failNextEventRequest = false;
+        let failNextManualEventRequest = false;
         let conversationTurns = [
             {
                 id: 'turn-ui-1',
@@ -133,14 +133,11 @@ test.describe('Docs and Runs Route Coverage', () => {
         });
 
         await page.route(`**/api/v1/runs/${runId}/events**`, async (route) => {
-            if (failNextEventRequest) {
-                failNextEventRequest = false;
+            const isManualRefresh = route.request().headers()['x-mycelis-e2e-event-refresh'] === '1';
+            if (failNextManualEventRequest && isManualRefresh) {
+                failNextManualEventRequest = false;
                 showTerminalEvents = true;
-                await route.fulfill({
-                    status: 503,
-                    contentType: 'application/json',
-                    body: JSON.stringify({ ok: false, error: 'run timeline temporarily unavailable' }),
-                });
+                await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'run timeline temporarily unavailable' }) });
                 return;
             }
 
@@ -312,7 +309,10 @@ test.describe('Docs and Runs Route Coverage', () => {
 
         await page.getByRole('button', { name: 'Events' }).first().click();
         await expect(page.getByText('mission.started')).toBeVisible();
-        failNextEventRequest = true;
+        failNextManualEventRequest = true;
+        await page.route(`**/api/v1/runs/${runId}/events**`, async (route) => {
+            await route.fallback({ headers: { ...route.request().headers(), 'x-mycelis-e2e-event-refresh': '1' } });
+        }, { times: 1 });
         await page.getByRole('button', { name: 'Refresh events' }).click();
         await expect(page.getByText('Failed to load events (503)')).toBeVisible();
         await page.getByRole('button', { name: 'Retry' }).last().click();

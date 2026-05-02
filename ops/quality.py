@@ -121,13 +121,20 @@ def _load_legacy_caps(path: Path = LEGACY_CAPS_PATH) -> dict[str, int]:
         if not line or line.startswith("#"):
             continue
         if "=" not in line:
-            continue
+            raise SystemExit(f"QUALITY CHECK FAILED: malformed legacy cap entry: {line}")
         key, value = line.split("=", 1)
         rel = key.strip().replace("\\", "/")
+        if not rel:
+            raise SystemExit("QUALITY CHECK FAILED: legacy cap entry has an empty path.")
+        if rel in caps:
+            raise SystemExit(f"QUALITY CHECK FAILED: duplicate legacy cap entry: {rel}")
         try:
-            caps[rel] = int(value.strip())
+            cap = int(value.strip())
         except ValueError:
-            continue
+            raise SystemExit(f"QUALITY CHECK FAILED: legacy cap entry has a non-integer cap: {line}") from None
+        if cap <= 0:
+            raise SystemExit(f"QUALITY CHECK FAILED: legacy cap entry must be positive: {line}")
+        caps[rel] = cap
     return caps
 
 
@@ -146,16 +153,19 @@ def max_lines(_c, limit=300, paths=DEFAULT_SOURCE_PATHS, strict=False):
     if not roots:
         raise SystemExit("QUALITY CHECK FAILED: no valid paths provided.")
 
-    caps = _load_legacy_caps()
+    caps = {} if strict else _load_legacy_caps()
     files = _iter_source_files(roots)
     violations: list[str] = []
     legacy_ok: list[str] = []
+    loose_caps: list[str] = []
+    retired_caps: list[str] = []
     stale_caps: list[str] = []
 
-    for rel in sorted(caps):
-        cap_path = ROOT_DIR / rel
-        if any(_path_is_under(cap_path, root) for root in roots) and not cap_path.exists():
-            stale_caps.append(rel)
+    if not strict:
+        for rel in sorted(caps):
+            cap_path = ROOT_DIR / rel
+            if any(_path_is_under(cap_path, root) for root in roots) and not cap_path.exists():
+                stale_caps.append(rel)
 
     for path in files:
         try:
@@ -163,16 +173,23 @@ def max_lines(_c, limit=300, paths=DEFAULT_SOURCE_PATHS, strict=False):
         except ValueError:
             rel = path.as_posix()
         count = _line_count(path)
+        cap = caps.get(rel)
+
+        if cap is not None and count <= limit:
+            retired_caps.append(f"{rel}: {count} lines (remove legacy-cap={cap})")
+            continue
+
         if count <= limit:
             continue
 
-        cap = caps.get(rel)
         if strict or cap is None or count > cap:
             detail = f"{rel}: {count} lines (limit={limit}"
             if cap is not None and not strict:
                 detail += f", legacy-cap={cap}"
             detail += ")"
             violations.append(detail)
+        elif cap > count:
+            loose_caps.append(f"{rel}: {count} lines (lower legacy-cap={cap})")
         else:
             legacy_ok.append(f"{rel}: {count}/{cap}")
 
@@ -186,6 +203,18 @@ def max_lines(_c, limit=300, paths=DEFAULT_SOURCE_PATHS, strict=False):
         for item in violations:
             print(f"  {item}")
         raise SystemExit("QUALITY CHECK FAILED: file length violations found.")
+
+    if loose_caps:
+        print("Loose legacy cap entries:")
+        for item in loose_caps:
+            print(f"  {item}")
+        raise SystemExit("QUALITY CHECK FAILED: legacy max-line caps must match current line counts.")
+
+    if retired_caps:
+        print("Retired legacy cap entries:")
+        for item in retired_caps:
+            print(f"  {item}")
+        raise SystemExit("QUALITY CHECK FAILED: legacy max-line caps for files under the limit must be removed.")
 
     if stale_caps:
         print("Stale legacy cap entries:")

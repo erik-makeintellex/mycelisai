@@ -230,7 +230,7 @@ test.describe('Groups workspace (/groups)', () => {
         await expect(page.getByTestId('groups-output-summary')).toContainText('1 contributing lead');
         await expect(page.getByText('Launch Brief', { exact: true })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Open Soma admin home' })).toHaveAttribute('href', '/dashboard');
-        await expect(page.getByRole('link', { name: 'Open launch-lead lead' })).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
+        await expect(page.getByTitle('Open launch-lead lead')).toHaveAttribute('href', '/dashboard?team_id=launch-lead');
         await expect(page.getByRole('link', { name: 'Download' }).first()).toHaveAttribute('href', '/api/v1/artifacts/artifact-brief/download');
 
         await page.getByTestId('groups-list-item-group-temp-archived').click();

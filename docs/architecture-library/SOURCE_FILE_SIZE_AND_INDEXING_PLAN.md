@@ -18,9 +18,11 @@ When a file approaches the limit, split by ownership:
 
 ## Current Enforcement
 
-`uv run inv quality.max-lines --limit 300` is the repository-wide authored-file ratchet. It scans source, tests, docs, scripts, charts, Kubernetes configs, SQL, and root orientation files. It reports legacy oversize files that remain inside their recorded cap and fails when a file grows past its cap or a new uncapped authored file exceeds 300 lines.
+`uv run inv quality.max-lines --limit 300` is the repository-wide authored-file ratchet. It scans source, tests, docs, scripts, charts, Kubernetes configs, SQL, and root orientation files. It reports legacy oversize files that remain at their recorded cap and fails when a file grows past its cap or a new uncapped authored file exceeds 300 lines.
 
 This keeps releases moving while preventing new growth. Do not raise a legacy cap as a convenience fix. Split the file instead.
+
+Legacy caps must match the current line count exactly. Lower the cap when a file shrinks, and remove the cap as soon as the file is at or below 300 lines.
 
 Generated and lock artifacts are skipped only through the documented allowlist in `ops/quality.py`, such as protobuf outputs, SDK stubs, package lockfiles, and Helm dependency locks.
 
@@ -65,6 +67,7 @@ Treat these as decomposition targets, not as examples to copy.
 A cleanup slice is complete only when:
 - no touched file exceeds 300 lines unless it was already legacy-capped and did not grow
 - new files are under 300 lines
+- legacy caps are exact current counts and no cap remains for a file at or below 300 lines
 - indexes link to any new canonical docs
 - `uv run inv quality.max-lines --limit 300` passes
 - the final report names remaining legacy oversize files relevant to the touched area
