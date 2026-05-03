@@ -9,12 +9,6 @@
 charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=570
 core/config/mcp-library.yaml=342
 core/config/templates/v8-migration-standing-team-bridge.yaml=570
-core/internal/server/cognitive_test.go=1592
-core/internal/server/cognitive.go=2109
-core/internal/server/groups_test.go=596
-core/internal/server/groups.go=931
-core/internal/server/organizations_test.go=1809
-core/internal/server/organizations.go=2689
 docs/architecture-library/INTENT_TO_MANIFESTATION_AND_TEAM_INTERACTION_V7.md=371
 docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md=547
 docs/architecture-library/V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md=368
