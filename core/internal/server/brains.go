@@ -5,30 +5,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/mycelis/core/internal/cognitive"
 )
-
-// validProviderID matches alphanumeric + dash/underscore IDs.
-var validProviderID = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
-
-// BrainEntry is the enriched provider info returned by GET /api/v1/brains.
-type BrainEntry struct {
-	ID                 string   `json:"id"`
-	Type               string   `json:"type"`
-	Endpoint           string   `json:"endpoint,omitempty"`
-	ModelID            string   `json:"model_id"`
-	Location           string   `json:"location"`
-	DataBoundary       string   `json:"data_boundary"`
-	UsagePolicy        string   `json:"usage_policy"`
-	TokenBudgetProfile string   `json:"token_budget_profile"`
-	MaxOutputTokens    int      `json:"max_output_tokens"`
-	RolesAllowed       []string `json:"roles_allowed"`
-	Enabled            bool     `json:"enabled"`
-	Status             string   `json:"status"` // "online" | "offline" | "disabled"
-}
 
 // GET /api/v1/brains — list all providers with enriched metadata + health status.
 func (s *AdminServer) HandleListBrains(w http.ResponseWriter, r *http.Request) {
@@ -40,46 +20,7 @@ func (s *AdminServer) HandleListBrains(w http.ResponseWriter, r *http.Request) {
 	entries := make([]BrainEntry, 0, len(s.Cognitive.Config.Providers))
 	for id, prov := range s.Cognitive.Config.Providers {
 		prov = cognitive.NormalizeProviderTokenDefaults(prov)
-		entry := BrainEntry{
-			ID:                 id,
-			Type:               prov.Type,
-			Endpoint:           prov.Endpoint,
-			ModelID:            prov.ModelID,
-			Location:           prov.Location,
-			DataBoundary:       prov.DataBoundary,
-			UsagePolicy:        prov.UsagePolicy,
-			TokenBudgetProfile: prov.TokenBudgetProfile,
-			MaxOutputTokens:    prov.MaxOutputTokens,
-			RolesAllowed:       prov.RolesAllowed,
-			Enabled:            prov.Enabled,
-		}
-
-		if entry.Location == "" {
-			entry.Location = "local"
-		}
-		if entry.DataBoundary == "" {
-			entry.DataBoundary = "local_only"
-		}
-		if entry.UsagePolicy == "" {
-			entry.UsagePolicy = "local_first"
-		}
-
-		if !prov.Enabled {
-			entry.Status = "disabled"
-		} else if adapter, ok := s.Cognitive.Adapters[id]; ok {
-			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-			alive, _ := adapter.Probe(ctx)
-			cancel()
-			if alive {
-				entry.Status = "online"
-			} else {
-				entry.Status = "offline"
-			}
-		} else {
-			entry.Status = "offline"
-		}
-
-		entries = append(entries, entry)
+		entries = append(entries, brainEntryFromProvider(id, prov, s.brainStatus(r.Context(), id, prov.Enabled)))
 	}
 
 	respondJSON(w, map[string]any{"ok": true, "data": entries})
@@ -186,22 +127,6 @@ func (s *AdminServer) HandleUpdateBrainPolicy(w http.ResponseWriter, r *http.Req
 	}})
 }
 
-// brainUpsertRequest is the shared request body for add/update operations.
-type brainUpsertRequest struct {
-	ID                 string   `json:"id"`
-	Type               string   `json:"type"`
-	Endpoint           string   `json:"endpoint"`
-	ModelID            string   `json:"model_id"`
-	APIKey             string   `json:"api_key"` // write-only — never returned
-	Location           string   `json:"location"`
-	DataBoundary       string   `json:"data_boundary"`
-	UsagePolicy        string   `json:"usage_policy"`
-	TokenBudgetProfile string   `json:"token_budget_profile"`
-	MaxOutputTokens    int      `json:"max_output_tokens"`
-	RolesAllowed       []string `json:"roles_allowed"`
-	Enabled            bool     `json:"enabled"`
-}
-
 // POST /api/v1/brains — add a new provider and hot-inject it into the running router.
 func (s *AdminServer) HandleAddBrain(w http.ResponseWriter, r *http.Request) {
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
@@ -228,29 +153,7 @@ func (s *AdminServer) HandleAddBrain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := cognitive.ProviderConfig{
-		Type:               req.Type,
-		Endpoint:           req.Endpoint,
-		ModelID:            req.ModelID,
-		AuthKey:            req.APIKey,
-		Location:           req.Location,
-		DataBoundary:       req.DataBoundary,
-		UsagePolicy:        req.UsagePolicy,
-		TokenBudgetProfile: req.TokenBudgetProfile,
-		MaxOutputTokens:    req.MaxOutputTokens,
-		RolesAllowed:       req.RolesAllowed,
-		Enabled:            req.Enabled,
-	}
-	if cfg.Location == "" {
-		cfg.Location = "local"
-	}
-	if cfg.DataBoundary == "" {
-		cfg.DataBoundary = "local_only"
-	}
-	if cfg.UsagePolicy == "" {
-		cfg.UsagePolicy = "local_first"
-	}
-	cfg = cognitive.NormalizeProviderTokenDefaults(cfg)
+	cfg := providerConfigFromBrainRequest(req, true)
 
 	if err := s.Cognitive.AddProvider(req.ID, cfg); err != nil {
 		log.Printf("AddProvider %s failed: %v", req.ID, err)
@@ -258,33 +161,7 @@ func (s *AdminServer) HandleAddBrain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Probe immediately so the response includes a live status
-	status := "offline"
-	if adapter, ok := s.Cognitive.Adapters[req.ID]; ok && cfg.Enabled {
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-		alive, _ := adapter.Probe(ctx)
-		cancel()
-		if alive {
-			status = "online"
-		}
-	} else if !cfg.Enabled {
-		status = "disabled"
-	}
-
-	respondJSON(w, map[string]any{"ok": true, "data": BrainEntry{
-		ID:                 req.ID,
-		Type:               cfg.Type,
-		Endpoint:           cfg.Endpoint,
-		ModelID:            cfg.ModelID,
-		Location:           cfg.Location,
-		DataBoundary:       cfg.DataBoundary,
-		UsagePolicy:        cfg.UsagePolicy,
-		TokenBudgetProfile: cfg.TokenBudgetProfile,
-		MaxOutputTokens:    cfg.MaxOutputTokens,
-		RolesAllowed:       cfg.RolesAllowed,
-		Enabled:            cfg.Enabled,
-		Status:             status,
-	}})
+	respondJSON(w, map[string]any{"ok": true, "data": brainEntryFromProvider(req.ID, cfg, s.brainStatus(r.Context(), req.ID, cfg.Enabled))})
 }
 
 // PUT /api/v1/brains/{id} — update a provider's full configuration and hot-reload it.
@@ -309,20 +186,7 @@ func (s *AdminServer) HandleUpdateBrain(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	cfg := cognitive.ProviderConfig{
-		Type:               req.Type,
-		Endpoint:           req.Endpoint,
-		ModelID:            req.ModelID,
-		AuthKey:            req.APIKey, // empty = keep existing (UpdateProvider handles this)
-		Location:           req.Location,
-		DataBoundary:       req.DataBoundary,
-		UsagePolicy:        req.UsagePolicy,
-		TokenBudgetProfile: req.TokenBudgetProfile,
-		MaxOutputTokens:    req.MaxOutputTokens,
-		RolesAllowed:       req.RolesAllowed,
-		Enabled:            req.Enabled,
-	}
-	cfg = cognitive.NormalizeProviderTokenDefaults(cfg)
+	cfg := providerConfigFromBrainRequest(req, false)
 
 	if err := s.Cognitive.UpdateProvider(id, cfg); err != nil {
 		log.Printf("UpdateProvider %s failed: %v", id, err)

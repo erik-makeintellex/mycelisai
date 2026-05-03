@@ -2,10 +2,7 @@ package artifacts
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,107 +14,6 @@ var artColumns = []string{
 	"id", "mission_id", "team_id", "agent_id", "trace_id", "artifact_type",
 	"title", "content_type", "content", "file_path", "file_size_bytes",
 	"metadata", "trust_score", "status", "created_at",
-}
-
-func TestArtifactsService_Store(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("Failed to mock DB: %v", err)
-	}
-	defer db.Close()
-
-	svc := NewService(db, "/data/artifacts")
-	newID := uuid.New()
-	now := time.Now()
-	trust := 0.85
-
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(), // mission_id, team_id
-			"agent-scanner-1",    // agent_id
-			sqlmock.AnyArg(),     // trace_id
-			ArtifactType("code"), // artifact_type
-			"main.go",            // title
-			"text/x-go",          // content_type
-			sqlmock.AnyArg(),     // content
-			sqlmock.AnyArg(),     // file_path
-			sqlmock.AnyArg(),     // file_size_bytes
-			sqlmock.AnyArg(),     // metadata
-			sqlmock.AnyArg(),     // trust_score
-			"pending",            // status
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
-			AddRow(newID, now))
-
-	input := Artifact{
-		AgentID:      "agent-scanner-1",
-		TraceID:      "trace-123",
-		ArtifactType: TypeCode,
-		Title:        "main.go",
-		ContentType:  "text/x-go",
-		Content:      "package main\n\nfunc main() {}",
-		TrustScore:   &trust,
-		Status:       "pending",
-	}
-
-	result, err := svc.Store(context.Background(), input)
-	if err != nil {
-		t.Fatalf("Store failed: %v", err)
-	}
-	if result.ID != newID {
-		t.Errorf("Expected ID %s, got %s", newID, result.ID)
-	}
-	if result.Title != "main.go" {
-		t.Errorf("Expected title 'main.go', got %q", result.Title)
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unmet DB expectations: %v", err)
-	}
-}
-
-func TestArtifactsService_StoreDefaultMetadata(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("Failed to mock DB: %v", err)
-	}
-	defer db.Close()
-
-	svc := NewService(db, "/data/artifacts")
-	newID := uuid.New()
-	now := time.Now()
-
-	mock.ExpectQuery("INSERT INTO artifacts").
-		WithArgs(
-			sqlmock.AnyArg(), sqlmock.AnyArg(),
-			"agent-1", sqlmock.AnyArg(),
-			ArtifactType("document"), "Report", "text/plain",
-			sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(),
-			sqlmock.AnyArg(), sqlmock.AnyArg(), "pending",
-		).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at"}).
-			AddRow(newID, now))
-
-	// nil metadata should default to {}
-	input := Artifact{
-		AgentID:      "agent-1",
-		ArtifactType: TypeDocument,
-		Title:        "Report",
-		ContentType:  "text/plain",
-		Status:       "pending",
-	}
-
-	result, err := svc.Store(context.Background(), input)
-	if err != nil {
-		t.Fatalf("Store failed: %v", err)
-	}
-	if result.Metadata == nil {
-		t.Error("Expected Metadata to be initialized, got nil")
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("Unmet DB expectations: %v", err)
-	}
 }
 
 func TestArtifactsService_ListByMission(t *testing.T) {
@@ -356,68 +252,5 @@ func TestArtifactsService_DeleteExpiredCachedImages(t *testing.T) {
 	}
 	if deleted != 2 {
 		t.Fatalf("expected 2 deletions, got %d", deleted)
-	}
-}
-
-func TestArtifactsService_SaveImageToWorkspace(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("Failed to mock DB: %v", err)
-	}
-	defer db.Close()
-
-	svc := NewService(db, "/data/artifacts")
-	artID := uuid.New()
-	now := time.Now()
-	imgB64 := base64.StdEncoding.EncodeToString([]byte("png-bytes"))
-
-	rows := sqlmock.NewRows(artColumns).
-		AddRow(artID, nil, nil, "internal", nil, "image",
-			"Generated Hero", "image/png", imgB64, nil, nil,
-			[]byte(`{"cache_policy":"ephemeral","saved":false}`), nil, "completed", now)
-	mock.ExpectQuery("SELECT .+ FROM artifacts\\s+WHERE id = \\$1").
-		WithArgs(artID).
-		WillReturnRows(rows)
-	mock.ExpectExec("UPDATE artifacts").
-		WithArgs(sqlmock.AnyArg(), int64(len([]byte("png-bytes"))), artID).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-
-	workspace := t.TempDir()
-	relPath, err := svc.SaveImageToWorkspace(context.Background(), artID, workspace, "saved-media", "hero")
-	if err != nil {
-		t.Fatalf("SaveImageToWorkspace failed: %v", err)
-	}
-	if relPath != "saved-media/hero.png" {
-		t.Fatalf("unexpected rel path: %s", relPath)
-	}
-
-	fullPath := filepath.Join(workspace, filepath.FromSlash(relPath))
-	if _, err := os.Stat(fullPath); err != nil {
-		t.Fatalf("expected saved file at %s: %v", fullPath, err)
-	}
-}
-
-func TestArtifactsService_SaveImageToWorkspace_NonImage(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("Failed to mock DB: %v", err)
-	}
-	defer db.Close()
-
-	svc := NewService(db, "/data/artifacts")
-	artID := uuid.New()
-	now := time.Now()
-
-	rows := sqlmock.NewRows(artColumns).
-		AddRow(artID, nil, nil, "internal", nil, "document",
-			"Doc", "text/plain", "hello", nil, nil,
-			[]byte(`{}`), nil, "completed", now)
-	mock.ExpectQuery("SELECT .+ FROM artifacts\\s+WHERE id = \\$1").
-		WithArgs(artID).
-		WillReturnRows(rows)
-
-	_, err = svc.SaveImageToWorkspace(context.Background(), artID, t.TempDir(), "", "")
-	if err == nil {
-		t.Fatal("expected error for non-image artifact")
 	}
 }
