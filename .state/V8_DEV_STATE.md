@@ -70,6 +70,7 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
 - `IN_REVIEW` the follow-on backend cleanup wave retired caps for conversation store tests, deployment context service helpers, memory service/archivist helpers, server trigger route tests, and trigger store tests; the touched package tests, repo-wide line gate, and whitespace checks are green.
 - `IN_REVIEW` the latest backend test/CLI hygiene wave retired caps for the Action CLI, inception store tests, reactive engine tests, server artifact tests, and mission tests; focused Go validation, repo-wide line gate, and whitespace checks are green.
 - `IN_REVIEW` the current backend service/test hygiene wave retired caps for memory archivist compression tests, MCP server tests, review-loop handlers/tests, and template execution/proof handlers/tests; focused server/memory validation, repo-wide line gate, and whitespace checks are green.
+- `IN_REVIEW` the latest focused backend hygiene wave retired caps for the cognitive router, deployment-context server tests, and provider CRUD tests while preserving provider CRUD test count; focused cognitive/server validation, repo-wide line gate, and whitespace checks are green.
 
 ## Layered Architecture Truth
 
