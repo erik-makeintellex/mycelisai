@@ -16,21 +16,21 @@ import (
 
 // TriggerRule is the DB + API representation of a trigger rule.
 type TriggerRule struct {
-	ID               string          `json:"id"`
-	TenantID         string          `json:"tenant_id"`
-	Name             string          `json:"name"`
-	Description      string          `json:"description,omitempty"`
-	EventPattern     string          `json:"event_pattern"`              // e.g. "mission.completed"
-	Condition        json.RawMessage `json:"condition"`                  // optional payload filter
-	TargetMissionID  string          `json:"target_mission_id"`          // mission to launch
-	Mode             string          `json:"mode"`                       // "propose" | "auto_execute"
-	CooldownSeconds  int             `json:"cooldown_seconds"`
-	MaxDepth         int             `json:"max_depth"`                  // recursion guard
-	MaxActiveRuns    int             `json:"max_active_runs"`            // concurrency guard
-	IsActive         bool            `json:"is_active"`
-	LastFiredAt      *time.Time      `json:"last_fired_at,omitempty"`
-	CreatedAt        time.Time       `json:"created_at"`
-	UpdatedAt        time.Time       `json:"updated_at"`
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	Name            string          `json:"name"`
+	Description     string          `json:"description,omitempty"`
+	EventPattern    string          `json:"event_pattern"`     // e.g. "mission.completed"
+	Condition       json.RawMessage `json:"condition"`         // optional payload filter
+	TargetMissionID string          `json:"target_mission_id"` // mission to launch
+	Mode            string          `json:"mode"`              // "propose" | "auto_execute"
+	CooldownSeconds int             `json:"cooldown_seconds"`
+	MaxDepth        int             `json:"max_depth"`       // recursion guard
+	MaxActiveRuns   int             `json:"max_active_runs"` // concurrency guard
+	IsActive        bool            `json:"is_active"`
+	LastFiredAt     *time.Time      `json:"last_fired_at,omitempty"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 // TriggerExecution is the audit record for a single evaluation.
@@ -39,7 +39,7 @@ type TriggerExecution struct {
 	RuleID     string    `json:"rule_id"`
 	EventID    string    `json:"event_id"`
 	RunID      string    `json:"run_id,omitempty"`
-	Status     string    `json:"status"`       // "fired" | "skipped" | "proposed"
+	Status     string    `json:"status"` // "fired" | "skipped" | "proposed"
 	SkipReason string    `json:"skip_reason,omitempty"`
 	ExecutedAt time.Time `json:"executed_at"`
 }
@@ -60,52 +60,6 @@ func NewStore(db *sql.DB) *Store {
 	}
 }
 
-// LoadActiveRules populates the in-memory cache from the database.
-// Safe to call multiple times (full refresh).
-func (s *Store) LoadActiveRules(ctx context.Context) error {
-	if s.db == nil {
-		return fmt.Errorf("triggers: database not available")
-	}
-
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, tenant_id, name, COALESCE(description,''), event_pattern,
-		       condition, target_mission_id, mode, cooldown_seconds, max_depth,
-		       max_active_runs, is_active, last_fired_at, created_at, updated_at
-		FROM trigger_rules
-		WHERE tenant_id = 'default' AND is_active = true`)
-	if err != nil {
-		return fmt.Errorf("triggers: load query failed: %w", err)
-	}
-	defer rows.Close()
-
-	fresh := make(map[string]*TriggerRule)
-	for rows.Next() {
-		r := &TriggerRule{}
-		var lastFired sql.NullTime
-		if err := rows.Scan(
-			&r.ID, &r.TenantID, &r.Name, &r.Description, &r.EventPattern,
-			&r.Condition, &r.TargetMissionID, &r.Mode, &r.CooldownSeconds,
-			&r.MaxDepth, &r.MaxActiveRuns, &r.IsActive, &lastFired,
-			&r.CreatedAt, &r.UpdatedAt,
-		); err != nil {
-			log.Printf("[triggers] scan error: %v", err)
-			continue
-		}
-		if lastFired.Valid {
-			t := lastFired.Time
-			r.LastFiredAt = &t
-		}
-		fresh[r.ID] = r
-	}
-
-	s.mu.Lock()
-	s.cache = fresh
-	s.mu.Unlock()
-
-	log.Printf("[triggers] loaded %d active rules into cache", len(fresh))
-	return rows.Err()
-}
-
 // MatchingRules returns all cached rules whose event_pattern matches the given event type.
 func (s *Store) MatchingRules(eventType string) []*TriggerRule {
 	s.mu.RLock()
@@ -118,77 +72,6 @@ func (s *Store) MatchingRules(eventType string) []*TriggerRule {
 		}
 	}
 	return matches
-}
-
-// ListAll returns all trigger rules (active and inactive) for the tenant.
-func (s *Store) ListAll(ctx context.Context) ([]TriggerRule, error) {
-	if s.db == nil {
-		return nil, fmt.Errorf("triggers: database not available")
-	}
-
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, tenant_id, name, COALESCE(description,''), event_pattern,
-		       condition, target_mission_id, mode, cooldown_seconds, max_depth,
-		       max_active_runs, is_active, last_fired_at, created_at, updated_at
-		FROM trigger_rules
-		WHERE tenant_id = 'default'
-		ORDER BY created_at DESC`)
-	if err != nil {
-		return nil, fmt.Errorf("triggers: list query failed: %w", err)
-	}
-	defer rows.Close()
-
-	rules := make([]TriggerRule, 0)
-	for rows.Next() {
-		var r TriggerRule
-		var lastFired sql.NullTime
-		if err := rows.Scan(
-			&r.ID, &r.TenantID, &r.Name, &r.Description, &r.EventPattern,
-			&r.Condition, &r.TargetMissionID, &r.Mode, &r.CooldownSeconds,
-			&r.MaxDepth, &r.MaxActiveRuns, &r.IsActive, &lastFired,
-			&r.CreatedAt, &r.UpdatedAt,
-		); err != nil {
-			log.Printf("[triggers] scan error: %v", err)
-			continue
-		}
-		if lastFired.Valid {
-			t := lastFired.Time
-			r.LastFiredAt = &t
-		}
-		rules = append(rules, r)
-	}
-	return rules, rows.Err()
-}
-
-// Get retrieves a single rule by ID.
-func (s *Store) Get(ctx context.Context, id string) (*TriggerRule, error) {
-	if s.db == nil {
-		return nil, fmt.Errorf("triggers: database not available")
-	}
-
-	var r TriggerRule
-	var lastFired sql.NullTime
-	err := s.db.QueryRowContext(ctx, `
-		SELECT id, tenant_id, name, COALESCE(description,''), event_pattern,
-		       condition, target_mission_id, mode, cooldown_seconds, max_depth,
-		       max_active_runs, is_active, last_fired_at, created_at, updated_at
-		FROM trigger_rules
-		WHERE id = $1 AND tenant_id = 'default'`, id).
-		Scan(&r.ID, &r.TenantID, &r.Name, &r.Description, &r.EventPattern,
-			&r.Condition, &r.TargetMissionID, &r.Mode, &r.CooldownSeconds,
-			&r.MaxDepth, &r.MaxActiveRuns, &r.IsActive, &lastFired,
-			&r.CreatedAt, &r.UpdatedAt)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("triggers: get failed: %w", err)
-	}
-	if lastFired.Valid {
-		t := lastFired.Time
-		r.LastFiredAt = &t
-	}
-	return &r, nil
 }
 
 // Create inserts a new trigger rule and adds it to the cache if active.
@@ -360,71 +243,4 @@ func (s *Store) UpdateLastFired(ctx context.Context, id string, t time.Time) {
 		r.LastFiredAt = &t
 	}
 	s.mu.Unlock()
-}
-
-// LogExecution records a trigger evaluation in the audit table.
-func (s *Store) LogExecution(ctx context.Context, exec *TriggerExecution) error {
-	if s.db == nil {
-		return fmt.Errorf("triggers: database not available")
-	}
-
-	exec.ID = uuid.New().String()
-	exec.ExecutedAt = time.Now()
-
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO trigger_executions (id, rule_id, event_id, run_id, status, skip_reason, executed_at)
-		VALUES ($1, $2, $3, NULLIF($4,''), $5, NULLIF($6,''), $7)`,
-		exec.ID, exec.RuleID, exec.EventID, exec.RunID, exec.Status, exec.SkipReason, exec.ExecutedAt)
-	if err != nil {
-		return fmt.Errorf("triggers: log execution failed: %w", err)
-	}
-	return nil
-}
-
-// ListExecutions returns recent executions for a rule, newest first.
-func (s *Store) ListExecutions(ctx context.Context, ruleID string, limit int) ([]TriggerExecution, error) {
-	if s.db == nil {
-		return nil, fmt.Errorf("triggers: database not available")
-	}
-	if limit <= 0 {
-		limit = 20
-	}
-
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, rule_id, event_id, COALESCE(run_id,''), status, COALESCE(skip_reason,''), executed_at
-		FROM trigger_executions
-		WHERE rule_id = $1
-		ORDER BY executed_at DESC
-		LIMIT $2`, ruleID, limit)
-	if err != nil {
-		return nil, fmt.Errorf("triggers: list executions failed: %w", err)
-	}
-	defer rows.Close()
-
-	execs := make([]TriggerExecution, 0)
-	for rows.Next() {
-		var e TriggerExecution
-		if err := rows.Scan(&e.ID, &e.RuleID, &e.EventID, &e.RunID, &e.Status, &e.SkipReason, &e.ExecutedAt); err != nil {
-			continue
-		}
-		execs = append(execs, e)
-	}
-	return execs, rows.Err()
-}
-
-// ActiveCount returns the count of active (running) runs for a given mission.
-func (s *Store) ActiveCount(ctx context.Context, missionID string) (int, error) {
-	if s.db == nil {
-		return 0, fmt.Errorf("triggers: database not available")
-	}
-
-	var count int
-	err := s.db.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM mission_runs
-		WHERE mission_id = $1 AND status IN ('pending','running')
-		AND tenant_id = 'default'`, missionID).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("triggers: active count query failed: %w", err)
-	}
-	return count, nil
 }
