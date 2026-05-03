@@ -8,49 +8,46 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
-func TestHandleListTriggers(t *testing.T) {
+// ── GET /api/v1/triggers/{id}/history ─────────────────────────────
+
+func TestHandleTriggerHistory(t *testing.T) {
 	tsOpt, mock := withTriggerStore(t)
 	s := newTestServer(tsOpt)
 
 	now := time.Now()
-	mock.ExpectQuery("SELECT .+ FROM trigger_rules").
-		WillReturnRows(sqlmock.NewRows(triggerRuleColumns).
-			AddRow("r-1", "default", "Rule A", "desc", "mission.completed",
-				[]byte(`{}`), "m-target-1", "propose", 60, 5, 3, true, nil, now, now).
-			AddRow("r-2", "default", "Rule B", "", "tool.completed",
-				[]byte(`{}`), "m-target-2", "auto_execute", 120, 3, 1, false, nil, now, now))
+	mock.ExpectQuery("SELECT .+ FROM trigger_executions").
+		WillReturnRows(sqlmock.NewRows(triggerExecColumns).
+			AddRow("exec-1", "r-1", "ev-1", "run-1", "fired", "", now).
+			AddRow("exec-2", "r-1", "ev-2", "", "skipped", "cooldown", now))
 
-	mux := setupMux(t, "GET /api/v1/triggers", s.HandleListTriggers)
-	rr := doRequest(t, mux, "GET", "/api/v1/triggers", "")
+	mux := setupMux(t, "GET /api/v1/triggers/{id}/history", s.HandleTriggerHistory)
+	rr := doRequest(t, mux, "GET", "/api/v1/triggers/r-1/history", "")
 
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp map[string]any
 	assertJSON(t, rr, &resp)
-	if resp["ok"] != true {
-		t.Errorf("expected ok=true, got %v", resp["ok"])
-	}
 	data, ok := resp["data"].([]any)
 	if !ok {
 		t.Fatalf("expected data array, got %T", resp["data"])
 	}
 	if len(data) != 2 {
-		t.Errorf("expected 2 rules, got %d", len(data))
+		t.Errorf("expected 2 executions, got %d", len(data))
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unmet DB expectations: %v", err)
 	}
 }
 
-func TestHandleListTriggers_Empty(t *testing.T) {
+func TestHandleTriggerHistory_Empty(t *testing.T) {
 	tsOpt, mock := withTriggerStore(t)
 	s := newTestServer(tsOpt)
 
-	mock.ExpectQuery("SELECT .+ FROM trigger_rules").
+	mock.ExpectQuery("SELECT .+ FROM trigger_executions").
 		WillReturnRows(sqlmock.NewRows(nil))
 
-	mux := setupMux(t, "GET /api/v1/triggers", s.HandleListTriggers)
-	rr := doRequest(t, mux, "GET", "/api/v1/triggers", "")
+	mux := setupMux(t, "GET /api/v1/triggers/{id}/history", s.HandleTriggerHistory)
+	rr := doRequest(t, mux, "GET", "/api/v1/triggers/r-1/history", "")
 
 	assertStatus(t, rr, http.StatusOK)
 
@@ -61,14 +58,14 @@ func TestHandleListTriggers_Empty(t *testing.T) {
 		t.Fatalf("expected data array, got %T", resp["data"])
 	}
 	if len(data) != 0 {
-		t.Errorf("expected empty array, got %d rules", len(data))
+		t.Errorf("expected 0 executions, got %d", len(data))
 	}
 }
 
-func TestHandleListTriggers_NilStore(t *testing.T) {
+func TestHandleTriggerHistory_NilStore(t *testing.T) {
 	s := newTestServer() // no Triggers wired → returns empty array
-	mux := setupMux(t, "GET /api/v1/triggers", s.HandleListTriggers)
-	rr := doRequest(t, mux, "GET", "/api/v1/triggers", "")
+	mux := setupMux(t, "GET /api/v1/triggers/{id}/history", s.HandleTriggerHistory)
+	rr := doRequest(t, mux, "GET", "/api/v1/triggers/r-1/history", "")
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp map[string]any
