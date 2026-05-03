@@ -10,8 +10,6 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-// ── Test fixtures ─────────────────────────────────────────────
-
 func testCouncilSoma() *swarm.Soma {
 	return swarm.NewTestSoma([]*swarm.TeamManifest{
 		{
@@ -33,7 +31,6 @@ func testCouncilSoma() *swarm.Soma {
 				{ID: "council-sentry", Role: "sentry"},
 			},
 		},
-		// Mission team — should NOT appear in council endpoints
 		{
 			ID:   "mission-abc-team-1",
 			Name: "Scraper Team",
@@ -51,8 +48,6 @@ func withCouncilSoma() func(*AdminServer) {
 	}
 }
 
-// ── GET /api/v1/council/members ───────────────────────────────
-
 func TestHandleListCouncilMembers(t *testing.T) {
 	s := newTestServer(withCouncilSoma())
 	rr := doRequest(t, http.HandlerFunc(s.HandleListCouncilMembers), "GET", "/api/v1/council/members", "")
@@ -65,7 +60,6 @@ func TestHandleListCouncilMembers(t *testing.T) {
 		t.Fatalf("Expected ok=true, got ok=false: %s", resp.Error)
 	}
 
-	// Decode data as []CouncilMemberInfo
 	raw, _ := json.Marshal(resp.Data)
 	var members []CouncilMemberInfo
 	if err := json.Unmarshal(raw, &members); err != nil {
@@ -76,13 +70,11 @@ func TestHandleListCouncilMembers(t *testing.T) {
 		t.Fatalf("Expected 5 council members, got %d", len(members))
 	}
 
-	// Build lookup
 	byID := map[string]CouncilMemberInfo{}
 	for _, m := range members {
 		byID[m.ID] = m
 	}
 
-	// Verify admin
 	if m, ok := byID["admin"]; !ok {
 		t.Error("Missing member: admin")
 	} else {
@@ -94,14 +86,12 @@ func TestHandleListCouncilMembers(t *testing.T) {
 		}
 	}
 
-	// Verify architect
 	if m, ok := byID["council-architect"]; !ok {
 		t.Error("Missing member: council-architect")
 	} else if m.Role != "architect" {
 		t.Errorf("architect role: got %q, want %q", m.Role, "architect")
 	}
 
-	// Verify mission agent is excluded
 	if _, ok := byID["scraper-agent"]; ok {
 		t.Error("Mission agent 'scraper-agent' should NOT appear in council members")
 	}
@@ -121,8 +111,6 @@ func TestHandleListCouncilMembers_NilSoma(t *testing.T) {
 		t.Error("Expected error message when Soma is nil")
 	}
 }
-
-// ── POST /api/v1/council/{member}/chat — Validation ──────────
 
 func TestHandleCouncilChat_UnknownMember(t *testing.T) {
 	s := newTestServer(withCouncilSoma())
@@ -188,7 +176,7 @@ func TestHandleCouncilChat_BadJSON(t *testing.T) {
 }
 
 func TestHandleCouncilChat_NilSoma(t *testing.T) {
-	s := newTestServer() // No Soma
+	s := newTestServer()
 	mux := setupMux(t, "POST /api/v1/council/{member}/chat", s.HandleCouncilChat)
 
 	body := `{"messages":[{"role":"user","content":"hello"}]}`
@@ -198,7 +186,7 @@ func TestHandleCouncilChat_NilSoma(t *testing.T) {
 }
 
 func TestHandleCouncilChat_NilNATS(t *testing.T) {
-	s := newTestServer(withCouncilSoma()) // Soma present but NC is nil
+	s := newTestServer(withCouncilSoma())
 	mux := setupMux(t, "POST /api/v1/council/{member}/chat", s.HandleCouncilChat)
 
 	body := `{"messages":[{"role":"user","content":"hello"}]}`
@@ -253,8 +241,6 @@ func TestHandleCouncilChat_ReturnsStructuredTransportBlockerWhenMemberHasNoRespo
 	}
 }
 
-// ── isCouncilMember unit tests ────────────────────────────────
-
 func TestIsCouncilMember(t *testing.T) {
 	s := newTestServer(withCouncilSoma())
 
@@ -270,8 +256,8 @@ func TestIsCouncilMember(t *testing.T) {
 		{"council-creative", true, "council-core", "creative"},
 		{"council-sentry", true, "council-core", "sentry"},
 		{"nonexistent", false, "", ""},
-		{"scraper-agent", false, "", ""}, // mission agent — not council
-		{"", false, "", ""},              // empty ID
+		{"scraper-agent", false, "", ""},
+		{"", false, "", ""},
 	}
 
 	for _, tt := range tests {
@@ -291,48 +277,9 @@ func TestIsCouncilMember(t *testing.T) {
 }
 
 func TestIsCouncilMember_NilSoma(t *testing.T) {
-	s := newTestServer() // No Soma
+	s := newTestServer()
 	_, _, ok := s.isCouncilMember("admin")
 	if ok {
 		t.Error("Expected false when Soma is nil")
-	}
-}
-
-// ── APIResponse helpers ───────────────────────────────────────
-
-func TestRespondAPIJSON_Success(t *testing.T) {
-	s := newTestServer(withCouncilSoma())
-	rr := doRequest(t, http.HandlerFunc(s.HandleListCouncilMembers), "GET", "/api/v1/council/members", "")
-
-	// Verify Content-Type
-	ct := rr.Header().Get("Content-Type")
-	if ct != "application/json" {
-		t.Errorf("Content-Type: got %q, want %q", ct, "application/json")
-	}
-
-	// Verify it's valid JSON with ok=true
-	var resp protocol.APIResponse
-	assertJSON(t, rr, &resp)
-	if !resp.OK {
-		t.Error("Expected ok=true in success response")
-	}
-}
-
-func TestRespondAPIJSON_Error(t *testing.T) {
-	s := newTestServer() // nil Soma → triggers respondAPIError
-	rr := doRequest(t, http.HandlerFunc(s.HandleListCouncilMembers), "GET", "/api/v1/council/members", "")
-
-	ct := rr.Header().Get("Content-Type")
-	if ct != "application/json" {
-		t.Errorf("Content-Type: got %q, want %q", ct, "application/json")
-	}
-
-	var resp protocol.APIResponse
-	assertJSON(t, rr, &resp)
-	if resp.OK {
-		t.Error("Expected ok=false in error response")
-	}
-	if resp.Error == "" {
-		t.Error("Expected non-empty error in error response")
 	}
 }

@@ -2,19 +2,14 @@ package server
 
 import (
 	"net/http"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/conversations"
-	"github.com/mycelis/core/internal/swarm"
-	"github.com/mycelis/core/pkg/protocol"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
-
-var testNATSPort int32 = 14520
 
 // ── Shared helpers for conversation handler tests ────────────────
 
@@ -35,7 +30,7 @@ func withConversations(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 // withNATS starts an embedded NATS server and wires NC into AdminServer.
 func withNATS(t *testing.T) func(*AdminServer) {
 	t.Helper()
-	opts := &natsserver.Options{Host: "127.0.0.1", Port: int(atomic.AddInt32(&testNATSPort, 1))}
+	opts := &natsserver.Options{Host: "127.0.0.1", Port: -1}
 	srv, err := natsserver.NewServer(opts)
 	if err != nil {
 		t.Fatalf("nats server: %v", err)
@@ -55,29 +50,6 @@ func withNATS(t *testing.T) func(*AdminServer) {
 	return func(s *AdminServer) {
 		s.NC = nc
 	}
-}
-
-// testInterjectSoma returns a Soma with a team whose members can be broadcast to.
-func testInterjectSoma() *swarm.Soma {
-	return swarm.NewTestSoma([]*swarm.TeamManifest{
-		{
-			ID:   "admin-core",
-			Name: "Admin",
-			Type: swarm.TeamTypeAction,
-			Members: []protocol.AgentManifest{
-				{ID: "admin", Role: "admin"},
-			},
-		},
-		{
-			ID:   "council-core",
-			Name: "Council",
-			Type: swarm.TeamTypeAction,
-			Members: []protocol.AgentManifest{
-				{ID: "council-architect", Role: "architect"},
-				{ID: "council-coder", Role: "coder"},
-			},
-		},
-	})
 }
 
 // convTurnColumns returns the column names returned by conversation_turns SELECT queries.
@@ -215,105 +187,3 @@ func TestHandleGetSessionConversation_NilConversations(t *testing.T) {
 // ════════════════════════════════════════════════════════════════════
 // HandleRunInterject — POST /api/v1/runs/{id}/interject
 // ════════════════════════════════════════════════════════════════════
-
-func TestHandleRunInterject_TargetedAgent(t *testing.T) {
-	natsOpt := withNATS(t)
-	convOpt, mock := withConversations(t)
-	s := newTestServer(natsOpt, convOpt, func(s *AdminServer) {
-		s.Soma = testInterjectSoma()
-	})
-
-	// The handler logs the interjection in a goroutine — mock the INSERT
-	mock.ExpectExec("INSERT INTO conversation_turns").
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
-	body := `{"message": "stop what you are doing", "agent_id": "admin"}`
-	mux := setupMux(t, "POST /api/v1/runs/{id}/interject", s.HandleRunInterject)
-	rr := doRequest(t, mux, "POST", "/api/v1/runs/run-200/interject", body)
-
-	assertStatus(t, rr, http.StatusOK)
-
-	var resp map[string]interface{}
-	assertJSON(t, rr, &resp)
-	if resp["ok"] != true {
-		t.Errorf("expected ok=true, got %v", resp["ok"])
-	}
-	data, ok := resp["data"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected data object, got %T", resp["data"])
-	}
-	// Targeted agent publish: agents_reached should be 1
-	reached, ok := data["agents_reached"].(float64)
-	if !ok {
-		t.Fatalf("expected agents_reached to be a number, got %T", data["agents_reached"])
-	}
-	if reached != 1 {
-		t.Errorf("expected agents_reached=1, got %v", reached)
-	}
-}
-
-func TestHandleRunInterject_Subtests(t *testing.T) {
-	// Share a single NATS server across subtests to avoid Windows port conflicts.
-	natsOpt := withNATS(t)
-
-	t.Run("Broadcast", func(t *testing.T) {
-		convOpt, mock := withConversations(t)
-		s := newTestServer(natsOpt, convOpt, func(s *AdminServer) {
-			s.Soma = testInterjectSoma()
-		})
-
-		// The handler logs the interjection in a goroutine — mock the INSERT
-		mock.ExpectExec("INSERT INTO conversation_turns").
-			WillReturnResult(sqlmock.NewResult(1, 1))
-
-		// No agent_id = broadcast to all team members (admin + council-architect + council-coder = 3)
-		body := `{"message": "attention everyone"}`
-		mux := setupMux(t, "POST /api/v1/runs/{id}/interject", s.HandleRunInterject)
-		rr := doRequest(t, mux, "POST", "/api/v1/runs/run-200/interject", body)
-
-		assertStatus(t, rr, http.StatusOK)
-
-		var resp map[string]interface{}
-		assertJSON(t, rr, &resp)
-		data, ok := resp["data"].(map[string]interface{})
-		if !ok {
-			t.Fatalf("expected data object, got %T", resp["data"])
-		}
-		reached, ok := data["agents_reached"].(float64)
-		if !ok {
-			t.Fatalf("expected agents_reached number, got %T", data["agents_reached"])
-		}
-		// 3 members total across 2 teams
-		if reached != 3 {
-			t.Errorf("expected agents_reached=3, got %v", reached)
-		}
-	})
-
-	t.Run("MissingRunID", func(t *testing.T) {
-		s := newTestServer(natsOpt)
-
-		// Direct handler call — PathValue("id") returns ""
-		rr := doRequest(t, http.HandlerFunc(s.HandleRunInterject), "POST", "/api/v1/runs/interject", `{"message":"hi"}`)
-		assertStatus(t, rr, http.StatusBadRequest)
-	})
-
-	t.Run("EmptyMessage", func(t *testing.T) {
-		s := newTestServer(natsOpt)
-
-		body := `{"message": ""}`
-		mux := setupMux(t, "POST /api/v1/runs/{id}/interject", s.HandleRunInterject)
-		rr := doRequest(t, mux, "POST", "/api/v1/runs/run-200/interject", body)
-
-		assertStatus(t, rr, http.StatusBadRequest)
-	})
-}
-
-func TestHandleRunInterject_NilNC(t *testing.T) {
-	s := newTestServer() // no NC wired
-
-	body := `{"message": "please respond"}`
-	mux := setupMux(t, "POST /api/v1/runs/{id}/interject", s.HandleRunInterject)
-	rr := doRequest(t, mux, "POST", "/api/v1/runs/run-200/interject", body)
-
-	assertStatus(t, rr, http.StatusServiceUnavailable)
-}

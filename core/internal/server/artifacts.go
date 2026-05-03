@@ -1,14 +1,11 @@
 package server
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/artifacts"
@@ -271,67 +268,4 @@ func (s *AdminServer) handleUpdateArtifactStatus(w http.ResponseWriter, r *http.
 	}
 
 	respondJSON(w, map[string]string{"status": body.Status})
-}
-
-func artifactDownloadBody(artifact *artifacts.Artifact) ([]byte, bool, error) {
-	if artifact == nil || strings.TrimSpace(artifact.Content) == "" {
-		return nil, false, nil
-	}
-
-	content := strings.TrimSpace(artifact.Content)
-	if artifact.ArtifactType == artifacts.TypeImage || strings.HasPrefix(strings.ToLower(strings.TrimSpace(artifact.ContentType)), "image/") {
-		raw, err := base64.StdEncoding.DecodeString(content)
-		if err != nil {
-			return nil, false, fmt.Errorf("decode artifact image content: %w", err)
-		}
-		return raw, true, nil
-	}
-
-	return []byte(content), true, nil
-}
-
-func resolveArtifactFilePath(artifact *artifacts.Artifact, dataDir string) (string, bool) {
-	if artifact == nil || strings.TrimSpace(artifact.FilePath) == "" {
-		return "", false
-	}
-
-	candidates := make([]string, 0, 2)
-	rawPath := strings.TrimSpace(artifact.FilePath)
-	if filepath.IsAbs(rawPath) {
-		candidates = append(candidates, filepath.Clean(rawPath))
-	} else {
-		workspaceRoot := os.Getenv("MYCELIS_WORKSPACE")
-		if workspaceRoot == "" {
-			workspaceRoot = "./workspace"
-		}
-		candidates = append(candidates, filepath.Clean(filepath.Join(workspaceRoot, filepath.FromSlash(rawPath))))
-		if strings.TrimSpace(dataDir) != "" {
-			candidates = append(candidates, filepath.Clean(filepath.Join(dataDir, filepath.FromSlash(rawPath))))
-		}
-	}
-
-	for _, candidate := range candidates {
-		info, err := os.Stat(candidate)
-		if err == nil && !info.IsDir() {
-			return candidate, true
-		}
-	}
-	return "", false
-}
-
-func downloadFilename(artifact *artifacts.Artifact) string {
-	if artifact == nil {
-		return "artifact"
-	}
-	if strings.TrimSpace(artifact.FilePath) != "" {
-		name := filepath.Base(filepath.FromSlash(strings.TrimSpace(artifact.FilePath)))
-		if name != "." && name != string(filepath.Separator) && name != "" {
-			return name
-		}
-	}
-	title := strings.TrimSpace(artifact.Title)
-	if title == "" {
-		return "artifact"
-	}
-	return title
 }
