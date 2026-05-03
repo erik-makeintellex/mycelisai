@@ -67,10 +67,10 @@ function ResourcesContent() {
                 <div className="flex items-end justify-between mb-4">
                     <div>
                         <h1 className="text-2xl font-bold text-cortex-text-main tracking-tight">
-                            Resources
+                            Advanced Resources
                         </h1>
                         <p className="text-cortex-text-muted text-sm mt-1">
-                            Connected tools, exchange lanes, workspace files, and advanced organization resources
+                            Support systems for Soma: connected tools, MCP/search readiness, workspace files, exchange lanes, and AI engine setup
                         </p>
                     </div>
                 </div>

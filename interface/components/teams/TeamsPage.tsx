@@ -217,7 +217,7 @@ export default function TeamsPage() {
                     href="/groups"
                     className="inline-flex items-center justify-center rounded-2xl border border-cortex-border px-4 py-2 text-sm font-semibold text-cortex-text-main hover:bg-cortex-border"
                   >
-                    Open groups workspace
+                    Open group operations
                   </Link>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -251,10 +251,10 @@ export default function TeamsPage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold text-cortex-text-main">
-                Groups have their own workspace now.
+                Groups are advanced operations now.
               </p>
               <p className="mt-1 text-sm leading-6 text-cortex-text-muted">
-                Keep this page focused on team leads. Open Groups when you want
+                Keep this page focused on team leads. Open Group Operations when you want
                 temporary or standing collaboration lanes, output review, and
                 broadcast coordination.
               </p>
@@ -263,7 +263,7 @@ export default function TeamsPage() {
               href="/groups"
               className="inline-flex items-center justify-center rounded-2xl border border-cortex-primary/30 px-4 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/10"
             >
-              Open groups workspace
+              Open group operations
             </Link>
           </div>
         </div>

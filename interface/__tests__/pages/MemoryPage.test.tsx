@@ -62,6 +62,6 @@ describe('Memory Page (app/memory/page.tsx)', () => {
             render(<MemoryRoute />);
         });
 
-        expect(screen.getByText(/Memory views stay behind Advanced mode/i)).toBeDefined();
+        expect(screen.getByText(/Memory is an Advanced support view/i)).toBeDefined();
     });
 });

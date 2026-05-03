@@ -33,7 +33,7 @@ test.describe('Teams Workspace (/teams)', () => {
 
     test('groups guidance points to the dedicated workspace', async ({ page }) => {
         await expect(page.getByText('Groups have their own workspace now.')).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Open groups workspace' }).last()).toHaveAttribute('href', '/groups');
+        await expect(page.getByRole('link', { name: 'Open group operations' }).last()).toHaveAttribute('href', '/groups');
     });
 
     test('guided team creation is reachable from the teams workspace', async ({ page }) => {

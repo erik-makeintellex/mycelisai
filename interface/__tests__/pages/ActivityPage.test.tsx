@@ -69,7 +69,7 @@ describe("ActivityPage", () => {
     render(<ActivityPage />);
 
     expect(
-      screen.getByRole("heading", { name: "Workflow and bus review" }),
+      screen.getByRole("heading", { name: "Progress, runs, and bus review" }),
     ).toBeDefined();
     expect(screen.getByText("Active workflows")).toBeDefined();
     expect(screen.getByText("Recent runs")).toBeDefined();

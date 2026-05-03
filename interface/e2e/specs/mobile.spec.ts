@@ -12,7 +12,7 @@ test.describe('Mobile Viewport', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.getByRole('link', { name: 'Create AI Organization' }).first()).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Review Docs' }).first()).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Docs' }).first()).toBeVisible();
     });
 
     test('hero content renders correctly on mobile', async ({ page }) => {
@@ -24,7 +24,7 @@ test.describe('Mobile Viewport', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.locator('body')).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Build AI Organizations that think, review, and evolve.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'What do you want Soma to do?' })).toBeVisible();
 
         // Verify content is not clipped — the main content area should have
         // a height that extends beyond the viewport (scrollable) or fit within it

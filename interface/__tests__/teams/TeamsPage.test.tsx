@@ -170,11 +170,11 @@ describe("TeamsPage", () => {
         .getAttribute("href"),
     ).toBe("/resources?tab=tools");
     expect(
-      screen.getByText(/Groups have their own workspace now/i),
+      screen.getByText(/Groups are advanced operations now/i),
     ).toBeDefined();
     expect(
       screen
-        .getAllByRole("link", { name: /Open groups workspace/i })[0]
+        .getAllByRole("link", { name: /Open group operations/i })[0]
         .getAttribute("href"),
     ).toBe("/groups");
     expect(

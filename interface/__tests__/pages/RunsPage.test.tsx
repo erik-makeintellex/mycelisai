@@ -78,7 +78,7 @@ describe('RunsPage', () => {
         render(<RunsPage />);
 
         expect(screen.getByText('No runs yet')).toBeDefined();
-        expect(screen.getByText(/Ask Soma to launch a crew/i)).toBeDefined();
+        expect(screen.getByText(/Ask Soma for an outcome first/i)).toBeDefined();
     });
 
     it('filters to active runs from the status query', () => {

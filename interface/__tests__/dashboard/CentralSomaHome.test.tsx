@@ -33,19 +33,22 @@ describe("CentralSomaHome", () => {
     it("renders the central Soma chat and the live interaction stream on the front page", () => {
         render(<CentralSomaHome />);
 
-        expect(screen.getByText("Work directly with Soma from the admin home.")).toBeDefined();
+        expect(screen.getByText("What do you want Soma to do?")).toBeDefined();
+        expect(screen.getByRole("button", { name: /Plan/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Research/i })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Configure tools/i })).toBeDefined();
         expect(screen.getByText("Say this to Soma")).toBeDefined();
         expect(screen.getAllByText("Web search").length).toBeGreaterThan(0);
         expect(screen.getByText("Create a team")).toBeDefined();
         expect(screen.getByText("Private data")).toBeDefined();
-        expect(screen.getByRole("link", { name: /Manage tools/i }).getAttribute("href")).toBe("/resources?tab=tools");
+        expect(screen.getByRole("link", { name: /Advanced tool setup/i }).getAttribute("href")).toBe("/resources?tab=tools");
         expect(screen.getByTestId("mission-control-chat")).toBeDefined();
         expect(screen.getByTestId("central-soma-chat-frame").className).toContain("h-[72vh]");
         expect(screen.getByTestId("central-soma-chat-frame").className).toContain("overflow-hidden");
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
-        expect(screen.getByRole("link", { name: /Open groups workspace/i }).getAttribute("href")).toBe("/groups");
-        expect(screen.getByRole("link", { name: /Review workflow activity/i }).getAttribute("href")).toBe("/activity");
         expect(screen.getByRole("link", { name: /Approval queue/i }).getAttribute("href")).toBe("/approvals");
+        expect(screen.getByRole("link", { name: /Activity and runs/i }).getAttribute("href")).toBe("/activity");
+        expect(screen.getByRole("link", { name: /Group operations/i }).getAttribute("href")).toBe("/groups");
         expect(screen.getByRole("link", { name: /Tool readiness/i }).getAttribute("href")).toBe("/resources?tab=tools");
         expect(screen.getByRole("link", { name: /Return to Northstar Labs/i }).getAttribute("href")).toBe("/organizations/org-1");
         expect(screen.queryByRole("link", { name: /Review Soma context model/i })).toBeNull();

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
-import { Activity, Building2, CheckSquare, FolderPlus, ListChecks, Sparkles, Users, Wrench } from "lucide-react";
+import { Activity, Building2, CheckSquare, Compass, FileText, FolderPlus, ListChecks, Search, Settings2, Sparkles, Users, Wrench } from "lucide-react";
 import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
 import MissionControlChat from "@/components/dashboard/MissionControlChat";
 import CentralActivityStream from "@/components/dashboard/CentralActivityStream";
@@ -14,6 +14,39 @@ type LastOrganization = {
     id: string;
     name: string;
 };
+
+const intentCards = [
+    {
+        label: "Plan",
+        detail: "Shape a goal into next steps.",
+        icon: Compass,
+        prompt: "Help me plan the next useful step and show what you understood.",
+    },
+    {
+        label: "Research",
+        detail: "Search or review sources, then summarize.",
+        icon: Search,
+        prompt: "Research this, cite sources, and tell me what changed.",
+    },
+    {
+        label: "Create",
+        detail: "Draft outputs and store them visibly.",
+        icon: Sparkles,
+        prompt: "Create a first version and tell me where the output was stored.",
+    },
+    {
+        label: "Review",
+        detail: "Check work, risks, and approvals.",
+        icon: FileText,
+        prompt: "Review this, identify the risks, and ask before taking action.",
+    },
+    {
+        label: "Configure tools",
+        detail: "Connect search, files, MCP, or services.",
+        icon: Settings2,
+        prompt: "Check available tools and walk me through enabling what is missing.",
+    },
+] as const;
 
 export default function CentralSomaHome({
     requestedTeamIdPromise,
@@ -81,19 +114,19 @@ export default function CentralSomaHome({
                     </div>
                     <div className="space-y-2">
                         <h1 className="text-3xl font-semibold tracking-tight text-cortex-text-main">
-                            Work directly with {assistantName} from the admin home.
+                            What do you want {assistantName} to do?
                         </h1>
                         <p className="max-w-4xl text-sm leading-7 text-cortex-text-muted">
-                            The root workspace should feel like a direct conversation with Soma. Ask for planning, team creation, reviews, repeated workflows, and output delivery here first; readable results stay inline, and saved or binary outputs should stay visible as clickable files.
+                            Start with intent. {assistantName} should reflect what it understood, show what it is doing,
+                            explain what changed, and point to where outputs were stored. Advanced tools, groups,
+                            memory, and runs stay available when you need operational depth.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <QuickLink href="/groups" icon={<Users className="h-4 w-4" />} label="Open groups workspace" />
                         {lastOrganization ? (
                             <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
                         ) : null}
                         <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Create or open AI Organizations" />
-                        <QuickLink href="/activity" icon={<Activity className="h-4 w-4" />} label="Review workflow activity" />
                     </div>
                     {focusedTeam ? (
                         <div className="rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3 text-sm text-cortex-text-main">
@@ -107,6 +140,28 @@ export default function CentralSomaHome({
                 </div>
                 <div className="mb-4">
                     <SomaReadinessStrip />
+                </div>
+                <div className="mb-4 grid gap-2 md:grid-cols-5">
+                    {intentCards.map((card) => {
+                        const Icon = card.icon;
+                        return (
+                            <button
+                                key={card.label}
+                                type="button"
+                                onClick={() => void navigator.clipboard?.writeText(card.prompt)}
+                                className="rounded-2xl border border-cortex-border bg-cortex-bg px-3 py-3 text-left transition hover:border-cortex-primary/30 hover:bg-cortex-primary/5"
+                                title="Copy Soma prompt"
+                            >
+                                <span className="flex items-center gap-2 text-sm font-semibold text-cortex-text-main">
+                                    <Icon className="h-4 w-4 text-cortex-primary" />
+                                    {card.label}
+                                </span>
+                                <span className="mt-2 block text-xs leading-5 text-cortex-text-muted">
+                                    {card.detail}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
                 <div className="mb-4">
                     <SomaCapabilityGuide />
@@ -125,8 +180,8 @@ export default function CentralSomaHome({
                 <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-5">
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">Management Workbench</p>
-                            <h2 className="mt-2 text-base font-semibold text-cortex-text-main">Move from conversation to action</h2>
+                            <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">Advanced support</p>
+                            <h2 className="mt-2 text-base font-semibold text-cortex-text-main">Review what Soma changed</h2>
                         </div>
                         <Sparkles className="h-5 w-5 text-cortex-primary" />
                     </div>
@@ -140,14 +195,14 @@ export default function CentralSomaHome({
                         <WorkbenchLink
                             href="/activity"
                             icon={<ListChecks className="h-4 w-4" />}
-                            title="Workflow activity"
-                            detail="Review current runs and readable message-bus activity."
+                            title="Activity and runs"
+                            detail="See progress, events, and recent outcomes behind Soma actions."
                         />
                         <WorkbenchLink
                             href="/groups"
                             icon={<Users className="h-4 w-4" />}
-                            title="Groups and teams"
-                            detail="Select a group, inspect its teams, and manage launch lanes."
+                            title="Group operations"
+                            detail="Manage advanced collaboration lanes without making groups the default workflow."
                         />
                         <WorkbenchLink
                             href="/resources?tab=tools"

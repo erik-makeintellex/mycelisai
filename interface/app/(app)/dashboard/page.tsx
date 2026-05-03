@@ -16,7 +16,8 @@ export default function DashboardPage({
                         Create or open AI Organizations
                     </summary>
                     <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                        Keep the main admin home centered on Soma. Open the full AI Organization setup flow only when you intentionally want to create or revisit organization contexts.
+                        Soma is the default place to begin. Open organization setup when you want to create a durable context
+                        or resume a structured workspace behind the conversation.
                     </p>
                     <div className="mt-5">
                         <CreateOrganizationEntry />

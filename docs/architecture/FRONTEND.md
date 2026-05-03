@@ -33,7 +33,7 @@
 Primary app layout is implemented in `interface/app/(app)/layout.tsx` and `interface/components/shell/ShellLayout.tsx`.
 
 Release-candidate MVP note:
-- default operator navigation is intentionally smaller than the full route set: `AI Organization`, `Automations`, `Docs`, and `Settings` stay visible by default, while `Resources`, `Memory`, and `System` are advanced-mode support routes
+- default operator navigation is intentionally smaller than the full route set: `Soma`, the current AI Organization when available, `Docs`, `Status`, and `Settings` stay visible by default, while `Groups`, `Activity/Runs`, `Resources/MCP`, `Memory`, and `System` are advanced/admin support routes
 
 | Shell area | Component | Purpose |
 | --- | --- | --- |
@@ -57,7 +57,7 @@ Current `page.tsx` route count: `22`.
 | Route | Source | Primary surface |
 | --- | --- | --- |
 | `/` | `app/(marketing)/page.tsx` | Product landing |
-| `/dashboard` | `app/(app)/dashboard/page.tsx` | AI Organization entry flow |
+| `/dashboard` | `app/(app)/dashboard/page.tsx` | Soma intent start and AI Organization entry flow |
 | `/organizations/[id]` | `app/(app)/organizations/[id]/page.tsx` | Soma-primary AI Organization workspace |
 | `/automations` | `app/(app)/automations/page.tsx` | Automation hub + tabs |
 | `/resources` | `app/(app)/resources/page.tsx` | Advanced resources (tools/files/AI engines/roles) |
@@ -70,6 +70,7 @@ Current `page.tsx` route count: `22`.
 
 | Route | Source | Primary surface |
 | --- | --- | --- |
+| `/groups` | `app/(app)/groups/page.tsx` | Advanced group operations |
 | `/runs` | `app/(app)/runs/page.tsx` | Run list and status summary |
 | `/runs/[id]` | `app/(app)/runs/[id]/page.tsx` | Run conversation/events tabs |
 | `/missions/[id]/teams` | `app/(app)/missions/[id]/teams/page.tsx` | Mission team actuation view |
@@ -139,7 +140,7 @@ Component files under `interface/components`: `96` (`.tsx` and `.ts`) across `27
 | `/organizations/[id]` | keep | Team Lead workspace is the compatibility-protected Soma-primary operating surface |
 | `/automations` `active`, `triggers`, `approvals` | keep | directly support guided operation, recurring work, and governed decisions |
 | `/automations` `teams`, `wiring` | revise | keep available, but only in advanced mode so the default workflow stays simpler |
-| `/resources`, `/memory`, `/system` | revise | remain shipped as advanced support routes, not default operator navigation |
+| `/groups`, `/activity`, `/runs`, `/resources`, `/memory`, `/system` | revise | remain shipped as advanced/admin support routes, not default operator navigation |
 | `/settings` `profile`, `profiles`, `users` | keep | operator-visible preferences and access are still MVP-worthy |
 | `/settings` `engines`, `tools` | revise | advanced setup belongs behind explicit advanced mode |
 | legacy redirects | keep as redirects | preserve bookmarks while funneling usage back into the reduced MVP route set |

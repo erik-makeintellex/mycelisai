@@ -11,8 +11,8 @@ test.describe('Mission Control Dashboard (/dashboard)', () => {
         const errorOverlay = page.locator('nextjs-portal');
         await expect(errorOverlay).not.toBeVisible();
 
-        await expect(page.getByRole('heading', { name: /Work directly with Soma from the admin home/i })).toBeVisible();
-        await expect(page.getByText(/Talk to Soma first/i)).toBeVisible();
+        await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
+        await expect(page.getByText(/Start with intent/i)).toBeVisible();
     });
 
     test('navigation rail is visible', async ({ page }) => {

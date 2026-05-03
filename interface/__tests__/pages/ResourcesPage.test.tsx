@@ -79,7 +79,7 @@ describe('Resources Page (V8.1 advanced support)', () => {
 
     it('renders page title', async () => {
         await act(async () => { render(<ResourcesPage />); });
-        expect(screen.getByText('Resources')).toBeDefined();
+        expect(screen.getByText('Advanced Resources')).toBeDefined();
     });
 
     it('renders all tabs', async () => {

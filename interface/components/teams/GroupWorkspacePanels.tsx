@@ -150,14 +150,15 @@ function GroupsHeader({
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
             <Users className="h-3.5 w-3.5" />
-            Groups Workspace
+            Advanced Group Operations
           </div>
           <h1 className="mt-2 text-lg font-semibold text-cortex-text-main">
-            Create, review, and coordinate focused groups.
+            Manage focused collaboration lanes.
           </h1>
           <p className="mt-1 max-w-3xl text-sm leading-5 text-cortex-text-muted">
-            Use groups as compact collaboration lanes while Soma stays the root
-            admin chat.
+            Use this page when Soma has created or needs a temporary or standing
+            group. New users can stay in Soma; admins can filter, inspect, archive,
+            and review retained outputs here.
           </p>
         </div>
         <button

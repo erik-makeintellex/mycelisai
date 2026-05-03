@@ -198,7 +198,7 @@ test.describe("Workflow output reload and retained review", () => {
         const openCompactLink = page.getByRole("link", { name: "Open Release Readiness Team temporary workflow" });
         await expect(openCompactLink).toHaveAttribute("href", "/groups?group_id=group-compact-release");
         await gotoWithColdStartRetry(page, "/groups?group_id=group-compact-release");
-        await expect(page.getByRole("heading", { name: "Create, review, and coordinate focused groups." })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Manage focused collaboration lanes." })).toBeVisible();
         await page.getByRole("button", { name: "Release Readiness Team temporary workflow" }).click();
         await expect(page.getByRole("heading", { name: "Release Readiness Team temporary workflow" })).toBeVisible();
         await page.getByRole("button", { name: "Archive temporary group" }).click();

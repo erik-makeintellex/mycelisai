@@ -19,8 +19,8 @@ export default function MemoryRoute() {
     if (!advancedMode) {
         return (
             <AdvancedModeGate
-                title="Memory views stay behind Advanced mode"
-                summary="Learning history, retained work, and deeper memory inspection are still available, but they are intentionally kept out of the default Team Lead workflow."
+                title="Memory is an Advanced support view"
+                summary="Soma should surface useful learning and artifacts in the work layer. Open Memory when an admin needs deeper retained-context inspection."
             />
         );
     }

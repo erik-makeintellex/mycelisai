@@ -32,7 +32,6 @@ import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
 const DEFAULT_NAV_ENTRIES = [
     { href: '/dashboard', label: 'Soma' },
-    { href: '/groups', label: 'Groups' },
     { href: '/docs', label: 'Docs' },
 ];
 
@@ -109,6 +108,8 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     it('keeps advanced routes hidden when advancedMode is off', () => {
         mockAdvancedMode.mockReturnValue(false);
         const { container } = render(<ZoneA />);
+        expect(container.querySelector('a[href="/groups"]')).toBeNull();
+        expect(container.querySelector('a[href="/activity"]')).toBeNull();
         expect(container.querySelector('a[href="/resources"]')).toBeNull();
         expect(container.querySelector('a[href="/memory"]')).toBeNull();
         const systemLink = container.querySelector('a[href="/system"]');
@@ -118,6 +119,8 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
     it('shows advanced routes when advancedMode is on', () => {
         mockAdvancedMode.mockReturnValue(true);
         render(<ZoneA />);
+        expect(screen.getByText('Groups')).toBeDefined();
+        expect(screen.getByText('Activity')).toBeDefined();
         expect(screen.getByText('Resources')).toBeDefined();
         expect(screen.getByText('Memory')).toBeDefined();
         expect(screen.getByText('System')).toBeDefined();

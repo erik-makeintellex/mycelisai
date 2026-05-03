@@ -171,7 +171,7 @@ test.describe("Workflow output multi-lane package", () => {
         const openMultiLaneLink = page.getByRole("link", { name: "Open Release Readiness Workflow temporary workflow" });
         await expect(openMultiLaneLink).toHaveAttribute("href", "/groups?group_id=group-multilane-release");
         await gotoWithColdStartRetry(page, "/groups");
-        await expect(page.getByRole("heading", { name: "Create, review, and coordinate focused groups." })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Manage focused collaboration lanes." })).toBeVisible();
         await page.getByRole("button", { name: "Release Readiness Workflow temporary workflow" }).click();
 
         await expect(page.getByRole("heading", { name: "Release Readiness Workflow temporary workflow" })).toBeVisible();

@@ -241,8 +241,7 @@ Use that file for:
 Do not duplicate the full live checklist in this README. Keep the implementation truth in the state file and update it in the same slice as any architecture, release-target, or UI-surface change.
 
 Current operator experience summary:
-- a new operator lands in AI Organization setup, not a blank workspace/chat
-- Soma is the default workspace route on first load and after AI Organization creation
+- a new operator lands on "What do you want Soma to do?", and Soma remains the default workspace route with simple Plan, Research, Create, Review, and Configure tools intent cards
 - the default AI Organization workspace now includes one primary Soma interaction surface with mode switching inside the same panel instead of parallel front doors
 - the default Soma conversation hides raw broadcast and direct-council routing controls until Advanced mode is intentionally opened
 - that same Soma conversation surface is also the canonical operator output lane for imagery, briefs, charts, code, and other rich artifacts, even when specialist or council paths generated them on Soma's behalf
@@ -252,12 +251,11 @@ Current operator experience summary:
 - advanced Resources now also includes Deployment Context intake so operators can upload/paste private user records, customer context, approved company knowledge, and admin-shaped Soma guidance into governed pgvector stores with explicit trust, sensitivity, visibility, and target-goal posture
 - Soma always presents guided starting actions instead of a dead-end blank state
 - `Start with Soma` works immediately, even before the operator types a custom request
-- live workspace streaming starts automatically; degraded mode is reserved for an actual connection failure, not normal startup warm-up
+- Groups, Activity/Runs, Resources/MCP, Memory, System, audit-style review, and deeper settings stay advanced/admin support surfaces rather than first-level concepts for new users
 - Team Leads remain visible as the operational leaders Soma works through
 - a visible `Soma just did this` strip now ties the last action to engaged teams, generated outputs, and updated support panels
 - Departments now show visible specialist-role summaries instead of only counts in the default workspace
 - People & Access now also exposes a reviewable deploy-owned access model so investors and operators can see the layered product story clearly: self-hosted release, self-hosted enterprise, or hosted admin control plane, plus the intended identity mode and who controls shared Soma output specificity
-- basic system confidence checks remain visible in the default workspace; operators do not need Advanced mode just to verify core service state
 - the Soma workspace keeps the in-progress request draft and the last guided outcome visible when the operator leaves and returns to the same AI Organization
 - the organization-wide AI Engine and Response Style chosen during setup shape Soma's initial working posture, while the assistant name remains operator-configurable
 - AI Engine providers now carry a safe default token budget profile and max output budget so local and hosted agentry usage stays bounded by configuration instead of hidden hardcoded limits
@@ -272,11 +270,13 @@ Default Operator Surface:
 - Create AI Organization
 - Soma-primary workspace
 - intent-driven interaction
+- progress/outcome feedback: what Soma understood, what Soma is doing, what changed, and where output was stored
 - Advisors, Departments, Automations, Recent Activity, and Memory & Continuity
 - AI Engine Settings and Response Style as guided, bounded controls
 
 Advanced Architecture / Runtime Surface:
 - separate and non-default for operators who understand the system deeply
+- Groups, Activity/Runs, Resources/MCP, Memory, System, auth, and audit-style administration
 - organization defaults and inheritance visibility
 - department overrides and specialist role bindings
 - automation definitions, capability posture, and response-style inheritance

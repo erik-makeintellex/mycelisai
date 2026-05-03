@@ -8,28 +8,23 @@ describe("Landing Page (V8.2 Soma-primary AI Organization workspace)", () => {
         render(<LandingPage />);
 
         expect(
-            screen.getByRole("heading", { name: "Build AI Organizations that think, review, and evolve." }),
+            screen.getByRole("heading", { name: "What do you want Soma to do?" }),
         ).toBeDefined();
-        expect(
-            screen.getByText(
-                /Mycelis opens with Soma at the center of a governed workspace/i,
-            ),
-        ).toBeDefined();
-        expect(screen.getAllByRole("link", { name: "Create AI Organization" })[0]?.getAttribute("href")).toBe("/dashboard");
-        expect(screen.getAllByRole("link", { name: "Review Docs" })[0]?.getAttribute("href")).toBe("/docs");
+        expect(screen.getByText(/Start with an intent/i)).toBeDefined();
+        expect(screen.getAllByRole("link", { name: /Ask Soma/i })[0].getAttribute("href")).toBe("/dashboard");
+        expect(screen.getByRole("link", { name: "Create AI Organization" }).getAttribute("href")).toBe("/dashboard#dashboard-organization-setup");
     });
 
-    it("renders the three truths and the post-creation workspace guidance", () => {
+    it("renders intent cards and support-system guidance", () => {
         render(<LandingPage />);
 
-        expect(screen.getByRole("heading", { name: "Structure" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Control" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Continuous Operation" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "The first screen after creation is a real operating workspace." })).toBeDefined();
-        expect(screen.getByText("Enter the Soma workspace")).toBeDefined();
-        expect(screen.getByText("See Advisors and Departments")).toBeDefined();
-        expect(screen.getByText("Watch Recent Activity")).toBeDefined();
-        expect(screen.getByText("Follow guided next steps")).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Choose the shape of work." })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Plan" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Research" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Create" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Review" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Configure tools" })).toBeDefined();
+        expect(screen.getByText("Advanced stays available")).toBeDefined();
     });
 
     it("keeps internal architecture terms and chatbot framing out of the landing page", () => {

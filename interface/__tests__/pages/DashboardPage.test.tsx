@@ -24,7 +24,7 @@ describe("DashboardPage", () => {
         expect(screen.getByTestId("central-soma-home")).toBeDefined();
         expect(screen.getByTestId("central-soma-home").getAttribute("data-has-team-promise")).toBe("no");
         expect(screen.getByText("Create or open AI Organizations")).toBeDefined();
-        expect(screen.getByText(/Keep the main admin home centered on Soma/i)).toBeDefined();
+        expect(screen.getByText(/Soma is the default place to begin/i)).toBeDefined();
         expect(screen.getByTestId("create-organization-entry")).toBeDefined();
     });
 

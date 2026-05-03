@@ -218,7 +218,7 @@ test.describe('Groups workspace (/groups)', () => {
 
         await page.goto('/groups', { waitUntil: 'domcontentloaded' });
 
-        await expect(page.getByRole('heading', { name: 'Create, review, and coordinate focused groups.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Standing groups', exact: true })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Temporary groups', exact: true })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Completed records', exact: true })).toBeVisible();

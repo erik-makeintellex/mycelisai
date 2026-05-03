@@ -83,14 +83,14 @@ export default function ActivityPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-cortex-primary">
               <Activity className="h-3.5 w-3.5" />
-              Admin Activity
+              Advanced Activity
             </div>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-              Workflow and bus review
+              Progress, runs, and bus review
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
-              Review active work, recent run outcomes, and the live event stream
-              without dropping into raw system diagnostics.
+              Use this support view to trace what Soma did, what changed, and
+              which run or signal produced the outcome.
             </p>
           </div>
           <button
@@ -160,7 +160,7 @@ export default function ActivityPage() {
         <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-5">
           <div className="flex items-center gap-2 text-sm text-cortex-text-muted">
             <Database className="h-4 w-4 text-cortex-primary" />
-            Use this page for admin review. Use{" "}
+            Soma should summarize outcomes in the work layer. Use this page for advanced review, and use{" "}
             <Link
               href="/system?tab=nats"
               className="text-cortex-primary hover:underline"

@@ -61,7 +61,7 @@ describe('DocsPage', () => {
 
         render(<DocsPage />);
 
-        expect(await screen.findByText('Documentation')).toBeDefined();
+        expect(await screen.findByText('Documentation and guidance')).toBeDefined();
         const labels = await screen.findAllByText('UI Generation Spec');
         expect(labels.length).toBeGreaterThan(0);
         expect(await screen.findByRole('heading', { name: 'Terminal States' })).toBeDefined();

@@ -69,7 +69,7 @@ describe("UsersPage", () => {
         expect(screen.getByTestId("enterprise-directory-locked")).toBeDefined();
         expect(screen.queryByTestId("users-management-panel")).toBeNull();
         expect(screen.getByTestId("users-groups-section")).toBeDefined();
-        expect(screen.getByRole("link", { name: /Open groups workspace/i }).getAttribute("href")).toBe("/groups");
+        expect(screen.getByRole("link", { name: /Open group operations/i }).getAttribute("href")).toBe("/groups");
     });
 
     it("keeps deployment-owned access model fields read-only even for owners", async () => {

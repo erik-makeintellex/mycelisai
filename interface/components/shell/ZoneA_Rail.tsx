@@ -34,9 +34,7 @@ export function ZoneA() {
         !!currentOrganizationHref &&
         (pathname === currentOrganizationHref || pathname?.startsWith(currentOrganizationHref + '/') === true);
     const primaryNav = [
-        { href: '/dashboard', icon: Home, label: 'Soma', description: 'Home', testId: 'nav-dashboard' },
-        { href: '/groups', icon: Users, label: 'Groups', description: 'Focused lanes', testId: 'nav-groups' },
-        { href: '/activity', icon: Radio, label: 'Activity', description: 'Runs & bus', testId: 'nav-activity' },
+        { href: '/dashboard', icon: Home, label: 'Soma', description: 'Ask first', testId: 'nav-dashboard' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,
@@ -48,6 +46,8 @@ export function ZoneA() {
         { href: '/docs', icon: BookOpen, label: 'Docs', testId: 'nav-docs' },
     ];
     const advancedNav = [
+        { href: '/groups', icon: Users, label: 'Groups', description: 'Operations', testId: 'nav-groups' },
+        { href: '/activity', icon: Radio, label: 'Activity', description: 'Runs & bus', testId: 'nav-activity' },
         { href: '/resources', icon: FolderCog, label: 'Resources', testId: 'nav-resources' },
         { href: '/memory', icon: Brain, label: 'Memory', testId: 'nav-memory' },
         { href: '/system', icon: Activity, label: 'System', testId: 'nav-system' },
@@ -82,7 +82,7 @@ export function ZoneA() {
                 {effectiveAdvancedMode && (
                     <div className="mt-3 space-y-1">
                         <div className="hidden px-2 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-cortex-text-muted/70 md:block">
-                            Advanced
+                            Advanced / Admin
                         </div>
                         {advancedNav.map((item) => (
                             <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} testId={item.testId} />

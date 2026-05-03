@@ -51,14 +51,14 @@ export function SomaCapabilityGuide() {
             Say this to Soma
           </p>
           <p className="mt-1 text-sm text-cortex-text-muted">
-            Use direct verbs. Answers can happen directly; teams, private data, private services, recurring behavior, and tool changes should become explicit confirmation or proposal steps.
+            Use direct verbs and ask for visible outcomes. Teams, private data, private services, recurring behavior, and tool changes should become explicit confirmation or proposal steps.
           </p>
         </div>
         <Link
           href="/resources?tab=tools"
           className="rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-xs font-semibold text-cortex-text-main hover:border-cortex-primary/25"
         >
-          Manage tools
+          Advanced tool setup
         </Link>
       </div>
       <div className="mt-3 grid gap-2 lg:grid-cols-3 xl:grid-cols-6">

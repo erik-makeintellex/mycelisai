@@ -73,7 +73,7 @@ function RunsContent() {
                 <div className="flex items-center gap-2">
                     <Activity className="w-3.5 h-3.5 text-cortex-primary" />
                     <span className="text-[11px] font-mono text-cortex-text-main font-bold uppercase tracking-widest">
-                        {requestedStatus === "running" ? "Active Runs" : "Runs"}
+                        {requestedStatus === "running" ? "Active Runs" : "Advanced Runs"}
                     </span>
                 </div>
 
@@ -99,7 +99,7 @@ function RunsContent() {
                         <Activity className="w-10 h-10 text-cortex-text-muted/20" />
                         <p className="text-sm font-mono text-cortex-text-muted">No runs yet</p>
                         <p className="text-[10px] font-mono text-cortex-text-muted/60">
-                            Ask {assistantName} to launch a crew to create your first run
+                        Ask {assistantName} for an outcome first; runs appear here when there is execution to review
                         </p>
                     </div>
                 )}

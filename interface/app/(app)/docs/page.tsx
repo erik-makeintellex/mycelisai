@@ -118,7 +118,7 @@ function DocsHeader({ docLabel }: { docLabel: string }) {
     <div className="flex items-center gap-3 px-4 py-2.5 border-b border-cortex-border bg-cortex-surface flex-shrink-0">
       <BookOpen className="w-4 h-4 text-cortex-primary flex-shrink-0" />
       <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-cortex-text-muted">
-        Documentation
+        Documentation and guidance
       </span>
       {docLabel ? (
         <>

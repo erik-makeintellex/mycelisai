@@ -51,7 +51,9 @@ function SettingsContent() {
                     <Settings className="w-6 h-6 text-cortex-text-muted" />
                     Settings
                 </h1>
-                <p className="text-cortex-text-muted mt-1">Manage workspace preferences, people access, and optional advanced setup.</p>
+                <p className="text-cortex-text-muted mt-1">
+                    Manage profile, people access, and optional admin setup without making configuration the default workflow.
+                </p>
             </div>
 
             <div className="max-w-5xl mx-auto w-full px-6 mt-6 space-y-5">

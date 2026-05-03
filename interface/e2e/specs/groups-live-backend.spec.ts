@@ -184,7 +184,7 @@ test.describe('Groups retained outputs live backend contract', () => {
         await gotoWithColdStartRetry(page, `/groups?group_id=${encodeURIComponent(group.group_id)}`);
         await groupsResponse;
 
-        await expect(page.getByRole('heading', { name: 'Create, review, and coordinate focused groups.' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Manage focused collaboration lanes.' })).toBeVisible();
         await expect(page.getByRole('heading', { name: group.name })).toBeVisible();
         await expect(page.getByText('Temporary group', { exact: true })).toBeVisible();
         await expect(page.getByTestId('groups-output-summary')).toContainText('2 outputs');
