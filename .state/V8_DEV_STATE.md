@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-05-02
+> Updated: 2026-05-03
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `architecture/v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `.state/V7_DEV_STATE.md` (legacy migration input)
 
@@ -61,6 +61,9 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
 - `IN_REVIEW` the default UX hierarchy has been re-centered on Soma intent and outcomes: the landing/dashboard ask what the operator wants Soma to do, default rail navigation now keeps Groups and Activity/Runs in Advanced/Admin, group management is framed as advanced operations, and support pages label MCP/resources, memory, runs, activity, docs, and settings as secondary systems behind the Soma work layer.
 - `IN_REVIEW` Soma chat now treats media as a first-class operator output lane: image, audio, video, chart, code, document, and downloadable artifact cards render in the conversation, while proposal cards expose inferred task lifecycle (`run once`, `scheduled`, `keep running`, `event-driven`) and current-team/multi-team NATS connection posture before approval.
 - `IN_REVIEW` the public homepage now uses sanitized deployer-editable template config served from `core/config/homepage.yaml` or `MYCELIS_HOMEPAGE_CONFIG_PATH`, keeping the default entry surface framed around Soma orchestration, governed execution, connected tools, auditability, and self-hosted control without hardcoded enterprise copy.
+- `IN_REVIEW` GitHub CI has been reset around token-free codebase proof: one PR/push workflow now runs repo hygiene/docs/ops tests, Go Core tests/build/vet, Interface unit/build/typecheck, mocked Chromium homepage smoke, and Helm standards without depending on hosted agentry, Brave, Ollama, NATS, PostgreSQL, or live MCP services.
+- `IN_REVIEW` the latest coordinated source-hygiene pass removed additional legacy caps without changing behavior: focused frontend MCP/team/action components, five user-facing docs, `ops/misc.py`, bootstrap template loading, MCP library tests, and exchange persistence scanning are now below the 300-line authored-file limit; integrated evidence is green for the repo-wide line gate, focused Go packages, Python misc/docs/workflow tests, TypeScript, and the touched Interface unit tests.
+- `IN_REVIEW` the follow-on source-hygiene wave retired more legacy caps across active docs, frontend team/automation surfaces, ops cache/interface env helpers, MCP pool/toolset tests, and mission profile activation; new helper modules stay below 300 lines, and integrated evidence is green for the repo-wide line gate, focused Go packages, Python compile/pytest, TypeScript, targeted Interface unit tests, docs links, and whitespace checks.
 
 ## Layered Architecture Truth
 

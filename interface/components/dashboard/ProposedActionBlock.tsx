@@ -46,23 +46,15 @@ function fallbackAffectedResources(proposal: ProposalData): string[] {
 
 function explainApprovalPosture(proposal: ProposalData, approvalRequired: boolean, approvalMode: string): string {
     if (approvalRequired) {
-        if (proposal.capability_ids?.includes("write_file")) {
-            return "This action will change your workspace, so Soma needs your approval before running it.";
-        }
-        if (proposal.external_data_use) {
-            return "This action may use external systems or data, so Soma needs your approval before running it.";
-        }
-        if (proposal.approval_reason === "cost_threshold") {
-            return "This action may incur additional spend, so Soma needs your approval before running it.";
-        }
+        if (proposal.capability_ids?.includes("write_file")) return "This action will change your workspace, so Soma needs your approval before running it.";
+        if (proposal.external_data_use) return "This action may use external systems or data, so Soma needs your approval before running it.";
+        if (proposal.approval_reason === "cost_threshold") return "This action may incur additional spend, so Soma needs your approval before running it.";
         return "This action crosses a governed policy threshold, so Soma needs your approval before running it.";
     }
 
-    if (approvalMode === "optional") {
-        return "This action stays within current policy thresholds, but you can still review it before execution.";
-    }
-
-    return "This action is within current policy thresholds and can run without a mandatory approval.";
+    return approvalMode === "optional"
+        ? "This action stays within current policy thresholds, but you can still review it before execution."
+        : "This action is within current policy thresholds and can run without a mandatory approval.";
 }
 
 export default function ProposedActionBlock({ message }: { message: ChatMessage }) {
@@ -83,24 +75,13 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
     const approvalMode = proposal.approval_mode ?? (approvalRequired ? "required" : "auto_allowed");
     const capabilityRisk = proposal.capability_risk ?? proposal.risk_level ?? "low";
     const capabilityIDs = proposal.capability_ids ?? [];
-    const governanceSummary = approvalRequired
-        ? "Approval required"
-        : approvalMode === "optional"
-            ? "Approval optional"
-            : "Auto-approved";
+    const governanceSummary = approvalRequired ? "Approval required" : approvalMode === "optional" ? "Approval optional" : "Auto-approved";
     const actionLabel = approvalRequired ? "Approve & Execute" : "Execute";
     const operatorSummary = proposal.operator_summary?.trim() || fallbackOperatorSummary(proposal);
     const expectedResult = proposal.expected_result?.trim() || fallbackExpectedResult(proposal);
     const affectedResources = (proposal.affected_resources ?? []).filter((value) => value.trim().length > 0);
     const visibleResources = affectedResources.length > 0 ? affectedResources : fallbackAffectedResources(proposal);
     const approvalExplanation = explainApprovalPosture(proposal, approvalRequired, approvalMode);
-
-    const riskColor = proposal.risk_level === "high"
-        ? "text-red-400 border-red-400/30"
-        : proposal.risk_level === "medium"
-            ? "text-amber-400 border-amber-400/30"
-            : "text-cortex-success border-cortex-success/30";
-
     const lifecycleTone = renderedLifecycle === "cancelled"
         ? "border-cortex-border bg-cortex-bg/60 text-cortex-text-muted"
         : renderedLifecycle === "confirmed_pending_execution"
@@ -153,9 +134,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
 
                 <div className="grid gap-3 md:grid-cols-2">
                     <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
-                            {approvalRequired ? "Why approval is needed" : "Execution posture"}
-                        </div>
+                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">{approvalRequired ? "Why approval is needed" : "Execution posture"}</div>
                         <p className="mt-1.5 text-sm leading-6 text-cortex-text-main">{approvalExplanation}</p>
                     </div>
                     <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
@@ -218,9 +197,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                         {message.brain && (
                             <div className="flex items-center gap-4">
                                 <span className="text-cortex-text-muted w-16">Brain</span>
-                                <span className="text-cortex-text-main">
-                                    {brainBadge(message.brain.provider_id, message.brain.location)}
-                                </span>
+                                <span className="text-cortex-text-main">{brainBadge(message.brain.provider_id, message.brain.location)}</span>
                                 {message.brain.location === "remote" && (
                                     <span className="text-amber-400 text-[10px] flex items-center gap-1">
                                         <AlertTriangle className="w-3 h-3" /> External

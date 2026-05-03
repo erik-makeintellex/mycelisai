@@ -218,7 +218,7 @@ Delivery-focused validation, runner checks, and release preflight.
 - **Runtime Posture Gate**: `--runtime-posture` adds a 12 GiB disk-headroom check, reads explicit AI endpoints from process env plus `.env.compose` / `.env`, fails closed when no supported non-loopback endpoint contract is configured before baseline proof runs, and mirrors `host.docker.internal` through WSL localhost when the probe itself is running inside WSL before Compose relay startup.
 - Interface-facing CI steps now perform the same repo-local worker cleanup after `build`, `tsc`, `vitest`, and Playwright runs, and they execute from the `interface/` working directory so Windows and Linux share the same `npm`/`node` task path
 - GitHub validation workflows should keep dependency/bootstrap steps workflow-native (`actions/setup-*`, `npm ci`, Playwright browser install), then hand real build/test execution back to the same `uv run inv ...` task surfaces so local and CI validation stay aligned
-- Push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens; use local `uv run inv ...` proof plus PR/manual workflow runs as the active validation path
+- GitHub CI now runs on PRs and `main` / `develop` pushes with token-free checks for repo hygiene, Core, Interface, mocked Chromium browser smoke, and Helm standards; live agentry/runtime proof remains in local/WSL release lanes.
 - Delivery reporting should include the commands run plus the docs changed and the touched docs reviewed unchanged.
 
 ### `misc.py` (Team Coordination)

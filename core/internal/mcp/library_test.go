@@ -15,15 +15,11 @@ func loadStandardLibraryForTest(t *testing.T) *Library {
 	return lib
 }
 
-// ── LoadLibrary ──────────────────────────────────────────────
-
 func TestLoadLibrary_ValidYAML(t *testing.T) {
-	// Load the real config file used in production.
 	lib := loadStandardLibraryForTest(t)
 	if len(lib.Categories) == 0 {
 		t.Fatal("expected at least one category")
 	}
-	// Spot-check a known entry.
 	fs := lib.FindByName("filesystem")
 	if fs == nil {
 		t.Fatal("expected to find 'filesystem' entry")
@@ -144,8 +140,6 @@ func TestLoadLibrary_InvalidYAML(t *testing.T) {
 	}
 }
 
-// ── FindByName ───────────────────────────────────────────────
-
 func TestLibrary_FindByName_Found(t *testing.T) {
 	lib := &Library{
 		Categories: []LibraryCategory{
@@ -172,8 +166,6 @@ func TestLibrary_FindByName_NotFound(t *testing.T) {
 		t.Error("expected nil for unknown server")
 	}
 }
-
-// ── ToServerConfig ───────────────────────────────────────────
 
 func TestLibraryEntry_ToServerConfig_Basic(t *testing.T) {
 	entry := LibraryEntry{

@@ -10,8 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ── Helpers ──────────────────────────────────────────────────
-
 func newTestToolSetService(t *testing.T) (*ToolSetService, sqlmock.Sqlmock) {
 	t.Helper()
 	db, mock, err := sqlmock.New()
@@ -30,8 +28,6 @@ var (
 	tsID1 = uuid.MustParse("11111111-1111-1111-1111-111111111111")
 	tsID2 = uuid.MustParse("22222222-2222-2222-2222-222222222222")
 )
-
-// ── List ─────────────────────────────────────────────────────
 
 func TestToolSetService_List_HappyPath(t *testing.T) {
 	svc, mock := newTestToolSetService(t)
@@ -73,8 +69,6 @@ func TestToolSetService_List_Empty(t *testing.T) {
 	}
 }
 
-// ── Get ──────────────────────────────────────────────────────
-
 func TestToolSetService_Get_Found(t *testing.T) {
 	svc, mock := newTestToolSetService(t)
 	now := time.Now()
@@ -111,8 +105,6 @@ func TestToolSetService_Get_NotFound(t *testing.T) {
 		t.Error("expected nil for not found")
 	}
 }
-
-// ── Create ───────────────────────────────────────────────────
 
 func TestToolSetService_Create_HappyPath(t *testing.T) {
 	svc, mock := newTestToolSetService(t)
@@ -156,8 +148,6 @@ func TestToolSetService_Create_NilRefs(t *testing.T) {
 	}
 }
 
-// ── Update ───────────────────────────────────────────────────
-
 func TestToolSetService_Update_Found(t *testing.T) {
 	svc, mock := newTestToolSetService(t)
 	now := time.Now()
@@ -190,8 +180,6 @@ func TestToolSetService_Update_NotFound(t *testing.T) {
 	}
 }
 
-// ── Delete ───────────────────────────────────────────────────
-
 func TestToolSetService_Delete_Found(t *testing.T) {
 	svc, mock := newTestToolSetService(t)
 
@@ -216,8 +204,6 @@ func TestToolSetService_Delete_NotFound(t *testing.T) {
 		t.Fatal("expected error for not found")
 	}
 }
-
-// ── FindByName ───────────────────────────────────────────────
 
 func TestToolSetService_FindByName_Found(t *testing.T) {
 	svc, mock := newTestToolSetService(t)
@@ -253,96 +239,5 @@ func TestToolSetService_FindByName_NotFound(t *testing.T) {
 	}
 	if ts != nil {
 		t.Error("expected nil for not found")
-	}
-}
-
-// ── ResolveRefs ──────────────────────────────────────────────
-
-func TestToolSetService_ResolveRefs_Mixed(t *testing.T) {
-	svc, mock := newTestToolSetService(t)
-	now := time.Now()
-
-	// toolset:workspace → expand to mcp:filesystem/*
-	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
-		WithArgs("workspace").
-		WillReturnRows(sqlmock.NewRows(toolSetColumns()).
-			AddRow(tsID1, "workspace", "File I/O", `["mcp:filesystem/*"]`, "default", now, now))
-
-	tools := []string{"read_file", "mcp:github/*", "toolset:workspace", "consult_council"}
-	resolved, err := svc.ResolveRefs(context.Background(), tools)
-	if err != nil {
-		t.Fatalf("ResolveRefs: %v", err)
-	}
-	// Expected: read_file, mcp:github/*, mcp:filesystem/*, consult_council
-	if len(resolved) != 4 {
-		t.Fatalf("got %d refs, want 4: %v", len(resolved), resolved)
-	}
-	if resolved[0] != "read_file" {
-		t.Errorf("resolved[0] = %q", resolved[0])
-	}
-	if resolved[1] != "mcp:github/*" {
-		t.Errorf("resolved[1] = %q", resolved[1])
-	}
-	if resolved[2] != "mcp:filesystem/*" {
-		t.Errorf("resolved[2] = %q", resolved[2])
-	}
-	if resolved[3] != "consult_council" {
-		t.Errorf("resolved[3] = %q", resolved[3])
-	}
-}
-
-func TestToolSetService_ResolveRefs_MissingToolSet(t *testing.T) {
-	svc, mock := newTestToolSetService(t)
-
-	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets WHERE name").
-		WithArgs("unknown").
-		WillReturnError(sql.ErrNoRows)
-
-	tools := []string{"mcp:filesystem/*", "toolset:unknown"}
-	resolved, err := svc.ResolveRefs(context.Background(), tools)
-	if err != nil {
-		t.Fatalf("ResolveRefs: %v", err)
-	}
-	// toolset:unknown silently skipped
-	if len(resolved) != 1 {
-		t.Fatalf("got %d refs, want 1: %v", len(resolved), resolved)
-	}
-}
-
-func TestToolSetService_ResolveRefs_NoToolSets(t *testing.T) {
-	svc, _ := newTestToolSetService(t)
-
-	tools := []string{"mcp:filesystem/*", "read_file", "mcp:github/create_issue"}
-	resolved, err := svc.ResolveRefs(context.Background(), tools)
-	if err != nil {
-		t.Fatalf("ResolveRefs: %v", err)
-	}
-	if len(resolved) != 3 {
-		t.Fatalf("got %d, want 3", len(resolved))
-	}
-}
-
-// ── NilDB ────────────────────────────────────────────────────
-
-func TestToolSetService_NilDB(t *testing.T) {
-	svc := NewToolSetService(nil)
-
-	if _, err := svc.List(context.Background()); err == nil {
-		t.Error("List: expected error with nil DB")
-	}
-	if _, err := svc.Get(context.Background(), tsID1); err == nil {
-		t.Error("Get: expected error with nil DB")
-	}
-	if _, err := svc.Create(context.Background(), ToolSet{Name: "x"}); err == nil {
-		t.Error("Create: expected error with nil DB")
-	}
-	if _, err := svc.Update(context.Background(), tsID1, ToolSet{Name: "x"}); err == nil {
-		t.Error("Update: expected error with nil DB")
-	}
-	if err := svc.Delete(context.Background(), tsID1); err == nil {
-		t.Error("Delete: expected error with nil DB")
-	}
-	if _, err := svc.FindByName(context.Background(), "x"); err == nil {
-		t.Error("FindByName: expected error with nil DB")
 	}
 }

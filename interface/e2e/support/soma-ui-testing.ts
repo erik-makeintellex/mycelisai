@@ -199,20 +199,11 @@ export function proposalEnvelope(): RouteResponse {
     };
 }
 
-export async function mockOrganizationWorkspace(
-    page: Page,
-    chatHandler: (requestBody: ChatRequestBody) => RouteResponse,
-): Promise<{ cancelCalls: () => number }> {
-    let cancelActionCalls = 0;
-
+async function mockOperatorShell(page: Page) {
     await page.route("**/api/v1/user/me", async (route) => {
         await fulfillJSON(route, 200, {
             ok: true,
-            data: {
-                id: "operator-1",
-                name: "Operator",
-                email: "operator@example.test",
-            },
+            data: { id: "operator-1", name: "Operator", email: "operator@example.test" },
         });
     });
 
@@ -226,6 +217,15 @@ export async function mockOrganizationWorkspace(
             ],
         });
     });
+}
+
+export async function mockOrganizationWorkspace(
+    page: Page,
+    chatHandler: (requestBody: ChatRequestBody) => RouteResponse,
+): Promise<{ cancelCalls: () => number }> {
+    let cancelActionCalls = 0;
+
+    await mockOperatorShell(page);
 
     await page.route(`**/api/v1/organizations/${organizationId}/home`, async (route) => {
         await fulfillJSON(route, 200, { ok: true, data: organizationHome });
@@ -260,27 +260,7 @@ export async function mockOrganizationWorkspace(
 }
 
 export async function mockApprovalsAudit(page: Page) {
-    await page.route("**/api/v1/user/me", async (route) => {
-        await fulfillJSON(route, 200, {
-            ok: true,
-            data: {
-                id: "operator-1",
-                name: "Operator",
-                email: "operator@example.test",
-            },
-        });
-    });
-
-    await page.route("**/api/v1/services/status", async (route) => {
-        await fulfillJSON(route, 200, {
-            ok: true,
-            data: [
-                { name: "nats", status: "online" },
-                { name: "postgres", status: "online" },
-                { name: "reactive", status: "degraded" },
-            ],
-        });
-    });
+    await mockOperatorShell(page);
 
     await page.route("**/api/v1/governance/pending", async (route) => {
         await fulfillJSON(route, 200, []);

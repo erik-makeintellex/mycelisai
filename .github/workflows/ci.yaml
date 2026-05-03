@@ -1,0 +1,210 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ["main", "develop"]
+  push:
+    branches: ["main", "develop"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+  MYCELIS_API_KEY: "ci-local-only"
+  MYCELIS_BREAK_GLASS_API_KEY: "ci-break-glass-only"
+  MYCELIS_SEARCH_PROVIDER: "disabled"
+  MYCELIS_PROVIDER_LOCAL_OLLAMA_DEV_ENABLED: "false"
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/workspace/tool-cache/playwright
+
+jobs:
+  repo-hygiene:
+    name: Repo Hygiene, Docs, And Ops Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install Python Tooling
+        run: uv sync --all-packages --dev
+
+      - name: Verify Invoke Entrypoints
+        run: uv run inv ci.entrypoint-check
+
+      - name: Enforce 300-Line No-Regression Gate
+        run: uv run inv quality.max-lines --limit 300
+
+      - name: Check Logging Contracts
+        run: |
+          uv run inv logging.check-schema
+          uv run inv logging.check-topics
+
+      - name: Run Python/Docs/Ops Tests
+        run: uv run pytest -q
+
+  core:
+    name: Go Core
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set Up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: core/go.mod
+          cache-dependency-path: core/go.sum
+
+      - name: Install Python Tooling
+        run: uv sync --all-packages --dev
+
+      - name: Run Go Tests
+        working-directory: core
+        run: go test ./... -count=1 -p 1
+
+      - name: Run Go Vet
+        working-directory: core
+        run: go vet ./...
+
+      - name: Compile Core Binary
+        run: uv run inv core.compile
+
+  interface:
+    name: Interface Unit And Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Install Python Tooling
+        run: uv sync --all-packages --dev
+
+      - name: Install Interface Dependencies
+        working-directory: interface
+        run: npm ci
+
+      - name: Run Interface Unit Tests
+        run: uv run inv interface.test
+
+      - name: Build Interface
+        run: uv run inv interface.build
+
+      - name: Typecheck Interface
+        run: uv run inv interface.typecheck
+
+  browser-smoke:
+    name: Browser Smoke Without Live Agentry
+    needs: interface
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: interface/package-lock.json
+
+      - name: Install Python Tooling
+        run: uv sync --all-packages --dev
+
+      - name: Install Interface Dependencies
+        working-directory: interface
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: interface
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Homepage Browser Smoke
+        run: >
+          uv run inv interface.e2e
+          --project=chromium
+          --workers=1
+          --server-mode=start
+          --spec=e2e/specs/homepage.spec.ts
+
+      - name: Upload Browser Artifacts On Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-artifacts
+          path: |
+            interface/test-results/
+            interface/playwright-report/
+            workspace/logs/
+          retention-days: 7
+
+  helm-standards:
+    name: Helm And Kubernetes Standards
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set Up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install Python Tooling
+        run: uv sync --all-packages --dev
+
+      - name: Run Open-Standards Chart Gate
+        run: >
+          uv run inv k8s.standards
+          --helm
+          --values-file=charts/mycelis-core/values-enterprise.yaml

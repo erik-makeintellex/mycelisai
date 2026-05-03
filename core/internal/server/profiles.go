@@ -12,7 +12,6 @@ package server
 //   POST   /api/v1/mission-profiles/{id}/activate
 
 import (
-	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -224,93 +223,4 @@ func (s *AdminServer) HandleDeleteMissionProfile(w http.ResponseWriter, r *http.
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]any{"id": id, "deleted": true}))
-}
-
-// POST /api/v1/mission-profiles/{id}/activate
-// Applies the profile's role_providers to the running cognitive router,
-// registers reactive NATS subscriptions, and marks it active in the DB.
-func (s *AdminServer) HandleActivateMissionProfile(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if id == "" {
-		respondAPIError(w, "Missing profile ID", http.StatusBadRequest)
-		return
-	}
-	if !s.dbRequired(w) {
-		return
-	}
-
-	// Load the profile
-	var p MissionProfile
-	var desc sql.NullString
-	err := s.DB.QueryRowContext(r.Context(), `
-		SELECT id, name, COALESCE(description,''), role_providers, subscriptions,
-		       context_strategy, auto_start, is_active, tenant_id, created_at, updated_at
-		FROM mission_profiles WHERE id=$1 AND tenant_id='default'`, id).
-		Scan(&p.ID, &p.Name, &desc,
-			&p.RoleProviders, &p.Subscriptions,
-			&p.ContextStrategy, &p.AutoStart, &p.IsActive,
-			&p.TenantID, &p.CreatedAt, &p.UpdatedAt)
-	if err == sql.ErrNoRows {
-		respondAPIError(w, "Profile not found", http.StatusNotFound)
-		return
-	}
-	if err != nil {
-		log.Printf("HandleActivateMissionProfile load: %v", err)
-		respondAPIError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	p.Description = desc.String
-
-	// Apply role_providers to the cognitive router's Profiles map
-	if s.Cognitive != nil && s.Cognitive.Config != nil {
-		var roleProviders map[string]string
-		if err := json.Unmarshal(p.RoleProviders, &roleProviders); err == nil {
-			for role, providerID := range roleProviders {
-				s.Cognitive.Config.Profiles[role] = providerID
-			}
-			if err := s.Cognitive.SaveConfig(); err != nil {
-				log.Printf("HandleActivateMissionProfile SaveConfig: %v", err)
-				// Non-fatal — profile still activates, but config won't survive restart
-			}
-		}
-	}
-
-	// Register reactive subscriptions
-	if s.Reactive != nil {
-		var subs []ProfileSubscription
-		if err := json.Unmarshal(p.Subscriptions, &subs); err == nil && len(subs) > 0 {
-			if err := s.Reactive.Subscribe(id, subs); err != nil {
-				log.Printf("HandleActivateMissionProfile Subscribe: %v", err)
-				// Non-fatal — profile still activates
-			}
-		}
-	}
-
-	// Mark this profile active (clear others unless auto_start)
-	tx, err := s.DB.BeginTx(r.Context(), nil)
-	if err != nil {
-		respondAPIError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	// Deactivate all non-auto-start profiles first
-	if _, err := tx.ExecContext(r.Context(),
-		"UPDATE mission_profiles SET is_active=false WHERE tenant_id='default' AND auto_start=false AND id != $1", id); err != nil {
-		tx.Rollback()
-		respondAPIError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	// Activate this one
-	if _, err := tx.ExecContext(r.Context(),
-		"UPDATE mission_profiles SET is_active=true, updated_at=NOW() WHERE id=$1", id); err != nil {
-		tx.Rollback()
-		respondAPIError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	if err := tx.Commit(); err != nil {
-		respondAPIError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	p.IsActive = true
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(p))
 }

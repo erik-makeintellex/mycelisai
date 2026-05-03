@@ -7,12 +7,12 @@
 
 ## 1. Purpose
 
-Mycelis has to support two different consumers of runtime output:
+Mycelis supports two consumers of runtime output:
 
 1. Service operators reading raw process logs.
 2. Agents and operators reading centralized, structured execution evidence.
 
-This document governs the second surface. Raw `stdout` or `stderr` logs may stay service-local, but anything that Soma, meta-agentry, team leads, or later review automation should reason over must land in the centralized review model below.
+This document governs the second surface. Raw `stdout` or `stderr` may stay service-local, but anything Soma, meta-agentry, team leads, or later review automation should reason over must land in the centralized review model below.
 
 ## 1.1 Standard Across The Stack
 
@@ -25,12 +25,7 @@ Mycelis uses one logging contract across all execution layers:
 - `mission_events` remains the durable audit spine for mutating or mission-linked execution
 - `log_entries` remains the centralized review surface for Soma, meta-agentry, team leads, and later review automation
 
-Rule:
-
-- do not create a second operator-review logging model per service, UI panel, or integration
-- use service-local logs for local troubleshooting
-- use `protocol.OperationalLogContext` for centralized review
-- use mission events when durable causality, replay, or governance review matters
+Rule: do not create a second operator-review model per service, UI panel, or integration. Use service-local logs for local troubleshooting, `protocol.OperationalLogContext` for centralized review, and mission events for durable causality, replay, or governance review.
 
 ## 2. Centralized Review Surfaces
 
@@ -62,7 +57,7 @@ This is the central review surface for:
 - `swarm.team.{team_id}.signal.result`
 - `swarm.team.{team_id}.telemetry`
 
-Teams still own their local output channels. The rule is not "replace team channels." The rule is:
+Teams still own their local output channels:
 
 - teams publish on their own canonical subjects first
 - centralized review mirrors the relevant output into `log_entries`
@@ -78,7 +73,7 @@ Allowed uses:
 - local failure detail
 - process-level troubleshooting
 
-These logs are useful for operators, but they are not the canonical agent-review surface.
+These logs are useful but not the canonical agent-review surface.
 
 ### 3.2 Agent-reviewable logs
 
@@ -94,15 +89,13 @@ These logs must use the centralized schema stored in `log_entries.context`.
 
 ### 3.3 UI-facing status and error presentation
 
-Operator UI surfaces must not invent their own hidden logging contract.
-
 Required behavior:
 
 - UI shows normalized status, retry, and degraded-state messaging
 - UI may consume centralized review, mission events, service-status APIs, and governed chat responses
 - UI must not present raw stack traces, raw NATS envelopes, or ad-hoc payload dumps as the primary operator log surface
 
-The UI is a presentation layer over the same centralized review contract. It is not a separate logging system.
+The UI is a presentation layer over the same centralized review contract, not a separate logging system.
 
 ## 4. Canonical Review Schema
 
@@ -230,9 +223,7 @@ Use `source_kind: system` or the governed product source kind when the record is
 
 ## 7. Template for Agentry Review
 
-Every centralized review log should be understandable when read without surrounding implementation context.
-
-Preferred shape:
+Every centralized review log should be understandable without surrounding implementation context. Preferred shape:
 
 - `summary`: what happened in one sentence
 - `detail`: compact supporting detail, status text, or payload summary
@@ -240,40 +231,14 @@ Preferred shape:
 - `suggested_action`: what to inspect or do next if follow-up is needed
 - `review_channels`: exact lanes where more detail can be found
 
-For service or MCP review, the same template applies. The reader should be able to answer:
+For service or MCP review, the reader should be able to answer:
 
 - what happened
 - where it happened
 - whether it affected execution
 - which channel or surface to inspect next
 
-Good example:
-
-```json
-{
-  "schema_version": "v1",
-  "review_scope": "central_review",
-  "audiences": ["soma", "meta_agentry", "team_lead"],
-  "service": "core",
-  "component": "signal-bridge",
-  "summary": "Creative Team Lead completed a review.",
-  "detail": "Result payload captured from the team result lane.",
-  "why_it_matters": "This team output is mirrored into centralized review so Soma and operational leads can inspect progress without leaving the shared channel model.",
-  "source_kind": "system",
-  "source_channel": "swarm.team.creative.signal.result",
-  "payload_kind": "result",
-  "run_id": "run-42",
-  "team_id": "creative",
-  "agent_id": "creative-lead",
-  "centralized_review": true,
-  "review_channels": [
-    "memory.stream",
-    "swarm.team.creative.signal.result",
-    "swarm.mission.events.run-42"
-  ],
-  "tags": ["team-output", "result"]
-}
-```
+Compact example: a team result mirror should set `schema_version: v1`, `review_scope: central_review`, `audiences: [soma, meta_agentry, team_lead]`, source metadata (`service`, `component`, `source_kind`, `source_channel`, `payload_kind`), execution metadata (`run_id`, `team_id`, `agent_id`), `centralized_review: true`, and `review_channels` such as `memory.stream`, the original team result lane, and the linked mission event lane.
 
 ## 8. Required Runtime Rules
 
@@ -285,9 +250,9 @@ Good example:
 6. Service-state review, MCP activity, and cross-team channel review must remain understandable from centralized review without requiring raw per-service console access.
 7. When Soma reviews team, service, or MCP channels, the underlying records must still preserve their original source channel in `review_channels`.
 
-## 8.1 Service, MCP, and channel-review expectations
+## 8.1 Service, MCP, and Channel Review
 
-When Soma or central services review the system, the standard expected surfaces are:
+Expected review surfaces:
 
 - team status and result lanes
 - summarized telemetry lanes
@@ -295,25 +260,13 @@ When Soma or central services review the system, the standard expected surfaces 
 - MCP invocation/completion/failure summaries
 - mission events when the action is mutating or execution-linked
 
-That means:
-
-- teams focus on their own output logging first
-- centralized review mirrors the same operational truth for cross-team inspection
-- Soma can review all relevant lanes without replacing local team ownership of those lanes
+Teams still log locally first; centralized review mirrors the same operational truth for cross-team inspection so Soma can review relevant lanes without replacing local team ownership.
 
 ## 9. Event Taxonomy for Mission Events
 
 Use `core/pkg/protocol/events.go` constants only. Do not invent ad-hoc event names.
 
-Core families:
-
-- Mission: `mission.started`, `mission.completed`, `mission.failed`, `mission.cancelled`
-- Team: `team.spawned`, `team.stopped`
-- Agent: `agent.started`, `agent.stopped`
-- Tool: `tool.invoked`, `tool.completed`, `tool.failed`
-- Artifact: `artifact.created`
-- Memory: `memory.stored`, `memory.recalled`
-- Orchestration: `trigger.fired`, `trigger.skipped`, `scheduler.tick`
+Core families: Mission (`mission.started`, `mission.completed`, `mission.failed`, `mission.cancelled`), Team (`team.spawned`, `team.stopped`), Agent (`agent.started`, `agent.stopped`), Tool (`tool.invoked`, `tool.completed`, `tool.failed`), Artifact (`artifact.created`), Memory (`memory.stored`, `memory.recalled`), Orchestration (`trigger.fired`, `trigger.skipped`, `scheduler.tick`).
 
 ## 10. Anti-Patterns
 

@@ -7,16 +7,10 @@
 
 ## Overview
 
-Open `Workspace` (`/dashboard`) and type naturally.
-Soma receives every message and coordinates the rest.
-Soma operates as a symbiote execution partner: it should execute and deliver outcomes,
-not instruct you step-by-step on how to do the work manually.
+Open `Workspace` (`/dashboard`) and type naturally. Soma receives every message, coordinates the rest, and should execute deliverable outcomes rather than instruct you step-by-step on manual work.
 Workspace should open with Soma already active, so you should not need to manually switch to Soma just to begin a normal session.
 
-Display-name customization:
-- open `Settings -> Profile`
-- set **Assistant Name**
-- save to update Workspace/status labels that normally show "Soma"
+Display-name customization: open `Settings -> Profile`, set **Assistant Name**, and save to update Workspace/status labels that normally show "Soma".
 
 ```
 You type -> Soma reasons (ReAct, up to 10 iterations)
@@ -42,7 +36,7 @@ Concrete central Soma phrases:
 - `Review my latest request, match it to related prior commands and tool metadata, tell me the action you infer, and ask me to confirm before you execute.`
 - `Create the smallest useful team for this outcome, have Council help choose the specialists and outputs, include target MCP tools, and walk me through any missing MCP enablement.`
 
-Live activity text indicates current steps (thinking, consulting, searching memory, invoking tools).
+Live activity text indicates current steps such as thinking, consulting, searching memory, and invoking tools.
 
 ## Referential Review And Confirmation
 
@@ -88,11 +82,7 @@ Good protected prompts:
 - `Review customer data from deployment context, tell me the visibility scope, and ask before retaining any output.`
 - `Make this a reusable conversation template only after you summarize the trigger phrase, protected scope, and approval posture.`
 
-AI Organization home adds a guided Soma entrypoint:
-- type a team or delivery request and choose `Start team design`, or
-- leave the field blank and use `Run a quick strategy check` to trigger an immediate first-pass review
-- ask Soma to create or reshape teams from the root organization workspace before dropping into a narrower lane
-- use `AI Engine Settings` from the same root workspace when an admin needs to set one shared model for everyone or detected output-type models for planning, research, code, and vision work
+AI Organization home adds a guided Soma entrypoint: type a team/delivery request and choose `Start team design`, leave the field blank and use `Run a quick strategy check`, create or reshape teams from the root organization workspace, and use `AI Engine Settings` to set one shared model or detected output-type models for planning, research, code, and vision work.
 
 If you leave the organization workspace and come back later, the current guided Soma draft and the last successful guidance for that organization should still be there.
 
@@ -277,11 +267,6 @@ When crew creation is needed, Soma should start from a lean 3-role shape:
 3. Focused Builder: produces the requested artifact, implementation, media direction, website draft, data review, or delivery payload.
 
 Soma can add a 4th or 5th role only when the output needs a separate reviewer/tester, domain specialist, or second focused builder. If the work needs more than 5 people, Soma should split the request into multiple compact lanes and explain what each lane will produce.
-
-Good examples:
-- "Create the smallest useful team to turn this customer brief into a one-page proposal and keep outputs visible in chat."
-- "This is broad: split the product review into planning, build, and review lanes, with each lane capped at a compact team."
-- "Show me which team lead owns each output and where I can review the retained artifacts."
 
 When specialized output is needed, Soma should prefer to:
 1. plan the need at the root workspace

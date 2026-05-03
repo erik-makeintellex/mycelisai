@@ -10,21 +10,6 @@ This document defines a single, repeatable way to instantiate and govern agent m
 
 ---
 
-## Table of Contents
-
-1. Purpose
-2. Canonical Provider Contract
-3. Provider-Type Mapping
-4. Standard YAML Templates
-5. Standard API Templates
-6. Validation Checklist
-7. Routing Template by Role
-8. Security and Governance Baseline
-9. Manifest Improvement Linkage
-10. Primary Documentation Sources
-
----
-
 ## 1. Purpose
 
 Use one contract for all providers so agent source setup is:

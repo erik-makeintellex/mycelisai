@@ -8,8 +8,8 @@ Current validation contract:
 - feature work is also not done until the touched docs are reviewed and updated where meaning changed
 - the Windows repo is the edit/review/push surface; authoritative build, API, UI, runtime, and release-style proof must run from the WSL `mother-brain` checkout backed by `D:\wsl-distro`
 - the expected engineering handoff is git-backed: commit and push from Windows, then refresh the WSL proof checkout from git before running authoritative evidence
-- `uv run inv ci.baseline` is the default branch-readiness gate and now includes Playwright by default
-- use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
+- `uv run inv ci.baseline` is the default branch-readiness gate and now includes Playwright by default; use `uv run inv ci.baseline --no-e2e` only for intentionally narrower local debugging
+- GitHub CI intentionally proves codebase health without hosted agentry: PRs and `main` / `develop` pushes run repo hygiene/docs/ops tests, Go Core tests/build/vet, Interface unit/build/typecheck, a mocked Chromium homepage smoke, and Helm standards while leaving live AI/service proof to local or WSL release lanes.
 - use `uv run inv ci.service-check` to verify the currently running local stack through lifecycle health; the live-backend variant restores the local bridge/core stack, ensures the `cortex` database exists, reuses the `cortex` schema only when it is already compatible with the current runtime, and otherwise bootstraps the database before proving the browser contract against the managed built server / built production server path
 - when the validation target is the supported home-runtime stack, use `uv run inv compose.up`, `uv run inv compose.status`, and `uv run inv compose.health` before browser proof instead of assuming Kind/bridge is the only real local environment; compose bring-up now mirrors `db.migrate` by skipping forward replay when the compose `cortex` schema is already compatible with the current runtime, emits numbered stage output with operator expectations, and accepts `--wait-timeout=<seconds>` for slower rebuild hosts
 - when the validation target is a personal-owner Compose deployment with user-configured data services, use `uv run inv compose.infra-up --wait-timeout=180` first to start only PostgreSQL/NATS, verify the printed DB/NATS connection settings, run `uv run inv compose.infra-health`, then run `uv run inv compose.storage-health` after migrations so the long-term pgvector/Postgres memory and artifact store is proven before Core/Interface workflow proof
@@ -694,28 +694,21 @@ Expected command outcomes:
 
 ## CI Pipelines
 
-Three GitHub Actions workflows remain available for PR-time and manual validation while push-triggered pipeline runs are intentionally disabled until the initial release-readiness gate is accepted:
+GitHub Actions use one token-free CI workflow for codebase validation plus manual release workflows for packaging:
 
 | Workflow | File | What it does |
 |----------|------|-------------|
-| **Core CI** | `.github/workflows/core-ci.yaml` | Workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, coverage, GolangCI-Lint v1.64.5, and `uv run inv core.compile` |
-| **Interface CI** | `.github/workflows/interface-ci.yaml` | Workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
-| **E2E CI** | `.github/workflows/e2e-ci.yaml` | Workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed browser matrix via `uv run inv interface.e2e` |
-
-Current trigger posture:
-
-- `core-ci.yaml`, `interface-ci.yaml`, and `e2e-ci.yaml` run on `pull_request` to `main` and `develop`
-- `dev-build.yaml` and `release.yaml` are manual-only via `workflow_dispatch`
-- direct push-triggered GitHub pipeline runs are paused until the initial release-ready boundary is explicitly reopened
+| **CI** | `.github/workflows/ci.yaml` | PR plus `main` / `develop` push proof for repo hygiene/docs/ops tests, Go Core tests/build/vet, Interface unit/build/typecheck, mocked Chromium homepage smoke, and Helm standards without hosted agentry |
+| **Release Packaging** | `.github/workflows/release.yaml` | Manual Helm verification packaging and optional image publishing |
+| **Release Binaries** | `.github/workflows/release-binaries.yaml` | Tag/manual Core binary packaging and release asset upload |
 
 ### CI Checks
 
 - **Go:** `go test -v -coverprofile=coverage.out ./...`
-- **Go Lint:** GolangCI-Lint v1.64.5
+- **Go Vet:** `go vet ./...`
 - **TypeScript:** `uv run inv interface.typecheck` (strict type checking)
-- **Frontend Lint:** `uv run inv interface.lint`
 - **Frontend Tests:** `uv run inv interface.test`
-- **E2E:** stable Playwright browser matrix (`chromium`, `firefox`, `webkit`, `mobile-chromium`) via `uv run inv interface.e2e` in managed `dev` mode, with `--server-mode=start` reserved for stricter or live-backend proof and the live path otherwise kept in `ci.service-check` / `ci.release-preflight`
+- **E2E:** token-free Chromium smoke via `uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --spec=e2e/specs/homepage.spec.ts`; live-backend proof stays in `ci.service-check` / `ci.release-preflight`
 
 ---
 

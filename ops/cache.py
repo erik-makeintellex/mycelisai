@@ -14,7 +14,6 @@ from .config import (
     ROOT_DIR,
     ensure_managed_cache_dirs,
     is_windows,
-    managed_cache_paths,
 )
 
 ns = Collection("cache")
@@ -32,19 +31,13 @@ DEFAULT_MIN_FREE_GB = 8
 
 
 def _username() -> str:
-    return (
-        os.environ.get("USERNAME")
-        or os.environ.get("USER")
-        or os.environ.get("LOGNAME")
-        or "user"
-    )
+    return os.environ.get("USERNAME") or os.environ.get("USER") or os.environ.get("LOGNAME") or "user"
 
 
 def _default_user_cache_root() -> Path:
     if is_windows():
         drive = Path(ROOT_DIR.drive + "\\") if ROOT_DIR.drive else Path.home().anchor
-        drive_root = str(drive)
-        if drive_root.upper().startswith("C:"):
+        if str(drive).upper().startswith("C:"):
             return Path.home() / "AppData" / "Local" / "MycelisCache"
         return drive / "Users" / _username() / "AppData" / "Local" / "MycelisCache"
     return Path.home() / ".cache" / "mycelis"
@@ -117,10 +110,6 @@ def _disk_targets(paths: tuple[Path, ...] | list[Path] | None = None) -> list[tu
     return list(deduped.values())
 
 
-def _free_gb(path: Path) -> float:
-    return shutil.disk_usage(path).free / float(1024 ** 3)
-
-
 def ensure_disk_headroom(
     *,
     min_free_gb: int = DEFAULT_MIN_FREE_GB,
@@ -150,17 +139,6 @@ def ensure_disk_headroom(
 
 
 def _delete_path(path: Path) -> int:
-    def _handle_remove_error(function, target, excinfo):
-        error = excinfo[1] if isinstance(excinfo, tuple) else excinfo
-        if isinstance(error, FileNotFoundError):
-            return
-        if isinstance(error, PermissionError):
-            with suppress(OSError):
-                os.chmod(target, stat.S_IWRITE | stat.S_IREAD)
-            function(target)
-            return
-        raise error
-
     reclaimed = _path_size_bytes(path)
     if not path.exists():
         return reclaimed
@@ -186,15 +164,22 @@ def _delete_path(path: Path) -> int:
     return reclaimed
 
 
+def _handle_remove_error(function, target, excinfo):
+    error = excinfo[1] if isinstance(excinfo, tuple) else excinfo
+    if isinstance(error, FileNotFoundError):
+        return
+    if isinstance(error, PermissionError):
+        with suppress(OSError):
+            os.chmod(target, stat.S_IWRITE | stat.S_IREAD)
+        function(target)
+        return
+    raise error
+
+
 def _set_windows_user_env(name: str, value: str):
     import winreg
 
-    with winreg.OpenKey(
-        winreg.HKEY_CURRENT_USER,
-        r"Environment",
-        0,
-        winreg.KEY_SET_VALUE,
-    ) as key:
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment", 0, winreg.KEY_SET_VALUE) as key:
         winreg.SetValueEx(key, name, 0, winreg.REG_EXPAND_SZ, value)
 
 
@@ -204,15 +189,7 @@ def _broadcast_windows_env_change():
     HWND_BROADCAST = 0xFFFF
     WM_SETTINGCHANGE = 0x001A
     SMTO_ABORTIFHUNG = 0x0002
-    ctypes.windll.user32.SendMessageTimeoutW(
-        HWND_BROADCAST,
-        WM_SETTINGCHANGE,
-        0,
-        "Environment",
-        SMTO_ABORTIFHUNG,
-        5000,
-        None,
-    )
+    ctypes.windll.user32.SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0, "Environment", SMTO_ABORTIFHUNG, 5000, None)
 
 
 @task
@@ -241,9 +218,10 @@ def status(c):
     print("Disk headroom:")
     for label, usage_path in _disk_targets():
         usage = shutil.disk_usage(usage_path)
+        free_gb = usage.free / float(1024 ** 3)
         print(
             f"  - {label}: free {_format_size(usage.free)} / total {_format_size(usage.total)}"
-            f" ({_free_gb(usage_path):.1f} GiB free)"
+            f" ({free_gb:.1f} GiB free)"
         )
     print("  Note: Docker daemon / WSL image-layer storage is tracked separately from repo-managed cache usage.")
 
@@ -255,12 +233,7 @@ def guard(c, min_free_gb=DEFAULT_MIN_FREE_GB):
     ensure_disk_headroom(min_free_gb=int(min_free_gb), reason="preflight")
 
 
-@task(
-    help={
-        "project": "Clean project-managed caches and build artifacts (default: True).",
-        "user": "Clean user-level tool caches configured by cache.apply-user-policy (default: False).",
-    }
-)
+@task(help={"project": "Clean project-managed caches and build artifacts (default: True).", "user": "Clean user-level tool caches configured by cache.apply-user-policy (default: False)."})
 def clean(c, project=True, user=False):
     """Clean managed project caches and optional user-level tool caches."""
     del c

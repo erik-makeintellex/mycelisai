@@ -8,31 +8,32 @@ def _read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_core_ci_watches_uv_lock():
-    workflow = _read(".github/workflows/core-ci.yaml")
-
-    assert '- "uv.lock"' in workflow
-
-
-def test_frontend_workflows_watch_root_npmrc_and_uv_lock():
-    interface_workflow = _read(".github/workflows/interface-ci.yaml")
-    e2e_workflow = _read(".github/workflows/e2e-ci.yaml")
-
-    for workflow in (interface_workflow, e2e_workflow):
-        assert '- ".npmrc"' in workflow
-        assert '- "uv.lock"' in workflow
-
-
-def test_e2e_workflow_contract_matches_stable_matrix():
-    workflow = _read(".github/workflows/e2e-ci.yaml")
+def test_ci_workflow_runs_token_free_codebase_gates():
+    workflow = _read(".github/workflows/ci.yaml")
     operations_doc = _read("docs/architecture/OPERATIONS.md")
 
-    assert '- "core/**"' not in workflow
-    assert "uv run inv interface.e2e" in workflow
-    assert (
-        "then the stable invoke-managed Chromium/Firefox/WebKit + mobile smoke browser matrix via `uv run inv interface.e2e`"
-        in operations_doc
-    )
+    for expected in [
+        "Repo Hygiene, Docs, And Ops Tests",
+        "Go Core",
+        "Interface Unit And Build",
+        "Browser Smoke Without Live Agentry",
+        "Helm And Kubernetes Standards",
+        "uv run inv quality.max-lines --limit 300",
+        "go test ./... -count=1 -p 1",
+        "uv run inv interface.test",
+        "uv run inv interface.build",
+        "uv run inv interface.typecheck",
+        "uv run inv interface.e2e",
+        "--spec=e2e/specs/homepage.spec.ts",
+        "uv run inv k8s.standards",
+        "MYCELIS_SEARCH_PROVIDER: \"disabled\"",
+    ]:
+        assert expected in workflow
+
+    assert "hosted agentry" in operations_doc
+    assert "core-ci.yaml" not in operations_doc
+    assert "interface-ci.yaml" not in operations_doc
+    assert "e2e-ci.yaml" not in operations_doc
     assert "start Core, then `uv run inv interface.e2e --live-backend`" not in operations_doc
 
 

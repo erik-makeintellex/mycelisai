@@ -288,24 +288,5 @@ Execution authority:
 
 ## VIII. Statistics
 
-| Metric | Count |
-|--------|-------|
-| Go source files | 110+ |
-| Go packages | 15 internal + 3 pkg |
-| HTTP endpoints | 50+ |
-| NATS topics | 30+ |
-| Database tables | 14+ |
-| SQL migrations | 21 |
-| Built-in tools | 17 |
-| LLM adapters | 4 |
-| Frontend routes | 22 |
-| React components | 96 |
-| Zustand state fields | ~60 |
-| Zustand actions | ~40 |
-| Invoke task modules | 11 |
-| @task functions | 60+ |
-| Go test suites | 11 |
-| Vitest tests | ~114 |
-| Playwright specs | 12 |
-| CI workflows | 3 |
+Current scale snapshot: 110+ Go files, 50+ HTTP endpoints, 30+ NATS topics, 21 SQL migrations, 17 built-in tools, 4 LLM adapters, 22 frontend routes, 96 React components, 60+ invoke tasks, 11 Go test suites, ~114 Vitest tests, and 12 Playwright specs.
 

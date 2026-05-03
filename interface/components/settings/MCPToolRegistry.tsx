@@ -110,7 +110,6 @@ export default function MCPToolRegistry() {
 
     return (
         <div className="h-full flex flex-col bg-cortex-bg">
-            {/* Header Bar */}
             <div className="h-12 border-b border-cortex-border bg-cortex-surface/50 backdrop-blur-sm flex items-center justify-between px-6 flex-shrink-0">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2.5">
@@ -119,8 +118,6 @@ export default function MCPToolRegistry() {
                             MCP Tool Registry
                         </span>
                     </div>
-
-                    {/* Tabs */}
                     <div className="flex items-center gap-1 bg-cortex-bg rounded-lg p-0.5 border border-cortex-border">
                         <button
                             onClick={() => setActiveTab("installed")}
@@ -162,7 +159,6 @@ export default function MCPToolRegistry() {
                 )}
             </div>
 
-            {/* Body */}
             <div className="flex-1 overflow-y-auto">
                 {activeTab === "installed" && (
                     <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
@@ -253,7 +249,6 @@ export default function MCPToolRegistry() {
                             )}
                         </div>
 
-                        {/* Loading Skeletons */}
                         {isFetching && mcpServers.length === 0 && (
                             <>
                                 {[1, 2, 3].map((i) => (
@@ -262,7 +257,6 @@ export default function MCPToolRegistry() {
                             </>
                         )}
 
-                        {/* Empty State */}
                         {isEmptyInstalledState && (
                             <div className="flex flex-col items-center justify-center py-24 text-cortex-text-muted">
                                 <Wrench className="w-12 h-12 mb-3 opacity-20" />
@@ -279,7 +273,6 @@ export default function MCPToolRegistry() {
                             </div>
                         )}
 
-                        {/* Server Cards */}
                         {mcpServers.map((server) => (
                             <MCPServerCard
                                 key={server.id}
@@ -300,14 +293,8 @@ export default function MCPToolRegistry() {
 
 function formatActivityScope(activity: MCPRecentActivity): string {
     const parts: string[] = [];
-    if (activity.teamId) {
-        parts.push(`Team ${activity.teamId}`);
-    }
-    if (activity.agentId) {
-        parts.push(`Agent ${activity.agentId}`);
-    }
-    if (activity.runId) {
-        parts.push(`Run ${activity.runId}`);
-    }
+    if (activity.teamId) parts.push(`Team ${activity.teamId}`);
+    if (activity.agentId) parts.push(`Agent ${activity.agentId}`);
+    if (activity.runId) parts.push(`Run ${activity.runId}`);
     return parts.join(" · ");
 }

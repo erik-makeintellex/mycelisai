@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Bot, Building2, Loader2, Sparkles, Users } from "lucide-react";
@@ -12,22 +12,16 @@ import type { OrganizationHomePayload } from "@/lib/organizations";
 type LoadState = "loading" | "ready" | "error";
 
 const PROMPT_SUGGESTIONS: TeamLeadPromptSuggestion[] = [
-    {
-        label: "Marketing launch team",
-        prompt: "Create a temporary marketing launch team that can produce campaign copy, a landing page brief, and social rollout assets for a new product launch.",
-    },
-    {
-        label: "Customer research team",
-        prompt: "Create a research team that can analyze customer interviews, summarize patterns, and produce an executive-ready recommendation brief.",
-    },
-    {
-        label: "RevOps workflow team",
-        prompt: "Create an operations team that can design a lead intake workflow, define the automation contract, and return the implementation checklist.",
-    },
-    {
-        label: "Security review team",
-        prompt: "Create a security review team that can assess a planned release, identify risks, and deliver an approval-ready review summary.",
-    },
+    { label: "Marketing launch team", prompt: "Create a temporary marketing launch team that can produce campaign copy, a landing page brief, and social rollout assets for a new product launch." },
+    { label: "Customer research team", prompt: "Create a research team that can analyze customer interviews, summarize patterns, and produce an executive-ready recommendation brief." },
+    { label: "RevOps workflow team", prompt: "Create an operations team that can design a lead intake workflow, define the automation contract, and return the implementation checklist." },
+    { label: "Security review team", prompt: "Create a security review team that can assess a planned release, identify risks, and deliver an approval-ready review summary." },
+];
+
+const WORKFLOW_HIGHLIGHTS = [
+    "Start from the organization context Soma already knows instead of building a team from scratch.",
+    "Ask for the team outcome, expected outputs, and delivery style before member details.",
+    "Keep the first team compact by default; if the ask is broad, let Soma split it into several small teams or lane bundles instead of one giant roster.",
 ];
 
 export default function TeamCreationPage() {
@@ -62,15 +56,11 @@ export default function TeamCreationPage() {
                 if (!response.ok) {
                     throw new Error(extractApiError(payload) || "Unable to load the current AI Organization.");
                 }
-                if (cancelled) {
-                    return;
-                }
+                if (cancelled) return;
                 setOrganization(extractApiData<OrganizationHomePayload>(payload));
                 setLoadState("ready");
             } catch (err) {
-                if (cancelled) {
-                    return;
-                }
+                if (cancelled) return;
                 setOrganization(null);
                 setLoadState("error");
                 setError(err instanceof Error ? err.message : "Unable to load the current AI Organization.");
@@ -82,15 +72,6 @@ export default function TeamCreationPage() {
             cancelled = true;
         };
     }, [effectiveOrganizationId]);
-
-    const workflowHighlights = useMemo(
-        () => [
-            "Start from the organization context Soma already knows instead of building a team from scratch.",
-            "Ask for the team outcome, expected outputs, and delivery style before member details.",
-            "Keep the first team compact by default; if the ask is broad, let Soma split it into several small teams or lane bundles instead of one giant roster.",
-        ],
-        [],
-    );
 
     return (
         <div className="h-full overflow-y-auto bg-cortex-bg px-6 py-6">
@@ -130,7 +111,7 @@ export default function TeamCreationPage() {
                         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4 text-sm text-cortex-text-muted lg:max-w-md">
                             <p className="font-medium text-cortex-text-main">What this workflow does</p>
                             <ul className="mt-3 space-y-2 leading-6">
-                                {workflowHighlights.map((item) => (
+                                {WORKFLOW_HIGHLIGHTS.map((item) => (
                                     <li key={item}>{item}</li>
                                 ))}
                             </ul>

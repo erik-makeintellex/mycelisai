@@ -1,53 +1,26 @@
 # Agentry Template Marketplace + Custom Templating V7
-> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
+> Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Overview](OVERVIEW.md) | [API Reference](../API_REFERENCE.md)
 
 Version: `1.0`
 Status: `Authoritative Planning`
 Last Updated: `2026-03-01`
-Scope: API-first support for external template marketplaces (ClawHub-style) and tenant/user-owned custom templates
+Scope: API-first support for external template marketplaces, private hubs, and tenant/user-owned custom templates.
 
----
+## Purpose
 
-## Table of Contents
+Mycelis supports local catalogue templates. Enterprise deployment also needs governed marketplace ingestion, purchase/install lifecycle, tenant-specific custom authoring, and one normalized template contract across all sources.
 
-1. Why This Exists
-2. Template Source Model
-3. Canonical Template Package Contract
-4. Marketplace API Contracts
-5. Custom Template API Contracts
-6. Purchase, Licensing, and Entitlements
-7. Governance + Security Controls
-8. NATS Event Model
-9. UI/Workflow Requirements
-10. Testing and Release Gates
-11. Rollout Plan
+Goals:
+- teams instantiate proven templates quickly
+- operators buy, import, fork, and publish templates safely
+- organizations can govern private and marketplace templates through the same API posture
 
----
+## Source Model
 
-## 1. Why This Exists
-
-Mycelis already supports local catalogue templates.
-Enterprise deployment now requires:
-
-1. external marketplace ingestion (for example, ClawHub-style template feeds)
-2. controlled purchase/install lifecycle
-3. tenant-specific custom template authoring and private distribution
-4. one consistent API contract across marketplace and custom sources
-
-Goal:
-- teams can instantiate proven templates quickly
-- operators can buy/import templates safely
-- organizations can version and govern their own templates
-
----
-
-## 2. Template Source Model
-
-Every template in Mycelis must declare a source class:
-
+Every template declares a source class:
 - `builtin`: shipped with Mycelis
-- `marketplace`: external provider feed (for example, clawhub)
-- `private_hub`: org-hosted template registry
+- `marketplace`: external provider feed, such as ClawHub-style feeds
+- `private_hub`: org-hosted registry
 - `tenant_custom`: user/org-authored template
 
 Required source metadata:
@@ -59,11 +32,9 @@ Required source metadata:
 - `version`
 - `signature_status` (`verified|unverified|failed`)
 
----
+## Canonical Package Contract
 
-## 3. Canonical Template Package Contract
-
-All templates normalize to a package contract:
+All sources normalize into one package shape before exposure:
 
 ```json
 {
@@ -109,80 +80,41 @@ Rules:
 - `parameters_schema` and `blueprint_spec` are required.
 - Marketplace packages must include integrity metadata.
 - Installed templates are immutable by default; edits create a forked custom template.
+- Paid marketplace forks retain source and license attribution, and license-restricted edits are blocked at publish.
 
----
+## API Contracts
 
-## 4. Marketplace API Contracts
+The canonical endpoint list is mirrored in [API Reference](../API_REFERENCE.md). This document owns the governance meaning.
 
-### 4.1 Source Registration
-
+Marketplace source management:
 - `GET /api/v1/template-market/sources`
-  - list configured marketplace/private sources
 - `POST /api/v1/template-market/sources`
-  - register a source (`clawhub`, private hub, or custom URL)
 - `PATCH /api/v1/template-market/sources/{source_id}`
-  - rotate credentials, enable/disable
 - `POST /api/v1/template-market/sources/{source_id}/probe`
-  - probe feed health and auth
 
-### 4.2 Discovery
-
+Marketplace discovery, acquisition, and install:
 - `GET /api/v1/template-market/templates`
-  - search + filter by source, category, tag, pricing, compatibility
 - `GET /api/v1/template-market/templates/{template_id}`
-  - detailed package view, requirements, pricing, license
-
-### 4.3 Acquire and Install
-
 - `POST /api/v1/template-market/templates/{template_id}/purchase-intent`
-  - create governed purchase proposal
 - `POST /api/v1/template-market/purchases/{purchase_id}/confirm`
-  - execute purchase after approval
 - `POST /api/v1/template-market/templates/{template_id}/install`
-  - install into tenant catalog (requires entitlement if paid)
 - `POST /api/v1/template-market/templates/{template_id}/sync`
-  - pull latest version metadata
-
-### 4.4 Lifecycle
-
 - `GET /api/v1/template-market/installs`
-  - list installed marketplace templates + versions
 - `POST /api/v1/template-market/installs/{install_id}/upgrade`
-  - controlled upgrade (with compatibility checks)
 - `DELETE /api/v1/template-market/installs/{install_id}`
-  - uninstall
 
----
-
-## 5. Custom Template API Contracts
-
-Custom templates are first-class and tenant scoped.
-
+Tenant custom templates:
 - `GET /api/v1/templates/custom`
-  - list custom templates for tenant/user
 - `POST /api/v1/templates/custom`
-  - create a new custom template
 - `GET /api/v1/templates/custom/{template_id}`
-  - template detail + version history
 - `PUT /api/v1/templates/custom/{template_id}`
-  - update draft metadata/spec
 - `POST /api/v1/templates/custom/{template_id}/publish`
-  - publish a versioned immutable release
 - `POST /api/v1/templates/custom/{template_id}/fork`
-  - fork from marketplace/builtin/custom template
 - `DELETE /api/v1/templates/custom/{template_id}`
-  - archive template
 
-Forking rules:
-- paid marketplace template forks must retain source and license attribution
-- disallowed edits (license restricted) are blocked at publish step
+## Purchase, Licensing, And Entitlements
 
----
-
-## 6. Purchase, Licensing, and Entitlements
-
-### 6.1 Purchase States
-
+Purchase states:
 - `draft`
 - `pending_approval`
 - `approved`
@@ -190,46 +122,31 @@ Forking rules:
 - `failed`
 - `revoked`
 
-### 6.2 Entitlement Contract
-
-Each paid template install binds an entitlement record:
+Each paid install binds an entitlement record with:
 - `tenant_id`
 - `template_id`
 - `license_id`
 - `entitlement_scope` (`tenant|seat|environment`)
 - `status`
-- `expires_at` (if subscription)
+- `expires_at` for subscriptions
 
-### 6.3 Enforcement
+Enforcement:
+- paid template install requires an active entitlement
+- upgrade requires license compatibility
+- expiring subscriptions surface runtime warnings
+- purchase, install, upgrade, and delete are governed mutations with deterministic audit trail
 
-- install blocked without active entitlement (for paid templates)
-- upgrade blocked if license compatibility check fails
-- runtime warnings for expiring subscriptions
-
----
-
-## 7. Governance + Security Controls
+## Governance And Security
 
 Mandatory controls:
+- source allowlist by default
+- signed package verification for marketplace sources
+- secret fields never returned in API payloads
+- template sandbox checks before activation
+- compatibility validation for providers, MCP/action dependencies, and policy constraints
+- ClawHub-style connectors support token auth, catalog pull, package verification, and normalization before exposure
 
-1. source allowlist by default
-2. signed package verification for marketplace sources
-3. purchase/install/upgrade are governed mutations
-4. secret fields never returned in API payloads
-5. deterministic audit trail for every purchase/install/upgrade/delete
-6. template sandbox checks before activation
-7. explicit compatibility validation:
-   - provider availability
-   - MCP/action dependencies
-   - policy constraints
-
-ClawHub-style support requirement:
-- source connector supports token auth, catalog pull, and package verification
-- all imported packages are normalized to canonical package contract before exposure
-
----
-
-## 8. NATS Event Model
+## Event Model
 
 Required event types:
 - `template.source.registered`
@@ -246,85 +163,36 @@ Recommended subjects:
 - `swarm.catalog.template.*`
 - `swarm.audit.template.*`
 
-Every event must include:
+Every event includes:
 - `tenant_id`
 - `user_id`
-- `run_id` (if workflow-driven)
+- `run_id` when workflow-driven
 - `template_id`
 - `source_type`
 
----
+## UI And Workflow Requirements
 
-## 9. UI/Workflow Requirements
+Resources -> Marketplace supports source filters, pricing and entitlement badges, compatibility results before install, and governed purchase proposals.
 
-### 9.1 Resources → Marketplace
+Template Builder supports schema-aware editing, draft/publish workflow, version history, rollback, and fork-from-installed.
 
-Must support:
-- source filters (`builtin|marketplace|private_hub|tenant_custom`)
-- pricing and entitlement badges
-- compatibility check result before install
-- proposal flow for purchases (not silent buy)
+Team instantiation shows source, license, required capabilities, missing dependencies, and safe remediation paths where available.
 
-### 9.2 Template Builder
+## Testing And Release Gates
 
-For tenant custom templates:
-- schema-aware template editor
-- draft/publish workflow
-- version history and rollback
-- fork-from-installed action
-
-### 9.3 Instantiation Flow
-
-When launching teams from template:
-- show source + license info
-- show required capabilities and missing dependencies
-- offer auto-remediation path where possible
-
----
-
-## 10. Testing and Release Gates
-
-### Unit
+Required tests:
 - package normalization
-- license/entitlement validation
-- source auth + signature verification
-
-### Integration
-- source registration/probe/sync
-- purchase intent -> approval -> confirm
-- install/upgrade/uninstall lifecycle
-- custom template draft/publish/fork
-
-### E2E
-- buy/install from marketplace (governed)
-- create/publish custom template and instantiate
-- entitlement expiry behavior
-- degraded marketplace source recovery
+- license and entitlement validation
+- source auth and signature verification
+- source registration, probe, sync, purchase, approval, install, upgrade, uninstall, draft, publish, and fork paths
+- E2E buy/install, custom publish/instantiate, entitlement expiry, and degraded marketplace recovery
 
 Release gate:
 - no template-market production enablement until purchase/install paths are fully audited and reversible
 
----
+## Rollout
 
-## 11. Rollout Plan
-
-### Wave 1
-- source registration + marketplace discovery APIs
-- read-only listing UI
-
-### Wave 2
-- governed purchase intent + entitlement model
-- install/uninstall path
-
-### Wave 3
-- custom template builder + publish/fork
-- upgrade path + compatibility checks
-
-### Wave 4
-- multi-source federation (`clawhub` + private hub + tenant custom)
-- full observability and policy hardening
-
----
-
-End of document.
-
+1. Source registration and marketplace discovery APIs with read-only listing UI.
+2. Governed purchase intent, entitlement model, install, and uninstall.
+3. Custom template builder, publish/fork, upgrade path, and compatibility checks.
+4. Multi-source federation with full observability and policy hardening.

@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -89,13 +88,7 @@ func (l *TemplateLoader) LoadBundles() ([]*TemplateBundle, error) {
 }
 
 func loadTemplateBundle(path string) (*TemplateBundle, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	data, err := io.ReadAll(file)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

@@ -14,8 +14,6 @@ Define the architecture-native workflow for delivering an Airflow-style visual c
 - deterministic delivery gates
 - strict git discipline per action
 
-This plan is implementation-facing and designed for Team A/C/Q/T/D parallel execution.
-
 Immediate alignment:
 - the active operator-facing slice is Launch Crew and workflow onboarding
 - onboarding must prove execution-facing outcomes before deeper workflow-composer expansion proceeds
@@ -53,18 +51,13 @@ This prerequisite is mandatory so manifested workflows remain auditable and agen
 
 ### 2.3 Architectural Opportunity
 
-The backend model already supports lineage, events, and trigger/schedule primitives. A visual composer can now become the unifying operator workflow for:
-
-- creating execution DAGs
-- manifesting teams from node intents
-- attaching approvals/policies at mutation gates
-- monitoring run outcomes and chain propagation
+The backend model already supports lineage, events, and trigger/schedule primitives. A visual composer can unify DAG creation, team manifestation, approval/policy attachment, and run/chain monitoring.
 
 ## 3. Target Product Shape: Workflow Composer
 
 ### 3.1 UX Model
 
-Single canvas where operators compose a DAG with drag-and-drop blocks, connect dependencies, validate policy coverage, and execute as proposal-first.
+Single proposal-first canvas for composing DAG blocks, connecting dependencies, validating policy coverage, and executing through governed confirmation.
 
 ### 3.2 Canonical Node Types (V1)
 
@@ -205,25 +198,13 @@ Verification:
 
 ## 5. Team Collaboration Model
 
-### Team A (Core Runtime)
-
-- Owns execution contracts, compile path, scheduler/trigger coupling, chain correctness.
-
-### Team C (GUI/Workflow UX)
-
-- Owns composer UX, node configuration ergonomics, monitor surfaces, run navigation.
-
-### Team Q (QA/Gates)
-
-- Owns acceptance gates, deterministic test matrices, release evidence criteria.
-
-### Team T (Tooling/Automation)
-
-- Owns `inv` task ergonomics, CI parity, preflight and pre-push automation.
-
-### Team D (Documentation/State)
-
-- Owns architecture/status docs and in-app docs registration for every delivery slice.
+| Team | Ownership |
+| --- | --- |
+| A | execution contracts, compile path, scheduler/trigger coupling, chain correctness |
+| C | composer UX, node configuration ergonomics, monitor surfaces, run navigation |
+| Q | acceptance gates, deterministic test matrices, release evidence criteria |
+| T | `inv` task ergonomics, CI parity, preflight and pre-push automation |
+| D | architecture/status docs and in-app docs registration for every delivery slice |
 
 ## 6. Git Discipline (Mandatory For Each Confirmed Action)
 

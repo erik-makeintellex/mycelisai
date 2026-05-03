@@ -439,7 +439,7 @@ Required command references for active V8 work:
 Use `uv run inv ...` for execution.
 Use `uvx --from invoke inv -l` only as a compatibility probe.
 Do not use bare `uvx inv ...`.
-- CI validation should reuse the same invoke task surfaces for interface build/test/browser execution after the workflow-native dependency/bootstrap steps complete, but push-triggered GitHub pipeline runs are intentionally paused until initial release readiness so local proof and PR-time validation remain the active gate
+- GitHub CI now runs on PRs plus `main` / `develop` pushes and stays token-free: workflow-native setup installs Python/Go/Node/Chromium/Helm, then `uv run inv ...` proves repo hygiene, Core, Interface, mocked browser smoke, and Helm standards without requiring hosted agentry or live AI services.
 
 Provider/runtime workflow reminders:
 - review architecture and state docs before implementation slices

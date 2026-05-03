@@ -1,15 +1,11 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, Play, Save } from "lucide-react";
+import { ArrowRight, Play, Save } from "lucide-react";
 import CapabilityReadinessGateCard from "@/components/automations/CapabilityReadinessGateCard";
 import RouteTemplatePicker from "@/components/automations/RouteTemplatePicker";
-import {
-    TEAM_PROFILE_TEMPLATES,
-    type BusExposureMode,
-    type ReadinessSnapshot,
-    type TeamProfileTemplate,
-} from "@/lib/workflowContracts";
+import { ProfileCard, StepBadge } from "@/components/automations/TeamInstantiationWizardCards";
+import { TEAM_PROFILE_TEMPLATES, type BusExposureMode, type ReadinessSnapshot } from "@/lib/workflowContracts";
 import { useCortexStore, type MissionProfileCreate } from "@/store/useCortexStore";
 
 const STEPS = ["Objective", "Profile", "Readiness", "Launch"] as const;
@@ -17,58 +13,6 @@ type StepIndex = 0 | 1 | 2 | 3;
 
 interface TeamInstantiationWizardProps {
     openTab: (tab: "triggers" | "approvals" | "teams" | "wiring") => void;
-}
-
-function StepBadge({ active, complete, label }: { active: boolean; complete: boolean; label: string }) {
-    return (
-        <div
-            className={`px-2.5 py-1 rounded-md text-[10px] font-mono border ${
-                active
-                    ? "border-cortex-primary/40 bg-cortex-primary/10 text-cortex-primary"
-                    : complete
-                      ? "border-cortex-success/40 bg-cortex-success/10 text-cortex-success"
-                      : "border-cortex-border text-cortex-text-muted"
-            }`}
-        >
-            {label}
-        </div>
-    );
-}
-
-function ProfileCard({
-    profile,
-    selected,
-    onSelect,
-}: {
-    profile: TeamProfileTemplate;
-    selected: boolean;
-    onSelect: () => void;
-}) {
-    return (
-        <button
-            onClick={onSelect}
-            className={`w-full text-left rounded-lg border p-3 transition-colors ${
-                selected
-                    ? "border-cortex-primary/40 bg-cortex-primary/10"
-                    : "border-cortex-border bg-cortex-surface hover:bg-cortex-bg"
-            }`}
-        >
-            <div className="flex items-start justify-between gap-2">
-                <div>
-                    <p className="text-sm font-semibold text-cortex-text-main">{profile.name}</p>
-                    <p className="text-[11px] text-cortex-text-muted mt-1">{profile.description}</p>
-                </div>
-                {selected ? <Check className="w-4 h-4 text-cortex-primary mt-0.5" /> : null}
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-                {profile.requiredCapabilities.map((cap) => (
-                    <span key={cap} className="px-1.5 py-0.5 rounded border border-cortex-border text-[10px] font-mono text-cortex-text-muted">
-                        {cap}
-                    </span>
-                ))}
-            </div>
-        </button>
-    );
 }
 
 export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWizardProps) {
@@ -87,10 +31,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
     const [actionError, setActionError] = useState<string | null>(null);
     const [lastAction, setLastAction] = useState("");
 
-    const selectedProfile = useMemo(
-        () => TEAM_PROFILE_TEMPLATES.find((p) => p.id === profileId) ?? TEAM_PROFILE_TEMPLATES[0],
-        [profileId]
-    );
+    const selectedProfile = useMemo(() => TEAM_PROFILE_TEMPLATES.find((p) => p.id === profileId) ?? TEAM_PROFILE_TEMPLATES[0], [profileId]);
 
     useEffect(() => {
         setRoutes(selectedProfile.suggestedRoutes);
@@ -101,8 +42,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
     }, [fetchMissionProfiles]);
 
     const nextDisabled = useMemo(() => {
-        if (step === 0) return objective.trim().length < 12;
-        return false;
+        return step === 0 && objective.trim().length < 12;
     }, [step, objective]);
 
     const canLaunchNow = readiness ? readiness.blockers.length === 0 : false;
@@ -151,9 +91,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
             <div className="flex items-center justify-between gap-2">
                 <div>
                     <h3 className="text-sm font-semibold text-cortex-text-main">Team Instantiation Wizard</h3>
-                    <p className="text-[11px] text-cortex-text-muted mt-1">
-                        Guided objective, profile, readiness, and governed launch review.
-                    </p>
+                    <p className="text-[11px] text-cortex-text-muted mt-1">Guided objective, profile, readiness, and governed launch review.</p>
                 </div>
                 <div className="flex items-center gap-1.5">
                     {STEPS.map((label, idx) => (
@@ -171,9 +109,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                         placeholder="Describe the outcome you want this team to execute."
                         className="w-full min-h-[110px] rounded-lg border border-cortex-border bg-cortex-bg p-3 text-sm text-cortex-text-main focus:outline-none focus:border-cortex-primary"
                     />
-                    <p className="text-[10px] text-cortex-text-muted">
-                        Tip: include desired output and any governance constraints.
-                    </p>
+                    <p className="text-[10px] text-cortex-text-muted">Tip: include desired output and any governance constraints.</p>
                 </div>
             )}
 
@@ -206,11 +142,7 @@ export default function TeamInstantiationWizard({ openTab }: TeamInstantiationWi
                             ))}
                         </div>
                     </div>
-                    <RouteTemplatePicker
-                        profile={selectedProfile}
-                        onRoutesChange={setRoutes}
-                        onBusModeChange={setBusMode}
-                    />
+                    <RouteTemplatePicker profile={selectedProfile} onRoutesChange={setRoutes} onBusModeChange={setBusMode} />
                 </div>
             )}
 

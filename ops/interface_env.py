@@ -9,7 +9,6 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from .cache import ensure_disk_headroom
 from .config import (
     INTERFACE_BIND_HOST,
     ROOT_DIR,
@@ -22,22 +21,15 @@ INTERFACE_DIR = ROOT_DIR / "interface"
 
 
 def _load_env():
-    """Load root .env into the process environment so Next.js proxy
-    can read MYCELIS_API_KEY (used to inject Authorization headers into
-    proxied /api/* requests). Loads .env.compose first for topology, then .env
-    so the root secret store wins for credentials. Uses override=True so repo env files win over system env.
-    Removes PORT afterwards — the root .env sets PORT for the Go Core HTTP
-    listener, but Next.js would otherwise try to reuse that port instead of
-    the configured interface port."""
-    import os
-
+    """Load Interface env files while keeping root .env as the secret source."""
     try:
         from dotenv import load_dotenv
 
         load_dotenv(str(ROOT_DIR / ".env.compose"), override=True)
         load_dotenv(str(ROOT_DIR / ".env"), override=True)
     except ImportError:
-        pass  # python-dotenv not installed — env vars must be set manually
+        pass
+    # Root .env owns the Go Core HTTP port; Next.js must use INTERFACE_PORT.
     os.environ.pop("PORT", None)
 
 
@@ -63,12 +55,7 @@ def _is_incomplete_next_build_output(result: CommandResult) -> bool:
     text = _normalize_process_text(f"{result.stdout}\n{result.stderr}")
     if ".next/" not in text:
         return False
-    incomplete_outputs = (
-        "required-server-files.json",
-        "build-manifest.json",
-        "pages-manifest.json",
-        ".nft.json",
-    )
+    incomplete_outputs = ("required-server-files.json", "build-manifest.json", "pages-manifest.json", ".nft.json")
     if "enoent" in text and any(name in text for name in incomplete_outputs):
         return True
     return ".next/types/" in text and "not found" in text
@@ -84,8 +71,7 @@ def _expected_next_build_artifacts() -> list[Path]:
 
     next_dir = runtime.INTERFACE_DIR / ".next"
     build_manifest_path = next_dir / "build-manifest.json"
-    required_server_files_path = next_dir / "required-server-files.json"
-    artifacts = [build_manifest_path, required_server_files_path]
+    artifacts = [build_manifest_path, next_dir / "required-server-files.json"]
     if not build_manifest_path.exists():
         return artifacts
 
@@ -143,30 +129,30 @@ def interface_task_env(extra=None):
     return _task_env(extra=extra)
 
 
-def _run_interface_shell_command(command: list[str], extra_env: dict[str, str] | None = None) -> CommandResult:
-    """Run a one-shot Interface command directly and return its exit data.
-
-    Invoke's runner is useful for long-lived dev/e2e flows, but the one-shot
-    build/test commands have been observed to return false negatives under the
-    wrapper on Windows. Running them directly keeps the exit code aligned with
-    the real tool result.
-    """
+def _interface_subprocess_env(extra_env: dict[str, str] | None = None) -> dict[str, str]:
     process_env = os.environ.copy()
     process_env.update(_task_env(extra_env))
+    return process_env
+
+
+def _resolve_interface_runner(command: list[str]) -> list[str]:
     runner = list(command)
     executable = runner[0]
-    if is_windows():
-        resolved = shutil.which(executable) or shutil.which(f"{executable}.cmd") or shutil.which(f"{executable}.exe")
+    candidates = [executable, f"{executable}.cmd", f"{executable}.exe"] if is_windows() else [executable]
+    for candidate in candidates:
+        resolved = shutil.which(candidate)
         if resolved:
             runner[0] = resolved
-    else:
-        resolved = shutil.which(executable)
-        if resolved:
-            runner[0] = resolved
+            break
+    return runner
+
+
+def _run_interface_shell_command(command: list[str], extra_env: dict[str, str] | None = None) -> CommandResult:
+    """Run a one-shot Interface command directly and return its exit data."""
     result = subprocess.run(
-        runner,
+        _resolve_interface_runner(command),
         cwd=str(INTERFACE_DIR),
-        env=process_env,
+        env=_interface_subprocess_env(extra_env),
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -176,28 +162,11 @@ def _run_interface_shell_command(command: list[str], extra_env: dict[str, str] |
 
 
 def _run_interface_shell_command_streaming(command: list[str], extra_env: dict[str, str] | None = None) -> CommandResult:
-    """Run an Interface command with inherited stdio for long-lived browser flows.
-
-    Browser/tooling subprocess trees on Windows can keep captured stdout/stderr
-    pipes open after the main runner finishes. Streaming avoids that pipe-lifetime
-    hang while preserving the real exit code for Invoke tasks.
-    """
-    process_env = os.environ.copy()
-    process_env.update(_task_env(extra_env))
-    runner = list(command)
-    executable = runner[0]
-    if is_windows():
-        resolved = shutil.which(executable) or shutil.which(f"{executable}.cmd") or shutil.which(f"{executable}.exe")
-        if resolved:
-            runner[0] = resolved
-    else:
-        resolved = shutil.which(executable)
-        if resolved:
-            runner[0] = resolved
+    """Run an Interface command with inherited stdio for long-lived browser flows."""
     result = subprocess.run(
-        runner,
+        _resolve_interface_runner(command),
         cwd=str(INTERFACE_DIR),
-        env=process_env,
+        env=_interface_subprocess_env(extra_env),
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -247,13 +216,7 @@ def _run_interface_commandline(
     return runtime._run_interface_shell_command(args, extra_env=extra_env)
 
 
-def _build_playwright_command(
-    *,
-    project: str = "",
-    spec: str = "",
-    workers: str = "",
-    headed: bool = False,
-) -> str:
+def _build_playwright_command(*, project: str = "", spec: str = "", workers: str = "", headed: bool = False) -> str:
     cmd = "npx playwright test --reporter=dot"
     effective_workers = workers or "1"
     if project:

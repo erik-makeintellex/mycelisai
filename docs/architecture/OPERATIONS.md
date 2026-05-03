@@ -642,13 +642,11 @@ Deployment automation rule:
 
 | Workflow | File | Trigger Paths | Checks |
 |----------|------|--------------|--------|
-| **Core CI** | `core-ci.yaml` | `core/**`, `ops/core.py`, `ops/config.py`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Go bootstrap, `uv run inv core.test`, direct coverage capture, GolangCI-Lint v1.64.5, `uv run inv core.compile` |
-| **Interface CI** | `interface-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/interface_runtime.py`, `ops/interface_env.py`, `ops/interface_process_support.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, `npm ci`, then `uv run inv interface.lint`, `uv run inv interface.typecheck`, `uv run inv interface.test`, and `uv run inv interface.build` |
-| **E2E CI** | `e2e-ci.yaml` | `interface/**`, `ops/interface.py`, `ops/interface_runtime.py`, `ops/interface_env.py`, `ops/interface_process_support.py`, `ops/config.py`, `.npmrc`, `tasks.py`, `pyproject.toml`, `uv.lock` | workflow-native Python/uv + Node bootstrap, Playwright browser install, `uv run inv interface.build`, then the stable invoke-managed Chromium/Firefox/WebKit + mobile smoke browser matrix via `uv run inv interface.e2e` |
+| **CI** | `ci.yaml` | PR plus `main` / `develop` push | token-free repo hygiene/docs/ops tests, Go Core tests/build/vet, Interface unit/build/typecheck, mocked Chromium homepage smoke, and Helm standards without hosted agentry |
 | **Release Packaging** | `release.yaml` | manual dispatch | workflow-native Python/uv + Helm verification packaging through `uv run inv k8s.deploy --verify-package` for promoted enterprise values files, then artifact upload from `dist/helm/` |
 | **Release Binaries** | `release-binaries.yaml` | tag push `v*` or manual dispatch | workflow-native Python/uv + Go bootstrap, then matrix packaging through `uv run inv core.package` and GitHub release asset upload for the archive plus manifest/checksum sidecars |
 
-**Trigger:** `pull_request` to `main` and `develop`; push-triggered GitHub pipeline runs are intentionally paused until the initial release-ready gate reopens. Container/image workflows are manual-only via `workflow_dispatch`.
+**Trigger:** CI runs on `pull_request` plus pushes to `main` and `develop`; container/image workflows remain manual-only via `workflow_dispatch`.
 
 ### Local CI
 

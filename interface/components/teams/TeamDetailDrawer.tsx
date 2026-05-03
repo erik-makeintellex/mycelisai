@@ -33,7 +33,6 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
 
     return (
         <div className="absolute right-0 top-0 bottom-0 w-[480px] z-40 bg-cortex-surface border-l border-cortex-border shadow-2xl flex flex-col">
-            {/* Header */}
             <div className="h-12 flex items-center justify-between px-4 border-b border-cortex-border bg-cortex-surface/50 backdrop-blur-sm flex-shrink-0">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-bold text-cortex-text-main uppercase truncate">
@@ -60,7 +59,6 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                 </button>
             </div>
 
-            {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 <div className="rounded-lg bg-cortex-bg border border-cortex-border p-3 space-y-2">
                     <div className="text-[10px] font-mono uppercase text-cortex-text-muted">
@@ -111,7 +109,6 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                     </div>
                 </div>
 
-                {/* Mission context */}
                 {team.type === 'mission' && team.mission_id && (
                     <div className="rounded-lg bg-cortex-bg border border-cortex-border p-3 space-y-1">
                         <div className="text-[10px] font-mono uppercase text-cortex-text-muted">
@@ -128,7 +125,6 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                     </div>
                 )}
 
-                {/* Input topics */}
                 {team.inputs.length > 0 && (
                     <div>
                         <div className="text-[10px] font-mono uppercase text-cortex-text-muted mb-1.5">
@@ -148,7 +144,6 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                     </div>
                 )}
 
-                {/* Delivery topics */}
                 {team.deliveries.length > 0 && (
                     <div>
                         <div className="text-[10px] font-mono uppercase text-cortex-text-muted mb-1.5">
@@ -168,7 +163,6 @@ export default function TeamDetailDrawer({ team, onClose }: TeamDetailDrawerProp
                     </div>
                 )}
 
-                {/* Agent Roster */}
                 <div>
                     <div className="text-[10px] font-mono uppercase text-cortex-text-muted mb-2">
                         Agent Roster ({team.agents.length})
@@ -209,7 +203,6 @@ function AgentRow({
 
     return (
         <div className="rounded-lg border border-cortex-border bg-cortex-bg overflow-hidden">
-            {/* Summary row */}
             <button
                 onClick={onToggle}
                 className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-cortex-surface/50 transition-colors"
@@ -242,10 +235,8 @@ function AgentRow({
                 </span>
             </button>
 
-            {/* Expanded detail */}
             {isExpanded && (
                 <div className="px-3 pb-3 pt-1 border-t border-cortex-border/50 space-y-3">
-                    {/* System prompt */}
                     {agent.system_prompt && (
                         <div>
                             <div className="text-[9px] font-mono uppercase text-cortex-text-muted mb-1">
@@ -257,7 +248,6 @@ function AgentRow({
                         </div>
                     )}
 
-                    {/* Tools */}
                     {agent.tools.length > 0 && (
                         <div>
                             <div className="text-[9px] font-mono uppercase text-cortex-text-muted mb-1">
@@ -276,7 +266,6 @@ function AgentRow({
                         </div>
                     )}
 
-                    {/* Model */}
                     {agent.model && (
                         <div className="flex items-center gap-2">
                             <span className="text-[9px] font-mono uppercase text-cortex-text-muted">
@@ -288,7 +277,6 @@ function AgentRow({
                         </div>
                     )}
 
-                    {/* Status */}
                     <div className="flex items-center gap-2">
                         <span className="text-[9px] font-mono uppercase text-cortex-text-muted">
                             Status:

@@ -2,27 +2,15 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 )
-
-// mcpConnectTimeout is the maximum time allowed per MCP server reconnect.
-// Prevents a single hung server from blocking the entire boot sequence.
-const mcpConnectTimeout = 15 * time.Second
-
-func withMCPConnectTimeout(ctx context.Context, fn func(context.Context) error) error {
-	connectCtx, cancel := context.WithTimeout(ctx, mcpConnectTimeout)
-	defer cancel()
-	return fn(connectCtx)
-}
 
 // ManagedClient wraps an active MCP client connection with its metadata.
 type ManagedClient struct {
@@ -300,25 +288,4 @@ func (p *ClientPool) ShutdownAll() {
 	// Clear the map.
 	p.clients = make(map[uuid.UUID]*ManagedClient)
 	log.Printf("mcp pool: all clients shut down")
-}
-
-// convertTools converts a slice of mcp.Tool from the MCP protocol into
-// the internal ToolDef representation used for database caching.
-func convertTools(serverID uuid.UUID, tools []mcp.Tool) ([]ToolDef, error) {
-	defs := make([]ToolDef, 0, len(tools))
-	for _, t := range tools {
-		// Marshal the InputSchema (ToolArgumentsSchema) to json.RawMessage.
-		schemaBytes, err := json.Marshal(t.InputSchema)
-		if err != nil {
-			return nil, fmt.Errorf("marshal input schema for tool %q: %w", t.Name, err)
-		}
-
-		defs = append(defs, ToolDef{
-			ServerID:    serverID,
-			Name:        t.Name,
-			Description: t.Description,
-			InputSchema: json.RawMessage(schemaBytes),
-		})
-	}
-	return defs, nil
 }

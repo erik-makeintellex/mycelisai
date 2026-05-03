@@ -10,13 +10,7 @@ interface EnvModalProps {
     onClose: () => void;
 }
 
-type EnvFieldSpec = {
-    name: string;
-    description?: string;
-    required?: boolean;
-    secret?: boolean;
-    default_value?: string;
-};
+type EnvFieldSpec = { name: string; description?: string; required?: boolean; secret?: boolean; default_value?: string };
 
 function EnvConfigModal({ entry, onInstall, onClose }: EnvModalProps) {
     const declaredEnv: EnvFieldSpec[] = entry.environment_variables && entry.environment_variables.length > 0
@@ -36,12 +30,8 @@ function EnvConfigModal({ entry, onInstall, onClose }: EnvModalProps) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="bg-cortex-surface border border-cortex-border rounded-xl w-full max-w-md p-6 shadow-2xl">
-                <h3 className="text-sm font-mono font-bold text-cortex-text-main mb-1">
-                    Configure {entry.name}
-                </h3>
-                <p className="text-[10px] font-mono text-cortex-text-muted mb-4">
-                    Set required environment variables before installing.
-                </p>
+                <h3 className="text-sm font-mono font-bold text-cortex-text-main mb-1">Configure {entry.name}</h3>
+                <p className="text-[10px] font-mono text-cortex-text-muted mb-4">Set required environment variables before installing.</p>
 
                 <div className="flex flex-col gap-3 mb-5">
                     {declaredEnv.map((spec) => (
@@ -111,8 +101,7 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
     const installedNames = new Set(mcpServers.map((s) => s.name));
 
     const handleInstallClick = (entry: MCPLibraryEntry) => {
-        const hasRequiredEnv = (entry.environment_variables && entry.environment_variables.length > 0)
-            || (entry.env && Object.keys(entry.env).length > 0);
+        const hasRequiredEnv = (entry.environment_variables && entry.environment_variables.length > 0) || (entry.env && Object.keys(entry.env).length > 0);
         if (hasRequiredEnv) {
             setEnvModalEntry(entry);
         } else {
@@ -134,19 +123,14 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
         }
     };
 
-    // Filter logic
     const filterEntries = (categories: MCPLibraryCategory[]) => {
         if (!searchQuery.trim()) return categories;
         const q = searchQuery.toLowerCase();
         return categories
             .map((cat) => ({
                 ...cat,
-                servers: cat.servers.filter(
-                    (s) =>
-                        s.name.toLowerCase().includes(q) ||
-                        s.description.toLowerCase().includes(q) ||
-                        s.tags.some((t) => t.toLowerCase().includes(q))
-                ),
+                servers: cat.servers.filter((s) =>
+                    s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q) || s.tags.some((t) => t.toLowerCase().includes(q))),
             }))
             .filter((cat) => cat.servers.length > 0);
     };
@@ -171,7 +155,6 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                 </div>
             )}
 
-            {/* Search */}
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cortex-text-muted/50" />
                 <input
@@ -183,14 +166,12 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                 />
             </div>
 
-            {/* Loading */}
             {isFetching && library.length === 0 && (
                 <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-5 h-5 text-cortex-text-muted animate-spin" />
                 </div>
             )}
 
-            {/* Categories */}
             {filtered.map((cat) => (
                 <div key={cat.name}>
                     <h3 className="text-[10px] font-mono font-bold text-cortex-text-muted uppercase tracking-wider mb-3">
@@ -298,7 +279,6 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                 </div>
             ))}
 
-            {/* Empty filtered */}
             {!isFetching && filtered.length === 0 && library.length > 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-cortex-text-muted">
                     <Search className="w-8 h-8 mb-2 opacity-20" />
@@ -306,7 +286,6 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                 </div>
             )}
 
-            {/* Env Config Modal */}
             {envModalEntry && (
                 <EnvConfigModal
                     entry={envModalEntry}
