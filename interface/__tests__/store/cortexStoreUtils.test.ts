@@ -119,6 +119,10 @@ describe('cortexStoreUtils', () => {
             risk_level: 'medium',
             confirm_token: 'ct-1',
             intent_proof_id: 'ip-1',
+            task_cadence: 'scheduled',
+            schedule_summary: 'Every weekday at 9 AM.',
+            bus_scope: 'multi_team',
+            nats_subjects: ['swarm.team.a.signal.status', 'swarm.team.b.signal.result'],
             team_expressions: [
                 {
                     team_id: 'admin-core',
@@ -136,6 +140,10 @@ describe('cortexStoreUtils', () => {
         expect(proposal?.teams).toBe(1);
         expect(proposal?.agents).toBe(2);
         expect(proposal?.tools).toEqual(['delegate_task', 'mcp:github/create_issue']);
+        expect(proposal?.task_cadence).toBe('scheduled');
+        expect(proposal?.schedule_summary).toBe('Every weekday at 9 AM.');
+        expect(proposal?.bus_scope).toBe('multi_team');
+        expect(proposal?.nats_subjects).toEqual(['swarm.team.a.signal.status', 'swarm.team.b.signal.result']);
         expect(proposal?.team_expressions?.[0].module_bindings?.[0]).toMatchObject({
             module_id: 'delegate_task',
             adapter_kind: 'internal',

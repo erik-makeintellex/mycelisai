@@ -1,0 +1,33 @@
+homepage:
+  enabled: true
+  brand:
+    product_name: "Mycelis"
+    tagline: "Soma-centered AI organization orchestration"
+    logo_url: ""
+  hero:
+    headline: "Operate AI Organizations through Soma"
+    subheadline: "Express intent once. Soma coordinates teams, tools, reviews, and governed execution behind the scenes."
+    primary_cta:
+      label: "Start with Soma"
+      href: "/dashboard"
+    secondary_cta:
+      label: "View Documentation"
+      href: "/docs"
+  sections:
+    - title: "Express intent"
+      body: "Describe what you want to accomplish in plain language."
+    - title: "Soma coordinates"
+      body: "Soma turns intent into structured work across teams, tools, memory, and reviews."
+    - title: "Governed execution"
+      body: "Approvals, audit records, and capability boundaries keep actions controlled."
+  links:
+    - label: "Documentation"
+      href: "/docs"
+      description: "Read setup and architecture guidance."
+    - label: "Resources and MCP"
+      href: "/resources"
+      description: "Review connected tools and runtime capabilities."
+    - label: "Activity and Audit"
+      href: "/activity"
+      description: "Inspect system activity and governed execution."
+  footer_text: "Self-hosted AI Organization orchestration with Soma."

@@ -163,8 +163,8 @@ describe('MissionControlChat UI states', () => {
         await settleMissionControlChat();
 
         expect(screen.getByRole('button', { name: 'Plan the next move for Marketing' })).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: 'Summarize Marketing in one sentence' }));
-        expect(screen.getByDisplayValue('Summarize Marketing in one sentence')).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: 'Review the current state of Marketing' }));
+        expect(screen.getByDisplayValue('Review the current state of Marketing')).toBeDefined();
     });
 
     it('shows broadcast directive text in broadcast mode', async () => {

@@ -250,6 +250,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	// Phase 5.2: Telemetry & Trust Economy
 	mux.HandleFunc("GET /api/v1/telemetry/compute", s.HandleTelemetry)
 	mux.HandleFunc("/api/v1/trust/threshold", s.HandleTrustThreshold)
+	mux.HandleFunc("GET /api/v1/homepage", s.HandleHomepageConfig)
 
 	// Phase 5.3: RAG Memory & Sensory
 	mux.HandleFunc("GET /api/v1/memory/search", s.HandleMemorySearch)
@@ -286,7 +287,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/mcp/library/install", s.handleMCPLibraryInstall)
 	mux.HandleFunc("POST /api/v1/mcp/library/apply", s.handleMCPLibraryApply)
 
-	// Phase 7.7: Governance Policy API
 	mux.HandleFunc("GET /api/v1/governance/policy", s.handleGetPolicy)
 	mux.HandleFunc("PUT /api/v1/governance/policy", s.handleUpdatePolicy)
 	mux.HandleFunc("GET /api/v1/governance/pending", s.handleGetPendingApprovals)

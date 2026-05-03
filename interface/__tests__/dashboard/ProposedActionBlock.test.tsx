@@ -143,6 +143,25 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByRole('button', { name: /approve & execute/i })).toBeDefined();
     });
 
+    it('shows scheduled or long-running task posture and bus scope before approval', () => {
+        render(<ProposedActionBlock message={buildMessage({
+            proposal: {
+                ...buildMessage().proposal!,
+                task_cadence: 'continuous',
+                schedule_summary: 'Watch the incident channel every 5 minutes.',
+                bus_scope: 'current_team',
+                nats_subjects: ['swarm.team.ops.signal.status'],
+            },
+        })} />);
+
+        expect(screen.getByText(/task lifecycle/i)).toBeDefined();
+        expect(screen.getByText(/keep running/i)).toBeDefined();
+        expect(screen.getByText(/watch the incident channel every 5 minutes/i)).toBeDefined();
+        expect(screen.getByText(/team \/ nats connection/i)).toBeDefined();
+        expect(screen.getByText(/current team bus/i)).toBeDefined();
+        expect(screen.getByText('swarm.team.ops.signal.status')).toBeDefined();
+    });
+
     it('shows auto-approved execution posture for low-risk actions and keeps raw reasons in details', () => {
         render(<ProposedActionBlock message={buildMessage({
             proposal: {

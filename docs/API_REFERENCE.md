@@ -44,6 +44,7 @@
 | `/api/v1/telemetry/compute` | GET | Goroutines, heap, system memory, LLM tokens/sec |
 | `/api/v1/trust/threshold` | GET/PUT | Read/write autonomy threshold |
 | `/api/v1/sensors` | GET | Sensor library (static + dynamic) |
+| `/api/v1/homepage` | GET | Return the sanitized deployer-editable homepage template from `core/config/homepage.yaml` or `MYCELIS_HOMEPAGE_CONFIG_PATH`, falling back to Soma orchestration defaults when missing or invalid |
 | **Memory & Search** | | |
 | `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters across Soma-personal, team-shared, and governed memory lanes |
 | `/api/v1/search/status` | GET | Current Mycelis Search provider posture for UI/Soma capability answers, including provider, configured/enabled flags, direct `web_search` support, token requirements, and blocker/next-action copy |

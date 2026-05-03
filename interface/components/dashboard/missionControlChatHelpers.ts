@@ -6,6 +6,7 @@ import {
     FileText,
     Image as ImageIcon,
     Music,
+    Video,
 } from "lucide-react";
 import type {
     ChatArtifactRef,
@@ -29,11 +30,15 @@ export const COUNCIL_META: Record<string, { label: string; color: string }> = {
 
 export const STARTER_PROMPTS = [
     "Search the web for current product news and cite sources",
+    "Create or review media output and show it in chat",
+    "Schedule this as a recurring review after I approve",
+    "Keep a monitor running and summarize changes here",
+    "Connect this task to the current team's NATS lane if configured",
     "Propose a small temporary team and ask me to approve",
-    "Review my request, match prior context, then ask me to confirm",
     "Review private/service boundaries before taking action",
     "Ask the active teams for blockers and summarize",
     "Use host data from workspace/shared-sources",
+    "Review my request, match prior context, then ask me to confirm",
 ] as const;
 
 const ASK_CLASS_BADGES: Record<string, { label: string; tone: string }> = {
@@ -57,6 +62,8 @@ export function artifactIcon(type: string) {
             return ImageIcon;
         case "audio":
             return Music;
+        case "video":
+            return Video;
         case "data":
             return Database;
         case "chart":

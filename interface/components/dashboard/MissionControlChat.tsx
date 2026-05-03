@@ -10,23 +10,17 @@ import {
     User,
     Trash2,
     Megaphone,
-    Code,
-    Image as ImageIcon,
-    Music,
-    BarChart3,
     ExternalLink,
-    Copy,
-    Check,
     AlertTriangle,
     Brain,
     Globe,
     Eye,
     Zap,
 } from "lucide-react";
-import { useCortexStore, type ChatMessage, type ChatArtifactRef, type ChatConsultation } from "@/store/useCortexStore";
-import { ChartRenderer, type MycelisChartSpec } from "@/components/charts";
+import { useCortexStore, type ChatMessage, type ChatConsultation } from "@/store/useCortexStore";
 import ProposedActionBlock from "./ProposedActionBlock";
 import OrchestrationInspector from "./OrchestrationInspector";
+import InlineArtifact from "./InlineArtifact";
 import {
     sourceNodeLabel,
     trustBadge,
@@ -40,301 +34,14 @@ import {
 } from "@/lib/labels";
 import CouncilCallErrorCard from "./CouncilCallErrorCard";
 import {
-    artifactDownloadHref,
-    artifactIcon,
     artifactResultSummary,
     askClassBadge,
-    binaryArtifactLabel,
     consultationResultSummary,
     COUNCIL_META,
     STARTER_PROMPTS,
     toolToActivity,
     trustColor,
 } from "./missionControlChatHelpers";
-
-// ── Copy Button ──────────────────────────────────────────────
-
-function CopyButton({ text }: { text: string }) {
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-    };
-
-    return (
-        <button
-            onClick={handleCopy}
-            className="p-1 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main transition-colors"
-            title="Copy"
-        >
-            {copied ? <Check className="w-3 h-3 text-cortex-success" /> : <Copy className="w-3 h-3" />}
-        </button>
-    );
-}
-
-// ── Inline Artifact Card ─────────────────────────────────────
-
-function InlineArtifact({ artifact }: { artifact: ChatArtifactRef }) {
-    const [expanded, setExpanded] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [savedPath, setSavedPath] = useState(artifact.saved_path || "");
-    const [saveError, setSaveError] = useState("");
-    const Icon = artifactIcon(artifact.type);
-    const isCachedImage = artifact.type === "image" && (artifact.cached || !!artifact.expires_at);
-    const downloadHref = artifactDownloadHref(artifact);
-
-    const handleSave = async () => {
-        if (!artifact.id || saving) return;
-        setSaving(true);
-        setSaveError("");
-        try {
-            const res = await fetch(`/api/v1/artifacts/${encodeURIComponent(artifact.id)}/save`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ folder: "saved-media" }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data?.error || `HTTP ${res.status}`);
-            }
-            setSavedPath(data?.file_path || "saved-media");
-        } catch (err: any) {
-            setSaveError(err?.message || "save failed");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // Chart rendering
-    if (artifact.type === "chart" && artifact.content) {
-        try {
-            const spec = JSON.parse(artifact.content) as MycelisChartSpec;
-            if (spec.chart_type && spec.data) {
-                return (
-                    <div className="mt-2 border border-cortex-border rounded-lg overflow-hidden bg-cortex-bg">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-cortex-surface/50 border-b border-cortex-border">
-                            <BarChart3 className="w-3 h-3 text-cortex-primary" />
-                            <span className="text-[10px] font-mono font-bold text-cortex-text-main flex-1 truncate">
-                                {artifact.title}
-                            </span>
-                        </div>
-                        <div className="p-2" style={{ maxHeight: 280 }}>
-                            <ChartRenderer spec={spec} />
-                        </div>
-                    </div>
-                );
-            }
-        } catch {
-            /* fall through to generic card */
-        }
-    }
-
-    // Image rendering
-    if (artifact.type === "image") {
-        const src = artifact.url || (artifact.content_type?.startsWith("image/") && artifact.content
-            ? `data:${artifact.content_type};base64,${artifact.content}`
-            : null);
-
-        return (
-            <div className="mt-2 border border-cortex-border rounded-lg overflow-hidden bg-cortex-bg">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-cortex-surface/50 border-b border-cortex-border">
-                    <ImageIcon className="w-3 h-3 text-cortex-primary" />
-                    <span className="text-[10px] font-mono font-bold text-cortex-text-main flex-1 truncate">
-                        {artifact.title}
-                    </span>
-                    {isCachedImage && !savedPath && (
-                        <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border bg-cortex-warning/10 text-cortex-warning border-cortex-warning/30">
-                            cached (1h)
-                        </span>
-                    )}
-                    {savedPath && (
-                        <span className="text-[8px] font-mono px-1.5 py-0.5 rounded border bg-cortex-success/10 text-cortex-success border-cortex-success/30">
-                            saved
-                        </span>
-                    )}
-                    {artifact.id && !savedPath && (
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="text-[8px] font-mono px-1.5 py-0.5 rounded border bg-cortex-primary/10 text-cortex-primary border-cortex-primary/30 hover:bg-cortex-primary/20 disabled:opacity-60"
-                            title="Save image to workspace/saved-media"
-                        >
-                            {saving ? "Saving..." : "Save"}
-                        </button>
-                    )}
-                    {artifact.url && (
-                        <a href={artifact.url} target="_blank" rel="noopener noreferrer"
-                           className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors">
-                            <ExternalLink className="w-3 h-3" />
-                        </a>
-                    )}
-                </div>
-                {src ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={src} alt={artifact.title} className="w-full max-h-80 object-contain bg-cortex-bg p-2" />
-                ) : (
-                    <div className="flex items-center justify-center h-32 text-cortex-text-muted/40">
-                        <ImageIcon className="w-8 h-8" />
-                    </div>
-                )}
-                {(savedPath || saveError) && (
-                    <div className="px-3 py-1.5 border-t border-cortex-border/60 text-[9px] font-mono">
-                        {savedPath ? (
-                            <span className="text-cortex-success">
-                                Saved to:{" "}
-                                {downloadHref ? (
-                                    <a
-                                        href={downloadHref}
-                                        download
-                                        className="underline underline-offset-2 hover:text-cortex-success/80"
-                                    >
-                                        {savedPath}
-                                    </a>
-                                ) : (
-                                    savedPath
-                                )}
-                            </span>
-                        ) : (
-                            <span className="text-cortex-danger">Save failed: {saveError}</span>
-                        )}
-                    </div>
-                )}
-            </div>
-        );
-    }
-
-    // Code rendering
-    if (artifact.type === "code" && artifact.content) {
-        return (
-            <div className="mt-2 border border-cortex-border rounded-lg overflow-hidden bg-cortex-bg">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-cortex-surface/50 border-b border-cortex-border">
-                    <Code className="w-3 h-3 text-cortex-primary" />
-                    <span className="text-[10px] font-mono font-bold text-cortex-text-main flex-1 truncate">
-                        {artifact.title}
-                    </span>
-                    {artifact.content_type && (
-                        <span className="text-[8px] font-mono text-cortex-text-muted bg-cortex-bg px-1.5 py-0.5 rounded">
-                            {artifact.content_type.replace("text/", "").replace("application/", "")}
-                        </span>
-                    )}
-                    <CopyButton text={artifact.content} />
-                </div>
-                <pre className="p-3 overflow-x-auto text-[11px] font-mono text-cortex-text-main leading-relaxed max-h-64 overflow-y-auto">
-                    {artifact.content}
-                </pre>
-            </div>
-        );
-    }
-
-    // Audio rendering
-    if (artifact.type === "audio" && artifact.url) {
-        return (
-            <div className="mt-2 border border-cortex-border rounded-lg overflow-hidden bg-cortex-bg">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-cortex-surface/50 border-b border-cortex-border">
-                    <Music className="w-3 h-3 text-cortex-primary" />
-                    <span className="text-[10px] font-mono font-bold text-cortex-text-main flex-1 truncate">
-                        {artifact.title}
-                    </span>
-                </div>
-                <div className="p-3">
-                    <audio controls className="w-full" src={artifact.url}>
-                        Your browser does not support the audio element.
-                    </audio>
-                </div>
-            </div>
-        );
-    }
-
-    // Data / JSON rendering
-    if ((artifact.type === "data" || artifact.type === "document") && artifact.content) {
-        let displayContent = artifact.content;
-        if (artifact.content_type?.includes("json")) {
-            try {
-                displayContent = JSON.stringify(JSON.parse(artifact.content), null, 2);
-            } catch { /* keep raw */ }
-        }
-
-        return (
-            <div className="mt-2 border border-cortex-border rounded-lg overflow-hidden bg-cortex-bg">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-cortex-surface/50 border-b border-cortex-border">
-                    <Icon className="w-3 h-3 text-cortex-primary" />
-                    <span className="text-[10px] font-mono font-bold text-cortex-text-main flex-1 truncate">
-                        {artifact.title}
-                    </span>
-                    <CopyButton text={displayContent} />
-                    <button
-                        onClick={() => setExpanded(!expanded)}
-                        className="text-[8px] font-mono text-cortex-primary hover:text-cortex-primary/80 transition-colors"
-                    >
-                        {expanded ? "collapse" : "expand"}
-                    </button>
-                </div>
-                <pre className={`p-3 overflow-x-auto text-[11px] font-mono text-cortex-text-main leading-relaxed overflow-y-auto ${expanded ? "max-h-96" : "max-h-32"}`}>
-                    {displayContent}
-                </pre>
-            </div>
-        );
-    }
-
-    // Generic file reference (no inline content)
-    return (
-        <div className="mt-2 border border-cortex-border rounded-lg bg-cortex-bg">
-            <div className="flex items-center gap-2 px-3 py-2">
-                <Icon className="w-3.5 h-3.5 text-cortex-primary" />
-                <span className="text-[10px] font-mono font-bold text-cortex-text-main flex-1 truncate">
-                    {artifact.title}
-                </span>
-                <span className="text-[8px] font-mono text-cortex-text-muted uppercase">
-                    {artifact.type}
-                </span>
-                {downloadHref && (
-                    <a href={downloadHref} download target="_blank" rel="noopener noreferrer"
-                       className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors"
-                       title={`Download ${binaryArtifactLabel(artifact)}`}>
-                        <ExternalLink className="w-3 h-3" />
-                    </a>
-                )}
-            </div>
-            {(artifact.saved_path || downloadHref) && (
-                <div className="border-t border-cortex-border/60 px-3 py-2 text-[9px] font-mono">
-                    {artifact.saved_path ? (
-                        <span className="text-cortex-success">
-                            Saved object:{" "}
-                            {downloadHref ? (
-                                <a
-                                    href={downloadHref}
-                                    download
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="underline underline-offset-2 hover:text-cortex-success/80"
-                                >
-                                    {artifact.saved_path}
-                                </a>
-                            ) : (
-                                artifact.saved_path
-                            )}
-                        </span>
-                    ) : (
-                        <span className="text-cortex-text-muted">
-                            Download artifact:{" "}
-                            <a
-                                href={downloadHref ?? "#"}
-                                download
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="underline underline-offset-2 hover:text-cortex-primary"
-                            >
-                                {binaryArtifactLabel(artifact)}
-                            </a>
-                        </span>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
 
 // ── Markdown Renderer ────────────────────────────────────────
 
@@ -894,8 +601,9 @@ export default function MissionControlChat({
         ? [
             `Plan the next move for ${currentTeam.name}`,
             `Review the current state of ${currentTeam.name}`,
+            `Schedule a recurring check for ${currentTeam.name}`,
+            `Keep monitoring ${currentTeam.name} and report changes`,
             `Run a governed change for ${currentTeam.name}`,
-            `Summarize ${currentTeam.name} in one sentence`,
         ]
         : [...STARTER_PROMPTS];
 

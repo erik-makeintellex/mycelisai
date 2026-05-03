@@ -76,7 +76,7 @@ Promoted Kubernetes preset files:
 
 ## Configuration Reference
 
-All configuration lives in **three places** — the `.env` file, `cognitive.yaml`, and team YAML files.
+Runtime configuration is split across `.env`, `core/config/cognitive.yaml`, `core/config/homepage.yaml`, policy/team/bootstrap YAML, and chart values; keep secrets in `.env` only, and customize the portal with fields such as `homepage.hero.headline`, `homepage.links`, and `homepage.footer_text`.
 
 ### `.env` (Project Root)
 

@@ -4,10 +4,7 @@ import React from "react";
 import { Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Clock3, XCircle } from "lucide-react";
 import { useCortexStore, type ChatMessage, type ProposalData } from "@/store/useCortexStore";
 import { brainBadge, toolLabel, sourceNodeLabel } from "@/lib/labels";
-
-interface Props {
-    message: ChatMessage;
-}
+import ProposalRunIntent from "./ProposalRunIntent";
 
 function humanizeLabel(value: string): string {
     const normalized = value.replace(/[_-]+/g, " ").trim();
@@ -68,7 +65,7 @@ function explainApprovalPosture(proposal: ProposalData, approvalRequired: boolea
     return "This action is within current policy thresholds and can run without a mandatory approval.";
 }
 
-export default function ProposedActionBlock({ message }: Props) {
+export default function ProposedActionBlock({ message }: { message: ChatMessage }) {
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
     const assistantName = useCortexStore((s) => s.assistantName);
@@ -151,6 +148,8 @@ export default function ProposedActionBlock({ message }: Props) {
                     <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Soma wants to</div>
                     <p className="text-sm leading-6 text-cortex-text-main">{operatorSummary}</p>
                 </div>
+
+                <ProposalRunIntent proposal={proposal} />
 
                 <div className="grid gap-3 md:grid-cols-2">
                     <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">

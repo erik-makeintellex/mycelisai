@@ -54,6 +54,9 @@ export interface TeamExpressionData {
     module_bindings?: ModuleBindingData[];
 }
 
+export type TaskCadence = 'run_once' | 'scheduled' | 'continuous' | 'event_driven';
+export type BusScope = 'none' | 'current_team' | 'multi_team' | 'global';
+
 export interface ProposalData {
     intent: string;
     operator_summary?: string;
@@ -73,6 +76,11 @@ export interface ProposalData {
     external_data_use?: boolean;
     estimated_cost?: number;
     team_expressions?: TeamExpressionData[];
+    task_cadence?: TaskCadence;
+    schedule_summary?: string;
+    runtime_posture?: string;
+    bus_scope?: BusScope;
+    nats_subjects?: string[];
 }
 
 export interface ConfirmProposalResult {
@@ -153,6 +161,11 @@ export interface CTSChatEnvelope {
                     operation?: string;
                 }[];
             }[];
+            task_cadence?: TaskCadence;
+            schedule_summary?: string;
+            runtime_posture?: string;
+            bus_scope?: BusScope;
+            nats_subjects?: string[];
         };
     };
 }

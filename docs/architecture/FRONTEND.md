@@ -45,6 +45,7 @@ Release-candidate MVP note:
 Implementation note:
 - governed approval review is store-driven through `GovernanceModal.tsx` in advanced workspace contexts, not a legacy shell side rail
 - stream/telemetry surfaces are route-local, with `NatsWaterfall.tsx` and `SignalDetailDrawer.tsx` carrying the active advanced inspection path
+- Soma chat renders returned artifacts inline, including images, audio, video, charts, code, and documents; governed proposals surface whether work is one-shot, scheduled, continuous, event-driven, and whether it connects to current-team or multi-team NATS lanes
 
 ---
 

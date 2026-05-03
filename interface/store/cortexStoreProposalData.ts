@@ -52,6 +52,18 @@ function normalizeTeamExpressions(raw: unknown): TeamExpressionData[] {
     return expressions;
 }
 
+function normalizeStringArray(raw: unknown): string[] | undefined {
+    if (!Array.isArray(raw)) return undefined;
+    const values = uniqueStrings(raw.filter((value): value is string => typeof value === 'string'));
+    return values.length > 0 ? values : undefined;
+}
+
+function pickString(rec: Record<string, unknown>, snake: string, camel: string): string | undefined {
+    const value = typeof rec[snake] === 'string' ? rec[snake] : typeof rec[camel] === 'string' ? rec[camel] : '';
+    const trimmed = value.trim();
+    return trimmed || undefined;
+}
+
 export function normalizeProposalData(raw: unknown): ProposalData | undefined {
     if (!raw || typeof raw !== 'object') return undefined;
     const rec = raw as Record<string, unknown>;
@@ -83,5 +95,10 @@ export function normalizeProposalData(raw: unknown): ProposalData | undefined {
         external_data_use: typeof approval?.external_data_use === 'boolean' ? Boolean(approval.external_data_use) : undefined,
         estimated_cost: typeof approval?.estimated_cost === 'number' ? Number(approval.estimated_cost) : undefined,
         team_expressions: teamExpressions.length > 0 ? teamExpressions : undefined,
+        task_cadence: pickString(rec, 'task_cadence', 'taskCadence') as ProposalData['task_cadence'],
+        schedule_summary: pickString(rec, 'schedule_summary', 'scheduleSummary'),
+        runtime_posture: pickString(rec, 'runtime_posture', 'runtimePosture'),
+        bus_scope: pickString(rec, 'bus_scope', 'busScope') as ProposalData['bus_scope'],
+        nats_subjects: normalizeStringArray(rec.nats_subjects ?? rec.natsSubjects),
     };
 }

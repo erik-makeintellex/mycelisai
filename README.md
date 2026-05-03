@@ -90,7 +90,7 @@ Bootstrap reminder:
 - always translate V7 YAML, runtime config, DB seeding, and operator wizard flows through that model before they touch a live organization
 - `Template ≠ instantiated organization`, so only instantiated orgs enter bootstrap resolution while templates stay reusable blueprints
 - startup truth is bundle-driven and fail-closed: normal startup fails closed unless a valid bootstrap bundle is present, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must select a bundle whenever more than one is mounted
-- the deployed Core image resolves runtime config from `/core/config`, and the Helm chart mounts the config volume there so bootstrap bundles, cognitive defaults, and policy files line up with the container workdir
+- the deployed Core image resolves runtime config from `/core/config`, and the Helm chart mounts the config volume there so bootstrap bundles, cognitive defaults, homepage templates, and policy files line up with the container workdir
 
 Tasking note:
 - `uv run inv db.migrate` is a forward-bootstrap task for schemas that are not yet compatible with the current runtime; if the `cortex` schema already has the required runtime tables and columns, it skips replay and points operators to `uv run inv db.reset` for a clean rebuild
@@ -109,6 +109,7 @@ Tasking note:
 - `uv run inv ci.release-preflight --runtime-posture` now adds a tighter runtime gate before baseline proof: 12 GiB disk headroom, explicit AI-endpoint discovery from process env plus `.env.compose` / `.env`, fail-closed behavior when no supported non-loopback endpoint contract is configured, and WSL-host probe mirroring for `host.docker.internal` so the Windows-local Ollama contract can still be verified before the Compose relay starts
 - `uv run inv quality.max-lines` now enforces the source-tree `300` LOC no-regression contract by default; existing oversized files are tracked in `ops/quality_legacy_caps.txt`, stale caps fail the gate, and cap values should only move downward as modules are split.
 - live Playwright proof that asserts filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the browser tests run from a different worktree than the live Core backend; use the backend's actual workspace root, for example `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack
+- deployer-editable homepage framing lives in `core/config/homepage.yaml` or `MYCELIS_HOMEPAGE_CONFIG_PATH`; Core serves only sanitized copy/link fields through `/api/v1/homepage`, and Helm mounts the same template through the chart ConfigMap for self-hosted and enterprise branded portals.
 - workspace-relative file/tool requests may use `workspace/...` as a readable alias for the configured workspace root; runtime normalization strips that leading alias instead of nesting a second `workspace` directory under `MYCELIS_WORKSPACE`
 - the supported home-runtime Docker Compose path uses `.env.compose`, not `.env`; use `MYCELIS_COMPOSE_OLLAMA_HOST` there so host-level `OLLAMA_HOST` settings cannot leak into the container runtime, point it at a host-reachable endpoint such as `http://host.docker.internal:11434`, and let Compose map that value into the provider-specific runtime overrides inside Core
 - the supported Core container image includes Node/npm/npx for curated stdio MCP servers; default MCP auto-bootstrap still stays disabled in Compose, but a manual `filesystem` library install must be able to launch and bind to the configured `/data/workspace` output block
@@ -202,7 +203,7 @@ Included in the V8.1 compatibility baseline:
 - AI Organization creation and Soma-primary workspace flow
 - a primary Soma conversation surface for discussing plans, samples, and delivery intent
 - startup and runtime checks that keep Soma bound to an available AI Engine or surface explicit setup guidance before generic interaction failures
-- conversation outputs from Soma may include media and rich artifacts generated directly by Soma or returned from consulted specialists
+- conversation outputs from Soma may include playable imagery, audio, video, and rich artifacts generated directly by Soma or returned from consulted specialists
 - a managed exchange foundation for governed channels, threads, schemas, and normalized outputs beyond single-model request/response
 - foundational managed exchange security for channel visibility, thread participation, artifact sensitivity, capability risk classes, and trust-classified external outputs
 - guided first-run Soma actions that help a new operator choose a visible next step quickly
@@ -244,13 +245,12 @@ Current operator experience summary:
 - a new operator lands on "What do you want Soma to do?", and Soma remains the default workspace route with simple Plan, Research, Create, Review, and Configure tools intent cards
 - the default AI Organization workspace now includes one primary Soma interaction surface with mode switching inside the same panel instead of parallel front doors
 - the default Soma conversation hides raw broadcast and direct-council routing controls until Advanced mode is intentionally opened
-- that same Soma conversation surface is also the canonical operator output lane for imagery, briefs, charts, code, and other rich artifacts, even when specialist or council paths generated them on Soma's behalf
+- that same Soma conversation surface is also the canonical operator output lane for playable media, briefs, charts, code, scheduled/continuous task proposals, and other rich artifacts, even when specialist or council paths generated them on Soma's behalf
 - team design now lives as a guided Soma mode inside that same workspace so the operator can stay in one continuous interaction context
-- team design defaults to small focused teams; broad asks should be split into several compact lanes or teams orchestrated by Soma with Council help over NATS and managed exchange rather than turning into one giant roster
+- team design defaults to small focused teams; broad asks should split into compact lanes orchestrated by Soma with Council help over NATS and managed exchange, including current-team or multi-team agentry wiring when configured
 - advanced Resources support now includes an inspect-only Managed Exchange surface for channels, active threads, and recent normalized outputs
 - advanced Resources now also includes Deployment Context intake so operators can upload/paste private user records, customer context, approved company knowledge, and admin-shaped Soma guidance into governed pgvector stores with explicit trust, sensitivity, visibility, and target-goal posture
 - Soma always presents guided starting actions instead of a dead-end blank state
-- `Start with Soma` works immediately, even before the operator types a custom request
 - Groups, Activity/Runs, Resources/MCP, Memory, System, audit-style review, and deeper settings stay advanced/admin support surfaces rather than first-level concepts for new users
 - Team Leads remain visible as the operational leaders Soma works through
 - a visible `Soma just did this` strip now ties the last action to engaged teams, generated outputs, and updated support panels
