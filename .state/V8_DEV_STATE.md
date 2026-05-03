@@ -68,6 +68,7 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
 - `IN_REVIEW` the current team source-hygiene wave retired medium backend caps for artifacts service/tests, MCP service/tests, exchange publish-security enrichment, run-manager tests, brain CRUD helpers, and action-governance helpers; all new helper modules remain under 300 lines and integrated evidence is green for the repo-wide line gate, touched Go packages, and whitespace checks.
 - `IN_REVIEW` the next backend source-hygiene wave retired caps for admin routing/intent helpers, mission commit/detail helpers, MCP activity/library handlers, exchange listing/search helpers, identity settings/team detail handlers, inception mutation tests, and trigger store query/execution helpers; the repo-wide line gate, touched Go package tests, and whitespace checks are green.
 - `IN_REVIEW` the follow-on backend cleanup wave retired caps for conversation store tests, deployment context service helpers, memory service/archivist helpers, server trigger route tests, and trigger store tests; the touched package tests, repo-wide line gate, and whitespace checks are green.
+- `IN_REVIEW` the latest backend test/CLI hygiene wave retired caps for the Action CLI, inception store tests, reactive engine tests, server artifact tests, and mission tests; focused Go validation, repo-wide line gate, and whitespace checks are green.
 
 ## Layered Architecture Truth
 

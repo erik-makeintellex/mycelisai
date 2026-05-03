@@ -7,21 +7,16 @@
 # - Remove the cap entry once a file reaches 300 lines or less.
 
 charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=570
-core/cmd/server/action_cli.go=396
 core/config/mcp-library.yaml=342
 core/config/templates/v8-migration-standing-team-bridge.yaml=570
 core/internal/cognitive/router.go=540
-core/internal/inception/store_test.go=543
 core/internal/memory/archivist_test.go=356
-core/internal/reactive/engine_test.go=632
-core/internal/server/artifacts_test.go=499
 core/internal/server/cognitive_test.go=1592
 core/internal/server/cognitive.go=2109
 core/internal/server/deployment_context_test.go=529
 core/internal/server/groups_test.go=596
 core/internal/server/groups.go=931
 core/internal/server/mcp_test.go=567
-core/internal/server/mission_test.go=429
 core/internal/server/organizations_test.go=1809
 core/internal/server/organizations.go=2689
 core/internal/server/provider_crud_test.go=1508
