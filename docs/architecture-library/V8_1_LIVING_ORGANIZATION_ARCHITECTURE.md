@@ -1,547 +1,181 @@
 # V8.1 Living Organization Architecture
-> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
+> Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
-> Status: Canonical V8.1 foundation and compatibility baseline
-> Last Updated: 2026-03-21
-> Purpose: Define the V8.1 Soma-primary baseline architecture for persistent execution, bounded automation, semantic continuity, learning promotion, and reproducible specialist behavior.
-> Depends On: `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
+Status: V8.1 compatibility baseline.
 
-This is the V8.1 foundation and compatibility baseline.
+This is the V8.1 foundation and compatibility baseline. The active V8.2/B2+ delivery frame, canonical full production architecture, and full actuation target live in `architecture/v8-2.md`.
 
-Use this document when checking the default Soma-primary operator surface and baseline architecture.
-Use `../../architecture/v8-2.md` for the active V8.2/B2+ delivery frame, canonical full production architecture, and full actuation target.
-Not every V8.2/B2+ production target is implemented or promoted into the default operator surface yet.
+This file protects the V8.1 Soma-primary foundation. Detail that used to make this file oversized now lives in [V8 Living Organization Baseline Details](V8_LIVING_ORGANIZATION_BASELINE_DETAILS.md).
 
-## 1. Why V8.1 exists
+Depends on:
+- [V8 Runtime Contracts](V8_RUNTIME_CONTRACTS.md)
+- [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+- [V8 UI/API and Operator Experience Contract](V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
 
-V8 established the AI Organization, Soma-primary workspace, bundle-driven startup truth, and bounded operator settings.
+## 1. Purpose
 
-V8.1 extends that work from a structured interactive system into a living, persistent, policy-bounded intelligence runtime.
+V8.1 defines the compatibility baseline for AI Organizations, Soma, council/advisor support, teams/departments/specialists, continuity, capabilities, and bounded automations.
 
-V8.1 introduces:
-- Loop Profiles as the bounded execution layer
-- Runtime Capabilities as the bounded action layer
-- Response Contract as a first-class inheritance contract
-- Agent Type Profiles as a first-class runtime layer between Team defaults and Agent instances
-- Learning Loops as the bounded candidate-capture and promotion-review layer
-- Memory Promotion and Semantic Continuity as the pgvector-backed recall substrate
-- Procedure / Skill Sets as reviewed specialist memory bound to Agent Type Profiles
+Do not add new V8.2/B2+ target scope here. Use [V8.2 Production Architecture Target](../../architecture/v8-2.md) for active expansion.
 
-This enables:
-- continuous but governed operation
-- event-driven workflows
-- safe automation
-- reproducible specialist behavior
-- policy-bounded learning continuity without silent self-rewrite
+## 2. Core Product Model
 
-V8.1 operator posture:
-- Soma is the primary user-facing interface and orchestrator
-- Team Leads remain visible as the operational leaders Soma works through
-- the default workspace stays simple and user-facing even when deeper architecture remains structured beneath it
-
-## 2. Product goals
-
-### 2.1 Primary goal
-
-Enable AI Organizations to:
-- operate continuously
-- react to events
-- supervise internal and external processes
-- maintain deterministic behavior through policy and inheritance
-
-### 2.2 Secondary goals
-
-- maintain strict Soma-primary UX discipline
-- avoid unbounded multi-agent chaos
-- ensure safe extensibility for future hardware and tool integration
-- preserve bundle-driven reproducibility as runtime truth
-
-## 3. Non-goals for V8.1
-
-- no full autonomy loops or runaway agents
-- no unrestricted tool execution
-- no agent-instance editing UI
-- no broad advanced config panels
-- no multi-organization federation
-
-## 4. Runtime architecture update
+The baseline product model is:
 
 ```text
-Inception
-  -> Soma Kernel
-  -> Central Council
-  -> Specialist Teams
-    -> Agent Type Profiles
-      -> Procedure / Skill Sets
-      -> Agent Instances
-  -> Loop Profiles
-    -> Review Loops
-    -> Learning Loops
-  -> Runs
-  -> Events
-  -> Memory
-    -> Semantic Continuity
-  -> Reflection
+AI Organization
+  -> Soma
+  -> advisors / council support
+  -> team leads / departments / specialists
+  -> governed execution, memory, activity, retained outputs
 ```
 
-V8.1 does not replace V8.
+## 3. AI Organization
 
-It promotes the execution and inheritance layers that must exist before deeper automation or agent-instance override work can safely ship.
+An AI Organization is the live work context. It carries identity, purpose, configuration posture, continuity, and governed execution state.
 
-## 5. Architecture layers
+## 4. Soma
+
+Soma is the primary counterpart. Soma answers directly when safe, proposes protected actions, routes to teams/specialists when needed, and keeps work reviewable.
+
+## 5. Living Organization Runtime Contracts
+
+The V8.1 baseline includes:
+- loop profiles
+- runtime capabilities
+- response contract inheritance
+- agent type profiles
+- learning loops and semantic continuity
+- procedure/skill sets
+- managed exchange foundation
+
+Loop Profiles as the bounded execution layer. Runtime Capabilities as the bounded action layer. Learning Loops as the bounded candidate-capture and promotion-review layer. Memory Promotion and Semantic Continuity as the pgvector-backed recall substrate. Procedure / Skill Sets as reviewed specialist memory bound to Agent Type Profiles.
 
 ### 5.1 Loop Profiles
 
-#### Definition
-
-A Loop Profile defines persistent execution behavior inside an AI Organization.
-
-Loop Profiles are configuration and policy objects first. The first shippable V8.1 state may expose them before live execution is enabled.
-
-#### Required loop types
-
-- Scheduled Loop
-  - trigger: cron or interval
-  - example: daily report
-- Event Loop
-  - trigger: event bus such as NATS
-  - example: API callback or system event
-- Review Loop
-  - trigger: completion of another process
-  - example: QA reviewing outputs
-- Learning Loop
-  - trigger: review completion, event, or schedule
-  - example: candidate capture, reviewed promotion, procedure-memory update
-  - posture: bounded review and promotion only, never silent self-rewrite
-- Actuation Loop
-  - trigger: schedule or event
-  - example: hardware or system action
-  - posture: restricted and policy-gated
-
-#### Initial schema contract
-
-```yaml
-id: string
-name: string
-type: scheduled | event | review | learning | actuation
-
-owner:
-  type: team | agent_type
-  id: string
-
-trigger:
-  schedule: optional cron
-  interval_seconds: optional integer
-  event_subject: optional string
-
-inputs:
-  sources: [events | memory | external]
-
-actions:
-  allowed_capabilities: []
-
-policy:
-  requires_approval: boolean
-  audit_required: boolean
-
-state:
-  persistence: short | long
-  memory_stage: raw | reviewed | promoted
-```
-
-#### Required rules
-
-- loops never bypass policy
-- loops never imply capabilities
-- actuation loops always require stronger gating than passive review loops
-- loops must remain auditable even when not yet executable
-- Learning Loops capture candidates, route them through review and promotion, and never silently rewrite memory or specialist behavior
-- Learning Loops follow a no silent self-rewrite rule even when they surface strong promotion candidates
-- memory promotion must stay policy-bounded even when the execution path is automated
+Loop Profiles keep execution bounded and inspectable.
 
 ### 5.2 Runtime Capabilities
 
-#### Definition
-
-Runtime Capabilities define what an entity is allowed to do.
-
-Capabilities are deny-by-default and allowlist-only.
-
-#### Required categories
-
-- API access
-- filesystem
-- browser automation
-- MCP and tool access
-- hardware control
-- messaging and event emission
-
-#### Required capability model
-
-```text
-Organization
-  -> Role (Kernel / Council)
-    -> Team
-      -> Agent Type
-        -> Agent Instance
-```
-
-#### Required rules
-
-- allowlist only
-- deny by default
-- every capability assignment must be auditable
-- advanced UI may expose capability boundaries, but default UI must not collapse into a raw permission dashboard
+Runtime Capabilities define allowed action/tool scope.
 
 ### 5.3 Response Contract
 
-#### Definition
-
-Response Contract defines output behavior constraints.
-
-V8.1 promotes it from a bounded workspace setting to a first-class runtime inheritance contract.
-
-#### Required properties
-
-- tone
-- verbosity
-- structure
-- formatting rules
-- safety posture
-
-#### Required inheritance chain
-
-```text
-Organization -> Team -> Agent Type -> Agent Instance
-```
-
-#### Required rules
-
-- Response Contract always applies
-- lower scopes may only diverge through governed override paths
-- raw prompt or system-policy text must not become the operator-facing contract surface
+Responses normalize into answer, proposal, execution result, blocker, and error states.
 
 ### 5.4 Agent Type Profiles
 
-#### Definition
-
-Agent Type Profiles are reusable definitions of specialist behavior.
-
-They sit between Team defaults and individual Agent instances.
-
-#### Required fields
-
-```yaml
-id: string
-name: string
-description: string
-
-engine:
-  default: string
-  override_allowed: boolean
-
-response_contract:
-  default: string
-  override_allowed: boolean
-
-procedure_skill_sets:
-  references: []
-  promotion_allowed: boolean
-
-capabilities:
-  required: []
-  optional: []
-
-policy:
-  mutable: boolean
-```
-
-#### Required rules
-
-- Agent Type Profiles always define baseline specialist behavior
-- Team Lead auto-instantiation must still resolve through Agent Type Profile defaults
-- agent-instance mutation must not ship before Agent Type Profile truth is stable and visible
+Agent Type Profiles bind role, provider posture, tools, and verification.
 
 ### 5.5 Memory Promotion and Semantic Continuity
 
-#### Definition
-
-Memory Promotion and Semantic Continuity define how an AI Organization preserves, reviews, promotes, and recalls meaning across runs without collapsing into ungoverned self-modification.
-
-In V8.1, pgvector is not just action storage. It is the semantic continuity substrate for:
-- event, action, and result semantic indexing
-- review memory
-- learning candidates
-- promoted organization memory
-- promoted team memory
-- promoted agent-type memory
-- procedure and skill retrieval
-- continuity recall
-
-Explicit memory layers:
-- `SOMA_MEMORY`: Soma-owned continuity and reviewed orchestrator facts
-- `AGENT_MEMORY`: team-shared and specialist-shared execution memory
-- `PROJECT_MEMORY`: governed source context such as user-private records, customer context, and company knowledge
-- `REFLECTION_MEMORY`: synthesized lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations that begin as exchange candidates before promotion
-
-#### Required memory stages
-
-- raw memory
-  - unreviewed records, observations, outputs, and candidate patterns
-- reviewed memory
-  - findings that have passed a bounded review step and are safe to compare or retrieve as governed evidence
-- promoted memory
-  - organization, team, agent-type, or procedure memory that has passed policy-bounded promotion and becomes reusable runtime truth
-
-#### Required rules
-
-- pgvector acts as the semantic persistence and recall substrate, not as a hidden policy engine
-- promotion never happens through silent self-rewrite
-- interaction never promotes directly into durable memory without classification, confidence, and review posture
-- reviewed and promoted memory must preserve lineage back to raw evidence
-- recalled memory must be resolved through scope, trust, and precedence rather than similarity alone
-- promoted memory may inform continuity and retrieval, but it does not replace Response Contract, AI Engine Settings, or Runtime Capabilities
-
-Required retrieval posture:
-- `AGENT_MEMORY` is the canonical team-shared vector lane
-- Soma may read allowed team-shared memory without flattening it into organization-wide doctrine
-- governed organization memory should outrank team-shared or personal memory when they conflict
-- deterministic logs, turns, and artifacts remain higher-order evidence than recalled summaries
+Learning Loop promotion uses pgvector-backed semantic continuity with raw memory, reviewed memory, and promoted memory; no silent self-rewrite is allowed.
 
 ### 5.6 Procedure / Skill Sets
 
-#### Definition
-
-Procedure / Skill Sets are reusable specialist procedures and reviewed execution patterns attached to Agent Type Profiles.
-
-They represent type-bound skill memory, not ad hoc one-off run history.
-
-#### Required properties
-
-- reusable specialist procedures
-- reviewed execution patterns
-- type-bound skill memory
-- retrieval through semantic continuity
-- governed promotion path before becoming reusable runtime truth
-
-#### Required rules
-
-- Procedure / Skill Sets sit under Agent Type Profiles and must resolve before agent-instance behavior diverges
-- procedure retrieval must use semantic continuity rather than hidden prompt mutation
-- skill memory remains inspectable and policy-bounded even when execution becomes more continuous later
+Procedure / Skill Sets are reviewed specialist memory bound to Agent Type Profiles.
 
 ### 5.7 Layering clarification
 
-The required V8.1 layering is:
-- pgvector = semantic persistence and recall substrate
-- Soma Kernel / Team Leads = orchestration and interpretation through a primary Soma interface and subordinate operational leaders
-- loops = candidate generation, review, and promotion
-- Response Contract, AI Engine Settings, and Runtime Capabilities = separate governed behavior layers, not interchangeable memory fields
+Lower layers specialize but do not bypass higher policy.
 
 ### 5.8 Managed exchange foundation
 
-V8.1 now requires a managed exchange foundation so outputs are not treated as unstructured one-off chat blobs.
+The managed exchange foundation provides named channels for work, review, learning, and normalized tool output plus structured threads for planning, work, review, escalation, and learning.
 
-The managed exchange foundation includes:
-- named channels for work, review, learning, and normalized tool output
-- a canonical field registry used across artifacts and messages
-- typed schemas such as `TextResult`, `PlanResult`, `ReviewResult`, `MediaResult`, `FileResult`, `ToolResult`, `LearningCandidate`, and `Escalation`
-- structured threads for planning, work, review, escalation, and learning
-- structural persistence plus semantic indexing so related prior outputs can be rediscovered
+Security foundation: channels, threads, and exchange items carry explicit readers, writers, reviewers, participants, sensitivity classes, and downstream allowed-consumer metadata. capability-producing outputs carry a capability id, risk class, trust class, and audit-ready publication metadata. normalization into exchange does not imply unrestricted trust.
 
-Required rules:
-- Soma, Team Leads, specialist roles, automations, and MCP-backed systems publish governed outputs through the exchange model rather than raw ad hoc payloads when those outputs matter operationally
-- team-local channels may still exist, but operator-reviewable outputs must remain discoverable through the managed exchange layer
-- the managed exchange foundation stays inspectable in V8.1 before broad editing UI ships
-- managed exchange is a runtime coordination substrate, not a replacement for bundle-driven startup or inheritance truth
-- channels, threads, and exchange items carry explicit readers, writers, reviewers, participants, sensitivity classes, and downstream allowed-consumer metadata
-- capability-producing outputs carry a capability id, risk class, trust class, and audit-ready publication metadata
-- normalization into exchange does not imply unrestricted trust; MCP and external outputs remain bounded by trust classification and review requirements
-- reflection and learning should start as `LearningCandidate` exchange items with classification, memory layer, confidence, and review posture before any durable memory promotion
+See [V8 Living Organization Baseline Details](V8_LIVING_ORGANIZATION_BASELINE_DETAILS.md).
 
 ## 6. Execution model
 
 ### 6.1 Interactive mode
 
-- user-driven
-- Soma is primary
+Operator-driven interaction through Soma remains the default.
 
 ### 6.2 Loop mode
 
-- system-driven
-- persistent
-- triggered by event or schedule
-
-V8.1 introduces Loop mode as an architecture contract before broad live execution.
+Bounded automations may run with explicit policy, visibility, and recovery posture. They must not hide persistent behavior from the operator.
 
 ## 7. System behavior rules
 
-1. Loops never bypass policy.
-2. Capabilities are never implied.
-3. Agent Type Profiles always define baseline behavior.
-4. Response Contract always applies.
-5. Bundle-driven configuration remains the single source of truth.
-6. Learning Loops may produce candidates and reviewed promotion decisions, but they never silently rewrite organization truth.
-7. Semantic continuity supports recall and promotion lineage; it does not replace policy, engine, response, or capability contracts.
+- Default UX starts with AI Organization and Soma, not raw agents.
+- Broad work becomes compact lanes or teams.
+- Governance controls mutating actions.
+- Memory promotion is reviewable.
+- Provider/capability policy remains visible in advanced surfaces.
+- Activity and retained outputs remain reviewable.
 
 ## 8. Operator UI architecture
 
 ### 8.1 Primary operator workspace
 
-Soma remains the primary operating counterpart.
-
-The primary workspace includes:
-- Soma
-- Team Lead
-- Advisors
-- Departments
-- Recent Activity
-- Learning & Context
-- AI Engine Settings
-- Response Style
-- Automations
+The primary workspace is Soma-first and organization-scoped.
 
 ### 8.2 Automations surface
 
-User-facing translations should stay simple:
-- Automations
-- Watchers
-- Reviews
+Automations are bounded, inspectable, and policy-aware.
 
-Each automation should show:
-- name
-- what it watches
-- what it does
-- how often it runs
-- who owns it
-
-The first shippable V8.1 state may keep this surface read-only.
+Automations include Watchers and Reviews where configured.
 
 ### 8.3 Advanced UI boundaries
 
-Advanced UI remains hidden by default.
+Advanced UI may expose inheritance, config origin, policy, provider routing, capabilities, and runtime health without making those concepts mandatory for first use.
 
-Advanced-only detail may include:
-- organization defaults and inheritance visibility
-- Department overrides
-- Specialist role bindings
-- Loop Profile details
-- detailed automation definitions
-- managed exchange inspection for channels, threads, recent artifacts, and schema types
-- Capability assignments
-- Response Style inheritance
-- bundle/config source truth
-- deployment/env influence
-- inheritance chains
-- policy boundaries
-
-Default UI must not leak architecture terms or raw control surfaces unnecessarily.
-
-Even with advanced UI later:
-- sensitive deployment secrets stay file/env/config driven
-- host-specific runtime wiring stays file/env/config driven
-- low-level provider auth and endpoints stay file/env/config driven where appropriate
-- cluster or distributed node plumbing stays out of default V8.1 scope unless intentionally promoted later
+organization defaults and inheritance visibility, deployment/env influence, and sensitive deployment secrets stay file/env/config driven.
 
 ## 9. Safety model
 
 ### 9.1 Required
 
-- audit logs for loops
-- capability enforcement
-- approval gates for actuation loops
-- managed exchange permission checks for read, write, review, and escalation paths
-- capability risk classification for browser, MCP, media, file, and API output paths
-- trust classification for internal tools, MCP services, external providers, and future remote execution nodes
+- approval/proposal posture for protected actions
+- source and scope metadata for signals
+- normalized UI errors
+- secret references instead of raw secrets
+- durable events for mutating actions
 
 ### 9.2 Forbidden
 
-- implicit execution
-- hidden capabilities
-- unrestricted overrides
-- unrestricted cross-channel consumption just because an artifact exists
+- silent mutation
+- raw provider/backend errors as user-facing output
+- hidden recurring behavior
+- unreviewed private data promotion
+- committed secrets
 
 ## 10. Testing requirements
 
 ### 10.1 Backend
 
-- loop schema validation
-- capability inheritance correctness
-- policy enforcement
-- memory-promotion path validation
+Prove API/runtime behavior with `uv run inv core.test` and focused handler/service tests.
 
 ### 10.2 Frontend
 
-- automation visibility
-- no architecture leakage
-- inheritance clarity
-- semantic continuity and promotion language stays user-facing
+Prove UI state and rendering with `uv run inv interface.test` and `interface.typecheck`.
 
 ### 10.3 End-to-end
 
-- create AI Organization
-- view Automations
-- inspect loop behavior without enabling execution yet
-- confirm learning continuity remains bounded and inspectable
+Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) for browser proof.
 
 ## 11. Release target
 
 ### 11.1 V8.1 initial release definition
 
-#### Must have
-
-- Loop Profiles defined in architecture and schema
-- Learning Loop subtype defined in architecture and schema
-- Runtime Capabilities contract defined
-- Agent Type Profiles fully surfaced
-- Response Contract integrated at organization and Agent Type level
-- Memory Promotion and Semantic Continuity model defined
-- Procedure / Skill Sets defined under Agent Type Profiles
-- Soma workspace stable
-- Automations UI visible, even if read-only
-
-#### Must not
-
-- expose unsafe execution
-- allow unrestricted tool use
-- break bundle-driven startup
+The shippable V8.1 baseline is a Soma-primary AI Organization experience with governed proposals, compact teams/groups, retained outputs, continuity, settings, and visible activity.
 
 ### 11.2 First shippable state
 
-- loops exist as configuration and inspectable architecture, not broad execution
-- automations are visible in the workspace
-- capabilities are defined but not fully exercised
-- learning continuity architecture is defined even when raw/reviewed/promoted memory promotion is not fully implemented yet
-- the system remains safe and inspectable
+The first shippable state must be useful without advanced mode and truthful when dependencies are unavailable.
+
+For V8.1, loops exist as configuration and inspectable architecture, not broad execution; capabilities are defined but not fully exercised; learning continuity architecture is defined even when raw/reviewed/promoted memory promotion is not fully implemented yet; the system remains safe and inspectable.
 
 ## 12. Post-release V8.2 targets
 
-- first bounded Learning Loop implementation
-- memory-promotion and procedure-skill retrieval runtime slices
-- capability-based tool execution
-- hardware-safe actuation
+V8.2 extends the baseline with distributed execution, active learning, richer capabilities, enterprise identity, and production deployment posture.
 
 ## 13. Delivery implication
 
-This document is the canonical V8.1 architecture contract for:
-- Loop Profiles
-- Runtime Capabilities
-- promoted Response Contract inheritance
-- promoted Agent Type Profile runtime truth
-- Learning Loops
-- Memory Promotion and Semantic Continuity
-- Procedure / Skill Sets
-- read-only Automations visibility in the Soma workspace
-
-Implementation that touches these areas must align with:
-- `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`
-- `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
-- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-- `.state/V8_DEV_STATE.md`
+Changes to baseline behavior require docs review, tests, and state updates. Do not claim compatibility if the Soma-primary path or governance path regresses.
 
 ## 14. Summary
 
-V8.1 transforms Mycelis from a structured AI interface into a living, persistent, policy-bounded intelligence system without sacrificing:
-- safety
-- clarity
-- reproducibility
+V8.1 is the stable compatibility layer. V8.2 builds on it; it does not erase it.

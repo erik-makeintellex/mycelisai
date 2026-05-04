@@ -154,14 +154,14 @@ V7 includes global operator-recovery UX:
 - **Status Drawer**: global health panel (open via ribbon or floating status action)
 - **Structured Council Error Card**: retry/reroute/copy diagnostics in chat
 - **Focus Mode (`F`)**: collapse ops panel while keeping critical status strip
-- **System Quick Checks**: run targeted checks from `/system`
+- **System Checks**: run targeted checks from `/system`
 
 These are designed to keep workflows recoverable without page switching.
 
 Expected user-visible controls:
 - global **Degraded Mode** banner actions (`Retry`, `Open Status`, and `Switch to Soma` only when you are not already on the Soma route)
 - right-side **Status Drawer** with council reachability + service health
-- `/system` **Quick Checks** with run + copy diagnostics actions
+- `/system` **System Checks** with run + copy diagnostics actions
 
 ---
 

@@ -1,852 +1,253 @@
-# Mycelis Cortex — Backend Specification
-> Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
+# Mycelis Cortex - Backend Specification
+> Navigation: [Project README](../../README.md) | [Overview](OVERVIEW.md) | [Frontend](FRONTEND.md) | [Operations](OPERATIONS.md)
 
-> **Load this doc when:** Working on Go code, APIs, database, NATS, or agent orchestration.
->
-> **Related:** [Overview](OVERVIEW.md) | [Frontend](FRONTEND.md) | [Operations](OPERATIONS.md)
-
----
+This file is the compact backend architecture index. It preserves stable anchors for existing docs and points implementation work toward code, API docs, and V8 contracts instead of duplicating full runtime detail.
 
 ## I. Package Structure
 
 ### Entry Points (`cmd/`)
 
-| Binary | File | Purpose |
-|--------|------|---------|
-| **server** | `cmd/server/main.go` | Main HTTP + NATS orchestration server |
-| **probe** | `cmd/probe/main.go` | Health check utility |
-| **signal_gen** | `cmd/signal_gen/main.go` | Signal generation tool |
-| **smoke** | `cmd/smoke/main.go` | Smoke test suite |
+Core service entrypoints live under `core/cmd/**`. The primary server owns HTTP startup, dependency wiring, graceful shutdown, and runtime config loading.
 
 ### Public API (`pkg/`)
 
-| Package | Files | Exports |
-|---------|-------|---------|
-| `protocol` | types.go, envelopes.go, manifest.go, blueprint.go, topics.go | CTSEnvelope, AgentManifest, MissionBlueprint, SignalType, 30+ topic constants |
-| `pb` | swarm.pb.go, envelope.pb.go | MsgEnvelope (Protobuf), SCIP protocol |
+Public packages expose reusable contracts and helpers. Keep product runtime behavior in Go-owned backend modules, not Python task code or UI-only state.
 
-### Private Implementation (`internal/` — 15 packages)
+### Private Implementation (`internal/` - packages)
 
-| Package | Files | Responsibility |
-|---------|-------|---------------|
-| **server** | admin.go, cognitive.go, mission.go, telemetry.go, governance.go, memory_search.go, proposals.go, artifacts.go, identity.go, registry.go, catalogue.go, mcp.go, provision.go, memory.go | HTTP handlers (50+ endpoints), `AdminServer` struct, `RegisterRoutes()` |
-| **swarm** | soma.go, axon.go, agent.go, team.go, sensor_agent.go, internal_tools.go, activation.go, converter.go, seeds.go, tool_executor.go | Agent orchestration, ReAct loop, tool dispatch |
-| **cognitive** | router.go, architect.go, openai.go, anthropic.go, google.go, discovery.go, types.go | LLM routing, provider adapters, token telemetry, embedding |
-| **governance** | guard.go, policy.go | Policy engine, rule evaluation, approval queue |
-| **memory** | service.go, archivist.go | Event log persistence, SitRep generation, LLM compression |
-| **overseer** | engine.go | Zero-trust DAG orchestration, governance valve |
-| **mcp** | service.go, pool.go, executor.go, library.go | MCP server registry, client lifecycle, tool invocation |
-| **artifacts** | service.go | Agent output persistence |
-| **catalogue** | service.go | Agent template CRUD |
-| **bootstrap** | — | Node discovery |
-| **router** | — | Input intent dispatcher |
-| **signal** | stream.go | SSE streaming handler |
-| **state** | — | State registry |
-| **identity** | — | Auth stubs |
-| **transport** | — | NATS wrapper |
+Private packages own API handlers, persistence, cognitive routing, governance, MCP integration, NATS orchestration, memory, and service glue.
 
 ### Go Dependencies (Direct)
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `github.com/jackc/pgx/v5` | 5.8.0 | PostgreSQL driver |
-| `github.com/nats-io/nats.go` | 1.48.0 | NATS client |
-| `github.com/nats-io/nats-server/v2` | 2.12.4 | Embedded NATS (testing) |
-| `github.com/sashabaranov/go-openai` | 1.41.2 | OpenAI-compatible SDK |
-| `github.com/mark3labs/mcp-go` | 0.43.2 | Model Context Protocol |
-| `github.com/google/uuid` | 1.6.0 | UUID generation |
-| `github.com/xeipuuv/gojsonschema` | 1.2.0 | JSON Schema validation |
-| `github.com/DATA-DOG/go-sqlmock` | 1.5.2 | SQL mocking (tests) |
-| `google.golang.org/protobuf` | 1.36.1 | Protocol Buffers |
-| `gopkg.in/yaml.v3` | 3.0.1 | YAML config parsing |
-
----
+Dependency changes should be intentional, reflected in `go.mod`/`go.sum`, and validated through `uv run inv core.test` plus the relevant build or runtime proof.
 
 ## II. Swarm Orchestration
 
-### Soma (Executive Cell) — `swarm/soma.go`
+### Soma (Executive Cell) - `swarm/soma.go`
 
-The user's proxy and team manager.
+Soma is the operator-facing orchestrator. It maps intent to answers, proposals, team activity, and retained outputs while respecting governance.
 
-**Responsibilities:**
-- Receives directives via `swarm.global.input.user`
-- Spawns/manages Teams from YAML registry
-- Wires composite tool executor (internal + MCP) to teams
-- Delegates execution to Axon for monitoring
-- **Exports:** `ListTeams()`, `ListAgents()`, `ActivateBlueprint()`, `DeactivateMission()`, `HandleCreateTeam()`
+### Axon (Messenger) - `swarm/axon.go`
 
-**Standing Teams (auto-spawned from YAML at startup):**
+Axon routes signals through canonical NATS subjects and event envelopes.
 
-| Team ID | Name | Type | Members | Tools |
-|---------|------|------|---------|-------|
-| `admin-core` | Admin | action | 1 (admin agent) | 17 built-in tools, 5 ReAct iterations max |
-| `council-core` | Council | cognitive | 4 (architect, coder, creative, sentry) | Per-member tool sets |
-| `genesis-core` | Genesis | action | 2 (architect, commander) | Bootstrap tools |
+### Agent (LLM Reasoning Node) - `swarm/agent.go`
 
-### Axon (Messenger) — `swarm/axon.go`
+Agents execute role-scoped reasoning and tool loops under provider, capability, memory, and policy constraints.
 
-Signal router and UI bridge.
+### SensorAgent (Poll-Based) - `swarm/sensor_agent.go`
 
-- Subscribes to `swarm.team.*.internal.>` (all team chatter)
-- Classifies signals: trigger, response, command, status
-- Enriches with timestamps
-- Broadcasts to SSE StreamHandler for real-time UI
+Sensor agents ingest external or device-like signals. They must keep device/feed origin explicit before normalization into operator-facing channels.
 
-### Agent (LLM Reasoning Node) — `swarm/agent.go`
+### Team - `swarm/team.go`
 
-**ReAct Loop:**
-1. Receive trigger message or NATS request-reply
-2. Build context: system_prompt + `InternalToolRegistry.BuildContext()` + thought_history + tool_descriptions
-3. Call `cognitive.Router.Infer()` (LLM inference)
-4. Parse JSON: `tool_call` or `final_response`
-5. If `tool_call`: resolve (internal → MCP → error), execute, append to history, continue
-6. If `final_response`: publish CTSEnvelope, break
-7. Max iterations guard (default 5 for admin)
+Teams coordinate agents for scoped work. Default team shaping should stay compact and reviewable.
 
-**Runtime Context Injection** (`BuildContext()` injects before every message):
-1. Active teams roster (names, member counts)
-2. Agent identity + NATS topology (trigger, respond, direct-address topics)
-3. Cognitive engine (active providers, endpoints, models, profiles)
-4. Installed MCP servers (names, transport, status, discovered tools)
-5. Interaction protocol (pre-response checklist: recall, consult, delegate, MCP tools)
+### Internal Tool Registry - `swarm/internal_tools.go`
 
-**Heartbeat:** `swarm.global.heartbeat` every 5 seconds
-**Personal RPC:** Listens on `swarm.council.{agent_id}.request`
+Internal tools are governed runtime capabilities. Tool metadata must identify source, scope, and intended consumer.
 
-### SensorAgent (Poll-Based) — `swarm/sensor_agent.go`
+### Composite Tool Executor - `swarm/tool_executor.go`
 
-- Configuration: endpoint URL, interval (default 60s), headers
-- HTTP client timeout: 10s
-- Publishes CTSEnvelopes with `TrustScore = 1.0` (sensor data is fact)
-- Zero cognitive overhead — no LLM invocation
+Composite execution must preserve bounded outputs, error normalization, and auditability.
 
-### Team — `swarm/team.go`
+### Blueprint Activation - `swarm/activation.go`, `converter.go`, `seeds.go`
 
-Agent container and task dispatcher.
-
-- Spawns Agents (cognitive) or SensorAgents (poll-based) based on `Team.sensorConfigs`
-- Subscribes to team input topics
-- Routes triggers to agents via `swarm.team.{id}.internal.trigger`
-- Publishes agent outputs to delivery topics
-- May spawn nested sub-teams (hierarchy via `parent_id`)
-
-### Internal Tool Registry — `swarm/internal_tools.go`
-
-17 built-in tools:
-
-| Tool | Purpose | Primary Users |
-|------|---------|---------------|
-| `consult_council` | Query a specific council member | Admin |
-| `delegate_task` | Publish task to team trigger topic | Admin |
-| `search_memory` | Scoped semantic search over durable memory | Admin, Council |
-| `list_teams` | Enumerate teams from Soma | Admin |
-| `list_missions` | Query missions from DB | Admin |
-| `get_system_status` | Aggregate runtime metrics | Admin |
-| `list_available_tools` | Enumerate all tools | Council (Sentry) |
-| `list_catalogue` | Browse agent templates | Council (Architect) |
-| `generate_image` | Stable Diffusion via media endpoint | Council (Creative) |
-| `remember` | Persistent fact storage | Any agent |
-| `recall` | Retrieve stored facts | Any agent |
-| `publish_signal` | Broadcast to NATS topic | Council, agents |
-| `read_signals` | Subscribe to NATS topic | Council (Sentry) |
-| `read_file` | Filesystem read access | Council |
-| `write_file` | Filesystem write access | Council (Coder, Architect) |
-| `store_artifact` | Persist agent output | Any agent |
-| `research_for_blueprint` | Gather context for blueprint design | Admin |
-
-### Composite Tool Executor — `swarm/tool_executor.go`
-
-Unified routing:
-1. Check internal tool registry → execute directly
-2. If not found → check MCP pool → `mcp.Service.Call(server_id, tool_name, args)`
-3. If not found → return error
-
-### Blueprint Activation — `swarm/activation.go`, `converter.go`, `seeds.go`
-
-- `ConvertBlueprintToManifests()` — mission-scoped IDs
-- `ActivateBlueprint()` — DB persist + Soma spawn
-- `seeds.go` — Symbiotic Seed (Gmail+Weather, no LLM required)
-
----
+Blueprint activation turns approved intent into teams, agents, events, and persisted run state.
 
 ## III. Cognitive Layer
 
-### Router — `cognitive/router.go`
+### Router - `cognitive/router.go`
 
-**Config Priority:** YAML base → DB overlay → Env overrides
-
-**Provider Types:**
-| Provider ID | Type | Default Endpoint |
-|-------------|------|-----------------|
-| `ollama` | openai_compatible | `http://192.168.50.156:11434/v1` (LAN) |
-| `vllm` | openai_compatible | `http://127.0.0.1:8000/v1` |
-| `lmstudio` | openai_compatible | `http://127.0.0.1:1234/v1` |
-| `production_gpt4` | openai | OpenAI API |
-| `production_claude` | anthropic | Anthropic API |
-| `production_gemini` | google | Gemini API |
-
-**Profile → Provider Routing (all default → ollama):**
-admin, architect, coder, creative, sentry, chat
-
-**Token Telemetry:**
-- `RecordTokens(n)` — cumulative counter + sliding window
-- `TokenRate()` — tokens/second over 60s window
-- Reported via `GET /api/v1/telemetry/compute`
-
-**Media:** `http://127.0.0.1:8001/v1` (Stable Diffusion Diffusers, OpenAI-compatible)
+The router resolves provider policy and profile routing into a concrete model call path. Deployment/env overrides configure endpoints and profiles; they do not replace instantiated organization truth.
 
 ### Adapters
-| File | Provider | SDK |
-|------|----------|-----|
-| `openai.go` | OpenAI (GPT-4) | `go-openai` |
-| `anthropic.go` | Anthropic (Claude) | Custom HTTP |
-| `google.go` | Google (Gemini) | Custom HTTP |
-| (shared) | OpenAI-compatible (Ollama, vLLM, LM Studio) | `go-openai` with custom base URL |
 
-### Discovery — `cognitive/discovery.go`
+Adapters normalize provider-specific request/response behavior for supported model backends.
 
-- Probes all providers at startup with test inference
-- Retries with exponential backoff
-- Marks unavailable → WARN log, continues
-- Dynamic probing: `GET /api/v1/cognitive/status`
+### Discovery - `cognitive/discovery.go`
 
-### Architect — `cognitive/architect.go`
+Discovery reports provider availability and health without leaking secrets.
 
-Meta-Architect: Intent (natural language) → MissionBlueprint (JSON) via LLM structured output.
+### Architect - `cognitive/architect.go`
 
----
+Architect behavior decomposes intent into structured plans, teams, and governed proposals.
 
 ## IV. Execution Pipelines
 
-### Pipeline 1: Intent → Blueprint → Activation
+### Pipeline 1: Intent -> Blueprint -> Activation
 
-```
-User types intent in ArchitectChat
-  │
-  ▼
-POST /api/v1/intent/negotiate
-  │ Meta-Architect generates MissionBlueprint via LLM
-  │ Frontend: blueprintToGraph() → ghost-draft nodes (50% opacity, dashed cyan)
-  ▼
-User reviews DAG, edits via WiringAgentEditor
-  │
-  ▼
-POST /api/v1/intent/commit → commitAndActivate()
-  │ 1. BEGIN DB transaction
-  │ 2. INSERT missions (status='active')
-  │ 3. INSERT teams (per BlueprintTeam)
-  │ 4. INSERT service_manifests (per AgentManifest)
-  │ 5. COMMIT
-  ▼
-Soma.ActivateBlueprint()
-  │ 1. ConvertBlueprintToManifests() — mission-scoped IDs
-  │ 2. Spawn Teams → spawn Agents/SensorAgents
-  │ 3. Register NATS subscriptions, start heartbeat
-  ▼
-Ghost nodes solidify, status → ACTIVE
-```
+User intent enters through API/UI, is normalized, may become a blueprint/proposal, and activates only after policy allows it or the operator approves it.
 
 ### Pipeline 2: Council Chat (Request-Reply)
 
-```
-POST /api/v1/council/{member}/chat  { "query": "..." }
-  │ 1. Validate member via isCouncilMember() (checks Soma)
-  │ 2. Build request envelope
-  ▼
-NATS: nc.Request("swarm.council.{member}.request", payload, 30s)
-  │
-  ▼
-Agent ReAct loop → tools → final response
-  │
-  ▼
-Wrap: ChatResponsePayload + TrustScore=0.5
-  │ Includes: consultations[], tools_used[], source_node
-  ▼
-HTTP 200 JSON
-```
+Council/member chat uses request-reply routing and returns normalized API envelopes for UI consumption.
 
 ### Pipeline 3: Agent ReAct Loop
 
-```
-Trigger on swarm.team.{team_id}.internal.trigger
-  │
-  ▼
-LOOP (max_iterations):
-  │ context = system_prompt + BuildContext() + thought_history + tools
-  │ response = cognitive.Router.Infer(context)
-  │
-  ├─ final_response → publish CTSEnvelope, BREAK
-  └─ tool_call → resolve → execute → append to history → CONTINUE
-```
+Agents build context, call a model, parse tool/final output, execute approved tools, and publish bounded results.
 
 ### Pipeline 4: Memory Archival & Compression
 
-```
-CTSEnvelope → swarm.team.{team_id}.telemetry
-  │
-  ├─ Memory.Service: INSERT log_entry, buffer event
-  │
-  ▼ Trigger: buffer ≥ 50 | artifact signal | 5min timer
-  │
-  Archivist.GenerateSitRep():
-    1. Retrieve log_entries for team
-    2. LLM compress → 3-sentence summary
-    3. Embed via nomic-embed-text → 768-dim vector
-    4. INSERT sitrep (content, context_vectors)
-    5. DELETE processed log_entries
-```
+Run and conversation events can be summarized, embedded, and stored for continuity. Memory promotion must stay explicit and reviewable.
 
 ### Pipeline 5: Governance & Zero-Trust Actuation
 
-```
-Overseer receives CTSEnvelope
-  │
-  ├─ TrustScore >= 0.7: advance DAG (auto-execute)
-  │
-  └─ TrustScore < 0.7:
-       GovernanceCallback → SSE/store sync → GovernanceModal
-       Human: POST /governance/resolve/{id} → approve/deny
-```
+Mutating or protected actions flow through policy checks, proposals, approvals, proof envelopes, and persistent mission events.
 
 ### Pipeline 6: SSE Real-Time Streaming
 
-```
-Frontend: EventSource → /api/v1/stream
-Backend: signal.StreamHandler (verify http.Flusher, respect ctx.Done())
-Axon routes signals → StreamHandler → data: {JSON}\n\n
-Frontend: parse → Zustand streamLogs[] (cap 100)
-  ├─ artifact → pendingArtifacts[]
-  ├─ governance_halt → GovernanceModal
-  └─ default → route-local stream inspection (for example `NatsWaterfall`)
-```
-
----
+Runtime events are streamed to the UI through normalized, route-safe state. High-volume telemetry must not substitute for operator status/result channels.
 
 ## V. Data Contracts & Protocols
 
 ### 1. The CTS Envelope (Cortex Telemetry Standard)
 
-```go
-type CTSEnvelope struct {
-    ID         string      `json:"id"`
-    SourceNode string      `json:"source_node"`
-    TeamID     string      `json:"team_id"`
-    SignalType SignalType   `json:"signal_type"`
-    TrustScore float64     `json:"trust_score"`    // 0.0–1.0
-    Payload    interface{} `json:"payload"`
-    CTSMeta    CTSMeta     `json:"cts_meta"`
-}
-
-type CTSMeta struct {
-    SourceNodeID string    `json:"source_node_id"`
-    Timestamp    time.Time `json:"timestamp"`
-    TraceID      string    `json:"trace_id"`
-}
-```
-
-**Signal Types:**
-| Type | Purpose | Default TrustScore |
-|------|---------|-------------------|
-| `telemetry` | Agent work update | 0.5 |
-| `task_complete` | DAG advancement | varies |
-| `task_failed` | Error signal | varies |
-| `error` | Exception | 0.0 |
-| `heartbeat` | Agent alive | 1.0 |
-| `governance_halt` | Low-trust pause | < threshold |
-| `sensor_data` | SensorAgent ingress | 1.0 |
-| `chat_response` | Council LLM output | 0.5 |
-
-**Trust Defaults by Category:**
-| Category | Score | Rationale |
-|----------|-------|-----------|
-| Sensory | 1.0 | Trusted fact |
-| Cognitive | 0.5 | May hallucinate |
-| Actuation | 0.8 | Moderate trust |
-| Ledger | 1.0 | Immutable record |
+Product signals must include enough metadata to identify source, scope, payload kind, and intended consumer. Required governed metadata includes `run_id` when execution-linked, `team_id` when team-scoped, `agent_id` when agent-scoped, `source_kind`, `source_channel`, `payload_kind`, and `timestamp`.
 
 ### 2. The ChatResponsePayload
 
-```go
-type ChatResponsePayload struct {
-    Response      string            `json:"response"`
-    Consultations []ChatConsultation `json:"consultations,omitempty"`
-    ToolsUsed     []string          `json:"tools_used,omitempty"`
-    SourceNode    string            `json:"source_node"`
-    TrustScore    float64           `json:"trust_score"`
-}
-```
+Chat responses normalize direct answers, proposals, execution results, blocker states, consultations, tools used, and trust/governance metadata for UI rendering.
 
 ### 3. The APIResponse Envelope
 
-```go
-type APIResponse struct {
-    OK    bool        `json:"ok"`
-    Data  interface{} `json:"data,omitempty"`
-    Error string      `json:"error,omitempty"`
-}
-```
-
-New endpoints use `respondAPIJSON()` / `respondAPIError()` helpers.
+HTTP responses should use the standard `{ ok, data, error }` posture with stable errors and no raw backend noise in UI-facing payloads.
 
 ### 4. The MissionBlueprint
 
-```go
-type MissionBlueprint struct {
-    MissionID    string                `json:"mission_id"`
-    Intent       string                `json:"intent"`
-    Teams        []BlueprintTeam       `json:"teams"`
-    Constraints  []Constraint          `json:"constraints,omitempty"`
-    Requirements []ResourceRequirement `json:"requirements,omitempty"`
-}
-
-type BlueprintTeam struct {
-    Name   string          `json:"name"`
-    Role   string          `json:"role"`
-    Agents []AgentManifest `json:"agents"`
-}
-
-type ResourceRequirement struct {
-    Type        string `json:"type"`   // mcp_server|api_key|env_var|credential
-    Name        string `json:"name"`
-    Description string `json:"description"`
-    Required    bool   `json:"required"`
-    Installed   bool   `json:"installed"`
-}
-```
+Blueprints describe decomposed work: teams, agents, constraints, resources, governance posture, and expected outputs.
 
 ### 5. The AgentManifest
 
-```go
-type AgentManifest struct {
-    ID            string       `json:"id"`
-    Role          string       `json:"role"`
-    SystemPrompt  string       `json:"system_prompt"`
-    Model         string       `json:"model"`
-    Inputs        []string     `json:"inputs"`
-    Outputs       []string     `json:"outputs"`
-    Tools         []string     `json:"tools"`
-    MaxIterations int          `json:"max_iterations"`
-    Verification  Verification `json:"verification"`
-}
-
-type Verification struct {
-    Strategy          string   `json:"strategy"`  // semantic|empirical
-    Rubric            []string `json:"rubric"`
-    ValidationCommand string   `json:"validation_command"`
-}
-```
+Manifests define role identity, system prompt, model/profile, tools, inputs, outputs, and verification expectations.
 
 ### 6. The ProofEnvelope
 
-```go
-type ProofEnvelope struct {
-    Artifact interface{} `json:"artifact"`
-    Proof    Proof       `json:"proof"`
-}
-
-type Proof struct {
-    Method      string `json:"method"`  // semantic|empirical|both
-    Logs        string `json:"logs"`
-    RubricScore string `json:"rubric_score"`
-    Pass        bool   `json:"pass"`
-}
-```
+Proof envelopes carry approval, execution, evidence, policy, and audit context for governed actions.
 
 ### 7. The SitRep Schema (Archivist Output)
 
-```json
-{
-  "contract_id": "archivist_v1_sitrep",
-  "summary": "String (Max 3 sentences).",
-  "key_events": [{ "signal": "string", "source": "string" }],
-  "strategies_applied": ["string"]
-}
-```
+SitReps are bounded summaries of run or memory-relevant activity for continuity and review.
 
 ### 8. API Graceful Degradation
 
-| Component Missing | HTTP Status | Behavior |
-|-------------------|-------------|----------|
-| NATS | 503 | REST-only mode |
-| LLM (all providers) | 502 | Inference fails gracefully |
-| PostgreSQL | WARN log | In-memory only |
-| MCP Pool | Skip | Internal tools only |
-| SSE Handler | 503 | Stream unavailable |
-| Governance Guard | WARN log | Allow all (security off) |
-| Memory Archivist | WARN log | Archival skipped |
-
----
+Handlers should return normalized degraded/blocker states when dependencies are unavailable, not panic text or provider internals.
 
 ## VI. NATS Topic Architecture
 
+Use canonical subject constants from Go protocol/topic definitions. Do not hardcode `swarm.*` literals in runtime code.
+
 ### Global Control Plane
 
-| Topic | Purpose | Frequency |
-|-------|---------|-----------|
-| `swarm.global.heartbeat` | Agent proof-of-life | 5s per agent |
-| `swarm.global.announce` | System announcements | On events |
-| `swarm.global.broadcast` | Mission Control → All Teams | On user action |
-| `swarm.global.input.user` | User input ingress | On chat submit |
-| `swarm.audit.trace` | Immutable audit log | Every action |
+Global subjects are for governed broadcast/control only.
 
 ### Team Internal (per team)
 
-| Topic Pattern | Purpose |
-|---------------|---------|
-| `swarm.team.{team_id}.internal.trigger` | Task dispatch to agents |
-| `swarm.team.{team_id}.internal.response` | Agent task responses |
-| `swarm.team.{team_id}.internal.command` | Control commands |
-| `swarm.team.{team_id}.signal.status` | Status signals |
-| `swarm.team.{team_id}.telemetry` | CTS envelopes (agent output + governance) |
+Use directed team input, status, result, and telemetry families with explicit `team_id`.
 
 ### Wildcards
 
-| Topic Pattern | Subscribers |
-|---------------|-------------|
-| `swarm.team.*.internal.>` | Axon (monitors all team chatter) |
-| `swarm.team.*.telemetry` | Overseer (validates all CTS envelopes) |
+Wildcard subscriptions must not blur operator status with high-volume telemetry.
 
 ### Council Request-Reply
 
-| Topic Pattern | Purpose |
-|---------------|---------|
-| `swarm.council.{agent_id}.request` | Direct RPC to council member (30s timeout) |
+Council calls use bounded request-reply subjects for specialist/member interaction.
 
 ### Sensor Data Ingress
 
-| Topic Pattern | Purpose |
-|---------------|---------|
-| `swarm.data.email.>` | Email feeds |
-| `swarm.data.weather.>` | Weather APIs |
-| `swarm.data.mcp.>` | MCP tool outputs |
-| `swarm.data.>` | Wildcard: all sensor data |
+Sensor/IoT input must identify device/feed origin and stay separate until normalized.
 
 ### Mission DAG
 
-| Topic | Purpose |
-|-------|---------|
-| `swarm.mission.task` | Overseer task dispatch |
+Mission events are run-linked and persistent when tied to mutating or auditable work.
 
 ### Agent Output
 
-| Topic Pattern | Purpose |
-|---------------|---------|
-| `swarm.agent.{agent_id}.output` | Individual agent stream |
-
-**Rule:** All topics use constants from `pkg/protocol/topics.go` — never hardcode topic strings.
-
----
+Agent outputs must be bounded, typed, scoped, and safe for downstream consumers.
 
 ## VII. Database Schema
 
-### 14+ Tables, 21 Migrations
+### Tables And Migrations
 
-#### Core Tables
-
-**`users`** (Migration 002)
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID PK | |
-| username | TEXT | |
-| role | TEXT | admin\|user\|observer |
-| settings | JSONB | |
-| created_at | TIMESTAMPTZ | |
-
-**`missions`** (Migrations 003, 010)
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID PK | |
-| owner_id | UUID FK → users | |
-| name | TEXT | |
-| directive | TEXT | The intent |
-| status | TEXT | draft\|active\|paused\|completed\|failed |
-| activated_at | TIMESTAMPTZ | [010] When mission went active |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
-
-**`teams`** (Migrations 002, 003, 007)
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID PK | |
-| owner_id | UUID FK → users | |
-| name | TEXT | |
-| role | TEXT | |
-| mission_id | UUID FK → missions ON DELETE CASCADE | |
-| parent_id | UUID FK → teams ON DELETE SET NULL | Hierarchy |
-| path | TEXT | Materialized path for tree traversal |
-| type | TEXT | standing\|mission |
-| created_at, updated_at | TIMESTAMPTZ | |
-
-**`service_manifests`** (Migrations 002, 020)
-| Column | Type | Notes |
-|--------|------|-------|
-| id | UUID PK | |
-| team_id | UUID FK → teams ON DELETE CASCADE | [020] Added cascade |
-| name | TEXT | |
-| manifest | JSONB | AgentManifest config |
-| status | TEXT | active\|paused\|failed |
-| created_at, updated_at | TIMESTAMPTZ | |
-
-#### Memory & Knowledge
-
-**`log_entries`** (Migration 001) — id, team_id, event, content (JSONB), created_at
-
-**`context_vectors`** (Migration 008) — shared pgvector semantic recall substrate for scoped durable memory, governed deployment context, promoted reflection, and SitRep/conversation embeddings
-
-**`sitreps`** (Migration 008) — id, team_id FK, period_start, period_end, content (TEXT), created_at; summarized warm-history artifacts that can also be semantically indexed
-
-**`working_memory`** (Migration 008) — legacy short-lived working context with TTL semantics
-
-**`agent_state`** (Migration 018) — legacy mission-scoped agent key/value state with optional TTL
-
-**`agent_memories`** (Migration 019) — scoped durable fact/preference/goal memory with team/agent/run/visibility metadata
-
-**`conversation_summaries`** (Migration 021) — durable summarized continuity records with semantic linkage back into shared recall
-
-**`temp_memory_channels`** (Migration 033) — restart-safe temporary continuity checkpoints for lead/team working state
-
-Trusted memory posture:
-- `SOMA_MEMORY` is Soma personal durable continuity
-- `AGENT_MEMORY` is the canonical team-shared execution lane
-- governed context (`customer_context`, `company_knowledge`, `user_private_context`, `soma_operating_context`) and promoted `reflection_synthesis` stay distinct from ordinary chat memory
-- `LearningCandidate` in Managed Exchange is the candidate-first boundary before durable promotion
-
-#### Output
-
-**`artifacts`** (Migration 018) — id, mission_id FK, team_id FK, agent_id, trace_id, artifact_type (code\|document\|image\|audio\|data\|file\|chart), title, content_type (MIME), content, file_path, file_size_bytes, metadata (JSONB), trust_score, status (pending\|approved\|rejected\|archived), created_at
-
-**`agent_catalogue`** (Migration 017) — id, name, role, system_prompt, model, tools (TEXT[]), inputs (TEXT[]), outputs (TEXT[]), verification_strategy, verification_rubric (TEXT[]), validation_command, created_at, updated_at
-
-#### Infrastructure
-
-**`nodes`** (Migrations 005, 011–015) — id (TEXT PK), type, status, last_seen, specs (JSONB)
-
-**`cognitive_registry`** (Migration 006) — provider_id (TEXT PK), type, endpoint, model_id, api_key_env, status, last_checked
-
-**`mcp_servers`** (Migration 016) — id, name, transport (stdio\|sse), command, args, env (JSONB), url, status, created_at
-
-**`mcp_tools`** (Migration 016) — id, server_id FK → mcp_servers, name, description, input_schema (JSONB)
+SQL owns schema and migration contracts. Runtime tables cover identity, organizations, runs, events, memory, artifacts, governance, teams/groups, MCP/tool activity, and configuration state.
 
 ### Migration Index
 
-| # | Purpose |
-|---|---------|
-| 001 | Event log (log_entries) |
-| 002 | Core schema (users, teams, service_manifests) |
-| 003 | Mission hierarchy + materialized path |
-| 004 | Registry metadata |
-| 005 | Hardware node discovery |
-| 006 | LLM provider config (cognitive_registry) |
-| 007 | Team fabric + root user seeding |
-| 008 | Context engine (sitreps, working_memory, pgvector) |
-| 009 | Local dev provider defaults |
-| 010 | missions.status + missions.activated_at |
-| 011–015 | Node/provider schema fixes |
-| 016 | MCP server registry (mcp_servers, mcp_tools) |
-| 017 | Agent catalogue (agent_catalogue) |
-| 018 | Artifacts + agent state |
-| 019 | Agent memory extensions |
-| 020 | service_manifests → teams FK cascade fix |
-| 021 | Conversation summaries + semantic continuity linkage |
-| 033 | Restart-safe temporary continuity channels |
-| 035 | Managed exchange fields/schemas/channels including `LearningCandidate` |
-
----
+Use migration files as the source of exact DDL truth. When API behavior or payload meaning changes, review [API Reference](../API_REFERENCE.md) and the affected migration docs/tests.
 
 ## VIII. API Surface (50+ Endpoints)
 
 ### Identity & Users
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/user/me` | Current user profile, including normalized principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`) plus deploy-owned People & Access posture surfaced read-only through `settings` |
-| GET/PUT | `/api/v1/user/settings` | Read/update persisted user preferences such as assistant name/theme; GET overlays deploy-owned People & Access posture (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`), while PUT ignores/preserves those deploy-owned fields instead of persisting them |
+User, local-admin, break-glass, and future enterprise auth endpoints.
 
 ### Chat & Council
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/v1/chat` | Admin agent chat (NATS request-reply only, no raw LLM fallback) |
-| POST | `/api/v1/council/{member}/chat` | Direct council member query (CTS-enveloped response) |
-| GET | `/api/v1/council/members` | List members (auto-discovered from Soma) |
+Soma, council, and member chat/proposal routes.
 
 ### Mission Orchestration
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/missions` | List missions |
-| GET | `/api/v1/missions/{id}` | Mission detail |
-| PUT | `/api/v1/missions/{id}/agents/{name}` | Update agent in active mission |
-| DELETE | `/api/v1/missions/{id}/agents/{name}` | Remove agent from active mission |
-| DELETE | `/api/v1/missions/{id}` | Delete mission (deactivate + DB) |
-| POST | `/api/v1/intent/negotiate` | Generate blueprint via Meta-Architect |
-| POST | `/api/v1/intent/commit` | Persist + activate mission |
-| POST | `/api/v1/intent/seed/symbiotic` | Activate built-in sensors |
+Run, mission, proposal, approval, execution, and timeline routes.
 
 ### Cognitive Engine
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/cognitive/status` | Probe all providers dynamically |
-| POST | `/api/v1/cognitive/infer` | Direct inference |
-| GET | `/api/v1/cognitive/config` | Read config |
-| PUT | `/api/v1/cognitive/profiles` | Update profile→provider routing |
-| PUT | `/api/v1/cognitive/providers/{id}` | Update provider config |
+Provider profile, health, discovery, and routing routes.
 
 ### Telemetry & Trust
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/stream` | SSE event stream |
-| GET | `/api/v1/telemetry/compute` | Runtime metrics (goroutines, memory, tokens/sec, uptime) |
-| GET | `/api/v1/trust/threshold` | Read AutoExecuteThreshold |
-| PUT | `/api/v1/trust/threshold` | Update trust valve |
+Status, trust, event, and stream routes.
 
 ### Memory & RAG
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/memory/stream` | Event log SSE |
-| GET | `/api/v1/memory/search` | Scoped vector semantic search (cosine) |
-| GET | `/api/v1/memory/sitreps` | List SitReps |
-| GET | `/api/v1/sensors` | List sensor subscriptions |
+Memory, semantic search, context, and continuity routes.
 
 ### Governance & Proposals
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/governance/policy` | Read policy |
-| PUT | `/api/v1/governance/policy` | Update policy |
-| GET | `/api/v1/governance/pending` | List pending approvals |
-| POST | `/api/v1/governance/resolve/{id}` | Approve/deny |
-| GET | `/api/v1/proposals` | List team proposals |
-| POST | `/api/v1/proposals/{id}/approve` | Approve proposal |
-| POST | `/api/v1/proposals/{id}/reject` | Reject proposal |
+Policy, proposal, proof, and approval routes.
 
 ### Teams
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/teams` | List teams |
-| GET | `/api/v1/teams/detail` | Aggregated team details |
-| POST | `/api/v1/teams/{id}/connectors` | Install connector |
-| GET | `/api/v1/teams/{id}/wiring` | Wiring diagram |
+Team, group, temporary workflow, and member routes.
 
 ### MCP Management
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/v1/mcp/install` | Raw install boundary (intentionally disabled; returns `403`) |
-| GET | `/api/v1/mcp/servers` | List servers + tools |
-| DELETE | `/api/v1/mcp/servers/{id}` | Uninstall |
-| POST | `/api/v1/mcp/servers/{id}/tools/{tool}/call` | Invoke tool |
-| GET | `/api/v1/mcp/tools` | List all tools |
-| GET | `/api/v1/mcp/library` | Browse curated catalogue |
-| POST | `/api/v1/mcp/library/install` | Install from library |
+Connected Tools registry, library, install, activity, and health routes.
 
 ### Agent Catalogue
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/catalogue/agents` | List templates |
-| POST | `/api/v1/catalogue/agents` | Create |
-| PUT | `/api/v1/catalogue/agents/{id}` | Update |
-| DELETE | `/api/v1/catalogue/agents/{id}` | Delete |
+Agent/template catalogue and manifest routes.
 
 ### Artifacts
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/v1/artifacts` | List (filterable) |
-| GET | `/api/v1/artifacts/{id}` | Detail |
-| POST | `/api/v1/artifacts` | Store |
-| PUT | `/api/v1/artifacts/{id}/status` | Update status |
+Generated output, file, media, and retained artifact routes.
 
 ### Provisioning & Registry
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/v1/provision/draft` | Generate manifest |
-| POST | `/api/v1/provision/deploy` | Deploy |
-| GET | `/api/v1/registry/templates` | List templates |
-| POST | `/api/v1/registry/templates` | Register |
+Bootstrap, templates, resource registry, and deployment-context routes.
 
 ### Health
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/healthz` | Readiness probe |
-
----
+Readiness, liveness, and dependency health routes.
 
 ## IX. Governance & Policy Engine
 
-### Guard — `governance/guard.go`
+Deploy-owned identity posture is backend-owned: deploy-owned People & Access posture surfaced read-only, and settings PUT ignores/preserves those deploy-owned fields instead of persisting them.
 
-**Rule Evaluation:**
-1. Check intent pattern match (regex)
-2. Check team/agent filter
-3. Evaluate conditions (e.g., `amount > 50`)
-4. Apply action: `ALLOW` | `DENY` | `REQUIRE_APPROVAL`
+### Guard - `governance/guard.go`
+
+The guard decides whether an action is allowed, blocked, or requires proposal/approval. It must be deterministic and auditable.
 
 ### Default Rules (`core/config/policy.yaml`)
 
-| Rule | Intent Pattern | Action |
-|------|---------------|--------|
-| System Critical | `k8s.delete.*`, `system.shutdown` | REQUIRE_APPROVAL + DENY |
-| Finance | `payment.create > $50` | REQUIRE_APPROVAL |
-| IoT Safety | `firmware.update` | REQUIRE_APPROVAL |
-| IoT Safety | `motor.set_speed > 8000 rpm` | DENY |
-| Default | * | ALLOW |
-
-**Approval Expiry:** 1 hour
-**Storage:** In-memory (transient by design)
-
----
+Default policy should be safe for self-hosted operation and explicit about mutating actions, external services, private data, and tool use.
 
 ## X. MCP Integration
 
 ### Architecture (`internal/mcp/`)
 
-| File | Purpose |
-|------|---------|
-| `service.go` | Registry + tool discovery |
-| `pool.go` | Client lifecycle management |
-| `executor.go` | Tool invocation |
-| `library.go` | Curated server catalogue |
+MCP integration covers server registry, library entries, installation, activation, activity, health, and governed tool calls.
 
 ### Transport: stdio or SSE
 
+Supported transports should be explicit and observable. Curated stdio servers must run inside the configured output/workspace boundary.
+
 ### Curated Library (`core/config/mcp-library.yaml`)
 
-| Category | Servers |
-|----------|---------|
-| Development | filesystem, github |
-| Data/Search | postgres, sqlite, brave-search, fetch |
-| Communication | slack |
-| Media | stable-diffusion, flux, elevenlabs, replicate, comfyui, dall-e |
-| Utilities | memory, puppeteer, sequential-thinking |
-
----
+Library changes require docs/tests when they affect operator workflow, capability posture, or task behavior.
 
 ## XI. Startup & Shutdown
 
 ### Startup Sequence
 
-```
-1.  Load environment (ports, DB URL, NATS URL)
-2.  Load config files (cognitive.yaml, policy.yaml)
-3.  Connect PostgreSQL (retry 10x)
-4.  Load Cognitive Router (provider discovery)
-5.  Load Governance Guard (policy rules)
-6.  Initialize Memory.Service
-7.  Connect NATS (retry 10x, continue degraded if fail)
-8.  Start Router (input dispatcher)
-9.  Start Soma (team orchestration)
-10. Start Axon (signal monitoring → SSE)
-11. Start Overseer (DAG reconciliation)
-12. Start Memory Subscription
-13. Spawn standing teams from YAML (admin, council, genesis)
-14. Spawn agents in each team
-15. Start HTTP server (port 8080)
-16. Register all routes
-17. Block on SIGINT
-```
+Startup resolves config, policy, bootstrap bundles, DB, NATS, providers, MCP posture, and HTTP services. Normal startup should fail closed when required bootstrap truth is missing.
 
 ### Graceful Shutdown
 
-```
-On SIGINT:
-1. Drain NATS (in-flight messages)
-2. Cancel all agent contexts
-3. Stop HTTP server
-4. Close database connection
-5. Exit(0)
-```
+Shutdown should stop HTTP, streams, NATS consumers, background workers, and local service resources cleanly. Use `uv run inv lifecycle.down` or the matching runtime task for operator control.

@@ -1,9 +1,7 @@
 # Remote User Testing Runbook
-> Navigation: [Project README](../README.md) | [Docs Home](README.md)
+> Navigation: [Project README](../README.md) | [Docs Home](README.md) | [Testing](TESTING.md)
 
-Use this runbook when you want to walk through Mycelis from a different machine on the same network and prove the current user-facing product story end to end.
-
-For release-style proof, use a clean WSL deployment-mimic checkout refreshed from git as the validation host. Keep the Windows root repo as the dev/staging worktree instead of treating it as the deployment-mimic runtime.
+Use this runbook when a human tester validates Mycelis from a different browser, host, or operator machine than the runtime/control checkout.
 
 ## TOC
 
@@ -14,493 +12,231 @@ For release-style proof, use a clean WSL deployment-mimic checkout refreshed fro
 - [Windows Self-Hosted Operator Lane](#windows-self-hosted-operator-lane)
 - [Walkthrough](#walkthrough)
 - [Pass Criteria](#pass-criteria)
+- [Initial Release Handoff](#initial-release-handoff)
 - [Failure Notes To Capture](#failure-notes-to-capture)
 - [Recommended Evidence Capture](#recommended-evidence-capture)
 
 ## Purpose
 
-This runbook is designed for:
-- a remote browser session on another machine in your network
-- or a Windows browser reaching a same-machine Windows Docker Desktop or WSL-hosted stack through the real operator-facing address
-- a live Mycelis environment reachable through the operator-facing host path for that lane
-- a user-testing pass that proves governed product behavior, not just page rendering
+Remote user testing proves the delivered operator path, not only local code health. The tester should reach the UI through the same address a real user will use, interact through Soma, and verify governance, retained outputs, and recovery from the browser.
 
-Use [V8 Workflow Variants And Reboot Proof Set](./architecture-library/V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md) when you specifically want to compare direct Soma, compact-team, and multi-lane workflow behavior for the same objective and verify the resume path after a full reboot.
-
-It is a product walkthrough, not a raw engineering soak test.
+Use [Testing](TESTING.md) for engineering gates and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
 
 ## Current Truth And Boundaries
 
-This runbook should prove the current shipped posture:
-- Soma-first operator workflow
-- Soma as the root admin workspace for creating and shaping teams
-- a dedicated Groups workspace for temporary and standing collaboration lanes
-- team-specific follow-through through a focused Team Lead workspace once a lane is selected
-- governed mutation through proposal -> approve/cancel -> execution
-- audit/activity visibility
-- deployment-context loading into governed vector-backed stores
-- admin-visible output-model routing for team delivery types
-- MCP visibility and recent persisted tool activity
+Accepted runtime lanes:
+- Docker Compose on the same Windows machine as the tester
+- Docker-in-WSL Compose with Windows browser on the same machine
+- Compose or Kubernetes on another host reached by IP/hostname
+- self-hosted Kubernetes through real ingress
 
-Trusted memory boundary:
-- governed doctrine and deterministic evidence outrank team-shared `AGENT_MEMORY`
-- team-shared `AGENT_MEMORY` outranks Soma personal continuity for team execution
-- Soma personal continuity may still shape local style or relationship preference inside scope
-- optional governed external/web research when the environment has that path enabled
-- the same user journey must also work from a Windows browser against a self-hosted runtime while the AI engine runs on a Windows GPU host addressed by explicit IP or hostname
+Required topology truth:
+- AI endpoint is explicit and reachable from the runtime
+- the browser address is the delivered operator address
+- no proof depends on hidden localhost shortcuts unless the delivered lane is same-machine `http://localhost:3000`
 
-This runbook should not be used to claim broader remote-host control than the product currently guarantees.
+Soma-first operator workflow is the target user path.
 
-Current boundary:
-- unrestricted remote host actuation is still security-gated and not the default shipped claim
-- the safe current actuation proof is governed file output, governed context loading, MCP-backed tool usage, and reviewable audit/activity behavior
+Remote proof should include deployment-context loading into governed vector-backed stores when a workflow depends on retained host/deployment context. Include MCP visibility and recent persisted tool activity. The safe current actuation proof is governed file output, governed context loading, MCP-backed tool usage, and reviewable audit/activity behavior.
+
+Use a clean WSL deployment-mimic checkout refreshed from git as the validation host, with the Windows root repo as the dev/staging worktree. For WSL proof, use a clean WSL deployment-mimic checkout refreshed from git as the validation host and run `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv ci.release-preflight --lane=release`.
+
+For Windows browser proof, verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch. If the first browser request warms a cold Next.js/Compose path, classify it as `cold_start_first_request` instead of a clean first-pass success; do not silently relabel the run as a clean first-pass success. Record whether the issue is a `cold_start_first_request`, a steady-state regression, or an environment/setup gap.
 
 ## Preflight
 
-Before the walkthrough, verify these are true on the machine hosting Mycelis:
+Record:
+- branch and commit SHA
+- local date/time
+- runtime lane: `compose`, `wsl-compose`, `kubernetes`, or `remote-host`
+- UI URL used by the tester
+- Core/API URL if separately exposed
+- AI endpoint host/IP, not secret tokens
+- browser and OS
 
-0. The validation host is the correct checkout.
-   - release-style validation runs from the clean WSL deployment-mimic checkout, not from the Windows dev worktree
-   - if the Windows root repo contains in-progress edits, push them to git first and refresh the WSL checkout before starting the proof run
-
-1. The UI is reachable on the network.
-   - Default UI port: `3000`
-   - The current default bind posture is LAN-friendly dual-stack listening
-   - If the stack is running through Windows Docker Desktop or inside WSL on the same Windows machine the operator is using, prove the Windows browser path through `http://localhost:3000` first before treating LAN reachability as the only valid access path
-
-2. The Core API is healthy.
-   - Default API port: `8081`
-
-3. The environment has a working model endpoint.
-   - local Ollama
-   - LAN Ollama
-   - or another configured provider
-   - for Windows self-hosted validation, record the explicit Windows GPU host IP or hostname used by the model service and do not validate against loopback
-
-4. Authentication posture is ready.
-   - self-hosted local admin path works
-   - if testing recovery posture, break-glass credential exists too
-
-5. MCP expectations are known before the walkthrough.
-   - `filesystem` and/or `fetch` should already be connected if you want to test governed tool usage
-   - do not assume remote/high-risk MCP install should auto-allow
-
-6. Output storage expectations are known before the walkthrough.
-   - if testing `local_hosted` output storage, confirm the host path exists before Compose bring-up
-   - if testing cluster-generated output storage, confirm the chart/runtime is using the PVC-backed default
-
-7. Media readiness is known before the walkthrough.
-   - if no media provider is configured, capture the missing-provider blocker explicitly
-   - if a media provider is configured, be ready to prove render/save/download behavior from the browser
-
-Useful host-side checks:
-
-```bash
-uv run inv auth.posture
-uv run inv lifecycle.status
-uv run inv lifecycle.health
-```
-
-If you are using the supported compose stack:
+Run one matching readiness set before inviting the tester:
 
 ```bash
 uv run inv compose.status
 uv run inv compose.health
 ```
 
+or:
+
+```bash
+uv run inv lifecycle.status
+uv run inv lifecycle.health
+```
+
+or the target-cluster equivalent plus:
+
+```bash
+uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml
+```
+
 ## Environment Setup
 
-On the remote user-testing machine:
+For Compose:
+- configure `.env.compose`
+- set `MYCELIS_COMPOSE_OLLAMA_HOST` to a runtime-reachable endpoint
+- run `uv run inv compose.up --build --wait-timeout=240`
+- confirm `uv run inv compose.health` passes
 
-1. Open the Mycelis UI with the operator-facing host path.
-   - Same Windows machine talking to a Windows Docker Desktop or WSL-hosted stack: `http://localhost:3000`
-   - Different machine on the same network: `http://<mycelis-host-ip>:3000`
-   - for the same-machine WSL-hosted lane, verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch before starting the guided workflow
+For Kubernetes:
+- set `MYCELIS_K8S_TEXT_ENDPOINT`
+- optionally set `MYCELIS_K8S_MEDIA_ENDPOINT`
+- select a values preset with `MYCELIS_K8S_VALUES_FILE`
+- deploy through `uv run inv k8s.up` or the target-cluster Helm process
 
-2. Confirm you can load the shell and the default workspace route.
-
-3. Keep one note open locally for:
-   - timestamp
-   - machine name
-   - browser used
-   - any visible blocker text
-
-If the environment relies on a LAN model endpoint, confirm the host machine is configured for that before the walkthrough:
-- `OLLAMA_HOST=http://<lan-ip>:11434`
-
-If the environment relies on a Windows GPU inference host, confirm the browser-facing deployment references an explicit host or IP before the walkthrough:
-- `MYCELIS_COMPOSE_OLLAMA_HOST=http://<windows-ai-host>:11434`
-- or the equivalent provider-specific endpoint override used by the deployment
+For source-mode proof:
+- use the WSL proof checkout for release-style validation
+- use the Windows browser for same-machine WSL-hosted UI proof
 
 ## Windows Self-Hosted Operator Lane
 
-Use this lane when the operator is on Windows and the product is running as a self-hosted deployment:
+This lane proves the product as a Windows operator actually uses it:
+- browser runs on Windows
+- UI is reached from Windows at the delivered address
+- runtime is Windows Docker Desktop Compose, Docker-in-WSL Compose, or self-hosted Kubernetes
+- AI engine is an explicit Windows host/IP or equivalent self-hosted service
 
-1. Open the UI from the Windows browser using the real operator-facing address.
-   - Same machine, Windows Docker Desktop or WSL-hosted stack: `http://localhost:3000`
-   - Different machine or explicit LAN proof: use the network-reachable host name or IP
-2. Confirm the root Soma workspace loads with a healthy runtime and a direct `answer` path for informational prompts.
-3. Confirm a mutating prompt enters `proposal` and can be approved or cancelled.
-4. Confirm guided team creation or temporary workflow launch completes without forcing a local-only dev shortcut.
-5. Confirm archived temporary groups retain their outputs and stay reviewable after refresh.
-6. Confirm a missing or unreachable Windows AI host produces a visible blocker, not a silent fallback to `localhost`.
-7. Restore the AI host and confirm the same browser session can continue working without a full reinstallation or desktop-only reset.
-8. If the very first fresh Soma request times out on a newly started stack but the warmed rerun succeeds, classify it as `cold_start_first_request` instead of a clean first-pass success.
-   - record the first timeout, then do one warm rerun after the stack is responsive
-   - do not silently relabel the run as a clean first-pass success
+Same-machine proof starts at:
+
+```text
+http://localhost:3000
+```
+
+Second-machine proof uses the reachable hostname or IP. Do not record raw secrets in evidence.
 
 ## Walkthrough
 
 ### 1. Workspace Entry And Continuity
 
-Goal:
-- prove that the remote machine can enter the real product and land in the Soma-first flow cleanly
+Open the UI. Confirm the tester can create or re-enter an AI Organization and land in a Soma-primary workspace.
 
-Steps:
-1. Open the app from the remote machine.
-2. Navigate into the active AI Organization if needed.
-3. Confirm the primary workspace lands on Soma, not a raw tool console.
-4. If the host was just rebuilt or upgraded, do one hard refresh before starting the scripted prompts so old conversation state does not masquerade as a live runtime failure.
-
-Expected outcome:
-- the workspace loads
-- Soma is the primary interaction surface
-- the root workspace makes it clear that admin can ask Soma to shape or create teams from here
-- a live interaction stream is visible on the Soma home and can be filtered by multiple teams and output aspects
-- no hydration crash or immediate degraded state appears on first view
+Expected: the product reads as an AI Organization workspace, not a raw chat box or dev console.
 
 ### 2. Direct Soma Answer
 
-Goal:
-- prove that a basic informational ask returns a direct answer instead of forcing a proposal path
+Ask a non-mutating question.
 
-Suggested prompts:
-- `what is your current state`
-- `what teams currently exist`
-- `Summarize the current design objectives for this AI Organization in 4 bullets.`
-
-Expected outcome:
-- terminal state is `answer`
-- response starts quickly
-- the first two prompts return a deterministic runtime/roster summary instead of a generic provider apology
-- no mutation proposal is shown for this informational ask
-- if a freshly started stack shows one first-request timeout before the runtime warms, capture it as `cold_start_first_request` and continue with one explicit warm rerun instead of hiding it
+Expected: Soma returns an `answer` without asking for mutation approval.
 
 ### 3. Soma Creates Or Refines A Team
 
-Goal:
-- prove that the root Soma workspace can be used to create or reshape a team without forcing the user into a low-level infrastructure view
+Ask Soma for a focused team or temporary workflow lane.
 
-Suggested prompt:
-- `Create a marketing team focused on campaign planning, launch messaging, and asset review.`
-
-Expected outcome:
-- Soma responds in a team-shaping posture
-- the result clearly frames the requested team as a governed working lane, not just a loose chat answer
-- the user can move from Soma's root workspace into a more focused team view afterward
+Expected: the team/lane shape is compact, reviewable, and routed through governed UI state.
 
 ### 3a. Groups Workspace
 
-Goal:
-- prove that collaboration groups have a dedicated workflow lane instead of crowding the root admin home
+Open the groups/temporary workflow surface.
 
-Steps:
-1. Open `Groups`.
-2. Confirm the page clearly separates standing and temporary groups.
-3. Create or review a temporary group.
-4. Confirm the selected group shows:
-   - focused lead/work mode
-   - recent outputs
-   - broadcast controls
-   - quick links back to Soma home and attached team leads
-5. Archive the temporary group.
-6. Confirm it moves from `Temporary groups` to `Archived temporary groups`.
-7. Confirm retained outputs remain reviewable and downloadable after archive.
-8. Confirm the group review surface shows how many outputs and contributing leads are currently attached to that lane.
-8. Confirm new broadcast is no longer available from the archived group view.
-
-Expected outcome:
-- groups are managed in their own graceful interface
-- temporary groups read as time-bounded working lanes, not permanent teams
-- outputs are reviewable from the group lane without dropping into raw logs by default
-- archived temporary groups remain reviewable after closure instead of disappearing into raw logs
-- retained outputs stay available without treating archived groups like active coordination lanes
-- the group review surface gives a quick count of outputs and contributing leads before the operator reads individual artifacts
+Expected: retained outputs, status, and review affordances remain visible.
 
 ### 4. Team Creation And Team Lead Focus
 
-Goal:
-- prove that team creation happens through a guided workflow first, and then team work happens through a focused lead instead of a generic global surface
+Run the guided team-creation path.
 
-Steps:
-1. Open `Teams`.
-2. Confirm the page shows both:
-   - the available team roster and lead-entry surface
-   - the reusable team-member templates Soma can use when specializing new teams
-3. Open `Open guided team creation`.
-4. Confirm the workflow explains:
-   - organization context
-   - expected outputs
-   - guided Soma handoff
-5. Use one of the guided starter prompts or enter a custom team request.
-6. Confirm Soma returns a team-shaping response with visible next steps or execution-path framing.
-7. If a native execution path is suggested, use `Create temporary workflow group`.
-8. Confirm the success state links into `Groups` for the newly created workflow group.
-9. Open that group and confirm it is already selected in the Groups workspace.
-10. Confirm the selected group shows multiple outputs or at least a clear output/contributing-lead summary when outputs exist.
-11. Archive the temporary workflow group.
-12. Confirm retained outputs remain reviewable/downloadable after archive and that broadcast controls are no longer available.
-13. Return to `Teams`.
-14. Select the created or existing team.
-15. Confirm the page frames that lane around a focused Team Lead counterpart.
-16. Ask a short team-specific question such as `Summarize this team's job in one sentence.`
-
-Expected outcome:
-- the Teams page reads as the admin surface for team specialization defaults and lead-entry, not the place to manually assemble a raw team form
-- the detailed creation flow happens on its own page instead of being buried in the roster
-- guided team creation can launch a temporary workflow group directly instead of forcing the user back into raw group fields
-- the newly launched group can be opened directly in the Groups workspace
-- the launched temporary workflow can be archived while preserving retained outputs for later review
-- live-backend validation should also prove that backend-stored outputs appear in the same retained group review surface after temporary-lane archive
-- the workspace or drawer clearly identifies a focused Team Lead / lead counterpart
-- team-specific prompts refer to the selected team first
-- the answer is scoped to that team, not the full global roster
+Expected: the Team Lead, purpose, and compact-default behavior are clear.
 
 ### 4a. Output Model Routing
 
-Goal:
-- prove that an admin can set a shared default model or detected output-type models for team delivery without editing backend config files
+Inspect AI Engine/response-style behavior only if the slice changes provider routing or response contracts.
 
-Steps:
-1. Return to the root AI Organization workspace.
-2. Open `AI Engine Settings`.
-3. Confirm the output-model routing panel loads.
-4. Review the recommended self-hosted starting points.
-5. Switch between:
-   - one shared model for everyone
-   - detected output-type routing
-6. Save a detected routing example such as:
-   - general text -> `Qwen3 8B`
-   - research and reasoning -> `Llama 3.1 8B`
-   - code generation -> `Qwen2.5 Coder 7B`
-   - vision analysis -> `LLaVA 7B`
-7. Return to the team view and confirm the team summary shows the detected effective model for that lane.
-
-Expected outcome:
-- the panel lists installed local models and recommended self-hosted starting points
-- the admin can save either routing mode without touching YAML directly
-- team-facing summaries reflect the detected effective model after save
-- ordinary non-admin interaction is not framed as the place to rewrite shared output-model policy
+Expected: effective settings are visible without exposing secrets.
 
 ### 4b. Output Block And Media Readiness
 
-Goal:
-- prove that retained outputs are written to the correct storage posture and that media generation is either live or clearly blocked
+Create or review an output artifact.
 
-Steps:
-1. Confirm the current output-block mode is visible in the setup or runtime notes.
-2. If the run is `local_hosted`, verify the host path exists before you start the browser walkthrough.
-3. If the run is `cluster_generated`, verify the storage path is presented as cluster-managed/PVC-backed.
-4. Run the health check and confirm whether the media engine is online.
-5. If media is online, run the headed browser proof that renders generated media artifacts and exposes save/download paths.
-6. If media is offline, capture the blocker text and stop the run as blocked instead of treating it as a pass.
-7. Use a team-managed flow such as guided team creation and temporary-group review to confirm retained outputs are still reviewable after archive.
-
-Expected outcome:
-- local-hosted output storage is tied to a real host directory and reads as a self-hosted exception
-- cluster-generated output storage reads as the default managed path
-- media readiness is explicit, not implied
-- team-managed outputs stay reviewable after temporary group closure
+Expected: generated files are linked/downloadable from the configured output block. If media is unavailable, the UI shows a clear blocker.
 
 ### 5. Governed Mutation: Cancel Path
 
-Goal:
-- prove that a mutating action is governed and can be stopped safely
+Ask for a protected/mutating action and cancel it.
 
-Suggested prompt:
-- `Create a file named remote_user_test.txt in the workspace with one line saying this was a remote user test.`
-
-Expected outcome:
-- terminal state is `proposal`
-- proposal card shows risk/approval posture
-- selecting `Cancel` ends with a no-action result
-
-Pass condition:
-- no file should be created after cancellation
+Expected: proposal state is visible, cancellation is clean, and no mutation is applied.
 
 ### 6. Governed Mutation: Execute Path
 
-Goal:
-- prove that the same actuation path works once approved
+Repeat a protected action and approve it.
 
-Suggested prompt:
-- repeat the file-create request from the previous step
-
-Expected outcome:
-- terminal state moves from `proposal` to `execution_result` after approval
-- the file write succeeds inside the governed workspace boundary
-- the result remains visible in conversation history
-
-Optional host-side verification:
-- inspect the workspace directory on the host machine and confirm the file exists
+Expected: execution state and result are visible, auditable, and retained.
 
 ### 7. Deployment Context Intake
 
-Goal:
-- prove that user-provided documentation can be loaded into governed long-term context instead of being treated as ordinary chat
+Provide deployment context only when needed for the tested slice.
 
-Steps:
-1. Open `Resources -> Deployment Context`.
-2. Paste a short deployment brief, policy note, or requirements summary.
-3. Load it as either `user_private_context` for private records tied to a target goal set, `customer_context` for operator/customer deployment material, or `reflection_synthesis` for a distilled lesson/pattern/trajectory-shift note.
-4. Set a reasonable trust/sensitivity posture.
-
-Suggested sample content:
-- a short note describing target users, deployment environment, and expected output style
-
-Expected outcome:
-- the entry is accepted as governed context
-- it appears in recent Deployment Context history
-- the UI makes clear this is governed context, not ordinary Soma memory
-- it is also clear that loading governed context does not silently create team-shared `AGENT_MEMORY`
-- private context shows private/restricted posture and target-goal metadata when provided
-- reflection/synthesis context shows a synthesis-oriented source kind such as `lesson`, `inferred_pattern`, `contradiction`, `trajectory_shift`, or `meta_observation`
-- it is clear that this context can support Soma and team leads without becoming ungoverned shared chat history
+Expected: private context is treated as governed input, not leaked as raw backend noise.
 
 ### 8. MCP Visibility And Tool Activity
 
-Goal:
-- prove that the operator can understand what tools are available and what agents have actually used
+Open Resources/Connected Tools when MCP behavior is in scope.
 
-Steps:
-1. Open `Resources -> Connected Tools`.
-2. Confirm installed/connected MCP servers are visible.
-3. Review recent MCP activity.
-
-Expected outcome:
-- the page shows connected servers clearly
-- recent activity includes persisted MCP usage, not only ephemeral live stream events
-- the operator can tell which server/tool was used
-
-If the environment allows low-risk curated install testing:
-- install only a known local-first, policy-compliant library entry
-- do not treat a remote/high-risk MCP install rejection as a failure; it is a valid governance result
+Expected: registry/library/activity state is understandable and actions remain governed.
 
 ### 9. Optional Web/External Research
 
-Goal:
-- prove that web/external research is governed rather than silently trusted
+Run only when search/research is in scope.
 
-Only run this if the environment already has a sanctioned research path such as `fetch`.
-
-Suggested prompt:
-- `Research <approved URL> and give me a 3-bullet summary plus whether it should be treated as durable deployment context.`
-
-Expected outcome:
-- the system either:
-  - returns a governed answer using the enabled research path, or
-  - returns a clear proposal/blocker if policy requires approval or the capability is unavailable
-
-Pass condition:
-- external access is visible and governed
-- the system does not behave like unrestricted open browsing
+Expected: configured provider posture is visible, and unreachable endpoints block clearly.
 
 ### 10. Audit / Activity Review
 
-Goal:
-- prove that the remote user can inspect what happened after the flow
+Open activity or run timeline.
 
-Steps:
-1. Open `Automations -> Approvals` or the Activity Log surface.
-2. Review the recent entries from this session.
-
-Expected outcome:
-- you can see:
-  - proposal generated
-  - proposal cancelled and/or confirmed
-  - execution result
-  - MCP activity if used
-  - approval posture
+Expected: direct answers, proposals, executions, and retained artifacts are reviewable.
 
 ### 11. Failure Recovery Check
 
-Goal:
-- prove that the system fails into a clear blocker or tool error, not silent breakage
+Temporarily break or simulate AI endpoint failure only if safe for the environment.
 
-Suggested prompt:
-- `Write a file to /root/forbidden_remote_test.txt`
-
-Expected outcome:
-- execution is blocked or fails visibly
-- the failure stays inside the conversation/audit model
-- the product does not crash globally
+Expected: blocker appears, recovery restores the same workflow after endpoint health returns.
 
 ## Pass Criteria
 
-This remote user test should be considered successful when all of these are true:
-
-1. The remote machine can reach and use the UI over the network.
-2. Soma-first workspace entry works.
-3. Soma can be used from the root workspace to shape or create a team.
-4. Selecting a team shifts the interaction into a clearly team-focused lead workspace.
-5. Admins can configure organization output-model routing from the root Soma workspace.
-6. Informational prompts return `answer`.
-7. Mutating prompts enter governed `proposal` flow.
-8. Cancel and approve paths both behave correctly.
-9. Deployment context can be loaded with visible governance posture.
-10. Connected Tools makes MCP availability and recent usage understandable.
-11. Optional web research, if enabled, behaves as a governed capability.
-12. Audit/activity surfaces reconstruct the session clearly.
-13. Failure cases degrade safely into blocker/error states instead of UI collapse.
-14. The same walkthrough works from Windows against a self-hosted runtime with an explicit non-loopback AI host.
+The run passes only when:
+- the tester used the real delivered UI address
+- Soma direct answer, governed proposal, approval/cancel, and retention paths worked
+- output artifacts were visible or a truthful blocker was recorded
+- the AI endpoint was explicit and reachable from runtime
+- failures surfaced in user-readable form
 
 ## Initial Release Handoff
 
-Use this shorter sequence when you are validating a fresh checkout on another machine before a first release handoff:
+Provide:
+- UI URL
+- runtime lane
+- AI endpoint host posture
+- evidence commands run
+- screenshots or short recordings
+- pass/fail notes
+- known blockers and recovery steps
 
-1. Push the candidate changes from the Windows dev/staging repo to git.
-2. Refresh the clean WSL deployment-mimic checkout from git.
-3. Follow [Local Development Workflow](./LOCAL_DEV_WORKFLOW.md) for the host you are using.
-4. Start the supported runtime (`uv run inv compose.up --build` on WSL/Linux/macOS, or the supported self-hosted runtime path with an explicit non-loopback AI endpoint on Windows or another host).
-5. Run `uv run inv ci.release-preflight --lane=release`.
-6. For the same-machine WSL-hosted lane, verify `http://localhost:3000` from Windows with both a simple HTTP probe and a real browser launch.
-7. Run the remote walkthrough in this document from the second machine or Windows browser lane.
-8. Confirm the current release blockers are named in `.state/V8_DEV_STATE.md` before you declare the release ready.
-
-Initial-release gate rule:
-- treat `.state/V8_DEV_STATE.md` as the live blocker board
-- do not promote a release if the remote walkthrough finds a fresh Soma chat, proposal/confirm, guided team creation, context intake, or artifact/output review defect
-- record media-engine gaps as environment notes unless the target machine is explicitly configured for live media generation
-- record a first-request-only warmup failure as `cold_start_first_request`; it stays a release note until the cold path is healthy, even if the warm rerun passes
+Follow [Local Development Workflow](LOCAL_DEV_WORKFLOW.md) for host-specific bring-up.
 
 ## Failure Notes To Capture
 
-When something goes wrong, record:
-- exact step number
-- prompt or action used
-- visible terminal state: `answer`, `proposal`, `execution_result`, or `blocker`
-- exact banner/card/error text
-- whether refresh/retry changed the result
-- whether the issue was remote-network only or reproducible from the host machine too
-- whether the issue is a `cold_start_first_request`, a steady-state regression, or an environment/setup gap
+Capture:
+- exact user action
+- visible UI state
+- browser console/network symptom when available
+- Core/log symptom when available
+- runtime lane and UI URL
+- whether refresh/retry recovered
 
 ## Recommended Evidence Capture
 
-Capture this during the run:
-- screenshot of workspace entry
-- screenshot of one governed proposal
-- screenshot of one successful execution result
-- screenshot of Deployment Context after ingest
-- screenshot of Connected Tools recent activity
-- screenshot of Activity Log / Audit after the session
-- one short written summary:
-  - what felt solid
-  - what felt confusing
-  - what broke trust
+Minimum:
+- dashboard or organization entry screenshot
+- Soma direct answer screenshot
+- proposal/cancel screenshot
+- proposal/execute result screenshot
+- retained output or blocker screenshot
+- activity/run timeline screenshot
 
-Related references:
-- [Testing Guide](./TESTING.md)
-- [Resources](./user/resources.md)
-- [Governance & Trust](./user/governance-trust.md)
-- [Licensing & Editions](./licensing.md)
-- [Development Workflow](./LOCAL_DEV_WORKFLOW.md)
+References:
+- [Testing](TESTING.md)
+- [Local Development Workflow](LOCAL_DEV_WORKFLOW.md)
+- [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md)

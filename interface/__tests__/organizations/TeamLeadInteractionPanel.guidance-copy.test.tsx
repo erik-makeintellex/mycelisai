@@ -12,8 +12,8 @@ describe("TeamLeadInteractionPanel guidance copy", () => {
     it("renders guided Soma actions without generic chat wording", () => {
         renderTeamLeadInteractionPanel();
 
-        expect(screen.getByText("Create teams with Soma")).toBeDefined();
-        expect(screen.getByText("Team creation lane")).toBeDefined();
+        expect(screen.getByText("Focused team design with Soma")).toBeDefined();
+        expect(screen.getByText("Advanced team design mode")).toBeDefined();
         expect(screen.getByRole("button", { name: "Start team design" })).toBeDefined();
         expect(screen.getByLabelText("Tell Soma what team or delivery lane you want to create")).toBeDefined();
         expect(screen.getByRole("button", { name: /Run a quick strategy check/i })).toBeDefined();

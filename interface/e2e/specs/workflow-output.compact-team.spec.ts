@@ -3,6 +3,7 @@ import {
     fulfillJSON,
     gotoWithColdStartRetry,
     installWorkflowOutputShell,
+    openAdvancedTeamDesign,
     openOrganization,
     type ArtifactRecord,
     type GroupRecord,
@@ -140,8 +141,7 @@ test.describe("Workflow output compact team package", () => {
         });
 
         await openOrganization(page);
-        await page.getByRole("button", { name: "Create teams with Soma" }).click();
-        await expect(page.getByRole("heading", { name: "Create teams with Soma" })).toBeVisible();
+        await openAdvancedTeamDesign(page);
 
         const requestField = page.getByLabel("Tell Soma what team or delivery lane you want to create");
         await requestField.fill(

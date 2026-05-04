@@ -18,8 +18,7 @@ test.describe("V8 AI Organization entry flow - setup", () => {
         await page.waitForLoadState("domcontentloaded");
 
         await expect(page.getByRole("heading", { name: /What do you want .* to do\?/i })).toBeVisible();
-        await expect(page.getByText("Central Soma")).toBeVisible();
-        await expect(page.getByText("Start with intent.")).toBeVisible();
+        await expect(page.getByText("Start with Soma")).toBeVisible();
         await expect(page.getByRole("button", { name: "Create or open AI Organizations" })).toBeVisible();
         await page.getByRole("button", { name: "Create or open AI Organizations" }).click();
         await expect(page.getByText("AI Organization Setup", { exact: true })).toBeVisible();

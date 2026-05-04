@@ -115,7 +115,13 @@ export async function installWorkflowOutputShell(page: Page) {
 export async function openOrganization(page: Page) {
     await gotoWithColdStartRetry(page, `/organizations/${organizationId}`);
     await page.getByPlaceholder(chatPlaceholder).waitFor({ timeout: 20_000 });
-    await expect(page.getByRole("heading", { name: "Talk with Soma" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What do you want Soma to do?" })).toBeVisible();
+}
+
+export async function openAdvancedTeamDesign(page: Page) {
+    await gotoWithColdStartRetry(page, `/teams/create?organization_id=${organizationId}`);
+    await expect(page.getByRole("heading", { name: "Create a team through Soma" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Focused team design with Soma" })).toBeVisible();
 }
 
 export async function sendWorkspaceMessage(page: Page, content: string) {

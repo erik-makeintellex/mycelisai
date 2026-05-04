@@ -1,11 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Loader2, RefreshCcw } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import type {
-    TeamLeadExecutionContract,
     TeamLeadGuidanceRequest,
     TeamLeadGuidanceResponse,
     TeamLeadGuidedAction,
@@ -14,22 +11,22 @@ import type {
 import {
     classifyRequestScope,
     defaultRequestLabel,
-    GUIDED_ACTIONS,
     normalizeGuidanceResponse,
     rewriteGuidanceText,
     resolvePromptAction,
-    type GuidedExecutionContract,
 } from "@/components/organizations/teamLeadGuidanceNormalization";
 import {
     persistWorkspaceState,
     readPersistedWorkspaceState,
     type RequestState,
 } from "@/components/organizations/teamLeadWorkspaceStorage";
-
-type LaunchedGroupState = {
-    groupId: string;
-    name: string;
-};
+import { TeamLeadGuidanceResult } from "@/components/organizations/teamLeadGuidanceResult";
+import type { LaunchedGroupState } from "@/components/organizations/teamLeadExecutionCards";
+import {
+    TeamLeadActionList,
+    TeamLeadPanelHeader,
+    TeamLeadRequestComposer,
+} from "@/components/organizations/teamLeadRequestComposer";
 
 export type SomaGuidanceUpdate = {
     requestLabel: string;
@@ -226,447 +223,42 @@ export default function TeamLeadInteractionPanel({
             ref={panelRef}
             className={embedded ? "space-y-5" : "rounded-3xl border border-cortex-border bg-cortex-surface p-6"}
         >
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <h2 className="text-xl font-semibold text-cortex-text-main">{embedded ? "Create teams with Soma" : "Create teams with Soma"}</h2>
-                    <p className="mt-1 text-sm text-cortex-text-muted">
-                        Use this lane when you want Soma to shape a team, delivery lane, or first execution structure for {organizationName}.
-                    </p>
-                </div>
-                {!embedded ? (
-                    <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted">
-                        <p className="font-medium text-cortex-text-main">Primary counterpart</p>
-                        <p className="mt-1">{somaName}</p>
-                        <p className="mt-3 font-medium text-cortex-text-main">Operational lead</p>
-                        <p className="mt-1">{teamLeadName}</p>
-                    </div>
-                ) : (
-                    <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
-                        <p className="font-medium text-cortex-text-main">How this mode works</p>
-                        <p className="mt-1 leading-6">
-                            Stay in the same Soma workspace while focusing this mode on team design, delivery lanes, and execution structure.
-                        </p>
-                    </div>
-                )}
-            </div>
+            <TeamLeadPanelHeader
+                organizationName={organizationName}
+                somaName={somaName}
+                teamLeadName={teamLeadName}
+                embedded={embedded}
+            />
+            <TeamLeadRequestComposer
+                promptRef={promptRef}
+                draftPrompt={draftPrompt}
+                promptSuggestions={promptSuggestions}
+                isLoading={isLoading}
+                onPromptChange={setDraftPrompt}
+                onSubmit={() => void handlePromptSubmit()}
+            />
+            <TeamLeadActionList
+                selectedAction={selectedAction}
+                isLoading={isLoading}
+                onAction={(action) => void triggerAction(action)}
+            />
 
-            <div className="mt-5 rounded-2xl border border-cortex-primary/30 bg-cortex-primary/10 p-4">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-2">
-                        <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-cortex-primary">Team creation lane</p>
-                        <p className="text-sm leading-6 text-cortex-text-main">
-                            Tell Soma what kind of team, delivery lane, or execution structure you want to create. This panel keeps that request focused on team design instead of general organization conversation.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handlePromptSubmit}
-                        disabled={isLoading}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2.5 text-sm font-semibold text-cortex-bg transition-colors hover:bg-cortex-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                        Start team design
-                    </button>
-                </div>
-                <div className="mt-4 space-y-2">
-                    <label htmlFor="soma-guided-prompt" className="text-sm font-medium text-cortex-text-main">
-                        Tell Soma what team or delivery lane you want to create
-                    </label>
-                    <textarea
-                        id="soma-guided-prompt"
-                        ref={promptRef}
-                        value={draftPrompt}
-                        onChange={(event) => setDraftPrompt(event.target.value)}
-                        onKeyDown={(event) => {
-                            if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                                event.preventDefault();
-                                void handlePromptSubmit();
-                            }
-                        }}
-                        placeholder="Tell Soma what team or delivery lane you want to create"
-                        className="min-h-[104px] w-full rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-main outline-none transition-colors placeholder:text-cortex-text-muted focus:border-cortex-primary/40"
-                    />
-                    <p className="text-xs leading-6 text-cortex-text-muted">
-                        Soma will use this request to choose the right first team-design move. Leave it blank to start with a quick strategy check right away.
-                    </p>
-                    {promptSuggestions.length > 0 ? (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                            {promptSuggestions.map((suggestion) => (
-                                <button
-                                    key={suggestion.label}
-                                    type="button"
-                                    onClick={() => setDraftPrompt(suggestion.prompt)}
-                                    className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1.5 text-xs font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary"
-                                >
-                                    {suggestion.label}
-                                </button>
-                            ))}
-                        </div>
-                    ) : null}
-                </div>
-            </div>
-
-            <div className="mt-5 grid gap-3">
-                {GUIDED_ACTIONS.map((item) => (
-                    <button
-                        key={item.action}
-                        onClick={() => triggerAction(item.action)}
-                        disabled={isLoading}
-                        className={`w-full rounded-2xl border p-4 text-left transition-colors ${
-                            selectedAction === item.action
-                                ? "border-cortex-primary/40 bg-cortex-primary/10"
-                                : "border-cortex-border bg-cortex-bg hover:border-cortex-primary/20"
-                        } disabled:cursor-not-allowed disabled:opacity-70`}
-                        aria-busy={selectedAction === item.action && isLoading}
-                    >
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <p className="text-sm font-semibold text-cortex-text-main">{item.label}</p>
-                                <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{item.detail}</p>
-                            </div>
-                            <ArrowRight className={`mt-0.5 h-4 w-4 ${selectedAction === item.action ? "text-cortex-primary" : "text-cortex-text-muted"}`} />
-                        </div>
-                    </button>
-                ))}
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
-                {requestState === "idle" && (
-                    <div>
-                        <p className="text-sm font-semibold text-cortex-text-main">Choose a guided team-design action</p>
-                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                            These starting options help Soma move from conversation into organization design. Each one should produce a clearer team-creation direction, delivery focus, or setup review without leaving the workspace.
-                        </p>
-                    </div>
-                )}
-
-                {requestState === "loading" && (
-                    <div className="flex items-center gap-3 text-sm text-cortex-text-muted">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Soma is preparing guidance for this AI Organization...</span>
-                    </div>
-                )}
-
-                {requestState === "error" && error && (
-                    <div>
-                        <p className="text-sm font-semibold text-cortex-text-main">Soma guidance is unavailable</p>
-                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{error}</p>
-                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                            {somaName} and the AI Organization context are still here. Retry the same action when you are ready.
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                            You can also choose another guided Soma action below without leaving {organizationName}.
-                        </p>
-                        {selectedAction && (
-                            <button
-                                onClick={() => triggerAction(selectedAction)}
-                                disabled={isLoading}
-                                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                                <RefreshCcw className="h-4 w-4" />
-                                Retry Soma action
-                            </button>
-                        )}
-                    </div>
-                )}
-
-                {requestState === "ready" && guidance && (
-                    <div className="space-y-5">
-                        {requestContext && (
-                            <div>
-                                <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">You asked Soma to help with</p>
-                                <p className="mt-2 text-sm leading-6 text-cortex-text-main">{requestContext}</p>
-                            </div>
-                        )}
-
-                        <CompactTeamGuidanceCard requestScope={requestScope} />
-
-                        <div>
-                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Current request</p>
-                            <p className="mt-2 text-base font-semibold text-cortex-text-main">{guidance.request_label}</p>
-                        </div>
-
-                        <div>
-                            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Soma guidance</p>
-                            <p className="mt-2 text-base font-semibold text-cortex-text-main">{guidance.headline}</p>
-                            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{guidance.summary}</p>
-                        </div>
-
-                        <div className="space-y-4">
-                            {guidance.execution_contract && <ExecutionContractCard contract={guidance.execution_contract} />}
-                            {guidance.execution_contract?.workflow_group ? (
-                                <TemporaryWorkflowLaunchCard
-                                    draft={guidance.execution_contract.workflow_group}
-                                    launching={launchingGroup}
-                                    launchedGroup={launchedGroup}
-                                    error={launchError}
-                                    onLaunch={() => void launchWorkflowGroup(guidance.execution_contract!.workflow_group!)}
-                                />
-                            ) : null}
-                        </div>
-
-                        <div>
-                            <p className="text-sm font-medium text-cortex-text-main">Priority steps</p>
-                            <div className="mt-3 space-y-2">
-                                {guidance.priority_steps.map((step) => (
-                                    <GuidanceRow key={step}>{step}</GuidanceRow>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <p className="text-sm font-medium text-cortex-text-main">Keep moving with</p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {guidance.suggested_follow_ups.map((suggestion) => (
-                                    <div
-                                        key={suggestion}
-                                        className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-2 text-sm text-cortex-text-main"
-                                    >
-                                        {suggestion}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+            <TeamLeadGuidanceResult
+                requestState={requestState}
+                error={error}
+                isLoading={isLoading}
+                selectedAction={selectedAction}
+                requestContext={requestContext}
+                requestScope={requestScope}
+                guidance={guidance}
+                launchingGroup={launchingGroup}
+                launchedGroup={launchedGroup}
+                launchError={launchError}
+                somaName={somaName}
+                organizationName={organizationName}
+                onRetryAction={(action) => void triggerAction(action)}
+                onLaunchWorkflowGroup={(draft) => void launchWorkflowGroup(draft)}
+            />
         </section>
-    );
-}
-
-function GuidanceRow({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="flex items-start gap-3 rounded-2xl border border-cortex-border bg-cortex-surface/60 px-3 py-3 text-sm text-cortex-text-muted">
-            <span className="mt-1 h-2 w-2 rounded-full bg-cortex-primary" />
-            <span className="leading-6">{children}</span>
-        </div>
-    );
-}
-
-function CompactTeamGuidanceCard({ requestScope }: { requestScope: "compact" | "broad" | null }) {
-    const broad = requestScope === "broad";
-    return (
-        <div className={`rounded-2xl border px-4 py-4 ${broad ? "border-cortex-primary/30 bg-cortex-primary/10" : "border-cortex-border bg-cortex-surface/60"}`}>
-            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Compact team default</p>
-            <p className="mt-2 text-sm font-semibold text-cortex-text-main">
-                {broad ? "This ask looks broad enough for several small teams or lane bundles." : "This ask looks compact enough for one focused team."}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">
-                Default to a small, focused roster. If the request crosses marketing, product, operations, or media at once, Soma should split it into several compact teams and use Council plus NATS to coordinate the handoffs instead of inflating one team past a dozen members.
-            </p>
-        </div>
-    );
-}
-
-function ExecutionContractCard({ contract }: { contract: TeamLeadExecutionContract }) {
-    const richContract = contract as GuidedExecutionContract;
-    const isNativeTeam = contract.execution_mode === "native_team";
-    const isContinuityResume = contract.execution_mode === "continuity_resume";
-    const title = isNativeTeam ? "Native Mycelis team" : contract.execution_mode === "external_workflow_contract"
-        ? "External workflow contract"
-        : isContinuityResume
-        ? "Retained package continuity"
-        : "Guided execution path";
-
-    return (
-        <div className="rounded-2xl border border-cortex-primary/25 bg-cortex-primary/5 px-4 py-4">
-            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">Execution path</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-cortex-primary/25 bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-primary">
-                    {title}
-                </span>
-                <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                    {contract.owner_label}
-                </span>
-                {contract.team_name ? (
-                    <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                        {contract.team_name}
-                    </span>
-                ) : null}
-                {contract.external_target ? (
-                    <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                        {contract.external_target}
-                    </span>
-                ) : null}
-            </div>
-            <p className="mt-3 text-sm leading-6 text-cortex-text-muted">{contract.summary}</p>
-            {isContinuityResume && (contract.continuity_summary || contract.resume_checkpoint) ? (
-                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
-                    {contract.continuity_label ? (
-                        <p className="text-xs font-mono uppercase tracking-[0.18em] text-cortex-primary">{contract.continuity_label}</p>
-                    ) : null}
-                    {contract.continuity_summary ? (
-                        <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{contract.continuity_summary}</p>
-                    ) : null}
-                    {contract.resume_checkpoint ? (
-                        <p className="mt-3 text-sm font-medium text-cortex-text-main">{contract.resume_checkpoint}</p>
-                    ) : null}
-                </div>
-            ) : null}
-            {contract.target_outputs.length > 0 ? (
-                <div className="mt-4">
-                    <p className="text-sm font-medium text-cortex-text-main">Target outputs</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                        {contract.target_outputs.map((output) => (
-                            <span
-                                key={output}
-                                className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-2 text-sm text-cortex-text-main"
-                            >
-                                {output}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            ) : null}
-            {richContract.workstreams && richContract.workstreams.length > 0 ? (
-                <div className="mt-4">
-                    <p className="text-sm font-medium text-cortex-text-main">Working together now</p>
-                    <div className="mt-3 space-y-3">
-                        {richContract.workstreams.map((workstream) => (
-                            <div key={`${workstream.label}:${workstream.owner_label}`} className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full border border-cortex-primary/25 bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-primary">
-                                        {workstream.label}
-                                    </span>
-                                    {workstream.status ? (
-                                        <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                                            {workstream.status}
-                                        </span>
-                                    ) : null}
-                                    <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                                        {workstream.owner_label}
-                                    </span>
-                                </div>
-                                <p className="mt-3 text-sm leading-6 text-cortex-text-muted">{workstream.summary}</p>
-                                <p className="mt-3 text-sm font-medium text-cortex-text-main">Next step</p>
-                                <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{workstream.next_step}</p>
-                                {workstream.target_outputs && workstream.target_outputs.length > 0 ? (
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        {workstream.target_outputs.map((output) => (
-                                            <span
-                                                key={`${workstream.label}:${output}`}
-                                                className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted"
-                                            >
-                                                {output}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : null}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ) : null}
-            {(richContract.recommended_team_shape || richContract.coordination_model || typeof richContract.recommended_team_count === "number" || typeof richContract.recommended_team_member_limit === "number") ? (
-                <div className="mt-4 rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-3">
-                    <p className="text-xs font-mono uppercase tracking-[0.18em] text-cortex-primary">Compact orchestration hints</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                        {richContract.recommended_team_shape ? (
-                            <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                                {richContract.recommended_team_shape}
-                            </span>
-                        ) : null}
-                        {richContract.coordination_model ? (
-                            <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                                {richContract.coordination_model}
-                            </span>
-                        ) : null}
-                        {typeof richContract.recommended_team_count === "number" ? (
-                            <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                                {richContract.recommended_team_count} team{richContract.recommended_team_count === 1 ? "" : "s"}
-                            </span>
-                        ) : null}
-                        {typeof richContract.recommended_team_member_limit === "number" ? (
-                            <span className="rounded-full border border-cortex-border bg-cortex-bg px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                                member limit {richContract.recommended_team_member_limit}
-                            </span>
-                        ) : null}
-                    </div>
-                </div>
-            ) : null}
-        </div>
-    );
-}
-
-function TemporaryWorkflowLaunchCard({
-    draft,
-    launching,
-    launchedGroup,
-    error,
-    onLaunch,
-}: {
-    draft: TeamLeadWorkflowGroupDraft;
-    launching: boolean;
-    launchedGroup: LaunchedGroupState | null;
-    error: string | null;
-    onLaunch: () => void;
-}) {
-    const launchable = draft.work_mode !== "resume_continuity";
-    const continuityHref = !launchable && draft.group_id
-        ? `/groups?group_id=${encodeURIComponent(draft.group_id)}`
-        : null;
-    return (
-        <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-4">
-            <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
-                {launchable ? "Launch temporary workflow group" : "Retained package continuity"}
-            </p>
-            <p className="mt-3 text-sm font-semibold text-cortex-text-main">{draft.name}</p>
-            <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{draft.summary}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-                <span className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                    {draft.work_mode}
-                </span>
-                <span className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                    {draft.coordinator_profile}
-                </span>
-                {typeof draft.expiry_hours === "number" && draft.expiry_hours > 0 ? (
-                    <span className="rounded-full border border-cortex-border bg-cortex-surface px-3 py-1 text-[11px] font-mono text-cortex-text-muted">
-                        expires in {draft.expiry_hours}h
-                    </span>
-                ) : null}
-            </div>
-            {launchable ? (
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={onLaunch}
-                        disabled={launching}
-                        className="rounded-2xl border border-cortex-primary/35 bg-cortex-primary px-4 py-2 text-sm font-semibold text-cortex-bg disabled:opacity-60"
-                    >
-                        {launching ? "Creating workflow group..." : "Create temporary workflow group"}
-                    </button>
-                    {launchedGroup ? (
-                        <Link
-                            href={`/groups?group_id=${encodeURIComponent(launchedGroup.groupId)}`}
-                            className="rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-2 text-sm font-medium text-cortex-text-main hover:border-cortex-primary/20"
-                        >
-                            Open {launchedGroup.name}
-                        </Link>
-                    ) : null}
-                </div>
-            ) : (
-                <div className="mt-4 space-y-3">
-                    <p className="text-sm text-cortex-text-muted">
-                        This continuity path is review-first. Reopen the retained package and continue from the recorded checkpoint instead of launching a new temporary group.
-                    </p>
-                    {continuityHref ? (
-                        <Link
-                            href={continuityHref}
-                            className="inline-flex rounded-2xl border border-cortex-border bg-cortex-surface px-4 py-2 text-sm font-medium text-cortex-text-main hover:border-cortex-primary/20"
-                        >
-                            Open retained package
-                        </Link>
-                    ) : null}
-                </div>
-            )}
-            {launchedGroup ? (
-                <p className="mt-3 text-sm text-cortex-primary">
-                    Soma launched {launchedGroup.name}. The workflow group is ready for focused coordination and retained output review.
-                </p>
-            ) : null}
-            {error ? (
-                <p className="mt-3 text-sm text-cortex-danger">{error}</p>
-            ) : null}
-        </div>
     );
 }

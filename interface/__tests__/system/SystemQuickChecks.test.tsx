@@ -34,12 +34,12 @@ describe("SystemQuickChecks", () => {
         });
     });
 
-    it("renders all quick checks and runs service-backed checks", async () => {
+    it("renders all system checks and runs service-backed checks", async () => {
         const fetchServicesStatus = vi.fn().mockResolvedValue(undefined);
         useCortexStore.setState({ fetchServicesStatus });
 
         render(<SystemQuickChecks />);
-        expect(screen.getByText("Quick Checks")).toBeDefined();
+        expect(screen.getByText("System Checks")).toBeDefined();
         expect(screen.getByTestId("quick-check-nats")).toBeDefined();
         expect(screen.getByTestId("quick-check-postgres")).toBeDefined();
         expect(screen.getByTestId("quick-check-sse")).toBeDefined();

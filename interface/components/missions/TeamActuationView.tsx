@@ -60,7 +60,7 @@ export default function TeamActuationView({
                     onClick={() => router.push("/")}
                     className="mt-6 px-4 py-2 rounded bg-cortex-primary/10 border border-cortex-primary/30 hover:bg-cortex-primary/20 text-cortex-primary text-xs font-mono transition-all"
                 >
-                    Back to Mission Control
+                    Back to Soma
                 </button>
             </div>
         );
@@ -91,7 +91,7 @@ export default function TeamActuationView({
                     <button
                         onClick={() => router.push("/")}
                         className="p-1.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-text-main transition-colors"
-                        title="Back to Mission Control"
+                        title="Back to Soma"
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </button>

@@ -7,13 +7,16 @@ vi.mock("@/lib/lastOrganization", () => ({
     subscribeLastOrganizationChange: () => () => undefined,
 }));
 
-vi.mock("@/components/dashboard/MissionControlChat", () => ({
+vi.mock("@/components/soma/SomaOperatingSurface", () => ({
     __esModule: true,
-    default: () => <div data-testid="mission-control-chat">Mission Chat</div>,
-}));
-
-vi.mock("@/components/dashboard/SomaReadinessStrip", () => ({
-    SomaReadinessStrip: () => <div data-testid="soma-readiness-strip">Readiness</div>,
+    SomaOperatingSurface: ({ organizationName }: { organizationName?: string | null }) => (
+        <div data-testid="soma-operating-surface">
+            <h2>What do you want Soma to do?</h2>
+            <p>Soma just did this</p>
+            <p>Evidence of Soma's work</p>
+            <p>{organizationName ?? "No organization"}</p>
+        </div>
+    ),
 }));
 
 import CentralSomaHome from "@/components/dashboard/CentralSomaHome";
@@ -33,23 +36,11 @@ describe("CentralSomaHome", () => {
     it("renders the central Soma chat and the live interaction stream on the front page", () => {
         render(<CentralSomaHome />);
 
+        expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
         expect(screen.getByText("What do you want Soma to do?")).toBeDefined();
-        expect(screen.getByRole("button", { name: /Plan/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Research/i })).toBeDefined();
-        expect(screen.getByRole("button", { name: /Configure tools/i })).toBeDefined();
-        expect(screen.getByText("Say this to Soma")).toBeDefined();
-        expect(screen.getAllByText("Web search").length).toBeGreaterThan(0);
-        expect(screen.getByText("Create a team")).toBeDefined();
-        expect(screen.getByText("Private data")).toBeDefined();
-        expect(screen.getByRole("link", { name: /Advanced tool setup/i }).getAttribute("href")).toBe("/resources?tab=tools");
-        expect(screen.getByTestId("mission-control-chat")).toBeDefined();
-        expect(screen.getByTestId("central-soma-chat-frame").className).toContain("h-[72vh]");
-        expect(screen.getByTestId("central-soma-chat-frame").className).toContain("overflow-hidden");
+        expect(screen.getByText("Soma just did this")).toBeDefined();
+        expect(screen.getByText("Evidence of Soma's work")).toBeDefined();
         expect(screen.getByText("Live team interaction stream")).toBeDefined();
-        expect(screen.getByRole("link", { name: /Approval queue/i }).getAttribute("href")).toBe("/approvals");
-        expect(screen.getByRole("link", { name: /Activity and runs/i }).getAttribute("href")).toBe("/activity");
-        expect(screen.getByRole("link", { name: /Group operations/i }).getAttribute("href")).toBe("/groups");
-        expect(screen.getByRole("link", { name: /Tool readiness/i }).getAttribute("href")).toBe("/resources?tab=tools");
         expect(screen.getByRole("link", { name: /Return to Northstar Labs/i }).getAttribute("href")).toBe("/organizations/org-1");
         expect(screen.queryByRole("link", { name: /Review Soma context model/i })).toBeNull();
     }, 15000);

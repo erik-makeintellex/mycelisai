@@ -87,8 +87,8 @@ test.describe("V8 AI Organization entry flow - recovery", () => {
                         data: {
                             action: requestBody.action ?? "plan_next_steps",
                             request_label: "Run a quick strategy check",
-                            headline: "Team Lead plan for Northstar Labs",
-                            summary: "Team Lead recommends a clear next move for Northstar Labs.",
+                            headline: "Soma plan for Northstar Labs",
+                            summary: "Soma recommends a clear next move for Northstar Labs.",
                             priority_steps: [
                                 "Align the first outcome with the AI Organization purpose.",
                                 "Use the first Department as the routing layer for work.",
@@ -118,14 +118,7 @@ test.describe("V8 AI Organization entry flow - recovery", () => {
         await page.getByRole("button", { name: /Run a quick strategy check/i }).click();
 
         await expect(page.getByText("Soma guidance is unavailable", { exact: true })).toBeVisible();
-        await expect(page.getByText("AI Organization Home")).toBeVisible();
-        await expect(page.getByText("Soma ready")).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Advisors" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Departments" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "AI Engine Settings" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Response Style" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Memory & Continuity" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Focused team design with Soma" })).toBeVisible();
         await expect(page.getByRole("button", { name: "Retry Soma action" })).toBeVisible();
         await expectNoForbiddenCopy(page);
 

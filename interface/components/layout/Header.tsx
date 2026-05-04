@@ -11,10 +11,10 @@ export function Header() {
                 <span className="mx-2 text-zinc-300">/</span>
                 <span className="text-slate-900 cursor-pointer hover:underline">System Workspace</span>
                 <span className="mx-2 text-zinc-300">/</span>
-                <span className="text-slate-500">Mission Control</span>
+                <span className="text-slate-500">Soma Interface</span>
             </div>
 
-            {/* 2. Omni-Command (Center) */}
+                {/* 2. Soma Search (Center) */}
             <div className="flex-1 flex justify-center">
                 <div className="relative w-full max-w-md group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-hover:text-zinc-600 transition-colors" size={14} />

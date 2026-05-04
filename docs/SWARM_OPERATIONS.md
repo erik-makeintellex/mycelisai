@@ -13,7 +13,7 @@ Admin (generic user proxy — always on)
         └── Agentry Team (1+ agents — mission-scoped, created on demand)
 ```
 
-- **Admin** handles Mission Control chat and routes directives.
+- **Soma** is the default operating interface and coordinates directives through governed execution.
 - **Council Members** are standing specialists available for broadcast and consultation.
 - **Agentry Teams** are spawned per-mission with specific roles, inputs, and outputs.
 

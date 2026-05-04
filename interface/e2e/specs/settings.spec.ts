@@ -71,7 +71,7 @@ test.describe('Settings Page (/settings)', () => {
         await expect(page.getByRole('button', { name: 'Open Profile' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Open Mission Profiles' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Open People & Access' })).toBeVisible();
-        await expect(page.getByText('Advanced setup stays intentional')).toBeVisible();
+        await expect(page.getByText('Tools live in Resources')).toBeVisible();
     });
 
     test('guided workflow controls can switch visible sections', async ({ page }) => {

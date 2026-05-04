@@ -247,7 +247,7 @@ test.describe('V7 Operational UX Gate A', () => {
         await page.goto('/system?tab=health');
         await page.waitForLoadState('domcontentloaded');
 
-        await expect(page.getByText('Quick Checks')).toBeVisible();
+        await expect(page.getByText('System Checks')).toBeVisible();
 
         const natsRow = page.getByTestId('quick-check-nats');
         await page.getByTestId('quick-check-nats-run').click();

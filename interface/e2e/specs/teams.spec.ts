@@ -32,7 +32,7 @@ test.describe('Teams Workspace (/teams)', () => {
     });
 
     test('groups guidance points to the dedicated workspace', async ({ page }) => {
-        await expect(page.getByText('Groups have their own workspace now.')).toBeVisible();
+        await expect(page.getByText('Specialize new teams through Soma')).toBeVisible();
         await expect(page.getByRole('link', { name: 'Open group operations' }).last()).toHaveAttribute('href', '/groups');
     });
 

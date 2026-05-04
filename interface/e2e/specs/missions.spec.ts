@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Mission Control Dashboard (/dashboard)', () => {
+test.describe('Soma Dashboard (/dashboard)', () => {
 
     test.beforeEach(async ({ page }) => {
         await page.goto('/dashboard');
@@ -12,7 +12,7 @@ test.describe('Mission Control Dashboard (/dashboard)', () => {
         await expect(errorOverlay).not.toBeVisible();
 
         await expect(page.getByRole('heading', { name: /What do you want Soma to do/i })).toBeVisible();
-        await expect(page.getByText(/Start with intent/i)).toBeVisible();
+        await expect(page.getByText(/Start with Soma/i)).toBeVisible();
     });
 
     test('navigation rail is visible', async ({ page }) => {

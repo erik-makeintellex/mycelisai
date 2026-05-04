@@ -8,7 +8,7 @@ test.describe('Accessibility Baseline', () => {
     test('dashboard has no critical a11y violations', async ({ page }) => {
         await page.goto('/');
         await page.waitForLoadState('domcontentloaded');
-        await expect(page.getByRole('link', { name: 'Create AI Organization' }).first()).toBeVisible();
+        await expect(page.getByRole('link', { name: /Start with Soma|Create AI Organization/i }).first()).toBeVisible();
 
         const results = await new AxeBuilder({ page })
             .withTags(['wcag2a', 'wcag2aa'])

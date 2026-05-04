@@ -132,7 +132,7 @@ export default function SystemQuickChecks() {
     return (
         <section className="rounded-xl border border-cortex-border bg-cortex-surface p-4 space-y-3">
             <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-cortex-text-main">Quick Checks</h3>
+                <h3 className="text-sm font-semibold text-cortex-text-main">System Checks</h3>
                 <span className="text-[10px] font-mono text-cortex-text-muted">{summary}</span>
             </div>
             <div className="space-y-2">

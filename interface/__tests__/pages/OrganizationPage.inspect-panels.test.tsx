@@ -41,7 +41,7 @@ describe("OrganizationPage inspect panel slices", () => {
         expect(screen.getByText("This system runs ongoing reviews and checks to help your organization improve over time.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
-        expect(screen.getByText("Create teams with Soma")).toBeDefined();
+        expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
         expect(screen.queryByText(/loop profile/i)).toBeNull();
         expect(screen.queryByText(/scheduler/i)).toBeNull();
         expect(screen.queryByText(/vector/i)).toBeNull();
@@ -74,7 +74,7 @@ describe("OrganizationPage inspect panel slices", () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
         });
 
-        expect(await screen.findByText("Create teams with Soma")).toBeDefined();
+        expect(await screen.findByTestId("soma-operating-surface")).toBeDefined();
         fireEvent.click(screen.getAllByRole("button", { name: "Review Advisors" })[0]);
 
         expect(await screen.findByRole("heading", { name: "Advisor details" })).toBeDefined();
@@ -82,7 +82,7 @@ describe("OrganizationPage inspect panel slices", () => {
         expect(screen.getByText("Decision support")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
         expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
-        expect(screen.getByText("Create teams with Soma")).toBeDefined();
+        expect(screen.getByText("Soma just did this")).toBeDefined();
     });
 
     it("opens Department details from the support column and preserves organization context", async () => {
@@ -111,6 +111,6 @@ describe("OrganizationPage inspect panel slices", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Back to Soma" }));
         expect(screen.queryByRole("heading", { name: "Department details" })).toBeNull();
-        expect(screen.getByText("Create teams with Soma")).toBeDefined();
+        expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
     });
 });

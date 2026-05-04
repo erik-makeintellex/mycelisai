@@ -252,7 +252,7 @@ To send directly to a specialist:
 For multi-step execution:
 
 1. Open the AI Organization workspace you want Soma to coordinate.
-2. Click `Create teams with Soma`.
+2. Open advanced team design from `/teams/create`.
 3. Click `Open crew launcher`.
 4. Provide mission intent.
 5. Review the generated proposal or blocker recovery guidance.

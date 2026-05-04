@@ -198,7 +198,7 @@ export function panelsUpdatedSince(
     if (learningInsights.some((item) => parseKnownTimestamp(item.observed_at) >= since)) {
         panels.push("Memory & Continuity");
     }
-    return panels.length > 0 ? panels : ["Quick Checks"];
+    return panels.length > 0 ? panels : ["Soma operating surface"];
 }
 
 export function toTitleCase(value: string) {

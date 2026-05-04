@@ -42,8 +42,8 @@ describe('MissionControlChat UI states', () => {
         await settleMissionControlChat();
 
         expect(screen.getByTestId('mission-chat').className).toContain('min-h-0');
-        expect(screen.getByTestId('mission-chat-scroll').className).toContain('min-h-0');
-        expect(screen.getByTestId('mission-chat-scroll').className).toContain('overflow-y-auto');
+        expect(screen.getByTestId('soma-conversation-thread').className).toContain('min-h-0');
+        expect(screen.getByTestId('soma-conversation-thread').className).toContain('overflow-y-auto');
     });
 
     it('shows a selected team placeholder in simple Soma mode', async () => {
@@ -136,9 +136,9 @@ describe('MissionControlChat UI states', () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByText('Choose a starter prompt')).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: 'Search the web for current product news and cite sources' }));
-        expect(screen.getByDisplayValue('Search the web for current product news and cite sources')).toBeDefined();
+        expect(screen.getByText('Start with Soma')).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /Research something.*Search or review sources/i }));
+        expect(screen.getByDisplayValue('Research this, cite sources, and tell me what changed.')).toBeDefined();
     });
 
     it('shows team-specific starter prompts in simple mode when a team is selected', async () => {
@@ -162,8 +162,8 @@ describe('MissionControlChat UI states', () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByRole('button', { name: 'Plan the next move for Marketing' })).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: 'Review the current state of Marketing' }));
+        expect(screen.getByRole('button', { name: /Plan this team.*Marketing/i })).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /Review state.*current risk/i }));
         expect(screen.getByDisplayValue('Review the current state of Marketing')).toBeDefined();
     });
 

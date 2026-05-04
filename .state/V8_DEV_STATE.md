@@ -928,6 +928,27 @@ Evidence:
 9. `$env:PYTHONPATH='.'; uv run pytest tests/test_runtime_deploy_contract_text.py tests/test_docs_links.py -q` -> pass (`63` passed).
 10. `uv run inv wsl.refresh` followed by `uv run inv wsl.validate --lane=release --compose-wait-timeout=240` at commit `54be7e0` -> pass after one transient Docker SWC download retry; WSL checkout dirty paths `0`, runtime preflight/baseline passed, Compose health/storage passed, live Soma/team/groups/workspace browser specs passed, and Windows GUI probe returned `http://localhost:3000 [200]`.
 
+### 27. Soma-first operating interface restructure
+
+Status:
+1. `IN_REVIEW` dashboard and AI Organization workspace now share the canonical Soma operating surface, with intent suggestions inside Soma instead of separate competing cards.
+2. `IN_REVIEW` default organization workspace no longer exposes the old team-design lane or System Checks panel as primary surfaces; advanced team design remains available through the advanced team creation route.
+3. `IN_REVIEW` Soma evidence and causal summary blocks now stay adjacent to the conversation surface so the operator can connect intent, coordination, outputs, state changes, and next step.
+4. `IN_REVIEW` stale user-facing "Mission Control", "Quick Checks", and "Create teams with Soma" default-path wording has been removed or moved to advanced/support language.
+5. `IN_REVIEW` browser specs now assert the Soma-first default path, advanced separation for team design/admin surfaces, and browser-visible continuity across organization setup, recovery, persistence, settings, teams, accessibility, and workflow-output paths.
+
+Evidence:
+1. `cd interface; npm test` -> pass (`113` files, `511` tests).
+2. `cd interface; npx tsc --noEmit` -> pass.
+3. `cd interface; npm run build` -> pass.
+4. `cd core; go test ./... -count=1 -p 1` -> pass.
+5. `uv run pytest` -> pass (`326` passed).
+6. `uv run pytest tests/test_docs_links.py -q` -> pass (`48` passed).
+7. `uv run inv quality.max-lines --limit 300` -> pass; `OrganizationContextShell.tsx` and `interface/e2e/support/organization-entry.ts` caps were ratcheted down to their reduced current sizes.
+8. `uv run inv interface.e2e --project=chromium --workers=1` -> pass (`81` passed, `22` skipped) after updating stale browser expectations around the new Soma-first and advanced-team-design paths.
+9. `uv run inv lifecycle.status` -> pass; Docker, PostgreSQL, NATS, Core, and Frontend were down, Ollama remained up as the host AI service, and no Mycelis listeners were left on `3000`, `3001`, or `3100`.
+10. WSL release proof still needs to be refreshed from committed state: the current validation was Windows-managed with Playwright Chromium, while `mother-brain` remains the target release-proof distro.
+
 ## Immediate Next Actions
 
 1. `COMPLETE` validate WSL git auth repair/report behavior for `wsl.refresh`.

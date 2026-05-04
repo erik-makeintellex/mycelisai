@@ -53,7 +53,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "system-status-recovery",
                 label: "System Status & Recovery",
                 path: "docs/user/system-status-recovery.md",
-                description: "Health signals, degraded recovery actions, and Quick Checks workflow",
+                description: "Health signals, degraded recovery actions, and System Checks workflow",
             },
             {
                 slug: "soma-chat",

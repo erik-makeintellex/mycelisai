@@ -110,8 +110,8 @@ Soma detects this requires a multi-agent setup and delegates to the Architect. T
 
 For structured intent before starting a conversation:
 
-1. Open the relevant AI Organization workspace
-2. Click **Create teams with Soma**
+1. Open advanced team design from `/teams/create`
+2. Select the relevant AI Organization if Soma does not resume it automatically
 3. Click **Open crew launcher**
 4. Describe the mission goal in the Step 1 text field — be specific about:
    - What needs to be produced

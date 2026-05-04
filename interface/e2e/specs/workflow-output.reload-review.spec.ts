@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
     fulfillJSON,
     installWorkflowOutputShell,
+    openAdvancedTeamDesign,
     openOrganization,
     sendWorkspaceMessage,
     type ArtifactRecord,
@@ -183,8 +184,7 @@ test.describe("Workflow output reload and retained review", () => {
             ),
         ).toBeVisible();
 
-        await page.getByRole("button", { name: "Create teams with Soma" }).click();
-        await expect(page.getByRole("heading", { name: "Create teams with Soma" })).toBeVisible();
+        await openAdvancedTeamDesign(page);
 
         const requestField = page.getByLabel("Tell Soma what team or delivery lane you want to create");
         await requestField.fill(

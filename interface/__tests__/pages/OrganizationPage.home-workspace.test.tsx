@@ -34,20 +34,20 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.getByText("Soma ready")).toBeDefined();
         expect(screen.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeDefined();
         expect(screen.getAllByText(/Team Lead for Northstar Labs/i).length).toBeGreaterThan(0);
-        expect(screen.getByText("Start here in this organization")).toBeDefined();
         expect(screen.getByText("Inspect the current organization")).toBeDefined();
-        expect(screen.getByRole("button", { name: "Open Soma conversation" })).toBeDefined();
-        expect(screen.getByRole("button", { name: "Open team design lane" })).toBeDefined();
-        expect(screen.getByRole("button", { name: "Review organization setup" })).toBeDefined();
-        expect(screen.getByRole("heading", { name: "Talk with Soma" })).toBeDefined();
-        expect(screen.getByText("How to read this workspace")).toBeDefined();
-        expect(screen.getByText(/Use Soma as the main interface\./)).toBeDefined();
+        expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
+        expect(screen.getByRole("heading", { name: "What do you want Soma to do?" })).toBeDefined();
         expect(screen.getByText("Soma just did this")).toBeDefined();
-        expect(screen.getByText("Create teams with Soma")).toBeDefined();
+        expect(screen.getByText("Evidence of Soma's work")).toBeDefined();
+        expect(screen.getByRole("link", { name: /Activity/i }).getAttribute("href")).toBe("/activity");
+        expect(screen.getByRole("link", { name: /Learning and context/i }).getAttribute("href")).toBe("/memory");
+        expect(screen.getByRole("link", { name: /Tools and capabilities/i }).getAttribute("href")).toBe("/resources?tab=tools");
         expect(screen.getByTestId("mission-chat")).toBeDefined();
         expect(screen.queryByText("Direct")).toBeNull();
         expect(screen.queryByTitle(/Broadcast mode/i)).toBeNull();
-        expect(screen.getByRole("heading", { name: "Quick Checks" })).toBeDefined();
+        expect(screen.queryByText("Create teams with Soma")).toBeNull();
+        expect(screen.queryByText("Open team design lane")).toBeNull();
+        expect(screen.queryByRole("heading", { name: "Quick Checks" })).toBeNull();
         expect(screen.getByRole("heading", { name: "Advisors" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Departments" })).toBeDefined();
         expect(screen.getByRole("heading", { name: "Automations" })).toBeDefined();
@@ -70,8 +70,6 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.getAllByText("Strong").length).toBeGreaterThan(0);
         expect(screen.getAllByText("Emerging").length).toBeGreaterThan(0);
         expect(screen.getAllByText("Planning review").length).toBeGreaterThan(0);
-        expect(screen.getByText("Started from")).toBeDefined();
-        expect(screen.getByText("Engineering Starter")).toBeDefined();
         expect(screen.getByText("Department readiness review • Scheduled")).toBeDefined();
         expect(screen.getByText("Agent type readiness review • Event-driven")).toBeDefined();
         expect(screen.getAllByText("What this affects").length).toBeGreaterThan(0);
@@ -82,11 +80,11 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.getByText("Verbosity")).toBeDefined();
         expect(screen.getByText("Durable memory recall")).toBeDefined();
         expect(screen.getByText("Temporary planning continuity")).toBeDefined();
-        expect(screen.getByText("Search the web for current product news and cite sources")).toBeDefined();
-        expect(screen.getByText("Propose a small temporary team and ask me to approve")).toBeDefined();
-        expect(screen.getByText("Review private/service boundaries before taking action")).toBeDefined();
-        expect(screen.getByText("Ask the active teams for blockers and summarize")).toBeDefined();
-        expect(screen.getByText("Use host data from workspace/shared-sources")).toBeDefined();
+        expect(screen.getByText("Plan something")).toBeDefined();
+        expect(screen.getByText("Research something")).toBeDefined();
+        expect(screen.getByText("Create something")).toBeDefined();
+        expect(screen.getByText("Review something")).toBeDefined();
+        expect(screen.getByText("Configure tools")).toBeDefined();
         expect(screen.getAllByRole("button", { name: "Review Advisors" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Open Departments" }).length).toBeGreaterThan(0);
         expect(screen.getAllByRole("button", { name: "Review Automations" }).length).toBeGreaterThan(0);
@@ -102,19 +100,17 @@ describe("OrganizationPage home workspace slices", () => {
         expect(screen.queryByText(/scheduler/i)).toBeNull();
     }, 15000);
 
-    it("uses the guided workspace start cards to switch into team design and setup review", async () => {
+    it("opens organization evidence details without a competing team-design front door", async () => {
         setupOrganizationFetch();
 
         await act(async () => {
             render(<OrganizationPage params={Promise.resolve({ id: "org-123" })} />);
         });
 
-        expect(await screen.findByText("Start here in this organization")).toBeDefined();
+        expect(await screen.findByTestId("soma-operating-surface")).toBeDefined();
+        expect(screen.queryByRole("button", { name: "Open team design lane" })).toBeNull();
 
-        fireEvent.click(screen.getByRole("button", { name: "Open team design lane" }));
-        expect(await screen.findByText("Choose a guided team-design action")).toBeDefined();
-
-        fireEvent.click(screen.getByRole("button", { name: "Review organization setup" }));
+        fireEvent.click(screen.getAllByRole("button", { name: "Open Departments" })[0]);
         expect(await screen.findByRole("heading", { name: "Department details" })).toBeDefined();
     }, 15000);
 });

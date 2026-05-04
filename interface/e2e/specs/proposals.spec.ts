@@ -84,9 +84,9 @@ async function createLiveOrganization(page: import('@playwright/test').Page) {
 
 async function openCrewLauncher(page: import('@playwright/test').Page) {
     const organizationId = await createLiveOrganization(page);
-    await page.goto(`/organizations/${organizationId}`);
+    await page.goto(`/teams/create?organization_id=${organizationId}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.getByRole('button', { name: 'Create teams with Soma' }).click();
+    await expect(page.getByRole('heading', { name: 'Focused team design with Soma' })).toBeVisible();
     await page.getByRole('button', { name: 'Open crew launcher' }).click();
     return page.locator('.fixed.inset-0.z-50').last();
 }
@@ -96,11 +96,10 @@ test.describe('Mission Proposal Entry Points', () => {
 
     test('workspace exposes launch controls for mission planning', async ({ page }) => {
         const organizationId = await createLiveOrganization(page);
-        await page.goto(`/organizations/${organizationId}`);
+        await page.goto(`/teams/create?organization_id=${organizationId}`);
         await page.waitForLoadState('domcontentloaded');
 
-        await expect(page.getByRole('heading', { name: /Soma for/i })).toBeVisible();
-        await page.getByRole('button', { name: 'Create teams with Soma' }).click();
+        await expect(page.getByRole('heading', { name: 'Focused team design with Soma' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Open crew launcher' })).toBeVisible();
     });
 

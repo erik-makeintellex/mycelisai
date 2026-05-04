@@ -49,9 +49,9 @@ The banner auto-clears once health recovers.
 
 ---
 
-## System Quick Checks (`/system`, Advanced mode)
+## System Checks (`/system`, Advanced mode)
 
-Quick Checks lets you run targeted validations:
+System Checks lets you run targeted validations:
 - NATS connected
 - Database reachable
 - SSE stream live
@@ -70,7 +70,7 @@ Use copied snippets in support/debug threads to share precise status context.
 ## Recommended Recovery Sequence
 
 1. Open Status Drawer and identify first failing subsystem.
-2. Run relevant Quick Checks in `/system`.
+2. Run relevant System Checks in `/system`.
 3. Use `Retry` from banner or affected surface.
 4. If the issue is tied to a direct specialist route, switch back to Soma and continue.
 5. Confirm banner clears and checks return healthy/degraded as expected.

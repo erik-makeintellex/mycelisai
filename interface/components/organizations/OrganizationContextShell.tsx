@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
+import { Activity, ArrowLeft, Blocks, Bot, BrainCircuit, Building2, Loader2, RefreshCcw, Sparkles, Users } from "lucide-react";
 import { extractApiData, extractApiError } from "@/lib/apiContracts";
 import { rememberLastOrganization } from "@/lib/lastOrganization";
 import type {
@@ -22,17 +22,12 @@ import type {
     ResponseContractProfileId,
     ResponseContractUpdateRequest,
 } from "@/lib/organizations";
-import TeamLeadInteractionPanel, { type SomaGuidanceUpdate } from "@/components/organizations/TeamLeadInteractionPanel";
-import MissionControlChat from "@/components/dashboard/MissionControlChat";
-import SystemQuickChecks from "@/components/system/SystemQuickChecks";
-import LaunchCrewModal from "@/components/workspace/LaunchCrewModal";
+import { SomaOperatingSurface } from "@/components/soma/SomaOperatingSurface";
 import { useCortexStore } from "@/store/useCortexStore";
 import {
     CausalFact,
     LearningVisibilityPanel,
     RecentActivityPanel,
-    SomaCausalStrip,
-    type CausalStripState,
 } from "@/components/organizations/organizationActivityPanels";
 import { AutomationDetailPanel } from "@/components/organizations/organizationAutomationPanel";
 import {
@@ -63,10 +58,8 @@ import {
     learningContextSummary,
     learningContextSupportItems,
     panelsUpdatedSince,
-    parseKnownTimestamp,
     responseContractSummary,
     responseContractSupportItems,
-    toTitleCase,
 } from "@/components/organizations/organizationSummaryHelpers";
 import { useOrganizationLivePanelData } from "@/components/organizations/useOrganizationLivePanelData";
 import {
@@ -78,9 +71,6 @@ import {
 } from "@/components/organizations/organizationProfileOptions";
 import {
     ActionPill,
-    GuidedWorkspaceCard,
-    HelpPill,
-    Metric,
 } from "@/components/organizations/organizationWorkspaceChrome";
 
 export {
@@ -95,8 +85,6 @@ async function readJson(response: Response) {
         return null;
     }
 }
-
-type SomaWorkspaceMode = "conversation" | "team_design";
 
 export default function OrganizationContextShell({ organizationId }: { organizationId: string }) {
     const [organization, setOrganization] = useState<OrganizationHomePayload | null>(null);
@@ -146,9 +134,6 @@ export default function OrganizationContextShell({ organizationId }: { organizat
         learningInsightsError,
         retryLearningInsights,
     } = useOrganizationLivePanelData(organizationId);
-    const [isLaunchCrewOpen, setIsLaunchCrewOpen] = useState(false);
-    const [somaWorkspaceMode, setSomaWorkspaceMode] = useState<SomaWorkspaceMode>("conversation");
-    const [lastGuidanceUpdate, setLastGuidanceUpdate] = useState<SomaGuidanceUpdate | null>(null);
     const missionChat = useCortexStore((s) => s.missionChat);
 
     useEffect(() => {
@@ -692,25 +677,10 @@ export default function OrganizationContextShell({ organizationId }: { organizat
     const lastConversationAction = [...missionChat].reverse().find((message) => message.role === "user" && !message.content.startsWith("[BROADCAST]"));
     const lastConversationOutcome = findLatestConversationOutcome(missionChat, teamLeadName);
     const latestConversationTimestamp = lastConversationOutcome?.timestamp ?? 0;
-    const latestGuidanceTimestamp = parseKnownTimestamp(lastGuidanceUpdate?.timestamp);
-    const latestSomaTimestamp = Math.max(latestConversationTimestamp, latestGuidanceTimestamp);
-    const overviewItems = [
-        { label: "Started from", value: organization.start_mode === "template" ? (organization.template_name || "Template") : "Empty" },
-        { label: "Advisors", value: formatConfiguredCount(organization.advisor_count, "Advisor") },
-        { label: "Departments", value: formatConfiguredCount(organization.department_count, "Department") },
-        { label: "Specialists", value: formatConfiguredCount(organization.specialist_count, "Specialist") },
-        { label: "AI Organization", value: toTitleCase(organization.status) },
-    ];
+    const latestSomaTimestamp = latestConversationTimestamp;
     const panelUpdates = panelsUpdatedSince(latestSomaTimestamp, recentActivity, automations, learningInsights);
-    const causalStrip: CausalStripState =
-        latestGuidanceTimestamp > latestConversationTimestamp && lastGuidanceUpdate
-            ? {
-                  action: lastGuidanceUpdate.requestLabel,
-                  teamsEngaged: lastGuidanceUpdate.teamsEngaged,
-                  outputsGenerated: lastGuidanceUpdate.outputs,
-                  panelsUpdated: panelUpdates,
-              }
-            : lastConversationOutcome
+    const causalStrip =
+        lastConversationOutcome
               ? {
                     action: lastConversationOutcome.actionLabel,
                     teamsEngaged: lastConversationOutcome.teamsEngaged,
@@ -728,7 +698,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                     action: "Ready for your first Soma request",
                     teamsEngaged: ["Soma"],
                     outputsGenerated: ["Conversation guidance"],
-                    panelsUpdated: panelUpdates.length > 0 ? panelUpdates : ["Quick Checks"],
+                    panelsUpdated: panelUpdates.length > 0 ? panelUpdates : ["Soma operating surface"],
                 };
 
     return (
@@ -768,7 +738,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                         <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
                             <p className="font-medium text-cortex-text-main">Soma ready</p>
                             <p className="mt-1 leading-6">
-                                {somaName} is ready to guide planning, structure review, and organization setup decisions while working through the right Team Lead support when needed.
+                                {somaName} is ready to guide planning, structure review, and organization setup decisions while coordinating the right teams when needed.
                             </p>
                             <a
                                 href="#soma-panel"
@@ -793,7 +763,7 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                                     <div>
                                         <h2 className="text-2xl font-semibold text-cortex-text-main">{somaName}</h2>
                                         <p className="mt-2 max-w-2xl text-sm leading-7 text-cortex-text-muted">
-                                            Soma is the primary counterpart for {organization.name}, coordinating the right Team Leads, Advisors, Departments, and Specialists around the organization purpose.
+                                            Soma is the primary counterpart for {organization.name}, coordinating the right teams, advisors, departments, and specialists around the organization purpose.
                                         </p>
                                     </div>
                                 </div>
@@ -806,43 +776,8 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             </div>
 
                             <div className="mt-6">
-                                <p className="text-sm font-medium text-cortex-text-main">Start here in this organization</p>
-                                <p className="mt-2 max-w-3xl text-sm leading-6 text-cortex-text-muted">
-                                    Choose the first move that matches what you need right now, then use the deeper inspect surfaces only when you want more structure, operating detail, or guided tuning.
-                                </p>
-                                <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                                    {[
-                                        {
-                                            eyebrow: "Primary conversation",
-                                            title: "Plan, review, or create with Soma",
-                                            summary: "Stay in the main Soma conversation for plans, drafts, imagery, governed changes, and broad delivery shaping.",
-                                            buttonLabel: "Open Soma conversation",
-                                            onClick: () => setSomaWorkspaceMode("conversation"),
-                                        },
-                                        {
-                                            eyebrow: "Team design lane",
-                                            title: "Shape the first team or lane",
-                                            summary: "Move into the focused team-design mode when you want roles, delivery lanes, or execution structure to become explicit.",
-                                            buttonLabel: "Open team design lane",
-                                            onClick: () => setSomaWorkspaceMode("team_design"),
-                                        },
-                                        {
-                                            eyebrow: "Setup review",
-                                            title: "Review current organization setup",
-                                            summary: "Inspect the current working structure when you want a clearer read on departments, specialists, and what is ready next.",
-                                            buttonLabel: "Review organization setup",
-                                            onClick: () => setActiveDetailView("departments"),
-                                        },
-                                    ].map((card) => (
-                                        <GuidedWorkspaceCard key={card.title} {...card} />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="mt-6">
                                 <p className="text-sm font-medium text-cortex-text-main">Inspect the current organization</p>
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                    <HelpPill label="Run a quick strategy check" />
                                     <ActionPill
                                         label="Review Advisors"
                                         isActive={activeDetailView === "advisors"}
@@ -960,98 +895,36 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             />
                         )}
 
-                        <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-6 shadow-[0_24px_60px_rgba(29,42,53,0.08)]">
-                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                <div className="space-y-3">
-                                    <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/20 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
-                                        <Bot className="h-3.5 w-3.5" />
-                                        Soma conversation
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-semibold text-cortex-text-main">Talk with Soma</h2>
-                                        <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
-                                            Use Soma as the primary root workspace for plans, concepts, imagery, drafts, and delivery shaping. Admins can ask Soma to create teams, structure new lanes, and coordinate the right advisor support before work is handed to focused Team Leads, Departments, and Specialists.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3 text-sm text-cortex-text-muted lg:max-w-sm">
-                                    <p className="font-medium text-cortex-text-main">How to read this workspace</p>
-                                    <p className="mt-1 leading-6">
-                                        Use Soma as the main interface. The overview and quick checks alongside it explain what is healthy, what is active, and what may need attention while you shape teams with Soma and then move into a focused Team Lead workspace when a specific lane is selected.
-                                    </p>
-                                </div>
-                            </div>
-                            <SomaCausalStrip
-                                action={causalStrip.action}
-                                teamsEngaged={causalStrip.teamsEngaged}
-                                outputsGenerated={causalStrip.outputsGenerated}
-                                panelsUpdated={causalStrip.panelsUpdated}
-                            />
-                            <div className="mt-5 grid gap-3 md:grid-cols-4">
-                                {overviewItems.map((item) => (
-                                    <Metric key={item.label} label={item.label} value={item.value} />
-                                ))}
-                            </div>
-                            <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                                <div className="flex flex-wrap gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSomaWorkspaceMode("conversation")}
-                                        className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                                            somaWorkspaceMode === "conversation"
-                                                ? "border-cortex-primary/35 bg-cortex-primary text-cortex-bg"
-                                                : "border-cortex-border bg-cortex-bg text-cortex-text-main hover:border-cortex-primary/20"
-                                        }`}
-                                    >
-                                        Talk with Soma
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSomaWorkspaceMode("team_design")}
-                                        className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
-                                            somaWorkspaceMode === "team_design"
-                                                ? "border-cortex-primary/35 bg-cortex-primary text-cortex-bg"
-                                                : "border-cortex-border bg-cortex-bg text-cortex-text-main hover:border-cortex-primary/20"
-                                        }`}
-                                    >
-                                        Create teams with Soma
-                                    </button>
-                                    {somaWorkspaceMode === "team_design" ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsLaunchCrewOpen(true)}
-                                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm font-medium text-cortex-text-main transition-colors hover:border-cortex-primary/20"
-                                        >
-                                            Open crew launcher
-                                        </button>
-                                    ) : null}
-                                </div>
-                                <span className="inline-flex items-center rounded-xl border border-cortex-border bg-cortex-bg px-4 py-2.5 text-sm text-cortex-text-muted">
-                                    {somaWorkspaceMode === "conversation"
-                                        ? "Stay in Soma's root workspace for planning, team creation, concepts, imagery, and broad delivery shaping."
-                                        : "Use team design mode when you want Soma to turn the current conversation into roles, lanes, and execution structure."}
-                                </span>
-                            </div>
-                            <div className="mt-6 overflow-hidden rounded-2xl border border-cortex-border bg-cortex-bg">
-                                {somaWorkspaceMode === "conversation" ? (
-                                    <div className="h-[46rem] min-h-0 lg:h-[52rem]">
-                                        <MissionControlChat simpleMode autoFocus organizationId={organizationId} />
-                                    </div>
-                                ) : (
-                                    <div className="p-5 lg:p-6">
-                                        <TeamLeadInteractionPanel
-                                            organizationId={organization.id}
-                                            organizationName={organization.name}
-                                            somaName={somaName}
-                                            teamLeadName={teamLeadName}
-                                            autoFocusOnLoad
-                                            embedded
-                                            onGuidanceStateChange={setLastGuidanceUpdate}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        </section>
+                        <SomaOperatingSurface
+                            organizationId={organizationId}
+                            organizationName={organization.name}
+                            activeMode="Organization work"
+                            evidenceItems={[
+                                {
+                                    title: "Activity",
+                                    detail: "What changed, why it changed, and which run or signal created the visible outcome.",
+                                    href: "/activity",
+                                    icon: <Activity className="h-4 w-4" />,
+                                },
+                                {
+                                    title: "Learning and context",
+                                    detail: "Reusable patterns and continuity cues Soma can use on later work.",
+                                    href: "/memory",
+                                    icon: <BrainCircuit className="h-4 w-4" />,
+                                },
+                                {
+                                    title: "Teams and specialists",
+                                    detail: "Departments and specialist roles Soma can coordinate when intent needs structure.",
+                                    icon: <Users className="h-4 w-4" />,
+                                },
+                                {
+                                    title: "Tools and capabilities",
+                                    detail: "Connected tools, search readiness, and governed capability boundaries.",
+                                    href: "/resources?tab=tools",
+                                    icon: <Blocks className="h-4 w-4" />,
+                                },
+                            ]}
+                        />
                     </div>
 
                     <section className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
@@ -1073,8 +946,6 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                             />
                         </div>
                         <div className="space-y-4">
-                            <SystemQuickChecks />
-
                             <InspectOnlySummary
                                 icon={<Users className="h-4 w-4" />}
                                 title="Advisors"
@@ -1171,7 +1042,6 @@ export default function OrganizationContextShell({ organizationId }: { organizat
                     </section>
                 </section>
             </div>
-            {isLaunchCrewOpen && <LaunchCrewModal onClose={() => setIsLaunchCrewOpen(false)} />}
         </div>
     );
 }

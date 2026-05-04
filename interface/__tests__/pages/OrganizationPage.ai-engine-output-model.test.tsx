@@ -44,7 +44,7 @@ describe("OrganizationPage AI engine and output model slices", () => {
         expect(screen.getByText("Departments start from the organization-wide AI engine unless a team-specific setting appears here.")).toBeDefined();
         expect(screen.getByText("No specific role overrides are visible in this workspace right now.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getByText("Create teams with Soma")).toBeDefined();
+        expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
     });
 
     it("lets the operator change the organization AI Engine through a guided selection flow", async () => {
@@ -67,7 +67,7 @@ describe("OrganizationPage AI engine and output model slices", () => {
         expect(await screen.findByText("Current profile: High Reasoning.")).toBeDefined();
         expect(screen.getByText("The current AI Engine Settings profile is high reasoning and shapes how the organization responds, plans, and carries work forward.")).toBeDefined();
         expect(screen.getByText("AI Organization Home")).toBeDefined();
-        expect(screen.getByText("Create teams with Soma")).toBeDefined();
+        expect(screen.getByTestId("soma-operating-surface")).toBeDefined();
     }, 15000);
 
     it("shows retry guidance when changing the AI Engine fails and recovers on retry", async () => {

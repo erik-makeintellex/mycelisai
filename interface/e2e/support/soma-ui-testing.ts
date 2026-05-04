@@ -278,7 +278,7 @@ export async function openOrganization(page: Page) {
     await page.goto(`/organizations/${organizationId}`);
     await page.waitForLoadState("domcontentloaded");
     await page.getByPlaceholder(chatPlaceholder).waitFor({ timeout: 20_000 });
-    await expect(page.getByRole("heading", { name: "Talk with Soma" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What do you want Soma to do?" })).toBeVisible();
 }
 
 export async function sendWorkspaceMessage(page: Page, content: string) {

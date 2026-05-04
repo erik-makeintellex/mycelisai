@@ -114,7 +114,7 @@ test.describe("V8 AI Organization entry flow - native vs external workflow outpu
         await expect(page.getByText("External workflow contract").first()).toBeVisible();
         await expect(page.getByText("n8n workflow contract", { exact: true })).toBeVisible();
         await expect(page.getByText("Normalized workflow result", { exact: true })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Focused team design with Soma" })).toBeVisible();
 
         expect(capturedActionBodies).toEqual([
             {

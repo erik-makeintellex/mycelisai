@@ -1,63 +1,32 @@
 """
 Local CI task entrypoints for operator and workflow use.
-GitHub workflows may reuse these task surfaces after workflow-native bootstrap.
 
 Usage:
-    uv run inv ci.lint          # Go vet + Next.js lint
-    uv run inv ci.test          # Go tests + Interface tests
-    uv run inv ci.build         # Go binary + Next.js production build (no Docker)
-    uv run inv ci.check         # Full pipeline: lint -> test -> build
-    uv run inv ci.deploy        # Build + Docker + K8s deploy (requires cluster)
+    uv run inv ci.lint
+    uv run inv ci.test
+    uv run inv ci.build
+    uv run inv ci.check
+    uv run inv ci.deploy
 """
 
-import os
 import ipaddress
+import os
 import re
-import time
+import urllib.error
+import urllib.request
 from contextlib import suppress
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
-import urllib.error
-import urllib.request
-from invoke import task, Collection
-from .config import (
-    CORE_DIR,
-    ROOT_DIR,
-    ensure_managed_cache_dirs,
-    managed_cache_env,
-    running_in_wsl,
-)
-from . import db as db_tasks
+
+from invoke import Collection, task
+
 from . import cache as cache_tasks
-from . import logging as logging_tasks
+from . import ci_pipeline, ci_release
 from . import core as core_tasks
+from . import db as db_tasks
 from . import interface as interface_tasks
-from . import lifecycle
-from . import quality
-
-
-RELEASE_PREFLIGHT_LANES = {
-    "baseline": {
-        "runtime_posture": False,
-        "service_health": False,
-        "live_backend": False,
-    },
-    "runtime": {
-        "runtime_posture": True,
-        "service_health": False,
-        "live_backend": False,
-    },
-    "service": {
-        "runtime_posture": False,
-        "service_health": True,
-        "live_backend": False,
-    },
-    "release": {
-        "runtime_posture": True,
-        "service_health": True,
-        "live_backend": True,
-    },
-}
+from . import lifecycle, logging as logging_tasks, quality
+from .config import CORE_DIR, ROOT_DIR, ensure_managed_cache_dirs, managed_cache_env, running_in_wsl
 
 
 def _task_env(extra=None):
@@ -113,7 +82,6 @@ def _configured_ai_endpoints(env_values: dict[str, str] | None = None) -> list[t
             continue
         provider_name = env_name.removeprefix("MYCELIS_PROVIDER_").removesuffix("_ENDPOINT").replace("_", " ").lower()
         endpoints.append((env_name, f"{provider_name} provider endpoint", raw))
-
     return endpoints
 
 
@@ -125,9 +93,7 @@ def _probe_paths_for_endpoint(env_name: str, raw: str) -> tuple[str, str]:
 
 
 def _probe_urls_for_endpoint(env_name: str, raw: str) -> list[str]:
-    probe_paths = _probe_paths_for_endpoint(env_name, raw)
-    urls = [urljoin(raw.rstrip("/") + "/", probe_path.lstrip("/")) for probe_path in probe_paths]
-
+    urls = [urljoin(raw.rstrip("/") + "/", path.lstrip("/")) for path in _probe_paths_for_endpoint(env_name, raw)]
     parsed = urlparse(raw)
     if (
         env_name == "MYCELIS_COMPOSE_OLLAMA_HOST"
@@ -135,23 +101,20 @@ def _probe_urls_for_endpoint(env_name: str, raw: str) -> list[str]:
         and (parsed.hostname or "").strip().lower() == "host.docker.internal"
     ):
         local_base = f"{parsed.scheme}://127.0.0.1:{parsed.port or (443 if parsed.scheme == 'https' else 80)}"
-        urls.extend(urljoin(local_base.rstrip("/") + "/", probe_path.lstrip("/")) for probe_path in probe_paths)
+        urls.extend(urljoin(local_base.rstrip("/") + "/", path.lstrip("/")) for path in _probe_paths_for_endpoint(env_name, raw))
 
     deduped: list[str] = []
     seen: set[str] = set()
     for url in urls:
-        if url in seen:
-            continue
-        seen.add(url)
-        deduped.append(url)
+        if url not in seen:
+            seen.add(url)
+            deduped.append(url)
     return deduped
 
 
 def _is_loopback_or_unspecified_host(host: str) -> bool:
     normalized = (host or "").strip().lower()
-    if not normalized:
-        return True
-    if normalized == "localhost":
+    if not normalized or normalized == "localhost":
         return True
     try:
         address = ipaddress.ip_address(normalized)
@@ -164,8 +127,7 @@ def _probe_http_endpoint(url: str, timeout: float = 3.0) -> tuple[int, str]:
     try:
         request = urllib.request.Request(url, headers={"Accept": "application/json"})
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            return response.status, body
+            return response.status, response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         body = ""
         with suppress(Exception):
@@ -178,7 +140,6 @@ def _probe_http_endpoint(url: str, timeout: float = 3.0) -> tuple[int, str]:
 def _runtime_posture_check(c):
     print("=== RUNTIME POSTURE ===")
     cache_tasks.ensure_disk_headroom(min_free_gb=12, reason="release preflight posture")
-
     endpoints = _configured_ai_endpoints()
     if not endpoints:
         raise SystemExit(
@@ -193,7 +154,6 @@ def _runtime_posture_check(c):
             failures.append(f"{env_name}: invalid endpoint URL '{raw}'")
             print(f"  [FAIL] {label}: invalid endpoint URL '{raw}'")
             continue
-
         host = parsed.hostname or ""
         if _is_loopback_or_unspecified_host(host):
             failures.append(f"{env_name}: loopback or unspecified host '{host}' is not allowed")
@@ -208,440 +168,69 @@ def _runtime_posture_check(c):
                 reachable = True
                 break
             print(f"  [WARN] {label}: {probe_url} [{status}]")
-
         if not reachable:
             failures.append(f"{env_name}: no AI probe path responded successfully")
 
     if failures:
-        raise SystemExit(
-            "RUNTIME POSTURE CHECK FAILED: "
-            + "; ".join(failures)
-        )
-
+        raise SystemExit("RUNTIME POSTURE CHECK FAILED: " + "; ".join(failures))
     print("RUNTIME POSTURE PASSED")
-
-
-def _release_preflight_clean_tree(c):
-    status = c.run("git status --porcelain", hide=True, warn=True)
-    dirty_lines = [ln for ln in (status.stdout or "").splitlines() if ln.strip()]
-    if dirty_lines:
-        print("Working tree is not clean:")
-        preview = dirty_lines[:20]
-        for ln in preview:
-            print(f"  {ln}")
-        if len(dirty_lines) > len(preview):
-            print(f"  ... and {len(dirty_lines) - len(preview)} more")
-        raise SystemExit("RELEASE PREFLIGHT FAILED: clean-tree requirement not met.")
-
-
-def _resolve_release_preflight_lane(
-    lane,
-    *,
-    runtime_posture=False,
-    service_health=False,
-    live_backend=False,
-):
-    normalized_lane = (lane or "baseline").strip().lower()
-    if normalized_lane not in RELEASE_PREFLIGHT_LANES:
-        valid_lanes = ", ".join(sorted(RELEASE_PREFLIGHT_LANES))
-        raise SystemExit(
-            f"RELEASE PREFLIGHT FAILED: unsupported lane '{lane}'. Expected one of: {valid_lanes}."
-        )
-
-    resolved = dict(RELEASE_PREFLIGHT_LANES[normalized_lane])
-    resolved["runtime_posture"] = resolved["runtime_posture"] or runtime_posture
-    resolved["service_health"] = resolved["service_health"] or service_health or live_backend
-    resolved["live_backend"] = resolved["live_backend"] or live_backend
-    if resolved["live_backend"]:
-        resolved["service_health"] = True
-    return normalized_lane, resolved
-
-
-def _release_preflight_stages(
-    c,
-    *,
-    e2e=True,
-    strict_toolchain=False,
-    runtime_posture=False,
-    service_health=False,
-    live_backend=False,
-):
-    stages = [
-        ("clean-tree", lambda: _release_preflight_clean_tree(c)),
-        ("toolchain-check", lambda: toolchain_check.body(c, strict=strict_toolchain)),
-    ]
-    if runtime_posture:
-        stages.append(("runtime-posture", lambda: _runtime_posture_check(c)))
-    stages.append(("baseline", lambda: baseline.body(c, e2e=e2e)))
-    if service_health:
-        stages.append(("service-check", lambda: service_check.body(c, live_backend=live_backend)))
-    return stages
 
 
 @task
 def lint(c):
     """Lint: Go vet + Next.js lint."""
-    errors = []
-
-    print("=== LINT ===")
-    print()
-
-    # 1. Go vet
-    print("[1/2] go vet ./...")
-    with c.cd(str(CORE_DIR)):
-        result = c.run("go vet ./...", warn=True, env=_task_env())
-        if result.exited != 0:
-            errors.append("go vet failed")
-        else:
-            print("  OK")
-
-    # 2. Next.js lint
-    print("[2/2] interface lint")
-    try:
-        interface_tasks.lint.body(c)
-    except SystemExit:
-        errors.append("next lint failed")
-    else:
-        print("  OK")
-
-    print()
-    if errors:
-        print(f"LINT FAILED: {', '.join(errors)}")
-        raise SystemExit(1)
-    print("LINT PASSED")
+    ci_pipeline.run_lint(c, core_dir=CORE_DIR, task_env=_task_env, interface_tasks=interface_tasks)
 
 
 @task
 def test(c):
     """Test: Go unit tests + Interface tests."""
-    errors = []
-
-    print("=== TEST ===")
-    print()
-
-    # 1. Go tests
-    print("[1/2] go test ./...")
-    with c.cd(str(CORE_DIR)):
-        result = c.run("go test ./...", warn=True, env=_task_env())
-        if result.exited != 0:
-            errors.append("go tests failed")
-        else:
-            print("  OK")
-
-    # 2. Interface tests
-    print("[2/2] interface test")
-    try:
-        interface_tasks.test.body(c)
-    except SystemExit:
-        errors.append("interface tests failed")
-    else:
-        print("  OK")
-
-    print()
-    if errors:
-        print(f"TEST FAILED: {', '.join(errors)}")
-        raise SystemExit(1)
-    print("TESTS PASSED")
+    ci_pipeline.run_test(c, core_dir=CORE_DIR, task_env=_task_env, interface_tasks=interface_tasks)
 
 
 @task
 def build(c):
     """Build: Go binary + Next.js production build (no Docker)."""
-    errors = []
-
-    print("=== BUILD ===")
-    print()
-    cache_tasks.ensure_disk_headroom(min_free_gb=10, reason="ci build")
-
-    # 1. Go binary
-    print("[1/2] core compile")
-    try:
-        core_tasks.compile.body(c)
-    except SystemExit:
-        errors.append("go build failed")
-    else:
-        print("  OK")
-
-    # 2. Next.js production build (type-checks + compiles)
-    print("[2/2] interface build")
-    try:
-        interface_tasks.build.body(c)
-    except SystemExit:
-        errors.append("next build failed")
-    else:
-        print("  OK")
-
-    print()
-    if errors:
-        print(f"BUILD FAILED: {', '.join(errors)}")
-        raise SystemExit(1)
-    print("BUILD PASSED")
+    ci_pipeline.run_build(c, cache_tasks=cache_tasks, core_tasks=core_tasks, interface_tasks=interface_tasks)
 
 
 @task
 def check(c):
-    """
-    Full local CI pipeline: lint -> test -> build.
-    Run this before pushing code or creating PRs.
-    """
-    start = time.time()
-
-    print("=" * 60)
-    print("  MYCELIS LOCAL CI PIPELINE")
-    print("=" * 60)
-    print()
-
-    stages = [
-        ("LINT", lint),
-        ("TEST", test),
-        ("BUILD", build),
-    ]
-
-    for name, fn in stages:
-        stage_start = time.time()
-        try:
-            fn(c)
-        except SystemExit:
-            elapsed = time.time() - start
-            print()
-            print(f"PIPELINE FAILED at stage: {name} ({elapsed:.1f}s)")
-            raise SystemExit(1)
-        stage_elapsed = time.time() - stage_start
-        print(f"  [{name} completed in {stage_elapsed:.1f}s]")
-        print()
-
-    elapsed = time.time() - start
-    print("=" * 60)
-    print(f"  PIPELINE PASSED ({elapsed:.1f}s)")
-    print("=" * 60)
+    """Full local CI pipeline: lint -> test -> build."""
+    ci_pipeline.run_check(c, lint_task=lint, test_task=test, build_task=build)
 
 
 @task(help={"e2e": "Include Playwright E2E run (default: True)."})
 def baseline(c, e2e=True):
-    """
-    Strict baseline validation for delivery readiness.
-    Runs: core tests, interface build, interface typecheck, vitest, and Playwright by default.
-    """
-    errors = []
-
-    print("=== BASELINE ===")
-    print()
-    cache_tasks.ensure_disk_headroom(min_free_gb=10, reason="ci baseline")
-
-    print("[1/7] logging.check-schema")
-    try:
-        logging_tasks.check_schema.body(c)
-        print("  OK")
-    except SystemExit:
-        errors.append("logging schema check failed")
-
-    print("[2/7] logging.check-topics")
-    try:
-        logging_tasks.check_topics.body(c)
-        print("  OK")
-    except SystemExit:
-        errors.append("logging topic check failed")
-
-    print("[3/7] quality.max-lines --limit=300")
-    try:
-        quality.max_lines.body(c, limit=300, paths=quality.DEFAULT_SOURCE_PATHS, strict=False)
-        print("  OK")
-    except SystemExit:
-        errors.append("quality max-lines check failed")
-
-    print("[4/7] core go test ./... -count=1")
-    with c.cd(str(CORE_DIR)):
-        result = c.run("go test ./... -count=1", warn=True, hide=True, env=_task_env())
-        if result.exited != 0:
-            errors.append("core go tests failed")
-        else:
-            print("  OK")
-
-    print("[5/7] interface build")
-    try:
-        interface_tasks.build.body(c)
-    except SystemExit:
-        errors.append("interface build failed")
-    else:
-        print("  OK")
-
-    print("[6/7] interface typecheck")
-    try:
-        interface_tasks.typecheck.body(c)
-    except SystemExit:
-        errors.append("interface typecheck failed")
-    else:
-        print("  OK")
-
-    print("[7/7] interface test")
-    try:
-        interface_tasks.stop.body(c)
-        interface_tasks.clean.body(c)
-        interface_tasks.test.body(c)
-    except SystemExit:
-        errors.append("interface vitest failed")
-    else:
-        print("  OK")
-
-    if e2e:
-        print("[E2E] interface playwright run")
-        if errors:
-            print("  SKIP (prerequisites failed)")
-        else:
-            try:
-                interface_tasks.build.body(c)
-                interface_tasks.e2e.body(c, workers="1", server_mode="start")
-            except SystemExit:
-                errors.append("interface playwright failed")
-            else:
-                print("  OK")
-    else:
-        print("[E2E] interface playwright run")
-        print("  SKIP (--no-e2e)")
-
-    print()
-    if errors:
-        print(f"BASELINE FAILED: {', '.join(errors)}")
-        raise SystemExit(1)
-    print("BASELINE PASSED")
+    """Strict baseline validation for delivery readiness."""
+    ci_pipeline.run_baseline(
+        c,
+        e2e=e2e,
+        cache_tasks=cache_tasks,
+        logging_tasks=logging_tasks,
+        quality=quality,
+        core_dir=CORE_DIR,
+        task_env=_task_env,
+        interface_tasks=interface_tasks,
+    )
 
 
 @task(help={"live_backend": "Also run the live-backend governed Soma browser contract after health checks."})
 def service_check(c, live_backend=False):
-    """
-    Validate the currently running local stack and optionally prove the live
-    backend governed Soma contract through the browser.
-    """
-    errors = []
-
-    print("=== SERVICE CHECK ===")
-    print()
-
-    if live_backend:
-        print("[1/3] lifecycle.up --frontend=false --build=false")
-        try:
-            lifecycle.up.body(c, frontend=False, build=False)
-            print("  OK")
-        except SystemExit:
-            errors.append("lifecycle up failed")
-        print("[1.5/3] db.migrate")
-        if db_tasks.schema_bootstrapped():
-            print("  SKIP (cortex schema already compatible with the current runtime)")
-        else:
-            try:
-                db_tasks.migrate.body(c)
-                print("  OK")
-            except SystemExit:
-                errors.append("database migrate failed")
-
-        print("[2/3] lifecycle.health")
-        try:
-            lifecycle.health.body(c)
-            print("  OK")
-        except SystemExit:
-            errors.append("lifecycle health failed")
-
-        print("[3/3] interface live-backend governed playwright")
-        if errors:
-            print("  SKIP (prerequisites failed)")
-        else:
-            try:
-                interface_tasks.build.body(c)
-                time.sleep(3)
-                interface_tasks.e2e.body(
-                    c,
-                    project="chromium",
-                    spec="e2e/specs/soma-governance-live.spec.ts",
-                    live_backend=True,
-                    workers="1",
-                    server_mode="start",
-                )
-            except SystemExit:
-                errors.append("interface live-backend governed playwright failed")
-            else:
-                print("  OK")
-    else:
-        print("[1/2] lifecycle.health")
-        try:
-            lifecycle.health.body(c)
-            print("  OK")
-        except SystemExit:
-            errors.append("lifecycle health failed")
-
-        print("[2/2] interface live-backend playwright")
-        print("  SKIP (--live-backend not set)")
-
-    print()
-    if errors:
-        print(f"SERVICE CHECK FAILED: {', '.join(errors)}")
-        raise SystemExit(1)
-    print("SERVICE CHECK PASSED")
+    """Validate the currently running local stack."""
+    ci_release.run_service_check(c, live_backend=live_backend, lifecycle=lifecycle, db_tasks=db_tasks, interface_tasks=interface_tasks)
 
 
 @task(help={"strict": "Fail if Go version does not match the locked policy (default: False)."})
 def toolchain_check(c, strict=False):
-    """
-    Report local toolchain versions and optionally enforce Go lock policy.
-    """
-    print("=== TOOLCHAIN CHECK ===")
-    go_result = c.run("go version", hide=True, warn=True)
-    node_result = c.run("node -v", hide=True, warn=True)
-    npm_result = c.run("npm -v", hide=True, warn=True)
-
-    go_text = (go_result.stdout or "").strip()
-    node_text = (node_result.stdout or "").strip()
-    npm_text = (npm_result.stdout or "").strip()
-
-    print(f"go:   {go_text or 'unavailable'}")
-    print(f"node: {node_text or 'unavailable'}")
-    print(f"npm:  {npm_text or 'unavailable'}")
-
-    if go_result.exited != 0:
-        raise SystemExit("TOOLCHAIN CHECK FAILED: go is unavailable.")
-
-    locked_go_prefix = "go1.26"
-    go_matches = locked_go_prefix in go_text
-    if not go_matches:
-        message = (
-            f"Go version drift: expected {locked_go_prefix} (locked docs), found '{go_text}'."
-        )
-        if strict:
-            raise SystemExit(f"TOOLCHAIN CHECK FAILED: {message}")
-        print(f"WARN: {message}")
-    else:
-        print("Go version matches lock policy.")
+    """Report local toolchain versions and optionally enforce Go lock policy."""
+    ci_release.run_toolchain_check(c, strict=strict)
 
 
 @task
 def entrypoint_check(c):
-    """
-    Verify the supported invoke runner matrix.
-    - uv run inv ...          => supported primary path
-    - uvx inv ...             => unsupported bare alias
-    - uvx --from invoke inv   => lightweight compatibility path
-    """
-    print("=== ENTRYPOINT CHECK ===")
-
-    primary = c.run("uv run inv -l", hide=True, warn=True)
-    if primary.exited != 0:
-        raise SystemExit("ENTRYPOINT CHECK FAILED: 'uv run inv -l' did not succeed.")
-    print("uv run inv -l: OK")
-
-    bare_uvx = c.run("uvx inv -l", hide=True, warn=True)
-    bare_uvx_text = f"{bare_uvx.stdout or ''}{bare_uvx.stderr or ''}"
-    expected_error = "does not provide any executables"
-    if bare_uvx.exited == 0 or expected_error not in bare_uvx_text:
-        raise SystemExit(
-            "ENTRYPOINT CHECK FAILED: expected bare 'uvx inv -l' to fail with the package-executable message."
-        )
-    print("uvx inv -l: expected failure confirmed")
-
-    compat = c.run("uvx --from invoke inv -l", hide=True, warn=True)
-    if compat.exited != 0:
-        raise SystemExit("ENTRYPOINT CHECK FAILED: 'uvx --from invoke inv -l' did not succeed.")
-    print("uvx --from invoke inv -l: OK")
-
-    print("ENTRYPOINT CHECK PASSED")
+    """Verify the supported invoke runner matrix."""
+    ci_release.run_entrypoint_check(c)
 
 
 @task(
@@ -654,67 +243,27 @@ def entrypoint_check(c):
         "runtime_posture": "Also check tighter disk headroom and explicit AI endpoint reachability when configured (default: False).",
     }
 )
-def release_preflight(
-    c,
-    lane="baseline",
-    e2e=True,
-    strict_toolchain=False,
-    service_health=False,
-    live_backend=False,
-    runtime_posture=False,
-):
-    """
-    Enforce release preflight gate:
-    - clean working tree
-    - toolchain check
-    - strict baseline validation
-    - lane presets for stronger runtime/service proof
-    - optional runtime posture check for storage and explicit AI endpoints
-    - optional live service-health / live-backend proof
-    """
-    resolved_lane, resolved = _resolve_release_preflight_lane(
-        lane,
-        runtime_posture=runtime_posture,
-        service_health=service_health,
-        live_backend=live_backend,
-    )
-    stages = _release_preflight_stages(
+def release_preflight(c, lane="baseline", e2e=True, strict_toolchain=False, service_health=False, live_backend=False, runtime_posture=False):
+    """Enforce release preflight gate."""
+    ci_release.run_release_preflight(
         c,
+        lane=lane,
         e2e=e2e,
         strict_toolchain=strict_toolchain,
-        runtime_posture=resolved["runtime_posture"],
-        service_health=resolved["service_health"],
-        live_backend=resolved["live_backend"],
+        service_health=service_health,
+        live_backend=live_backend,
+        runtime_posture=runtime_posture,
+        runtime_posture_check=_runtime_posture_check,
+        toolchain_check=toolchain_check,
+        baseline=baseline,
+        service_check=service_check,
     )
-
-    print(f"=== RELEASE PREFLIGHT ({resolved_lane}) ===")
-    for index, (stage_name, runner) in enumerate(stages, start=1):
-        print(f"[{index}/{len(stages)}] {stage_name}")
-        runner()
-    print("RELEASE PREFLIGHT PASSED")
 
 
 @task
 def deploy(c):
-    """
-    Build + Docker + K8s deploy.
-    Requires: Docker running, Kind cluster active.
-    Delegates to k8s.deploy which handles image build + helm upgrade.
-    """
-    from . import k8s
-
-    print("=== DEPLOY ===")
-    print()
-
-    # Run lint + test first
-    lint(c)
-    test(c)
-
-    # Delegate to k8s.deploy (builds Docker image + helm upgrade)
-    k8s.deploy(c)
-
-    print()
-    print("DEPLOY COMPLETE")
+    """Build + Docker + K8s deploy."""
+    ci_release.run_deploy(c, lint_task=lint, test_task=test)
 
 
 ns = Collection("ci")

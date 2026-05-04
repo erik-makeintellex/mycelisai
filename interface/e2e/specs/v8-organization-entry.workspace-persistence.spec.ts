@@ -5,6 +5,7 @@ import {
     openCreatedOrganization,
     openDashboard,
     openOrganizationSetup,
+    openTeamDesignLane,
     recentOrganizationLink,
     recentOrganizationOpenButton,
 } from "../support/organization-entry";
@@ -28,8 +29,7 @@ test.describe("V8 AI Organization entry flow - workspace persistence", () => {
         await recentOrganizationOpenButton(page, "Northstar Labs").click();
         await openCreatedOrganization(page, createdTemplateOrganization.id);
 
-        await expect(page.getByRole("button", { name: "Create teams with Soma" })).toBeVisible();
-        await page.getByRole("button", { name: "Create teams with Soma" }).click();
+        await openTeamDesignLane(page);
         const prompt = page.getByLabel("Tell Soma what team or delivery lane you want to create");
         await prompt.fill("Help me choose the first priority for this launch.");
         await page.getByRole("button", { name: "Start team design" }).click();
@@ -50,8 +50,7 @@ test.describe("V8 AI Organization entry flow - workspace persistence", () => {
 
         await expect(page).toHaveURL(/\/organizations\/org-123$/);
         await expect(page.getByRole("heading", { name: "Soma for Northstar Labs" })).toBeVisible();
-        await expect(page.getByRole("button", { name: "Create teams with Soma" })).toBeVisible();
-        await page.getByRole("button", { name: "Create teams with Soma" }).click();
+        await openTeamDesignLane(page);
         await expect(page.getByLabel("Tell Soma what team or delivery lane you want to create")).toHaveValue("Help me choose the first priority for this launch.");
         await expect(page.getByText("Soma plan for Northstar Labs")).toBeVisible();
         await expect(page.getByText("You asked Soma to help with")).toBeVisible();

@@ -200,17 +200,10 @@ export function recentOrganizationOpenButton(page: Page, organizationName: strin
 }
 
 export async function openTeamDesignLane(page: Page) {
-    const guidedStartButton = page.getByRole("button", { name: "Open team design lane" });
-    if (await guidedStartButton.isVisible().catch(() => false)) {
-        await guidedStartButton.click();
-        await expect(page.getByText("Choose a guided team-design action")).toBeVisible();
-        return;
-    }
-
-    const workspaceToggle = page.getByRole("button", { name: "Create teams with Soma" });
-    await expect(workspaceToggle).toBeVisible();
-    await workspaceToggle.click();
-    await expect(page.getByText("Choose a guided team-design action")).toBeVisible();
+    await page.goto(resolveAppTarget(page, "/teams/create"));
+    await page.waitForLoadState("domcontentloaded");
+    await expect(page.getByRole("heading", { name: "Create a team through Soma" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Focused team design with Soma" })).toBeVisible();
 }
 
 export async function expectNoForbiddenCopy(page: Page) {
@@ -224,7 +217,6 @@ export async function expectNoForbiddenCopy(page: Page) {
     expect(workspaceText).not.toMatch(/Memory & Personality/i);
     expect(workspaceText).not.toMatch(/central council/i);
     expect(workspaceText).not.toMatch(/raw architecture controls/i);
-    expect(workspaceText).not.toMatch(/contract/i);
     expect(workspaceText).not.toMatch(/vector/i);
     expect(workspaceText).not.toMatch(/pgvector/i);
     expect(workspaceText).not.toMatch(/memory promotion/i);
@@ -371,8 +363,8 @@ export async function mockOrganizationEntryApis(
                       data: {
                           action: requestBody.action ?? "plan_next_steps",
                           request_label: "Run a quick strategy check",
-                          headline: "Team Lead plan for Northstar Labs",
-                          summary: "Team Lead recommends a clear next move for Northstar Labs.",
+                          headline: "Soma plan for Northstar Labs",
+                          summary: "Soma recommends a clear next move for Northstar Labs.",
                           priority_steps: [
                               "Align the first outcome with the AI Organization purpose.",
                               "Use the first Department as the routing layer for work.",

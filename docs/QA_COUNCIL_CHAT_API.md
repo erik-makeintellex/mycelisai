@@ -1,4 +1,4 @@
-# QA Test Plan: Council Chat API + Mission Control Restructure
+# QA Test Plan: Council Chat API + Soma Interface
 > Navigation: [Project README](../README.md) | [Docs Home](README.md)
 
 > **Scope:** Standardized Council Chat API (backend + frontend), current organization workspace regression, `/approvals` Team Proposals tab, and regression of existing features.
@@ -75,18 +75,18 @@ Run these with `curl` or any HTTP client against `http://localhost:8081`.
 
 Open `http://localhost:3000` in browser.
 
-### 2.1 Mission Control — Council Selector
+### 2.1 Soma Interface — Council Selector
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
-| 2.1.1 | Selector populated | Load Mission Control (`/`) | Header shows dropdown with council members (ADMIN, ARCHITECT, CODER, CREATIVE, SENTRY) — not just static "Admin" label |
+| 2.1.1 | Selector populated | Load the advanced council chat surface | Header shows dropdown with council members (ADMIN, ARCHITECT, CODER, CREATIVE, SENTRY) — not just static "Admin" label |
 | 2.1.2 | Fallback when backend offline | Stop backend, reload page | Dropdown shows single "Admin" option (fallback) — no crash |
 | 2.1.3 | Switching target | Select "ARCHITECT" from dropdown | Dropdown value updates, input placeholder changes to "Ask the architect..." |
 | 2.1.4 | Placeholder is dynamic | Cycle through all members | Placeholder text reflects the selected member's role each time |
 | 2.1.5 | Selector hidden in broadcast | Toggle broadcast mode ON | Dropdown replaced by "Broadcast" label with megaphone icon |
 | 2.1.6 | Selector returns on broadcast off | Toggle broadcast mode OFF | Dropdown reappears with last-selected member still active |
 
-### 2.2 Mission Control — Council Chat Flow
+### 2.2 Soma Interface — Council Chat Flow
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
@@ -100,7 +100,7 @@ Open `http://localhost:3000` in browser.
 | 2.2.8 | Clear chat | Click trash icon after sending messages | All messages cleared, empty state shown with updated placeholder |
 | 2.2.9 | Scroll to bottom | Send enough messages to overflow | Chat auto-scrolls to newest message |
 
-### 2.3 Mission Control — Error States
+### 2.3 Soma Interface — Error States
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
@@ -109,7 +109,7 @@ Open `http://localhost:3000` in browser.
 | 2.3.3 | Network error | Disconnect network, send a message | "Chat failed" error message in chat bubble |
 | 2.3.4 | Error bar dismissal | Trigger an error, then send a successful message | Error bar content shows the error text, clears on next successful interaction |
 
-### 2.4 Mission Control — Broadcast Mode (Regression)
+### 2.4 Advanced Routing — Broadcast Mode (Regression)
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
