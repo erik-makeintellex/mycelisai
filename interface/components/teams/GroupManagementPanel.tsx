@@ -4,14 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { GroupWorkspacePanels } from "./GroupWorkspacePanels";
 import {
+  buildGroupBuckets,
   emptyGroupDraft,
+  errorMessage,
   getData,
-  isCompleteGroup,
+  groupHiddenByFilters,
   splitList,
   summarizeOutputs,
+  visibleGroupBroadcastResult,
   type ApprovalPrompt,
   type Group,
-  type GroupBucket,
+  type GroupBroadcastResult,
   type GroupDraft,
   type Monitor,
 } from "./groupWorkspaceTypes";
@@ -38,45 +41,25 @@ export default function GroupManagementPanel({
   const [archiving, setArchiving] = useState(false);
   const [draft, setDraft] = useState<GroupDraft>(emptyGroupDraft);
   const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [lastBroadcastResult, setLastBroadcastResult] =
+    useState<GroupBroadcastResult | null>(null);
   const { recordFilters, updateRecordFilters } = useGroupRecordFilters();
 
-  const selectedGroup = useMemo(
-    () => groups.find((group) => group.group_id === selectedGroupId) ?? null,
-    [groups, selectedGroupId],
+  const selectedGroup =
+    groups.find((group) => group.group_id === selectedGroupId) ?? null;
+  const filteredGroups = filterGroups(groups, recordFilters);
+  const selectedGroupHiddenByFilters = groupHiddenByFilters(
+    selectedGroup,
+    filteredGroups,
   );
-  const filteredGroups = useMemo(
-    () => filterGroups(groups, recordFilters),
-    [groups, recordFilters],
+  const visibleBroadcastResult = visibleGroupBroadcastResult(
+    lastBroadcastResult,
+    selectedGroup,
   );
-  const selectedGroupHiddenByFilters = Boolean(
-    selectedGroup &&
-      !filteredGroups.some((group) => group.group_id === selectedGroup.group_id),
-  );
-  const buckets = useMemo<GroupBucket[]>(
-    () => [
-      {
-        id: "standing",
-        title: "Standing groups",
-        groups: filteredGroups.filter((group) => !group.expiry),
-      },
-      {
-        id: "temporary",
-        title: "Temporary groups",
-        groups: filteredGroups.filter(
-          (group) => !!group.expiry && !isCompleteGroup(group),
-        ),
-      },
-      {
-        id: "archived",
-        title: "Completed records",
-        groups: filteredGroups.filter((group) => isCompleteGroup(group)),
-      },
-    ],
+  const buckets = useMemo(
+    () => buildGroupBuckets(filteredGroups),
     [filteredGroups],
   );
-  const selectedGroupIsArchived = selectedGroup?.status === "archived";
-  const outputSummary = useMemo(() => summarizeOutputs(outputs), [outputs]);
-
   const loadGroups = async () => {
     setRefreshing(true);
     setError(null);
@@ -93,11 +76,7 @@ export default function GroupManagementPanel({
       );
       if (monitorRes.ok) setMonitor(await getData<Monitor>(monitorRes));
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Could not load groups.",
-      );
+      setError(errorMessage(loadError, "Could not load groups."));
     } finally {
       setRefreshing(false);
     }
@@ -115,7 +94,10 @@ export default function GroupManagementPanel({
   }, [groups, initialSelectedGroupId]);
 
   useEffect(() => {
-    if (selectedGroupId && groups.some((group) => group.group_id === selectedGroupId)) {
+    if (
+      selectedGroupId &&
+      groups.some((group) => group.group_id === selectedGroupId)
+    ) {
       return;
     }
     if (filteredGroups.length === 0) {
@@ -185,11 +167,7 @@ export default function GroupManagementPanel({
       setDraft(emptyGroupDraft);
       await loadGroups();
     } catch (createError) {
-      setError(
-        createError instanceof Error
-          ? createError.message
-          : "Could not create the group.",
-      );
+      setError(errorMessage(createError, "Could not create the group."));
     } finally {
       setSaving(false);
     }
@@ -198,6 +176,7 @@ export default function GroupManagementPanel({
   const broadcastToGroup = async () => {
     if (!selectedGroup || !broadcastMessage.trim()) return;
     setBroadcasting(true);
+    setLastBroadcastResult(null);
     setNotice(null);
     setError(null);
     try {
@@ -209,16 +188,19 @@ export default function GroupManagementPanel({
           body: JSON.stringify({ message: broadcastMessage.trim() }),
         },
       );
+      const payload = await getData<GroupBroadcastResult>(res);
       if (!res.ok)
         throw new Error("Could not broadcast to the selected group.");
+      setLastBroadcastResult(payload);
       setNotice("Broadcast queued for the selected group.");
       setBroadcastMessage("");
       await loadGroups();
     } catch (broadcastError) {
       setError(
-        broadcastError instanceof Error
-          ? broadcastError.message
-          : "Could not broadcast to the selected group.",
+        errorMessage(
+          broadcastError,
+          "Could not broadcast to the selected group.",
+        ),
       );
     } finally {
       setBroadcasting(false);
@@ -226,7 +208,11 @@ export default function GroupManagementPanel({
   };
 
   const archiveSelectedGroup = async () => {
-    if (!selectedGroup || !selectedGroup.expiry || selectedGroupIsArchived)
+    if (
+      !selectedGroup ||
+      !selectedGroup.expiry ||
+      selectedGroup.status === "archived"
+    )
       return;
     setArchiving(true);
     setNotice(null);
@@ -250,14 +236,16 @@ export default function GroupManagementPanel({
       );
       setSelectedGroupId(archivedGroup.group_id);
       setBroadcastMessage("");
+      setLastBroadcastResult(null);
       setNotice(
         "Temporary group archived. Retained outputs are still available for review.",
       );
     } catch (archiveError) {
       setError(
-        archiveError instanceof Error
-          ? archiveError.message
-          : "Could not archive the selected temporary group.",
+        errorMessage(
+          archiveError,
+          "Could not archive the selected temporary group.",
+        ),
       );
     } finally {
       setArchiving(false);
@@ -273,7 +261,7 @@ export default function GroupManagementPanel({
       hiddenSelectedGroup={selectedGroupHiddenByFilters ? selectedGroup : null}
       selectedGroupId={selectedGroupId}
       outputs={outputs}
-      outputSummary={outputSummary}
+      outputSummary={summarizeOutputs(outputs)}
       draft={draft}
       notice={notice}
       error={error}
@@ -283,6 +271,7 @@ export default function GroupManagementPanel({
       broadcasting={broadcasting}
       archiving={archiving}
       broadcastMessage={broadcastMessage}
+      lastBroadcastResult={visibleBroadcastResult}
       onRefresh={() => void loadGroups()}
       onRecordFiltersChange={updateRecordFilters}
       onSelectGroup={setSelectedGroupId}

@@ -11,6 +11,7 @@ import {
   type Group,
   type GroupBucket,
   type GroupDraft,
+  type GroupBroadcastResult,
   type GroupRecordFilters,
   type Monitor,
   type OutputSummary,
@@ -34,6 +35,7 @@ type WorkspaceProps = {
   broadcasting: boolean;
   archiving: boolean;
   broadcastMessage: string;
+  lastBroadcastResult: GroupBroadcastResult | null;
   onRefresh: () => void;
   onRecordFiltersChange: (patch: Partial<GroupRecordFilters>) => void;
   onSelectGroup: (groupId: string) => void;
@@ -63,6 +65,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
     broadcasting,
     archiving,
     broadcastMessage,
+    lastBroadcastResult,
     onRefresh,
     onRecordFiltersChange,
     onSelectGroup,
@@ -105,6 +108,7 @@ export function GroupWorkspacePanels(props: WorkspaceProps) {
             monitor={monitor}
             selectedGroup={selectedGroup}
             broadcastMessage={broadcastMessage}
+            lastBroadcastResult={lastBroadcastResult}
             broadcasting={broadcasting}
             onBroadcastMessageChange={onBroadcastMessageChange}
             onBroadcast={onBroadcast}
@@ -157,8 +161,8 @@ function GroupsHeader({
           </h1>
           <p className="mt-1 max-w-3xl text-sm leading-5 text-cortex-text-muted">
             Use this page when Soma has created or needs a temporary or standing
-            group. New users can stay in Soma; admins can filter, inspect, archive,
-            and review retained outputs here.
+            group. New users can stay in Soma; admins can filter, inspect,
+            archive, and review retained outputs here.
           </p>
         </div>
         <button

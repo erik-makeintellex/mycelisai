@@ -66,7 +66,8 @@ Current implementation status:
 - `IN_REVIEW` tool-assisted chat/search now preserves read-only `tools_used`, classifies tool/artifact responses as `tool_assisted_work`, adds `execution_summary` to direct `web_search`, and marks blocked search as `blocked`.
 - `IN_REVIEW` Team Lead guidance and group broadcast accepted responses now attach `execution_summary` without fabricating `run_id`; group/team proof stays audit/group scoped until a concrete run exists.
 - `IN_REVIEW` focused browser-visible component proof now covers direct tool-assisted Soma search summaries and Team Lead execution summaries, including the no-fabricated-run-link boundary.
-- `ACTIVE` remaining Wave 1 release work is live-backend browser proof for group broadcast proof visibility, then WSL release proof from the committed state.
+- `IN_REVIEW` mocked Chromium browser proof now covers Groups broadcast execution-summary/audit-proof visibility after `POST /api/v1/groups/{id}/broadcast`.
+- `ACTIVE` remaining Wave 1 release work is live-backend group broadcast proof visibility, then WSL release proof from the committed state.
 
 Wave 1 validation evidence:
 - `go test ./pkg/protocol ./internal/server -run "TestChatResponsePayload_ExecutionSummaryIsAdditive|TestHandleChat_UnwrapsReadableJSONEnvelopeFromAgent|TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory|TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls|TestHandleConfirmAction_NormalizesWriteFileAliasesInStoredPlan" -count=1 -v`
@@ -86,6 +87,7 @@ Next team handoff status:
 - `COMPLETE` runtime/tool-assisted implementation is in review with focused Go proof.
 - `COMPLETE` team/group retained-output implementation is in review with focused Go/UI proof.
 - `IN_REVIEW` validation team added focused browser-visible component coverage for direct search/tool-assisted proof and Team Lead proof rendering.
+- `IN_REVIEW` validation team added focused mocked Chromium coverage for group broadcast execution-summary proof visibility.
 - `NEXT` validation team should promote group broadcast proof visibility into live-backend browser coverage.
 
 ### Wave 2: Capability Clarity

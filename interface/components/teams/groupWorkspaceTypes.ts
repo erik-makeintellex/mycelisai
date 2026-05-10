@@ -1,4 +1,5 @@
 import type { Artifact } from "@/store/cortexStoreTypesPlanning";
+import type { ExecutionSummaryData } from "@/store/cortexStoreTypesChat";
 
 export type WorkMode =
   | "read_only"
@@ -33,11 +34,47 @@ export type Monitor = {
 
 export type ApprovalPrompt = { confirm_token?: { token?: string } };
 
+export type GroupBroadcastResult = {
+  group_id?: string;
+  execution_summary?: ExecutionSummaryData;
+};
+
 export type GroupBucket = {
   id: string;
   title: string;
   groups: Group[];
 };
+
+export const groupHiddenByFilters = (
+  selected: Group | null,
+  filtered: Group[],
+) =>
+  Boolean(
+    selected && !filtered.some((group) => group.group_id === selected.group_id),
+  );
+
+export const visibleGroupBroadcastResult = (
+  result: GroupBroadcastResult | null,
+  selected: Group | null,
+) => (result?.group_id === selected?.group_id ? result : null);
+
+export const buildGroupBuckets = (groups: Group[]): GroupBucket[] => [
+  {
+    id: "standing",
+    title: "Standing groups",
+    groups: groups.filter((group) => !group.expiry),
+  },
+  {
+    id: "temporary",
+    title: "Temporary groups",
+    groups: groups.filter((group) => !!group.expiry && !isCompleteGroup(group)),
+  },
+  {
+    id: "archived",
+    title: "Completed records",
+    groups: groups.filter((group) => isCompleteGroup(group)),
+  },
+];
 
 export type GroupKindFilter = "all" | "standing" | "temporary";
 
@@ -109,6 +146,9 @@ export const getData = async <T>(res: Response): Promise<T> => {
       : payload
   ) as T;
 };
+
+export const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export const relativeTime = (value?: string | null) => {
   if (!value) return "not yet";

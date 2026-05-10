@@ -1,8 +1,10 @@
 import { MessageSquare, RefreshCw } from "lucide-react";
+import ExecutionSummaryCard from "@/components/soma/ExecutionSummaryCard";
 import {
   compactButtonClassName,
   inputClassName,
   linkClassName,
+  type GroupBroadcastResult,
   type Group,
   type Monitor,
 } from "./groupWorkspaceTypes";
@@ -11,6 +13,7 @@ export function GroupCommunicationPanel({
   monitor,
   selectedGroup,
   broadcastMessage,
+  lastBroadcastResult,
   broadcasting,
   onBroadcastMessageChange,
   onBroadcast,
@@ -19,6 +22,7 @@ export function GroupCommunicationPanel({
   monitor: Monitor | null;
   selectedGroup: Group | null;
   broadcastMessage: string;
+  lastBroadcastResult: GroupBroadcastResult | null;
   broadcasting: boolean;
   onBroadcastMessageChange: (message: string) => void;
   onBroadcast: () => void;
@@ -89,6 +93,13 @@ export function GroupCommunicationPanel({
             </>
           )}
         </div>
+        {lastBroadcastResult?.execution_summary ? (
+          <div data-testid="groups-broadcast-execution-summary">
+            <ExecutionSummaryCard
+              summary={lastBroadcastResult.execution_summary}
+            />
+          </div>
+        ) : null}
         <div className="rounded-xl border border-cortex-border bg-cortex-bg p-4">
           <h3 className="text-sm font-semibold text-cortex-text-main">
             Message bus
