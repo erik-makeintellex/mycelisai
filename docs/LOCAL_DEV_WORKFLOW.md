@@ -249,7 +249,7 @@ uv run inv wsl.cycle --branch <name>
 uv run inv ci.release-preflight --lane=release
 ```
 
-These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree. Always keep the WSL `mother-brain` checkout git-backed and disposable for deployment-mimic proof.
+These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree. Always keep the WSL `mycelis-root` deployment checkout git-backed and disposable for deployment-mimic proof.
 
 Guarded commands: `uv run inv wsl.status`, `uv run inv wsl.refresh --branch <name>`, `uv run inv wsl.validate`, `uv run inv wsl.cycle --branch <name>`.
 

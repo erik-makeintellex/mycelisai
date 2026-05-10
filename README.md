@@ -174,7 +174,7 @@ At minimum review these when the touched surface changes:
 
 ## Command Contract
 
-Use `uv run inv ...` for real task execution.
+Use `uv run inv ...` for real task execution. Managed Interface dependency bootstrap uses `npm ci` so proof checkouts remain lockfile-clean.
 
 Allowed compatibility probe:
 

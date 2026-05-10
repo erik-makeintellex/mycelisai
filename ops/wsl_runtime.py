@@ -13,8 +13,8 @@ from .config import ROOT_DIR, is_windows
 
 ns = Collection("wsl")
 
-DEFAULT_WSL_DISTRO = os.environ.get("MYCELIS_WSL_PROOF_DISTRO") or os.environ.get("MYCELIS_WSL_DISTRO") or "mother-brain"
-DEFAULT_WSL_CHECKOUT = os.environ.get("MYCELIS_WSL_PROOF_REPO", "/home/erik/Projects/mycelisai/scratch")
+DEFAULT_WSL_DISTRO = os.environ.get("MYCELIS_WSL_PROOF_DISTRO") or os.environ.get("MYCELIS_WSL_DISTRO") or "mycelis-root"
+DEFAULT_WSL_CHECKOUT = os.environ.get("MYCELIS_WSL_PROOF_REPO", "/home/erik/deployments/mycelis/checkouts/main")
 DEFAULT_WSL_REMOTE = os.environ.get("MYCELIS_WSL_PROOF_REMOTE", "origin")
 DEFAULT_GUI_URL = os.environ.get("MYCELIS_WSL_PROOF_GUI_URL", "http://localhost:3000")
 DEFAULT_RELEASE_LANE = os.environ.get("MYCELIS_WSL_PROOF_RELEASE_LANE", "runtime")
@@ -535,7 +535,7 @@ def status(_c, distro="", checkout="", remote=""):
     help={
         "branch": "Remote branch to refresh in the WSL proof checkout. Defaults to the current Windows dev branch.",
         "ref": "Specific remote commit/ref to refresh in the WSL proof checkout (detached HEAD).",
-        "distro": "WSL distro name. Defaults to MYCELIS_WSL_PROOF_DISTRO or mother-brain.",
+        "distro": "WSL distro name. Defaults to MYCELIS_WSL_PROOF_DISTRO or mycelis-root.",
         "checkout": "Linux-path checkout to refresh. Defaults to MYCELIS_WSL_PROOF_REPO.",
         "remote": "Git remote name (default: origin).",
     }
@@ -600,7 +600,7 @@ def refresh(_c, branch="", ref="", distro="", checkout="", remote=""):
 @task(
     help={
         "lane": "WSL proof lane. service/release run runtime preflight, then task-owned Compose/browser proof (default: runtime).",
-        "distro": "WSL distro name. Defaults to MYCELIS_WSL_PROOF_DISTRO or mother-brain.",
+        "distro": "WSL distro name. Defaults to MYCELIS_WSL_PROOF_DISTRO or mycelis-root.",
         "checkout": "Linux-path checkout to validate. Defaults to MYCELIS_WSL_PROOF_REPO.",
         "gui_url": "Windows-side URL to probe after the WSL stack is healthy (default: http://localhost:3000).",
         "compose_wait_timeout": "Compose wait timeout in seconds (default: 240).",
@@ -670,7 +670,7 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
         "branch": "Remote branch to refresh in the WSL proof checkout before validation.",
         "ref": "Specific remote commit/ref to refresh before validation.",
         "lane": "Release-preflight lane to run inside WSL before compose/browser proof (default: runtime).",
-        "distro": "WSL distro name. Defaults to MYCELIS_WSL_PROOF_DISTRO or mother-brain.",
+        "distro": "WSL distro name. Defaults to MYCELIS_WSL_PROOF_DISTRO or mycelis-root.",
         "checkout": "Linux-path checkout to refresh/validate. Defaults to MYCELIS_WSL_PROOF_REPO.",
         "remote": "Git remote name (default: origin).",
         "gui_url": "Windows-side URL to probe after the WSL stack is healthy (default: http://localhost:3000).",

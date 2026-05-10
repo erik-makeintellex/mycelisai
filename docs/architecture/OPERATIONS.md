@@ -180,6 +180,9 @@ uv run inv wsl.refresh
 uv run inv wsl.validate --lane=release
 ```
 
+The root and Interface install tasks use `npm ci` for Interface dependencies; release proof expects
+dependency bootstrap to preserve a clean lockfile and fail before validation if it cannot.
+
 ### Deployment Guidance Across Host Architectures
 
 - Windows x86_64: edit on Windows; prove through Compose, WSL Compose, or Kubernetes as the slice requires.

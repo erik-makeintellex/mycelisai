@@ -430,7 +430,7 @@ def test_release_proof_sequence_keeps_wsl_validate_before_browser_certification(
             (
                 V8_DEV_STATE,
                 [
-                    "guarded `uv run inv wsl.validate --lane=release` path from the refreshed `mother-brain` checkout",
+                    "guarded `uv run inv wsl.validate --lane=release` path from the refreshed `mycelis-root` deployment checkout",
                     "maps `--lane=service` and `--lane=release` to `ci.release-preflight --lane=runtime --no-e2e`",
                     "keep the focused `/runs` and guided retry/recovery browser proofs green, refresh the WSL proof checkout from the committed slice, run `wsl.validate`, and then rerun broader headed certification from committed state",
                     "run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting the new browser-gap evidence as authoritative",
@@ -455,7 +455,7 @@ def test_windows_edit_wsl_proof_contract_does_not_turn_wsl_into_day_to_day_workt
     required_snippets = [
         "For day-to-day Windows development, keep the Windows repo as the edit/review/push surface.",
         "Use this as the canonical deployment-mimic proof path when Windows editing is ready for authoritative build, API, UI, runtime, or release-style validation:",
-        "keep the WSL `mother-brain` checkout git-backed and disposable for deployment-mimic proof",
+        "keep the WSL `mycelis-root` deployment checkout git-backed and disposable for deployment-mimic proof",
         "These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree.",
     ]
     missing = [snippet for snippet in required_snippets if snippet not in text]

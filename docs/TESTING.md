@@ -247,6 +247,9 @@ uv run inv wsl.refresh
 uv run inv wsl.validate --lane=release
 ```
 
+The managed install path uses `npm ci` for Interface dependencies, so WSL and CI-style proof
+checkouts must not dirty `interface/package-lock.json` during bootstrap.
+
 Release-preflight lane presets are `baseline`, `runtime`, `service`, and `release`; use `uv run inv ci.release-preflight --lane=release` for the full release gate.
 
 Deployment proof contracts:

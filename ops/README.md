@@ -26,7 +26,7 @@ This directory contains the logic for the **Service Release Standard 1.0**.
 
 Recommended host posture:
 - Windows repo: canonical editing, review, and git-push surface for active development
-- WSL `mother-brain` checkout backed by `D:\wsl-distro`: canonical rapid proof lane for install, build, API/UI test, Compose runtime, and pre-cluster validation
+- WSL `mycelis-root` deployment checkout: canonical rapid proof lane for install, build, API/UI test, Compose runtime, and pre-cluster validation
 - Windows native: keep the runtime story anchored to rapid Compose proof or self-hosted Kubernetes validation; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
@@ -53,6 +53,8 @@ Deployment selection rule:
 
 - Use `uv run inv install --optional-engines` when you also want the local `cognitive/` extras.
 - Use `uv run inv cognitive.install` if you want only the optional local engine dependencies.
+- Interface dependencies are installed with `npm ci` so clean WSL/CI-style checkouts do not rewrite
+  `interface/package-lock.json` during proof bootstrap.
 - The supported install path now also provisions the managed Playwright Chromium binary so fresh checkouts can run the repo-owned browser proof lane without a separate manual browser install step.
 - The root `uv.lock` is tracked for reproducible Python automation; update it intentionally with `uv lock` after dependency changes and verify with `uv lock --check` before release handoff.
 

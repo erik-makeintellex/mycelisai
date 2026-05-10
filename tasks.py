@@ -45,7 +45,7 @@ def install(c, optional_engines=False):
         c.run("go mod download", env=env)
 
     print("Installing Interface dependencies...")
-    c.run("npm install --prefix interface", env=env)
+    c.run("npm ci --prefix interface", env=env)
     print("Installing Playwright Chromium browser...")
     c.run("npx --prefix interface playwright install chromium", env=env)
 
