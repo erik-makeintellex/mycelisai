@@ -86,7 +86,7 @@ def _parse_network_endpoint(url: str) -> tuple[str, int]:
 
 
 def _wsl_http_available(url: str) -> bool:
-    return compose_env.wsl_http_available(url, _wsl_exec_command)
+    return compose_env.wsl_http_available(url, (lambda *args: list(args)) if running_in_wsl() else _wsl_exec_command)
 
 
 def _wsl_ollama_relay_port(env_values: dict[str, str]) -> int:
