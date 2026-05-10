@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Wrench, BookOpen } from "lucide-react";
-import { useCortexStore } from "@/store/useCortexStore";
+import { BookOpen, ShieldCheck, Wrench } from "lucide-react";
 import MCPServerCard, { type MCPRecentActivity } from "./MCPServerCard";
+import { useCortexStore } from "@/store/useCortexStore";
 import { MCPLibraryBrowserBody } from "./MCPLibraryBrowser";
+import { CapabilityRegistryPanel } from "./MCPToolCapabilityRegistry";
+import { formatActivityScope, useMCPRecentActivity } from "./MCPToolRegistryActivity";
+import { deriveFallbackCapabilities } from "./MCPToolRegistryCapabilities";
 import { ConnectedToolsWorkflowCard, SearchCapabilityCard, SomaToolPromptCard } from "./MCPToolGuidance";
 
 type Tab = "installed" | "library";
@@ -25,6 +28,10 @@ export default function MCPToolRegistry() {
     const searchCapability = useCortexStore((s) => s.searchCapability);
     const isFetchingSearchCapability = useCortexStore((s) => s.isFetchingSearchCapability);
     const searchCapabilityError = useCortexStore((s) => s.searchCapabilityError);
+    const capabilities = useCortexStore((s) => s.capabilities);
+    const isFetchingCapabilities = useCortexStore((s) => s.isFetchingCapabilities);
+    const capabilitiesError = useCortexStore((s) => s.capabilitiesError);
+    const fetchCapabilities = useCortexStore((s) => s.fetchCapabilities);
 
     const [activeTab, setActiveTab] = useState<Tab>("installed");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
@@ -35,62 +42,14 @@ export default function MCPToolRegistry() {
         fetchMCPServers();
         fetchMCPActivity();
         fetchSearchCapability();
-    }, [fetchMCPActivity, fetchMCPServers, fetchSearchCapability]);
+        fetchCapabilities();
+    }, [fetchCapabilities, fetchMCPActivity, fetchMCPServers, fetchSearchCapability]);
 
     useEffect(() => {
         initializeStream();
     }, [initializeStream]);
 
-    const recentActivity = useMemo<MCPRecentActivity[]>(() => {
-        const serverNames = new Map(mcpServers.map((server) => [server.id, server.name]));
-        const persistedActivity = mcpActivity.map((entry) => ({
-            id: entry.id,
-            serverId: entry.server_id,
-            serverName: entry.server_id ? (serverNames.get(entry.server_id) ?? entry.server_name) : entry.server_name,
-            toolName: entry.tool_name,
-            state: entry.state,
-            message: entry.message || entry.summary,
-            timestamp: entry.timestamp,
-            runId: entry.run_id,
-            teamId: entry.team_id,
-            agentId: entry.agent_id,
-        }));
-        const liveActivity = streamLogs
-            .filter((signal) => signal.source_kind === "mcp")
-            .map((signal, index) => {
-                const serverId = typeof signal.payload?.server_id === "string" ? signal.payload.server_id : undefined;
-                const toolName = typeof signal.payload?.tool === "string" ? signal.payload.tool : "unknown_tool";
-                const state = typeof signal.payload?.state === "string" ? signal.payload.state : "activity";
-                const preview = typeof signal.payload?.result_preview === "string"
-                    ? signal.payload.result_preview
-                    : typeof signal.payload?.error === "string"
-                    ? signal.payload.error
-                    : signal.message ?? "Agent MCP activity recorded.";
-                return {
-                    id: `${signal.timestamp ?? "mcp"}-${serverId ?? "server"}-${toolName}-${index}`,
-                    serverId,
-                    serverName: serverId ? (serverNames.get(serverId) ?? serverId) : "mcp",
-                    toolName,
-                    state,
-                    message: preview,
-                    timestamp: signal.timestamp ?? new Date().toISOString(),
-                    runId: signal.run_id,
-                    teamId: signal.team_id,
-                    agentId: signal.agent_id,
-                };
-            });
-        const merged = [...liveActivity, ...persistedActivity];
-        const deduped = new Map<string, MCPRecentActivity>();
-        for (const activity of merged) {
-            const key = `${activity.timestamp}|${activity.serverId ?? activity.serverName}|${activity.toolName}|${activity.state}|${activity.message}`;
-            if (!deduped.has(key)) {
-                deduped.set(key, activity);
-            }
-        }
-        return Array.from(deduped.values())
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-            .slice(0, 12);
-    }, [mcpActivity, mcpServers, streamLogs]);
+    const recentActivity = useMCPRecentActivity(mcpServers, mcpActivity, streamLogs);
 
     const recentActivityByServer = useMemo(() => {
         const grouped = new Map<string, MCPRecentActivity[]>();
@@ -102,6 +61,13 @@ export default function MCPToolRegistry() {
         }
         return grouped;
     }, [recentActivity]);
+
+    const fallbackCapabilities = useMemo(
+        () => deriveFallbackCapabilities(mcpServers, searchCapability, searchCapabilityError),
+        [mcpServers, searchCapability, searchCapabilityError],
+    );
+    const visibleCapabilities = capabilities.length > 0 ? capabilities : fallbackCapabilities;
+    const usingCapabilityFallback = capabilities.length === 0 && fallbackCapabilities.length > 0;
 
     function handleInstalled(name: string) {
         setInstallNotice(`Installed ${name}. Check the connected server card and live MCP activity below.`);
@@ -164,6 +130,12 @@ export default function MCPToolRegistry() {
                     <div className="flex flex-col gap-4 p-6 max-w-4xl mx-auto">
                         <SomaToolPromptCard />
                         <ConnectedToolsWorkflowCard isStreamConnected={isStreamConnected} />
+                        <CapabilityRegistryPanel
+                            capabilities={visibleCapabilities}
+                            isLoading={isFetchingCapabilities}
+                            error={capabilitiesError}
+                            usingFallback={usingCapabilityFallback}
+                        />
 
                         <SearchCapabilityCard
                             status={searchCapability}
@@ -273,15 +245,37 @@ export default function MCPToolRegistry() {
                             </div>
                         )}
 
-                        {mcpServers.map((server) => (
-                            <MCPServerCard
-                                key={server.id}
-                                server={server}
-                                onDelete={deleteMCPServer}
-                                onEdit={() => setActiveTab("library")}
-                                recentActivity={recentActivityByServer.get(server.id) ?? []}
-                            />
-                        ))}
+                        {mcpServers.length > 0 && (
+                            <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-4">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <ShieldCheck className="h-4 w-4 text-cortex-primary" />
+                                        <div>
+                                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                                                MCP Server Drill-Down
+                                            </p>
+                                            <p className="mt-1 text-xs text-cortex-text-muted">
+                                                Server structure remains available for transport, command, secret refs, tool list, and activity review.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="rounded-full border border-cortex-border bg-cortex-bg px-2 py-1 text-[10px] font-mono text-cortex-text-muted">
+                                        {mcpServers.length} server{mcpServers.length === 1 ? "" : "s"}
+                                    </span>
+                                </div>
+                                <div className="mt-3 space-y-3">
+                                    {mcpServers.map((server) => (
+                                        <MCPServerCard
+                                            key={server.id}
+                                            server={server}
+                                            onDelete={deleteMCPServer}
+                                            onEdit={() => setActiveTab("library")}
+                                            recentActivity={recentActivityByServer.get(server.id) ?? []}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -289,12 +283,4 @@ export default function MCPToolRegistry() {
             </div>
         </div>
     );
-}
-
-function formatActivityScope(activity: MCPRecentActivity): string {
-    const parts: string[] = [];
-    if (activity.teamId) parts.push(`Team ${activity.teamId}`);
-    if (activity.agentId) parts.push(`Agent ${activity.agentId}`);
-    if (activity.runId) parts.push(`Run ${activity.runId}`);
-    return parts.join(" · ");
 }

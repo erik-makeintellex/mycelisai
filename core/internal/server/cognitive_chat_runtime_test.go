@@ -61,6 +61,21 @@ func TestHandleChat_ReturnsDeterministicRuntimeStateSummaryWithoutNATS(t *testin
 	if !strings.Contains(payload.Text, "Current team focus: Marketing.") {
 		t.Fatalf("text = %q, want team focus", payload.Text)
 	}
+	if payload.ExecutionSummary == nil {
+		t.Fatal("expected execution_summary")
+	}
+	if payload.ExecutionSummary.Execution.Shape != protocol.ExecutionShapeDirectSoma {
+		t.Fatalf("execution shape = %q", payload.ExecutionSummary.Execution.Shape)
+	}
+	if payload.ExecutionSummary.Proof.RunClass != protocol.ExecutionRunClassNoRun {
+		t.Fatalf("proof run_class = %q", payload.ExecutionSummary.Proof.RunClass)
+	}
+	if payload.ExecutionSummary.Proof.ProofClass != protocol.ExecutionProofClassAuditOnly {
+		t.Fatalf("proof proof_class = %q", payload.ExecutionSummary.Proof.ProofClass)
+	}
+	if len(payload.ExecutionSummary.Outputs) != 1 || payload.ExecutionSummary.Outputs[0].RetentionClass != protocol.ExecutionRetentionClassNonRetained {
+		t.Fatalf("runtime output retention = %+v", payload.ExecutionSummary.Outputs)
+	}
 }
 
 func TestHandleChat_ReturnsDeterministicTeamRosterSummary(t *testing.T) {

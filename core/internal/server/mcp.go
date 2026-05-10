@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/exchange"
 	"github.com/mycelis/core/internal/mcp"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 // handleMCPList returns all registered MCP servers with their tools.
@@ -124,24 +125,33 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, fmt.Sprintf(`{"error":"tool call failed: %s"}`, err.Error()), http.StatusBadGateway)
 		return
 	}
+	summary := fmt.Sprintf("%s returned output.", toolName)
+	if text := strings.TrimSpace(extractMCPResultSummary(result)); text != "" {
+		summary = text
+	}
+	serverName := serversNameOrFallback(s.MCP, ctx, serverID)
+	var exchangeItemID string
 	if s.Exchange != nil {
-		summary := fmt.Sprintf("%s returned output.", toolName)
-		if text := strings.TrimSpace(extractMCPResultSummary(result)); text != "" {
-			summary = text
-		}
-		_, _ = s.Exchange.PublishMCPResult(ctx, exchange.MCPNormalizationInput{
-			ServerID:      serverID.String(),
-			ServerName:    serversNameOrFallback(s.MCP, ctx, serverID),
-			ToolName:      toolName,
-			Summary:       summary,
-			ResultPreview: summary,
-			TargetRole:    "soma",
-			Status:        "completed",
-			Result:        map[string]any{"arguments": body.Arguments, "result": result},
+		item, _ := s.Exchange.PublishMCPResult(ctx, exchange.MCPNormalizationInput{
+			ServerID:       serverID.String(),
+			ServerName:     serverName,
+			ToolName:       toolName,
+			Summary:        summary,
+			ResultPreview:  summary,
+			TargetRole:     "soma",
+			Status:         "completed",
+			Result:         map[string]any{"arguments": body.Arguments, "result": result},
+			RunClass:       string(protocol.ExecutionRunClassNoRun),
+			NoRunReason:    "Direct MCP tool call did not supply a run id.",
+			RetentionClass: string(protocol.ExecutionRetentionClassRetained),
 		})
+		if item != nil {
+			exchangeItemID = item.ID.String()
+		}
 	}
 
-	respondJSON(w, result)
+	executionSummary := buildMCPToolCallExecutionSummary(serverName, toolName, summary, exchangeItemID)
+	respondJSON(w, mcpToolCallResponse(result, executionSummary, exchangeItemID))
 }
 
 func serversNameOrFallback(svc *mcp.Service, ctx context.Context, serverID uuid.UUID) string {
@@ -167,6 +177,27 @@ func extractMCPResultSummary(result any) string {
 		return fmt.Sprintf("MCP tool returned %d result items.", len(typed))
 	}
 	return ""
+}
+
+func mcpToolCallResponse(result any, summary *protocol.ExecutionSummary, exchangeItemID string) any {
+	if raw, err := json.Marshal(result); err == nil {
+		var object map[string]any
+		if err := json.Unmarshal(raw, &object); err == nil && object != nil {
+			object["execution_summary"] = summary
+			if strings.TrimSpace(exchangeItemID) != "" {
+				object["exchange_item_id"] = exchangeItemID
+			}
+			return object
+		}
+	}
+	response := map[string]any{
+		"result":            result,
+		"execution_summary": summary,
+	}
+	if strings.TrimSpace(exchangeItemID) != "" {
+		response["exchange_item_id"] = exchangeItemID
+	}
+	return response
 }
 
 // handleMCPToolsList returns a flat list of all tools across all MCP servers.

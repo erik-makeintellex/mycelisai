@@ -10,6 +10,7 @@ import (
 
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/bootstrap"
+	"github.com/mycelis/core/internal/capabilities"
 	"github.com/mycelis/core/internal/catalogue"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/comms"
@@ -49,6 +50,7 @@ type productServices struct {
 	EventStore      *events.Store
 	RunsManager     *runs.Manager
 	ConversationLog *conversations.Store
+	Capabilities    *capabilities.Service
 }
 
 func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRuntime) *productRuntime {
@@ -64,6 +66,12 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 	overseerEngine := startOverseerEngine(core.NC, services.Stream)
 
 	mcpLibrary := loadMCPLibrary(ctx, services.MCP, services.MCPPool)
+	services.Capabilities = capabilities.NewService(capabilities.Dependencies{
+		MCP:           services.MCP,
+		MCPLibrary:    mcpLibrary,
+		InternalTools: services.InternalTools,
+		Search:        services.Search,
+	})
 	if services.MetaArchitect != nil {
 		caps := buildSystemCapabilities(ctx, services.InternalTools, services.MCP, mcpLibrary)
 		services.MetaArchitect.SetCapabilities(caps)

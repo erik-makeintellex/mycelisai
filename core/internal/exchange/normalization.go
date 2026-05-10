@@ -10,33 +10,40 @@ import (
 )
 
 type ArtifactNormalizationInput struct {
-	ArtifactID    uuid.UUID
-	ArtifactType  string
-	Title         string
-	AgentID       string
-	ChannelName   string
-	TargetRole    string
-	Status        string
-	Confidence    *float64
-	Tags          []string
-	ContinuityKey string
-	ThreadID      *uuid.UUID
+	ArtifactID     uuid.UUID
+	ArtifactType   string
+	Title          string
+	AgentID        string
+	RunID          string
+	RunClass       string
+	NoRunReason    string
+	RetentionClass string
+	ChannelName    string
+	TargetRole     string
+	Status         string
+	Confidence     *float64
+	Tags           []string
+	ContinuityKey  string
+	ThreadID       *uuid.UUID
 }
 
 type MCPNormalizationInput struct {
-	ServerID      string
-	ServerName    string
-	ToolName      string
-	Summary       string
-	ResultPreview string
-	TargetRole    string
-	Status        string
-	Result        map[string]any
-	SourceTeam    string
-	AgentID       string
-	RunID         string
-	ContinuityKey string
-	ThreadID      *uuid.UUID
+	ServerID       string
+	ServerName     string
+	ToolName       string
+	Summary        string
+	ResultPreview  string
+	TargetRole     string
+	Status         string
+	Result         map[string]any
+	SourceTeam     string
+	AgentID        string
+	RunID          string
+	RunClass       string
+	NoRunReason    string
+	RetentionClass string
+	ContinuityKey  string
+	ThreadID       *uuid.UUID
 }
 
 func (s *Service) PublishArtifact(ctx context.Context, input ArtifactNormalizationInput) (*ExchangeItem, error) {
@@ -76,6 +83,8 @@ func (s *Service) PublishArtifact(ctx context.Context, input ArtifactNormalizati
 	if input.Confidence != nil {
 		payload["confidence"] = *input.Confidence
 	}
+	proofMetadata := outputProofMetadata(input.RunID, input.RunClass, input.NoRunReason, input.RetentionClass)
+	applyOutputProofPayload(payload, proofMetadata)
 	return s.Publish(ctx, PublishInput{
 		ChannelName:      channelName,
 		SchemaID:         schemaID,
@@ -98,7 +107,11 @@ func (s *Service) PublishArtifact(ctx context.Context, input ArtifactNormalizati
 			"TextResult":  "trusted_internal",
 		}[schemaID],
 		ReviewRequired: schemaID != "TextResult",
-		Summary:        summary,
+		Metadata: map[string]any{
+			"source_kind": "artifact",
+			"proof":       proofMetadata,
+		},
+		Summary: summary,
 	})
 }
 
@@ -153,6 +166,8 @@ func (s *Service) PublishMCPResult(ctx context.Context, input MCPNormalizationIn
 	if input.ContinuityKey != "" {
 		payload["continuity_key"] = input.ContinuityKey
 	}
+	proofMetadata := outputProofMetadata(input.RunID, input.RunClass, input.NoRunReason, input.RetentionClass)
+	applyOutputProofPayload(payload, proofMetadata)
 	return s.Publish(ctx, PublishInput{
 		ChannelName:      channelName,
 		SchemaID:         schemaID,
@@ -170,19 +185,65 @@ func (s *Service) PublishMCPResult(ctx context.Context, input MCPNormalizationIn
 		ReviewRequired:   true,
 		Metadata: map[string]any{
 			"source_kind": "mcp",
+			"proof":       proofMetadata,
 			"mcp": map[string]any{
-				"server_id":      serverID,
-				"server_name":    serverName,
-				"tool_name":      strings.TrimSpace(input.ToolName),
-				"state":          state,
-				"agent_id":       strings.TrimSpace(input.AgentID),
-				"source_team":    strings.TrimSpace(input.SourceTeam),
-				"run_id":         strings.TrimSpace(input.RunID),
-				"continuity_key": strings.TrimSpace(input.ContinuityKey),
+				"server_id":       serverID,
+				"server_name":     serverName,
+				"tool_name":       strings.TrimSpace(input.ToolName),
+				"state":           state,
+				"agent_id":        strings.TrimSpace(input.AgentID),
+				"source_team":     strings.TrimSpace(input.SourceTeam),
+				"run_id":          strings.TrimSpace(input.RunID),
+				"run_class":       proofMetadata["run_class"],
+				"no_run_reason":   proofMetadata["no_run_reason"],
+				"retention_class": proofMetadata["retention_class"],
+				"continuity_key":  strings.TrimSpace(input.ContinuityKey),
 			},
 		},
 		Summary: summary,
 	})
+}
+
+func outputProofMetadata(runID, runClass, noRunReason, retentionClass string) map[string]any {
+	runID = strings.TrimSpace(runID)
+	runClass = strings.TrimSpace(runClass)
+	noRunReason = strings.TrimSpace(noRunReason)
+	retentionClass = strings.TrimSpace(retentionClass)
+	if runID != "" {
+		if runClass == "" || runClass == "no_run" {
+			runClass = "run_linked"
+		}
+	} else {
+		runClass = "no_run"
+		if noRunReason == "" {
+			noRunReason = "No execution run was supplied for this normalized output."
+		}
+	}
+	if retentionClass == "" {
+		retentionClass = "retained"
+	}
+	proof := map[string]any{
+		"run_class":       runClass,
+		"retention_class": retentionClass,
+	}
+	if runID != "" {
+		proof["run_id"] = runID
+	}
+	if noRunReason != "" {
+		proof["no_run_reason"] = noRunReason
+	}
+	return proof
+}
+
+func applyOutputProofPayload(payload map[string]any, proof map[string]any) {
+	if payload == nil || proof == nil {
+		return
+	}
+	for _, key := range []string{"run_id", "run_class", "no_run_reason", "retention_class"} {
+		if value, ok := proof[key]; ok {
+			payload[key] = value
+		}
+	}
 }
 
 func classifyMCPOutput(serverName, toolName string) (string, string, []string) {

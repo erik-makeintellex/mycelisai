@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/cognitive"
@@ -83,7 +84,29 @@ func publishArtifactToExchange(ctx context.Context, svc *exchange.Service, artif
 	if err != nil {
 		return
 	}
-	_, _ = svc.PublishArtifact(ctx, exchange.ArtifactNormalizationInput{ArtifactID: parsedID, ArtifactType: artType, Title: title, AgentID: "internal", Status: "pending", TargetRole: "soma", Tags: []string{"artifact", artType}})
+	runID, runClass, noRunReason := artifactExchangeRuntimeMetadata(ctx)
+	_, _ = svc.PublishArtifact(ctx, exchange.ArtifactNormalizationInput{
+		ArtifactID:     parsedID,
+		ArtifactType:   artType,
+		Title:          title,
+		AgentID:        "internal",
+		RunID:          runID,
+		RunClass:       runClass,
+		NoRunReason:    noRunReason,
+		RetentionClass: "retained",
+		Status:         "pending",
+		TargetRole:     "soma",
+		Tags:           []string{"artifact", artType},
+	})
+}
+
+func artifactExchangeRuntimeMetadata(ctx context.Context) (runID, runClass, noRunReason string) {
+	if inv, ok := ToolInvocationContextFromContext(ctx); ok {
+		if runID = strings.TrimSpace(inv.RunID); runID != "" {
+			return runID, "run_linked", ""
+		}
+	}
+	return "", "no_run", "Artifact normalization did not receive an execution run id."
 }
 
 func storeMemoryVector(ctx context.Context, brain *cognitive.Router, mem *memory.Service, category, content, memContext string, scope memoryScope) {

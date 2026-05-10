@@ -154,6 +154,7 @@ func (s *AdminServer) respondRuntimeStateSummary(w http.ResponseWriter, r *http.
 			PolicyDecision:  "allow",
 			AuditEventID:    auditEventID,
 		},
+		ExecutionSummary: buildRuntimeStateExecutionSummary(organizationID, teamID, teamName, auditEventID),
 	}
 	payloadBytes, _ := json.Marshal(chatPayload)
 	envelope := protocol.CTSEnvelope{
@@ -168,4 +169,56 @@ func (s *AdminServer) respondRuntimeStateSummary(w http.ResponseWriter, r *http.
 		Mode:       protocol.ModeAnswer,
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
+}
+
+func buildRuntimeStateExecutionSummary(organizationID, teamID, teamName, auditEventID string) *protocol.ExecutionSummary {
+	scope := "workspace runtime"
+	if trimmed := strings.TrimSpace(teamName); trimmed != "" {
+		scope = trimmed
+	} else if trimmed := strings.TrimSpace(teamID); trimmed != "" {
+		scope = trimmed
+	} else if trimmed := strings.TrimSpace(organizationID); trimmed != "" {
+		scope = trimmed
+	}
+	return &protocol.ExecutionSummary{
+		Intent: protocol.ExecutionIntent{
+			Original: "runtime state",
+			Resolved: "answer",
+		},
+		Understanding: protocol.ExecutionUnderstanding{
+			Summary: "Reported deterministic runtime state for " + scope + ".",
+			Assumptions: []string{
+				"Runtime-state chat is read-only and does not execute a run.",
+				"The answer is audit-only and not retained as run output.",
+			},
+		},
+		Execution: protocol.ExecutionState{
+			Shape:   protocol.ExecutionShapeDirectSoma,
+			Status:  protocol.ExecutionStatusCompleted,
+			Summary: "Soma returned a deterministic runtime-state answer.",
+		},
+		Outputs: []protocol.ExecutionOutput{{
+			Kind:           "runtime_state_answer",
+			Title:          "Runtime state answer",
+			Summary:        "Read-only runtime-state summary.",
+			Retained:       boolPtr(false),
+			RetentionClass: protocol.ExecutionRetentionClassNonRetained,
+		}},
+		Proof: protocol.ExecutionProof{
+			RunClass:     protocol.ExecutionRunClassNoRun,
+			NoRunReason:  "Deterministic runtime-state chat is audit-only and does not create an execution run.",
+			ProofClass:   protocol.ExecutionProofClassAuditOnly,
+			AuditEventID: auditEventID,
+			Verified:     boolPtr(strings.TrimSpace(auditEventID) != ""),
+		},
+		AuditRecovery: protocol.AuditRecovery{
+			ApprovalStatus: "allow",
+			RecoveryState:  "audit_recorded",
+			Retryable:      boolPtr(true),
+		},
+		NextStep: &protocol.ExecutionNextStep{
+			Label:  "Ask a follow-up",
+			Action: "chat",
+		},
+	}
 }

@@ -20,9 +20,10 @@ func buildTeamLeadGuidanceExecutionSummary(response TeamLeadGuidanceResponse, re
 		}
 		retained := contract.ExecutionMode == TeamLeadExecutionModeContinuityResume
 		outputs = append(outputs, protocol.ExecutionOutput{
-			Kind:     "retained_output",
-			Title:    title,
-			Retained: boolPtr(retained),
+			Kind:           "retained_output",
+			Title:          title,
+			Retained:       boolPtr(retained),
+			RetentionClass: retentionClassForBool(retained),
 		})
 	}
 
@@ -61,7 +62,10 @@ func buildTeamLeadGuidanceExecutionSummary(response TeamLeadGuidanceResponse, re
 		CapabilityUse: capabilityUse,
 		Outputs:       outputs,
 		Proof: protocol.ExecutionProof{
-			Verified: boolPtr(false),
+			RunClass:    protocol.ExecutionRunClassNoRun,
+			NoRunReason: "Team Lead guidance is a reviewable execution contract, not an execution run.",
+			ProofClass:  protocol.ExecutionProofClassGuidance,
+			Verified:    boolPtr(false),
 		},
 		AuditRecovery: protocol.AuditRecovery{
 			ApprovalStatus: "guidance_only",
@@ -80,9 +84,11 @@ func buildGroupBroadcastExecutionSummary(group *CollaborationGroup, message, aud
 	}
 
 	outputs := []protocol.ExecutionOutput{{
-		Kind:    "group_broadcast",
-		Title:   "Group broadcast accepted",
-		Summary: "Broadcast queued for the group collaboration channel and active team command lanes.",
+		Kind:           "group_broadcast",
+		Title:          "Group broadcast accepted",
+		Summary:        "Broadcast queued for the group collaboration channel and active team command lanes.",
+		Retained:       boolPtr(false),
+		RetentionClass: protocol.ExecutionRetentionClassNonRetained,
 	}}
 	for _, teamID := range group.TeamIDs {
 		teamID = strings.TrimSpace(teamID)
@@ -90,9 +96,11 @@ func buildGroupBroadcastExecutionSummary(group *CollaborationGroup, message, aud
 			continue
 		}
 		outputs = append(outputs, protocol.ExecutionOutput{
-			ID:    teamID,
-			Kind:  "team_signal",
-			Title: teamID,
+			ID:             teamID,
+			Kind:           "team_signal",
+			Title:          teamID,
+			Retained:       boolPtr(false),
+			RetentionClass: protocol.ExecutionRetentionClassNonRetained,
 		})
 	}
 
@@ -117,6 +125,9 @@ func buildGroupBroadcastExecutionSummary(group *CollaborationGroup, message, aud
 		}},
 		Outputs: outputs,
 		Proof: protocol.ExecutionProof{
+			RunClass:     protocol.ExecutionRunClassNoRun,
+			NoRunReason:  "Group broadcasts record audit proof and bus fanout without creating an execution run.",
+			ProofClass:   protocol.ExecutionProofClassAuditOnly,
 			AuditEventID: auditEventID,
 			Verified:     boolPtr(strings.TrimSpace(auditEventID) != ""),
 		},

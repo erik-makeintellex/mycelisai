@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-05-09
+> Last Updated: 2026-05-10
 > Module Boundary: advanced UI, runtime/deployment, capability/MCP, governance/trust, team/workflow
 > Purpose: Align UI, runtime, and delivery discipline around Mycelis as a Soma-centered directed execution system.
 
@@ -86,7 +86,8 @@ The UI may hide internal orchestration jargon, but it must not hide action, cons
 | Runs | `/runs` and run timelines exist, with status, chain, artifacts, retry/error concepts documented. |
 | Outputs | Chat output cards, artifacts, media lanes, retained group outputs, and managed exchange outputs exist. |
 | Capabilities | Connected Tools, MCP library, search capability, and capability-risk/audit foundations exist. |
-| Deployment trust | WSL proof, Compose, deployment roots, artifact/log/cache directories, and proof environments exist operationally. |
+| Directed-execution trust spine | Wave 1 execution summaries, proof links, tool-assisted work, and team/group retained-output proof are proven and in final review. |
+| Deployment trust | The dedicated `mycelis-root` WSL proof lane is authoritative and green; Compose, deployment roots, artifact/log/cache directories, and proof environments exist operationally. |
 | Docs/state | Capability Manifest and product-standard contracts now exist and are in-app discoverable. |
 
 ## Gap Analysis
@@ -126,9 +127,9 @@ Avoid:
 2. Runtime clarity: ensure meaningful execution paths attach to Run and Output objects consistently across direct retained answers, proposals, tools, teams, automations, and plugins.
 3. Release importance: make post-execution UI link outputs to run proof, audit/proposal state, and recovery where applicable.
 4. Capability clarity: reshape Connected Tools around capabilities first, with MCP/server registry details behind advanced disclosure.
-5. Deployment trust: add System/Deployments trust surface showing checkout, deployment root, execution root, artifact/log/cache roots, current commit, proof status, and recovery action.
-6. Governance clarity: normalize proposal/proof language so default surfaces explain consequence and approval while advanced surfaces expose policy/audit detail.
-7. Cleanup complexity: retire or collapse dashboard/admin-feeling panels that duplicate Soma-directed workflow state.
+5. Run/Output hardening: tighten durable output objects, proof links, retained artifacts, and recovery metadata across meaningful execution paths.
+6. Deployment trust: add System/Deployments trust surface showing checkout, deployment root, execution root, artifact/log/cache roots, current commit, proof status, and recovery action.
+7. Governance clarity and GUI cleanup: normalize proposal/proof language, keep default Soma directed and outcome-shaped, and retire or collapse dashboard/admin-feeling panels that duplicate Soma-directed workflow state.
 
 ## Validation Standard
 

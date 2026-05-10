@@ -27,7 +27,17 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 				Status:  ExecutionStatusCompleted,
 				Summary: "Soma completed a direct response.",
 			},
+			Outputs: []ExecutionOutput{{
+				ID:             "artifact-1",
+				Kind:           "document",
+				Title:          "Brief",
+				Retained:       &verified,
+				RetentionClass: ExecutionRetentionClassRetained,
+			}},
 			Proof: ExecutionProof{
+				RunClass:     ExecutionRunClassNoRun,
+				NoRunReason:  "direct answer",
+				ProofClass:   ExecutionProofClassAuditOnly,
 				AuditEventID: "audit-1",
 				Verified:     &verified,
 			},
@@ -56,5 +66,14 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 	}
 	if execution["status"] != string(ExecutionStatusCompleted) {
 		t.Fatalf("execution.status = %v", execution["status"])
+	}
+	proof := summary["proof"].(map[string]any)
+	if proof["run_class"] != string(ExecutionRunClassNoRun) || proof["proof_class"] != string(ExecutionProofClassAuditOnly) {
+		t.Fatalf("proof classification = %+v", proof)
+	}
+	outputs := summary["outputs"].([]any)
+	output := outputs[0].(map[string]any)
+	if output["retention_class"] != string(ExecutionRetentionClassRetained) {
+		t.Fatalf("output retention_class = %v", output["retention_class"])
 	}
 }

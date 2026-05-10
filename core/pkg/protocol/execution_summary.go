@@ -22,6 +22,30 @@ const (
 	ExecutionStatusCancelled ExecutionStatus = "cancelled"
 )
 
+type ExecutionRunClass string
+
+const (
+	ExecutionRunClassLinked ExecutionRunClass = "run_linked"
+	ExecutionRunClassNoRun  ExecutionRunClass = "no_run"
+)
+
+type ExecutionProofClass string
+
+const (
+	ExecutionProofClassAuditOnly  ExecutionProofClass = "audit_only"
+	ExecutionProofClassIntentOnly ExecutionProofClass = "intent_proof"
+	ExecutionProofClassRunAudit   ExecutionProofClass = "run_and_audit"
+	ExecutionProofClassGuidance   ExecutionProofClass = "guidance_only"
+)
+
+type ExecutionRetentionClass string
+
+const (
+	ExecutionRetentionClassRetained    ExecutionRetentionClass = "retained"
+	ExecutionRetentionClassNonRetained ExecutionRetentionClass = "non_retained"
+	ExecutionRetentionClassExternalRef ExecutionRetentionClass = "external_reference"
+)
+
 type CapabilityUseKind string
 
 const (
@@ -68,20 +92,25 @@ type CapabilityUse struct {
 }
 
 type ExecutionOutput struct {
-	ID       string `json:"id,omitempty"`
-	Kind     string `json:"kind"`
-	Title    string `json:"title"`
-	Summary  string `json:"summary,omitempty"`
-	Href     string `json:"href,omitempty"`
-	Retained *bool  `json:"retained,omitempty"`
+	ID             string                  `json:"id,omitempty"`
+	Kind           string                  `json:"kind"`
+	Title          string                  `json:"title"`
+	Summary        string                  `json:"summary,omitempty"`
+	Href           string                  `json:"href,omitempty"`
+	Retained       *bool                   `json:"retained,omitempty"`
+	RetentionClass ExecutionRetentionClass `json:"retention_class,omitempty"`
 }
 
 type ExecutionProof struct {
-	RunID         string `json:"run_id,omitempty"`
-	AuditEventID  string `json:"audit_event_id,omitempty"`
-	IntentProofID string `json:"intent_proof_id,omitempty"`
-	Verified      *bool  `json:"verified,omitempty"`
-	Href          string `json:"href,omitempty"`
+	RunID          string              `json:"run_id,omitempty"`
+	RunClass       ExecutionRunClass   `json:"run_class,omitempty"`
+	NoRunReason    string              `json:"no_run_reason,omitempty"`
+	ProofClass     ExecutionProofClass `json:"proof_class,omitempty"`
+	AuditEventID   string              `json:"audit_event_id,omitempty"`
+	IntentProofID  string              `json:"intent_proof_id,omitempty"`
+	ExchangeItemID string              `json:"exchange_item_id,omitempty"`
+	Verified       *bool               `json:"verified,omitempty"`
+	Href           string              `json:"href,omitempty"`
 }
 
 type AuditRecovery struct {

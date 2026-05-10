@@ -71,7 +71,7 @@ describe('MissionControlChat execution summary', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
-            expect(screen.getByText('Directed execution')).toBeDefined();
+            expect(screen.getByText('Directed execution package')).toBeDefined();
             expect(screen.getByText('directed_execution')).toBeDefined();
             expect(screen.getByText('workflow.launch')).toBeDefined();
             expect(screen.getByText('Operations Team')).toBeDefined();
@@ -113,7 +113,7 @@ describe('MissionControlChat execution summary', () => {
                                 capabilities: ['web_search'],
                                 tools: ['web_search'],
                             },
-                            proof: [{ label: 'Search proof', url: '/runs/search-proof' }],
+                            proof: [{ label: 'Search proof', url: '/runs/search-proof', run_id: 'search-run-123' }],
                             next_step: 'Share the direct search result with the operator.',
                         },
                     },
@@ -130,6 +130,7 @@ describe('MissionControlChat execution summary', () => {
 
         await waitFor(() => {
             expect(screen.getByTestId('execution-summary-card')).toBeDefined();
+            expect(screen.getByRole('link', { name: /Run search-r/i }).getAttribute('href')).toBe('/runs/search-run-123');
             expect(screen.getByText('tool_assisted_work')).toBeDefined();
             expect(screen.getAllByText('web_search').length).toBeGreaterThan(0);
             expect(screen.getByText(/completed/i)).toBeDefined();

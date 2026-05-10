@@ -3,7 +3,6 @@ package server
 import (
 	"strings"
 
-	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -20,9 +19,11 @@ func buildDirectChatExecutionSummary(originalIntent, replyText, auditEventID str
 		executionSummary = "Soma completed tool-assisted work."
 	}
 	outputs := []protocol.ExecutionOutput{{
-		Kind:    "answer",
-		Title:   "Soma answer",
-		Summary: summaryText,
+		Kind:           "answer",
+		Title:          "Soma answer",
+		Summary:        summaryText,
+		Retained:       boolPtr(false),
+		RetentionClass: protocol.ExecutionRetentionClassNonRetained,
 	}}
 	outputs = append(outputs, executionOutputsFromArtifacts(agentResult.Artifacts)...)
 
@@ -42,6 +43,9 @@ func buildDirectChatExecutionSummary(originalIntent, replyText, auditEventID str
 		CapabilityUse: capabilityUseFromChat(agentResult.ToolsUsed, agentResult.Consultations, ""),
 		Outputs:       outputs,
 		Proof: protocol.ExecutionProof{
+			RunClass:     protocol.ExecutionRunClassNoRun,
+			NoRunReason:  "Direct Soma answers are audit-only and do not create execution runs.",
+			ProofClass:   protocol.ExecutionProofClassAuditOnly,
 			AuditEventID: auditEventID,
 			Verified:     boolPtr(strings.TrimSpace(auditEventID) != ""),
 		},
@@ -80,12 +84,17 @@ func buildProposalExecutionSummary(originalIntent string, planned []protocol.Pla
 		},
 		CapabilityUse: capabilityUseFromPlannedCalls(planned, mutTools, chatToolRisk(mutTools)),
 		Outputs: []protocol.ExecutionOutput{{
-			ID:      proofID,
-			Kind:    "proposal",
-			Title:   "Guided proposal",
-			Summary: display.OperatorSummary,
+			ID:             proofID,
+			Kind:           "proposal",
+			Title:          "Guided proposal",
+			Summary:        display.OperatorSummary,
+			Retained:       boolPtr(true),
+			RetentionClass: protocol.ExecutionRetentionClassRetained,
 		}},
 		Proof: protocol.ExecutionProof{
+			RunClass:      protocol.ExecutionRunClassNoRun,
+			NoRunReason:   "Guided proposals create intent proof first; no execution run exists until confirmation.",
+			ProofClass:    protocol.ExecutionProofClassIntentOnly,
 			AuditEventID:  auditEventID,
 			IntentProofID: proofID,
 			Verified:      boolPtr(strings.TrimSpace(proofID) != "" && strings.TrimSpace(auditEventID) != ""),
@@ -125,6 +134,8 @@ func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *p
 		CapabilityUse: capabilities,
 		Proof: protocol.ExecutionProof{
 			RunID:         runID,
+			RunClass:      protocol.ExecutionRunClassLinked,
+			ProofClass:    protocol.ExecutionProofClassRunAudit,
 			AuditEventID:  auditID,
 			IntentProofID: proofID,
 			Verified:      boolPtr(true),
@@ -142,110 +153,56 @@ func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *p
 	}
 }
 
-func capabilityUseFromChat(tools []string, consultations []protocol.ConsultationEntry, risk string) []protocol.CapabilityUse {
-	uses := capabilityUseFromTools(tools, risk)
-	seen := map[string]struct{}{}
-	for _, item := range uses {
-		seen[item.ID] = struct{}{}
+func buildMCPToolCallExecutionSummary(serverName, toolName, summary, exchangeItemID string) *protocol.ExecutionSummary {
+	retained := strings.TrimSpace(exchangeItemID) != ""
+	capabilityLabel := strings.TrimSpace(toolName)
+	if server := strings.TrimSpace(serverName); server != "" && capabilityLabel != "" {
+		capabilityLabel = server + ":" + capabilityLabel
 	}
-	for _, consultation := range consultations {
-		id := strings.TrimSpace(consultation.Member)
-		if id == "" {
-			continue
-		}
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		uses = append(uses, protocol.CapabilityUse{
-			ID:     id,
-			Label:  id,
-			Kind:   protocol.CapabilityUseTeam,
-			Reason: firstNonEmptyString(consultation.Summary, "Consulted during response preparation."),
-		})
-	}
-	return uses
-}
-
-func capabilityUseFromPlannedCalls(planned []protocol.PlannedToolCall, fallbackTools []string, fallbackRisk string) []protocol.CapabilityUse {
-	tools := make([]string, 0, len(planned)+len(fallbackTools))
-	risks := map[string]string{}
-	for _, call := range planned {
-		name := strings.TrimSpace(call.Name)
-		if name == "" {
-			continue
-		}
-		tools = append(tools, name)
-		risks[name] = capabilityRiskForTool(name, call.Arguments)
-	}
-	tools = append(tools, fallbackTools...)
-
-	uses := capabilityUseFromTools(tools, fallbackRisk)
-	for i := range uses {
-		if risk := strings.TrimSpace(risks[uses[i].ID]); risk != "" && risk != "low" {
-			uses[i].Risk = risk
-		}
-	}
-	return uses
-}
-
-func capabilityUseFromTools(tools []string, fallbackRisk string) []protocol.CapabilityUse {
-	deduped := uniqueOrderedTools(tools)
-	uses := make([]protocol.CapabilityUse, 0, len(deduped))
-	for _, tool := range deduped {
-		uses = append(uses, protocol.CapabilityUse{
-			ID:     tool,
-			Label:  tool,
-			Kind:   capabilityUseKindForTool(tool),
-			Reason: "Used to satisfy the requested execution path.",
-			Risk:   fallbackRisk,
-		})
-	}
-	return uses
-}
-
-func capabilityUseKindForTool(tool string) protocol.CapabilityUseKind {
-	switch inferAdapterKindFromTool(tool) {
-	case "mcp":
-		return protocol.CapabilityUseMCP
-	case "host", "openapi":
-		return protocol.CapabilityUseTool
-	default:
-		if tool == "delegate" || tool == "delegate_task" {
-			return protocol.CapabilityUseTeam
-		}
-		return protocol.CapabilityUseTool
-	}
-}
-
-func executionOutputsFromArtifacts(artifacts []protocol.ChatArtifactRef) []protocol.ExecutionOutput {
-	outputs := make([]protocol.ExecutionOutput, 0, len(artifacts))
-	for _, artifact := range artifacts {
-		title := strings.TrimSpace(artifact.Title)
-		if title == "" {
-			title = "Artifact"
-		}
-		retained := artifact.ID != "" || artifact.Cached || artifact.SavedPath != ""
-		outputs = append(outputs, protocol.ExecutionOutput{
-			ID:       artifact.ID,
-			Kind:     firstNonEmptyString(artifact.Type, "artifact"),
-			Title:    title,
-			Href:     firstNonEmptyString(artifact.URL, artifact.SavedPath),
-			Retained: boolPtr(retained),
-		})
-	}
-	return outputs
-}
-
-func confirmActionResponseData(proofID, runID, auditID string, scope *protocol.ScopeValidation) map[string]any {
-	return map[string]any{
-		"confirmed":         true,
-		"verified":          true,
-		"execution_state":   "verified",
-		"proof_id":          proofID,
-		"audit_event_id":    auditID,
-		"run_id":            runID,
-		"run_status":        runs.StatusCompleted,
-		"execution_summary": buildConfirmActionExecutionSummary(proofID, runID, auditID, scope),
+	return &protocol.ExecutionSummary{
+		Intent: protocol.ExecutionIntent{
+			Resolved: "mcp_tool_call",
+		},
+		Understanding: protocol.ExecutionUnderstanding{
+			Summary: firstNonEmptyString(summary, "MCP tool call completed."),
+			Assumptions: []string{
+				"Direct MCP tool calls are operator-triggered tool invocations.",
+				"No execution run is created unless a run id is supplied by an enclosing runtime path.",
+			},
+		},
+		Execution: protocol.ExecutionState{
+			Shape:   protocol.ExecutionShapeToolAssistedWork,
+			Status:  protocol.ExecutionStatusCompleted,
+			Summary: firstNonEmptyString(summary, "MCP tool call completed."),
+		},
+		CapabilityUse: []protocol.CapabilityUse{{
+			ID:     strings.TrimSpace(toolName),
+			Label:  capabilityLabel,
+			Kind:   protocol.CapabilityUseMCP,
+			Reason: "Direct MCP tool call requested through the admin runtime.",
+		}},
+		Outputs: []protocol.ExecutionOutput{{
+			ID:             exchangeItemID,
+			Kind:           "mcp_tool_result",
+			Title:          firstNonEmptyString(strings.TrimSpace(toolName), "MCP tool result"),
+			Summary:        firstNonEmptyString(summary, "MCP tool call completed."),
+			Retained:       boolPtr(retained),
+			RetentionClass: retentionClassForBool(retained),
+		}},
+		Proof: protocol.ExecutionProof{
+			RunClass:       protocol.ExecutionRunClassNoRun,
+			NoRunReason:    "Direct MCP tool calls are audit/exchange proof only unless invoked inside a run.",
+			ProofClass:     protocol.ExecutionProofClassAuditOnly,
+			ExchangeItemID: exchangeItemID,
+			Verified:       boolPtr(retained),
+		},
+		AuditRecovery: protocol.AuditRecovery{
+			ApprovalStatus: "allow",
+			RecoveryState:  "exchange_recorded",
+			Retryable:      boolPtr(true),
+		},
+		NextStep: &protocol.ExecutionNextStep{
+			Label: "Review MCP result",
+		},
 	}
 }

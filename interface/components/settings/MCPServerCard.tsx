@@ -213,6 +213,7 @@ export default function MCPServerCard({ server, onDelete, recentActivity = [], o
 function MCPServerStructure({ server, onEdit }: { server: MCPServerWithTools; onEdit?: () => void }) {
     const envKeys = Object.keys(server.env ?? {});
     const headerKeys = Object.keys(server.headers ?? {});
+    const capabilityIds = server.capability_ids ?? [];
     return (
         <div className="pt-3 pb-3 border-b border-cortex-border/50">
             <div className="flex items-center justify-between gap-2">
@@ -237,6 +238,7 @@ function MCPServerStructure({ server, onEdit }: { server: MCPServerWithTools; on
                 <StructureField label="Arguments" value={server.args?.length ? server.args.join(" ") : "none"} wide />
                 <StructureField label="Environment refs" value={envKeys.length ? envKeys.join(", ") : "none"} />
                 <StructureField label="Header refs" value={headerKeys.length ? headerKeys.join(", ") : "none"} />
+                <StructureField label="Capability bindings" value={capabilityIds.length ? capabilityIds.join(", ") : "derived from tools"} wide />
             </div>
             <p className="mt-2 text-[10px] leading-4 text-cortex-text-muted">
                 Secrets are shown only as references or redacted values. Update credentials in the repo/deployment `.env`, then reapply the curated Library entry when the server structure changes.

@@ -34,6 +34,12 @@ func TestBuildDirectChatExecutionSummary_MarksToolsAndArtifactsAssisted(t *testi
 	if len(summary.CapabilityUse) != 1 || summary.CapabilityUse[0].ID != "web_search" {
 		t.Fatalf("capability_use = %+v", summary.CapabilityUse)
 	}
+	if summary.Proof.RunClass != protocol.ExecutionRunClassNoRun || summary.Proof.NoRunReason == "" {
+		t.Fatalf("proof no-run classification = %+v", summary.Proof)
+	}
+	if len(summary.Outputs) == 0 || summary.Outputs[0].RetentionClass != protocol.ExecutionRetentionClassNonRetained {
+		t.Fatalf("answer output retention = %+v", summary.Outputs)
+	}
 }
 
 func decodeChatPayloadFromAPIResponse(t *testing.T, rr *httptest.ResponseRecorder) protocol.ChatResponsePayload {

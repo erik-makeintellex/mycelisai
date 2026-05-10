@@ -11,18 +11,21 @@ import (
 )
 
 type mcpActivityEntry struct {
-	ID          string `json:"id"`
-	ServerID    string `json:"server_id,omitempty"`
-	ServerName  string `json:"server_name"`
-	ToolName    string `json:"tool_name"`
-	State       string `json:"state"`
-	Summary     string `json:"summary"`
-	Message     string `json:"message"`
-	ChannelName string `json:"channel_name"`
-	RunID       string `json:"run_id,omitempty"`
-	TeamID      string `json:"team_id,omitempty"`
-	AgentID     string `json:"agent_id,omitempty"`
-	Timestamp   string `json:"timestamp"`
+	ID             string `json:"id"`
+	ServerID       string `json:"server_id,omitempty"`
+	ServerName     string `json:"server_name"`
+	ToolName       string `json:"tool_name"`
+	State          string `json:"state"`
+	Summary        string `json:"summary"`
+	Message        string `json:"message"`
+	ChannelName    string `json:"channel_name"`
+	RunID          string `json:"run_id,omitempty"`
+	RunClass       string `json:"run_class,omitempty"`
+	NoRunReason    string `json:"no_run_reason,omitempty"`
+	RetentionClass string `json:"retention_class,omitempty"`
+	TeamID         string `json:"team_id,omitempty"`
+	AgentID        string `json:"agent_id,omitempty"`
+	Timestamp      string `json:"timestamp"`
 }
 
 // handleMCPActivity returns persisted MCP activity across managed exchange channels.
@@ -137,18 +140,21 @@ func normalizeMCPActivityItem(item exchange.ExchangeItem) (mcpActivityEntry, boo
 	}
 
 	return mcpActivityEntry{
-		ID:          item.ID.String(),
-		ServerID:    serverID,
-		ServerName:  serverName,
-		ToolName:    toolName,
-		State:       state,
-		Summary:     summary,
-		Message:     message,
-		ChannelName: item.ChannelName,
-		RunID:       lookupString([]map[string]any{payload, mcpMeta, metadata}, "run_id", "continuity_key"),
-		TeamID:      lookupString([]map[string]any{payload, mcpMeta, metadata}, "source_team"),
-		AgentID:     lookupString([]map[string]any{payload, mcpMeta, metadata}, "agent_id"),
-		Timestamp:   timestamp,
+		ID:             item.ID.String(),
+		ServerID:       serverID,
+		ServerName:     serverName,
+		ToolName:       toolName,
+		State:          state,
+		Summary:        summary,
+		Message:        message,
+		ChannelName:    item.ChannelName,
+		RunID:          lookupString([]map[string]any{payload, mcpMeta, metadata}, "run_id", "continuity_key"),
+		RunClass:       lookupString([]map[string]any{payload, mcpMeta, metadata, nestedMap(metadata, "proof")}, "run_class"),
+		NoRunReason:    lookupString([]map[string]any{payload, mcpMeta, metadata, nestedMap(metadata, "proof")}, "no_run_reason"),
+		RetentionClass: lookupString([]map[string]any{payload, mcpMeta, metadata, nestedMap(metadata, "proof")}, "retention_class"),
+		TeamID:         lookupString([]map[string]any{payload, mcpMeta, metadata}, "source_team"),
+		AgentID:        lookupString([]map[string]any{payload, mcpMeta, metadata}, "agent_id"),
+		Timestamp:      timestamp,
 	}, true
 }
 

@@ -50,6 +50,8 @@ describe('MCPLibraryBrowser', () => {
         expect(screen.getByText(/Local-first curated entries install directly without another approval step/i)).toBeDefined();
         expect(screen.getByText(/@modelcontextprotocol\/server-filesystem/i)).toBeDefined();
         expect(screen.getByText(/Version policy: latest \(curated upstream tracking\)/i)).toBeDefined();
+        expect(screen.getByText(/Capability binding: filesystem/i)).toBeDefined();
+        expect(screen.getByText(/outputs normalize through Managed Exchange/i)).toBeDefined();
         expect((screen.getByRole('link', { name: 'Repository' }) as HTMLAnchorElement).href).toBe('https://github.com/modelcontextprotocol/servers');
         expect((screen.getByRole('link', { name: 'Homepage' }) as HTMLAnchorElement).href).toBe('https://modelcontextprotocol.io/');
     });

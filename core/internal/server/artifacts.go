@@ -219,14 +219,19 @@ func (s *AdminServer) handleStoreArtifact(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if s.Exchange != nil {
+		runID, runClass, noRunReason, retentionClass := artifactRuntimeMetadata(stored.Metadata)
 		_, _ = s.Exchange.PublishArtifact(r.Context(), exchange.ArtifactNormalizationInput{
-			ArtifactID:   stored.ID,
-			ArtifactType: string(stored.ArtifactType),
-			Title:        stored.Title,
-			AgentID:      stored.AgentID,
-			Status:       stored.Status,
-			TargetRole:   "soma",
-			Tags:         []string{"artifact", string(stored.ArtifactType)},
+			ArtifactID:     stored.ID,
+			ArtifactType:   string(stored.ArtifactType),
+			Title:          stored.Title,
+			AgentID:        stored.AgentID,
+			RunID:          runID,
+			RunClass:       runClass,
+			NoRunReason:    noRunReason,
+			RetentionClass: retentionClass,
+			Status:         stored.Status,
+			TargetRole:     "soma",
+			Tags:           []string{"artifact", string(stored.ArtifactType)},
 		})
 	}
 

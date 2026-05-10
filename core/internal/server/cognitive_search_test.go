@@ -46,6 +46,9 @@ func TestRespondSearchChatPayload_DirectSearchIncludesCompletedExecutionSummary(
 	if payload.ExecutionSummary.Execution.Status != protocol.ExecutionStatusCompleted {
 		t.Fatalf("execution_summary.execution.status = %q", payload.ExecutionSummary.Execution.Status)
 	}
+	if payload.ExecutionSummary.Proof.RunClass != protocol.ExecutionRunClassNoRun || payload.ExecutionSummary.Proof.NoRunReason == "" {
+		t.Fatalf("execution_summary.proof = %+v", payload.ExecutionSummary.Proof)
+	}
 }
 
 func TestHandleChat_DirectSearchBlockerHasBlockedExecutionSummary(t *testing.T) {
@@ -74,5 +77,8 @@ func TestHandleChat_DirectSearchBlockerHasBlockedExecutionSummary(t *testing.T) 
 	}
 	if payload.ExecutionSummary.Execution.Status != protocol.ExecutionStatusBlocked {
 		t.Fatalf("execution_summary.execution.status = %q", payload.ExecutionSummary.Execution.Status)
+	}
+	if payload.ExecutionSummary.Proof.RunClass != protocol.ExecutionRunClassNoRun {
+		t.Fatalf("execution_summary.proof.run_class = %q", payload.ExecutionSummary.Proof.RunClass)
 	}
 }

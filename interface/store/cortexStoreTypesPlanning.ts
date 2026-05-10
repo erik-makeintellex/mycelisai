@@ -182,6 +182,7 @@ export interface MCPServer {
     status: string;
     error?: string;
     created_at: string;
+    capability_ids?: string[];
 }
 
 export interface MCPTool {
@@ -190,6 +191,7 @@ export interface MCPTool {
     name: string;
     description?: string;
     input_schema: Record<string, any>;
+    capability_id?: string;
 }
 
 export interface MCPServerWithTools extends MCPServer {
@@ -266,4 +268,32 @@ export interface MCPInstallResult {
     ok: boolean;
     message?: string;
     governance?: MCPGovernanceDecision;
+}
+
+export interface CapabilityManifest {
+    id: string;
+    name: string;
+    description?: string;
+    source: 'builtin' | 'mcp' | 'openapi' | 'local_script' | 'external_api' | 'python' | 'a2a' | 'plugin' | string;
+    category: string;
+    risk: 'low' | 'medium' | 'high' | string;
+    approval: 'none' | 'optional' | 'required' | 'policy_resolved' | string;
+    inputs?: string[];
+    outputs?: string[];
+    writes?: string[];
+    allowed_roles?: string[];
+    audit?: 'none' | 'optional' | 'required' | string;
+    health_check?: boolean;
+    availability_status?: 'available' | 'degraded' | 'unavailable' | 'unknown' | string;
+    fallback_behavior?: string;
+    retention_policy?: string;
+    review_required?: boolean;
+    server_or_package?: string;
+    config_refs?: string[];
+    secret_refs?: string[];
+    provider?: string;
+    bound_server_id?: string;
+    bound_server_name?: string;
+    bound_tool_id?: string;
+    bound_tool_name?: string;
 }

@@ -97,7 +97,20 @@ func (r *InternalToolRegistry) finishGeneratedImage(ctx context.Context, prompt,
 	}
 	if r.exchange != nil && strings.TrimSpace(artifactID) != "" {
 		if parsedID, err := uuid.Parse(artifactID); err == nil {
-			_, _ = r.exchange.PublishArtifact(ctx, exchange.ArtifactNormalizationInput{ArtifactID: parsedID, ArtifactType: "image", Title: title, AgentID: "internal", Status: "completed", TargetRole: "soma", Tags: []string{"artifact", "image", "generated"}})
+			runID, runClass, noRunReason := artifactExchangeRuntimeMetadata(ctx)
+			_, _ = r.exchange.PublishArtifact(ctx, exchange.ArtifactNormalizationInput{
+				ArtifactID:     parsedID,
+				ArtifactType:   "image",
+				Title:          title,
+				AgentID:        "internal",
+				RunID:          runID,
+				RunClass:       runClass,
+				NoRunReason:    noRunReason,
+				RetentionClass: "retained",
+				Status:         "completed",
+				TargetRole:     "soma",
+				Tags:           []string{"artifact", "image", "generated"},
+			})
 		}
 	}
 	return mustJSON(map[string]any{"message": fmt.Sprintf("Image generated for: \"%s\" (size: %s). Cached for 60 minutes unless saved.", prompt, size), "artifact": map[string]any{"id": artifactID, "type": "image", "title": title, "content_type": "image/png", "content": b64Content, "cached": true, "expires_at": expiresAt}}), nil

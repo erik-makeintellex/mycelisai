@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { MCPServerWithTools } from '@/store/useCortexStore';
+import { mockServers, readySearchCapability, webResearchCapability } from './MCPToolRegistry.testData';
 
 type MockMCPServerCardProps = {
     server: MCPServerWithTools;
@@ -38,31 +39,6 @@ vi.mock('@/components/settings/MCPLibraryBrowser', () => ({
 import MCPToolRegistry from '@/components/settings/MCPToolRegistry';
 import { useCortexStore } from '@/store/useCortexStore';
 
-const mockServers: MCPServerWithTools[] = [
-    {
-        id: 'srv-001',
-        name: 'filesystem-server',
-        transport: 'stdio',
-        command: 'npx -y @modelcontextprotocol/server-fs',
-        args: ['/home/user/docs'],
-        status: 'connected',
-        created_at: '2025-01-01T00:00:00Z',
-        tools: [
-            { id: 'tool-1', server_id: 'srv-001', name: 'read_file', description: 'Read a file', input_schema: {} },
-            { id: 'tool-2', server_id: 'srv-001', name: 'write_file', description: 'Write a file', input_schema: {} },
-        ],
-    },
-    {
-        id: 'srv-002',
-        name: 'web-scraper',
-        transport: 'sse',
-        url: 'http://localhost:3001/sse',
-        status: 'connected',
-        created_at: '2025-01-02T00:00:00Z',
-        tools: [],
-    },
-];
-
 describe('MCPToolRegistry', () => {
     beforeEach(() => {
         useCortexStore.setState({
@@ -74,6 +50,7 @@ describe('MCPToolRegistry', () => {
             fetchMCPServers: vi.fn(),
             fetchMCPActivity: vi.fn(),
             fetchSearchCapability: vi.fn(),
+            fetchCapabilities: vi.fn(),
             deleteMCPServer: vi.fn(),
             streamLogs: [],
             isStreamConnected: false,
@@ -81,6 +58,9 @@ describe('MCPToolRegistry', () => {
             searchCapability: null,
             isFetchingSearchCapability: false,
             searchCapabilityError: null,
+            capabilities: [],
+            isFetchingCapabilities: false,
+            capabilitiesError: null,
         });
     });
 
@@ -88,23 +68,15 @@ describe('MCPToolRegistry', () => {
         const initializeStream = vi.fn();
         const fetchMCPActivity = vi.fn();
         const fetchSearchCapability = vi.fn();
+        const fetchCapabilities = vi.fn();
         useCortexStore.setState({
             mcpServers: mockServers,
             initializeStream,
             fetchMCPActivity,
             fetchSearchCapability,
-            searchCapability: {
-                provider: 'searxng',
-                enabled: true,
-                configured: true,
-                supports_local_sources: false,
-                supports_public_web: true,
-                soma_tool_name: 'web_search',
-                direct_soma_interaction: true,
-                requires_hosted_api_token: false,
-                max_results: 8,
-                next_actions: ['Ask Soma to search the public web through the self-hosted SearXNG provider.'],
-            },
+            fetchCapabilities,
+            capabilities: [webResearchCapability],
+            searchCapability: readySearchCapability,
         });
 
         render(<MCPToolRegistry />);
@@ -127,6 +99,13 @@ describe('MCPToolRegistry', () => {
         expect(initializeStream).toHaveBeenCalledTimes(1);
         expect(fetchMCPActivity).toHaveBeenCalledTimes(1);
         expect(fetchSearchCapability).toHaveBeenCalledTimes(1);
+        expect(fetchCapabilities).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('What Soma Can Use')).toBeDefined();
+        expect(screen.getByText('Web Research')).toBeDefined();
+        expect(screen.getByText(/risk medium/i)).toBeDefined();
+        expect(screen.getByText(/approval optional/i)).toBeDefined();
+        expect(screen.getByText(/exchange.browser.research.results/i)).toBeDefined();
+        expect(screen.getByText(/searxng \/ web_search/i)).toBeDefined();
         expect(screen.getByText('Mycelis Search Capability')).toBeDefined();
         expect(screen.getByText('Soma search is ready')).toBeDefined();
         expect(screen.getByText(/No hosted Brave token required/i)).toBeDefined();
@@ -189,6 +168,37 @@ describe('MCPToolRegistry', () => {
         expect(screen.getByText(/Team alpha · Agent soma-admin · Run run-1/i)).toBeDefined();
     });
 
+    it('falls back to MCP and search data when capability manifests are unavailable', () => {
+        useCortexStore.setState({
+            mcpServers: mockServers,
+            capabilities: [],
+            capabilitiesError: 'Capability registry unreachable (HTTP 503)',
+            searchCapability: {
+                provider: 'local_sources',
+                enabled: true,
+                configured: true,
+                supports_local_sources: true,
+                supports_public_web: false,
+                soma_tool_name: 'web_search',
+                direct_soma_interaction: true,
+                requires_hosted_api_token: false,
+                max_results: 8,
+            },
+        });
+
+        render(<MCPToolRegistry />);
+
+        expect(screen.getByText(/Capability registry unreachable/i)).toBeDefined();
+        expect(screen.getByText(/derived from MCP servers and search status/i)).toBeDefined();
+        expect(screen.getByText('Mycelis Search')).toBeDefined();
+        expect(screen.getByText('filesystem-server: read_file')).toBeDefined();
+        expect(screen.getByText('filesystem-server: write_file')).toBeDefined();
+        expect(screen.getByText(/approval required/i)).toBeDefined();
+        expect(screen.getByText(/workspace files/i)).toBeDefined();
+        expect(screen.getByText(/filesystem-server \/ write_file/i)).toBeDefined();
+        expect(screen.getByText('MCP Server Drill-Down')).toBeDefined();
+    });
+
     it('shows search capability blockers as operator guidance', () => {
         useCortexStore.setState({
             searchCapability: {
@@ -212,7 +222,7 @@ describe('MCPToolRegistry', () => {
         render(<MCPToolRegistry />);
 
         expect(screen.getByText('Soma search needs configuration')).toBeDefined();
-        expect(screen.getByText('Mycelis Search is disabled.')).toBeDefined();
+        expect(screen.getAllByText('Mycelis Search is disabled.').length).toBeGreaterThan(0);
         expect(screen.getByText(/Soma direct: web_search/i)).toBeDefined();
     });
 

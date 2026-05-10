@@ -71,6 +71,9 @@ const initialResourcesState: StripActions<CortexResourcesContract> = {
     searchCapability: null,
     isFetchingSearchCapability: false,
     searchCapabilityError: null,
+    capabilities: [],
+    isFetchingCapabilities: false,
+    capabilitiesError: null,
 };
 
 const initialMissionChatContractState: StripActions<CortexMissionChatContract> = {

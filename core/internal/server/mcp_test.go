@@ -7,6 +7,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func TestHandleMCPList_NilSubsystem(t *testing.T) {
@@ -47,6 +48,31 @@ func TestHandleMCPToolsList_NilSubsystem(t *testing.T) {
 	s := newTestServer()
 	rr := doRequest(t, http.HandlerFunc(s.handleMCPToolsList), "GET", "/api/v1/mcp/tools", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
+}
+
+func TestMCPToolCallResponse_AddsExecutionSummaryToObjectResult(t *testing.T) {
+	summary := buildMCPToolCallExecutionSummary("filesystem", "read_file", "Read workspace brief.", "exchange-1")
+	response := mcpToolCallResponse(map[string]any{
+		"content": []any{map[string]any{"type": "text", "text": "hello"}},
+	}, summary, "exchange-1")
+
+	object, ok := response.(map[string]any)
+	if !ok {
+		t.Fatalf("response = %T, want map", response)
+	}
+	if object["exchange_item_id"] != "exchange-1" {
+		t.Fatalf("exchange_item_id = %v", object["exchange_item_id"])
+	}
+	gotSummary, ok := object["execution_summary"].(*protocol.ExecutionSummary)
+	if !ok {
+		t.Fatalf("execution_summary = %T", object["execution_summary"])
+	}
+	if gotSummary.Proof.RunClass != protocol.ExecutionRunClassNoRun || gotSummary.Proof.NoRunReason == "" {
+		t.Fatalf("proof no-run classification = %+v", gotSummary.Proof)
+	}
+	if gotSummary.Proof.ExchangeItemID != "exchange-1" {
+		t.Fatalf("exchange proof item = %q", gotSummary.Proof.ExchangeItemID)
+	}
 }
 
 func TestHandleMCPList_HappyPath(t *testing.T) {

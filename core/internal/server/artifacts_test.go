@@ -265,3 +265,20 @@ func TestHandleGetArtifact_NotInitialized(t *testing.T) {
 		t.Errorf("Expected status 503, got %d", rr.Code)
 	}
 }
+
+func TestArtifactRuntimeMetadata_PassesProofFields(t *testing.T) {
+	raw, _ := json.Marshal(map[string]any{
+		"run_id":          "run-42",
+		"run_class":       "run_linked",
+		"retention_class": "retained",
+	})
+
+	runID, runClass, noRunReason, retentionClass := artifactRuntimeMetadata(raw)
+
+	if runID != "run-42" || runClass != "run_linked" || retentionClass != "retained" {
+		t.Fatalf("metadata = %q/%q/%q", runID, runClass, retentionClass)
+	}
+	if noRunReason != "" {
+		t.Fatalf("no_run_reason = %q, want empty", noRunReason)
+	}
+}

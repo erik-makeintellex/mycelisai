@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-05-09
+> Last Updated: 2026-05-10
 > Module Boundary: advanced UI, runtime/deployment, capability/MCP, governance/trust, team/workflow
 > Purpose: Orchestrate the delivery teams that turn the directed-execution directive and capability-manifest standard into product behavior.
 
@@ -21,13 +21,13 @@ The release goal is not another panel. The release goal is one coherent executio
 | Team | Status | Owns | First Output |
 | --- | --- | --- | --- |
 | Orchestration Lead | ACTIVE | Plan, sequencing, dependency resolution, state/docs sync, acceptance decisions. | Keep this plan current and coordinate gates. |
-| Runtime/Run Spine | IN_REVIEW | Run attachment, execution identity, output references, recovery metadata. | Shared `ExecutionSummary`/run-link contract for direct and guided proposal paths. |
-| Output/Exchange | ACTIVE | Durable output object mapping, retained artifacts, exchange normalization. | Output object shape and proof linkage across chat, tools, teams, and artifacts. |
-| Capability/MCP | NEXT | Capability manifest registry, MCP-to-capability mapping, health/fallback. | Capability list that answers "what Soma can use" with risk, schema, approval, output destinations. |
+| Runtime/Run Spine | IN_REVIEW | Run attachment, execution identity, output references, recovery metadata. | Wave 1 trust-spine contract is proven and in final review. |
+| Output/Exchange | ACTIVE | Durable output object mapping, retained artifacts, exchange normalization. | Run/Output hardening across chat, tools, teams, artifacts, proof links, and recovery metadata. |
+| Capability/MCP | ACTIVE | Capability manifest registry, MCP-to-capability mapping, health/fallback. | Capability list that answers "what Soma can use" with risk, schema, approval, output destinations. |
 | Governance/Trust | IN_REVIEW | Proposal/approval/audit language, risk policy, proof semantics. | Default-safe proof copy plus advanced audit detail mapping. |
 | Interface/Soma UX | IN_REVIEW | Default Soma execution summary, proof links, output cards, next-step display. | Soma response surface showing intent, understanding, execution shape, capability/team use, outputs, proof, next step. |
-| Interface/Advanced UX | NEXT | Connected Tools capability view, Runs proof view, System/Deployments trust view. | Advanced surfaces that reveal manifests, run traces, deployment roots, and recovery without polluting default UX. |
-| Validation | REQUIRED | Browser-visible proof, unit/API contract coverage, failure/recovery checks. | Test matrix for directed execution, capability use, output durability, governance, and deployment trust. |
+| Interface/Advanced UX | ACTIVE | Connected Tools capability view, Runs proof view, System/Deployments trust view. | GUI directed-execution surfaces that reveal manifests, run traces, deployment roots, and recovery without polluting default UX. |
+| Validation | ACTIVE | Browser-visible proof, unit/API contract coverage, failure/recovery checks. | Keep Wave 1 final-review evidence green while proving the next capability/output/GUI lanes. |
 | Docs/In-App Docs | ACTIVE | Architecture/user/state/docs manifest alignment. | Keep canonical docs and in-app docs synced for each slice. |
 
 ## Work Packages
@@ -61,13 +61,13 @@ Exit gate:
 - all visibly carry execution summary, run/output proof, and recovery/audit state where applicable
 
 Current implementation status:
-- `IN_REVIEW` direct Soma answers, guided proposals, and confirmed proposal execution now share the additive `execution_summary` runtime payload.
+- `IN_REVIEW` direct Soma answers, guided proposals, and confirmed proposal execution share the additive `execution_summary` runtime payload.
 - `IN_REVIEW` the Soma chat surface renders intent, understanding, execution shape/status, capability use, outputs, proof, audit/recovery, and next step from that payload.
-- `IN_REVIEW` tool-assisted chat/search now preserves read-only `tools_used`, classifies tool/artifact responses as `tool_assisted_work`, adds `execution_summary` to direct `web_search`, and marks blocked search as `blocked`.
-- `IN_REVIEW` Team Lead guidance and group broadcast accepted responses now attach `execution_summary` without fabricating `run_id`; group/team proof stays audit/group scoped until a concrete run exists.
-- `IN_REVIEW` focused browser-visible component proof now covers direct tool-assisted Soma search summaries and Team Lead execution summaries, including the no-fabricated-run-link boundary.
-- `IN_REVIEW` mocked Chromium browser proof now covers Groups broadcast execution-summary/audit-proof visibility after `POST /api/v1/groups/{id}/broadcast`.
-- `ACTIVE` remaining Wave 1 release work is live-backend group broadcast proof visibility, then WSL release proof from the committed state.
+- `IN_REVIEW` tool-assisted chat/search preserves read-only `tools_used`, classifies tool/artifact responses as `tool_assisted_work`, adds `execution_summary` to direct `web_search`, and marks blocked search as `blocked`.
+- `IN_REVIEW` Team Lead guidance and group broadcast accepted responses attach `execution_summary` without fabricating `run_id`; group/team proof stays audit/group scoped until a concrete run exists.
+- `IN_REVIEW` focused browser-visible component proof covers direct tool-assisted Soma search summaries and Team Lead execution summaries, including the no-fabricated-run-link boundary.
+- `IN_REVIEW` mocked Chromium browser proof covers Groups broadcast execution-summary/audit-proof visibility after `POST /api/v1/groups/{id}/broadcast`.
+- `IN_REVIEW` Wave 1 is proven and in final review with live-backend/WSL release evidence from the dedicated `mycelis-root` proof lane recorded by state commit `f332c680cc6eec285da018dc48c9760dd15cb4e7`.
 
 Wave 1 validation evidence:
 - `go test ./pkg/protocol ./internal/server -run "TestChatResponsePayload_ExecutionSummaryIsAdditive|TestHandleChat_UnwrapsReadableJSONEnvelopeFromAgent|TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory|TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls|TestHandleConfirmAction_NormalizesWriteFileAliasesInStoredPlan" -count=1 -v`
@@ -76,34 +76,42 @@ Wave 1 validation evidence:
 - `uv run pytest tests/test_docs_links.py tests/test_documentation_layout_contract.py -q`
 - `uv run inv quality.max-lines --limit 300`
 - `git diff --check`
+- `uv run inv wsl.refresh`
+- `uv run inv wsl.validate --lane=release`
 
-Next team handoff:
-- Runtime/Tool-Assisted should classify non-mutating chat responses with tools or artifacts as `tool_assisted_work`, preserve read-only `tools_used`, add `execution_summary` to direct `web_search` responses, and cover blocked search as `blocked`.
-- Team/Group Retained Output should add `execution_summary` to Team Lead guidance and group broadcast/retained-output responses without inventing run proof where only audit/group proof exists.
-- Interface should reuse `ExecutionSummaryCard` near existing Team Lead execution contracts and avoid duplicating retained artifact lists already shown in group detail views.
-- Validation should extend focused server tests for direct search, tool-backed chat, guidance contracts, group broadcast proof, and targeted organization UI tests before live browser proof.
-
-Next team handoff status:
+Wave 1 final-review status:
 - `COMPLETE` runtime/tool-assisted implementation is in review with focused Go proof.
 - `COMPLETE` team/group retained-output implementation is in review with focused Go/UI proof.
-- `IN_REVIEW` validation team added focused browser-visible component coverage for direct search/tool-assisted proof and Team Lead proof rendering.
-- `IN_REVIEW` validation team added focused mocked Chromium coverage for group broadcast execution-summary proof visibility.
-- `NEXT` validation team should promote group broadcast proof visibility into live-backend browser coverage.
+- `COMPLETE` validation team added focused browser-visible component coverage for direct search/tool-assisted proof and Team Lead proof rendering.
+- `COMPLETE` validation team added focused mocked Chromium coverage for group broadcast execution-summary proof visibility.
+- `IN_REVIEW` dedicated `mycelis-root` WSL release proof is green and is the authoritative proof environment, replacing older local-Windows release caveats.
+
+Next active handoff:
+- `IN_REVIEW` Capability/MCP first slice is implemented locally: `/api/v1/capabilities` exposes a derived manifest snapshot from exchange seed capabilities, MCP registry/library entries, Mycelis Search, internal tools, and host command allowlists; persistence schema exists but refresh results are still in-memory.
+- `IN_REVIEW` Runtime/Run Spine and Output/Exchange first slice is implemented locally: execution summaries now expose explicit run/proof classes, no-run reasons, exchange item proof, and output retention classes; runtime-state chat, Exchange/artifact normalization, and direct MCP tool-call responses now classify proof more explicitly.
+- `IN_REVIEW` Interface/Soma UX and Interface/Advanced UX first slice is implemented locally: the default Soma surface renders a causal directed-execution package, and Connected Tools now prioritizes capability visibility while preserving MCP server drill-down.
+- `ACTIVE` Validation should promote the local focused proof into broader managed build/browser checks, then WSL release proof after commit/push.
 
 ### Wave 2: Capability Clarity
 
-Proceed with DE-4 after Wave 1 has a stable proof contract.
+Proceed with DE-4 now that Wave 1 has a stable proof contract.
 
 Rationale:
 - Capability manifests should feed the same execution-summary and output contracts instead of becoming a separate registry feature.
+- This is the first active post-Wave-1 lane.
 
 Exit gate:
 - Connected Tools can answer: what Soma can use, why, risk, approval, schema posture, availability, outputs, and result destination
 - MCP server details remain inspectable but secondary
 
+Current implementation status:
+- `IN_REVIEW` backend capability manifests are available through `GET /api/v1/capabilities`, `GET /api/v1/capabilities/{id}`, and `POST /api/v1/capabilities/refresh`.
+- `IN_REVIEW` Connected Tools consumes the capability API when available and falls back to existing MCP/search data when it is not.
+- `NEXT` persist refreshed manifest rows into `capability_manifests` and reconcile the runtime snapshot with long-lived deployment health/probe state.
+
 ### Wave 3: Deployment Trust
 
-Proceed with DE-5 when Wave 1 proof links are stable.
+Proceed with DE-5 from the dedicated `mycelis-root` proof model while Run/Output hardening continues.
 
 Rationale:
 - Self-hosting credibility needs visible roots and proof status, but this should not distract from the primary Soma workflow.
@@ -111,9 +119,12 @@ Rationale:
 Exit gate:
 - System/Deployments exposes checkout/deployment/execution/artifact/log/cache roots, current commit, proof status, and recovery action
 
+Current implementation status:
+- `NEXT` deployment trust is still the next explicit UI/runtime lane; current work prepared proof metadata and capability/run surfaces, but did not add the System/Deployments root-visibility surface.
+
 ### Wave 4: Governance Polish And Cleanup
 
-Proceed with DE-6 and DE-7 after Waves 1-3 identify duplicated surfaces.
+Proceed with DE-6 and DE-7 alongside the active GUI directed-execution cleanup once duplicated surfaces are tied back to the proof model.
 
 Rationale:
 - Cleanup should follow the proof model so the team removes duplicate noise instead of deleting useful evidence.

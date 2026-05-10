@@ -1,6 +1,7 @@
 import { extractApiData } from '@/lib/apiContracts';
+import { isSearchCapabilityStatus, normalizeCapabilitiesPayload } from '@/store/cortexStoreMcpCapabilities';
 import type { CortexGet, CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
-import type { MCPActivityEntry, MCPGovernanceDecision, MCPInstallResult, MCPServerWithTools, MCPLibraryCategory, MCPTool, SearchCapabilityStatus } from '@/store/cortexStoreTypes';
+import type { CapabilityManifest, MCPActivityEntry, MCPGovernanceDecision, MCPInstallResult, MCPServerWithTools, MCPLibraryCategory, MCPTool, SearchCapabilityStatus } from '@/store/cortexStoreTypes';
 
 interface MCPLibraryInspectionResponse {
     decision?: string;
@@ -37,6 +38,7 @@ export function createCortexMcpSlice(
     | 'fetchMCPLibrary'
     | 'installFromLibrary'
     | 'fetchSearchCapability'
+    | 'fetchCapabilities'
 > {
     return {
         fetchMCPServers: async () => {
@@ -143,6 +145,36 @@ export function createCortexMcpSlice(
             }
         },
 
+        fetchCapabilities: async () => {
+            set({ isFetchingCapabilities: true, capabilitiesError: null });
+            try {
+                const res = await fetch('/api/v1/capabilities');
+                if (res.ok) {
+                    const payload = await res.json();
+                    const data = extractApiData<CapabilityManifest[] | { capabilities?: unknown; manifests?: unknown } | unknown>(payload);
+                    const capabilities = normalizeCapabilitiesPayload(data);
+                    set({
+                        capabilities,
+                        isFetchingCapabilities: false,
+                        capabilitiesError: capabilities.length > 0 ? null : 'Capability registry returned no readable manifests.',
+                    });
+                } else {
+                    set({
+                        capabilities: [],
+                        isFetchingCapabilities: false,
+                        capabilitiesError: `Capability registry unreachable (HTTP ${res.status})`,
+                    });
+                }
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'network error';
+                set({
+                    capabilities: [],
+                    isFetchingCapabilities: false,
+                    capabilitiesError: `Capability registry unreachable (${message})`,
+                });
+            }
+        },
+
         installFromLibrary: async (name: string, env?: Record<string, string>): Promise<MCPInstallResult> => {
             try {
                 const inspectRes = await fetch('/api/v1/mcp/library/inspect', {
@@ -189,12 +221,4 @@ export function createCortexMcpSlice(
             }
         },
     };
-}
-
-function isSearchCapabilityStatus(value: unknown): value is SearchCapabilityStatus {
-    return typeof value === 'object'
-        && value !== null
-        && typeof (value as SearchCapabilityStatus).provider === 'string'
-        && typeof (value as SearchCapabilityStatus).enabled === 'boolean'
-        && typeof (value as SearchCapabilityStatus).configured === 'boolean';
 }

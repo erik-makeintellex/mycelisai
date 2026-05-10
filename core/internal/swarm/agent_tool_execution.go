@@ -139,19 +139,28 @@ func (a *Agent) persistMCPExchangeResult(serverID uuid.UUID, toolName, state, pr
 	if targetRole == "" {
 		targetRole = "soma"
 	}
+	runClass := "run_linked"
+	noRunReason := ""
+	if strings.TrimSpace(a.runID) == "" {
+		runClass = "no_run"
+		noRunReason = "Agent MCP exchange publish did not have an execution run id."
+	}
 	_, err := a.internalTools.exchange.PublishMCPResult(a.ctx, exchange.MCPNormalizationInput{
-		ServerID:      serverID.String(),
-		ServerName:    serverID.String(),
-		ToolName:      toolName,
-		Summary:       summary,
-		ResultPreview: summary,
-		TargetRole:    targetRole,
-		Status:        state,
-		Result:        result,
-		SourceTeam:    a.TeamID,
-		AgentID:       a.Manifest.ID,
-		RunID:         a.runID,
-		ContinuityKey: a.runID,
+		ServerID:       serverID.String(),
+		ServerName:     serverID.String(),
+		ToolName:       toolName,
+		Summary:        summary,
+		ResultPreview:  summary,
+		TargetRole:     targetRole,
+		Status:         state,
+		Result:         result,
+		SourceTeam:     a.TeamID,
+		AgentID:        a.Manifest.ID,
+		RunID:          a.runID,
+		RunClass:       runClass,
+		NoRunReason:    noRunReason,
+		RetentionClass: "retained",
+		ContinuityKey:  a.runID,
 	})
 	if err != nil {
 		log.Printf("Agent [%s] MCP exchange publish failed: %v", a.Manifest.ID, err)

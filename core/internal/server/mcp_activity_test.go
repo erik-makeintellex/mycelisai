@@ -22,8 +22,8 @@ func TestHandleMCPActivity_ReturnsPersistedMCPUsage(t *testing.T) {
 	channelID := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 	itemID := uuid.MustParse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 
-	payload := []byte(`{"summary":"Read workspace brief successfully.","state":"completed","server_id":"srv-001","server_name":"filesystem","tool_name":"read_file","result_preview":"Read workspace brief successfully.","run_id":"run-1","source_team":"alpha","agent_id":"soma-admin","created_at":"2026-04-06T12:00:00Z"}`)
-	metadata := []byte(`{"source_kind":"mcp","mcp":{"server_id":"srv-001","server_name":"filesystem","tool_name":"read_file","state":"completed","run_id":"run-1","source_team":"alpha","agent_id":"soma-admin"}}`)
+	payload := []byte(`{"summary":"Read workspace brief successfully.","state":"completed","server_id":"srv-001","server_name":"filesystem","tool_name":"read_file","result_preview":"Read workspace brief successfully.","run_id":"run-1","run_class":"run_linked","retention_class":"retained","source_team":"alpha","agent_id":"soma-admin","created_at":"2026-04-06T12:00:00Z"}`)
+	metadata := []byte(`{"source_kind":"mcp","proof":{"run_id":"run-1","run_class":"run_linked","retention_class":"retained"},"mcp":{"server_id":"srv-001","server_name":"filesystem","tool_name":"read_file","state":"completed","run_id":"run-1","run_class":"run_linked","retention_class":"retained","source_team":"alpha","agent_id":"soma-admin"}}`)
 
 	mock.ExpectQuery("SELECT i.id, i.channel_id, c.name, i.schema_id, i.payload, i.created_by").
 		WithArgs("browser.research.results", nil, 10).
@@ -58,6 +58,9 @@ func TestHandleMCPActivity_ReturnsPersistedMCPUsage(t *testing.T) {
 	}
 	if resp.Data[0]["state"] != "completed" {
 		t.Fatalf("state = %v, want completed", resp.Data[0]["state"])
+	}
+	if resp.Data[0]["run_class"] != "run_linked" || resp.Data[0]["retention_class"] != "retained" {
+		t.Fatalf("proof classification = %+v", resp.Data[0])
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("expectations: %v", err)

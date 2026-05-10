@@ -21,7 +21,7 @@ const somaToolPrompts = [
         icon: Users,
     },
     {
-        label: "Private data",
+        label: "Read host data",
         prompt: "Review host/private data boundaries, name the files or source scope, and ask me to confirm before using or retaining outputs.",
         icon: Search,
     },

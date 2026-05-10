@@ -8,6 +8,7 @@ import type {
     AuditLogEntry,
     BrainProvenance,
     CatalogueAgent,
+    CapabilityManifest,
     ChatMessage,
     CognitiveStatus,
     ConfirmProposalResult,
@@ -106,6 +107,9 @@ export interface CortexResourcesContract {
     searchCapability: SearchCapabilityStatus | null;
     isFetchingSearchCapability: boolean;
     searchCapabilityError: string | null;
+    capabilities: CapabilityManifest[];
+    isFetchingCapabilities: boolean;
+    capabilitiesError: string | null;
     fetchMissions: () => Promise<void>;
     selectArtifact: (artifact: CTSEnvelope | null) => void;
     approveArtifact: (id: string) => void;
@@ -133,6 +137,7 @@ export interface CortexResourcesContract {
     fetchMCPLibrary: () => Promise<void>;
     installFromLibrary: (name: string, env?: Record<string, string>) => Promise<MCPInstallResult>;
     fetchSearchCapability: () => Promise<void>;
+    fetchCapabilities: () => Promise<void>;
 }
 
 export interface CortexMissionChatContract {

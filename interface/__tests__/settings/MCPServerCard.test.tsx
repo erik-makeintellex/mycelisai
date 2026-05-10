@@ -13,6 +13,7 @@ const server: MCPServerWithTools = {
     headers: { Authorization: "[redacted]" },
     status: "connected",
     created_at: "2026-04-30T12:00:00Z",
+    capability_ids: ["mcp.filesystem.read_file"],
     tools: [
         {
             id: "tool-1",
@@ -44,6 +45,8 @@ describe("MCPServerCard", () => {
         expect(screen.getByText(/workspace\/shared-sources/i)).toBeDefined();
         expect(screen.getByText("FILESYSTEM_ROOT")).toBeDefined();
         expect(screen.getByText("Authorization")).toBeDefined();
+        expect(screen.getByText("Capability bindings")).toBeDefined();
+        expect(screen.getByText("mcp.filesystem.read_file")).toBeDefined();
         expect(screen.getByText(/Secrets are shown only as references/i)).toBeDefined();
 
         fireEvent.click(screen.getByRole("button", { name: /Edit in Library/i }));

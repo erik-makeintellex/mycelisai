@@ -195,7 +195,13 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                         <DelegationTrace consultations={msg.consultations} assistantName={assistantName} />
                     </div>
                 ) : null}
-                {!isUser && msg.execution_summary && <ExecutionSummaryCard summary={msg.execution_summary} />}
+                {!isUser && msg.execution_summary && (
+                    <ExecutionSummaryCard
+                        summary={msg.execution_summary}
+                        runId={msg.run_id}
+                        artifacts={msg.artifacts}
+                    />
+                )}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
                 {!isUser && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">
