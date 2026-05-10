@@ -591,15 +591,14 @@ def test_coverage(c):
         "spec": "Optional Playwright spec path or glob.",
         "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
         "workers": "Optional Playwright worker count override for stability-sensitive runs.",
-        "server_mode": "Server mode for the managed UI server (dev or start, defaults to dev).",
+        "server_mode": "UI server mode (dev, start, or external; defaults to dev).",
     }
 )
 def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev"):
     """
-    Run Playwright E2E tests.
     The Invoke wrapper starts a managed local Next.js server and clears any stale
     Interface listener before and after the run because Next.js dev servers can
-    linger on Windows after Playwright exits.
+    linger on Windows after Playwright exits. Use external for a running Compose UI.
     Stable mocked browser proof defaults to a managed dev server; use
     --server-mode=start when the run should refresh and serve the built bundle.
     Use --live-backend when the spec should talk to the real Core API through
@@ -608,12 +607,12 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     print("Running Playwright E2E Tests...")
     ensure_disk_headroom(min_free_gb=8 if server_mode == "start" else 6, reason=f"interface e2e ({server_mode})")
     cmd = _build_playwright_command(project=project, spec=spec, workers=workers, headed=headed)
-    chosen_port = _pick_interface_port(INTERFACE_PORT)
+    chosen_port = INTERFACE_PORT if server_mode == "external" else _pick_interface_port(INTERFACE_PORT)
     env = _build_playwright_env(live_backend=live_backend, port=chosen_port)
-    stop(c)
+    server_mode == "external" or stop(c)
     if chosen_port != INTERFACE_PORT:
         stop(c, port=chosen_port)
-    _cleanup_managed_interface_listeners()
+    server_mode == "external" or _cleanup_managed_interface_listeners()
     if server_mode == "start":
         print("Refreshing built Interface bundle for managed start-mode browser proof...")
         build(c)
@@ -621,8 +620,9 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     server: subprocess.Popen[str] | None = None
     keep_server_log = False
     try:
-        server = _start_playwright_server(env, port=chosen_port, server_mode=server_mode)
-        env, chosen_port = _reconcile_managed_server_endpoint(env, chosen_port, server)
+        if server_mode != "external":
+            server = _start_playwright_server(env, port=chosen_port, server_mode=server_mode)
+            env, chosen_port = _reconcile_managed_server_endpoint(env, chosen_port, server)
         result = _run_interface_commandline(cmd, extra_env=env, stream=True)
         _print_ascii_safe(result.stdout)
         _print_ascii_safe(result.stderr)
@@ -637,9 +637,9 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
             time.sleep(0.5)
             with suppress(Exception):
                 server.wait(timeout=5)
-        stop(c, port=chosen_port)
-        _cleanup_repo_local_interface_processes()
-        _cleanup_managed_interface_listeners()
+        server_mode == "external" or stop(c, port=chosen_port)
+        server_mode == "external" or _cleanup_repo_local_interface_processes()
+        server_mode == "external" or _cleanup_managed_interface_listeners()
         if not keep_server_log:
             _cleanup_playwright_server_log()
 
