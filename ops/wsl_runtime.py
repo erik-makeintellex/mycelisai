@@ -147,7 +147,7 @@ def _run_wsl_git_noninteractive(
 
 def _run_wsl_shell(command: str, *, distro: str = "", checkout: str = "", check: bool = True) -> None:
     completed = subprocess.run(
-        _wsl_command("bash", "-lc", command, distro=distro, checkout=checkout),
+        _wsl_command("bash", "-lc", f"export PATH=/usr/local/go/bin:$HOME/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; {command}", distro=distro, checkout=checkout),
         text=True,
         check=False,
     )
