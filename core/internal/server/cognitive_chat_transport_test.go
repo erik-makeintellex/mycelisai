@@ -69,6 +69,21 @@ func TestHandleChat_UnwrapsReadableJSONEnvelopeFromAgent(t *testing.T) {
 	if payload.Text != "Council-Sentry protects the runtime and reviews operational risk." {
 		t.Fatalf("payload.text = %q", payload.Text)
 	}
+	if payload.ExecutionSummary == nil {
+		t.Fatal("expected execution_summary")
+	}
+	if payload.ExecutionSummary.Intent.Original != "Introduce sentry." {
+		t.Fatalf("execution_summary.intent.original = %q", payload.ExecutionSummary.Intent.Original)
+	}
+	if payload.ExecutionSummary.Execution.Shape != protocol.ExecutionShapeDirectSoma {
+		t.Fatalf("execution_summary.execution.shape = %q", payload.ExecutionSummary.Execution.Shape)
+	}
+	if payload.ExecutionSummary.Execution.Status != protocol.ExecutionStatusCompleted {
+		t.Fatalf("execution_summary.execution.status = %q", payload.ExecutionSummary.Execution.Status)
+	}
+	if payload.ExecutionSummary.Proof.RunID != "" {
+		t.Fatalf("direct answer run_id = %q, want empty", payload.ExecutionSummary.Proof.RunID)
+	}
 }
 
 func TestHandleChat_ReturnsStructuredTransportBlockerWhenAdminHasNoResponder(t *testing.T) {

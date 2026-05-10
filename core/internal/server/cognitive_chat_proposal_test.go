@@ -140,6 +140,21 @@ func TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory(t *tes
 				if payload.Proposal == nil {
 					t.Fatal("expected proposal payload")
 				}
+				if payload.ExecutionSummary == nil {
+					t.Fatal("expected execution_summary")
+				}
+				if payload.ExecutionSummary.Execution.Shape != protocol.ExecutionShapeGuidedProposal {
+					t.Fatalf("execution_summary.execution.shape = %q", payload.ExecutionSummary.Execution.Shape)
+				}
+				if payload.ExecutionSummary.Execution.Status != protocol.ExecutionStatusProposed {
+					t.Fatalf("execution_summary.execution.status = %q", payload.ExecutionSummary.Execution.Status)
+				}
+				if payload.ExecutionSummary.Proof.IntentProofID != payload.Proposal.IntentProofID {
+					t.Fatalf("execution_summary proof intent_proof_id = %q, proposal intent_proof_id = %q", payload.ExecutionSummary.Proof.IntentProofID, payload.Proposal.IntentProofID)
+				}
+				if payload.ExecutionSummary.NextStep == nil || payload.ExecutionSummary.NextStep.Action != "confirm_action" {
+					t.Fatalf("execution_summary next_step = %+v", payload.ExecutionSummary.NextStep)
+				}
 				if tc.wantProposalTool != "" {
 					if len(payload.Proposal.Tools) == 0 {
 						t.Fatal("expected proposed tools")

@@ -1,3 +1,5 @@
+import type { ExecutionSummaryData } from "@/store/useCortexStore";
+
 export type OrganizationStartMode = "template" | "empty";
 export type OrganizationAIEngineProfileId = "starter_defaults" | "balanced" | "high_reasoning" | "fast_lightweight" | "deep_planning";
 export type ResponseContractProfileId = "clear_balanced" | "structured_analytical" | "concise_direct" | "warm_supportive";
@@ -256,4 +258,5 @@ export interface TeamLeadGuidanceResponse {
     priority_steps: string[];
     suggested_follow_ups: string[];
     execution_contract?: TeamLeadExecutionContract;
+    execution_summary?: ExecutionSummaryData;
 }

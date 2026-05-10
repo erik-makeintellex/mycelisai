@@ -1,5 +1,7 @@
 package server
 
+import "github.com/mycelis/core/pkg/protocol"
+
 type OrganizationStartMode string
 
 const (
@@ -237,4 +239,5 @@ type TeamLeadGuidanceResponse struct {
 	PrioritySteps      []string                   `json:"priority_steps"`
 	SuggestedFollowUps []string                   `json:"suggested_follow_ups"`
 	ExecutionContract  *TeamLeadExecutionContract `json:"execution_contract,omitempty"`
+	ExecutionSummary   *protocol.ExecutionSummary `json:"execution_summary,omitempty"`
 }

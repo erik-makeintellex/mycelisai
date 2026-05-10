@@ -88,11 +88,12 @@ func (s *AdminServer) HandleGroupBroadcast(w http.ResponseWriter, r *http.Reques
 	)
 
 	respondAPIJSON(w, http.StatusAccepted, protocol.NewAPISuccess(map[string]any{
-		"group_id":       group.ID,
-		"status":         "queued",
-		"subjects":       subjects,
-		"team_count":     len(group.TeamIDs),
-		"audit_event_id": auditEventID,
+		"group_id":          group.ID,
+		"status":            "queued",
+		"subjects":          subjects,
+		"team_count":        len(group.TeamIDs),
+		"audit_event_id":    auditEventID,
+		"execution_summary": buildGroupBroadcastExecutionSummary(group, msg, auditEventID, subjects),
 	}))
 }
 

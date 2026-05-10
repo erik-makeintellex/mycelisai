@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-03-29
+> Last Updated: 2026-05-09
 > Owner: Product Management / Delivery Coordination
 > Purpose: Define the canonical product target where Soma and Council are universal operating entities, while AI Organizations, deployments, teams, and projects remain governed working contexts.
 > Depends On: `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/user/memory.md`, `docs/user/resources.md`
@@ -210,7 +210,25 @@ That means the operator should always be able to answer:
 - whether approval is required and why
 - what artifact or result was produced
 
-## 6. Delivery model
+## 6. Product standards for current AI agentry
+
+Mycelis should set a product standard around inspectable agency, not a visual simulation of agency.
+Required:
+- Soma is the first-class product interface; app navigation supports Soma instead of competing with it.
+- Direct answer comes before agent escalation whenever the ask is bounded, non-mutating, and answerable from available context.
+- Escalation to teams, tools, MCP, web search, or specialist models is visible as a choice with purpose, scope, and outcome.
+- Plan, action, rationale, source, result, blocker, and recovery are inspectable runtime states, not hidden implementation detail.
+- Human approval is modeled as an explicit state with cancel, approve, evidence, and after-action audit semantics.
+- Guardrails exist at input, output, tool, memory, deployment-context, and artifact boundaries.
+- Runs, retained outputs, logs, and artifacts are durable product objects the user can revisit, compare, download, and use for recovery.
+- Teams and groups are execution lanes with retained outputs and accountability; they are not presented as chat-room novelty.
+- Deployment roots, execution roots, checkouts, caches, and proof artifacts are operator-visible system concepts when they affect trust or recovery.
+- Memory, deployment context, logs, traces, and governed doctrine remain separate stores with clear promotion rules.
+- The interface exposes recovery paths for dependency failure, missing providers, network instability, approval cancellation, and partial execution.
+- The product is accessible to both human operators and future agentic operators through stable normalized UI/API states.
+- Browser-visible proof is part of the product contract; a release claim is incomplete if it only passes headless or backend tests.
+
+## 7. Delivery model
 
 ### Phase 1: Contract correction
 
@@ -252,26 +270,26 @@ Deliverables:
 - council/specialist contribution inspection
 - scoped logs and memory inspection that remain coherent with the default product story
 
-## 7. Acceptance criteria
-
+## 8. Acceptance criteria
 This PRD is materially delivered only when all of the following are true:
-
 - operators experience Soma as one persistent counterpart across contexts
 - AI Organizations are clearly presented as work contexts, not separate Soma identities
 - governed execution remains scoped and auditable
 - content and artifact delivery feel direct and valuable
 - settings and continuity surfaces actually persist
 - advanced platform depth remains reachable without polluting the default story
+- operators can inspect why Soma answered directly, escalated to a team, called a tool, required approval, produced an artifact, or stopped at a blocker
+- deployment and execution roots are visible enough for proof, recovery, and operator trust without turning the default surface into an infrastructure console
 
-## 8. Immediate next actuation
+## 9. Immediate next actuation
 
 The first code slice under this PRD should:
-
 1. fix the user-settings contract so settings really persist and reload
 2. update active docs/state surfaces so they stop silently teaching an org-scoped Soma identity as the long-term model
 3. prepare the dashboard/home evolution toward a Central Soma surface instead of a pure organization-launch screen
+4. promote deployment/execution roots into the operator trust model: source checkout, deployment directory, execution directory, artifact store, logs, cache, current commit, proof status, and recovery actions
 
-## 9. Compatibility note
+## 10. Compatibility note
 
 The current bounded V8.1 operator contract remains valid for the release candidate:
 

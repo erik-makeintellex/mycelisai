@@ -12,6 +12,7 @@ import {
     TemporaryWorkflowLaunchCard,
     type LaunchedGroupState,
 } from "@/components/organizations/teamLeadExecutionCards";
+import ExecutionSummaryCard from "@/components/soma/ExecutionSummaryCard";
 
 type RequestState = "idle" | "loading" | "ready" | "error";
 
@@ -167,6 +168,7 @@ function ReadyState({
             </div>
             <div className="space-y-4">
                 {guidance.execution_contract && <ExecutionContractCard contract={guidance.execution_contract} />}
+                {guidance.execution_summary && <ExecutionSummaryCard summary={guidance.execution_summary} />}
                 {guidance.execution_contract?.workflow_group ? (
                     <TemporaryWorkflowLaunchCard
                         draft={guidance.execution_contract.workflow_group}

@@ -26,8 +26,11 @@ The UI testing agentry must cover these operator-visible actions.
 | AI Organization entry | Open an existing AI Organization and land in the Soma-first workspace | Soma is clearly primary and the organization frame stays visible |
 | Direct Soma answer | Ask a non-mutating question in the main Soma conversation | Response lands in `answer` state with readable content |
 | Governed mutation | Ask for a file or other mutating action | Response lands in `proposal` state with approval context and capability risk |
+| Escalation rationale | Ask for work that could be direct, team-based, or tool-backed | UI explains why Soma answered directly or escalated, and shows the relevant team/tool/source boundary |
+| Capability manifest path | Invoke or inspect an MCP/custom/API/script/plugin capability | Capability registration, availability, risk, approval posture, output type, and run/output destination are visible |
 | Proposal cancellation | Cancel a pending proposed action | Proposal is neutralized and the UI states that no action executed |
 | Approval execution | Confirm a pending proposed action | UI shows execution proof or an explicit bounded blocker |
+| Deployment/execution roots | Open system or proof-oriented surfaces after a deployment-backed run | Checkout, deployment root, execution root, artifact/log locations, proof status, and recovery action are visible when they affect trust |
 | Cold-start recovery | Trigger a first-query transient failure | Transient startup failure is surfaced gracefully with a retry path, and retry recovers to a valid terminal state |
 | Continuity | Refresh or re-enter the same AI Organization | Prior Soma context remains legible and scoped to that organization |
 | Audit visibility | Open Automations -> Approvals -> Audit | Inspect-only `Activity Log` shows recent governance and execution events |
@@ -51,6 +54,8 @@ Evidence requirements:
 
 - Every criticism must include one visible piece of evidence.
 - Every positive claim must include one specific reason trust was earned.
+- Evidence for agentic behavior must distinguish answer, proposal, execution, blocker, tool/source use, retained output, and recovery instead of treating all assistant text as equivalent.
+- Evidence for integration behavior must identify the capability manifest, run proof, output object, audit record, and failure/recovery path when the capability is execution-backed.
 - When something feels off, classify it as one of:
   - `clarity`
   - `hierarchy`
@@ -113,6 +118,9 @@ The UI testing agentry must fail the release recommendation if any of the follow
 - the first-path workspace request fails without a clear retry and recovery path
 - a mutating request bypasses the proposal and approval contract
 - cancelling a proposal leaves uncertainty about whether execution still happened
+- tool use, source use, deployment context use, or team/group escalation is hidden when it affects trust, cost, privacy, or recovery
+- MCP/custom/API/script/plugin execution bypasses capability registration, schema validation, approval policy, audit, run proof, or output normalization
+- deployment/execution proof cannot be located from the operator-facing system surfaces when the test is deployment-backed
 - the operator cannot refresh or re-enter with confidence
 - audit visibility is missing or only exposes raw backend noise
 - default-path UI copy leaks developer-facing architecture terms

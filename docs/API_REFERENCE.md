@@ -6,6 +6,7 @@
 ## API TOC
 
 - [Endpoints](#endpoints)
+- [Directed Execution Payloads](#directed-execution-payloads)
 - [Provider Auth Notes](#provider-auth-notes)
 
 ## Endpoints
@@ -16,7 +17,7 @@
 | `/api/v1/council/{member}/chat` | POST | Chat with any council member via NATS request-reply. Returns `APIResponse<CTSEnvelope>` with trust score + provenance |
 | `/api/v1/council/members` | GET | List all addressable council members from standing teams (admin-core, council-core) |
 | **Chat & Cognitive** | | |
-| `/api/v1/chat` | POST | Soma/Admin chat. Runtime-state and search-capability questions answer directly; freshness-oriented search prompts call configured Mycelis `web_search` before the NATS Admin-agent path. |
+| `/api/v1/chat` | POST | Soma/Admin chat. Runtime-state and search-capability questions answer directly; freshness-oriented search prompts call configured Mycelis `web_search` before the NATS Admin-agent path. Chat responses may include `execution_summary` so the UI can show intent, Soma understanding, execution shape, capability use, outputs, proof, audit/recovery state, and next step. |
 | `/api/v1/cognitive/infer` | POST | Direct cognitive inference (profile-routed) |
 | `/api/v1/cognitive/config` | GET | Read cognitive router configuration (providers, profiles, media) |
 | `/api/v1/cognitive/matrix` | GET | Alias for cognitive config (matrix view) |
@@ -155,7 +156,7 @@ Memory/governance note:
 | `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (MissionEventEnvelope records) |
 | `/api/v1/runs/{id}/chain` | GET | Causal chain — parent run → event → trigger → child run traversal |
 | **Intent (CE-1)** | | |
-| `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return run_id |
+| `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return `run_id` plus `execution_summary` proof for verified guided execution |
 | `/api/v1/intent/proof/{id}` | GET | Retrieve intent proof bundle by ID |
 | `/api/v1/templates` | GET | List CE-1 orchestration templates or V8 AI Organization starters when `view=organization-starters` |
 | `/api/v1/conversation-templates` | GET/POST | List/create DB-backed reusable Soma/Council/team ask templates |
@@ -167,8 +168,29 @@ Conversation-template instantiation is non-executing by default. Protected Soma 
 | `/api/v1/organizations` | GET | List created AI Organization summaries for the entry flow |
 | `/api/v1/organizations` | POST | Create an AI Organization from template or empty start |
 | `/api/v1/organizations/{id}/home` | GET | Load the minimal AI Organization context shell |
+| `/api/v1/organizations/{id}/workspace/actions` | POST | Return Team Lead guidance, execution contract, and optional `execution_summary` for operator review without attaching a `run_id` until real execution exists |
 | `/api/v1/organizations/{id}/output-model-routing` | GET | Read admin-configurable output-model routing for the organization, including detected output-type bindings, locally installed models, and recommended self-hosted starting points |
 | `/api/v1/organizations/{id}/output-model-routing` | PATCH | Update the organization default model or detected output-type model bindings for team and specialist output delivery |
+
+## Directed Execution Payloads
+
+`execution_summary` is the additive V8.2 directed-execution contract for Soma-facing runtime responses. It is optional for compatibility, but meaningful Soma actions should populate it as they move into the directed-execution model.
+
+The object can include:
+- `intent`: original and resolved request classification
+- `understanding`: Soma's concise interpretation and assumptions
+- `execution`: shape, status, and summary such as `direct_soma`, `guided_proposal`, `tool_assisted_work`, or `team_execution`
+- `capability_use`: governed tools, teams, MCP capabilities, automations, or plugins used
+- `outputs`: answer, proposal, artifact, tool result, or other retained output references
+- `proof`: `run_id`, `audit_event_id`, `intent_proof_id`, and verification state
+- `audit_recovery`: approval status, recovery state, blocker, and retry posture
+- `next_step`: suggested continuation or proof/review link
+
+Current producers:
+- `/api/v1/chat` direct answers and guided proposals
+- `/api/v1/intent/confirm-action` verified proposal execution results
+- `/api/v1/organizations/{id}/workspace/actions` Team Lead guidance responses with proof explicitly left unrun until execution exists
+- `/api/v1/groups/{id}/broadcast` accepted group broadcasts with `audit_event_id` proof and no fabricated `run_id`
 
 ## Provider Auth Notes
 

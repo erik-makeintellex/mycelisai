@@ -269,12 +269,9 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md",
                 description: "Canonical V7-to-V8 bootstrap, template, instantiation, inheritance, and precedence contract",
             },
-            {
-                slug: "v8-ui-api-operator-experience-contract",
-                label: "V8 UI/API/Operator Contract",
-                path: "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md",
-                description: "Canonical operator workflow contract for AI Organization creation and Soma-first runtime behavior",
-            },
+            { slug: "v8-ui-api-operator-experience-contract", label: "V8 UI/API/Operator Contract", path: "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md", description: "Canonical operator workflow contract for AI Organization creation and Soma-first runtime behavior" },
+            { slug: "v8-directed-execution-ui-runtime-alignment", label: "V8 Directed Execution UI", path: "docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md", description: "UI/runtime alignment directive for Soma-centered directed execution, durable outputs, run proof, capabilities, governance, and deployment trust" },
+            { slug: "v8-directed-execution-delivery-plan", label: "V8 Directed Execution Delivery", path: "docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md", description: "Team execution plan for directed-execution work packages, waves, dependencies, validation gates, and orchestration rules" },
             {
                 slug: "v8-1-living-organization-architecture",
                 label: "V8.1 Living Organization Baseline",
@@ -331,12 +328,8 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/architecture-library/V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md",
                 description: "Compact delivery-team contract for Soma-primary compatibility proof and modular V8.2/B2+ self-hosted runtime work",
             },
-            {
-                slug: "v8-mycelis-search-capability-delivery",
-                label: "V8 Mycelis Search Capability",
-                path: "docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md",
-                description: "Delivery-team contract for owned local-source search, operator-owned local API search, optional SearXNG, optional hosted/Brave search, and capability/MCP testing gates",
-            },
+            { slug: "v8-mycelis-search-capability-delivery", label: "V8 Mycelis Search Capability", path: "docs/architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md", description: "Delivery-team contract for owned local-source search, operator-owned local API search, optional SearXNG, optional hosted/Brave search, and capability/MCP testing gates" },
+            { slug: "v8-capability-manifest-runtime-integration", label: "V8 Capability Manifest", path: "docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md", description: "Runtime integration standard for governed capability manifests, run proof, output normalization, MCP/custom additions, and release validation" },
             {
                 slug: "v8-enterprise-self-hosted-kubernetes-delivery-plan",
                 label: "V8 Enterprise Self-Hosted Kubernetes",

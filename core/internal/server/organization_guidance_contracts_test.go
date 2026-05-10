@@ -39,6 +39,21 @@ func TestHandleTeamLeadGuidedAction_AddsNativeTeamExecutionContractForImageReque
 	if executionContract["team_name"] != "Creative Delivery Team" {
 		t.Fatalf("expected creative team name, got %+v", executionContract)
 	}
+	executionSummary, ok := data["execution_summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution summary, got %+v", data)
+	}
+	execution, ok := executionSummary["execution"].(map[string]any)
+	if !ok || execution["shape"] != "team_execution" || execution["status"] != "proposed" {
+		t.Fatalf("expected proposed team execution summary, got %+v", executionSummary)
+	}
+	proof, ok := executionSummary["proof"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected proof object with no run id, got %+v", executionSummary)
+	}
+	if proof["run_id"] != nil {
+		t.Fatalf("guidance summary must not fabricate run id, got %+v", proof)
+	}
 	outputs, ok := executionContract["target_outputs"].([]any)
 	if !ok || len(outputs) < 1 {
 		t.Fatalf("expected target outputs, got %+v", executionContract)

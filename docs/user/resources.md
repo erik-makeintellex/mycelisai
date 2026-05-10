@@ -39,7 +39,7 @@ What you can do:
 
 ## Connected Tools
 
-MCP servers expose tool capabilities agents can invoke during execution.
+MCP servers, custom connectors, local scripts, external APIs, and future plugins expose capabilities Soma and teams can invoke during execution.
 
 The Dashboard readiness strip summarizes search/tool posture for Soma, but
 Resources is the primary place to inspect or change MCP servers, web search
@@ -52,10 +52,17 @@ Current baseline posture:
 - `artifact-renderer` remains planned
 
 Key outcome:
-Operators should be able to determine "what the system can access" directly from this tab.
+Operators should be able to determine "what Soma can currently use" directly from this tab, including what each capability is for, whether it is available, what risk level it has, what outputs it can produce, and where its results appear.
+
+Capability manifest expectation:
+- every built-in MCP, external tool, local script, custom connector, or plugin must register as a governed capability before Soma or a team can use it
+- every meaningful execution should create or attach to a run
+- every meaningful output should normalize into Managed Exchange, a retained artifact/output, audit evidence, or a learning candidate before it is treated as durable product state
+- raw MCP/custom output should not be the final unmanaged state
 
 Review/edit expectation:
 - the installed server card should expand into an MCP structure view with transport, status, command or endpoint, arguments, env/header references, discovered tools, and recent use
+- the capability view should show manifest identity, input/output schema posture, risk, approval, availability, fallback, allowed roles, and output destinations
 - secrets should appear only as references or redacted values; set or rotate values in `.env` or the configured secret backend
 - use Library to install, reapply, or edit the curated server shape instead of pasting raw MCP config into the UI
 - after changing structure or secrets, return to Installed and confirm the server card, tool list, and recent MCP activity match the expected shape

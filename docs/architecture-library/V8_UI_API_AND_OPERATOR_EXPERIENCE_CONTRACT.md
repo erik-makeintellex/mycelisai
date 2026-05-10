@@ -80,6 +80,25 @@ User -> Soma -> routing/council -> team leads -> departments/specialists -> revi
 
 Every screen expects normalized envelopes with stable IDs, labels, role/type metadata, loading/error/empty states, and no raw backend leakage.
 
+### 3.7 Inspectable agency rule
+
+The UI must make agency inspectable without making the default operator path noisy.
+
+Default surfaces show:
+- direct answer, proposal, execution result, blocker, or recovery state
+- why Soma stayed direct or escalated
+- what team, tool, source, model, or deployment context mattered
+- what output, artifact, retained result, or audit event was produced
+
+Advanced surfaces show:
+- plan/action/source/result details
+- capability and approval posture
+- run, group, artifact, log, checkout, deployment-root, and execution-root evidence
+- memory versus deployment-context boundaries
+- capability manifests for MCP tools, custom connectors, local scripts, external APIs, and plugins when they affect execution
+
+Hidden autonomy is not acceptable for mutating work, external calls, private context use, artifact creation, or team/group execution.
+
 ## 4. Screen and flow contracts
 
 ### 4.1 First-run flow
@@ -149,6 +168,9 @@ Minimum product proof covers:
 - Soma direct answer
 - governed proposal cancel/execute
 - team/group creation and retained output review
+- inspectable escalation rationale, source/tool use, and produced output
+- deployment/execution-root visibility when release proof or recovery depends on it
+- capability manifest visibility for promoted MCP/custom/API/script/plugin execution paths
 - settings persistence or clear blocker
 - activity/audit review
 - recovery from dependency failure

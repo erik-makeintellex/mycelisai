@@ -116,6 +116,27 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	if data["run_status"] != runs.StatusCompleted {
 		t.Fatalf("run_status = %v, want %s", data["run_status"], runs.StatusCompleted)
 	}
+	summary, ok := data["execution_summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution_summary map, got %T", data["execution_summary"])
+	}
+	execution, ok := summary["execution"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution map, got %T", summary["execution"])
+	}
+	if execution["status"] != string(protocol.ExecutionStatusCompleted) {
+		t.Fatalf("execution_summary.execution.status = %v", execution["status"])
+	}
+	proof, ok := summary["proof"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected proof map, got %T", summary["proof"])
+	}
+	if proof["run_id"] != runID {
+		t.Fatalf("execution_summary.proof.run_id = %v, want %s", proof["run_id"], runID)
+	}
+	if proof["intent_proof_id"] != proofID {
+		t.Fatalf("execution_summary.proof.intent_proof_id = %v, want %s", proof["intent_proof_id"], proofID)
+	}
 	auditID, _ := data["audit_event_id"].(string)
 	if strings.TrimSpace(auditID) == "" {
 		t.Fatal("expected non-empty audit_event_id")

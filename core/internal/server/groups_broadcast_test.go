@@ -67,6 +67,27 @@ func TestHandleGroupBroadcast_FanoutParallel_DB(t *testing.T) {
 	mux := setupMux(t, "POST /api/v1/groups/{id}/broadcast", s.HandleGroupBroadcast)
 	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/groups/group-ops/broadcast", `{"message":"kickoff sync"}`)
 	assertStatus(t, rr, http.StatusAccepted)
+	var resp protocol.APIResponse
+	assertJSON(t, rr, &resp)
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected response data, got %T", resp.Data)
+	}
+	executionSummary, ok := data["execution_summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected execution summary, got %+v", data)
+	}
+	returnedAuditID, _ := data["audit_event_id"].(string)
+	if returnedAuditID == "" {
+		t.Fatalf("expected audit_event_id in response, got %+v", data)
+	}
+	proof, ok := executionSummary["proof"].(map[string]any)
+	if !ok || proof["audit_event_id"] != returnedAuditID {
+		t.Fatalf("expected matching audit proof %s, got %+v", returnedAuditID, executionSummary)
+	}
+	if proof["run_id"] != nil {
+		t.Fatalf("group broadcast summary must not fabricate run id, got %+v", proof)
+	}
 
 	select {
 	case payload := <-groupCh:

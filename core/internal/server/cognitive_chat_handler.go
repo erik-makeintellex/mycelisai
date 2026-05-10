@@ -156,7 +156,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	chatPayload := protocol.ChatResponsePayload{
 		Text:          replyText,
-		ToolsUsed:     mutTools,
+		ToolsUsed:     chatResponseTools(isMutation, agentResult.ToolsUsed, mutTools),
 		Artifacts:     agentResult.Artifacts,
 		Consultations: agentResult.Consultations,
 	}
@@ -219,6 +219,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		}
 		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, mutTools)
 		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, "admin-core", []string{"admin"}, approval, profile.snapshot(), display)
+		chatPayload.ExecutionSummary = buildProposalExecutionSummary(latestUserText, plannedToolCalls, mutTools, display, proofID, auditEventID, approval)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",
@@ -245,6 +246,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 			PolicyDecision:  "allow",
 			AuditEventID:    auditEventID,
 		}
+		chatPayload.ExecutionSummary = buildDirectChatExecutionSummary(latestUserText, replyText, auditEventID, agentResult)
 		if len(agentResult.Artifacts) > 0 {
 			for _, artifact := range agentResult.Artifacts {
 				_, _ = s.createAuditEvent(

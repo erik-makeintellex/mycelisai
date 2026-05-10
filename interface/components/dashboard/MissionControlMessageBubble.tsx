@@ -14,6 +14,7 @@ import { useCortexStore, type ChatConsultation, type ChatMessage } from "@/store
 import InlineArtifact from "./InlineArtifact";
 import MissionControlMarkdown from "./MissionControlMarkdown";
 import ProposedActionBlock from "./ProposedActionBlock";
+import ExecutionSummaryCard from "@/components/soma/ExecutionSummaryCard";
 import {
     artifactResultSummary,
     askClassBadge,
@@ -194,6 +195,7 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                         <DelegationTrace consultations={msg.consultations} assistantName={assistantName} />
                     </div>
                 ) : null}
+                {!isUser && msg.execution_summary && <ExecutionSummaryCard summary={msg.execution_summary} />}
                 {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
                 {!isUser && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">

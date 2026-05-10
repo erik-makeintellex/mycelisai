@@ -142,6 +142,8 @@ type ChatResponsePayload struct {
 	Brain *BrainProvenance `json:"brain,omitempty"`
 	// Chat proposal (when agent uses mutation tools)
 	Proposal *ChatProposal `json:"proposal,omitempty"`
+	// ExecutionSummary is an additive operator contract for directed execution.
+	ExecutionSummary *ExecutionSummary `json:"execution_summary,omitempty"`
 }
 
 // ChatArtifactRef is an inline artifact reference embedded in a chat response.
@@ -284,8 +286,7 @@ func WrapSignalPayloadWithMeta(
 	return json.Marshal(env)
 }
 
-// ValidateTelemetryMessage is NATS middleware that rejects any message on
-// swarm.team.*.telemetry that fails CTS schema validation.
+// ValidateTelemetryMessage rejects malformed swarm.team.*.telemetry envelopes.
 // It returns the parsed envelope on success, or an error explaining the rejection.
 func ValidateTelemetryMessage(data []byte) (*CTSEnvelope, error) {
 	var env CTSEnvelope

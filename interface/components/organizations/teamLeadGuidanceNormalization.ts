@@ -50,6 +50,9 @@ export function normalizeGuidanceResponse(
     const prioritySteps = normalizeGuidanceList(payload?.priority_steps, defaultPrioritySteps(action, organizationName), somaName, teamLeadName);
     const suggestedFollowUps = normalizeGuidanceList(payload?.suggested_follow_ups, defaultFollowUps(action), somaName, teamLeadName);
     const executionContract = normalizeExecutionContract(payload?.execution_contract, somaName, teamLeadName);
+    const executionSummary = payload?.execution_summary && typeof payload.execution_summary === "object"
+        ? payload.execution_summary
+        : undefined;
 
     return {
         action,
@@ -59,6 +62,7 @@ export function normalizeGuidanceResponse(
         priority_steps: prioritySteps,
         suggested_follow_ups: suggestedFollowUps,
         execution_contract: executionContract,
+        execution_summary: executionSummary,
     };
 }
 

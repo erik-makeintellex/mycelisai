@@ -8,10 +8,10 @@ Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules
 - `architecture/v8-2.md`: active V8.2/B2+ production target
 - `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`: V8.1 compatibility baseline
-- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`: operator UX and screen/API truth
+- `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md`: operator UX, screen/API truth, and directed-execution alignment
+- `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`: capability manifest, run/output, MCP/custom integration, and proof truth
 - `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`: V7-to-V8 bootstrap migration truth
 - `.state/V8_DEV_STATE.md`: live implementation scoreboard
-
 ## README TOC
 
 - [Fresh Agent Start Here](#fresh-agent-start-here)
@@ -137,6 +137,8 @@ source-of-truth layers remain separate:
 - state and architecture docs
 
 managed exchange foundation: channels, threads, schemas, and normalized outputs remain the governed substrate. managed exchange is permissioned; normalization into managed exchange does not imply unrestricted trust. The free-node release now includes foundational security boundaries.
+capability manifest foundation: MCP tools, custom connectors, local scripts, external APIs, generated artifacts, and future plugins/modules must register as governed capabilities before Soma, teams, groups, or automations use them. Meaningful executions attach to runs; meaningful outputs normalize into exchange, artifacts, audit, or learning candidates instead of remaining raw tool side effects.
+directed execution foundation: default UX must show intent, Soma understanding, execution shape, capability/team use, outputs, proof, and next step. Runs, outputs, governance, capabilities, and deployment trust are product surfaces, not hidden diagnostics.
 
 ## Architecture Terms To Operator Terms
 

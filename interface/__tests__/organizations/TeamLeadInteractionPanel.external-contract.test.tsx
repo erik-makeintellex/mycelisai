@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { mockFetch } from "../setup";
 import { jsonResponse, renderTeamLeadInteractionPanel } from "./teamLeadInteractionPanelTestSupport";
 
@@ -33,10 +33,27 @@ describe("TeamLeadInteractionPanel external workflow contract", () => {
                         "Linked artifact or execution note",
                     ],
                 },
+                execution_summary: {
+                    intent: {
+                        original: "Create an n8n workflow contract for inbound leads.",
+                        resolved: "plan_next_steps",
+                    },
+                    execution: {
+                        shape: "team_execution",
+                        status: "proposed",
+                        summary: "External workflow contract is ready for operator review.",
+                    },
+                    proof: {
+                        verified: false,
+                    },
+                    next_step: {
+                        label: "Review the workflow contract",
+                    },
+                },
             },
         }));
 
-        renderTeamLeadInteractionPanel();
+        const { container } = renderTeamLeadInteractionPanel();
 
         fireEvent.change(screen.getByLabelText("Tell Soma what team or delivery lane you want to create"), {
             target: { value: "Create an n8n workflow contract for inbound leads." },
@@ -44,6 +61,9 @@ describe("TeamLeadInteractionPanel external workflow contract", () => {
         fireEvent.click(screen.getByRole("button", { name: "Start team design" }));
 
         expect((await screen.findAllByText("External workflow contract")).length).toBeGreaterThan(0);
+        const summaryCard = screen.getByTestId("execution-summary-card");
+        expect(within(summaryCard).getByText("team_execution")).toBeDefined();
+        expect(container.querySelector('a[href^="/runs/"]')).toBeNull();
         expect(screen.getByText("n8n workflow contract")).toBeDefined();
         expect(screen.getByText("Normalized workflow result")).toBeDefined();
     });

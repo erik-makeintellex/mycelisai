@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -68,15 +67,7 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 	}
 
 	auditID := s.auditConfirmedAction(proofID, runID, scope, auditUser)
-	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]any{
-		"confirmed":       true,
-		"verified":        true,
-		"execution_state": "verified",
-		"proof_id":        proofID,
-		"audit_event_id":  auditID,
-		"run_id":          runID,
-		"run_status":      runs.StatusCompleted,
-	}))
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(confirmActionResponseData(proofID, runID, auditID, scope)))
 }
 
 func (s *AdminServer) prepareConfirmedAction(w http.ResponseWriter, r *http.Request, tx *sql.Tx, token string) (string, *protocol.ScopeValidation, string, bool) {

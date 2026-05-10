@@ -115,6 +115,13 @@ func mergeMutationTools(agentTools, requestTools []string) (bool, []string) {
 	return isMutation, mutTools
 }
 
+func chatResponseTools(isMutation bool, agentTools, mutTools []string) []string {
+	if isMutation {
+		return mutTools
+	}
+	return uniqueOrderedTools(agentTools)
+}
+
 func containsToolCallJSON(text string) bool {
 	trimmed := strings.TrimSpace(text)
 	if trimmed == "" {

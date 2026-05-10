@@ -42,6 +42,8 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
+- **V8 Directed Execution UI And Runtime Alignment Directive**: `./architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md`
+- **V8 Directed Execution Delivery Plan**: `./architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md`
 - **V8.1 Living Organization Baseline**: `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
 - **V8 Memory Layer + Reflection Contract**: `./architecture-library/V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md`
 - **V8 Trusted Memory Arbitration Contract**: `./architecture-library/V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md`
@@ -52,6 +54,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **V8 Home Docker Compose Runtime**: `./architecture-library/V8_HOME_DOCKER_COMPOSE_RUNTIME.md`
 - **V8 Self-Hosted Runtime Delivery Program**: `./architecture-library/V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md`
 - **V8 Mycelis Search Capability Delivery Plan**: `./architecture-library/V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md`
+- **V8 Capability Manifest And Runtime Integration Standard**: `./architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`
 - **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`
 - **V8 MVP Media, Team Output, And Template Registry**: `./architecture-library/V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md`
 - **V8.2 Production Architecture Target / B2+ Delivery Frame**: `../architecture/v8-2.md`

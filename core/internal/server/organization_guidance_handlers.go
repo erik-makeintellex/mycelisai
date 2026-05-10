@@ -44,15 +44,13 @@ func (s *AdminServer) buildTeamLeadGuidanceResponse(ctx context.Context, home Or
 	if err != nil {
 		return TeamLeadGuidanceResponse{}, err
 	}
-	if action != TeamLeadGuidedActionResumeRetainedPackage {
-		return response, nil
+	if action == TeamLeadGuidedActionResumeRetainedPackage {
+		if enriched, ok := s.buildRetainedPackageContinuityFromState(ctx, home, requestContext); ok {
+			response = enriched
+		}
 	}
-
-	enriched, ok := s.buildRetainedPackageContinuityFromState(ctx, home, requestContext)
-	if !ok {
-		return response, nil
-	}
-	return enriched, nil
+	response.ExecutionSummary = buildTeamLeadGuidanceExecutionSummary(response, requestContext)
+	return response, nil
 }
 
 func buildTeamLeadGuidance(home OrganizationHomePayload, action TeamLeadGuidedAction, requestContext string) (TeamLeadGuidanceResponse, error) {
