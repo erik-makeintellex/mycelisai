@@ -215,10 +215,10 @@ def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
         "uv run inv compose.health",
         "uv run inv compose.storage-health",
         "uv run inv compose.warm-cognitive",
-        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=external",
-        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts --live-backend --workers=1 --server-mode=external",
-        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
-        "uv run inv interface.e2e --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
+        "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=external",
+        "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts --live-backend --workers=1 --server-mode=external",
+        "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
+        "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
     ]
     assert probe_calls == ["http://localhost:3000"]
 

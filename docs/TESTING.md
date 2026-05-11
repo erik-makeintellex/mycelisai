@@ -140,6 +140,8 @@ uv run inv logging.check-schema
 uv run inv logging.check-topics
 ```
 
+`wsl.validate --lane=release` runs `compose.health` before each live browser spec because those specs execute through separate WSL shell invocations.
+
 Focused live-backend examples:
 
 ```bash

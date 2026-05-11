@@ -117,6 +117,7 @@ uv run inv compose.down
 ```
 
 Compose is the supported single-host runtime lane. `.env.compose` owns container topology; `.env` remains the secret source.
+The WSL release proof health-gates each live browser spec with `compose.health` because the runner executes specs through separate WSL shell invocations.
 
 ### Kubernetes Tasks (`ops/k8s.py`)
 
