@@ -23,8 +23,8 @@ export const organizationHome: OrganizationHomePayload = {
     response_contract_summary: "Clear & Balanced",
     memory_personality_summary: "Prepared for Adaptive Delivery work",
     output_model_routing_mode: "single_model",
-    default_output_model_id: "qwen2.5-coder:7b-instruct",
-    default_output_model_summary: "Qwen2.5 Coder 7B",
+    default_output_model_id: "qwen3:14b",
+    default_output_model_summary: "Qwen3 14B",
     status: "ready",
     description: "Guided AI Organization for engineering work",
     output_model_bindings: [
@@ -56,8 +56,8 @@ export const organizationHome: OrganizationHomePayload = {
                     inherits_default_response_contract: false,
                     output_type_id: "research_reasoning",
                     output_type_label: "Research & reasoning",
-                    output_model_effective_id: "qwen2.5-coder:7b-instruct",
-                    output_model_effective_summary: "Qwen2.5 Coder 7B",
+                    output_model_effective_id: "qwen3:14b",
+                    output_model_effective_summary: "Qwen3 14B",
                     inherits_default_output_model: true,
                 },
                 {
@@ -72,8 +72,8 @@ export const organizationHome: OrganizationHomePayload = {
                     inherits_default_response_contract: true,
                     output_type_id: "code_generation",
                     output_type_label: "Code generation",
-                    output_model_effective_id: "qwen2.5-coder:7b-instruct",
-                    output_model_effective_summary: "Qwen2.5 Coder 7B",
+                    output_model_effective_id: "qwen3:14b",
+                    output_model_effective_summary: "Qwen3 14B",
                     inherits_default_output_model: true,
                 },
             ],
@@ -83,8 +83,8 @@ export const organizationHome: OrganizationHomePayload = {
 
 export const outputModelRouting: OrganizationOutputModelRoutingPayload = {
     routing_mode: "single_model",
-    default_model_id: "qwen2.5-coder:7b-instruct",
-    default_model_summary: "Qwen2.5 Coder 7B",
+    default_model_id: "qwen3:14b",
+    default_model_summary: "Qwen3 14B",
     hardware_summary: "Local-first self-hosted posture tuned for the current Ollama inventory and a 16GB-class GPU host.",
     review_permission_prompt: "Ask the owner/admin before Soma reviews potential model behavior for a requested output or changes saved routing.",
     automatic_selection_criteria: [

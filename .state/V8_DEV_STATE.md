@@ -31,8 +31,10 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
 - `IN_REVIEW` Wave 1 validation is in final review with focused and release-style evidence: tool-assisted server tests, Team Lead/group broadcast server tests, protocol tests, Interface typecheck, targeted Team Lead/Soma execution-summary Vitest coverage, docs link/layout tests, line-count gate, whitespace check, browser-visible component proof, mocked Groups browser proof, live-backend proof in the WSL release lane, and the Windows `http://localhost:3000` GUI probe.
 - `ACTIVE` next directed-execution work now moves to the post-Wave-1 lanes: Capability Manifest runtime integration and Connected Tools capability clarity; Run/Output hardening for durable output objects, proof links, and recovery metadata; and GUI directed-execution cleanup so the default Soma path stays outcome-shaped while advanced proof surfaces remain reachable.
 - `IN_REVIEW` post-Wave-1 parallel team execution has landed locally across runtime, capability, and GUI lanes: execution summaries now carry explicit run/proof classifications and output retention classes; deterministic runtime-state chat returns an audit-only/non-retained direct-Soma summary; Exchange/artifact/MCP normalization passes run/no-run/retention metadata; direct MCP tool-call responses include execution-summary proof when available; `/api/v1/capabilities` exposes a derived capability manifest snapshot from exchange seed capabilities, MCP registry/library entries, Mycelis Search, internal tools, and host-command allowlists; Connected Tools now prioritizes "What Soma Can Use" capability visibility with MCP drill-down preserved; and the default Soma surface now renders the latest response as intent, understanding, execution, capability/team use, outputs, proof/recovery, and next step. `docs/API_REFERENCE.md` was updated for the new capability API; `README.md`, `docs/architecture/OPERATIONS.md`, `ops/README.md`, and `interface/lib/docsManifest.ts` were reviewed and left unchanged.
-- `IN_REVIEW` local integration evidence for the post-Wave-1 lanes is green after one transient Windows/NATS socket rerun: focused Go protocol/exchange/capabilities/server/swarm tests passed; `go build ./cmd/server` passed; focused Soma and Connected Tools Vitest suites passed; `npx tsc --noEmit` passed; docs link/layout/runtime-deploy text tests passed; and `git diff --check` passed. Full release proof still requires commit/push, WSL refresh, and `uv run inv wsl.validate --lane=release` from the dedicated `mycelis-root` checkout.
-- `COMPLETE` directed-execution validation has landed for this slice: browser-visible component proof covers direct Soma tool-assisted search summaries showing `tool_assisted_work`, `web_search`, completed status, and proof link; Team Lead guidance summaries show `team_execution` while asserting no `/runs/` link appears when no real `run_id` exists; mocked Groups browser proof shows group broadcast execution-summary/audit-proof visibility after `POST /api/v1/groups/{id}/broadcast`; and release proof is green from the dedicated `mycelis-root` deployment checkout, recorded in latest state commit `f332c680cc6eec285da018dc48c9760dd15cb4e7`.
+- `IN_REVIEW` local integration evidence for the post-Wave-1 lanes is green and committed in `de8f5fc1ad907d64ba8cf06db4f7b118487f2667` (`Advance directed execution capability and proof surfaces`): focused Go protocol/exchange/capabilities/server/swarm tests passed; `go test ./... -p 1` passed; `go build ./cmd/server` passed; focused Soma and Connected Tools Vitest suites passed; full Interface unit suite passed in WSL (`115` files / `515` tests); `npx tsc --noEmit` passed; `uv run inv interface.build` passed; docs link/layout/runtime-deploy text tests passed; `uv run inv quality.max-lines --limit 300` passed; and `git diff --check` passed.
+- `IN_REVIEW` the local default-model posture has been updated for the Soma-first self-hosted MVP architecture: the operator refreshed Ollama model storage to `E:\.ollama\models`, installed `qwen3:14b` and `qwen3:8b`, and the checked-in local Ollama defaults now point Soma/basic self-hosted operation at `qwen3:14b` instead of the older coder-first default. Windows validation is green for `go test ./internal/server -run OutputModel -count=1`, `npm test -- OrganizationPage`, `go test ./... -count=1 -p 1`, `uv run inv interface.typecheck`, `uv run inv interface.build`, `uv run pytest tests/test_docs_links.py tests/test_documentation_layout_contract.py -q`, `uv run inv quality.max-lines --limit 300`, and `git diff --check`; `uv run inv core.test` remains prone to Windows NATS socket contention when it runs packages concurrently, so the serialized Go command is the accepted Windows proof for this slice.
+- `BLOCKED` target release proof for the current head plus local default-model update is not accepted yet. Previous `de8f5fc1ad907d64ba8cf06db4f7b118487f2667` WSL release proof reached Compose build/health but was interrupted after the WSL Ollama relay needed manual repair, so browser-live proof and the final Windows `http://localhost:3000` probe still need a clean rerun from a committed, git-refreshed `mycelis-root` checkout with the `qwen3:14b` default.
+- `COMPLETE` previous directed-execution validation remains the historical release baseline recorded by state commit `f332c680cc6eec285da018dc48c9760dd15cb4e7`: browser-visible component proof covered direct Soma tool-assisted search summaries, Team Lead guidance summaries, mocked Groups execution-summary/audit-proof visibility, and a green dedicated `mycelis-root` release lane. This proof is superseded for acceptance by the current `de8f5fc` plus `qwen3:14b` default-model proof requirement.
 - `ACTIVE` the Windows repo is now the canonical edit, review, and git-push surface for ongoing work. It is not the authoritative release-proof environment.
 - `ACTIVE` the authoritative deployment-mimic proof checkout lives inside the dedicated `mycelis-root` WSL distro at `/home/erik/deployments/mycelis/checkouts/main`; full install, build, API test, UI test, Compose runtime proof, and release-style validation happen from that WSL checkout.
 - `ACTIVE` the canonical runner contract stays narrow in the WSL proof checkout: use `uv run inv ...` for real work, use `uvx --from invoke inv -l` only as a compatibility probe, and treat raw `npx`, direct Playwright, and PowerShell wrappers as troubleshooting-only historical fallbacks rather than the normal proof path.
@@ -45,7 +47,7 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
 - `ACTIVE` current WSL proof gate is the guarded `uv run inv wsl.validate --lane=release` path from the refreshed `mycelis-root` deployment checkout: it runs Compose-safe runtime preflight first, then owns Compose health/storage proof, focused live-backend browser checks, and the Windows `http://localhost:3000` GUI probe. The standalone `ci.release-preflight --lane=release` and `ci.service-check --live-backend` lanes remain valid for local lifecycle/service proof, but they are not the WSL Compose service gate.
 - `IN_REVIEW` source hygiene is now ratcheted through `uv run inv quality.max-lines` at the default `300` LOC source-tree limit with temporary no-regression caps in `ops/quality_legacy_caps.txt`; the current oversized inventory is accepted only as a modularization backlog and each cap should move downward as files are decomposed.
 - `ACTIVE` the guarded `wsl.validate` proof lane now bootstraps `.env.compose` from the tracked example when a clean proof checkout has none yet, creates the configured Compose output-block host path when it is missing, loads that Compose env into the managed Interface proxy/browser proof path, maps `--lane=service` and `--lane=release` to `ci.release-preflight --lane=runtime --no-e2e`, then runs Compose health/storage proof, focused live-backend Soma/team/groups/workspace browser checks, and the Windows `http://localhost:3000` GUI probe in one task-owned pass.
-- `COMPLETE` the latest clean WSL release proof pass from the refreshed `mycelis-root` deployment checkout is green and recorded by state commit `f332c680cc6eec285da018dc48c9760dd15cb4e7`: `uv run inv wsl.refresh` synced WSL to `origin/main`, then `uv run inv wsl.validate --lane=release` passed. Evidence included `uv run inv install`, `uv run inv ci.release-preflight --lane=runtime --no-e2e`, `uv run inv auth.posture --compose`, `uv run inv compose.up --build --wait-timeout=240`, `uv run inv compose.health`, `uv run inv compose.storage-health`, Windows-side `http://localhost:3000 [200]`, and live Chromium `soma-governance-live.spec.ts`, `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts` against the Compose-delivered Interface via `--server-mode=external`. Compose health reported text inference online and media offline as a non-blocking note.
+- `COMPLETE` the previous clean WSL release proof pass from the refreshed `mycelis-root` deployment checkout is green and recorded by state commit `f332c680cc6eec285da018dc48c9760dd15cb4e7`: `uv run inv wsl.refresh` synced WSL to `origin/main`, then `uv run inv wsl.validate --lane=release` passed. Evidence included `uv run inv install`, `uv run inv ci.release-preflight --lane=runtime --no-e2e`, `uv run inv auth.posture --compose`, `uv run inv compose.up --build --wait-timeout=240`, `uv run inv compose.health`, `uv run inv compose.storage-health`, Windows-side `http://localhost:3000 [200]`, and live Chromium `soma-governance-live.spec.ts`, `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts` against the Compose-delivered Interface via `--server-mode=external`. Compose health reported text inference online and media offline as a non-blocking note.
 - `COMPLETE` the prior WSL/Docker instability blocker is superseded by the dedicated `mycelis-root` proof lane and task repairs: WSL validation now defaults to `/home/erik/deployments/mycelis/checkouts/main`, uses `npm ci` for clean Interface bootstrap, sanitizes Linux PATH for Docker pulls, prepares the WSL Ollama relay without nested `wsl.exe`, and runs browser proof against the Compose UI instead of replacing it.
 - `COMPLETE` workspace-relative file/tool requests now treat leading `workspace/` as an alias for the configured workspace root instead of nesting a second `workspace` path under `MYCELIS_WORKSPACE`; the live Compose-backed workspace browser assertions were updated to match that runtime contract.
 - `IN_REVIEW` the guarded `wsl.refresh` lane now runs WSL git fetch noninteractively, attempts a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, preserves generated WSL runtime/cache roots during source cleanup, and fails before reset/clean with SSH/HTTPS guidance when host auth is still blocked.
@@ -962,43 +964,41 @@ Evidence:
 7. `uv run inv quality.max-lines --limit 300` -> pass; `OrganizationContextShell.tsx` and `interface/e2e/support/organization-entry.ts` caps were ratcheted down to their reduced current sizes.
 8. `uv run inv interface.e2e --project=chromium --workers=1` -> pass (`81` passed, `22` skipped) after updating stale browser expectations around the new Soma-first and advanced-team-design paths.
 9. `uv run inv lifecycle.status` -> pass; Docker, PostgreSQL, NATS, Core, and Frontend were down, Ollama remained up as the host AI service, and no Mycelis listeners were left on `3000`, `3001`, or `3100`.
-10. WSL release proof has since been refreshed from committed state in the dedicated `mycelis-root` proof distro; latest state commit `f332c680cc6eec285da018dc48c9760dd15cb4e7` records the green release lane and supersedes this earlier Windows-managed validation caveat.
+10. WSL release proof was later refreshed from committed state in the dedicated `mycelis-root` proof distro; state commit `f332c680cc6eec285da018dc48c9760dd15cb4e7` records that green release lane and superseded this earlier Windows-managed validation caveat.
 
 ## Immediate Next Actions
 
-1. `COMPLETE` validate WSL git auth repair/report behavior for `wsl.refresh`.
-   - keep the Windows-to-WSL handoff git-backed instead of artifact-backed
-   - make manual source handoff unnecessary; when host auth is blocked, fail with actionable SSH/HTTPS guidance
-2. `COMPLETE` run `uv run inv wsl.validate` from the refreshed WSL proof checkout before accepting the new browser-gap evidence as authoritative.
-   - prove release-preflight, Compose health/storage, live Soma/team/groups/workspace browser workflows, and the Windows `http://localhost:3000` probe from the git-refreshed checkout
-   - use the `wsl.refresh` auth guidance instead of copying source if WSL fetch is still blocked
-3. `COMPLETE` keep `/runs` browser proof green beyond route smoke.
-   - current focused proof verifies list-to-detail review, detail conversation filtering, operator interjection, event retry/failure messaging, and chain navigation with parent/child metadata through browser-visible coverage
-   - keep the existing tighter unit coverage as the foundation for future live-backend depth
-4. `COMPLETE` unskip and keep green the guided Soma retry/recovery browser scenario.
-   - preserve organization context when a guided action fails
-   - prove the retry path from the live UI contract rather than leaving it as a known skipped branch
-5. `COMPLETE` live MCP-backed workflow correlation proof is green from the refreshed WSL proof checkout.
-   - a real temporary team workflow uses the filesystem MCP `read_file` capability
-   - matching recent MCP activity is visible back to the operator in Connected Tools
-6. `NEXT` rerun the broader headed Chromium MVP certification pass from committed state after the next proof-hardening slice lands.
+1. `COMPLETE` finish Windows-side validation for the `qwen3:14b` default-model slice.
+   - `go test ./... -count=1 -p 1`
+   - `uv run inv interface.typecheck`
+   - `uv run inv interface.build`
+   - `uv run pytest tests/test_docs_links.py tests/test_documentation_layout_contract.py -q`
+   - `uv run inv quality.max-lines --limit 300`
+2. `ACTIVE` commit and push the default-model/state/doc slice from the Windows repo.
+   - keep the handoff git-backed
+   - do not copy source or generated artifacts into WSL manually
+3. `NEXT` refresh the dedicated `mycelis-root` proof checkout and run the release lane.
+   - `uv run inv wsl.refresh`
+   - `uv run inv wsl.validate --lane=release`
+   - prove Compose health/storage, text inference through the WSL Ollama relay, live Soma/team/groups/workspace browser checks, and the Windows `http://localhost:3000` probe
+4. `NEXT` rerun the broader headed Chromium MVP certification pass from committed state after the clean WSL release pass.
    - keep managed `uv run inv interface.e2e ...` invocations serialized from WSL
    - treat browser-visible proof as the release-center check, not only unit/type safety
-7. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
+5. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
    - verify the Windows browser can still reach the WSL/Compose-hosted UI
    - keep explicit non-loopback AI endpoint posture intact as docs/tests/runtime evolve
-8. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
+6. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
    - `README.md`
    - `docs/TESTING.md`
    - `docs/LOCAL_DEV_WORKFLOW.md`
    - `docs/architecture/OPERATIONS.md`
    - `ops/README.md`
    - `interface/lib/docsManifest.ts` whenever the in-app docs surface changes
-9. `REQUIRED` keep all new validation checkpoints, blocker transitions, and accepted proof results recorded here in `V8_DEV_STATE.md` in the same delivery window.
-10. `NEXT` continue the workflow-complete verification lane from the current durable workflow/testing contracts.
+7. `REQUIRED` keep all new validation checkpoints, blocker transitions, and accepted proof results recorded here in `V8_DEV_STATE.md` in the same delivery window.
+8. `NEXT` continue the workflow-complete verification lane from the current durable workflow/testing contracts.
    - keep mapping primary user workflows to explicit automated proof
    - tighten any slice that proves only immediate interaction instead of user-visible outcome
-11. `NEXT` keep the current MCP/team/media/output-value lanes outcome-shaped.
+9. `NEXT` keep the current MCP/team/media/output-value lanes outcome-shaped.
    - extend direct-vs-team/media/browser proof into more live configured provider/runtime checks
    - keep retained outputs, previews, downloads, and operator-readable recent activity as the visible success contract
 

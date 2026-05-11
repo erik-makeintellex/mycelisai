@@ -45,7 +45,7 @@ The current hosted Ollama inventory observed for this release lane includes:
 - local custom orchestration candidates: `orchestrator:latest`, `mother-brain:latest`, `symbios-orchestrator:latest`, `wonderluma-qwen:latest`
 - vision analysis candidates: `llava:7b`, `wonderluma-vision:latest`, `prism:latest`
 
-Current repo config sets the enabled `ollama` provider to `qwen2.5-coder:7b-instruct` at `http://127.0.0.1:11434/v1`. Several execution profiles still name `local-ollama-dev`, but that provider is disabled in the checked-in local config, so runtime availability handling must continue to fall back to the enabled local provider instead of surfacing a generic chat failure.
+Current repo config sets the enabled `ollama` provider to `qwen3:14b` at `http://127.0.0.1:11434/v1`. Several execution profiles still name `local-ollama-dev`, but that provider is disabled in the checked-in local config, so runtime availability handling must continue to fall back to the enabled local provider instead of surfacing a generic chat failure.
 
 The official Ollama library currently exposes a wider multimodal model surface, including current vision/tool/reasoning families such as Gemma 4 and Qwen vision-language families. Treat those as candidate additions, not as already-proven local runtime dependencies, until they are pulled and validated on the target host.
 

@@ -89,7 +89,7 @@ var curatedOutputModelCatalog = []outputModelCatalogSeed{
 }
 
 func defaultOrganizationOutputModelID() string {
-	return "qwen2.5-coder:7b-instruct"
+	return "qwen3:14b"
 }
 
 func normalizeOrganizationOutputModelRoutingMode(value string) OrganizationOutputModelRoutingMode {

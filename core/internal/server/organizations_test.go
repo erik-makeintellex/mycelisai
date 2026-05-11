@@ -176,7 +176,7 @@ func TestHandleCreateOrganization_FromTemplateAndGetHome(t *testing.T) {
 	if planner["inherits_department_ai_engine"] != false || planner["inherits_default_response_contract"] != false {
 		t.Fatalf("expected Planner to expose type-specific bindings, got %+v", planner)
 	}
-	if planner["output_type_id"] != "research_reasoning" || planner["output_model_effective_summary"] != "Qwen2.5 Coder 7B" {
+	if planner["output_type_id"] != "research_reasoning" || planner["output_model_effective_summary"] != "Qwen3 14B" {
 		t.Fatalf("expected default single-model output routing on planner, got %+v", planner)
 	}
 
