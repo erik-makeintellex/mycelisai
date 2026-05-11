@@ -77,6 +77,7 @@ def ensure(
         "mycelis.relay.target_host": target_host,
         "mycelis.relay.target_port": str(target_port),
         "mycelis.relay.listen_port": str(relay_port),
+        "mycelis.relay.restart_policy": "unless-stopped",
     }
     if labels and all(labels.get(key) == value for key, value in expected.items()):
         return
@@ -103,6 +104,8 @@ def ensure(
             f"mycelis.relay.target_port={target_port}",
             "--label",
             f"mycelis.relay.listen_port={relay_port}",
+            "--label",
+            "mycelis.relay.restart_policy=unless-stopped",
             relay_image,
             "sh",
             "-lc",
@@ -140,7 +143,12 @@ def prepare_host(
     if labels and labels.get("mycelis.relay.listen_port") == str(listen_port):
         target_port = labels.get("mycelis.relay.target_port", "")
         target_host = labels.get("mycelis.relay.target_host", "")
-        if target_port == str(configured_port) and target_host in {configured_host, "127.0.0.1"}:
+        restart_policy = labels.get("mycelis.relay.restart_policy", "")
+        if (
+            target_port == str(configured_port)
+            and target_host in {configured_host, "127.0.0.1"}
+            and restart_policy == "unless-stopped"
+        ):
             print(
                 "  WSL Ollama relay: "
                 f"http://host.docker.internal:{listen_port} -> {target_host}:{target_port}"

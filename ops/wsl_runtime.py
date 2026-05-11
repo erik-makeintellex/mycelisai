@@ -10,7 +10,6 @@ from invoke import Collection, task
 
 from .config import ROOT_DIR, is_windows
 
-
 ns = Collection("wsl")
 
 DEFAULT_WSL_DISTRO = os.environ.get("MYCELIS_WSL_PROOF_DISTRO") or os.environ.get("MYCELIS_WSL_DISTRO") or "mycelis-root"

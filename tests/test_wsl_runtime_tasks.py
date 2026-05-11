@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 from invoke import Context
 
 from ops import wsl_runtime
-
 
 def test_configured_checkout_rejects_mnt_paths():
     try:

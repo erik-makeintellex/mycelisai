@@ -254,7 +254,6 @@ uv run inv lifecycle.health
 ```
 
 For the supported home-runtime stack:
-
 ```bash
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.status

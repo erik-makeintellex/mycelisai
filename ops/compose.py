@@ -1,11 +1,9 @@
 import subprocess
-import json
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 from invoke import task, Collection
 
+from . import compose_cognitive_warm
 from . import compose_env
 from . import compose_probe
 from . import compose_storage
@@ -63,10 +61,7 @@ def _compose_effective_env(env_values: dict[str, str] | None = None) -> dict[str
 def _wsl_exec_command(*args: str) -> list[str]:
     return compose_env.wsl_exec_command(*args)
 
-
-def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:
-    return compose_env.port_open(port, host=host, timeout=timeout)
-
+_port_open = compose_env.port_open
 
 def _normalize_bool(value: str) -> bool:
     return compose_env.normalize_bool(value)
@@ -664,75 +659,6 @@ def health(c):
     )
 
 
-def _compose_ollama_probe_base_url(env_values: dict[str, str]) -> str:
-    configured = _clean_env_value(env_values.get("MYCELIS_COMPOSE_OLLAMA_HOST", "http://host.docker.internal:11434"))
-    host, port = _parse_network_endpoint(configured)
-    if (docker_host_mode() == "wsl" or running_in_wsl()) and host == "host.docker.internal":
-        return f"http://127.0.0.1:{port}"
-    return configured.rstrip("/")
-
-
-def _configured_ollama_model_id() -> str:
-    try:
-        import yaml
-
-        config = yaml.safe_load((ROOT_DIR / "core" / "config" / "cognitive.yaml").read_text(encoding="utf-8")) or {}
-        provider = (config.get("providers") or {}).get("ollama") or {}
-        model_id = str(provider.get("model_id") or "").strip()
-        if model_id:
-            return model_id
-    except Exception:
-        pass
-    return "qwen3:14b"
-
-
-@task
-def warm_cognitive(c):
-    """Warm the Compose text model through the same endpoint Core uses."""
-    del c
-    _require_compose_env_file()
-    env_values = _compose_effective_env()
-    _validate_compose_env(env_values)
-    env_values = _prepare_wsl_ollama_host(env_values)
-
-    model_id = _configured_ollama_model_id()
-    base_url = _compose_ollama_probe_base_url(env_values)
-    warm_url = f"{base_url}/v1/chat/completions"
-    payload = {
-        "model": model_id,
-        "messages": [{"role": "user", "content": "/no_think Reply READY."}],
-        "stream": False,
-        "max_tokens": 8,
-    }
-    print("=== Mycelis Compose Cognitive Warm-Up ===\n")
-    print(f"  model: {model_id}")
-    print(f"  endpoint: {warm_url}")
-    try:
-        request = urllib.request.Request(
-            warm_url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(request, timeout=240) as response:
-            body = response.read().decode("utf-8", errors="replace")
-            if response.status != 200:
-                raise SystemExit(f"Cognitive warm-up failed: {warm_url} returned HTTP {response.status}.")
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"Cognitive warm-up failed: {warm_url} returned HTTP {exc.code}: {detail}") from exc
-    except Exception as exc:
-        raise SystemExit(f"Cognitive warm-up failed: {exc}") from exc
-
-    try:
-        decoded = json.loads(body)
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Cognitive warm-up failed: invalid JSON response ({exc}).") from exc
-    if not decoded.get("choices"):
-        raise SystemExit("Cognitive warm-up failed: response did not include choices.")
-    print("  [OK] text model completed a warm-up chat response.")
-
-
 @task(help={"service": "Optional compose service name.", "tail": "Number of log lines to show (default: 200)."})
 def logs(c, service="", tail=200):
     """Show compose logs for the full stack or a single service."""
@@ -753,5 +679,5 @@ ns.add_task(down)
 ns.add_task(migrate)
 ns.add_task(status)
 ns.add_task(health)
-ns.add_task(warm_cognitive, name="warm-cognitive")
+ns.add_task(compose_cognitive_warm.warm_cognitive, name="warm-cognitive")
 ns.add_task(logs)
