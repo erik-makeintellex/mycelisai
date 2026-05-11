@@ -209,12 +209,7 @@ export const DOC_MANIFEST: DocSection[] = [
     {
         section: "Architecture",
         docs: [
-            {
-                slug: "architecture-library-index",
-                label: "Architecture Library Index",
-                path: "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md",
-                description: "Canonical modular index for target delivery, architecture, UI, and testing authority",
-            },
+            { slug: "architecture-library-index", label: "Architecture Library Index", path: "docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md", description: "Canonical modular index for target delivery, architecture, UI, and testing authority" },
             {
                 slug: "target-deliverable-v7",
                 label: "Target Deliverable V7",
@@ -272,6 +267,8 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "v8-ui-api-operator-experience-contract", label: "V8 UI/API/Operator Contract", path: "docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md", description: "Canonical operator workflow contract for AI Organization creation and Soma-first runtime behavior" },
             { slug: "v8-directed-execution-ui-runtime-alignment", label: "V8 Directed Execution UI", path: "docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md", description: "UI/runtime alignment directive for Soma-centered directed execution, durable outputs, run proof, capabilities, governance, and deployment trust" },
             { slug: "v8-directed-execution-delivery-plan", label: "V8 Directed Execution Delivery", path: "docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md", description: "Team execution plan for directed-execution work packages, waves, dependencies, validation gates, and orchestration rules" },
+            { slug: "v8-governed-execution-doctrine", label: "V8 Governed Execution Doctrine", path: "docs/architecture-library/V8_GOVERNED_EXECUTION_DOCTRINE.md", description: "Doctrine for accountable cognition, Event Spine truth, Workspace visibility, delivery compression, and manifestation pathway" },
+            { slug: "v8-mvp-governed-execution-mission-plan", label: "V8 MVP Governed Execution Missions", path: "docs/architecture-library/V8_MVP_GOVERNED_EXECUTION_MISSION_PLAN.md", description: "Executable MVP mission plan for governed execution, Event Spine truth, Workspace visibility, capability governance, and proof-backed completion" },
             {
                 slug: "v8-1-living-organization-architecture",
                 label: "V8.1 Living Organization Baseline",
