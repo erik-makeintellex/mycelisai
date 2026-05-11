@@ -108,6 +108,7 @@ uv run inv lifecycle.memory-restart --frontend
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.status
 uv run inv compose.health
+uv run inv compose.warm-cognitive
 uv run inv compose.migrate
 uv run inv compose.storage-health
 uv run inv compose.infra-up --wait-timeout=180
@@ -245,7 +246,7 @@ Open-standard resources include Deployment, Service, ServiceAccount, Secret, Con
 
 Docker Compose is rapid local development/proof only and must not become the production deployment standard. Use Compose for single-host self-hosted runtime. Keep `MYCELIS_COMPOSE_OLLAMA_HOST` container-reachable and avoid `localhost` unless it is meaningful inside the container path. use explicit reachable AI endpoints for deployed text or media engines instead of localhost assumptions; the Helm chart applies `MYCELIS_K8S_TEXT_ENDPOINT` through provider-specific env overrides.
 
-use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`; Compose can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST`.
+use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`; Compose can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST`, that relay is restartable, and `compose.warm-cognitive` proves the configured text model can complete a tiny chat before live browser proof starts.
 
 the compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root.
 

@@ -259,6 +259,7 @@ For the supported home-runtime stack:
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.status
 uv run inv compose.health
+uv run inv compose.warm-cognitive
 ```
 
 Bootstrap reminder: normal startup fails closed unless a valid bootstrap bundle is present, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must choose a bundle when more than one is mounted.

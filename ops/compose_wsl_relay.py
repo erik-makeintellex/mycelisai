@@ -91,7 +91,8 @@ def ensure(
         [
             "run",
             "-d",
-            "--rm",
+            "--restart",
+            "unless-stopped",
             "--name",
             relay_name,
             "--network",

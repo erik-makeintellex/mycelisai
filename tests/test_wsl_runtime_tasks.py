@@ -216,6 +216,7 @@ def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
         "uv run inv compose.up --build --wait-timeout=240",
         "uv run inv compose.health",
         "uv run inv compose.storage-health",
+        "uv run inv compose.warm-cognitive",
         "uv run inv interface.e2e --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=external",
         "uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts --live-backend --workers=1 --server-mode=external",
         "uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
@@ -251,6 +252,7 @@ def test_validate_release_lane_uses_runtime_preflight_before_compose_owned_gates
     assert "uv run inv ci.release-preflight --lane=release --no-e2e" not in shell_calls
     assert "uv run inv compose.health" in shell_calls
     assert "uv run inv compose.storage-health" in shell_calls
+    assert "uv run inv compose.warm-cognitive" in shell_calls
 
 
 def test_ensure_wsl_compose_env_bootstraps_from_example(monkeypatch):

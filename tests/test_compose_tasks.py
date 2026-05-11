@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from ops import compose
+from ops import compose_wsl_relay
 from ops.config import docker_host_path
 
 
@@ -182,6 +183,35 @@ def test_prepare_wsl_ollama_host_runs_inside_direct_wsl_shell(monkeypatch):
 
     assert values["MYCELIS_COMPOSE_OLLAMA_HOST"] == "http://host.docker.internal:11435"
     assert calls == [("127.0.0.1", 11434, 11435)]
+
+
+def test_wsl_ollama_relay_is_restartable():
+    calls: list[tuple[list[str], bool]] = []
+
+    def docker_runner(args: list[str], check: bool = True):
+        calls.append((args, check))
+
+        class Result:
+            stdout = "relay-container\n"
+            returncode = 0
+
+        return Result()
+
+    compose_wsl_relay.ensure(
+        "127.0.0.1",
+        11434,
+        11435,
+        relay_name="mycelis-home-ollama-relay",
+        relay_image="alpine:3.21",
+        inspect_relay_labels=lambda: None,
+        stop_relay=lambda: None,
+        docker_runner=docker_runner,
+    )
+
+    run_args = calls[0][0]
+    assert "--restart" in run_args
+    assert "unless-stopped" in run_args
+    assert "--rm" not in run_args
 
 
 def test_require_compose_env_file_has_clear_guidance(tmp_path, monkeypatch):
