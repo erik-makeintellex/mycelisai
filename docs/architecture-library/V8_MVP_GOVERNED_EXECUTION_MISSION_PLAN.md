@@ -43,15 +43,15 @@ Status: `NEXT`
 
 Execution scope:
 - define the minimum runtime needed for a single-host governed execution path
-- keep Windows as edit/git surface and WSL/Compose as proof surface
+- keep Windows as edit/git surface, Rancher Desktop K3s as the Windows local Kubernetes parity proof lane, and WSL/Compose as the guarded deployment-mimic proof surface
 - keep `qwen3:14b` as the primary Soma/self-hosted model and specialist models behind governed routing
 - produce a repeatable release proof from `origin/main`
 
 Dependencies:
-- `uv run inv wsl.refresh`
-- `uv run inv wsl.validate --lane=release`
-- host Ollama on `127.0.0.1:11434`
-- WSL/Compose relay to host Ollama
+- Rancher Desktop K3s through `MYCELIS_K8S_BACKEND=rancher`
+- WSL/Compose proof through `uv run inv wsl.refresh` and `uv run inv wsl.validate --lane=release` when Compose deployment-mimic evidence is required
+- explicit reachable Ollama or OpenAI-compatible AI endpoint such as `http://<windows-ai-host>:11434/v1`
+- WSL/Compose relay to the explicit AI endpoint when that proof lane is used
 - Compose Postgres, NATS, Core, Interface, SearXNG, and storage health
 
 Governance implications:
@@ -249,11 +249,11 @@ Keep:
 - capability governance
 - Workspace execution visibility
 - proof-backed completion
-- deployable WSL/Compose release lane
+- Rancher K3s release-parity proof plus guarded WSL/Compose proof when required
 
 ## Initial Execution Sequence
 
-1. `NEXT` Mission 1: refresh and pass the WSL release proof from the committed `qwen3:14b` default.
+1. `NEXT` Mission 1: pass the committed-tree Rancher K3s RC proof, with WSL Compose proof retained as secondary deployment-mimic evidence.
 2. `NEXT` Mission 3: tighten the minimum event taxonomy and reconstruction checks for governed actions.
 3. `NEXT` Mission 2: make Workspace show active execution contract, governance state, capability use, and proof as one continuous operator surface.
 4. `NEXT` Mission 4: close capability invocation gaps where tool use is not visibly governed before execution.

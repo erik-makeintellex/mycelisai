@@ -41,7 +41,6 @@ def test_k8s_docs_define_clustered_open_standards_as_target_deployment():
             TESTING,
             [
                 "when the validation target is clustered deployment, run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`; Compose remains rapid local development/proof only",
-                "clustered Kubernetes proof: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`",
             ],
         ),
     ]

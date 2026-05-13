@@ -3,6 +3,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+import subprocess
 
 from invoke import Context
 import pytest
@@ -72,6 +73,26 @@ def test_deploy_uses_k3d_image_import_when_k3d_backend_selected(monkeypatch, cap
     assert any("--set image.tag=v0.1.0-deadbee" in command for command in ctx.commands)
 
 
+def test_deploy_skips_image_import_for_rancher_backend(monkeypatch, capsys):
+    ctx = FakeContext()
+
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "rancher")
+    monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.1.0-deadbee")
+    monkeypatch.setenv("POSTGRES_USER", "mycelis")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "password")
+    monkeypatch.setenv("POSTGRES_DB", "cortex")
+    monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
+
+    k8s.deploy.body(ctx)
+    output = capsys.readouterr().out
+
+    assert "Deployment posture: Rancher Desktop K3s validation" in output
+    assert "image import skipped" in output
+    assert not any("k3d image import" in command for command in ctx.commands)
+    assert not any("kind load docker-image" in command for command in ctx.commands)
+    assert any("--set image.tag=v0.1.0-deadbee" in command for command in ctx.commands)
+
+
 def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch, tmp_path: Path, capsys):
     ctx = FakeContext()
     values_file = tmp_path / "values-enterprise-windows-ai.yaml"
@@ -90,6 +111,7 @@ def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch, tmp_path: P
     monkeypatch.setenv("POSTGRES_DB", "cortex")
     monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
     monkeypatch.setenv("MYCELIS_K8S_TEXT_ENDPOINT", "http://192.168.50.156:11434/v1")
+    monkeypatch.setenv("MYCELIS_K8S_TEXT_MODEL_ID", "qwen3:8b")
     monkeypatch.setenv("MYCELIS_K8S_MEDIA_ENDPOINT", "http://192.168.50.156:8001/v1")
     monkeypatch.setenv("MYCELIS_K8S_VALUES_FILE", values_file.name)
 
@@ -97,9 +119,12 @@ def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch, tmp_path: P
     output = capsys.readouterr().out
 
     assert "Deployment posture: enterprise self-hosted with Windows-hosted AI" in output
+    assert "Text AI model: qwen3:8b" in output
     helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
     assert f"--set-string ai.textEndpoint={k8s._shell_quote('http://192.168.50.156:11434/v1')}" in helm_command
+    assert f"--set-string ai.textModelId={k8s._shell_quote('qwen3:8b')}" in helm_command
     assert f"--set-string ai.mediaEndpoint={k8s._shell_quote('http://192.168.50.156:8001/v1')}" in helm_command
+    assert "--set networkPolicy.aiEgress.enabled=true" in helm_command
     assert f"--values {k8s._shell_quote(values_file.resolve())}" in helm_command
 
 
@@ -175,6 +200,19 @@ def test_k8s_backend_prefers_k3d_when_available(monkeypatch):
     assert k8s._k8s_backend() == "k3d"
 
 
+def test_k8s_backend_auto_detects_rancher_context_when_no_k3d_or_kind(monkeypatch):
+    monkeypatch.delenv("MYCELIS_K8S_BACKEND", raising=False)
+    monkeypatch.setattr(k8s.shutil, "which", lambda name: "kubectl" if name == "kubectl" else None)
+
+    def fake_run(command, **_kwargs):
+        assert command == ["kubectl", "config", "current-context"]
+        return subprocess.CompletedProcess(command, 0, stdout="rancher-desktop\n", stderr="")
+
+    monkeypatch.setattr(k8s.subprocess, "run", fake_run)
+
+    assert k8s._k8s_backend() == "rancher"
+
+
 def test_init_creates_k3d_cluster_when_k3d_backend_selected(monkeypatch):
     ctx = FakeContext()
     monkeypatch.setattr(k8s, "_k8s_backend", lambda: "k3d")
@@ -183,6 +221,25 @@ def test_init_creates_k3d_cluster_when_k3d_backend_selected(monkeypatch):
     k8s.init.body(ctx)
 
     assert "k3d cluster create mycelis-cluster" in ctx.commands
+
+
+def test_init_accepts_existing_rancher_cluster(monkeypatch):
+    ctx = FakeContext()
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "rancher")
+    monkeypatch.setattr(k8s, "_cluster_exists", lambda _c: True)
+
+    k8s.init.body(ctx)
+
+    assert not ctx.commands
+
+
+def test_init_fails_when_rancher_cluster_is_not_reachable(monkeypatch):
+    ctx = FakeContext()
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "rancher")
+    monkeypatch.setattr(k8s, "_cluster_exists", lambda _c: False)
+
+    with pytest.raises(SystemExit, match="Rancher Desktop Kubernetes is not reachable"):
+        k8s.init.body(ctx)
 
 
 def test_init_reads_and_writes_kind_config_under_root_dir(monkeypatch, tmp_path: Path):
@@ -228,6 +285,14 @@ def test_reset_uses_k3d_cluster_delete_when_k3d_backend_selected(monkeypatch):
     assert "k3d cluster delete mycelis-cluster" in ctx.commands
 
 
+def test_reset_refuses_to_reset_rancher_desktop(monkeypatch):
+    ctx = FakeContext()
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "rancher")
+
+    with pytest.raises(SystemExit, match="does not reset Rancher Desktop"):
+        k8s.reset.body(ctx)
+
+
 def test_cluster_exists_parses_kind_get_clusters_directly(monkeypatch):
     ctx = FakeContext({"kind get clusters": FakeResult(stdout="other\nmycelis-cluster\n")})
     monkeypatch.setattr(k8s, "_k8s_backend", lambda: "kind")
@@ -250,6 +315,15 @@ def test_cluster_exists_parses_k3d_cluster_list_directly(monkeypatch):
     assert k8s._cluster_exists(ctx)
 
     assert ctx.commands == ["k3d cluster list"]
+
+
+def test_cluster_exists_uses_cluster_info_for_rancher(monkeypatch):
+    ctx = FakeContext({"kubectl cluster-info": FakeResult()})
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "rancher")
+
+    assert k8s._cluster_exists(ctx)
+
+    assert ctx.commands == ["kubectl cluster-info"]
 
 
 def test_status_skips_cluster_checks_when_docker_is_down(capsys):

@@ -33,9 +33,9 @@ uv run inv compose.health
 uv run inv interface.check
 ```
 
-### 2.2 Kind/Kubernetes runtime
+### 2.2 Local Kubernetes runtime
 
-Use only when cluster behavior matters. Prefer k3d for local cluster proof; use Kind only when explicitly selected.
+Use only when cluster behavior matters. Prefer Rancher Desktop K3s on Windows, prefer k3d for WSL/Linux local cluster proof, and use Kind only when explicitly selected.
 
 ```bash
 uv run inv lifecycle.down
@@ -43,6 +43,8 @@ uv run inv k8s.up
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
 ```
+
+For Rancher Desktop K3s proof, set `MYCELIS_K8S_BACKEND=rancher`, use `charts/mycelis-core/values-k3d.yaml` as the shared local-Kubernetes preset, and use the K8s/PVC Playwright workspace probe when a browser spec asserts backend-written files.
 
 ### 2.3 Windows Self-Hosted Operator Runtime
 
@@ -56,7 +58,7 @@ Record branch, commit SHA, date/time, runtime lane, browser, UI URL, live-backen
 
 For operator-facing certification, run critical Chromium proof in headed mode and do not fan out multiple managed Playwright invocations against the same workspace/port.
 
-Critical commands are listed in [V8 UI Team Browser Workflows](V8_UI_TEAM_BROWSER_WORKFLOWS.md).
+Critical commands are listed in [V8 UI Team Browser Workflows](V8_UI_TEAM_BROWSER_WORKFLOWS.md). For the guarded WSL release lane, `uv run inv wsl.validate --lane=release --headed-browser` runs the focused live-backend Compose proof with visible Playwright windows after the standard release validation sequence.
 
 ## 4. Execution Order
 

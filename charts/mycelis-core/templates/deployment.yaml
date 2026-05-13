@@ -96,6 +96,12 @@ spec:
               value: {{ $.Values.ai.textEndpoint | quote }}
             {{- end }}
             {{- end }}
+            {{- if .Values.ai.textModelId }}
+            {{- range $providerID := .Values.ai.textProviderIds }}
+            - name: MYCELIS_PROVIDER_{{ $providerID | replace "-" "_" | upper }}_MODEL_ID
+              value: {{ $.Values.ai.textModelId | quote }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.ai.mediaEndpoint }}
             - name: MYCELIS_MEDIA_ENDPOINT
               value: {{ .Values.ai.mediaEndpoint | quote }}

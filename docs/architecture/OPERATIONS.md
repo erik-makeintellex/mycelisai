@@ -22,7 +22,7 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 Operational lanes use:
 - `uv` and Invoke for repo task execution
 - Docker/Compose for the supported home-runtime stack
-- k3d or Kind plus kubectl/Helm for local Kubernetes
+- Rancher Desktop K3s on Windows, or k3d/Kind plus kubectl/Helm for local Kubernetes
 - Go, Node.js, and Python for source-mode development
 - PostgreSQL, NATS, and a reachable AI endpoint for live runtime proof
 
@@ -130,7 +130,7 @@ uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterpr
 uv run inv k8s.reset
 ```
 
-Prefer `k3d`; use `MYCELIS_K8S_BACKEND=kind` only for the explicit legacy path.
+Prefer Rancher Desktop K3s on Windows and `k3d` on WSL/Linux; use `MYCELIS_K8S_BACKEND=kind` only for the explicit legacy path. `MYCELIS_K8S_BACKEND=rancher` targets the existing Rancher Desktop cluster and does not create or reset it.
 
 ### Cognitive Tasks (`ops/cognitive.py`)
 
@@ -170,16 +170,17 @@ uv run inv quality.max-lines --limit 300
 
 Choose the runtime lane first:
 - Compose for supported home-runtime proof
-- k3d/Helm for local cluster proof
+- Rancher Desktop K3s or k3d/Helm for local cluster proof
 - source lifecycle for implementation
-- WSL proof checkout for release-style validation from Windows
+- WSL proof checkout for guarded Compose release-style validation from Windows
 
-Windows edit -> git push -> WSL refresh -> WSL validate is the release-proof path:
+Windows edit -> git push -> WSL refresh -> WSL validate is the guarded WSL Compose proof path:
 
 ```bash
 uv run inv wsl.status
 uv run inv wsl.refresh
 uv run inv wsl.validate --lane=release
+uv run inv wsl.validate --lane=release --headed-browser
 ```
 
 The root and Interface install tasks use `npm ci` for Interface dependencies; release proof expects
@@ -220,6 +221,7 @@ Use [Testing](../TESTING.md) for gate details. Operational summary:
 - browser: `uv run inv interface.e2e`
 - live stack: `lifecycle.health` or `compose.health`
 - release: `ci.baseline` or `wsl.validate --lane=release`
+- visible live-window proof: `wsl.validate --lane=release --headed-browser` or focused `interface.e2e --headed --live-backend`
 
 Runtime checks must start clean, verify readiness, run proof once services are healthy, and shut down unless a follow-on check needs them.
 
@@ -233,15 +235,15 @@ Local CI tasks:
 
 GitHub CI proves repo health without hosted agentry. Live service/browser proof is local, WSL, Compose, or target-cluster evidence.
 
-Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a mocked Chromium homepage smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`.
+Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a mocked Chromium homepage smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`; add `--headed-browser` to `wsl.validate` or `wsl.cycle` when focused live-backend Playwright proof must open visible browser windows.
 
 ## VII. Deployment Architecture
 
 ### Kubernetes (Self-Hosted / Helm)
 
-This chart is the target clustered deployment contract for self-hosted and enterprise Kubernetes. Use Helm with explicit values, secrets, persistent storage, ingress, and reachable AI endpoints. Use `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` for chart posture. local Kubernetes now prefers `k3d` when it is installed; fallback with `MYCELIS_K8S_BACKEND=kind`.
+This chart is the target clustered deployment contract for self-hosted and enterprise Kubernetes. Use Helm with explicit values, secrets, persistent storage, ingress, and reachable AI endpoints. Use `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` for chart posture. local Kubernetes now prefers `k3d` when it is installed on WSL/Linux, prefers Rancher Desktop K3s on Windows, and falls back with `MYCELIS_K8S_BACKEND=kind`.
 
-Open-standard resources include Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. `MYCELIS_K8S_VALUES_FILE` may select `values-k3d.yaml`, `values-enterprise.yaml`, or `values-enterprise-windows-ai.yaml`.
+Open-standard resources include Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. `MYCELIS_K8S_VALUES_FILE` may select `values-k3d.yaml`, `values-enterprise.yaml`, or `values-enterprise-windows-ai.yaml`. `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_TEXT_MODEL_ID` project provider endpoint/model overrides into Core, and configured text endpoints enable explicit AI egress in the chart NetworkPolicy.
 
 ### Docker
 
@@ -253,7 +255,7 @@ the compose Core image includes Node/npm/npx so manual curated stdio MCP install
 
 ### Persistent Storage Contract
 
-PostgreSQL plus pgvector owns durable memory/context. Output block storage is configured by `MYCELIS_OUTPUT_BLOCK_MODE` and `MYCELIS_OUTPUT_HOST_PATH` for local-hosted Compose, or PVC-backed cluster storage for Kubernetes.
+PostgreSQL plus pgvector owns durable memory/context. Output block storage is configured by `MYCELIS_OUTPUT_BLOCK_MODE` and `MYCELIS_OUTPUT_HOST_PATH` for local-hosted Compose, or PVC-backed cluster storage for Kubernetes. K8s live-browser proof that checks backend-written files should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` so the assertion targets the Core pod workspace/PVC rather than host-only paths.
 
 ### Startup Sequence
 
@@ -279,6 +281,7 @@ Use task health checks rather than raw port checks when claiming product readine
 - Compose may relay a Windows-hosted AI endpoint through WSL for bridge containers.
 - Do not share generated environments across Windows and WSL.
 - Browser proof that checks backend-written files may need `MYCELIS_BACKEND_WORKSPACE_ROOT`.
+- K8s/PVC browser proof should use `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`, `PLAYWRIGHT_K8S_NAMESPACE`, `PLAYWRIGHT_K8S_CORE_SELECTOR`, and `PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT`.
 
 ## IX. Monitoring & Observability
 

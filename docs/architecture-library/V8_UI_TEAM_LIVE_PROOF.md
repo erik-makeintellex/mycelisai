@@ -15,6 +15,15 @@ uv run inv compose.health
 
 Then run focused browser proof against the delivered UI address.
 
+For the guarded Windows -> WSL release lane, use:
+
+```bash
+uv run inv wsl.validate --lane=release
+uv run inv wsl.validate --lane=release --headed-browser
+```
+
+The first command is the headless deployment-mimic gate; the second opens visible Playwright windows for the same focused live-backend specs when browser-visible release evidence is required.
+
 ## Live Governed Browser Proof
 
 Use when Soma, governance, Core proxy, retained outputs, groups, or runtime contracts changed:
@@ -24,6 +33,8 @@ uv run inv interface.e2e --headed --live-backend --server-mode=start --project=c
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/team-creation.spec.ts
 ```
+
+When the Compose UI is already running and must remain the delivered surface under test, use `--server-mode=external` instead of replacing it with a managed `next start` server.
 
 ## Windows Self-Hosted Browser Proof
 

@@ -97,7 +97,7 @@ For source-mode proof:
 This lane proves the product as a Windows operator actually uses it:
 - browser runs on Windows
 - UI is reached from Windows at the delivered address
-- runtime is Windows Docker Desktop Compose, Docker-in-WSL Compose, or self-hosted Kubernetes
+- runtime is Windows/Rancher Desktop Docker-compatible Compose, Docker-in-WSL Compose, Rancher Desktop K3s, or self-hosted Kubernetes
 - AI engine is an explicit Windows host/IP or equivalent self-hosted service
 
 Same-machine proof starts at:

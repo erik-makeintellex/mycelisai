@@ -7,7 +7,7 @@ Use this page to choose the deployment path that matches the environment you act
 
 - [Start With The Target Environment](#start-with-the-target-environment)
 - [Docker Compose Single Host](#docker-compose-single-host)
-- [Local Kubernetes With k3d](#local-kubernetes-with-k3d)
+- [Local Kubernetes With Rancher K3s Or k3d](#local-kubernetes-with-rancher-k3s-or-k3d)
 - [Enterprise Self-Hosted Kubernetes](#enterprise-self-hosted-kubernetes)
 - [Edge Or Small Node Deployments](#edge-or-small-node-deployments)
 - [Developer Source Mode](#developer-source-mode)
@@ -21,19 +21,21 @@ Choose the runtime by deployment target, not by whichever tool is already open.
 | Target environment | Recommended path | Best fit |
 | :-- | :-- | :-- |
 | One machine, rapid iteration, founder demo, personal proof | Docker Compose | Fastest local full-stack development/proof runtime |
-| Local Helm and Kubernetes validation in WSL/Linux | `k3d` | Best local proof for chart behavior before a real cluster |
+| Local Helm and Kubernetes validation on Windows | Rancher Desktop K3s | Best local proof for commercial-release Kubernetes behavior on the current Windows dev host |
+| Local Helm and Kubernetes validation in WSL/Linux | `k3d` | Best WSL/Linux proof for chart behavior before a real cluster |
 | Customer-managed, enterprise-managed, or release target cluster | Enterprise self-hosted Kubernetes | Best fit for real cluster policy, ingress, registry, storage, and secret management |
 | Edge node, Raspberry Pi style control node, small Linux box | Packaged binary or node-attached service | Lightweight host footprint with remote AI service support |
 | Active code changes and UI/backend iteration | WSL worktree + Docker Compose first, source-mode fallback when needed | Best fit for implementation work, not for production-style deployment |
 
 Quick rule:
 - if the question is "how do I iterate quickly or prove the stack on one host?" use Docker Compose
-- if the question is "how do I prove the Helm chart or cluster behavior locally?" use `k3d`
+- if the question is "how do I prove the Helm chart or cluster behavior locally?" use Rancher Desktop K3s on Windows or `k3d` in WSL/Linux
 - if the question is "how will this be deployed for release or a customer-owned environment?" use the Helm chart for enterprise self-hosted Kubernetes
 - if the question is "how do I place a lightweight node on small hardware?" use the packaged binary path and keep AI remote
 
 Supported user access lanes:
-- Windows Docker Desktop: run the rapid local Compose stack on Windows and open `http://localhost:3000` from the Windows browser on that same machine
+- Windows Rancher Desktop or Docker Desktop Compose: run the rapid local Compose stack on Windows and open `http://localhost:3000` from the Windows browser on that same machine
+- Windows Rancher Desktop K3s: run the Helm/Kubernetes lane locally and open the Interface from the Windows browser against the bridged Core service
 - Windows + WSL Docker: run the rapid local Compose stack from WSL, then use the Windows browser as the first operator proof path through `http://localhost:3000`
 - Kubernetes / Helm clustered deployment: run the verified chart on the target cluster and open the UI through the same ingress, hostname, or IP operators will really use remotely
 
@@ -45,14 +47,14 @@ Typical fit:
 - home-lab or personal owner proof
 - demos and partner evaluation
 - one machine running the full stack
-- Windows Docker Desktop single-machine runtime with the Windows browser on the same host
+- Windows Rancher Desktop or Docker Desktop single-machine runtime with the Windows browser on the same host
 - Windows + WSL Docker with the Windows browser as the first operator proof path
 - Linux server bring-up where remote clients should use the published host/IP or ingress address
 - WSL2, Linux, or macOS bring-up where local Kubernetes would add unnecessary overhead
 
 Recommended path:
 
-Windows Docker Desktop:
+Windows Rancher Desktop or Docker Desktop:
 
 ```powershell
 Copy-Item .env.compose.example .env.compose
@@ -87,24 +89,41 @@ uv run inv compose.health
 
 Use this path first for rapid iteration, not as the target clustered deployment contract.
 Use the same operator-facing address you will really support after delivery:
-- Windows Docker Desktop on the same machine: `http://localhost:3000`
+- Windows Rancher Desktop or Docker Desktop on the same machine: `http://localhost:3000`
 - Windows browser against a WSL-hosted stack: start with `http://localhost:3000`, then prove the host/IP path for second-machine access
 - clustered release: use the published Kubernetes ingress/hostname/IP from the operator machine
 
-## Local Kubernetes With k3d
+## Local Kubernetes With Rancher K3s Or k3d
 
-Choose `k3d` when you need local Kubernetes behavior, Helm validation, or cluster-shaped testing in Docker.
+Choose Rancher Desktop K3s on Windows, or `k3d` in WSL/Linux, when you need local Kubernetes behavior, Helm validation, or cluster-shaped testing in Docker.
 
 Typical fit:
 - validating Helm values or readiness behavior locally
 - proving Kubernetes networking, PVC, ingress, or rollout expectations before a remote cluster
+- Windows local commercial-release parity through Rancher Desktop K3s
 - development in WSL/Linux where Docker is available and you want chart parity
 
-Recommended path:
+Recommended Windows Rancher Desktop K3s path:
+
+```powershell
+Copy-Item .env.example .env
+$env:MYCELIS_K8S_BACKEND="rancher"
+$env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-k3d.yaml"
+$env:MYCELIS_K8S_TEXT_ENDPOINT="http://<windows-ai-host>:11434/v1"
+$env:MYCELIS_K8S_TEXT_MODEL_ID="qwen3:8b"
+uv run inv k8s.up
+uv run inv k8s.status
+uv run inv k8s.bridge
+uv run inv lifecycle.up --frontend
+uv run inv lifecycle.health
+```
+
+Recommended WSL/Linux k3d path:
 
 ```bash
 cp .env.example .env
 # set MYCELIS_K8S_TEXT_ENDPOINT to a reachable AI service when needed
+export MYCELIS_K8S_BACKEND=k3d
 export MYCELIS_K8S_VALUES_FILE=charts/mycelis-core/values-k3d.yaml
 uv run inv k8s.up
 uv run inv k8s.status
@@ -113,7 +132,9 @@ uv run inv lifecycle.health
 ```
 
 Notes:
-- `k3d` is the preferred local Kubernetes backend
+- Rancher Desktop K3s is the preferred Windows local Kubernetes backend
+- `k3d` is the preferred WSL/Linux local Kubernetes backend
+- `values-k3d.yaml` is the shared local-Kubernetes preset for Rancher Desktop K3s and k3d
 - use `MYCELIS_K8S_BACKEND=kind` only when you intentionally need the older local fallback
 - this is a local validation lane for the clustered deployment contract, not the recommended default just to get a single machine running
 
@@ -128,7 +149,7 @@ Typical fit:
 - environments where platform teams manage ingress, certificates, storage, and image pull policy
 
 Use the Helm chart as the canonical deployment contract.
-Treat `k3d` as the local preflight lane for that chart, not as the production target.
+Treat Rancher Desktop K3s or `k3d` as local preflight lanes for that chart, not as the production target.
 
 Promoted preset files:
 - `charts/mycelis-core/values-enterprise.yaml`
@@ -225,7 +246,7 @@ Before user testing or UI testing, prove the lane you picked:
 - Docker Compose rapid development/proof: `uv run inv compose.status` and `uv run inv compose.health`
 - local Kubernetes: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-k3d.yaml`, `uv run inv k8s.status`, and `uv run inv lifecycle.health`
 - enterprise self-hosted Kubernetes: run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`, render/package the Helm chart with the real values, then prove ingress, readiness, storage, and the explicit AI endpoint on the target cluster
-- Windows Docker Desktop: open the UI from the Windows browser on the same machine through `http://localhost:3000`, then confirm the runtime reaches the explicit Windows AI host instead of a loopback-only deployment assumption
+- Windows Rancher Desktop or Docker Desktop Compose: open the UI from the Windows browser on the same machine through `http://localhost:3000`, then confirm the runtime reaches the explicit Windows AI host instead of a loopback-only deployment assumption
 - Windows browser against a WSL-hosted stack: start with `http://localhost:3000` on that same Windows machine, then use the host/IP path for second-machine or LAN proof
 - Kubernetes clustered release: open the UI from the operator machine through the same ingress/host/IP/hostname that will be used remotely, not `localhost` on the server
 - release gate: `uv run inv ci.release-preflight --lane=release` (recommended preset for runtime-posture + service-health + live-backend proof; the legacy flags remain available when you need a narrower/manual combination)

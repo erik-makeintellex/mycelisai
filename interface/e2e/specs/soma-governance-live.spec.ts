@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 
 const repoRoot = path.resolve(__dirname, '../../..');
@@ -26,8 +27,58 @@ function resolveBackendLogTargets(filename: string) {
     return resolveBackendWorkspaceRoots().map((workspaceRoot) => path.join(workspaceRoot, 'logs', filename));
 }
 
+let cachedK8sPodName: string | null = null;
+
+function k8sWorkspaceProbeEnabled() {
+    return process.env.PLAYWRIGHT_BACKEND_WORKSPACE_PROBE === 'k8s';
+}
+
+function shellQuote(value: string) {
+    return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function k8sWorkspaceRoot() {
+    return (
+        process.env.PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT ??
+        process.env.MYCELIS_BACKEND_WORKSPACE_ROOT ??
+        '/data/workspace'
+    ).replace(/\\/g, '/');
+}
+
+function k8sCorePodName() {
+    if (cachedK8sPodName) return cachedK8sPodName;
+    const namespace = process.env.PLAYWRIGHT_K8S_NAMESPACE ?? 'mycelis';
+    const selector = process.env.PLAYWRIGHT_K8S_CORE_SELECTOR ?? 'app=mycelis-core';
+    cachedK8sPodName = execFileSync(
+        'kubectl',
+        ['get', 'pods', '-n', namespace, '-l', selector, '-o', 'jsonpath={.items[0].metadata.name}'],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 10_000 },
+    ).trim();
+    return cachedK8sPodName;
+}
+
+function k8sLogPathForTarget(candidate: string) {
+    return `${k8sWorkspaceRoot().replace(/\/$/, '')}/logs/${path.basename(candidate)}`;
+}
+
+function k8sTargetExists(candidate: string) {
+    if (!k8sWorkspaceProbeEnabled()) return false;
+    const namespace = process.env.PLAYWRIGHT_K8S_NAMESPACE ?? 'mycelis';
+    const podName = k8sCorePodName();
+    const k8sPath = k8sLogPathForTarget(candidate);
+    try {
+        execFileSync('kubectl', ['exec', '-n', namespace, podName, '--', 'sh', '-c', `test -f ${shellQuote(k8sPath)}`], {
+            stdio: 'ignore',
+            timeout: 10_000,
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 function anyTargetExists(paths: string[]) {
-    return paths.some((candidate) => fs.existsSync(candidate));
+    return paths.some((candidate) => fs.existsSync(candidate) || k8sTargetExists(candidate));
 }
 
 function removeExistingTargets(paths: string[]) {
@@ -40,6 +91,20 @@ function removeExistingTargets(paths: string[]) {
                 if (code !== 'EACCES' && code !== 'EPERM') {
                     throw error;
                 }
+            }
+        }
+        if (k8sWorkspaceProbeEnabled()) {
+            const namespace = process.env.PLAYWRIGHT_K8S_NAMESPACE ?? 'mycelis';
+            const podName = k8sCorePodName();
+            const k8sPath = k8sLogPathForTarget(candidate);
+            try {
+                execFileSync('kubectl', ['exec', '-n', namespace, podName, '--', 'sh', '-c', `rm -f ${shellQuote(k8sPath)}`], {
+                    stdio: 'ignore',
+                    timeout: 10_000,
+                });
+            } catch {
+                // Cleanup is best-effort because failed assertions should preserve the
+                // original browser/API failure instead of hiding it behind kubectl noise.
             }
         }
     }

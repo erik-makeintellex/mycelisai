@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-04-15
+> Last Updated: 2026-05-13
 > Purpose: Define the delivery plan, local proof model, and compact team structure for turning the current self-hosted Kubernetes lane into an enterprise-compatible deployment contract.
 
 ## TOC
@@ -38,11 +38,13 @@ Use these deployment modes deliberately and keep their purposes distinct.
 | Mode | Purpose | Canonical posture |
 | --- | --- | --- |
 | `compose_single_host` | rapid local development, same-machine proof, and demos | useful proof/runtime loop, not the target clustered deployment contract |
+| `rancher_desktop_k3s` | Windows local Kubernetes parity proof through Rancher Desktop | preferred Windows commercial-release simulation lane |
 | `k3d_local_k8s` | local Kubernetes validation lane inside WSL/Linux Docker | enterprise-simulation dev/test lane, not the production target |
 | `enterprise_self_hosted_k8s` | customer-managed cluster deployment | Helm/GitOps/promoted-values contract for real enterprise clusters |
 | `edge_binary_node` | lightweight node-attached runtime helper or specialist host | binary/image variant for local-only users or edge nodes such as Raspberry Pi-class systems |
 
 Rules:
+- `rancher_desktop_k3s` is the preferred Windows local Kubernetes lane when Windows is the editing/operator machine.
 - `k3d_local_k8s` replaces Kind as the preferred local Kubernetes validation lane for WSL/Linux work.
 - `k3d_local_k8s` exists to simulate enterprise cluster posture locally; it is not itself the enterprise deployment target.
 - `enterprise_self_hosted_k8s` must not depend on Docker Desktop, Kind-only image loading, or localhost-only AI endpoints.
@@ -53,7 +55,7 @@ Rules:
 
 The current delivery target is:
 - keep Compose as the rapid local development/proof runtime
-- establish `k3d` as the canonical local Kubernetes validation lane
+- establish Rancher Desktop K3s as the Windows local commercial-release parity lane and `k3d` as the WSL/Linux local Kubernetes validation lane
 - make the Helm chart enterprise-compatible through values, secrets, networking, storage, and image-delivery contracts
 - prove that Mycelis can be promoted into a customer-managed Kubernetes cluster without forking templates or reintroducing desktop-local assumptions
 
@@ -67,8 +69,8 @@ The current non-targets are:
 
 Local proof for enterprise compatibility must use a stack that exercises real cluster contracts:
 
-1. Docker inside WSL/Linux
-2. `k3d`
+1. Rancher Desktop K3s on Windows, or Docker inside WSL/Linux with `k3d`
+2. Docker CLI access to the same image store the local cluster consumes
 3. `kubectl`
 4. `helm`
 5. local registry or `k3d image import`
@@ -83,6 +85,8 @@ Required local enterprise-simulation behaviors:
 - ingress or equivalent service exposure contract
 - no required `hostPath` assumptions for normal cluster deployment
 - no `localhost` AI provider assumptions in cluster mode
+- explicit `MYCELIS_K8S_TEXT_ENDPOINT` and, when needed, `MYCELIS_K8S_TEXT_MODEL_ID` so the deployed Core uses an installed reachable model
+- explicit AI egress in NetworkPolicy when the chart is configured for an external text endpoint
 - chart renders cleanly for promoted values files
 - `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` passes before release packaging or target-cluster handoff
 
@@ -93,9 +97,9 @@ Keep the delivery team compact and specialized.
 | Role | Ownership | Primary surfaces | Success condition |
 | --- | --- | --- | --- |
 | Delivery Manager | scope, sequencing, blockers, state updates, gate decisions | `.state/V8_DEV_STATE.md`, delivery docs, board cadence | one active target, explicit owners, no silent drift |
-| Platform Architect | deployment contract, environment promotion model, topology rules | architecture docs, chart contract, values model | local `k3d` and enterprise cluster assumptions align |
+| Platform Architect | deployment contract, environment promotion model, topology rules | architecture docs, chart contract, values model | local Rancher/K3s or `k3d` and enterprise cluster assumptions align |
 | Chart / Runtime Engineer | Helm surfaces, config projection, storage/network/image hooks | `charts/mycelis-core/**` | chart supports enterprise-compatible overrides without template forks |
-| Ops / Deployment Engineer | local cluster automation, image flow, local-k8s tasks, runbooks | `ops/k8s.py`, `docs/LOCAL_DEV_WORKFLOW.md`, tests | local `k3d` validation is deterministic and repeatable |
+| Ops / Deployment Engineer | local cluster automation, image flow, local-k8s tasks, runbooks | `ops/k8s.py`, `docs/LOCAL_DEV_WORKFLOW.md`, tests | Rancher K3s and k3d validation are deterministic and repeatable |
 | Validation / Release Engineer | chart/render checks, browser/runtime proof, release evidence | `tests/**`, validation docs, CI tasks | enterprise-simulated local proof is automated and reviewable |
 
 Pull specialist support only when blocked:
@@ -104,7 +108,7 @@ Pull specialist support only when blocked:
 
 ## Management Contract
 
-- one active target: `enterprise-compatible self-hosted Kubernetes delivery with k3d as the local validation lane`
+- one active target: `enterprise-compatible self-hosted Kubernetes delivery with Rancher Desktop K3s on Windows and k3d on WSL/Linux as local validation lanes`
 - one board: `REQUIRED`, `NEXT`, `ACTIVE`, `IN_REVIEW`, `COMPLETE`, `BLOCKED`
 - one owner per slice
 - every slice must declare:
@@ -130,9 +134,9 @@ PM rules:
 | Lane | Status | Owner | Current target | Next proof |
 | --- | --- | --- | --- | --- |
 | Delivery Management | `ACTIVE` | Delivery Manager | keep one enterprise-Kubernetes target and compact team ownership | updated state + accepted slice board |
-| Platform Contract | `ACTIVE` | Platform Architect | define `k3d` as local K8s lane and enterprise chart promotion rules | canonical plan + docs alignment |
+| Platform Contract | `ACTIVE` | Platform Architect | define Rancher K3s / `k3d` local K8s lanes and enterprise chart promotion rules | canonical plan + docs alignment |
 | Chart Enterprise Readiness | `IN_REVIEW` | Chart / Runtime Engineer | keep enterprise-friendly Helm surfaces aligned with promoted preset files | rendered chart diff + focused tests |
-| Local K8s Ops | `IN_REVIEW` | Ops / Deployment Engineer | apply promoted preset files through `MYCELIS_K8S_VALUES_FILE` and keep `k3d` tasking deterministic | deterministic local `k3d` up/deploy/status proof |
+| Local K8s Ops | `IN_REVIEW` | Ops / Deployment Engineer | apply promoted preset files through `MYCELIS_K8S_VALUES_FILE` and keep Rancher K3s / `k3d` tasking deterministic | deterministic local K3s up/deploy/status proof |
 | Validation + Release | `IN_REVIEW` | Validation / Release Engineer | keep chart render/policy/runtime proof in the repo gate and cover preset values files | `k8s.standards`, local enterprise-sim render/test gate |
 | Enterprise Staging Contract | `IN_REVIEW` | Shared after preceding lanes | use promoted values files to define customer-managed dependency posture | documented deploy contract for real clusters |
 
@@ -140,7 +144,7 @@ PM rules:
 
 This delivery lane is only complete when all of the following are true:
 
-1. `k3d` is the documented and supported local Kubernetes validation lane for WSL/Linux work.
+1. Rancher Desktop K3s is documented and supported for Windows local Kubernetes validation, and `k3d` remains documented and supported for WSL/Linux work.
 2. The Helm chart supports enterprise-friendly override surfaces without template patching.
 3. The runtime uses explicit reachable AI endpoints in cluster mode.
 4. Local Kubernetes proof validates enterprise-compatible assumptions: storage, ingress/service exposure, image delivery, config/secret posture, and health checks.
@@ -149,7 +153,7 @@ This delivery lane is only complete when all of the following are true:
 7. Docs, tasks, and tests all describe the same Kubernetes story.
 
 Evidence bias:
-- local `k3d` proof is required
+- local Rancher K3s or `k3d` proof is required, depending on host lane
 - render/validation proof is required
 - standards-gate proof is required
 - Compose success alone is not sufficient
@@ -169,7 +173,7 @@ Execute in this order:
    - affinity
    - topology spread constraints
    - explicit image tag/digest posture
-3. `IN_REVIEW` convert local Kubernetes tasking from Kind bias to `k3d` bias:
+3. `IN_REVIEW` convert local Kubernetes tasking from Kind bias to Rancher K3s / `k3d` bias:
    - cluster create/delete/status contract
    - image import or local registry flow
    - promoted values file application through `MYCELIS_K8S_VALUES_FILE`
@@ -177,9 +181,9 @@ Execute in this order:
 4. `IN_REVIEW` add enterprise-simulated validation gates:
    - Helm lint/render
    - chart config tests
-   - local `k3d` smoke deploy
+   - local Rancher K3s or `k3d` smoke deploy
 5. `IN_REVIEW` publish promoted-values guidance:
-   - local `k3d`
+   - local Rancher K3s and `k3d`
    - enterprise-managed services
    - external AI host
 6. `NEXT` run the full local proof and update `.state/V8_DEV_STATE.md` with the resulting delivery truth.

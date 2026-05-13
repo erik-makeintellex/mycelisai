@@ -31,6 +31,10 @@ ingress:
 coreAuth:
   existingSecret: mycelis-core-auth
 
+networkPolicy:
+  aiEgress:
+    enabled: true
+
 outputBlock:
   mode: cluster_generated
 
@@ -40,6 +44,7 @@ dataVolume:
 
 ai:
   textEndpoint: "http://<windows-ai-host>:11434/v1"
+  textModelId: "qwen3:8b"
 
 nats:
   jetstream:

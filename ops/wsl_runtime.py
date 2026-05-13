@@ -37,7 +37,6 @@ GIT_AUTH_FAILURE_MARKERS = (
     "no such device or address",
 )
 
-
 @dataclass
 class CommandResult:
     command: list[str]
@@ -45,13 +44,11 @@ class CommandResult:
     stdout: str
     stderr: str
 
-
 def _require_windows_dev_host() -> None:
     if not is_windows():
         raise SystemExit("WSL proof tasks must be launched from the Windows dev checkout.")
     if not shutil.which("wsl.exe"):
         raise SystemExit("WSL proof tasks require wsl.exe on the Windows host.")
-
 
 def _configured_distro(distro: str = "") -> str:
     return (distro or DEFAULT_WSL_DISTRO).strip()
@@ -73,7 +70,6 @@ def _configured_checkout(checkout: str = "") -> str:
 
 def _configured_remote(remote: str = "") -> str:
     return (remote or DEFAULT_WSL_REMOTE).strip() or "origin"
-
 
 def _wsl_command(*args: str, distro: str = "", checkout: str = "") -> list[str]:
     command = ["wsl.exe"]
@@ -603,9 +599,10 @@ def refresh(_c, branch="", ref="", distro="", checkout="", remote=""):
         "checkout": "Linux-path checkout to validate. Defaults to MYCELIS_WSL_PROOF_REPO.",
         "gui_url": "Windows-side URL to probe after the WSL stack is healthy (default: http://localhost:3000).",
         "compose_wait_timeout": "Compose wait timeout in seconds (default: 240).",
+        "headed_browser": "Run focused live-backend Playwright specs with visible browser windows.",
     }
 )
-def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeout=""):
+def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeout="", headed_browser=False):
     """
     Run the proof-only WSL validation flow against the Linux-native checkout.
     """
@@ -638,12 +635,13 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
         )
     else:
         print(f"Release-preflight lane inside WSL: {preflight_lane}")
-    print(f"Windows GUI probe URL: {selected_gui_url}")
+    print(f"Windows GUI probe URL: {selected_gui_url}" + ("\nLive browser specs: headed Playwright windows enabled" if headed_browser else ""))
     print()
 
     _ensure_wsl_compose_env(distro=selected_distro, checkout=selected_checkout)
     _ensure_wsl_output_block_path(distro=selected_distro, checkout=selected_checkout)
 
+    headed_flag = " --headed" if headed_browser else ""
     commands = (
         "uv run inv install",
         f"uv run inv ci.release-preflight --lane={preflight_lane} --no-e2e",
@@ -652,10 +650,10 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
         "uv run inv compose.health",
         "uv run inv compose.storage-health",
         "uv run inv compose.warm-cognitive",
-        "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=external",
-        "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/team-creation.spec.ts --live-backend --workers=1 --server-mode=external",
-        "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
-        "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
+        f"uv run inv compose.health && uv run inv interface.e2e{headed_flag} --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=external",
+        f"uv run inv compose.health && uv run inv interface.e2e{headed_flag} --project=chromium --spec=e2e/specs/team-creation.spec.ts --live-backend --workers=1 --server-mode=external",
+        f"uv run inv compose.health && uv run inv interface.e2e{headed_flag} --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
+        f"uv run inv compose.health && uv run inv interface.e2e{headed_flag} --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
     )
     for command in commands:
         print(f"[WSL] {command}")
@@ -675,9 +673,10 @@ def validate(_c, lane="", distro="", checkout="", gui_url="", compose_wait_timeo
         "remote": "Git remote name (default: origin).",
         "gui_url": "Windows-side URL to probe after the WSL stack is healthy (default: http://localhost:3000).",
         "compose_wait_timeout": "Compose wait timeout in seconds (default: 240).",
+        "headed_browser": "Run focused live-backend Playwright specs with visible browser windows.",
     }
 )
-def cycle(_c, branch="", ref="", lane="", distro="", checkout="", remote="", gui_url="", compose_wait_timeout=""):
+def cycle(_c, branch="", ref="", lane="", distro="", checkout="", remote="", gui_url="", compose_wait_timeout="", headed_browser=False):
     """
     Refresh the WSL proof checkout from git, then run the WSL validation flow.
     """
@@ -697,6 +696,7 @@ def cycle(_c, branch="", ref="", lane="", distro="", checkout="", remote="", gui
         checkout=checkout,
         gui_url=gui_url,
         compose_wait_timeout=compose_wait_timeout,
+        headed_browser=headed_browser,
     )
 
 

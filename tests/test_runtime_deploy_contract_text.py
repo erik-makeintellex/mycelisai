@@ -118,26 +118,26 @@ def test_compose_core_image_supports_curated_stdio_mcp_launch():
     assert not missing, "Curated stdio MCP runtime packaging contract is missing from active docs:\n" + "\n".join(missing)
 
 
-def test_k8s_docs_prefer_k3d_with_kind_fallback():
+def test_k8s_docs_name_rancher_and_k3d_with_kind_fallback():
     snippets = [
         (
             README,
             [
-                "prefer `k3d` as the local Kubernetes backend when it is available",
+                "prefer Rancher Desktop K3s on Windows and `k3d` on WSL/Linux",
                 "MYCELIS_K8S_BACKEND=kind",
             ],
         ),
         (
             TESTING,
             [
-                "when the validation target is local Kubernetes, prefer `k3d`",
+                "when the validation target is local Kubernetes, prefer `k3d` on WSL/Linux, prefer Rancher Desktop K3s on Windows",
                 "`MYCELIS_K8S_BACKEND=kind`",
             ],
         ),
         (
             OPERATIONS,
             [
-                "local Kubernetes now prefers `k3d` when it is installed",
+                "local Kubernetes now prefers `k3d` when it is installed on WSL/Linux, prefers Rancher Desktop K3s on Windows",
                 "MYCELIS_K8S_BACKEND=kind",
             ],
         ),
@@ -150,15 +150,14 @@ def test_k8s_docs_prefer_k3d_with_kind_fallback():
             if snippet not in text:
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
-    assert not missing, "k3d local-Kubernetes contract is missing from active docs:\n" + "\n".join(missing)
-
+    assert not missing, "Rancher/k3d local-Kubernetes contract is missing from active docs:\n" + "\n".join(missing)
 
 def test_user_docs_explain_deployment_method_selection_by_target_environment():
     text = DEPLOYMENT_METHODS.read_text(encoding="utf-8")
 
     required_snippets = [
         "Docker Compose",
-        "Local Kubernetes With k3d",
+        "Local Kubernetes With Rancher K3s Or k3d",
         "Enterprise Self-Hosted Kubernetes",
         "Edge Or Small Node Deployments",
         "Developer source mode is not a deployment method",
@@ -187,7 +186,8 @@ def test_active_docs_cover_supported_user_access_lanes():
         (
             TESTING,
             [
-                "Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof",
+                "Windows Docker-compatible Compose through Rancher Desktop or Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof",
+                "Windows Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher`",
                 "Kubernetes / Helm clustered deployment reached through the real ingress, remote host, IP, or hostname",
                 "the browser opens the UI through the same operator-facing address the delivered environment will actually use",
             ],
@@ -196,7 +196,7 @@ def test_active_docs_cover_supported_user_access_lanes():
             DEPLOYMENT_METHODS,
             [
                 "Supported user access lanes:",
-                "Windows Docker Desktop",
+                "Windows Rancher Desktop or Docker Desktop",
                 "Windows + WSL Docker",
                 "Kubernetes / Helm clustered deployment",
             ],
@@ -454,8 +454,8 @@ def test_windows_edit_wsl_proof_contract_does_not_turn_wsl_into_day_to_day_workt
 
     required_snippets = [
         "For day-to-day Windows development, keep the Windows repo as the edit/review/push surface.",
-        "Use this as the canonical deployment-mimic proof path when Windows editing is ready for authoritative build, API, UI, runtime, or release-style validation:",
-        "keep the WSL `mycelis-root` deployment checkout git-backed and disposable for deployment-mimic proof",
+        "Use this as the guarded WSL Compose deployment-mimic proof path when Windows editing is ready for build, API, UI, runtime, or release-style validation:",
+        "keep the WSL `mycelis-root` deployment checkout git-backed and disposable for Compose deployment-mimic proof",
         "These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree.",
     ]
     missing = [snippet for snippet in required_snippets if snippet not in text]

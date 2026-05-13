@@ -59,4 +59,18 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+
+    {{- if and .Values.ai.textEndpoint .Values.networkPolicy.aiEgress.enabled }}
+    # 5. Allow explicitly configured external AI endpoint ports.
+    - to:
+        {{- range .Values.networkPolicy.aiEgress.cidrs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        {{- range .Values.networkPolicy.aiEgress.ports }}
+        - protocol: TCP
+          port: {{ . }}
+        {{- end }}
+    {{- end }}
 {{- end }}

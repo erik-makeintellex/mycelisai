@@ -45,7 +45,7 @@ Concrete requests Soma should understand when the matching capability is configu
 
 ## Setup And Recovery
 
-- [Deployment Method Selection](deployment-methods.md): choose Docker Compose, local `k3d`, enterprise self-hosted Kubernetes, or edge/binary deployment by target environment.
+- [Deployment Method Selection](deployment-methods.md): choose Docker Compose, Rancher K3s or k3d local Kubernetes, enterprise self-hosted Kubernetes, or edge/binary deployment by target environment.
 - [System Status & Recovery](system-status-recovery.md): health checks, degraded states, and recovery expectations.
 - [Governance & Trust](governance-trust.md): approval posture, risk classes, and audit visibility.
 - [Run Timeline](run-timeline.md): reading workflow activity, message-bus summaries, execution timelines, and outcome history.

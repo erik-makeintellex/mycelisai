@@ -6,6 +6,7 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 ## TOC
 
 - [Current Validation Contract](#current-validation-contract)
+- [Thorough Release Testing Contract](#thorough-release-testing-contract)
 - [User Interaction Delivery Gate](#user-interaction-delivery-gate)
 - [Target-Action Testing Matrix](#target-action-testing-matrix)
 - [Full GUI Coverage Matrix](#full-gui-coverage-matrix)
@@ -31,14 +32,32 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - `uv run inv ci.baseline` is the default branch-readiness gate.
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
 - GitHub CI proves codebase health without hosted agentry; live AI/service proof remains local, WSL, Compose, or target-cluster evidence.
-- Windows is the edit/review/push surface; WSL is the authoritative release-style proof checkout.
+- Windows is the edit/review/push surface; WSL is the guarded Compose release-style proof checkout, while Rancher Desktop K3s is the Windows local Kubernetes/commercial-parity proof lane.
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required.
 - Playwright starts/stops the managed Next.js app, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant.
+
+## Thorough Release Testing Contract
+
+Use this sequence when a slice changes the delivered operator workflow, runtime topology, governance behavior, retained outputs, AI provider posture, or release proof lane:
+
+1. Source and contract proof from the Windows repo: `uv run inv core.test`, `uv run inv interface.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, docs tests, and `uv run inv quality.max-lines --limit 300`.
+2. Deployment-mimic proof from the git-refreshed WSL checkout:
+   - `uv run inv wsl.refresh`
+   - `uv run inv wsl.validate --lane=release`
+3. Local Kubernetes proof when Helm/commercial-release parity is part of the risk: set `$env:MYCELIS_K8S_BACKEND="rancher"` on Windows Rancher Desktop K3s, use `$env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-k3d.yaml"` as the shared local-Kubernetes preset for Rancher K3s and k3d, then run `uv run inv k8s.deploy`, `uv run inv k8s.wait --timeout=300`, `uv run inv k8s.bridge`, and a live backend GUI proof with `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`.
+4. Visible live-window Playwright proof when the user-facing browser path is part of the risk:
+   - `uv run inv wsl.validate --lane=release --headed-browser`
+   - or, when Compose is already up and should stay running, `uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=<focused-live-spec>`
+5. Broader headed Chromium MVP certification after the clean release lane:
+   - run the critical matrix in [V8 UI Team Browser Workflows](architecture-library/V8_UI_TEAM_BROWSER_WORKFLOWS.md) sequentially
+
+Do not claim thorough release readiness from unit, type, or headless-only proof when the slice changes what the operator sees or approves.
 
 ## User Interaction Delivery Gate
 
 Supported user proof lanes:
-- Windows Docker Desktop Compose with Windows browser at `http://localhost:3000`
+- Windows Docker-compatible Compose through Rancher Desktop or Windows Docker Desktop Compose with Windows browser at `http://localhost:3000`
+- Windows Rancher Desktop K3s with a local Interface server and Windows browser
 - WSL-hosted Compose with Windows browser at `http://localhost:3000`
 - second-machine or Linux-server proof through a real host/IP/hostname
 - self-hosted Kubernetes/Helm through real ingress
@@ -131,6 +150,7 @@ uv run inv core.smoke
 uv run inv ci.test
 uv run inv ci.baseline
 uv run inv ci.release-preflight --lane=release
+uv run inv wsl.validate --lane=release --headed-browser
 uv run inv compose.health
 uv run inv compose.warm-cognitive
 uv run inv compose.storage-health
@@ -140,7 +160,7 @@ uv run inv logging.check-schema
 uv run inv logging.check-topics
 ```
 
-`wsl.validate --lane=release` runs `compose.health` before each live browser spec because those specs execute through separate WSL shell invocations.
+`wsl.validate --lane=release` runs `compose.health` before each live browser spec because those specs execute through separate WSL shell invocations. Use `--headed-browser` on that same task when acceptance evidence must include visible live Playwright windows.
 
 Focused live-backend examples:
 
@@ -148,6 +168,25 @@ Focused live-backend examples:
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts
+```
+
+Rancher Desktop K3s live-backend proof uses the local Interface server against the K3s Core bridge. When the spec checks backend-written files, prove the PVC-backed workspace through `kubectl`:
+
+```bash
+$env:MYCELIS_K8S_BACKEND="rancher"
+$env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-k3d.yaml"
+$env:MYCELIS_K8S_TEXT_ENDPOINT="http://<windows-ai-host>:11434/v1"
+$env:MYCELIS_K8S_TEXT_MODEL_ID="qwen3:8b"
+uv run inv k8s.deploy
+uv run inv k8s.wait --timeout=300
+uv run inv k8s.bridge
+$env:MYCELIS_API_HOST="127.0.0.1"
+$env:MYCELIS_API_PORT="8080"
+$env:PLAYWRIGHT_BACKEND_WORKSPACE_PROBE="k8s"
+$env:PLAYWRIGHT_K8S_NAMESPACE="mycelis"
+$env:PLAYWRIGHT_K8S_CORE_SELECTOR="app=mycelis-core"
+$env:PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT="/data/workspace"
+uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=dev
 ```
 
 ## Product Delivery Proof
@@ -256,13 +295,13 @@ checkouts must not dirty `interface/package-lock.json` during bootstrap.
 Release-preflight lane presets are `baseline`, `runtime`, `service`, and `release`; use `uv run inv ci.release-preflight --lane=release` for the full release gate.
 
 Deployment proof contracts:
-- Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof.
+- Windows Docker-compatible Compose through Rancher Desktop or Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof.
+- Windows Rancher Desktop K3s with `MYCELIS_K8S_BACKEND=rancher` for local commercial-release parity proof.
 - Kubernetes / Helm clustered deployment reached through the real ingress, remote host, IP, or hostname; the browser opens the UI through the same operator-facing address the delivered environment will actually use.
 - when the validation target is clustered deployment, run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`; Compose remains rapid local development/proof only.
-- clustered Kubernetes proof: `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml`.
-- when the validation target is local Kubernetes, prefer `k3d`; fallback with `MYCELIS_K8S_BACKEND=kind`.
-- use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT`, an explicit reachable AI host instead of a chart-baked or localhost default, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`; Compose may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host.
-- `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`.
+- when the validation target is local Kubernetes, prefer `k3d` on WSL/Linux, prefer Rancher Desktop K3s on Windows, and fallback with `MYCELIS_K8S_BACKEND=kind`.
+- use `MYCELIS_K8S_TEXT_ENDPOINT` and optional `MYCELIS_K8S_MEDIA_ENDPOINT`; optional `MYCELIS_K8S_TEXT_MODEL_ID` selects the installed model. Use an explicit reachable AI host instead of a chart-baked or localhost default, and keep it container-reachable instead of `localhost`, `127.0.0.1`, or `0.0.0.0`; Compose may relay `MYCELIS_COMPOSE_OLLAMA_HOST` through the WSL host.
+- `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`; `values-k3d.yaml` is the shared local-Kubernetes preset for Rancher Desktop K3s on Windows and k3d on WSL/Linux.
 - prove the deployed Core image can launch the curated `filesystem` stdio MCP server through `npx` and runtime workspace normalization for filesystem installs.
 
 Guarded WSL tasks: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, `uv run inv wsl.cycle`.

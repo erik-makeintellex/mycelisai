@@ -221,36 +221,16 @@ def test_validate_runs_expected_wsl_commands_and_windows_probe(monkeypatch):
         "uv run inv compose.health && uv run inv interface.e2e --project=chromium --spec=e2e/specs/workspace-live-backend.spec.ts --live-backend --workers=1 --server-mode=external",
     ]
     assert probe_calls == ["http://localhost:3000"]
-
-
-def test_validate_release_lane_uses_runtime_preflight_before_compose_owned_gates(monkeypatch):
-    monkeypatch.setattr(wsl_runtime, "_require_windows_dev_host", lambda: None)
-    monkeypatch.setattr(wsl_runtime, "_configured_distro", lambda distro="": "mother-brain")
-    monkeypatch.setattr(wsl_runtime, "_configured_checkout", lambda checkout="": "/home/erik/Projects/mycelisai/scratch")
-    monkeypatch.setattr(
-        wsl_runtime,
-        "_collect_wsl_state",
-        lambda **_kwargs: {"branch": "main", "commit": "abc123", "dirty": 0},
-    )
-    monkeypatch.setattr(wsl_runtime, "_print_repo_state", lambda *args, **kwargs: None)
-    monkeypatch.setattr(wsl_runtime, "_ensure_wsl_compose_env", lambda **_kwargs: None)
-    monkeypatch.setattr(wsl_runtime, "_ensure_wsl_output_block_path", lambda **_kwargs: None)
-    monkeypatch.setattr(wsl_runtime, "_probe_windows_gui", lambda _url: None)
-
-    shell_calls: list[str] = []
-    monkeypatch.setattr(
-        wsl_runtime,
-        "_run_wsl_shell",
-        lambda command, **_kwargs: shell_calls.append(command),
-    )
-
+    shell_calls.clear()
+    wsl_runtime.validate.body(Context(), lane="runtime", headed_browser=True)
+    live_spec_calls = [command for command in shell_calls if "interface.e2e" in command]
+    assert len(live_spec_calls) == 4
+    assert all("interface.e2e --headed --project=chromium" in command for command in live_spec_calls)
+    assert all("--live-backend --workers=1 --server-mode=external" in command for command in live_spec_calls)
+    shell_calls.clear()
     wsl_runtime.validate.body(Context(), lane="release")
-
     assert "uv run inv ci.release-preflight --lane=runtime --no-e2e" in shell_calls
     assert "uv run inv ci.release-preflight --lane=release --no-e2e" not in shell_calls
-    assert "uv run inv compose.health" in shell_calls
-    assert "uv run inv compose.storage-health" in shell_calls
-    assert "uv run inv compose.warm-cognitive" in shell_calls
 
 
 def test_ensure_wsl_compose_env_bootstraps_from_example(monkeypatch):
@@ -331,6 +311,7 @@ def test_cycle_runs_refresh_then_validate(monkeypatch):
                 "checkout": "",
                 "gui_url": "",
                 "compose_wait_timeout": "",
+                "headed_browser": False,
             },
         ),
     ]

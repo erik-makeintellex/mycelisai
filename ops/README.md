@@ -26,23 +26,24 @@ This directory contains the logic for the **Service Release Standard 1.0**.
 
 Recommended host posture:
 - Windows repo: canonical editing, review, and git-push surface for active development
-- WSL `mycelis-root` deployment checkout: canonical rapid proof lane for install, build, API/UI test, Compose runtime, and pre-cluster validation
+- WSL `mycelis-root` deployment checkout: guarded WSL Compose proof checkout for install, build, API/UI test, Compose runtime, and deployment-mimic validation
 - Windows native: keep the runtime story anchored to rapid Compose proof or self-hosted Kubernetes validation; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 
-Proof-checkout contract:
-- the Windows repo is not the authoritative proof environment; use it to edit, review, and push
-- after a Windows-side commit/push, refresh the WSL proof checkout from git before running authoritative evidence
+WSL Compose proof-checkout contract:
+- use the Windows repo to edit, review, and push; use Rancher Desktop K3s for Windows local Kubernetes parity and WSL when guarded Compose proof is required
+- after a Windows-side commit/push, refresh the WSL proof checkout from git before running WSL Compose evidence
 - keep destructive cleanup such as `git reset --hard` and source `git clean` scoped to the dedicated WSL proof checkout; `wsl.refresh` preserves generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots so permission-owned runtime/cache mounts do not block source refresh
 - when the runtime is hosted from WSL on the same Windows machine, the required operator-facing browser path is the Windows browser at `http://localhost:3000`
 - use `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when you want the guarded Windows-dev -> WSL-proof task path instead of a manual handoff
 - `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, preserves generated WSL runtime/cache roots during source cleanup, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; keep the boundary commit/push/fetch based instead of copying source trees
-- `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, sanitizes the Linux-side PATH so Windows Docker credential helpers cannot hijack Docker pulls, uses local Linux probes when the Ollama relay is prepared inside WSL, then runs Compose-safe release-preflight, Compose health/storage proof, a `compose.warm-cognitive` text-model warm-up, focused live-backend browser workflows against the Compose-delivered UI, and the Windows GUI probe; `--lane=service` and `--lane=release` keep the runtime preflight step and let this task own the Compose service/browser proof
+- `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, sanitizes the Linux-side PATH so Windows Docker credential helpers cannot hijack Docker pulls, uses local Linux probes when the Ollama relay is prepared inside WSL, then runs Compose-safe release-preflight, Compose health/storage proof, a `compose.warm-cognitive` text-model warm-up, focused live-backend browser workflows against the Compose-delivered UI, and the Windows GUI probe; `--lane=service` and `--lane=release` keep the runtime preflight step and let this task own the Compose service/browser proof, and `--headed-browser` adds visible Playwright windows for those focused live specs when browser-visible release evidence is required
 
 Deployment selection rule:
 - Docker Compose is the rapid local development and same-machine proof runtime
-- `k3d` is the preferred local Kubernetes validation lane for Helm behavior
+- Rancher Desktop K3s is the preferred Windows local Kubernetes validation lane for Helm behavior
+- `k3d` is the preferred WSL/Linux local Kubernetes validation lane for Helm behavior
 - Kubernetes / Helm is the target clustered deployment contract for self-hosted and enterprise environments
 - enterprise self-hosted Kubernetes uses the same Helm chart with real cluster values
 - packaged binaries fit small Linux nodes or edge/control-host roles that should point at a remote AI service
@@ -64,19 +65,19 @@ Calculates the **Immutable Tag**: `v{SEMVER}-{SHA}`.
 - Git: `git rev-parse --short HEAD`.
 
 ### `k8s.py` (Deployment)
-Handles standards-first Kubernetes/Helm deployment automation, with `k3d` preferred for local cluster validation and Kind retained only as an older fallback.
+Handles standards-first Kubernetes/Helm deployment automation, with Rancher Desktop K3s supported for Windows local validation, `k3d` preferred for WSL/Linux local cluster validation, and Kind retained only as an older fallback.
 - **Init**: `uv run inv k8s.init` (Infra).
 - **Deploy**: `uv run inv k8s.deploy` (Core).
 - **Standards**: `uv run inv k8s.standards` verifies the static open-standard chart contract; add `--helm --values-file=<path>` to run offline Helm lint/template checks with vendored chart dependencies.
 - **Status**: `uv run inv k8s.status` (Health).
 - **Bridge**: `uv run inv k8s.bridge` now verifies the local PostgreSQL/NATS/Core port-forwards actually bind before reporting success.
 - **Recover**: `uv run inv k8s.recover` now fails closed when the cluster is unreachable and waits for rollout readiness before claiming recovery.
-- **Backend selection**: local Kubernetes now prefers `k3d` when available; set `MYCELIS_K8S_BACKEND=kind` when you intentionally need the older Kind workflow.
-- **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host without editing chart source.
+- **Backend selection**: local Kubernetes supports `MYCELIS_K8S_BACKEND=rancher` for Rancher Desktop K3s, prefers `k3d` on WSL/Linux when available, and accepts `MYCELIS_K8S_BACKEND=kind` for the older Kind workflow. Rancher mode requires an existing reachable Rancher Desktop cluster and skips image import because Rancher K3s shares the local Docker engine.
+- **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT`, optional `MYCELIS_K8S_TEXT_MODEL_ID`, and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host without editing chart source.
 - **Preset values contract**: `k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`; repo-relative paths such as `charts/mycelis-core/values-k3d.yaml` are resolved from the repo root and the task fails fast if the requested values file does not exist.
 - **Verification packaging**: `k8s.deploy --verify-package` is the release-packaging path for promoted values files; it renders, lints, packages, and writes manifest/checksum artifacts under `dist/helm/` without contacting a cluster.
 - **Open-standard surfaces**: the standards gate keeps the chart on standard Kubernetes resources: Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy, probes, non-root pod/container security context, image pull/digest posture, and cluster-managed output storage.
-- **Enterprise Windows-AI guardrail**: the `values-enterprise-windows-ai` preset fails closed unless `MYCELIS_K8S_TEXT_ENDPOINT` is set to the real Windows GPU host endpoint.
+- **Enterprise Windows-AI guardrail**: the `values-enterprise-windows-ai` preset fails closed unless `MYCELIS_K8S_TEXT_ENDPOINT` is set to the real Windows GPU host endpoint; the preset also declares `qwen3:8b` as the reviewable self-hosted model default and enables explicit AI egress.
 - Chart/runtime config alignment: the deployed Core image resolves startup config from `/core/config`, so the chart mount path and container workdir must stay in sync for bootstrap bundles to load.
 
 ### `compose.py` (Home Runtime)
@@ -160,14 +161,14 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **E2E**: `uv run inv interface.e2e`
 - `ops/interface.py` is the stable Invoke entrypoint; the task implementation lives in `ops/interface_runtime.py`, with shared command/env helpers in `ops/interface_env.py` and process matching hints in `ops/interface_process_support.py`
 - `uv run inv interface.e2e` now defaults to managed `dev` mode for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; `uv run inv interface.build` still retries once after stale repo-local Next build locks, stale `.next/standalone` cleanup locks, incomplete built-server packaging, or transient missing `.next/types` output before failing, start-mode E2E inherits that same recovery behavior, Windows managed Playwright servers bind to `127.0.0.1` for stable loopback readiness/browser navigation, and managed `dev` runs clear an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains.
-- Live backend browser specs that assert filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the spec checkout and the running Core checkout differ; use the backend's actual workspace root, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack.
+- Live backend browser specs that assert filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the spec checkout and the running Core checkout differ; use the backend's actual workspace root, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack. For K8s/PVC proof, set `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` plus `PLAYWRIGHT_K8S_NAMESPACE`, `PLAYWRIGHT_K8S_CORE_SELECTOR`, and `PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT` so the live spec checks the Core pod workspace with `kubectl`.
 - Runtime file/tool requests may also use `workspace/...` as a friendly alias for the configured workspace root; the backend normalizes that prefix away so Compose-backed `/data/workspace` and repo-local `./workspace` do not produce doubled `workspace/workspace/...` paths.
 
 ### `test.py` (Root Test Aliases)
 - **All**: `uv run inv test.all`
 - **Coverage**: `uv run inv test.coverage`
 - **E2E Alias**: `uv run inv test.e2e`
-- `uv run inv test.e2e` mirrors the same managed browser options as `uv run inv interface.e2e`, including `--workers` and `--server-mode`.
+- `uv run inv test.e2e` mirrors the same managed browser options as `uv run inv interface.e2e`, including `--workers` and `--server-mode=dev|start|external`.
 
 ### `cognitive.py` (Optional Local Engine Helpers)
 - **Install**: `uv run inv cognitive.install`

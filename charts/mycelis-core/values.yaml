@@ -34,6 +34,15 @@ ingress:
 
 networkPolicy:
   enabled: true
+  aiEgress:
+    # Enable when Core must call an external self-hosted AI endpoint such as a
+    # Windows-hosted Ollama service. Keep ports explicit instead of allowing
+    # broad outbound egress from the Core pod.
+    enabled: false
+    cidrs:
+      - 0.0.0.0/0
+    ports:
+      - 11434
 
 coreAuth:
   # Either provide apiKey (for dev) or reference an existing secret
@@ -105,6 +114,8 @@ ai:
   # Explicit reachable endpoint for the text engine used by deployed providers.
   # Example: http://192.168.50.156:11434/v1
   textEndpoint: ""
+  # Optional model override applied to the text providers when set.
+  textModelId: ""
   # Providers that should receive the text endpoint override when textEndpoint is set.
   textProviderIds:
     - ollama
@@ -166,6 +177,11 @@ postgresql:
     password: ""
     database: "cortex"
   primary:
+    extraEnvVars:
+      # The chart uses the official pgvector image so the initial database
+      # bootstrap must use the upstream Postgres env name, not Bitnami's alias.
+      - name: POSTGRES_DB
+        value: cortex
     resources:
       requests:
         cpu: 100m

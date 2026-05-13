@@ -87,7 +87,7 @@ The UI may hide internal orchestration jargon, but it must not hide action, cons
 | Outputs | Chat output cards, artifacts, media lanes, retained group outputs, and managed exchange outputs exist. |
 | Capabilities | Connected Tools, MCP library, search capability, and capability-risk/audit foundations exist. |
 | Directed-execution trust spine | Wave 1 execution summaries, proof links, tool-assisted work, and team/group retained-output proof are proven and in final review. |
-| Deployment trust | The dedicated `mycelis-root` WSL proof lane is authoritative and green; Compose, deployment roots, artifact/log/cache directories, and proof environments exist operationally. |
+| Deployment trust | Rancher Desktop K3s is the Windows local Kubernetes release-parity proof lane; the dedicated `mycelis-root` WSL Compose proof lane remains green historical deployment-mimic evidence. |
 | Docs/state | Capability Manifest and product-standard contracts now exist and are in-app discoverable. |
 
 ## Gap Analysis

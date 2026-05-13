@@ -41,7 +41,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "deployment-method-selection",
                 label: "Deployment Method Selection",
                 path: "docs/user/deployment-methods.md",
-                description: "Pick Docker Compose, local k3d, enterprise self-hosted Kubernetes, or edge deployment by target environment",
+                description: "Pick Docker Compose, Rancher K3s or k3d local Kubernetes, enterprise self-hosted Kubernetes, or edge deployment by target environment",
             },
             {
                 slug: "core-concepts",
@@ -331,7 +331,7 @@ export const DOC_MANIFEST: DocSection[] = [
                 slug: "v8-enterprise-self-hosted-kubernetes-delivery-plan",
                 label: "V8 Enterprise Self-Hosted Kubernetes",
                 path: "docs/architecture-library/V8_ENTERPRISE_SELF_HOSTED_KUBERNETES_DELIVERY_PLAN.md",
-                description: "Enterprise-compatible Kubernetes delivery plan with local k3d validation, chart promotion rules, and acceptance gates",
+                description: "Enterprise-compatible Kubernetes delivery plan with Rancher K3s and k3d validation, chart promotion rules, and acceptance gates",
             },
             {
                 slug: "v8-compose-personal-owner-test-plan",

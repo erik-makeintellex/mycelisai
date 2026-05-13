@@ -3,7 +3,7 @@
 
 > Status: ACTIVE
 > Last Updated: 2026-04-12
-> Purpose: Define the supported single-host Docker Compose runtime for home and small-team operators who want Mycelis without Kind/Kubernetes.
+> Purpose: Define the supported single-host Docker Compose runtime for home and small-team operators who want Mycelis without a local Kubernetes cluster.
 
 ## Goal
 
@@ -14,7 +14,7 @@ Provide a supported local runtime path that keeps:
 - NATS messaging
 - operator-readable health and logs
 
-without requiring a Kind/Kubernetes cluster.
+without requiring a local Kubernetes cluster.
 
 ## Supported Scope
 
@@ -43,7 +43,7 @@ Default cognitive posture:
 
 ## Env Contract
 
-Compose uses `.env` as the local secret store and `.env.compose` for container topology/runtime defaults. This keeps credentials consistent across local, Compose, and proof lanes while still separating host/container assumptions from Kind/bridge assumptions.
+Compose uses `.env` as the local secret store and `.env.compose` for container topology/runtime defaults. This keeps credentials consistent across local, Compose, and proof lanes while still separating host/container assumptions from local-Kubernetes or cluster-bridge assumptions.
 
 Required in `.env`:
 - `MYCELIS_API_KEY`

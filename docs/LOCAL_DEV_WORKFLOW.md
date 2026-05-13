@@ -27,7 +27,8 @@ Install the toolchain needed for the runtime lane you will use:
 | Tool | Purpose |
 | --- | --- |
 | Docker Engine / Docker CLI | Compose runtime and local Kubernetes container backend |
-| k3d | preferred local Kubernetes backend |
+| Rancher Desktop | preferred Windows local Docker + K3s control plane |
+| k3d | preferred WSL/Linux local Kubernetes backend |
 | Kind | explicit legacy fallback via `MYCELIS_K8S_BACKEND=kind` |
 | kubectl and Helm | cluster interaction and chart deploy/render |
 | Go 1.26 | Core build/test |
@@ -46,7 +47,8 @@ Task runner contract:
 | Target | Use | Notes |
 | --- | --- | --- |
 | Single-host self-hosted runtime | Docker Compose | default user/demo/home-lab lane |
-| Local Kubernetes proof | `k3d` | preferred chart validation lane |
+| Local Kubernetes proof on Windows | Rancher Desktop K3s | preferred commercial-release parity lane |
+| Local Kubernetes proof on WSL/Linux | `k3d` | preferred chart validation lane |
 | Enterprise/self-hosted cluster | Helm | use real ingress, secrets, storage, and policy controls |
 | Small control node | packaged binary | keep AI on a reachable remote service |
 | Source development | lifecycle tasks | best for implementation, not the operator deployment story |
@@ -60,7 +62,7 @@ Set `MYCELIS_K8S_VALUES_FILE` before `uv run inv k8s.deploy` or `uv run inv k8s.
 
 ## Deployment Guidance By Host Architecture
 
-- Windows x86_64: use Windows editing plus Compose, WSL proof, or self-hosted Kubernetes.
+- Windows x86_64: use Windows editing plus Rancher Desktop Docker-compatible Compose, Rancher Desktop K3s proof, WSL Compose proof, or self-hosted Kubernetes.
 - Linux x86_64: use Compose for home-runtime proof and k3d/Helm for cluster proof.
 - Linux arm64: prefer Compose or binary/control-node lanes with remote AI where local model capacity is limited.
 - Mixed-architecture deployments: keep the control plane, runtime, and AI endpoint addresses explicit instead of relying on localhost assumptions.
@@ -87,6 +89,7 @@ Common runtime variables:
 - `MYCELIS_WORKSPACE`: workspace sandbox root
 - `MYCELIS_COMPOSE_OLLAMA_HOST`: Compose-reachable text model endpoint
 - `MYCELIS_K8S_TEXT_ENDPOINT`: Kubernetes/Helm text model endpoint
+- `MYCELIS_K8S_TEXT_MODEL_ID`: Kubernetes/Helm text model override
 - `MYCELIS_MEDIA_ENDPOINT`, `MYCELIS_MEDIA_MODEL_ID`: media provider overrides
 - `MYCELIS_SEARCH_PROVIDER`, `MYCELIS_SEARXNG_ENDPOINT`, `MYCELIS_SEARCH_LOCAL_API_ENDPOINT`, `MYCELIS_SEARCH_MAX_RESULTS`: governed search posture
 
@@ -119,8 +122,7 @@ Do not share `.venv`, `interface/node_modules`, `.next`, or generated runtime st
 
 ## WSL/Linux Proof Checkout Handoff
 
-Windows is the edit/review/git surface. WSL is the release-proof surface.
-
+Windows is the edit/review/git surface. WSL is the guarded Compose proof surface; Rancher Desktop K3s is the Windows local Kubernetes proof surface.
 Guarded sequence:
 
 ```bash
@@ -134,6 +136,7 @@ Rules:
 - do not copy source trees across the host boundary
 - keep destructive source cleanup scoped to the dedicated WSL proof checkout
 - use the Windows browser at `http://localhost:3000` when proving a WSL-hosted stack on the same machine
+- use `uv run inv wsl.validate --lane=release --headed-browser` when release evidence needs visible live-window Playwright proof against the Compose-delivered UI
 
 ## Quick Start Paths
 
@@ -154,13 +157,18 @@ uv run inv compose.status
 uv run inv compose.health
 ```
 
-Local Kubernetes:
-
-```bash
+Windows local Kubernetes with Rancher Desktop K3s:
+```powershell
+$env:MYCELIS_K8S_BACKEND="rancher"
+$env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-k3d.yaml"
+$env:MYCELIS_K8S_TEXT_ENDPOINT="http://<windows-ai-host>:11434/v1"
+$env:MYCELIS_K8S_TEXT_MODEL_ID="qwen3:8b"
 uv run inv k8s.up
+uv run inv k8s.bridge
 uv run inv lifecycle.up --frontend
 uv run inv lifecycle.health
 ```
+WSL/Linux local Kubernetes with k3d uses the same `values-k3d.yaml` preset with `MYCELIS_K8S_BACKEND=k3d` or auto-detection when k3d is installed.
 
 ## First-Time Setup
 
@@ -239,19 +247,20 @@ Treat `compose.health` as product availability proof: the text cognitive engine 
 
 For day-to-day Windows development, keep the Windows repo as the edit/review/push surface.
 
-Use this as the canonical deployment-mimic proof path when Windows editing is ready for authoritative build, API, UI, runtime, or release-style validation:
+Use this as the guarded WSL Compose deployment-mimic proof path when Windows editing is ready for build, API, UI, runtime, or release-style validation:
 
 ```bash
 uv run inv wsl.status
 uv run inv wsl.refresh --branch <name>
 uv run inv wsl.validate
+uv run inv wsl.validate --lane=release --headed-browser
 uv run inv wsl.cycle --branch <name>
 uv run inv ci.release-preflight --lane=release
 ```
 
-These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree. Always keep the WSL `mycelis-root` deployment checkout git-backed and disposable for deployment-mimic proof.
+These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree. Always keep the WSL `mycelis-root` deployment checkout git-backed and disposable for Compose deployment-mimic proof; use Rancher Desktop K3s when the proof target is local Kubernetes/Helm parity.
 
-Guarded commands: `uv run inv wsl.status`, `uv run inv wsl.refresh --branch <name>`, `uv run inv wsl.validate`, `uv run inv wsl.cycle --branch <name>`.
+Guarded commands: `uv run inv wsl.status`, `uv run inv wsl.refresh --branch <name>`, `uv run inv wsl.validate`, `uv run inv wsl.validate --headed-browser`, `uv run inv wsl.cycle --branch <name>`.
 
 ## Troubleshooting
 
@@ -268,7 +277,7 @@ Default local text inference is Ollama. Hosted or OpenAI-compatible providers ar
 
 Use explicit non-loopback endpoints for Compose/Kubernetes when the model service is outside the container/cluster:
 - Compose: `MYCELIS_COMPOSE_OLLAMA_HOST=http://host.docker.internal:11434` or a reachable LAN host
-- Kubernetes: `MYCELIS_K8S_TEXT_ENDPOINT=http://<host>:11434/v1`
+- Kubernetes: `MYCELIS_K8S_TEXT_ENDPOINT=http://<host>:11434/v1` plus `MYCELIS_K8S_TEXT_MODEL_ID=<installed-model>` when the cluster should use a specific self-hosted model.
 
 Optional local GPU helpers:
 

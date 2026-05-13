@@ -21,6 +21,7 @@ DEPLOYMENT = ROOT / "charts" / "mycelis-core" / "templates" / "deployment.yaml"
 HELPERS = ROOT / "charts" / "mycelis-core" / "templates" / "_helpers.tpl"
 INGRESS = ROOT / "charts" / "mycelis-core" / "templates" / "ingress.yaml"
 SERVICE_ACCOUNT = ROOT / "charts" / "mycelis-core" / "templates" / "serviceaccount.yaml"
+NETWORK_POLICY = ROOT / "charts" / "mycelis-core" / "templates" / "network-policy.yaml"
 
 
 @dataclass
@@ -76,6 +77,15 @@ def test_chart_exposes_first_enterprise_k8s_override_surfaces():
     assert "tag: latest" not in values_text, "values.yaml should not default the chart image tag to `latest`"
 
 
+def test_pgvector_postgres_bootstrap_uses_upstream_database_env():
+    values_text = VALUES.read_text(encoding="utf-8")
+
+    assert "repository: pgvector/pgvector" in values_text
+    assert "extraEnvVars:" in values_text
+    assert "name: POSTGRES_DB" in values_text
+    assert "value: cortex" in values_text
+
+
 def test_chart_templates_project_enterprise_k8s_surfaces_into_workload():
     deployment_text = DEPLOYMENT.read_text(encoding="utf-8")
     required_deployment_snippets = [
@@ -122,6 +132,31 @@ def test_chart_projects_search_provider_env_into_workload():
     ]
     missing_deployment = [snippet for snippet in required_deployment_snippets if snippet not in deployment_text]
     assert not missing_deployment, "deployment.yaml is missing search provider env projection:\n" + "\n".join(missing_deployment)
+
+
+def test_chart_projects_external_ai_endpoint_and_model_env_into_workload():
+    values_text = VALUES.read_text(encoding="utf-8")
+    deployment_text = DEPLOYMENT.read_text(encoding="utf-8")
+    windows_ai_text = VALUES_ENTERPRISE_WINDOWS_AI.read_text(encoding="utf-8")
+
+    assert "textModelId:" in values_text
+    assert "MYCELIS_PROVIDER_{{ $providerID | replace \"-\" \"_\" | upper }}_ENDPOINT" in deployment_text
+    assert "MYCELIS_PROVIDER_{{ $providerID | replace \"-\" \"_\" | upper }}_MODEL_ID" in deployment_text
+    assert "textModelId: \"qwen3:8b\"" in windows_ai_text
+
+
+def test_chart_makes_external_ai_egress_explicit():
+    values_text = VALUES.read_text(encoding="utf-8")
+    network_policy_text = NETWORK_POLICY.read_text(encoding="utf-8")
+    windows_ai_text = VALUES_ENTERPRISE_WINDOWS_AI.read_text(encoding="utf-8")
+
+    assert "aiEgress:" in values_text
+    assert "ports:" in values_text
+    assert "- 11434" in values_text
+    assert "if and .Values.ai.textEndpoint .Values.networkPolicy.aiEgress.enabled" in network_policy_text
+    assert "range .Values.networkPolicy.aiEgress.cidrs" in network_policy_text
+    assert "range .Values.networkPolicy.aiEgress.ports" in network_policy_text
+    assert "networkPolicy:\n  aiEgress:\n    enabled: true" in windows_ai_text
 
 
 def test_chart_adds_ingress_and_serviceaccount_templates():

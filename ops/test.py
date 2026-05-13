@@ -41,7 +41,7 @@ def coverage(c):
         "spec": "Optional Playwright spec path or glob.",
         "live_backend": "Enable specs that require a real Core backend and authenticated UI proxying.",
         "workers": "Optional Playwright worker count override.",
-        "server_mode": "Server mode for the managed UI server (dev or start).",
+        "server_mode": "Server mode for the UI server (dev, start, or external).",
     }
 )
 def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", server_mode="dev"):
@@ -49,8 +49,9 @@ def e2e(c, headed=False, project="", spec="", live_backend=False, workers="", se
     Run Playwright E2E tests (alias for interface.e2e).
     The alias mirrors the managed Interface browser contract, including worker
     and server-mode controls used for stable mocked proof or stricter built
-    bundle proof. Start Core separately only when the spec needs a live backend
-    instead of route stubs.
+    bundle proof, or external mode for a running Compose-delivered UI. Start
+    Core separately only when the spec needs a live backend instead of route
+    stubs.
     """
     interface.e2e.body(
         c,

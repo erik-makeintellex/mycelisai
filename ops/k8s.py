@@ -15,20 +15,31 @@ from .version import get_version
 
 def _k8s_backend() -> str:
     requested = os.environ.get("MYCELIS_K8S_BACKEND", "auto").strip().lower()
-    if requested not in {"", "auto", "k3d", "kind"}:
-        raise SystemExit("Invalid MYCELIS_K8S_BACKEND. Use one of: auto, k3d, kind.")
+    if requested not in {"", "auto", "k3d", "kind", "rancher"}:
+        raise SystemExit("Invalid MYCELIS_K8S_BACKEND. Use one of: auto, k3d, kind, rancher.")
 
     if requested in {"", "auto"}:
         if shutil.which("k3d"):
             return "k3d"
         if shutil.which("kind"):
             return "kind"
-        raise SystemExit("No supported local Kubernetes backend found. Install k3d or kind.")
+        if shutil.which("kubectl"):
+            result = subprocess.run(
+                ["kubectl", "config", "current-context"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0 and result.stdout.strip() == "rancher-desktop":
+                return "rancher"
+        raise SystemExit("No supported local Kubernetes backend found. Install k3d/kind or start Rancher Desktop.")
 
     if requested == "k3d" and not shutil.which("k3d"):
         raise SystemExit("MYCELIS_K8S_BACKEND=k3d requires k3d on PATH.")
     if requested == "kind" and not shutil.which("kind"):
         raise SystemExit("MYCELIS_K8S_BACKEND=kind requires kind on PATH.")
+    if requested == "rancher" and not shutil.which("kubectl"):
+        raise SystemExit("MYCELIS_K8S_BACKEND=rancher requires kubectl on PATH.")
     return requested
 
 
@@ -49,6 +60,9 @@ def _cluster_list_has_name(output: str, backend: str) -> bool:
 
 def _cluster_exists(c) -> bool:
     backend = _k8s_backend()
+    if backend == "rancher":
+        result = c.run("kubectl cluster-info", hide=True, warn=True)
+        return bool(result and result.ok)
     command = "k3d cluster list" if backend == "k3d" else "kind get clusters"
     result = c.run(command, hide=True, warn=True)
     if not result or not result.ok:
@@ -199,6 +213,10 @@ def _deployment_posture(backend: str, values_file: Path | None) -> str:
             return "enterprise self-hosted with Windows-hosted AI"
         if "enterprise" in values_name:
             return "enterprise self-hosted"
+        if "rancher" in values_name:
+            return "Rancher Desktop K3s validation"
+    if backend == "rancher":
+        return "Rancher Desktop K3s validation"
     if backend == "k3d":
         return "k3d validation"
     return f"{backend} validation"
@@ -233,6 +251,11 @@ def init(c):
     if _cluster_exists(c):
         print("Cluster exists.")
     else:
+        if backend == "rancher":
+            raise SystemExit(
+                "Rancher Desktop Kubernetes is not reachable. Start Rancher Desktop, enable Kubernetes, "
+                "then verify with 'kubectl get nodes' before running k8s.init."
+            )
         if backend == "k3d":
             c.run(f"k3d cluster create {CLUSTER_NAME}")
         else:
@@ -302,7 +325,9 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
 
     # 2. Load into the local Kubernetes backend
     print(f"   Loading Image into Cluster...")
-    if backend == "k3d":
+    if backend == "rancher":
+        print("   Rancher Desktop shares the Docker engine with K3s; image import skipped.")
+    elif backend == "k3d":
         c.run(f"k3d image import mycelis/core:{tag} -c {CLUSTER_NAME}")
     else:
         c.run(f"kind load docker-image mycelis/core:{tag} --name {CLUSTER_NAME}")
@@ -319,6 +344,7 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
     pg_db = os.getenv("POSTGRES_DB", "cortex")
     api_key = os.getenv("MYCELIS_API_KEY", "")
     k8s_text_endpoint = os.getenv("MYCELIS_K8S_TEXT_ENDPOINT", "").strip()
+    k8s_text_model_id = os.getenv("MYCELIS_K8S_TEXT_MODEL_ID", "").strip()
     k8s_media_endpoint = os.getenv("MYCELIS_K8S_MEDIA_ENDPOINT", "").strip()
     values_file = resolved_values_file
     if not api_key:
@@ -333,6 +359,8 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
     print(f"   Deployment posture: {_deployment_posture(backend, values_file)}")
     if k8s_text_endpoint:
         print(f"   Text AI endpoint: {k8s_text_endpoint}")
+    if k8s_text_model_id:
+        print(f"   Text AI model: {k8s_text_model_id}")
     if k8s_media_endpoint:
         print(f"   Media AI endpoint: {k8s_media_endpoint}")
     if values_file:
@@ -351,6 +379,9 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
         cmd += f"--values {_shell_quote(values_file)} "
     if k8s_text_endpoint:
         cmd += f"--set-string ai.textEndpoint={_shell_quote(k8s_text_endpoint)} "
+        cmd += "--set networkPolicy.aiEgress.enabled=true "
+    if k8s_text_model_id:
+        cmd += f"--set-string ai.textModelId={_shell_quote(k8s_text_model_id)} "
     if k8s_media_endpoint:
         cmd += f"--set-string ai.mediaEndpoint={_shell_quote(k8s_media_endpoint)} "
     cmd += "--wait"
@@ -473,13 +504,21 @@ def status(c):
 
     try:
         backend = _k8s_backend()
-        cluster_command = "k3d cluster list" if backend == "k3d" else "kind get clusters"
-        cluster_info = c.run(cluster_command, hide=True, warn=True)
-        if cluster_info and cluster_info.ok and _cluster_list_has_name(cluster_info.stdout, backend):
-            print(f"Local Kubernetes Cluster ({backend} / {CLUSTER_NAME}): Active")
+        if backend == "rancher":
+            cluster_info = c.run("kubectl cluster-info", hide=True, warn=True)
+            if cluster_info and cluster_info.ok:
+                print("Local Kubernetes Cluster (Rancher Desktop K3s): Active")
+            else:
+                print("Local Kubernetes Cluster: Not Found")
+                return
         else:
-            print("Local Kubernetes Cluster: Not Found")
-            return
+            cluster_command = "k3d cluster list" if backend == "k3d" else "kind get clusters"
+            cluster_info = c.run(cluster_command, hide=True, warn=True)
+            if cluster_info and cluster_info.ok and _cluster_list_has_name(cluster_info.stdout, backend):
+                print(f"Local Kubernetes Cluster ({backend} / {CLUSTER_NAME}): Active")
+            else:
+                print("Local Kubernetes Cluster: Not Found")
+                return
     except:
          print(f"Local Kubernetes Cluster: Error checking")
          return
@@ -538,6 +577,11 @@ def reset(c):
     # 1. Teardown
     backend = _k8s_backend()
     print("Stopping Local Kubernetes Cluster...")
+    if backend == "rancher":
+        raise SystemExit(
+            "k8s.reset does not reset Rancher Desktop. Use Rancher Desktop reset/shutdown controls, "
+            "or remove the Helm release with 'helm uninstall mycelis-core -n mycelis' when intentional."
+        )
     if backend == "k3d":
         c.run(f"k3d cluster delete {CLUSTER_NAME}")
     else:

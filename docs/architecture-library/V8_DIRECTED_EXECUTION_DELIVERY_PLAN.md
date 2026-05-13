@@ -84,7 +84,7 @@ Wave 1 final-review status:
 - `COMPLETE` team/group retained-output implementation is in review with focused Go/UI proof.
 - `COMPLETE` validation team added focused browser-visible component coverage for direct search/tool-assisted proof and Team Lead proof rendering.
 - `COMPLETE` validation team added focused mocked Chromium coverage for group broadcast execution-summary proof visibility.
-- `IN_REVIEW` dedicated `mycelis-root` WSL release proof is green and is the authoritative proof environment, replacing older local-Windows release caveats.
+- `IN_REVIEW` dedicated `mycelis-root` WSL Compose proof is green as historical deployment-mimic evidence, while Rancher Desktop K3s is now the Windows local Kubernetes release-parity proof lane.
 
 Next active handoff:
 - `IN_REVIEW` Capability/MCP first slice is implemented locally: `/api/v1/capabilities` exposes a derived manifest snapshot from exchange seed capabilities, MCP registry/library entries, Mycelis Search, internal tools, and host command allowlists; persistence schema exists but refresh results are still in-memory.
