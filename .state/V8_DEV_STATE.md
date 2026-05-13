@@ -43,7 +43,8 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
 - `IN_REVIEW` Rancher Desktop K3s is now a live delivery-proof lane rather than only an installed toolchain. `ops/k8s.py` supports `MYCELIS_K8S_BACKEND=rancher`, detects `rancher-desktop` when `k3d`/Kind are absent, accepts an existing Rancher K3s cluster instead of creating one, skips image import because Rancher shares the local Docker engine, refuses destructive `k8s.reset` against Rancher Desktop, and reports Rancher K3s status through `kubectl cluster-info`.
 - `IN_REVIEW` the Helm chart now closes the first K3s runtime blockers found by live proof: official `pgvector/pgvector:pg16` bootstrap gets `POSTGRES_DB=cortex`; `MYCELIS_K8S_TEXT_ENDPOINT` projects provider endpoint overrides; `MYCELIS_K8S_TEXT_MODEL_ID` projects provider model overrides; and configured external text endpoints enable explicit NetworkPolicy AI egress on port `11434`. Live Rancher deployment used `http://192.168.50.156:11434/v1` plus `qwen3:8b`.
 - `IN_REVIEW` headed standard Chromium GUI proof is green against the Rancher K3s Core bridge with local Interface: `soma-governance-live.spec.ts` passed all 4 scenarios using `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` to verify PVC-backed workspace output through `kubectl`; `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts` also passed headed Chromium against the same K3s backend. This supersedes the earlier failing K3s browser run where the AI model was unavailable and the test harness only checked host-visible Compose paths.
-- `NEXT` MVP release acceptance still needs packaging and commit-boundary cleanup before release promotion: rerun the focused regression bundle from the final working tree, refresh documentation surfaces, decide whether Rancher K3s or WSL Compose is the named RC proof lane for the release note, and keep Compose as the fast inner loop rather than the commercial release target.
+- `COMPLETE` Rancher Desktop K3s is the named local RC proof lane for commit `8333788` (`feat(k8s): add Rancher Desktop K3s RC proof lane`). Committed-tree evidence on 2026-05-13 is green: `git show --check --stat --oneline HEAD`, `uv run inv quality.max-lines --limit 300`, focused docs tests (`65` passed), focused K8s/WSL/quality task tests (`70` passed), Helm standards for `values-k3d.yaml`, `values-enterprise.yaml`, and `values-enterprise-windows-ai.yaml`, `uv run inv core.test`, `uv run inv interface.typecheck`, `uv run inv interface.build`, and `uv run inv interface.test` (`115` files / `515` tests). Live Rancher proof redeployed image `mycelis/core:v0.6.0-8333788`, waited PostgreSQL/NATS/Core ready, bridged Core on `127.0.0.1:8080`, passed `uv run inv lifecycle.health`, then passed headed Chromium `soma-governance-live.spec.ts` (`4` tests), `team-creation.spec.ts`, `groups-live-backend.spec.ts`, and `workspace-live-backend.spec.ts` with `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s` against `/data/workspace`.
+- `NEXT` MVP release acceptance now moves to packaging, release-note/handoff cleanup, and optional secondary WSL Compose proof only if the release packet needs deployment-mimic evidence beyond the Rancher K3s local Kubernetes RC proof.
 - `COMPLETE` previous directed-execution validation remains the historical release baseline recorded by state commit `f332c680cc6eec285da018dc48c9760dd15cb4e7`: browser-visible component proof covered direct Soma tool-assisted search summaries, Team Lead guidance summaries, mocked Groups execution-summary/audit-proof visibility, and a green dedicated `mycelis-root` release lane. This proof is superseded for acceptance by the current `de8f5fc` plus `qwen3:14b` default-model proof requirement.
 - `ACTIVE` the Windows repo is now the canonical edit, review, and git-push surface for ongoing work; Rancher Desktop K3s is the Windows local Kubernetes/commercial-parity proof lane.
 - `ACTIVE` the guarded WSL Compose proof checkout lives inside the dedicated `mycelis-root` WSL distro at `/home/erik/deployments/mycelis/checkouts/main`; full install, build, API test, UI test, Compose runtime proof, and WSL release-style validation happen from that WSL checkout when Compose deployment-mimic evidence is required.
@@ -987,16 +988,19 @@ Evidence:
 2. `COMPLETE` commit and push the default-model/state/doc slice from the Windows repo.
    - keep the handoff git-backed
    - do not copy source or generated artifacts into WSL manually
-3. `NEXT` commit the Rancher K3s proof-lane slice, excluding status-only `interface/playwright.config.ts`, then run the committed-tree regression bundle and record the SHA.
-4. `NEXT` run the Rancher Desktop K3s RC proof lane from committed state.
+3. `COMPLETE` commit the Rancher K3s proof-lane slice, excluding status-only `interface/playwright.config.ts`, then run the committed-tree regression bundle and record the SHA.
+4. `COMPLETE` run the Rancher Desktop K3s RC proof lane from committed state.
    - `MYCELIS_K8S_BACKEND=rancher`
    - `MYCELIS_K8S_VALUES_FILE=charts/mycelis-core/values-k3d.yaml`
    - `uv run inv k8s.deploy`, `uv run inv k8s.wait --timeout=300`, `uv run inv k8s.bridge`, `uv run inv lifecycle.health`
    - run headed Chromium Soma/team/groups/workspace live specs with `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`
-5. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
+5. `NEXT` package the MVP release candidate and prepare release-note/handoff evidence.
+   - name Rancher Desktop K3s as the local RC proof lane
+   - keep WSL Compose as optional secondary deployment-mimic evidence
+6. `NEXT` keep the Windows self-hosted operator lane honest while the MVP proof surface grows.
    - verify the Windows browser can still reach the active proof UI, whether Rancher K3s with local Interface or WSL/Compose
    - keep explicit non-loopback AI endpoint posture intact as docs/tests/runtime evolve
-6. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
+7. `REQUIRED` keep the task/operator contract synchronized in the same slices that change it.
    - `README.md`
    - `docs/TESTING.md`
    - `docs/LOCAL_DEV_WORKFLOW.md`
