@@ -140,12 +140,8 @@ export const DOC_MANIFEST: DocSection[] = [
                 path: "docs/LOCAL_DEV_WORKFLOW.md",
                 description: "Setup, config reference, port map, and troubleshooting guidance",
             },
-            {
-                slug: "remote-user-testing",
-                label: "Remote User Testing",
-                path: "docs/REMOTE_USER_TESTING.md",
-                description: "Walkthrough for networked user testing of Soma, governance, MCP visibility, and safe actuation paths",
-            },
+            { slug: "remote-user-testing", label: "Remote User Testing", path: "docs/REMOTE_USER_TESTING.md", description: "Walkthrough for networked user testing of Soma, governance, MCP visibility, and safe actuation paths" },
+            { slug: "release-handoff", label: "Release Handoff", path: "docs/RELEASE_HANDOFF.md", description: "Current release-candidate handoff with Rancher Desktop K3s proof result, deployment lanes, live GUI commands, packaging commands, and optional WSL Compose secondary proof" },
             {
                 slug: "v8-dev-state",
                 label: "V8 Dev State",

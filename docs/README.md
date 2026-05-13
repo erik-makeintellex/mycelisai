@@ -79,6 +79,7 @@ Use these when the goal is product packaging, edition posture, or the paid-vs-se
 
 Use these when the goal is verification, release proof, or workflow-complete validation:
 
+- **Release Handoff**: `./RELEASE_HANDOFF.md` for the current RC proof result, deployment lanes, Rancher K3s commands, GUI proof commands, packaging commands, and optional WSL Compose secondary proof.
 - **Testing Guide**: `./TESTING.md`
 - **Remote User Testing Runbook**: `./REMOTE_USER_TESTING.md`
 - **V8 Compose Personal Owner Deployment Test Plan**: `./architecture-library/V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md`

@@ -240,7 +240,7 @@ Invoke-managed Playwright owns the local Next.js server lifecycle. Run `uv run i
 
 ## Testing Gate
 
-Canonical testing guidance lives in [Testing](docs/TESTING.md). Browser proof depth lives in [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md).
+Canonical testing guidance lives in [Testing](docs/TESTING.md). Browser proof depth lives in [V8 UI Testing Agentry Product Contract](docs/architecture-library/V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) and [V8 UI Team Full Test Set](docs/architecture-library/V8_UI_TEAM_FULL_TEST_SET.md). Current RC proof and operator handoff evidence lives in [Release Handoff](docs/RELEASE_HANDOFF.md); `.state/V8_DEV_STATE.md` remains the detailed delivery scoreboard.
 
 End-of-slice reporting should name evidence commands run, docs changed, and touched docs reviewed unchanged.
 
