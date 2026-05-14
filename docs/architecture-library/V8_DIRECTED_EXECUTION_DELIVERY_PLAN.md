@@ -30,6 +30,20 @@ The release goal is not another panel. The release goal is one coherent executio
 | Validation | ACTIVE | Browser-visible proof, unit/API contract coverage, failure/recovery checks. | Keep Wave 1 final-review evidence green while proving the next capability/output/GUI lanes. |
 | Docs/In-App Docs | ACTIVE | Architecture/user/state/docs manifest alignment. | Keep canonical docs and in-app docs synced for each slice. |
 
+## Active Embodiment Cell
+
+This is the current cross-team operating cell. It is an execution overlay, not a new doctrine layer.
+
+| Lane | Active Team | Architecture Guidance | Execution Target | Proof Gate |
+| --- | --- | --- | --- | --- |
+| Soma experience | Interface/Soma UX + Governance/Trust | Keep Soma singular; compress default UX into intent, visible result, proof/recovery. | Verify Operator trust package, proposal lifecycle, recovery/degradation, and retained outputs in the default Soma path. | Focused Vitest plus headed browser proof for Soma governance. |
+| Runtime and capability | Runtime/Run Spine + Capability/MCP + Output/Exchange | Capabilities are governed runtime objects; outputs are durable product objects. | Redeploy current HEAD to Rancher K3s and prove run-linked execution, retained artifacts, search/capability posture, and degradation metadata. | `go test ./... -count=1 -p 1`, K3s deploy/wait/bridge, lifecycle health. |
+| Governance and trust | Governance/Trust + Runtime/Run Spine | Proposal -> confirm -> execute is durable infrastructure, not UI decoration. | Prove successful and failed approved execution carry run/proof/audit/recovery boundaries. | API/server tests plus live proposal/confirm/run proof. |
+| Deployment and proof | Interface/Advanced UX + Validation | Deployment roots and runtime health must become understandable proof, not topology noise. | Prove current image/commit in Rancher K3s, Core bridge, storage/PVC root, AI/search posture, and workspace output review. | K3s status/deploy/wait/bridge plus workspace live-backend proof. |
+| QA and embodiment | Validation + Orchestration Lead | Acceptance asks whether users can trust visible execution and recovery. | Run the canonical MVP path: Soma intent -> proposal -> approval -> run -> retained output -> proof/revisitability. | Headed Chromium live specs for governance, team execution, groups, and workspace. |
+
+Immediate orchestration rule: the next broadening slice is deferred until current HEAD is live-proven on the Rancher K3s lane.
+
 ## Work Packages
 
 | ID | Priority | Owner | Work Package | Acceptance |
