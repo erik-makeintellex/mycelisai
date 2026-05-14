@@ -66,12 +66,7 @@ func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool)
 		return protocol.PlannedToolCall{}, false
 	}
 
-	pathMatch := namedFilePattern.FindStringSubmatch(trimmed)
-	if len(pathMatch) < 2 {
-		return protocol.PlannedToolCall{}, false
-	}
-
-	targetPath := strings.TrimSpace(pathMatch[1])
+	targetPath := extractRequestedFilePath(trimmed)
 	if targetPath == "" {
 		return protocol.PlannedToolCall{}, false
 	}
@@ -104,6 +99,28 @@ func inferWriteFilePlanFromRequest(text string) (protocol.PlannedToolCall, bool)
 	}, true
 }
 
+func extractRequestedFilePath(text string) string {
+	matches := namedFilePattern.FindAllStringSubmatch(text, -1)
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+		candidate := strings.TrimSpace(match[1])
+		if looksLikeFilePath(candidate) {
+			return strings.Trim(candidate, `"'.,;`)
+		}
+	}
+	return ""
+}
+
+func looksLikeFilePath(value string) bool {
+	trimmed := strings.Trim(value, `"'.,;`)
+	if trimmed == "" {
+		return false
+	}
+	return strings.ContainsAny(trimmed, `/\`) || filepathExt(trimmed) != ""
+}
+
 func filepathExt(targetPath string) string {
 	lastDot := strings.LastIndex(targetPath, ".")
 	if lastDot < 0 {
@@ -114,8 +131,22 @@ func filepathExt(targetPath string) string {
 
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
 	var planned []protocol.PlannedToolCall
-	if call, ok := parsePlannedToolCall(agentResult.Text); ok {
-		planned = append(planned, normalizePlannedToolCall(call))
+	parsedCall, hasParsedCall := parsePlannedToolCall(agentResult.Text)
+	if inferredTeamCall, ok := inferCreateTeamPlanFromRequest(latestRequest); ok {
+		if hasParsedCall && strings.TrimSpace(parsedCall.Name) == "create_team" {
+			planned = append(planned, normalizePlannedToolCall(mergeMissingPlannedToolArguments(parsedCall, inferredTeamCall)))
+		} else {
+			planned = append(planned, normalizePlannedToolCall(inferredTeamCall))
+		}
+		if containsToolName(mutTools, "write_file") {
+			if fileCall, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
+				planned = append(planned, normalizePlannedToolCall(fileCall))
+			}
+		}
+		return planned
+	}
+	if hasParsedCall {
+		planned = append(planned, normalizePlannedToolCall(parsedCall))
 	}
 	if len(planned) == 0 {
 		for _, tool := range mutTools {
@@ -127,6 +158,27 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 		}
 	}
 	return planned
+}
+
+func mergeMissingPlannedToolArguments(primary, fallback protocol.PlannedToolCall) protocol.PlannedToolCall {
+	if primary.Arguments == nil {
+		primary.Arguments = map[string]any{}
+	}
+	for key, value := range fallback.Arguments {
+		if strings.TrimSpace(fmt.Sprint(primary.Arguments[key])) == "" {
+			primary.Arguments[key] = value
+		}
+	}
+	return primary
+}
+
+func containsToolName(tools []string, want string) bool {
+	for _, tool := range tools {
+		if strings.EqualFold(strings.TrimSpace(tool), want) {
+			return true
+		}
+	}
+	return false
 }
 
 func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []string {
@@ -146,6 +198,11 @@ func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []stri
 		case "promote_deployment_context":
 			if artifactID, ok := call.Arguments["source_artifact_id"].(string); ok && strings.TrimSpace(artifactID) != "" {
 				resources = append(resources, fmt.Sprintf("company knowledge from %s", strings.TrimSpace(artifactID)))
+				continue
+			}
+		case "create_team":
+			if teamID := firstNonEmptyString(call.Arguments["team_id"], call.Arguments["id"], call.Arguments["team_name"]); teamID != "" {
+				resources = append(resources, "team:"+teamID)
 				continue
 			}
 		}

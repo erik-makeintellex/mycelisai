@@ -73,4 +73,17 @@ spec:
           port: {{ . }}
         {{- end }}
     {{- end }}
+    {{- if and (or .Values.search.searxngEndpoint .Values.search.localApiEndpoint) .Values.networkPolicy.searchEgress.enabled }}
+    # 6. Allow explicitly configured external search endpoint ports.
+    - to:
+        {{- range .Values.networkPolicy.searchEgress.cidrs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        {{- range .Values.networkPolicy.searchEgress.ports }}
+        - protocol: TCP
+          port: {{ . }}
+        {{- end }}
+    {{- end }}
 {{- end }}

@@ -17,7 +17,7 @@
 | `/api/v1/council/{member}/chat` | POST | Chat with any council member via NATS request-reply. Returns `APIResponse<CTSEnvelope>` with trust score + provenance |
 | `/api/v1/council/members` | GET | List all addressable council members from standing teams (admin-core, council-core) |
 | **Chat & Cognitive** | | |
-| `/api/v1/chat` | POST | Soma/Admin chat. Runtime-state and search-capability questions answer directly; freshness-oriented search prompts call configured Mycelis `web_search` before the NATS Admin-agent path. Chat responses may include `execution_summary` so the UI can show intent, Soma understanding, execution shape, capability use, outputs, proof, audit/recovery state, and next step. |
+| `/api/v1/chat` | POST | Soma/Admin chat. Runtime-state and search-capability questions answer directly; freshness-oriented search prompts call configured Mycelis `web_search` before the NATS Admin-agent path only when the latest request is not a governed mutation/team-creation/delegation prompt. Proposal payloads include `bus_scope` and `nats_subjects`; explicit `create_team` proposals use only the requested team's command/status/result subjects, not a fallback admin-core bus. Explicit team requests can retain concrete output asks such as `write_file` in the same proposal. Chat responses may include `execution_summary` so the UI can show intent, Soma understanding, execution shape, capability use, outputs, proof, audit/recovery state, and next step. |
 | `/api/v1/cognitive/infer` | POST | Direct cognitive inference (profile-routed) |
 | `/api/v1/cognitive/config` | GET | Read cognitive router configuration (providers, profiles, media) |
 | `/api/v1/cognitive/matrix` | GET | Alias for cognitive config (matrix view) |
@@ -48,10 +48,10 @@
 | `/api/v1/homepage` | GET | Return the sanitized deployer-editable homepage template from `core/config/homepage.yaml` or `MYCELIS_HOMEPAGE_CONFIG_PATH`, falling back to Soma orchestration defaults when missing or invalid |
 | **Memory & Search** | | |
 | `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters across Soma-personal, team-shared, and governed memory lanes |
-| `/api/v1/search/status` | GET | Current Mycelis Search provider posture for UI/Soma capability answers, including provider, configured/enabled flags, direct `web_search` support, token requirements, and blocker/next-action copy |
-| `/api/v1/search` | POST | Governed Mycelis Search API over `local_sources`, optional self-hosted `searxng`, optional hosted search/MCP bridge posture, or structured disabled-provider blockers |
+| `/api/v1/search/status` | GET | Current Mycelis Search provider posture for UI/Soma capability answers, including provider, configured/enabled flags, direct `web_search` support, token requirements, online-allowed/no-confirm disclosure posture, and blocker/next-action copy |
+| `/api/v1/search` | POST | Governed Mycelis Search API over `local_sources`, optional self-hosted `searxng`, optional hosted search/MCP bridge posture, or structured disabled-provider blockers. Configured online search runs without a separate confirmation prompt when `MYCELIS_SEARCH_ONLINE_ALLOWED=true`, while responses disclose provider/path and treat external results as leads to verify. |
 | **Runtime Capabilities** | | |
-| `/api/v1/capabilities` | GET | Return the canonical runtime Capability Manifest snapshot as `APIResponse<Snapshot>`, derived from exchange capabilities, installed/available MCP, Mycelis Search status, internal tools, and host-command allowlist |
+| `/api/v1/capabilities` | GET | Return the canonical runtime Capability Manifest snapshot as `APIResponse<Snapshot>`, derived from exchange capabilities, installed/available MCP, Mycelis Search status, internal tools, and host-command allowlist; runtime team creation/delegation maps to the medium-risk `team_orchestration` capability |
 | `/api/v1/capabilities/{id}` | GET | Return one runtime capability manifest by ID (`404` when absent) |
 | `/api/v1/capabilities/refresh` | POST | Re-derive and cache the current runtime Capability Manifest snapshot |
 | `/api/v1/memory/deployment-context` | GET/POST | List or load governed user/private content, deployment knowledge, admin-owned Soma context, and reflection/synthesis observations into separate `user_private_context`, `customer_context`, `company_knowledge`, `soma_operating_context`, and `reflection_synthesis` pgvector stores; POST supports text content plus metadata such as `content_domain` and `target_goal_sets`. This is governed source/doctrine intake, not implicit team-shared `AGENT_MEMORY`. |
@@ -93,6 +93,7 @@
 | `/api/v1/artifacts/{id}/download` | GET | Download a stored or inline artifact as a file attachment for chat/operator review |
 | `/api/v1/artifacts/{id}/status` | PUT | Update artifact status |
 | `/api/v1/artifacts/{id}/save` | POST | Persist cached image artifact to workspace folder (`saved-media` default) |
+| `/api/v1/workspace/files/view?path=...` | GET | Serve a bounded workspace file inline for retained chat outputs; paths are workspace-confined and HTML is sandboxed for generated game/code review |
 | **MCP Ingress** | | |
 | `/api/v1/mcp/install` | POST | Raw MCP install endpoint — **disabled by Phase 0 security** (`403`), use library install |
 | `/api/v1/mcp/servers` | GET | List installed MCP servers |
@@ -160,7 +161,7 @@ Memory/governance note:
 | `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (MissionEventEnvelope records) |
 | `/api/v1/runs/{id}/chain` | GET | Causal chain — parent run → event → trigger → child run traversal |
 | **Intent (CE-1)** | | |
-| `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return `run_id` plus `execution_summary` proof for verified guided execution |
+| `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return `run_id` plus `execution_summary` proof for verified guided execution. Confirmed tool calls are logged to `/api/v1/runs/{id}/conversation`; approved `create_team` calls also mirror a collaboration-group record so the created team is visible through `/api/v1/groups`. Retained outputs identify created teams as `kind=team` and approved file writes as retained `kind=file` or `kind=code` depending on extension; file outputs include an `href` to the sandboxed workspace viewer when the path is workspace-readable. |
 | `/api/v1/intent/proof/{id}` | GET | Retrieve intent proof bundle by ID |
 | `/api/v1/templates` | GET | List CE-1 orchestration templates or V8 AI Organization starters when `view=organization-starters` |
 | `/api/v1/conversation-templates` | GET/POST | List/create DB-backed reusable Soma/Council/team ask templates |
@@ -185,14 +186,14 @@ The object can include:
 - `understanding`: Soma's concise interpretation and assumptions
 - `execution`: shape, status, and summary such as `direct_soma`, `guided_proposal`, `tool_assisted_work`, or `team_execution`
 - `capability_use`: governed tools, teams, MCP capabilities, automations, or plugins used
-- `outputs`: answer, proposal, artifact, tool result, or other retained output references
+- `outputs`: answer, proposal, artifact, tool result, retained team, or retained file/code output references
 - `proof`: `run_id`, `audit_event_id`, `intent_proof_id`, and verification state
 - `audit_recovery`: approval status, recovery state, blocker, and retry posture
 - `next_step`: suggested continuation or proof/review link
 
 Current producers:
 - `/api/v1/chat` direct answers and guided proposals
-- `/api/v1/intent/confirm-action` verified proposal execution results
+- `/api/v1/intent/confirm-action` verified proposal execution results, including retained tool outputs and run-conversation turns for confirmed tool calls
 - `/api/v1/organizations/{id}/workspace/actions` Team Lead guidance responses with proof explicitly left unrun until execution exists
 - `/api/v1/groups/{id}/broadcast` accepted group broadcasts with `audit_event_id` proof and no fabricated `run_id`
 

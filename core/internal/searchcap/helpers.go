@@ -3,6 +3,7 @@ package searchcap
 import (
 	"encoding/json"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -35,6 +36,39 @@ func normalizeSourceScope(raw string) string {
 		return strings.ToLower(strings.TrimSpace(raw))
 	default:
 		return "local_sources"
+	}
+}
+
+func parseBoolDefault(raw string, fallback bool) bool {
+	if strings.TrimSpace(raw) == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(strings.TrimSpace(raw))
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func normalizeApprovalMode(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "require_confirmation", "confirm", "approval_required":
+		return "require_confirmation"
+	case "silent":
+		return "silent"
+	default:
+		return "notify"
+	}
+}
+
+func normalizeDisclosureMode(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "minimal":
+		return "minimal"
+	case "silent":
+		return "silent"
+	default:
+		return "notice_and_interpretation"
 	}
 }
 

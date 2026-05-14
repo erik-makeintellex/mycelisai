@@ -191,3 +191,36 @@ func TestHandleChat_BlocksUnexpectedMutationForReadOnlyPromptAfterRetry(t *testi
 		t.Fatalf("error = %q, want drift blocker summary", resp.Error)
 	}
 }
+
+func TestInferMutationToolsTreatsNeedResearchTeamAsBlueprintDelegation(t *testing.T) {
+	tools := inferMutationToolsFromText("i need an indepth ai research team that can take on various aspects of current research to understand optimal agentry architecture")
+
+	if !containsString(tools, "generate_blueprint") {
+		t.Fatalf("tools = %v, want generate_blueprint", tools)
+	}
+	if !containsString(tools, "delegate") {
+		t.Fatalf("tools = %v, want delegate", tools)
+	}
+}
+
+func TestNormalizeRetryRequestUsesPriorUserIntent(t *testing.T) {
+	messages := []chatRequestMessage{
+		{Role: "user", Content: "create a research team and have them generate documentation"},
+		{Role: "assistant", Content: "Soma hit a server-side failure while handling the request."},
+		{Role: "user", Content: "try again"},
+	}
+
+	normalized := normalizeRetryRequest(messages)
+	latest := latestUserMessageContent(normalized)
+
+	if strings.Contains(latest, "try again") {
+		t.Fatalf("latest retry request was not normalized: %q", latest)
+	}
+	if !strings.Contains(latest, "create a research team") {
+		t.Fatalf("latest retry request = %q, want prior user intent", latest)
+	}
+	tools := inferMutationToolsFromText(latest)
+	if !containsString(tools, "generate_blueprint") || !containsString(tools, "delegate") || containsString(tools, "write_file") {
+		t.Fatalf("retry mutation tools = %v, want team proposal tools without write_file", tools)
+	}
+}

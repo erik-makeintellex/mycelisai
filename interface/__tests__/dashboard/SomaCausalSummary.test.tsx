@@ -1,10 +1,16 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SomaCausalSummary } from "@/components/soma/SomaCausalSummary";
 import type { ChatMessage } from "@/store/useCortexStore";
 
 describe("SomaCausalSummary", () => {
     it("summarizes the latest directed execution as one causal package", () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, "clipboard", {
+            value: { writeText },
+            configurable: true,
+        });
+
         const messages: ChatMessage[] = [
             { role: "user", content: "Prepare onboarding assets" },
             {
@@ -58,5 +64,12 @@ describe("SomaCausalSummary", () => {
         expect(screen.getByText(/Audit proof/i)).toBeDefined();
         expect(screen.getByText(/Recovery snapshot retained/i)).toBeDefined();
         expect(screen.getByText("Review the package with operators.")).toBeDefined();
+
+        fireEvent.click(screen.getByRole("button", { name: /Copy output quote for Onboarding run package, Onboarding brief/i }));
+
+        return waitFor(() => {
+            expect(writeText).toHaveBeenCalledWith("> Onboarding run package, Onboarding brief");
+            expect(screen.getByRole("button", { name: /Copied output quote/i })).toBeDefined();
+        });
     });
 });

@@ -85,6 +85,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	if sys == "" {
 		sys = fmt.Sprintf("You are a %s in the %s team.", a.Manifest.Role, a.TeamID)
 	}
+	sys += runtimeResponseDirective()
 	if a.internalTools != nil {
 		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
 	}
@@ -103,4 +104,12 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 		profile = a.Manifest.Model
 	}
 	return cognitive.InferRequest{Profile: profile, Provider: a.Manifest.Provider, Messages: messages}, profile
+}
+
+func runtimeResponseDirective() string {
+	return "\n\n## Runtime Response Contract\n" +
+		"- Be terse in agent-to-agent and operator-facing response text. Prefer compact status fragments over full prose.\n" +
+		"- Say only target, action, evidence/result, blocker, and next step needed for execution.\n" +
+		"- For configured online search, use web_search without asking for confirmation. Disclose path first: provider/tool, no confirmation, external results are leads to verify.\n" +
+		"- Do not add tutorial text, pleasantries, or broad explanations unless explicitly requested.\n"
 }

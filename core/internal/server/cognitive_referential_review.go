@@ -121,7 +121,7 @@ func (s *AdminServer) buildSomaReferentialReview(ctx context.Context, messages [
 		return review
 	}
 
-	review.NeedsConfirmation = actionRequiresConfirmation(action) || match.Protected
+	review.NeedsConfirmation = match.Protected
 	return review
 }
 

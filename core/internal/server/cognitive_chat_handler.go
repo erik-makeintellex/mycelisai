@@ -59,6 +59,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	req.Messages = normalizeRetryRequest(req.Messages)
 	latestUserText := latestUserMessageContent(req.Messages)
 	if isRuntimeStateQuestion(latestUserText) {
 		s.respondRuntimeStateSummary(w, r, req.OrganizationID, req.TeamID, req.TeamName)
@@ -68,7 +69,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		s.respondSearchCapabilitySummary(w, r)
 		return
 	}
-	if query, ok := directSearchQuery(latestUserText); ok {
+	if query, ok := shouldHandleDirectSearch(latestUserText); ok {
 		s.respondDirectSearchAnswer(w, r, query)
 		return
 	}
@@ -170,11 +171,12 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 
 	if isMutation {
 		plannedToolCalls := buildPlannedToolCalls(agentResult, latestUserText, mutTools)
-		approval := buildApprovalPolicy(profile, plannedToolCalls, mutTools)
+		effectiveTools := toolsForPlannedCalls(plannedToolCalls, mutTools)
+		approval := buildApprovalPolicy(profile, plannedToolCalls, effectiveTools)
 		scope := &protocol.ScopeValidation{
-			Tools:             mutTools,
+			Tools:             effectiveTools,
 			AffectedResources: affectedResourcesForPlannedCalls(plannedToolCalls),
-			RiskLevel:         chatToolRisk(mutTools),
+			RiskLevel:         chatToolRisk(effectiveTools),
 			PlannedToolCalls:  plannedToolCalls,
 			Approval:          approval,
 			GovernanceProfile: profile.snapshot(),
@@ -189,7 +191,7 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 			protocol.TemplateChatToProposal, "admin",
 			"Chat mutation detected",
 			map[string]any{
-				"tools":           mutTools,
+				"tools":           effectiveTools,
 				"agent_tools":     agentResult.ToolsUsed,
 				"requested_tools": requestMutationTools,
 				"actor":           "Soma",
@@ -217,9 +219,10 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		if confirmToken != nil {
 			token = confirmToken.Token
 		}
-		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, mutTools)
-		chatPayload.Proposal = buildMutationChatProposal(mutTools, proofID, token, "admin-core", []string{"admin"}, approval, profile.snapshot(), display)
-		chatPayload.ExecutionSummary = buildProposalExecutionSummary(latestUserText, plannedToolCalls, mutTools, display, proofID, auditEventID, approval)
+		display := buildProposalDisplayContract(plannedToolCalls, latestUserText, effectiveTools)
+		chatPayload.ToolsUsed = chatResponseTools(isMutation, agentResult.ToolsUsed, effectiveTools)
+		chatPayload.Proposal = buildMutationChatProposal(effectiveTools, proofID, token, "admin-core", []string{"admin"}, approval, profile.snapshot(), display)
+		chatPayload.ExecutionSummary = buildProposalExecutionSummary(latestUserText, plannedToolCalls, effectiveTools, display, proofID, auditEventID, approval)
 
 		chatPayload.Provenance = &protocol.AnswerProvenance{
 			ResolvedIntent:  "proposal",

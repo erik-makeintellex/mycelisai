@@ -113,11 +113,12 @@ func buildProposalExecutionSummary(originalIntent string, planned []protocol.Pla
 	}
 }
 
-func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *protocol.ScopeValidation) *protocol.ExecutionSummary {
+func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) *protocol.ExecutionSummary {
 	capabilities := []protocol.CapabilityUse{}
 	if scope != nil {
 		capabilities = capabilityUseFromPlannedCalls(scope.PlannedToolCalls, scope.Tools, scope.RiskLevel)
 	}
+	outputs := executionOutputsFromToolResults(results)
 
 	return &protocol.ExecutionSummary{
 		Intent: protocol.ExecutionIntent{
@@ -132,6 +133,7 @@ func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *p
 			Summary: "Soma executed the confirmed proposal and recorded durable proof.",
 		},
 		CapabilityUse: capabilities,
+		Outputs:       outputs,
 		Proof: protocol.ExecutionProof{
 			RunID:         runID,
 			RunClass:      protocol.ExecutionRunClassLinked,

@@ -44,6 +44,9 @@ func TestServiceStatusExplainsTokenFreeSelfHostedPath(t *testing.T) {
 	if status.SomaToolName != "web_search" || !status.DirectSomaInteraction {
 		t.Fatalf("soma direct status = %+v", status)
 	}
+	if !status.OnlineAllowed || status.ApprovalMode != "notify" || status.DisclosureMode != "notice_and_interpretation" {
+		t.Fatalf("search governance status = %+v", status)
+	}
 }
 
 func TestServiceSearXNGNormalizesJSONResults(t *testing.T) {
@@ -75,6 +78,26 @@ func TestServiceSearXNGNormalizesJSONResults(t *testing.T) {
 	if resp.Results[0].SourceKind != "searxng" || resp.Results[0].TrustClass != "bounded_external" {
 		t.Fatalf("result = %+v", resp.Results[0])
 	}
+	if resp.Metadata["approval_mode"] != "notify" || resp.Metadata["confirmation"] != "not_required" {
+		t.Fatalf("metadata = %+v", resp.Metadata)
+	}
+}
+
+func TestServicePublicWebSearchCanBeDisabledByConfig(t *testing.T) {
+	svc := NewService(Config{
+		Provider:         ProviderSearXNG,
+		SearXNGEndpoint:  "http://searxng.local",
+		OnlineAllowed:    false,
+		OnlineAllowedSet: true,
+	}, nil, nil)
+
+	resp, err := svc.Search(context.Background(), Request{Query: "mycelis search", SourceScope: "web"})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if resp.Blocker == nil || resp.Blocker.Code != "online_search_not_allowed" {
+		t.Fatalf("Blocker = %+v", resp.Blocker)
+	}
 }
 
 func TestServiceSearXNGForbiddenExplainsJSONFormat(t *testing.T) {
@@ -100,6 +123,9 @@ func TestConfigFromEnvAcceptsSelfHostedLocalAPI(t *testing.T) {
 	t.Setenv("MYCELIS_SEARCH_PROVIDER", "self_hosted")
 	t.Setenv("MYCELIS_SEARCH_LOCAL_API_ENDPOINT", "http://search.local/api/search")
 	t.Setenv("MYCELIS_SEARCH_MAX_RESULTS", "3")
+	t.Setenv("MYCELIS_SEARCH_ONLINE_ALLOWED", "true")
+	t.Setenv("MYCELIS_SEARCH_APPROVAL_MODE", "notify")
+	t.Setenv("MYCELIS_SEARCH_DISCLOSURE_MODE", "notice_and_interpretation")
 
 	cfg := ConfigFromEnv()
 
@@ -111,6 +137,9 @@ func TestConfigFromEnvAcceptsSelfHostedLocalAPI(t *testing.T) {
 	}
 	if cfg.MaxResults != 3 {
 		t.Fatalf("MaxResults = %d, want 3", cfg.MaxResults)
+	}
+	if !cfg.OnlineAllowed || !cfg.OnlineAllowedSet || cfg.ApprovalMode != "notify" || cfg.DisclosureMode != "notice_and_interpretation" {
+		t.Fatalf("search governance config = %+v", cfg)
 	}
 }
 

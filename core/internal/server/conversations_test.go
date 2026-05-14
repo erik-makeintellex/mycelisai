@@ -1,7 +1,10 @@
 package server
 
 import (
+	"fmt"
+	"net"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -10,6 +13,9 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
+
+var serverTestNATSPort int32 = 15100 + int32(time.Now().UnixNano()%1000)
+var serverTestNATSClientPort int32 = 25000 + int32(time.Now().UnixNano()%5000)
 
 // ── Shared helpers for conversation handler tests ────────────────
 
@@ -30,7 +36,7 @@ func withConversations(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 // withNATS starts an embedded NATS server and wires NC into AdminServer.
 func withNATS(t *testing.T) func(*AdminServer) {
 	t.Helper()
-	opts := &natsserver.Options{Host: "127.0.0.1", Port: -1}
+	opts := &natsserver.Options{Host: "127.0.0.1", Port: nextServerTestNATSPort(t)}
 	srv, err := natsserver.NewServer(opts)
 	if err != nil {
 		t.Fatalf("nats server: %v", err)
@@ -39,17 +45,47 @@ func withNATS(t *testing.T) func(*AdminServer) {
 	if !srv.ReadyForConnections(3 * time.Second) {
 		t.Fatal("nats server not ready")
 	}
-	nc, err := nats.Connect(srv.ClientURL())
+	nc, err := nats.Connect(srv.ClientURL(), nats.Dialer(&net.Dialer{
+		LocalAddr: &net.TCPAddr{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: nextServerTestNATSClientPort(t),
+		},
+		Timeout: 2 * time.Second,
+	}))
 	if err != nil {
+		srv.Shutdown()
 		t.Fatalf("nats connect: %v", err)
 	}
 	t.Cleanup(func() {
 		nc.Close()
 		srv.Shutdown()
+		srv.WaitForShutdown()
 	})
 	return func(s *AdminServer) {
 		s.NC = nc
 	}
+}
+
+func nextServerTestNATSPort(t *testing.T) int {
+	return nextServerTestTCPPort(t, &serverTestNATSPort)
+}
+
+func nextServerTestNATSClientPort(t *testing.T) int {
+	return nextServerTestTCPPort(t, &serverTestNATSClientPort)
+}
+
+func nextServerTestTCPPort(t *testing.T, counter *int32) int {
+	t.Helper()
+	for range 200 {
+		port := int(atomic.AddInt32(counter, 1))
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err == nil {
+			_ = ln.Close()
+			return port
+		}
+	}
+	t.Fatal("no available low NATS test port")
+	return 0
 }
 
 // convTurnColumns returns the column names returned by conversation_turns SELECT queries.

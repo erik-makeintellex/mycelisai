@@ -135,6 +135,7 @@ No backend/API review is complete without a mapped UI target and evidence result
 - Run one managed Playwright invocation at a time for a workspace and port.
 - Start only the services required for the check.
 - Shut services down after the check unless a follow-on validation needs them alive.
+- Windows task loads prepend standard local tool bins, including Rancher Desktop and Chocolatey, and embedded NATS unit tests must bind package-unique low loopback ports outside the Windows dynamic client-port range instead of `Port: -1`.
 
 Compiled Go services started with `go build`, `go run`, or direct binaries can outlive tests. Runtime validation must account for repo-local binaries, containerized dependencies, and test-managed services.
 
@@ -168,35 +169,35 @@ Focused live-backend examples:
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
 uv run inv interface.e2e --headed --live-backend --server-mode=start --project=chromium --spec=e2e/specs/groups-live-backend.spec.ts
+uv run inv interface.e2e --headed --live-backend --server-mode=external --project=chromium --spec=e2e/specs/team-execution-live.spec.ts
 ```
 
-Rancher Desktop K3s live-backend proof uses the local Interface server against the K3s Core bridge. When the spec checks backend-written files, prove the PVC-backed workspace through `kubectl`:
+Rancher Desktop K3s live-backend proof uses the local Interface server against the K3s Core bridge; `k8s.bridge` forwards in-cluster Core `:8080` to `MYCELIS_API_PORT` or `8081` by default, and the Interface proxy/live proof must use that same local port. When the spec checks backend-written files, prove the PVC-backed workspace through `kubectl`:
 
 ```bash
 $env:MYCELIS_K8S_BACKEND="rancher"
 $env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-k3d.yaml"
 $env:MYCELIS_K8S_TEXT_ENDPOINT="http://<windows-ai-host>:11434/v1"
 $env:MYCELIS_K8S_TEXT_MODEL_ID="qwen3:8b"
+$env:MYCELIS_K8S_SEARCH_PROVIDER="searxng"; $env:MYCELIS_K8S_SEARXNG_ENDPOINT="http://<windows-ai-host>:8088"
 uv run inv k8s.deploy
 uv run inv k8s.wait --timeout=300
 uv run inv k8s.bridge
 $env:MYCELIS_API_HOST="127.0.0.1"
-$env:MYCELIS_API_PORT="8080"
+$env:MYCELIS_API_PORT="8081"
 $env:PLAYWRIGHT_BACKEND_WORKSPACE_PROBE="k8s"
 $env:PLAYWRIGHT_K8S_NAMESPACE="mycelis"
 $env:PLAYWRIGHT_K8S_CORE_SELECTOR="app=mycelis-core"
 $env:PLAYWRIGHT_K8S_BACKEND_WORKSPACE_ROOT="/data/workspace"
 uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/soma-governance-live.spec.ts --live-backend --workers=1 --server-mode=dev
+uv run inv interface.e2e --headed --project=chromium --spec=e2e/specs/team-execution-live.spec.ts --live-backend --workers=1 --server-mode=external
 ```
+
+Use `team-execution-live.spec.ts` when team execution, retained file/code outputs, group visibility, run-conversation proof, or team NATS proposal subjects change. The proof asks Soma for explicit expected output criteria, creates a runtime team, approves governed execution, writes a small browser-game HTML file through the backend workspace, verifies the PVC-backed artifact with `PLAYWRIGHT_BACKEND_WORKSPACE_PROBE=k8s`, confirms retained `team` and `code` outputs with the exact workspace-viewer href, opens the generated game from the retained output link, verifies the page title and initial score, clicks it in a browser page, checks the final score, checks `/api/v1/runs/{id}/conversation`, and verifies the team appears in `/groups`.
 
 ## Product Delivery Proof
 
-For product-facing work, include:
-- relevant unit/component tests
-- focused browser proof for the user workflow
-- live-backend proof when Core/proxy/runtime contracts changed
-- docs review
-- explicit pass/fail evidence in close-out
+For product-facing work, include relevant unit/component tests, focused browser proof for the user workflow, live-backend proof when Core/proxy/runtime contracts changed, docs review, and explicit pass/fail evidence in close-out.
 
 For output block, media readiness, and team-managed review, use:
 - `uv run inv compose.up --build --wait-timeout=240`
@@ -283,7 +284,6 @@ Primary local gates:
 - `uv run inv ci.release-preflight --lane=release`
 
 WSL release-style proof:
-
 ```bash
 uv run inv wsl.refresh
 uv run inv wsl.validate --lane=release

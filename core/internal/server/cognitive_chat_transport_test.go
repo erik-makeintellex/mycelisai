@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
@@ -138,6 +139,28 @@ func TestBuildTransportChatBlocker_ClassifiesTimeout(t *testing.T) {
 	}
 	if blocker.Summary != "Soma did not respond before the request deadline." {
 		t.Fatalf("summary = %q", blocker.Summary)
+	}
+}
+
+func TestChatAgentRequestTimeoutDefaultsAndBounds(t *testing.T) {
+	t.Setenv("MYCELIS_CHAT_AGENT_TIMEOUT_SECONDS", "")
+	if got := chatAgentRequestTimeout(); got != 120*time.Second {
+		t.Fatalf("default timeout = %s, want 120s", got)
+	}
+
+	t.Setenv("MYCELIS_CHAT_AGENT_TIMEOUT_SECONDS", "240")
+	if got := chatAgentRequestTimeout(); got != 240*time.Second {
+		t.Fatalf("configured timeout = %s, want 240s", got)
+	}
+
+	t.Setenv("MYCELIS_CHAT_AGENT_TIMEOUT_SECONDS", "900")
+	if got := chatAgentRequestTimeout(); got != 300*time.Second {
+		t.Fatalf("capped timeout = %s, want 300s", got)
+	}
+
+	t.Setenv("MYCELIS_CHAT_AGENT_TIMEOUT_SECONDS", "5")
+	if got := chatAgentRequestTimeout(); got != 120*time.Second {
+		t.Fatalf("too-small timeout = %s, want default 120s", got)
 	}
 }
 

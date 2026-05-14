@@ -51,7 +51,7 @@ func TestCognitiveMatrix(t *testing.T) {
 
 func TestHandleCognitiveStatus_ExposesTypedMediaProviderContract(t *testing.T) {
 	mediaEnabled := true
-	mediaHealth := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mediaHealth := newLocalHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/health" {
 			http.NotFound(w, r)
 			return
@@ -59,7 +59,6 @@ func TestHandleCognitiveStatus_ExposesTypedMediaProviderContract(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	}))
-	defer mediaHealth.Close()
 
 	s := &AdminServer{
 		Cognitive: &cognitive.Router{

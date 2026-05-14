@@ -76,7 +76,7 @@ func capabilityUseKindForTool(tool string) protocol.CapabilityUseKind {
 	case "host", "openapi":
 		return protocol.CapabilityUseTool
 	default:
-		if tool == "delegate" || tool == "delegate_task" {
+		if tool == "create_team" || tool == "delegate" || tool == "delegate_task" {
 			return protocol.CapabilityUseTeam
 		}
 		return protocol.CapabilityUseTool
@@ -110,7 +110,7 @@ func retentionClassForBool(retained bool) protocol.ExecutionRetentionClass {
 	return protocol.ExecutionRetentionClassNonRetained
 }
 
-func confirmActionResponseData(proofID, runID, auditID string, scope *protocol.ScopeValidation) map[string]any {
+func confirmActionResponseData(proofID, runID, auditID string, scope *protocol.ScopeValidation, results []plannedToolExecutionResult) map[string]any {
 	return map[string]any{
 		"confirmed":         true,
 		"verified":          true,
@@ -119,6 +119,6 @@ func confirmActionResponseData(proofID, runID, auditID string, scope *protocol.S
 		"audit_event_id":    auditID,
 		"run_id":            runID,
 		"run_status":        runs.StatusCompleted,
-		"execution_summary": buildConfirmActionExecutionSummary(proofID, runID, auditID, scope),
+		"execution_summary": buildConfirmActionExecutionSummary(proofID, runID, auditID, scope, results),
 	}
 }

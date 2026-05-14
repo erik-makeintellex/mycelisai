@@ -1,4 +1,4 @@
-package swarm
+package overseer
 
 import (
 	"fmt"
@@ -11,16 +11,12 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-var swarmTestNATSPort int32 = 14220 + int32(time.Now().UnixNano()%1000)
-var swarmTestNATSClientPort int32 = 30000 + int32(time.Now().UnixNano()%5000)
+var overseerTestNATSPort int32 = 14420 + int32(time.Now().UnixNano()%1000)
+var overseerTestNATSClientPort int32 = 35000 + int32(time.Now().UnixNano()%5000)
 
 func startTestNATS(t *testing.T) (*natsserver.Server, *nats.Conn) {
 	t.Helper()
-
-	opts := &natsserver.Options{
-		Host: "127.0.0.1",
-		Port: nextSwarmTestNATSPort(t),
-	}
+	opts := &natsserver.Options{Host: "127.0.0.1", Port: nextOverseerTestNATSPort(t)}
 	srv, err := natsserver.NewServer(opts)
 	if err != nil {
 		t.Fatalf("nats server: %v", err)
@@ -29,13 +25,9 @@ func startTestNATS(t *testing.T) (*natsserver.Server, *nats.Conn) {
 	if !srv.ReadyForConnections(3 * time.Second) {
 		t.Fatal("nats server not ready")
 	}
-
 	nc, err := nats.Connect(srv.ClientURL(), nats.Dialer(&net.Dialer{
-		LocalAddr: &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: nextSwarmTestNATSClientPort(t),
-		},
-		Timeout: 2 * time.Second,
+		LocalAddr: &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: nextOverseerTestNATSClientPort(t)},
+		Timeout:   2 * time.Second,
 	}))
 	if err != nil {
 		srv.Shutdown()
@@ -47,19 +39,18 @@ func startTestNATS(t *testing.T) (*natsserver.Server, *nats.Conn) {
 		srv.Shutdown()
 		srv.WaitForShutdown()
 	})
-
 	return srv, nc
 }
 
-func nextSwarmTestNATSPort(t *testing.T) int {
-	return nextSwarmTestTCPPort(t, &swarmTestNATSPort)
+func nextOverseerTestNATSPort(t *testing.T) int {
+	return nextOverseerTestTCPPort(t, &overseerTestNATSPort)
 }
 
-func nextSwarmTestNATSClientPort(t *testing.T) int {
-	return nextSwarmTestTCPPort(t, &swarmTestNATSClientPort)
+func nextOverseerTestNATSClientPort(t *testing.T) int {
+	return nextOverseerTestTCPPort(t, &overseerTestNATSClientPort)
 }
 
-func nextSwarmTestTCPPort(t *testing.T, counter *int32) int {
+func nextOverseerTestTCPPort(t *testing.T, counter *int32) int {
 	t.Helper()
 	for range 200 {
 		port := int(atomic.AddInt32(counter, 1))

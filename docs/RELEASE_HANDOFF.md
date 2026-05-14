@@ -13,7 +13,7 @@
 - Handoff/package label: `v0.6.0-98f83b8`
 - Result: Rancher Desktop K3s local Kubernetes RC proof is green.
 - Proven image: `mycelis/core:v0.6.0-8333788`
-- Proven Core bridge: `127.0.0.1:8080`
+- Proven Core bridge: `127.0.0.1:8081` local API port forwarding to in-cluster Core `:8080`
 - Proven AI endpoint: explicit reachable Windows host endpoint, not pod-local `localhost`
 - Proven text model: `qwen3:8b`
 - Local package result: binary archives and enterprise Helm verification bundles generated under `dist/`.
@@ -36,20 +36,23 @@ $env:MYCELIS_K8S_BACKEND="rancher"
 $env:MYCELIS_K8S_VALUES_FILE="charts/mycelis-core/values-k3d.yaml"
 $env:MYCELIS_K8S_TEXT_ENDPOINT="http://<windows-ai-host>:11434/v1"
 $env:MYCELIS_K8S_TEXT_MODEL_ID="qwen3:8b"
+$env:MYCELIS_K8S_SEARCH_PROVIDER="searxng"
+$env:MYCELIS_K8S_SEARXNG_ENDPOINT="http://<windows-ai-host>:8088"
 
 uv run inv k8s.status
 uv run inv k8s.deploy
 uv run inv k8s.wait --timeout=300
 uv run inv k8s.bridge
 $env:MYCELIS_API_HOST="127.0.0.1"
-$env:MYCELIS_API_PORT="8080"
+$env:MYCELIS_API_PORT="8081"
 uv run inv lifecycle.health
 ```
 
 Pass criteria:
 - Rancher K3s node is Ready.
 - PostgreSQL, NATS, and Core are ready in namespace `mycelis`.
-- Core bridge serves `/healthz` on `127.0.0.1:8080`.
+- Core bridge serves `/healthz` on `127.0.0.1:8081`.
+- `/api/v1/search/status` reports `provider=searxng`, `online_allowed=true`, `approval_mode=notify`, and `disclosure_mode=notice_and_interpretation` when online search proof is in scope.
 - `lifecycle.health` reports all backend endpoints healthy.
 
 ## Live GUI Proof Commands

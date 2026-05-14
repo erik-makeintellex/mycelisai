@@ -5,7 +5,15 @@ import zipfile
 from pathlib import Path
 
 from invoke import task, Collection
-from .config import CORE_DIR, ROOT_DIR, ensure_managed_cache_dirs, is_windows, managed_cache_env
+from .config import (
+    CORE_DIR,
+    ROOT_DIR,
+    docker_command,
+    ensure_managed_cache_dirs,
+    is_windows,
+    managed_cache_env,
+    shell_command,
+)
 from .packaging import relative_to_root, write_checksum_file, write_json
 
 
@@ -208,7 +216,7 @@ def build(c):
     # 2. Build Docker Image
     print(f"   Building Container...")
     # Assumes Dockerfile is in core/Dockerfile and context is root
-    c.run(f"docker build -t mycelis/core:{tag} -f core/Dockerfile .")
+    c.run(shell_command(docker_command("build", "-t", f"mycelis/core:{tag}", "-f", "core/Dockerfile", ".")))
 
     return tag
 

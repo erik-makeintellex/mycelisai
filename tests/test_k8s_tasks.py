@@ -113,6 +113,8 @@ def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch, tmp_path: P
     monkeypatch.setenv("MYCELIS_K8S_TEXT_ENDPOINT", "http://192.168.50.156:11434/v1")
     monkeypatch.setenv("MYCELIS_K8S_TEXT_MODEL_ID", "qwen3:8b")
     monkeypatch.setenv("MYCELIS_K8S_MEDIA_ENDPOINT", "http://192.168.50.156:8001/v1")
+    monkeypatch.setenv("MYCELIS_K8S_SEARCH_PROVIDER", "searxng")
+    monkeypatch.setenv("MYCELIS_K8S_SEARXNG_ENDPOINT", "http://192.168.50.156:8088")
     monkeypatch.setenv("MYCELIS_K8S_VALUES_FILE", values_file.name)
 
     k8s.deploy.body(ctx)
@@ -121,11 +123,9 @@ def test_deploy_includes_explicit_ai_endpoint_overrides(monkeypatch, tmp_path: P
     assert "Deployment posture: enterprise self-hosted with Windows-hosted AI" in output
     assert "Text AI model: qwen3:8b" in output
     helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
-    assert f"--set-string ai.textEndpoint={k8s._shell_quote('http://192.168.50.156:11434/v1')}" in helm_command
-    assert f"--set-string ai.textModelId={k8s._shell_quote('qwen3:8b')}" in helm_command
-    assert f"--set-string ai.mediaEndpoint={k8s._shell_quote('http://192.168.50.156:8001/v1')}" in helm_command
-    assert "--set networkPolicy.aiEgress.enabled=true" in helm_command
-    assert f"--values {k8s._shell_quote(values_file.resolve())}" in helm_command
+    quote = k8s._shell_quote
+    expected = [f"--set-string ai.textEndpoint={quote('http://192.168.50.156:11434/v1')}", f"--set-string ai.textModelId={quote('qwen3:8b')}", f"--set-string ai.mediaEndpoint={quote('http://192.168.50.156:8001/v1')}", f"--set-string search.provider={quote('searxng')}", f"--set-string search.searxngEndpoint={quote('http://192.168.50.156:8088')}", "--set networkPolicy.aiEgress.enabled=true", "--set networkPolicy.searchEgress.enabled=true", f"--values {quote(values_file.resolve())}"]
+    assert all(fragment in helm_command for fragment in expected)
 
 
 def test_deploy_requires_explicit_windows_ai_endpoint_for_enterprise_preset(monkeypatch, tmp_path: Path):

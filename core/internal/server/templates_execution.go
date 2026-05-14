@@ -14,6 +14,12 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+type plannedToolExecutionResult struct {
+	Name      string
+	Arguments map[string]any
+	Output    string
+}
+
 func (s *AdminServer) loadIntentProofScopeTx(tx *sql.Tx, proofID string) (*protocol.ScopeValidation, error) {
 	if tx == nil {
 		return nil, errDBUnavailable
@@ -135,9 +141,9 @@ func (s *AdminServer) markRunFailedTx(tx *sql.Tx, runID, proofID, reason string)
 	return err
 }
 
-func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser string) error {
+func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protocol.ScopeValidation, auditUser string) ([]plannedToolExecutionResult, error) {
 	if scope == nil || len(scope.PlannedToolCalls) == 0 {
-		return fmt.Errorf("no approved execution plan was stored for this proposal")
+		return nil, fmt.Errorf("no approved execution plan was stored for this proposal")
 	}
 
 	registry := swarm.NewInternalToolRegistry(swarm.InternalToolDeps{
@@ -145,6 +151,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		Brain: s.Cognitive,
 		DB:    s.getDB(),
 	})
+	registry.SetSoma(s.Soma)
 	executor := swarm.NewCompositeToolExecutor(registry, nil)
 	toolCtx := swarm.WithToolInvocationContext(ctx, swarm.ToolInvocationContext{
 		SourceKind:    protocol.SourceKindWebAPI,
@@ -155,22 +162,29 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, scope *protoc
 		PlanningOnly:  false,
 	})
 
+	results := make([]plannedToolExecutionResult, 0, len(scope.PlannedToolCalls))
 	for _, planned := range scope.PlannedToolCalls {
 		toolName := strings.TrimSpace(planned.Name)
 		if toolName == "" {
-			return fmt.Errorf("approved execution plan contained an empty tool name")
+			return results, fmt.Errorf("approved execution plan contained an empty tool name")
 		}
 		serverID, resolvedToolName, err := executor.FindToolByName(toolCtx, toolName)
 		if err != nil {
-			return err
+			return results, err
 		}
-		if _, err := executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments); err != nil {
-			return err
+		output, err := executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments)
+		if err != nil {
+			return results, err
 		}
+		results = append(results, plannedToolExecutionResult{
+			Name:      resolvedToolName,
+			Arguments: planned.Arguments,
+			Output:    output,
+		})
 		s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
 	}
 
-	return nil
+	return results, nil
 }
 
 func (s *AdminServer) auditExecutedPlannedTool(planned protocol.PlannedToolCall, resolvedToolName, auditUser string) {

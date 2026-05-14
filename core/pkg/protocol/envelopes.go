@@ -86,9 +86,7 @@ type BrainProvenance struct {
 }
 
 // ChatProposal carries proposal metadata for chat-based mutation actions.
-// When an agent uses mutation tools, the response is tagged as a proposal.
-// Slice 6: Team expressions + module bindings are optional structured fields
-// that bridge intent-level proposals to executable binding contracts.
+// Team expressions and module bindings bridge proposals to executable contracts.
 type ChatModuleBinding struct {
 	BindingID   string `json:"binding_id,omitempty"`
 	ModuleID    string `json:"module_id"`
@@ -114,12 +112,13 @@ type ChatProposal struct {
 	ConfirmToken      string                     `json:"confirm_token"`
 	IntentProofID     string                     `json:"intent_proof_id"`
 	TeamExpressions   []ChatTeamExpression       `json:"team_expressions,omitempty"`
+	BusScope          string                     `json:"bus_scope,omitempty"`
+	NATSSubjects      []string                   `json:"nats_subjects,omitempty"`
 	Approval          *ApprovalPolicy            `json:"approval,omitempty"`
 	GovernanceProfile *GovernanceProfileSnapshot `json:"governance_profile,omitempty"`
 }
 
-// ConsultationEntry records a single council member consultation made by an agent
-// during its ReAct loop. Member is the agent ID (e.g. "council-architect"),
+// ConsultationEntry records one council consultation. Member is the agent ID,
 // Summary is the first 300 chars of the member's response.
 type ConsultationEntry struct {
 	Member  string `json:"member"`

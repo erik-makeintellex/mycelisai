@@ -24,6 +24,12 @@ describe('MissionControlChat execution summary', () => {
     });
 
     it('renders directed execution summary details from Soma chat responses', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText },
+            configurable: true,
+        });
+
         useCortexStore.setState({
             councilMembers: COUNCIL_MEMBERS,
             councilTarget: 'admin',
@@ -78,6 +84,13 @@ describe('MissionControlChat execution summary', () => {
             expect(screen.getByRole('link', { name: /Audit proof/i }).getAttribute('href')).toBe('/proof/proof-123');
             expect(screen.getByRole('link', { name: /Onboarding run package/i }).getAttribute('href')).toBe('/runs/run-123');
             expect(screen.getByText('Review the generated package before notifying operators.')).toBeDefined();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: /Copy output quote for Onboarding run package/i }));
+
+        await waitFor(() => {
+            expect(writeText).toHaveBeenCalledWith('> Onboarding run package\n/runs/run-123');
+            expect(screen.getByRole('button', { name: /Copied output quote/i })).toBeDefined();
         });
     });
 
@@ -135,6 +148,55 @@ describe('MissionControlChat execution summary', () => {
             expect(screen.getAllByText('web_search').length).toBeGreaterThan(0);
             expect(screen.getByText(/completed/i)).toBeDefined();
             expect(screen.getByRole('link', { name: /Search proof/i }).getAttribute('href')).toBe('/runs/search-proof');
+        });
+    });
+
+    it('renders confirmed generated file outputs as openable links on system run messages', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText },
+            configurable: true,
+        });
+        const filePath = 'workspace/logs/qa_team_click_game.html';
+        const href = '/api/v1/workspace/files/view?path=workspace%2Flogs%2Fqa_team_click_game.html';
+
+        useCortexStore.setState({
+            missionChat: [{
+                role: 'system',
+                content: 'Mission activated',
+                mode: 'execution_result',
+                run_id: 'run-game-123456',
+                execution_summary: {
+                    execution: {
+                        shape: 'team_execution',
+                        status: 'verified',
+                        summary: 'Generated a browser click game and retained it for operator review.',
+                    },
+                    outputs: [{
+                        id: filePath,
+                        kind: 'code',
+                        title: filePath,
+                        href,
+                        retained: true,
+                    }],
+                    proof: [{ run_id: 'run-game-123456' }],
+                },
+            }],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        const outputLink = await screen.findByRole('link', { name: new RegExp(filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+        expect(outputLink.getAttribute('href')).toBe(href);
+        expect(outputLink.getAttribute('target')).toBe('_blank');
+        expect(screen.getByRole('link', { name: /Mission activated/i }).getAttribute('href')).toBe('/runs/run-game-123456');
+
+        fireEvent.click(screen.getByRole('button', { name: new RegExp(`Copy output quote for ${filePath}`) }));
+
+        await waitFor(() => {
+            expect(writeText).toHaveBeenCalledWith(`> ${filePath}\n${href}`);
         });
     });
 });

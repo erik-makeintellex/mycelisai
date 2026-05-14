@@ -115,6 +115,12 @@ spec:
               value: {{ default "" .localApiEndpoint | quote }}
             - name: MYCELIS_SEARCH_MAX_RESULTS
               value: {{ default 8 .maxResults | quote }}
+            - name: MYCELIS_SEARCH_ONLINE_ALLOWED
+              value: {{ ternary .onlineAllowed true (hasKey . "onlineAllowed") | quote }}
+            - name: MYCELIS_SEARCH_APPROVAL_MODE
+              value: {{ default "notify" .approvalMode | quote }}
+            - name: MYCELIS_SEARCH_DISCLOSURE_MODE
+              value: {{ default "notice_and_interpretation" .disclosureMode | quote }}
             {{- end }}
             {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}

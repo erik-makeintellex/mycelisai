@@ -41,12 +41,36 @@ describe('useCortexStore confirm proposal execution', () => {
         });
         mockFetch.mockResolvedValue({
             ok: true,
-            json: async () => ({ data: { run_id: 'run-123' } }),
+            json: async () => ({
+                data: {
+                    run_id: 'run-123',
+                    execution_summary: {
+                        outputs: [
+                            {
+                                id: 'workspace/logs/game.html',
+                                kind: 'code',
+                                title: 'workspace/logs/game.html',
+                                href: '/api/v1/workspace/files/view?path=workspace%2Flogs%2Fgame.html',
+                                retained: true,
+                            },
+                        ],
+                    },
+                },
+            }),
         });
 
         await useCortexStore.getState().confirmProposal();
 
         expect(useCortexStore.getState().activeMode).toBe('execution_result');
         expect(useCortexStore.getState().activeRunId).toBe('run-123');
+        expect(useCortexStore.getState().missionChat.at(-1)?.execution_summary?.outputs).toEqual([
+            {
+                id: 'workspace/logs/game.html',
+                kind: 'code',
+                title: 'workspace/logs/game.html',
+                href: '/api/v1/workspace/files/view?path=workspace%2Flogs%2Fgame.html',
+                retained: true,
+            },
+        ]);
     });
 });

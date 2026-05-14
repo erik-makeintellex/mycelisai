@@ -42,7 +42,6 @@ func defaultSomaInteractionThemes() []somaInteractionTheme {
 			Phrases:       []string{"create team", "build team", "launch team", "instantiate team", "manifest team", "put together", "orchestrate team", "specialists", "members", "lanes"},
 			Concepts:      []string{"team", "specialists", "outputs"},
 			MutationTools: []string{"generate_blueprint", "delegate"},
-			Protected:     true,
 		},
 		{
 			ID:       "mcp_tool_posture",
@@ -99,7 +98,6 @@ func defaultSomaInteractionTemplates() []somaInteractionTemplate {
 			ConfirmationPrompt: "Confirm whether Soma should create the team plan once, then route it through proposal approval.",
 			TargetMCPHints:     []string{"fetch", "filesystem", "github", "brave-search", "web_search"},
 			MutationTools:      []string{"generate_blueprint", "delegate"},
-			Protected:          true,
 		},
 		{
 			ID:                 "protected-service-action",

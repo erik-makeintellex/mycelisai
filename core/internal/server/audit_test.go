@@ -51,6 +51,33 @@ func TestBuildApprovalPolicy_RequiresApprovalForHighRiskCapability(t *testing.T)
 	}
 }
 
+func TestBuildApprovalPolicy_TeamCreationUsesTeamOrchestrationCapability(t *testing.T) {
+	profile := userGovernanceProfile{
+		Role:                 "owner",
+		CostSensitivity:      "balanced",
+		ReviewStrictness:     "standard",
+		AutomationTolerance:  "balanced",
+		EscalationPreference: "ask",
+	}
+
+	policy := buildApprovalPolicy(profile, []protocol.PlannedToolCall{{
+		Name:      "create_team",
+		Arguments: map[string]any{"team_id": "research-team"},
+	}}, nil)
+	if policy == nil {
+		t.Fatal("expected approval policy")
+	}
+	if len(policy.CapabilityIDs) != 1 || policy.CapabilityIDs[0] != "team_orchestration" {
+		t.Fatalf("capability_ids = %#v, want [team_orchestration]", policy.CapabilityIDs)
+	}
+	if policy.CapabilityRisk != "medium" {
+		t.Fatalf("capability_risk = %q, want medium", policy.CapabilityRisk)
+	}
+	if policy.ApprovalMode != "optional" {
+		t.Fatalf("approval_mode = %q, want optional", policy.ApprovalMode)
+	}
+}
+
 func TestBuildApprovalPolicy_RequiresApprovalForCompanyKnowledgePromotion(t *testing.T) {
 	profile := userGovernanceProfile{
 		Role:                 "owner",

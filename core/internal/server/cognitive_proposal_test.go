@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -73,6 +74,12 @@ func TestBuildMutationChatProposal(t *testing.T) {
 	if len(proposal.Tools) != 2 || proposal.Tools[0] != "delegate" || proposal.Tools[1] != "mcp_fetch" {
 		t.Fatalf("tools = %#v, want [delegate mcp_fetch]", proposal.Tools)
 	}
+	if proposal.BusScope != "current_team" {
+		t.Fatalf("bus_scope = %q, want current_team", proposal.BusScope)
+	}
+	if len(proposal.NATSSubjects) == 0 || proposal.NATSSubjects[0] != "swarm.team.admin-core.internal.command" {
+		t.Fatalf("nats_subjects = %#v", proposal.NATSSubjects)
+	}
 	if len(proposal.TeamExpressions) != 2 {
 		t.Fatalf("team_expressions length = %d, want 2", len(proposal.TeamExpressions))
 	}
@@ -117,5 +124,55 @@ func TestBuildProposalDisplayContractUsesDelegateTaskFallback(t *testing.T) {
 	}
 	if len(display.AffectedResources) != 1 || display.AffectedResources[0] != "governed state" {
 		t.Fatalf("affected_resources = %#v, want [governed state]", display.AffectedResources)
+	}
+}
+
+func TestBuildProposalDisplayContractDefaultsCreateTeamToTeamBus(t *testing.T) {
+	display := buildProposalDisplayContract([]protocol.PlannedToolCall{
+		{
+			Name: "create_team",
+			Arguments: map[string]any{
+				"team_id": "research-team",
+				"name":    "Research Team",
+			},
+		},
+	}, "", []string{"create_team"})
+
+	if display.OperatorSummary != "Create Research Team as a governed runtime team." {
+		t.Fatalf("operator summary = %q", display.OperatorSummary)
+	}
+	if display.BusScope != "current_team" {
+		t.Fatalf("bus_scope = %q, want current_team", display.BusScope)
+	}
+	want := []string{
+		"swarm.team.research-team.internal.command",
+		"swarm.team.research-team.signal.status",
+		"swarm.team.research-team.signal.result",
+	}
+	for i, subject := range want {
+		if len(display.NATSSubjects) <= i || display.NATSSubjects[i] != subject {
+			t.Fatalf("nats_subjects = %#v, want prefix %#v", display.NATSSubjects, want)
+		}
+	}
+	if len(display.NATSSubjects) != len(want) {
+		t.Fatalf("nats_subjects = %#v, want exactly %#v", display.NATSSubjects, want)
+	}
+	proposal := buildMutationChatProposal(
+		[]string{"create_team"},
+		"proof-123",
+		"token-123",
+		"admin-core",
+		nil,
+		nil,
+		nil,
+		display,
+	)
+	if len(proposal.NATSSubjects) != len(want) {
+		t.Fatalf("proposal nats_subjects = %#v, want exactly %#v", proposal.NATSSubjects, want)
+	}
+	for _, subject := range proposal.NATSSubjects {
+		if strings.Contains(subject, "admin-core") {
+			t.Fatalf("proposal nats_subjects leaked fallback team: %#v", proposal.NATSSubjects)
+		}
 	}
 }

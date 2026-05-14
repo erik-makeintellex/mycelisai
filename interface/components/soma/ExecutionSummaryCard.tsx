@@ -1,7 +1,8 @@
 "use client";
 
 import type React from "react";
-import { CheckCircle2, ExternalLink, FileText, Gauge, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Check, CheckCircle2, ExternalLink, FileText, Gauge, Quote, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
 import type { ChatArtifactRef, ExecutionSummaryData } from "@/store/useCortexStore";
 import {
     artifactOutputItems,
@@ -56,6 +57,10 @@ function ChipList({ values }: { values: string[] }) {
     );
 }
 
+function quotedOutputText(output: { text: string; url: string | null }) {
+    return output.url ? `> ${output.text}\n${output.url}` : `> ${output.text}`;
+}
+
 export default function ExecutionSummaryCard({
     summary,
     runId,
@@ -65,6 +70,7 @@ export default function ExecutionSummaryCard({
     runId?: string;
     artifacts?: ChatArtifactRef[];
 }) {
+    const [copiedOutputKey, setCopiedOutputKey] = useState<string | null>(null);
     if (!summary) return null;
 
     const executionShape = compactText(summary.execution?.shape) ?? compactText(summary.execution_shape);
@@ -101,6 +107,12 @@ export default function ExecutionSummaryCard({
         || nextStep;
 
     if (!hasContent) return null;
+
+    const copyOutputQuote = async (output: { text: string; url: string | null }, key: string) => {
+        await navigator.clipboard.writeText(quotedOutputText(output));
+        setCopiedOutputKey(key);
+        window.setTimeout(() => setCopiedOutputKey((current) => current === key ? null : current), 1200);
+    };
 
     return (
         <div className="rounded-lg border border-cortex-info/20 bg-cortex-info/5 px-3 py-2.5 shadow-sm" data-testid="execution-summary-card">
@@ -161,16 +173,31 @@ export default function ExecutionSummaryCard({
                 {allOutputs.length > 0 && (
                     <SummaryRow icon={<FileText className="h-3.5 w-3.5" />} label="Outputs">
                         <div className="flex flex-wrap gap-x-3 gap-y-1">
-                            {allOutputs.map((output) => (
-                                output.url ? (
-                                    <a key={`${output.text}-${output.url}`} href={output.url} className="inline-flex items-center gap-1 text-cortex-primary hover:underline">
-                                        {output.text}
-                                        <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                ) : (
-                                    <span key={output.text}>{output.text}</span>
-                                )
-                            ))}
+                            {allOutputs.map((output, index) => {
+                                const key = `${output.text}-${output.url ?? "text"}-${index}`;
+                                const copied = copiedOutputKey === key;
+                                return (
+                                    <span key={key} className="inline-flex max-w-full items-center gap-1">
+                                        {output.url ? (
+                                            <a href={output.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 text-cortex-primary hover:underline">
+                                                <span className="truncate">{output.text}</span>
+                                                <ExternalLink className="h-3 w-3 shrink-0" />
+                                            </a>
+                                        ) : (
+                                            <span className="min-w-0 truncate">{output.text}</span>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => void copyOutputQuote(output, key)}
+                                            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
+                                            title={copied ? "Copied output quote" : "Copy output quote"}
+                                            aria-label={copied ? "Copied output quote" : `Copy output quote for ${output.text}`}
+                                        >
+                                            {copied ? <Check className="h-3 w-3" /> : <Quote className="h-3 w-3" />}
+                                        </button>
+                                    </span>
+                                );
+                            })}
                         </div>
                     </SummaryRow>
                 )}

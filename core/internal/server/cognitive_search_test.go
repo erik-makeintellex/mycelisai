@@ -21,7 +21,7 @@ func TestRespondSearchChatPayload_DirectSearchIncludesCompletedExecutionSummary(
 		req,
 		"Direct web search",
 		"latest news updates regarding ai agent products",
-		"I used web_search through local_api. Current results:\n1. Agent product release",
+		"Notice: web_search via local_api; no confirmation; external results are leads, verify before relying.\nResults:\n1. Agent product release",
 		[]string{"web_search"},
 		protocol.ExecutionStatusCompleted,
 		"",
@@ -36,6 +36,9 @@ func TestRespondSearchChatPayload_DirectSearchIncludesCompletedExecutionSummary(
 	}
 	if !strings.Contains(payload.Text, "Agent product release") {
 		t.Fatalf("payload.text = %q, want search result", payload.Text)
+	}
+	if !strings.Contains(payload.Text, "no confirmation") {
+		t.Fatalf("payload.text = %q, want no-confirm disclosure", payload.Text)
 	}
 	if payload.ExecutionSummary == nil {
 		t.Fatal("expected execution_summary")
@@ -80,5 +83,29 @@ func TestHandleChat_DirectSearchBlockerHasBlockedExecutionSummary(t *testing.T) 
 	}
 	if payload.ExecutionSummary.Proof.RunClass != protocol.ExecutionRunClassNoRun {
 		t.Fatalf("execution_summary.proof.run_class = %q", payload.ExecutionSummary.Proof.RunClass)
+	}
+}
+
+func TestSearchCapabilityQuestionDoesNotMatchResearchTeamPrompt(t *testing.T) {
+	prompt := "i need an indepth ai research team that can take on various aspects of current research to understand optimal agentry architecture"
+
+	if isSearchCapabilityQuestion(prompt) {
+		t.Fatal("research team prompt should not be treated as a search capability question")
+	}
+}
+
+func TestDirectSearchDoesNotStealTeamCreationResearchPrompt(t *testing.T) {
+	prompt := "create a team to look up latest AI agent architecture research"
+
+	if query, ok := shouldHandleDirectSearch(prompt); ok {
+		t.Fatalf("team creation prompt routed to direct search query %q", query)
+	}
+}
+
+func TestDirectSearchStillHandlesPlainLookupPrompt(t *testing.T) {
+	prompt := "look up latest AI agent architecture research"
+
+	if query, ok := shouldHandleDirectSearch(prompt); !ok || query != prompt {
+		t.Fatalf("plain lookup direct search = (%q, %v), want original query and ok", query, ok)
 	}
 }

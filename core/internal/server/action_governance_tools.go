@@ -31,6 +31,8 @@ func capabilityForPlannedTool(name string) string {
 		return "planning"
 	case "load_deployment_context", "promote_deployment_context", "remember", "summarize_conversation":
 		return "learning"
+	case "create_team", "delegate_task":
+		return "team_orchestration"
 	case "delegate":
 		return "review"
 	case "publish_signal", "broadcast":
@@ -51,7 +53,7 @@ func capabilityRiskForTool(name string, arguments map[string]any) string {
 		default:
 			return "medium"
 		}
-	case "write_file", "delegate", "remember", "summarize_conversation":
+	case "write_file", "create_team", "delegate", "delegate_task", "remember", "summarize_conversation":
 		return "medium"
 	default:
 		return "low"

@@ -23,6 +23,13 @@ ai:
   textEndpoint: ""
   mediaEndpoint: ""
 
+search:
+  provider: searxng
+  searxngEndpoint: ""
+  onlineAllowed: true
+  approvalMode: notify
+  disclosureMode: notice_and_interpretation
+
 nats:
   jetstream:
     fileStore:

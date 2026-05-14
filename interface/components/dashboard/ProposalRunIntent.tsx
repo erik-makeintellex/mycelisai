@@ -36,13 +36,20 @@ function busLabel(scope?: ProposalData["bus_scope"]): string {
         case "global":
             return "Global bus";
         default:
-            return "No bus connection";
+            return "Run bus";
     }
+}
+
+function proposalUsesTeamBus(proposal: ProposalData) {
+    return proposal.tools.some((tool) => /^(create_team|delegate|delegate_task)$/i.test(tool));
 }
 
 export default function ProposalRunIntent({ proposal }: { proposal: ProposalData }) {
     const subjects = proposal.nats_subjects ?? [];
-    const showBus = proposal.bus_scope && proposal.bus_scope !== "none";
+    const busScope = proposal.bus_scope && proposal.bus_scope !== "none"
+        ? proposal.bus_scope
+        : proposalUsesTeamBus(proposal) ? "current_team" : undefined;
+    const showBus = Boolean(busScope);
 
     return (
         <div className="grid gap-3 md:grid-cols-2">
@@ -59,9 +66,9 @@ export default function ProposalRunIntent({ proposal }: { proposal: ProposalData
                     <RadioTower className="h-3 w-3" />
                     Team / NATS connection
                 </div>
-                <p className="mt-1.5 text-sm font-medium text-cortex-text-main">{busLabel(proposal.bus_scope)}</p>
+                <p className="mt-1.5 text-sm font-medium text-cortex-text-main">{busLabel(busScope)}</p>
                 <p className="mt-1 text-xs leading-5 text-cortex-text-muted">
-                    {showBus ? "Soma will connect this work to the configured agentry bus after approval." : "This work stays in the chat/run path unless you approve bus wiring."}
+                    {showBus ? "Soma will connect this team work to the configured agentry bus after approval." : "Soma will record the approved work through the run/audit path; team work uses NATS automatically."}
                 </p>
                 {subjects.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-1">

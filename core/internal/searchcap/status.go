@@ -9,6 +9,9 @@ func (s *Service) Status() Status {
 			SomaToolName:          "web_search",
 			DirectSomaInteraction: true,
 			MaxResults:            8,
+			OnlineAllowed:         true,
+			ApprovalMode:          "notify",
+			DisclosureMode:        "notice_and_interpretation",
 			Blocker:               disabledBlocker(),
 			NextActions:           []string{"Set MYCELIS_SEARCH_PROVIDER=local_sources, searxng, or local_api."},
 		}
@@ -18,6 +21,9 @@ func (s *Service) Status() Status {
 		SomaToolName:          "web_search",
 		DirectSomaInteraction: true,
 		MaxResults:            limitFor(0, s.cfg.MaxResults),
+		OnlineAllowed:         s.cfg.OnlineAllowed,
+		ApprovalMode:          s.cfg.ApprovalMode,
+		DisclosureMode:        s.cfg.DisclosureMode,
 	}
 	switch s.cfg.Provider {
 	case ProviderLocalSources:

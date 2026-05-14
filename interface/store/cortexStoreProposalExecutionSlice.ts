@@ -40,6 +40,7 @@ export function createCortexProposalExecutionSlice(
                         content: proofSummary ?? (runId ? 'Mission activated' : 'Proposal confirmed. Waiting for execution proof.'),
                         mode: runId ? 'execution_result' : 'proposal',
                         run_id: runId ?? undefined,
+                        execution_summary: body?.data?.execution_summary,
                         timestamp: new Date().toISOString(),
                     };
                     set((s) => ({

@@ -13,6 +13,8 @@ import (
 var mutationTools = map[string]bool{
 	"generate_blueprint":         true,
 	"delegate":                   true,
+	"create_team":                true,
+	"delegate_task":              true,
 	"write_file":                 true,
 	"publish_signal":             true,
 	"broadcast":                  true,
@@ -62,7 +64,7 @@ func chatToolRisk(tools []string) string {
 		if t == "publish_signal" || t == "broadcast" {
 			return "high"
 		}
-		if t == "generate_blueprint" || t == "delegate" || t == "write_file" {
+		if t == "generate_blueprint" || t == "delegate" || t == "create_team" || t == "delegate_task" || t == "write_file" {
 			return "medium"
 		}
 		if t == "promote_deployment_context" {
@@ -106,6 +108,41 @@ func latestUserMessageContent(messages []chatRequestMessage) string {
 	return strings.TrimSpace(messages[idx].Content)
 }
 
+func normalizeRetryRequest(messages []chatRequestMessage) []chatRequestMessage {
+	idx := latestUserMessageIndex(messages)
+	if idx < 0 || !isRetryRequest(messages[idx].Content) {
+		return messages
+	}
+	for i := idx - 1; i >= 0; i-- {
+		if !strings.EqualFold(strings.TrimSpace(messages[i].Role), "user") {
+			continue
+		}
+		prior := stripRouteAndContext(messages[i].Content)
+		if prior == "" || isRetryRequest(prior) {
+			continue
+		}
+		normalized := make([]chatRequestMessage, len(messages))
+		copy(normalized, messages)
+		normalized[idx].Content = "Retry the previous failed user request without changing intent:\n" + prior
+		return normalized
+	}
+	return messages
+}
+
+func isRetryRequest(text string) bool {
+	lower := normalizeIntentText(text)
+	if lower == "" {
+		return false
+	}
+	retries := []string{"try again", "retry", "retry it", "run again", "run it again", "do it again", "again"}
+	for _, retry := range retries {
+		if lower == retry || strings.HasPrefix(lower, retry+" ") {
+			return true
+		}
+	}
+	return false
+}
+
 func requestContainsAny(lower string, needles []string) bool {
 	for _, needle := range needles {
 		if strings.Contains(lower, needle) {
@@ -123,9 +160,14 @@ func inferMutationToolsFromText(text string) []string {
 
 	var tools []string
 
+	teamMention := requestContainsAny(lower, []string{"team", "teams", "specialist", "members", "lane", "lanes"})
 	fileActions := []string{"create", "write", "update", "edit", "modify", "replace", "append", "save", "persist", "store", "generate", "draft"}
-	fileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "document", "doc", "repo", "repository", "codebase"}
-	if requestContainsAny(lower, fileActions) && requestContainsAny(lower, fileTargets) {
+	strongFileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "repo", "repository", "codebase"}
+	weakFileTargets := []string{"document", "documentation", "doc"}
+	hasFileAction := requestContainsAny(lower, fileActions)
+	hasStrongFileTarget := requestContainsAny(lower, strongFileTargets)
+	hasWeakFileTarget := requestContainsAny(lower, weakFileTargets)
+	if hasFileAction && (hasStrongFileTarget || (hasWeakFileTarget && !teamMention)) {
 		tools = append(tools, "write_file")
 	}
 
@@ -141,7 +183,7 @@ func inferMutationToolsFromText(text string) []string {
 		tools = append(tools, "delegate")
 	}
 
-	teamCreationActions := []string{"create", "build", "launch", "instantiate", "manifest", "put together", "orchestrate"}
+	teamCreationActions := []string{"create", "build", "launch", "instantiate", "manifest", "put together", "orchestrate", "need", "asked for", "ask for", "want", "form"}
 	teamCreationTargets := []string{"team", "teams", "specialist", "members", "lane", "lanes"}
 	if requestContainsAny(lower, teamCreationActions) && requestContainsAny(lower, teamCreationTargets) {
 		tools = append(tools, "generate_blueprint", "delegate")

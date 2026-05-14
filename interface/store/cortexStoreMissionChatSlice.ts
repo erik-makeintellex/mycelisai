@@ -170,6 +170,19 @@ export function createCortexMissionChatSlice(
         setMissionChatScope: (scope: string | null) => {
             const normalizedScope = typeof scope === 'string' && scope.trim() ? scope.trim() : null;
             if (get().workspaceChatScope === normalizedScope) {
+                if (!get().workspaceChatPrimed && get().missionChat.length === 0) {
+                    const scopedMessages = loadPersistedChat(normalizedScope);
+                    if (scopedMessages.length > 0) {
+                        const derivedState = deriveMissionChatState(scopedMessages);
+                        set({
+                            missionChat: scopedMessages,
+                            pendingProposal: derivedState.pendingProposal,
+                            activeConfirmToken: derivedState.activeConfirmToken,
+                            activeRunId: derivedState.activeRunId,
+                            activeMode: derivedState.activeMode,
+                        });
+                    }
+                }
                 return;
             }
 

@@ -8,13 +8,12 @@ import type {
     CortexState,
 } from '@/store/cortexStoreState';
 import { deriveMissionChatState } from '@/store/cortexStoreChatWorkflow';
-import { loadPersistedChat } from '@/store/cortexStoreUtils';
 
 type StripActions<T> = {
     [K in keyof T as T[K] extends (...args: infer _Args) => unknown ? never : K]: T[K];
 };
 
-const initialMissionChat = loadPersistedChat(null);
+const initialMissionChat: CortexMissionChatContract['missionChat'] = [];
 const initialMissionChatState = deriveMissionChatState(initialMissionChat);
 
 function readInitialAdvancedMode(): boolean {

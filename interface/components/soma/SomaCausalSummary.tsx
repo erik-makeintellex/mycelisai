@@ -1,15 +1,12 @@
-import { CheckCircle2, FileText, Gauge, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
+"use client";
+
+import { Check, CheckCircle2, FileText, Gauge, Quote, RotateCcw, Route, ShieldCheck, Sparkles } from "lucide-react";
 import type React from "react";
-import type {
-  ChatArtifactRef,
-  ChatMessage,
-  ExecutionSummaryCapabilityUse,
-  ExecutionSummaryData,
-  ExecutionSummaryItem,
-  ExecutionSummaryLink,
-} from "@/store/useCortexStore";
+import { useState } from "react";
+import type { ChatArtifactRef, ChatMessage, ExecutionSummaryCapabilityUse, ExecutionSummaryData, ExecutionSummaryItem, ExecutionSummaryLink } from "@/store/useCortexStore";
 
 type SummaryValue = string | ExecutionSummaryItem;
+type FactModel = { label: string; value: string; icon: React.ReactNode; quoteValue?: string };
 
 function lastMessage(messages: ChatMessage[], role: ChatMessage["role"]) {
   return [...messages].reverse().find((message) => message.role === role);
@@ -146,6 +143,7 @@ export function SomaCausalSummary({
   outputs?: string[];
   updated?: string[];
 }) {
+  const [copiedFact, setCopiedFact] = useState<string | null>(null);
   const latestUser = lastMessage(messages, "user");
   const latestSoma = lastSomaMessage(messages);
   const summary = latestSoma?.execution_summary;
@@ -195,6 +193,7 @@ export function SomaCausalSummary({
       label: "Outputs",
       value: produced.join(", "),
       icon: <FileText className="h-3.5 w-3.5" />,
+      quoteValue: produced.join(", "),
     },
     {
       label: "Proof",
@@ -208,36 +207,88 @@ export function SomaCausalSummary({
     },
   ];
 
+  const primaryFacts = facts.slice(0, 4);
+  const secondaryFacts = facts.slice(4);
+  const copyFactQuote = async (fact: FactModel) => {
+    if (!fact.quoteValue) return;
+    await navigator.clipboard.writeText(`> ${fact.quoteValue}`);
+    setCopiedFact(fact.label);
+    window.setTimeout(() => setCopiedFact((current) => current === fact.label ? null : current), 1200);
+  };
+
   return (
-    <section className="rounded-2xl border border-cortex-primary/25 bg-cortex-primary/10 p-4">
+    <section className="rounded-lg border border-cortex-primary/25 bg-cortex-primary/10 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-cortex-primary" />
           <p className="text-sm font-semibold text-cortex-text-main">Soma just did this</p>
         </div>
-        <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
-          Causal package
-        </p>
+        <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Causal package</p>
       </div>
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {facts.map((fact) => (
-          <Fact key={fact.label} label={fact.label} value={fact.value} icon={fact.icon} />
+      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {primaryFacts.map((fact) => (
+          <Fact key={fact.label} fact={fact} copied={copiedFact === fact.label} onQuote={() => void copyFactQuote(fact)} />
         ))}
       </div>
+      {secondaryFacts.length ? (
+        <div className="mt-2 grid gap-2 md:grid-cols-3">
+          {secondaryFacts.map((fact) => (
+            <Fact key={fact.label} fact={fact} copied={copiedFact === fact.label} compact onQuote={() => void copyFactQuote(fact)} />
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function Fact({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function QuoteFactButton({ fact, copied, onQuote }: { fact: FactModel; copied: boolean; onQuote: () => void }) {
+  if (!fact.quoteValue) return null;
   return (
-    <div className="min-w-0 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2">
-      <div className="flex items-center gap-1.5 text-cortex-primary">
-        {icon}
-        <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
-          {label}
-        </p>
+    <button
+      type="button"
+      onClick={onQuote}
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-cortex-border/70 text-cortex-text-muted transition-colors hover:border-cortex-info/40 hover:bg-cortex-info/10 hover:text-cortex-info"
+      title={copied ? "Copied output quote" : "Copy output quote"}
+      aria-label={copied ? "Copied output quote" : `Copy output quote for ${fact.value}`}
+    >
+      {copied ? <Check className="h-3 w-3" /> : <Quote className="h-3 w-3" />}
+    </button>
+  );
+}
+
+function Fact({
+  fact,
+  copied,
+  onQuote,
+  compact = false,
+}: {
+  fact: FactModel;
+  copied: boolean;
+  onQuote: () => void;
+  compact?: boolean;
+}) {
+  const shellClass = compact
+    ? "min-w-0 rounded-lg border border-cortex-border bg-cortex-bg/80 px-3 py-2"
+    : "min-h-[82px] min-w-0 overflow-hidden rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2";
+  const textClass = compact
+    ? "mt-1 overflow-hidden text-xs leading-4 text-cortex-text-main [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:1]"
+    : "mt-2 overflow-hidden text-sm leading-5 text-cortex-text-main [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]";
+
+  return (
+    <div className={shellClass}>
+      <div className="flex items-center justify-between gap-2 text-cortex-primary">
+        <div className="flex min-w-0 items-center gap-1.5">
+          {fact.icon}
+          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">{fact.label}</p>
+        </div>
+        <QuoteFactButton fact={fact} copied={copied} onQuote={onQuote} />
       </div>
-      <p className="mt-2 text-sm leading-5 text-cortex-text-main">{value}</p>
+      <p
+        className={textClass}
+        title={fact.value}
+      >
+        {fact.value}
+      </p>
     </div>
   );
 }

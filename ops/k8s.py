@@ -6,12 +6,12 @@ import time
 from pathlib import Path
 
 from invoke import task, Collection
-from .config import CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
+from .config import API_PORT, CLUSTER_NAME, NAMESPACE, is_windows, ROOT_DIR
 from .core import build as core_build
+from .k8s_search import append_search_overrides, print_search_overrides, search_overrides
 from .k8s_standards import _shell_quote, standards
 from .packaging import relative_to_root, resolve_repo_path, slugify_label, write_checksum_file, write_json
 from .version import get_version
-
 
 def _k8s_backend() -> str:
     requested = os.environ.get("MYCELIS_K8S_BACKEND", "auto").strip().lower()
@@ -42,7 +42,6 @@ def _k8s_backend() -> str:
         raise SystemExit("MYCELIS_K8S_BACKEND=rancher requires kubectl on PATH.")
     return requested
 
-
 def _cluster_list_has_name(output: str, backend: str) -> bool:
     for line in output.splitlines():
         stripped = line.strip()
@@ -57,7 +56,6 @@ def _cluster_list_has_name(output: str, backend: str) -> bool:
             return True
     return False
 
-
 def _cluster_exists(c) -> bool:
     backend = _k8s_backend()
     if backend == "rancher":
@@ -68,7 +66,6 @@ def _cluster_exists(c) -> bool:
     if not result or not result.ok:
         return False
     return _cluster_list_has_name(result.stdout, backend)
-
 
 def _resource_exists(c, resource: str) -> bool:
     result = c.run(f"kubectl get {resource} -n {NAMESPACE}", hide=True, warn=True)
@@ -346,6 +343,7 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
     k8s_text_endpoint = os.getenv("MYCELIS_K8S_TEXT_ENDPOINT", "").strip()
     k8s_text_model_id = os.getenv("MYCELIS_K8S_TEXT_MODEL_ID", "").strip()
     k8s_media_endpoint = os.getenv("MYCELIS_K8S_MEDIA_ENDPOINT", "").strip()
+    k8s_search = search_overrides(os.environ)
     values_file = resolved_values_file
     if not api_key:
         raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
@@ -363,6 +361,7 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
         print(f"   Text AI model: {k8s_text_model_id}")
     if k8s_media_endpoint:
         print(f"   Media AI endpoint: {k8s_media_endpoint}")
+    print_search_overrides(k8s_search)
     if values_file:
         print(f"   Helm values file: {values_file}")
 
@@ -384,6 +383,7 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
         cmd += f"--set-string ai.textModelId={_shell_quote(k8s_text_model_id)} "
     if k8s_media_endpoint:
         cmd += f"--set-string ai.mediaEndpoint={_shell_quote(k8s_media_endpoint)} "
+    cmd = append_search_overrides(cmd, k8s_search)
     cmd += "--wait"
     c.run(cmd)
     
@@ -452,9 +452,9 @@ def up(c, timeout=180):
 def bridge(c):
     """
     Open Development Bridge.
-    Forwards cluster ports (NATS:4222, HTTP:8080, PG:5432) to localhost.
+    Forwards cluster ports (NATS:4222, HTTP:API_PORT, PG:5432) to localhost.
     """
-    print("Starting Port-Forward Proxy (NATS:4222, HTTP:8080, PG:5432)...")
+    print(f"Starting Port-Forward Proxy (NATS:4222, HTTP:{API_PORT}, PG:5432)...")
     cluster_ready = c.run("kubectl cluster-info", hide=True, warn=True)
     if not cluster_ready.ok:
         raise SystemExit(
@@ -464,7 +464,7 @@ def bridge(c):
 
     forwards = [
         ("svc/mycelis-core-nats", "4222:4222", 4222, "NATS"),
-        ("svc/mycelis-core", "8080:8080", 8080, "Core API bridge"),
+        ("svc/mycelis-core", f"{API_PORT}:8080", API_PORT, "Core API bridge"),
         ("svc/mycelis-core-postgresql", "5432:5432", 5432, "PostgreSQL"),
     ]
 

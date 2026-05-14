@@ -38,6 +38,11 @@ dataVolume:
   size: 5Gi
   storageClassName: standard
 
+search:
+  onlineAllowed: true
+  approvalMode: notify
+  disclosureMode: notice_and_interpretation
+
 ai:
   textEndpoint: ""
   mediaEndpoint: ""

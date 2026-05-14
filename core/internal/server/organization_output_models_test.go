@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/mycelis/core/internal/cognitive"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestHandleGetOrganizationOutputModelRouting_ListsInstalledAndPopularSelfHostedModels(t *testing.T) {
-	ollamaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ollamaServer := newLocalHTTPTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/tags" {
 			http.NotFound(w, r)
 			return
@@ -26,7 +25,6 @@ func TestHandleGetOrganizationOutputModelRouting_ListsInstalledAndPopularSelfHos
 			},
 		})
 	}))
-	defer ollamaServer.Close()
 
 	s := newTestServer(withTemplateBundlesPath(writeStarterBundle(t)), func(s *AdminServer) {
 		s.Cognitive = &cognitive.Router{

@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 
@@ -21,6 +22,11 @@ SDK_DIR = ROOT_DIR / "sdk/python"
 WORKSPACE_DIR = ROOT_DIR / "workspace"
 PROJECT_CACHE_ROOT = Path(
     os.environ.get("MYCELIS_PROJECT_CACHE_ROOT", str(WORKSPACE_DIR / "tool-cache"))
+)
+
+WINDOWS_TOOL_PATHS = (
+    Path(r"C:\Program Files\Rancher Desktop\resources\resources\win32\bin"),
+    Path(r"C:\ProgramData\chocolatey\bin"),
 )
 
 # -- Host Defaults (env-var overridable) --
@@ -44,6 +50,29 @@ INTERFACE_PORT = int(os.environ.get("MYCELIS_INTERFACE_PORT", "3000"))
 
 def is_windows():
     return platform.system() == "Windows"
+
+
+def ensure_windows_tool_path() -> list[Path]:
+    """Make repo tasks find standard Windows CLIs during each shell load."""
+    if not is_windows():
+        return []
+    current_parts = [part for part in os.environ.get("PATH", "").split(os.pathsep) if part]
+    current_lower = {part.lower() for part in current_parts}
+    added: list[Path] = []
+    for tool_dir in WINDOWS_TOOL_PATHS:
+        if not tool_dir.exists():
+            continue
+        raw = str(tool_dir)
+        if raw.lower() in current_lower:
+            continue
+        current_lower.add(raw.lower())
+        added.append(tool_dir)
+    if added:
+        os.environ["PATH"] = os.pathsep.join([str(path) for path in added] + current_parts)
+    return added
+
+
+ensure_windows_tool_path()
 
 
 @lru_cache(maxsize=1)
@@ -134,6 +163,12 @@ def docker_command(*args: str, cwd: Path | None = None) -> list[str]:
     if docker_host_mode() == "wsl":
         return _wsl_base_command(cwd=cwd) + ["docker", *args]
     return ["docker", *args]
+
+
+def shell_command(args: list[str]) -> str:
+    if is_windows():
+        return subprocess.list2cmdline(args)
+    return shlex.join(args)
 
 
 def managed_cache_paths(root: Path | None = None) -> dict[str, Path]:

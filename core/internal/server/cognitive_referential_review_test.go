@@ -8,10 +8,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
+	"github.com/nats-io/nats.go"
 )
 
-func TestBuildSomaReferentialReviewRequiresTeamMCPConfirmation(t *testing.T) {
+func TestBuildSomaReferentialReviewLetsExplicitTeamRequestsReachProposal(t *testing.T) {
 	s := newTestServer()
 	messages := []chatRequestMessage{{
 		Role:    "user",
@@ -20,8 +22,8 @@ func TestBuildSomaReferentialReviewRequiresTeamMCPConfirmation(t *testing.T) {
 
 	review := s.buildSomaReferentialReview(t.Context(), messages)
 
-	if !review.NeedsConfirmation {
-		t.Fatal("expected team + MCP action to require confirmation")
+	if review.NeedsConfirmation {
+		t.Fatal("explicit team creation should route to governed proposal instead of a separate confirmation prompt")
 	}
 	if !strings.Contains(review.InferredAction, "specialist roles") {
 		t.Fatalf("inferred action = %q", review.InferredAction)
@@ -165,9 +167,33 @@ func TestMatchSomaInteractionTemplateCombinesRecurringPrivateDataConcepts(t *tes
 	}
 }
 
-func TestHandleChatRequestsReferentialConfirmationBeforeTeamMutation(t *testing.T) {
-	s := newTestServer()
-	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"Create a team with specialists and target MCP tools for research."}]}`)
+func TestHandleChatRoutesExplicitTeamResearchRequestToProposal(t *testing.T) {
+	wireNATS := withNATS(t)
+	s := newTestServer(wireNATS)
+	s.Cognitive = &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "mock"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"mock": {Type: "mock", Enabled: true, ModelID: "test-model"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"mock": cognitiveTestProvider{},
+		},
+	}
+	subject := "swarm.council.admin.request"
+	_, err := s.NC.Subscribe(subject, func(msg *nats.Msg) {
+		resp, _ := json.Marshal(map[string]any{"text": "Team plan ready for proposal."})
+		msg.Respond(resp)
+	})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := s.NC.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+
+	reqBody := bytes.NewBufferString(`{"messages":[{"role":"user","content":"create the team, and then have them execute an initial research"}]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat", reqBody)
 	rr := httptest.NewRecorder()
 
@@ -177,11 +203,14 @@ func TestHandleChatRequestsReferentialConfirmationBeforeTeamMutation(t *testing.
 		t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
 	}
 	payload := decodeChatPayloadFromTestResponse(t, rr.Body.Bytes())
-	if !strings.Contains(payload.Text, "Confirm whether Soma should create the team plan once") {
-		t.Fatalf("payload text = %q", payload.Text)
+	if payload.Proposal == nil {
+		t.Fatalf("expected proposal payload, got text=%q", payload.Text)
 	}
-	if payload.Provenance == nil || payload.Provenance.ResolvedIntent != "confirmation_required" {
-		t.Fatalf("provenance = %+v, want confirmation_required", payload.Provenance)
+	if payload.Provenance == nil || payload.Provenance.ResolvedIntent != "proposal" {
+		t.Fatalf("provenance = %+v, want proposal", payload.Provenance)
+	}
+	if len(payload.ToolsUsed) != 1 || payload.ToolsUsed[0] != "create_team" {
+		t.Fatalf("tools_used = %#v, want create_team", payload.ToolsUsed)
 	}
 }
 

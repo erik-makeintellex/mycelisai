@@ -22,6 +22,10 @@ type Config struct {
 	SearXNGEndpoint  string
 	LocalAPIEndpoint string
 	MaxResults       int
+	OnlineAllowed    bool
+	OnlineAllowedSet bool
+	ApprovalMode     string
+	DisclosureMode   string
 }
 
 type Request struct {
@@ -59,6 +63,9 @@ type Status struct {
 	RequiresHostedAPIToken    bool     `json:"requires_hosted_api_token"`
 	SearXNGEndpointConfigured bool     `json:"searxng_endpoint_configured,omitempty"`
 	MaxResults                int      `json:"max_results"`
+	OnlineAllowed             bool     `json:"online_allowed"`
+	ApprovalMode              string   `json:"approval_mode"`
+	DisclosureMode            string   `json:"disclosure_mode"`
 	Blocker                   *Blocker `json:"blocker,omitempty"`
 	NextActions               []string `json:"next_actions,omitempty"`
 }

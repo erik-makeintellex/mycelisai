@@ -46,6 +46,13 @@ ai:
   textEndpoint: "http://<windows-ai-host>:11434/v1"
   textModelId: "qwen3:8b"
 
+search:
+  provider: searxng
+  searxngEndpoint: "http://<windows-ai-host>:8088"
+  onlineAllowed: true
+  approvalMode: notify
+  disclosureMode: notice_and_interpretation
+
 nats:
   jetstream:
     fileStore:

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,7 +22,7 @@ func (s *AdminServer) requestChatAgent(parent context.Context, subject string, m
 		return chatAgentResult{}, err
 	}
 
-	reqCtx, cancel := context.WithTimeout(parent, 60*time.Second)
+	reqCtx, cancel := context.WithTimeout(parent, chatAgentRequestTimeout())
 	defer cancel()
 
 	msg, err := s.NC.RequestWithContext(reqCtx, subject, payload)
@@ -28,6 +30,21 @@ func (s *AdminServer) requestChatAgent(parent context.Context, subject string, m
 		return chatAgentResult{}, err
 	}
 	return decodeChatAgentResult(msg.Data), nil
+}
+
+func chatAgentRequestTimeout() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("MYCELIS_CHAT_AGENT_TIMEOUT_SECONDS"))
+	if raw == "" {
+		return 120 * time.Second
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil || seconds < 30 {
+		return 120 * time.Second
+	}
+	if seconds > 300 {
+		seconds = 300
+	}
+	return time.Duration(seconds) * time.Second
 }
 
 func applyBrainProvenance(s *AdminServer, chatPayload *protocol.ChatResponsePayload, agentResult chatAgentResult) {

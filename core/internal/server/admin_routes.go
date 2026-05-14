@@ -186,6 +186,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/host/status", s.HandleHostStatus)
 	mux.HandleFunc("GET /api/v1/host/actions", s.HandleHostActions)
 	mux.HandleFunc("POST /api/v1/host/actions/{id}/invoke", s.HandleInvokeHostAction)
+	mux.HandleFunc("GET /api/v1/workspace/files/view", s.HandleWorkspaceFileView)
 	mux.HandleFunc("GET /api/v1/runs/{id}/conversation", s.HandleGetRunConversation)
 	mux.HandleFunc("GET /api/v1/conversations/{session_id}", s.HandleGetSessionConversation)
 	mux.HandleFunc("POST /api/v1/runs/{id}/interject", s.HandleRunInterject)

@@ -43,6 +43,14 @@ networkPolicy:
       - 0.0.0.0/0
     ports:
       - 11434
+  searchEgress:
+    # Enable when Core must call an external self-hosted search endpoint such as
+    # host-published SearXNG. Keep ports explicit.
+    enabled: false
+    cidrs:
+      - 0.0.0.0/0
+    ports:
+      - 8088
 
 coreAuth:
   # Either provide apiKey (for dev) or reference an existing secret
@@ -131,6 +139,9 @@ search:
   searxngEndpoint: ""
   localApiEndpoint: ""
   maxResults: 8
+  onlineAllowed: true
+  approvalMode: notify
+  disclosureMode: notice_and_interpretation
 
 # Environment variables (Extras)
 env:

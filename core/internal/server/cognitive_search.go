@@ -16,9 +16,20 @@ func isSearchCapabilityQuestion(text string) bool {
 	if lower == "" {
 		return false
 	}
-	searchTerms := []string{"search", "web request", "web requests", "web search", "make requests", "browse", "internet", "brave", "searxng", "shared sources"}
+	searchTerms := []string{"web request", "web requests", "web search", "make requests", "browse", "internet", "brave", "searxng", "shared sources"}
 	capabilityTerms := []string{"can you", "are you able", "able to", "do you have", "current", "status", "instantiate", "own api", "tokens", "token"}
-	return requestContainsAny(lower, searchTerms) && requestContainsAny(lower, capabilityTerms)
+	return (hasExactWord(lower, "search") || requestContainsAny(lower, searchTerms)) && requestContainsAny(lower, capabilityTerms)
+}
+
+func hasExactWord(text, word string) bool {
+	for _, field := range strings.FieldsFunc(text, func(r rune) bool {
+		return (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '_'
+	}) {
+		if field == word {
+			return true
+		}
+	}
+	return false
 }
 
 func directSearchQuery(text string) (string, bool) {
@@ -36,6 +47,13 @@ func directSearchQuery(text string) (string, bool) {
 		return trimmed, true
 	}
 	return "", false
+}
+
+func shouldHandleDirectSearch(text string) (string, bool) {
+	if len(inferMutationToolsFromText(text)) > 0 {
+		return "", false
+	}
+	return directSearchQuery(text)
 }
 
 func quotedSearchQuery(text string) (string, bool) {
@@ -131,12 +149,14 @@ func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.R
 }
 
 func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
+	notice := directSearchNotice(resp)
 	if err != nil {
-		return fmt.Sprintf("I tried to use web_search, but search failed before results were available: %v", err)
+		return strings.Join([]string{notice, fmt.Sprintf("Blocked: search failed before results were available: %v", err)}, "\n")
 	}
 	if resp.Blocker != nil {
 		lines := []string{
-			"I tried to use web_search, but search is blocked right now.",
+			notice,
+			"Blocked: web_search unavailable.",
 			fmt.Sprintf("- Blocker: %s", resp.Blocker.Message),
 		}
 		if strings.TrimSpace(resp.Blocker.NextAction) != "" {
@@ -145,9 +165,9 @@ func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
 		return strings.Join(lines, "\n")
 	}
 	if len(resp.Results) == 0 {
-		return fmt.Sprintf("I used web_search for %q, but no results were returned by %s.", resp.Query, resp.Provider)
+		return strings.Join([]string{notice, fmt.Sprintf("No results: %q via %s.", resp.Query, resp.Provider)}, "\n")
 	}
-	lines := []string{fmt.Sprintf("I used web_search through %s for %q. Current results:", resp.Provider, resp.Query)}
+	lines := []string{notice, fmt.Sprintf("Results for %q:", resp.Query)}
 	for i, result := range resp.Results {
 		title := strings.TrimSpace(result.Title)
 		if title == "" {
@@ -158,11 +178,32 @@ func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
 			line += fmt.Sprintf(" - %s", result.URL)
 		}
 		if strings.TrimSpace(result.Snippet) != "" {
-			line += fmt.Sprintf("\n   %s", strings.TrimSpace(result.Snippet))
+			line += fmt.Sprintf("; %s", terseSearchSnippet(result.Snippet))
 		}
 		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")
+}
+
+func terseSearchSnippet(snippet string) string {
+	compact := strings.Join(strings.Fields(strings.TrimSpace(snippet)), " ")
+	const maxLen = 140
+	if len(compact) <= maxLen {
+		return compact
+	}
+	return strings.TrimSpace(compact[:maxLen]) + "..."
+}
+
+func directSearchNotice(resp searchcap.Response) string {
+	provider := strings.TrimSpace(resp.Provider)
+	if provider == "" {
+		provider = "configured provider"
+	}
+	mode := "no confirmation"
+	if value, ok := resp.Metadata["approval_mode"].(string); ok && strings.TrimSpace(value) == "require_confirmation" {
+		mode = "confirmation required"
+	}
+	return fmt.Sprintf("Notice: web_search via %s; %s; external results are leads, verify before relying.", provider, mode)
 }
 
 func (s *AdminServer) respondSearchChatPayload(w http.ResponseWriter, r *http.Request, summary, originalIntent, text string, tools []string, resultStatus protocol.ExecutionStatus, blocker string) {

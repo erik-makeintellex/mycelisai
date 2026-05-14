@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/runs"
+	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -20,7 +22,11 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	t.Setenv("MYCELIS_WORKSPACE", workspace)
 
 	dbOpt, mock := withDB(t)
-	s := newTestServer(dbOpt)
+	wireNATS := withNATS(t)
+	s := newTestServer(dbOpt, wireNATS, func(s *AdminServer) {
+		s.Soma = swarm.NewSoma(s.NC, nil, nil, nil, nil, nil, nil)
+		t.Cleanup(s.Soma.Shutdown)
+	})
 	mock.MatchExpectationsInOrder(false)
 
 	token := "11111111-1111-1111-1111-111111111111"
@@ -35,8 +41,17 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	}
 	expiresAt := time.Now().Add(time.Hour)
 	scope := protocol.ScopeValidation{
-		Tools: []string{"write_file"},
+		Tools: []string{"create_team", "write_file"},
 		PlannedToolCalls: []protocol.PlannedToolCall{
+			{
+				Name: "create_team",
+				Arguments: map[string]any{
+					"team_id":              "qa-runtime-team",
+					"name":                 "QA Runtime Team",
+					"role":                 "validator",
+					"allowed_capabilities": []any{"write_file", "team.coordinate"},
+				},
+			},
 			{
 				Name: "write_file",
 				Arguments: map[string]any{
@@ -45,7 +60,7 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 				},
 			},
 		},
-		CapabilityIDs: []string{"write_file"},
+		CapabilityIDs: []string{"team_orchestration", "file_output"},
 	}
 	scopeJSON, err := json.Marshal(scope)
 	if err != nil {
@@ -69,6 +84,9 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	mock.ExpectExec("INSERT INTO log_entries \\(id, trace_id, timestamp, level, source, intent, message, context\\)").
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "audit", "confirm-action", string(protocol.TemplateChatToProposal), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec("INSERT INTO log_entries \\(id, trace_id, timestamp, level, source, intent, message, context\\)").
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "audit", "confirm-action", string(protocol.TemplateChatToProposal), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec("UPDATE mission_runs SET status = \\$1, completed_at = NOW\\(\\) WHERE id = \\$2").
 		WithArgs(runs.StatusCompleted, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
@@ -85,6 +103,11 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	mock.ExpectExec("INSERT INTO log_entries \\(id, trace_id, timestamp, level, source, intent, message, context\\)").
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), "audit", "confirm-action", string(protocol.TemplateChatToProposal), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery("SELECT id::text, tenant_id, name, goal_statement, work_mode,").
+		WithArgs("QA Runtime Team").
+		WillReturnError(sql.ErrNoRows)
+	mock.ExpectQuery("INSERT INTO collaboration_groups").
+		WillReturnRows(sqlmock.NewRows([]string{"created_at", "updated_at"}).AddRow(time.Now(), time.Now()))
 
 	reqBody := `{"confirm_token":"` + token + `"}`
 	rr := doRequest(t, http.HandlerFunc(s.HandleConfirmAction), http.MethodPost, "/api/v1/intent/confirm-action", reqBody)
@@ -137,6 +160,16 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	if proof["intent_proof_id"] != proofID {
 		t.Fatalf("execution_summary.proof.intent_proof_id = %v, want %s", proof["intent_proof_id"], proofID)
 	}
+	outputs, ok := summary["outputs"].([]any)
+	if !ok {
+		t.Fatalf("expected outputs list, got %T", summary["outputs"])
+	}
+	if !executionSummaryHasOutput(outputs, "team", "qa-runtime-team", true) {
+		t.Fatalf("outputs missing retained team output: %#v", outputs)
+	}
+	if !executionSummaryHasOutput(outputs, "file", "output/confirmed.txt", true) {
+		t.Fatalf("outputs missing retained file output: %#v", outputs)
+	}
 	auditID, _ := data["audit_event_id"].(string)
 	if strings.TrimSpace(auditID) == "" {
 		t.Fatal("expected non-empty audit_event_id")
@@ -153,6 +186,19 @@ func TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls(t *t
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet db expectations: %v", err)
 	}
+}
+
+func executionSummaryHasOutput(outputs []any, kind, id string, retained bool) bool {
+	for _, raw := range outputs {
+		output, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if output["kind"] == kind && output["id"] == id && output["retained"] == retained {
+			return true
+		}
+	}
+	return false
 }
 
 func TestHandleConfirmAction_NormalizesWriteFileAliasesInStoredPlan(t *testing.T) {

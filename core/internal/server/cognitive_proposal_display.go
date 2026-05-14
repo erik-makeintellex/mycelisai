@@ -11,6 +11,8 @@ type proposalDisplayContract struct {
 	OperatorSummary   string
 	ExpectedResult    string
 	AffectedResources []string
+	BusScope          string
+	NATSSubjects      []string
 }
 
 func firstStringArgument(arguments map[string]any, key string) string {
@@ -44,6 +46,7 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 		OperatorSummary: "Carry out the requested governed action.",
 		ExpectedResult:  "Soma will perform the approved action and return durable execution proof.",
 	}
+	display.BusScope, display.NATSSubjects = proposalBusWiring(planned, mutTools, "admin-core")
 
 	for _, resource := range affectedResourcesForPlannedCalls(planned) {
 		if formatted := formatProposalResource(resource); formatted != "" {
@@ -83,6 +86,13 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 			display.OperatorSummary = "Prepare a reusable blueprint from this request."
 			display.ExpectedResult = "A governed blueprint draft will be created for review."
 			return display
+		case "create_team":
+			teamID := firstStringArgument(planned[0].Arguments, "team_id")
+			name := firstStringArgument(planned[0].Arguments, "name")
+			label := firstNonEmptyString(name, teamID, "the requested team")
+			display.OperatorSummary = fmt.Sprintf("Create %s as a governed runtime team.", label)
+			display.ExpectedResult = fmt.Sprintf("%s will be created, wired to team NATS subjects, logged to the run, and mirrored in Groups.", label)
+			return display
 		case "delegate", "delegate_task":
 			display.OperatorSummary = "Hand the requested work to the right team."
 			display.ExpectedResult = "The approved task will be routed to the selected team with execution proof."
@@ -121,6 +131,9 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 		case "generate_blueprint":
 			display.OperatorSummary = "Prepare a reusable blueprint from this request."
 			display.ExpectedResult = "A governed blueprint draft will be created for review."
+		case "create_team":
+			display.OperatorSummary = "Create the requested governed runtime team."
+			display.ExpectedResult = "The requested team will be created, wired to team NATS subjects, logged to the run, and mirrored in Groups."
 		case "delegate", "delegate_task":
 			display.OperatorSummary = "Hand the requested work to the right team."
 			display.ExpectedResult = "The approved task will be routed to the selected team with execution proof."
@@ -152,7 +165,80 @@ func buildMutationChatProposal(mutTools []string, proofID, confirmToken, teamID 
 		ConfirmToken:      confirmToken,
 		IntentProofID:     proofID,
 		TeamExpressions:   buildTeamExpressionsFromTools(deduped, teamID, rolePlan),
+		BusScope:          firstNonEmptyString(display.BusScope, "current_team"),
+		NATSSubjects:      defaultProposalNATSSubjects(display.NATSSubjects, teamID),
 		Approval:          approval,
 		GovernanceProfile: profile,
 	}
+}
+
+func proposalBusWiring(planned []protocol.PlannedToolCall, mutTools []string, fallbackTeamID string) (string, []string) {
+	tools := append([]string{}, mutTools...)
+	for _, call := range planned {
+		tools = append(tools, call.Name)
+		if isTeamBusTool(call.Name) {
+			teamID := firstStringArgument(call.Arguments, "team_id")
+			if teamID == "" {
+				teamID = firstStringArgument(call.Arguments, "id")
+			}
+			if teamID == "" {
+				teamID = firstStringArgument(call.Arguments, "team_name")
+			}
+			return "current_team", defaultProposalNATSSubjects(nil, firstNonEmptyString(teamID, fallbackTeamID))
+		}
+	}
+	for _, tool := range tools {
+		if isTeamBusTool(tool) {
+			return "current_team", defaultProposalNATSSubjects(nil, fallbackTeamID)
+		}
+		if strings.TrimSpace(tool) == "broadcast" {
+			return "global", []string{protocol.TopicGlobalBroadcast}
+		}
+		if strings.TrimSpace(tool) == "publish_signal" && len(planned) > 0 {
+			if subject := firstStringArgument(planned[0].Arguments, "subject"); subject != "" {
+				return "global", []string{subject}
+			}
+		}
+	}
+	return "current_team", defaultProposalNATSSubjects(nil, fallbackTeamID)
+}
+
+func isTeamBusTool(tool string) bool {
+	switch strings.TrimSpace(tool) {
+	case "create_team", "delegate", "delegate_task":
+		return true
+	default:
+		return false
+	}
+}
+
+func defaultProposalNATSSubjects(subjects []string, teamID string) []string {
+	cleaned := make([]string, 0, len(subjects)+3)
+	seen := map[string]struct{}{}
+	for _, subject := range subjects {
+		if trimmed := strings.TrimSpace(subject); trimmed != "" {
+			if _, ok := seen[trimmed]; !ok {
+				seen[trimmed] = struct{}{}
+				cleaned = append(cleaned, trimmed)
+			}
+		}
+	}
+	if len(cleaned) > 0 {
+		return cleaned
+	}
+	team := strings.TrimSpace(teamID)
+	if team == "" {
+		team = "admin-core"
+	}
+	for _, subject := range []string{
+		fmt.Sprintf(protocol.TopicTeamInternalCommand, team),
+		fmt.Sprintf(protocol.TopicTeamSignalStatus, team),
+		fmt.Sprintf(protocol.TopicTeamSignalResult, team),
+	} {
+		if _, ok := seen[subject]; !ok {
+			seen[subject] = struct{}{}
+			cleaned = append(cleaned, subject)
+		}
+	}
+	return cleaned
 }

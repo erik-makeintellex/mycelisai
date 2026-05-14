@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -16,6 +17,101 @@ func TestParsePlannedToolCall_NormalizesWriteFileAliases(t *testing.T) {
 	}
 	if call.Arguments["content"] != "print('hello world')" {
 		t.Fatalf("content = %#v", call.Arguments["content"])
+	}
+}
+
+func TestBuildPlannedToolCalls_PrefersExplicitCreateTeamRequest(t *testing.T) {
+	calls := buildPlannedToolCalls(chatAgentResult{
+		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
+	}, "Create a team with team_id qa-visibility-team named QA Visibility Team. Role researcher.", []string{"generate_blueprint", "delegate"})
+
+	if len(calls) != 1 {
+		t.Fatalf("planned calls = %#v, want one create_team call", calls)
+	}
+	if calls[0].Name != "create_team" {
+		t.Fatalf("planned call = %q, want create_team", calls[0].Name)
+	}
+	if calls[0].Arguments["team_id"] != "qa-visibility-team" {
+		t.Fatalf("team_id = %#v", calls[0].Arguments["team_id"])
+	}
+	if calls[0].Arguments["name"] != "QA Visibility Team" {
+		t.Fatalf("name = %#v", calls[0].Arguments["name"])
+	}
+	if calls[0].Arguments["role"] != "researcher" {
+		t.Fatalf("role = %#v", calls[0].Arguments["role"])
+	}
+	tools := toolsForPlannedCalls(calls, []string{"generate_blueprint", "delegate"})
+	if len(tools) != 1 || tools[0] != "create_team" {
+		t.Fatalf("effective tools = %#v, want create_team only", tools)
+	}
+}
+
+func TestBuildPlannedToolCalls_KeepsTeamAndConcreteCodeOutput(t *testing.T) {
+	request := "Create a compact team with team_id qa-browser-game-team. Then have that team create a simple browser click game at path workspace/logs/qa_team_game.html containing '<!doctype html><title>QA Click Game</title><button id=coin>Coin</button><p id=score>0</p><script>let s=0;coin.onclick=()=>score.textContent=++s</script>'"
+	calls := buildPlannedToolCalls(chatAgentResult{
+		Text: `{"tool_call":{"name":"generate_blueprint","arguments":{"topic":"wrong"}}}`,
+	}, request, []string{"write_file", "generate_blueprint", "delegate"})
+
+	if len(calls) != 2 {
+		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
+	}
+	if calls[0].Name != "create_team" {
+		t.Fatalf("first call = %q, want create_team", calls[0].Name)
+	}
+	if calls[0].Arguments["team_id"] != "qa-browser-game-team" {
+		t.Fatalf("team_id = %#v", calls[0].Arguments["team_id"])
+	}
+	if calls[0].Arguments["name"] != "Qa Browser Game Team" {
+		t.Fatalf("name = %#v", calls[0].Arguments["name"])
+	}
+	if calls[1].Name != "write_file" {
+		t.Fatalf("second call = %q, want write_file", calls[1].Name)
+	}
+	if calls[1].Arguments["path"] != "workspace/logs/qa_team_game.html" {
+		t.Fatalf("path = %#v", calls[1].Arguments["path"])
+	}
+	if !strings.Contains(calls[1].Arguments["content"].(string), "coin.onclick") {
+		t.Fatalf("content = %#v, want simple game code", calls[1].Arguments["content"])
+	}
+	tools := toolsForPlannedCalls(calls, []string{"write_file", "generate_blueprint", "delegate"})
+	if len(tools) != 2 || tools[0] != "create_team" || tools[1] != "write_file" {
+		t.Fatalf("effective tools = %#v, want create_team + write_file", tools)
+	}
+}
+
+func TestBuildPlannedToolCalls_PreservesExplicitCreateTeamArguments(t *testing.T) {
+	request := "Create a compact team with team_id rich-team. Then have that team create a small note at path workspace/logs/rich_team_note.md containing 'ready'"
+	calls := buildPlannedToolCalls(chatAgentResult{
+		Text: `{"tool_call":{"name":"create_team","arguments":{"team_id":"rich-team","name":"Rich Team","role":"validator","manifest":{"ask_routing":{"validation":"validator"}},"required_capabilities":["write_file"]}}}`,
+	}, request, []string{"create_team", "write_file"})
+
+	if len(calls) != 2 {
+		t.Fatalf("planned calls = %#v, want create_team + write_file", calls)
+	}
+	if calls[0].Name != "create_team" {
+		t.Fatalf("first call = %q, want create_team", calls[0].Name)
+	}
+	if calls[0].Arguments["name"] != "Rich Team" || calls[0].Arguments["role"] != "validator" {
+		t.Fatalf("create_team arguments = %#v, want rich model-provided arguments", calls[0].Arguments)
+	}
+	if _, ok := calls[0].Arguments["manifest"].(map[string]any); !ok {
+		t.Fatalf("manifest = %#v, want preserved model-provided manifest", calls[0].Arguments["manifest"])
+	}
+	if calls[1].Name != "write_file" || calls[1].Arguments["path"] != "workspace/logs/rich_team_note.md" {
+		t.Fatalf("write_file call = %#v", calls[1])
+	}
+}
+
+func TestInferCreateTeamPlanFromRequest_DefaultResearchTeam(t *testing.T) {
+	call, ok := inferCreateTeamPlanFromRequest("i need an indepth ai research team that can take on current research")
+	if !ok {
+		t.Fatal("expected create_team plan")
+	}
+	if call.Arguments["team_id"] != "ai-research-team" {
+		t.Fatalf("team_id = %#v", call.Arguments["team_id"])
+	}
+	if call.Arguments["role"] != "researcher" {
+		t.Fatalf("role = %#v", call.Arguments["role"])
 	}
 }
 

@@ -82,7 +82,7 @@ func buildChatBlocker(agentResult chatAgentResult, fallbackSummary string) cogni
 
 func readableChatText(agentResult chatAgentResult, isMutation bool) string {
 	if isMutation {
-		if _, ok := parsePlannedToolCall(agentResult.Text); ok {
+		if _, ok := parsePlannedToolCall(agentResult.Text); ok || containsToolCallJSON(agentResult.Text) || isUnreadableStructuredReply(agentResult.Text) {
 			return "Soma captured a governed mutation intent. Review the proposal details below."
 		}
 	}

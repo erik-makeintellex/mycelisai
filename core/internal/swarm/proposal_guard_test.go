@@ -47,12 +47,13 @@ func (c *countingToolExecutor) CallTool(_ context.Context, _ uuid.UUID, toolName
 
 func TestBlocksProposalPlanningToolClassification(t *testing.T) {
 	tests := map[string]bool{
-		"write_file":            true,
-		"publish_signal":        true,
-		"send_external_message": true,
-		"read_file":             false,
-		"consult_council":       false,
-		"generate_blueprint":    false,
+		"write_file":             true,
+		"publish_signal":         true,
+		"send_external_message":  true,
+		"generate_blueprint":     true,
+		"research_for_blueprint": true,
+		"read_file":              false,
+		"consult_council":        false,
 	}
 
 	for toolName, want := range tests {

@@ -3,16 +3,21 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/registry"
 	pb "github.com/mycelis/core/pkg/pb/swarm"
 )
+
+var serverTestHTTPPort int32 = 23000 + int32(time.Now().UnixNano()%5000)
 
 // ── Shared Test Helpers ────────────────────────────────────────────
 
@@ -24,6 +29,20 @@ func newTestServer(opts ...func(*AdminServer)) *AdminServer {
 		o(s)
 	}
 	return s
+}
+
+func newLocalHTTPTestServer(t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
+	port := nextServerTestTCPPort(t, &serverTestHTTPPort)
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		t.Fatalf("test http listen: %v", err)
+	}
+	srv := httptest.NewUnstartedServer(handler)
+	srv.Listener = ln
+	srv.Start()
+	t.Cleanup(srv.Close)
+	return srv
 }
 
 // withDB creates a sqlmock database and wires it through Registry.

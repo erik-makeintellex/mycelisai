@@ -119,6 +119,29 @@ func (s *AdminServer) getGroupDB(ctx context.Context, id string) (*Collaboration
 	return g, err
 }
 
+func (s *AdminServer) getGroupByNameDB(ctx context.Context, name string) (*CollaborationGroup, error) {
+	db := s.getDB()
+	if db == nil {
+		return nil, errors.New("database not available")
+	}
+	row := db.QueryRowContext(ctx, `
+		SELECT id::text, tenant_id, name, goal_statement, work_mode,
+		       allowed_capabilities, member_user_ids, team_ids,
+		       coordinator_profile, approval_policy_ref, status, created_by,
+		       expiry,
+		       COALESCE(created_audit_event_id::text, ''),
+		       COALESCE(updated_audit_event_id::text, ''),
+		       created_at, updated_at
+		FROM collaboration_groups
+		WHERE tenant_id='default' AND name=$1`, strings.TrimSpace(name))
+
+	g, err := scanGroupRow(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return g, err
+}
+
 func (s *AdminServer) insertGroupDB(ctx context.Context, g *CollaborationGroup) error {
 	db := s.getDB()
 	if db == nil {

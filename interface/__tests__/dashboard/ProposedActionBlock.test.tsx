@@ -67,6 +67,9 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/this action will change your workspace, so soma needs your approval before running it\./i)).toBeDefined();
         expect(screen.getByText(/approval required/i)).toBeDefined();
         expect(screen.getByText(/risk medium/i)).toBeDefined();
+        expect(screen.getByText(/current team bus/i)).toBeDefined();
+        expect(screen.queryByText(/no bus connection/i)).toBeNull();
+        expect(screen.queryByText(/unless you approve bus wiring/i)).toBeNull();
         expect(screen.getByRole('button', { name: /show details/i })).toBeDefined();
         expect(screen.queryByText(/execute delegate through governed module binding/i)).toBeNull();
         expect(screen.queryByText(/delegate \(internal\)/i)).toBeNull();

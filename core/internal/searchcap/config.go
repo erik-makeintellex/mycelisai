@@ -18,5 +18,9 @@ func ConfigFromEnv() Config {
 		SearXNGEndpoint:  strings.TrimRight(strings.TrimSpace(os.Getenv("MYCELIS_SEARXNG_ENDPOINT")), "/"),
 		LocalAPIEndpoint: strings.TrimSpace(os.Getenv("MYCELIS_SEARCH_LOCAL_API_ENDPOINT")),
 		MaxResults:       maxResults,
+		OnlineAllowed:    parseBoolDefault(os.Getenv("MYCELIS_SEARCH_ONLINE_ALLOWED"), true),
+		OnlineAllowedSet: true,
+		ApprovalMode:     normalizeApprovalMode(os.Getenv("MYCELIS_SEARCH_APPROVAL_MODE")),
+		DisclosureMode:   normalizeDisclosureMode(os.Getenv("MYCELIS_SEARCH_DISCLOSURE_MODE")),
 	}
 }
