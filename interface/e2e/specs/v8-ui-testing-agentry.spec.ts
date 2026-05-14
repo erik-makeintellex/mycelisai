@@ -37,7 +37,7 @@ test.describe("V8 UI testing agentry product contract", () => {
         );
 
         await sendWorkspaceMessage(page, "Summarize the current Workspace V8 design objectives.");
-        await expect(page.getByText(directAnswer)).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByTestId("soma-conversation-thread").getByText(directAnswer)).toBeVisible({ timeout: 20_000 });
 
         await page.reload({ waitUntil: "domcontentloaded" });
         await page.getByPlaceholder(chatPlaceholder).waitFor({ timeout: 20_000 });

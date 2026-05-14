@@ -30,7 +30,7 @@ test.describe("Soma raw output suppression", () => {
         await openOrganization(page);
 
         await sendWorkspaceMessage(page, "Trigger the raw tool json regression.");
-        await expect(page.getByText(/could not produce a readable reply/i)).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByTestId("soma-conversation-thread").getByText(/could not produce a readable reply/i)).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText(rawCouncilPayload)).toHaveCount(0);
         await expect(page.getByText(/consult_council requires/i)).toHaveCount(0);
 

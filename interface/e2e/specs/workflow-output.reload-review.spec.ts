@@ -179,7 +179,7 @@ test.describe("Workflow output reload and retained review", () => {
             "Give me the shortest practical recommendation for how to validate this Windows self-hosted release lane.",
         );
         await expect(
-            page.getByText(
+            page.getByTestId("soma-conversation-thread").getByText(
                 "Use the supported Docker Compose lane first with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks. Keep Kubernetes as the modular scale-up proof lane.",
             ),
         ).toBeVisible();
@@ -214,7 +214,7 @@ test.describe("Workflow output reload and retained review", () => {
             "Resume the release-readiness work from the retained package and show me what is already done, what remains, and which lane or lead owns the next step.",
         );
         await expect(
-            page.getByText(
+            page.getByTestId("soma-conversation-thread").getByText(
                 "Already done: planning lane package, validation checklist, and review summary are retained. Remaining: confirm the live Windows operator validation pass. Next owner: Review lane lead.",
             ),
         ).toBeVisible();

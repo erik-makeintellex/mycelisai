@@ -41,20 +41,27 @@ test.describe('Teams Workspace (/teams)', () => {
     });
 
     test('team quick action links are wired', async ({ page }) => {
-        const openChatLinks = page.getByRole('link', { name: 'Open lead workspace' });
-        const viewRunsLinks = page.getByRole('link', { name: 'View runs' });
-        const viewWiringLinks = page.getByRole('link', { name: 'View wiring' });
-        const viewSystemLinks = page.getByRole('link', { name: 'View system' });
-        const emptyState = page.locator('text=No teams found');
+        const cards = page.getByRole('button')
+            .filter({ hasText: 'Open lead workspace' })
+            .filter({ hasText: 'View runs' });
+        const openChatLinks = page.locator('a[data-testid$="-open-chat"]');
+        const viewRunsLinks = page.locator('a[data-testid$="-view-runs"]');
+        const viewWiringLinks = page.locator('a[data-testid$="-view-wiring"]');
+        const viewSystemLinks = page.locator('a[data-testid$="-view-logs"]');
+        const emptyState = page.getByText('No teams found', { exact: true });
         await expect
-            .poll(async () => (await openChatLinks.count()) > 0 || (await emptyState.count()) > 0)
-            .toBeTruthy();
-        const count = await openChatLinks.count();
+            .poll(async () => {
+                if ((await cards.count()) > 0) return 'cards';
+                return await emptyState.isVisible().catch(() => false) ? 'empty' : 'pending';
+            })
+            .not.toBe('pending');
+        const count = await cards.count();
         if (count === 0) {
             await expect(emptyState).toBeVisible();
             return;
         }
 
+        await expect(openChatLinks).toHaveCount(count);
         await expect(viewRunsLinks).toHaveCount(count);
         await expect(viewWiringLinks).toHaveCount(count);
         await expect(viewSystemLinks).toHaveCount(count);
@@ -67,13 +74,14 @@ test.describe('Teams Workspace (/teams)', () => {
 
     test('clicking a team card opens and closes the detail drawer', async ({ page }) => {
         test.slow();
-        const cards = page.locator('div[role="button"][tabindex="0"]');
-        const emptyState = page.getByText('No teams found');
+        const cards = page.getByRole('button')
+            .filter({ hasText: 'Open lead workspace' })
+            .filter({ hasText: 'View runs' });
+        const emptyState = page.getByText('No teams found', { exact: true });
         await expect
             .poll(async () => {
                 if ((await cards.count()) > 0) return 'cards';
-                const bodyText = await page.locator('body').textContent();
-                return bodyText?.includes('No teams found') ? 'empty' : 'pending';
+                return await emptyState.isVisible().catch(() => false) ? 'empty' : 'pending';
             })
             .not.toBe('pending');
         const count = await cards.count();

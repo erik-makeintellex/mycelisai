@@ -62,7 +62,7 @@ describe("TeamLeadInteractionPanel external workflow contract", () => {
 
         expect((await screen.findAllByText("External workflow contract")).length).toBeGreaterThan(0);
         const summaryCard = screen.getByTestId("execution-summary-card");
-        expect(within(summaryCard).getByText("team_execution")).toBeDefined();
+        expect(within(summaryCard).getByText("Directed execution")).toBeDefined();
         expect(container.querySelector('a[href^="/runs/"]')).toBeNull();
         expect(screen.getByText("n8n workflow contract")).toBeDefined();
         expect(screen.getByText("Normalized workflow result")).toBeDefined();

@@ -16,6 +16,13 @@ async function fulfillJSON(route: RouteLike, status: number, body: unknown) {
   });
 }
 
+function isoDaysFromNow(days: number): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  date.setUTCHours(12, 0, 0, 0);
+  return date.toISOString();
+}
+
 async function mockBroadcastProofWorkspace(page: Page) {
   await page.route("**/api/v1/groups", async (route) => {
     await fulfillJSON(route, 200, {
@@ -31,9 +38,9 @@ async function mockBroadcastProofWorkspace(page: Page) {
           coordinator_profile: "proof lead",
           approval_policy_ref: "browser-proof",
           status: "active",
-          expiry: "2026-04-15T09:30:00Z",
+          expiry: isoDaysFromNow(7),
           created_by: "owner",
-          created_at: "2026-04-09T10:00:00Z",
+          created_at: isoDaysFromNow(-1),
         },
       ],
     });

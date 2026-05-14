@@ -11,6 +11,7 @@ import {
     capabilityGroups,
     compactText,
     degradationLines,
+    executionShapeLabel,
     intentLines,
     itemText,
     itemUrl,
@@ -82,7 +83,7 @@ export default function ExecutionSummaryCard({
     const [copiedOutputKey, setCopiedOutputKey] = useState<string | null>(null);
     if (!summary) return null;
 
-    const executionShape = compactText(summary.execution?.shape) ?? compactText(summary.execution_shape);
+    const executionShape = executionShapeLabel(summary.execution?.shape) ?? executionShapeLabel(summary.execution_shape);
     const executionStatus = compactText(summary.execution?.status) ?? compactText(summary.execution_status);
     const executionSummary = compactText(summary.execution?.summary) ?? compactText(summary.execution_summary);
     const capabilities = capabilityGroups(summary.capability_use);

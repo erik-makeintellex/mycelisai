@@ -79,7 +79,7 @@ describe('MissionControlChat execution summary', () => {
         await waitFor(() => {
             expect(screen.getByText('Operator trust package')).toBeDefined();
             expect(screen.getByText('Proof needs review')).toBeDefined();
-            expect(screen.getByText('directed_execution')).toBeDefined();
+            expect(screen.getByText('Directed execution')).toBeDefined();
             expect(screen.getByText('workflow.launch')).toBeDefined();
             expect(screen.getByText('Operations Team')).toBeDefined();
             expect(screen.getByRole('link', { name: /Audit proof/i }).getAttribute('href')).toBe('/proof/proof-123');
@@ -146,7 +146,7 @@ describe('MissionControlChat execution summary', () => {
             expect(screen.getByTestId('execution-summary-card')).toBeDefined();
             expect(screen.getByText('Verified execution proof')).toBeDefined();
             expect(screen.getByRole('link', { name: /Run search-r/i }).getAttribute('href')).toBe('/runs/search-run-123');
-            expect(screen.getByText('tool_assisted_work')).toBeDefined();
+            expect(screen.getByText('Tool-assisted work')).toBeDefined();
             expect(screen.getAllByText('web_search').length).toBeGreaterThan(0);
             expect(screen.getByText(/completed/i)).toBeDefined();
             expect(screen.getByRole('link', { name: /Search proof/i }).getAttribute('href')).toBe('/runs/search-proof');

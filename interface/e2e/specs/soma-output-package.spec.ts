@@ -40,11 +40,12 @@ test.describe("Soma output package separation", () => {
         await openOrganization(page);
 
         await sendWorkspaceMessage(page, "Give me a direct single-agent positioning line.");
-        await expect(page.getByText("Direct Soma answer: lead with the customer outcome and keep the positioning line short.")).toBeVisible({ timeout: 20_000 });
+        const thread = page.getByTestId("soma-conversation-thread");
+        await expect(thread.getByText("Direct Soma answer: lead with the customer outcome and keep the positioning line short.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText("Team-managed output package ready")).toHaveCount(0);
 
         await sendWorkspaceMessage(page, "Now create a team-managed output package for the marketing launch.");
-        await expect(page.getByText("Team-managed output package ready: Marketing Delivery Team produced the reviewable campaign package.")).toBeVisible({ timeout: 20_000 });
+        await expect(thread.getByText("Team-managed output package ready: Marketing Delivery Team produced the reviewable campaign package.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText("Artifact result")).toBeVisible();
         await expect(page.getByText("Soma prepared 1 artifact for review: Marketing Delivery Team output brief.")).toBeVisible();
         await expect(page.getByText(/Soma consulted/i)).toBeVisible();

@@ -29,6 +29,7 @@ type ArtifactRecord = {
     created_at: string;
 };
 
+function isoDaysFromNow(days: number): string { const date = new Date(Date.now() + days * 86_400_000); date.setUTCHours(12, 0, 0, 0); return date.toISOString(); }
 async function fulfillJson(route: { fulfill: (options: { status: number; contentType: string; body: string }) => Promise<void> }, status: number, body: unknown) {
     await route.fulfill({
         status,
@@ -38,7 +39,9 @@ async function fulfillJson(route: { fulfill: (options: { status: number; content
 }
 
 async function mockGroupsWorkspace(page: Page) {
-    const createdAt = '2026-04-09T10:00:00Z';
+    const createdAt = isoDaysFromNow(-1);
+    const activeExpiry = isoDaysFromNow(7);
+    const archivedExpiry = isoDaysFromNow(-2);
     const groups: GroupRecord[] = [
         {
             group_id: 'group-standing',
@@ -64,7 +67,7 @@ async function mockGroupsWorkspace(page: Page) {
             coordinator_profile: 'Launch Sprint lead',
             approval_policy_ref: 'high-impact',
             status: 'active',
-            expiry: '2026-04-12T12:00:00Z',
+            expiry: activeExpiry,
             created_by: 'owner',
             created_at: createdAt,
         },
@@ -78,7 +81,7 @@ async function mockGroupsWorkspace(page: Page) {
             coordinator_profile: 'Archive Review lead',
             approval_policy_ref: 'high-impact',
             status: 'archived',
-            expiry: '2026-04-08T17:00:00Z',
+            expiry: archivedExpiry,
             created_by: 'owner',
             created_at: createdAt,
         },

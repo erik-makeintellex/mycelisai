@@ -13,6 +13,24 @@ export function compactText(value?: string | null) {
     return trimmed || null;
 }
 
+export function executionShapeLabel(value?: string | null) {
+    const shape = compactText(value);
+    if (!shape) return null;
+    const labels: Record<string, string> = {
+        direct_answer: "Direct answer",
+        directed_execution: "Directed execution",
+        governed_artifact: "Governed artifact",
+        proposal: "Governed proposal",
+        guided_proposal: "Governed proposal",
+        team_execution: "Directed execution",
+        native_team: "Native team execution",
+        external_workflow: "External workflow",
+        external_workflow_contract: "External workflow contract",
+        tool_assisted_work: "Tool-assisted work",
+    };
+    return labels[shape] ?? shape.replace(/[_-]+/g, " ");
+}
+
 export function itemText(item: SummaryValue): string | null {
     if (typeof item === "string") return compactText(item);
     return compactText(item.label)

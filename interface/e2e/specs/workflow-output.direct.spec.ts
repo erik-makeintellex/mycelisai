@@ -42,7 +42,7 @@ test.describe("Workflow output direct answer", () => {
         );
 
         await expect(
-            page.getByText(
+            page.getByTestId("soma-conversation-thread").getByText(
                 "Use the supported Docker Compose lane first with an explicit Windows AI endpoint, then run the Windows browser validation flow against the retained output and continuity checks. Keep Kubernetes as the modular scale-up proof lane.",
             ),
         ).toBeVisible();

@@ -29,7 +29,7 @@ test.describe("Soma output safety", () => {
         await openOrganization(page);
         await sendWorkspaceMessage(page, "Summarize the current Workspace V8 design objectives.");
 
-        await expect(page.getByText("Recovered answer after startup wobble.")).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByTestId("soma-conversation-thread").getByText("Recovered answer after startup wobble.")).toBeVisible({ timeout: 20_000 });
         await expect(page.getByText(/Soma Chat Blocked/i)).toHaveCount(0);
         await expect(page.getByTestId("mission-chat").getByRole("button", { name: /^Retry$/i })).toHaveCount(0);
         expect(attempts).toBe(2);

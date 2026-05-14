@@ -12,9 +12,9 @@ describe("Landing Page homepage template", () => {
     it("renders the default Soma orchestration product framing", () => {
         render(<LandingPage />);
 
-        expect(screen.getByRole("heading", { name: "Operate AI Organizations through Soma" })).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Ask Soma. See the work. Trust the result." })).toBeDefined();
         expect(screen.getByText(/self-hostable operating surface for ai work/i)).toBeDefined();
-        expect(screen.getByText(/Example workspace preview/i)).toBeDefined();
+        expect(screen.getByRole("heading", { name: "Intent, progress, outcome." })).toBeDefined();
         expect(screen.getAllByRole("link", { name: /Start with Soma/i })[0].getAttribute("href")).toBe("/dashboard");
         expect(screen.getAllByRole("link", { name: /View Documentation/i })[0].getAttribute("href")).toBe("/docs");
     });
