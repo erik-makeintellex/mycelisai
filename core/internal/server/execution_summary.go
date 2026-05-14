@@ -155,6 +155,60 @@ func buildConfirmActionExecutionSummary(proofID, runID, auditID string, scope *p
 	}
 }
 
+func buildConfirmActionFailureExecutionSummary(proofID, runID, auditID string, err error) *protocol.ExecutionSummary {
+	blocker := "The approved execution failed."
+	if err != nil {
+		blocker = firstNonEmptyString(strings.TrimSpace(err.Error()), blocker)
+	}
+	runClass := protocol.ExecutionRunClassNoRun
+	noRunReason := "The approved execution did not retain a run id."
+	if strings.TrimSpace(runID) != "" {
+		runClass = protocol.ExecutionRunClassLinked
+		noRunReason = ""
+	}
+	return &protocol.ExecutionSummary{
+		Intent: protocol.ExecutionIntent{
+			Resolved: "chat-action",
+		},
+		Understanding: protocol.ExecutionUnderstanding{
+			Summary: "Soma accepted the approval, then execution degraded before completion.",
+		},
+		Execution: protocol.ExecutionState{
+			Shape:   protocol.ExecutionShapeGuidedProposal,
+			Status:  protocol.ExecutionStatusFailed,
+			Summary: "Soma could not complete the approved proposal.",
+		},
+		Proof: protocol.ExecutionProof{
+			RunID:         runID,
+			RunClass:      runClass,
+			NoRunReason:   noRunReason,
+			ProofClass:    protocol.ExecutionProofClassRunAudit,
+			AuditEventID:  auditID,
+			IntentProofID: proofID,
+			Verified:      boolPtr(false),
+		},
+		AuditRecovery: protocol.AuditRecovery{
+			ApprovalStatus: "confirmed",
+			RecoveryState:  "failed",
+			Blocker:        blocker,
+			Retryable:      boolPtr(true),
+			Degradation: &protocol.ExecutionDegradation{
+				Code:              "approved_execution_failed",
+				WhatFailed:        blocker,
+				TrustedState:      "The approval, intent proof, failed run record, and audit event remain trusted.",
+				InvalidatedProof:  "No completed execution proof or retained output should be trusted for this attempt.",
+				SafeContinuation:  "Review the failed run, adjust the request or runtime dependency, then retry the proposal.",
+				RequiresAttention: true,
+			},
+		},
+		NextStep: &protocol.ExecutionNextStep{
+			Label:  "Review failed run",
+			Action: "view_run",
+			Href:   "/api/v1/runs/" + runID,
+		},
+	}
+}
+
 func buildMCPToolCallExecutionSummary(serverName, toolName, summary, exchangeItemID string) *protocol.ExecutionSummary {
 	retained := strings.TrimSpace(exchangeItemID) != ""
 	capabilityLabel := strings.TrimSpace(toolName)

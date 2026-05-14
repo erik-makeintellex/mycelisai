@@ -41,6 +41,17 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 				AuditEventID: "audit-1",
 				Verified:     &verified,
 			},
+			AuditRecovery: AuditRecovery{
+				RecoveryState: "blocked",
+				Degradation: &ExecutionDegradation{
+					Code:              "search_provider_disabled",
+					WhatFailed:        "Search provider disabled.",
+					TrustedState:      "The audit record remains trusted.",
+					InvalidatedProof:  "No search proof is available.",
+					SafeContinuation:  "Configure search and retry.",
+					RequiresAttention: true,
+				},
+			},
 		},
 	}
 
@@ -75,5 +86,10 @@ func TestChatResponsePayload_ExecutionSummaryIsAdditive(t *testing.T) {
 	output := outputs[0].(map[string]any)
 	if output["retention_class"] != string(ExecutionRetentionClassRetained) {
 		t.Fatalf("output retention_class = %v", output["retention_class"])
+	}
+	auditRecovery := summary["audit_recovery"].(map[string]any)
+	degradation := auditRecovery["degradation"].(map[string]any)
+	if degradation["code"] != "search_provider_disabled" || degradation["requires_attention"] != true {
+		t.Fatalf("degradation = %+v", degradation)
 	}
 }

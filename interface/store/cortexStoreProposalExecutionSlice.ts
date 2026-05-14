@@ -63,12 +63,15 @@ export function createCortexProposalExecutionSlice(
 
                 const text = await res.text();
                 let errMsg = 'Confirm action failed';
+                let parsedBody: any = null;
                 try {
-                    const parsed = JSON.parse(text);
-                    errMsg = parsed.error || errMsg;
+                    parsedBody = JSON.parse(text);
+                    errMsg = parsedBody.error || errMsg;
                 } catch {
                     errMsg = text || errMsg;
                 }
+                const failureRunId = trimToNonEmpty(parsedBody?.data?.run_id);
+                const failureExecutionSummary = parsedBody?.data?.execution_summary;
                 const failure = buildMissionChatFailure({
                     assistantName: get().assistantName,
                     targetId: 'admin',
@@ -84,8 +87,17 @@ export function createCortexProposalExecutionSlice(
                     missionChat: [
                         ...updateProposalLifecycle(s.missionChat, pendingProposal.intent_proof_id, 'failed', {
                             mode: 'blocker',
+                            run_id: failureRunId ?? undefined,
                         }),
-                        { role: 'council', content: failure.summary, source_node: 'admin', mode: 'blocker' },
+                        {
+                            role: 'council',
+                            content: failure.summary,
+                            source_node: 'admin',
+                            mode: 'blocker',
+                            run_id: failureRunId ?? undefined,
+                            execution_summary: failureExecutionSummary,
+                            timestamp: new Date().toISOString(),
+                        },
                     ],
                     pendingProposal: null,
                     activeConfirmToken: null,

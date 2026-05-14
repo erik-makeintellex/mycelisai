@@ -25,6 +25,7 @@ func TestRespondSearchChatPayload_DirectSearchIncludesCompletedExecutionSummary(
 		[]string{"web_search"},
 		protocol.ExecutionStatusCompleted,
 		"",
+		nil,
 	)
 
 	if rr.Code != http.StatusOK {
@@ -83,6 +84,15 @@ func TestHandleChat_DirectSearchBlockerHasBlockedExecutionSummary(t *testing.T) 
 	}
 	if payload.ExecutionSummary.Proof.RunClass != protocol.ExecutionRunClassNoRun {
 		t.Fatalf("execution_summary.proof.run_class = %q", payload.ExecutionSummary.Proof.RunClass)
+	}
+	if payload.ExecutionSummary.AuditRecovery.Degradation == nil {
+		t.Fatal("expected degradation metadata for blocked search")
+	}
+	if payload.ExecutionSummary.AuditRecovery.Degradation.Code != "search_provider_disabled" {
+		t.Fatalf("degradation.code = %q", payload.ExecutionSummary.AuditRecovery.Degradation.Code)
+	}
+	if !payload.ExecutionSummary.AuditRecovery.Degradation.RequiresAttention {
+		t.Fatal("expected degradation to require operator attention")
 	}
 }
 

@@ -122,3 +122,16 @@ func confirmActionResponseData(proofID, runID, auditID string, scope *protocol.S
 		"execution_summary": buildConfirmActionExecutionSummary(proofID, runID, auditID, scope, results),
 	}
 }
+
+func confirmActionFailureResponseData(proofID, runID, auditID string, err error) map[string]any {
+	return map[string]any{
+		"confirmed":         false,
+		"verified":          false,
+		"execution_state":   "failed",
+		"proof_id":          proofID,
+		"audit_event_id":    auditID,
+		"run_id":            runID,
+		"run_status":        runs.StatusFailed,
+		"execution_summary": buildConfirmActionFailureExecutionSummary(proofID, runID, auditID, err),
+	}
+}

@@ -10,6 +10,7 @@ import {
     auditText,
     capabilityGroups,
     compactText,
+    degradationLines,
     intentLines,
     itemText,
     itemUrl,
@@ -96,6 +97,7 @@ export default function ExecutionSummaryCard({
         .filter((proof): proof is { text: string; url: string | null } => Boolean(proof.text));
     const summaryRunId = runId ?? proofLinks(summary.proof).map(linkRunId).find(Boolean) ?? null;
     const audit = auditText(summary.audit_recovery);
+    const degradation = degradationLines(summary.audit_recovery);
     const nextStep = nextStepText(summary.next_step);
     const allOutputs = [
         ...outputs,
@@ -113,6 +115,7 @@ export default function ExecutionSummaryCard({
         || proofs.length
         || summaryRunId
         || audit
+        || degradation.length
         || nextStep;
 
     if (!hasContent) return null;
@@ -232,6 +235,13 @@ export default function ExecutionSummaryCard({
                 {audit && (
                     <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Recovery">
                         {audit}
+                    </SummaryRow>
+                )}
+                {degradation.length > 0 && (
+                    <SummaryRow icon={<RotateCcw className="h-3.5 w-3.5" />} label="Degraded">
+                        <div className="space-y-1">
+                            {degradation.map((line) => <div key={line}>{line}</div>)}
+                        </div>
                     </SummaryRow>
                 )}
                 <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Trust">

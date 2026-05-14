@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"testing"
 
@@ -39,6 +40,27 @@ func TestBuildDirectChatExecutionSummary_MarksToolsAndArtifactsAssisted(t *testi
 	}
 	if len(summary.Outputs) == 0 || summary.Outputs[0].RetentionClass != protocol.ExecutionRetentionClassNonRetained {
 		t.Fatalf("answer output retention = %+v", summary.Outputs)
+	}
+}
+
+func TestBuildConfirmActionFailureExecutionSummary_DescribesDegradation(t *testing.T) {
+	summary := buildConfirmActionFailureExecutionSummary("proof-1", "run-1", "audit-1", errors.New("tool unavailable"))
+
+	if summary.Execution.Status != protocol.ExecutionStatusFailed {
+		t.Fatalf("execution.status = %q", summary.Execution.Status)
+	}
+	if summary.Proof.RunID != "run-1" || summary.Proof.Verified == nil || *summary.Proof.Verified {
+		t.Fatalf("proof = %+v", summary.Proof)
+	}
+	degradation := summary.AuditRecovery.Degradation
+	if degradation == nil {
+		t.Fatal("expected degradation metadata")
+	}
+	if degradation.Code != "approved_execution_failed" || !degradation.RequiresAttention {
+		t.Fatalf("degradation = %+v", degradation)
+	}
+	if degradation.TrustedState == "" || degradation.InvalidatedProof == "" || degradation.SafeContinuation == "" {
+		t.Fatalf("degradation trust boundaries incomplete: %+v", degradation)
 	}
 }
 

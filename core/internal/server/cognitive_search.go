@@ -118,7 +118,7 @@ func (s *AdminServer) buildSearchCapabilityAnswer() string {
 }
 
 func (s *AdminServer) respondSearchCapabilitySummary(w http.ResponseWriter, r *http.Request) {
-	s.respondSearchChatPayload(w, r, "Search capability summary", "Search capability summary", s.buildSearchCapabilityAnswer(), nil, protocol.ExecutionStatusCompleted, "")
+	s.respondSearchChatPayload(w, r, "Search capability summary", "Search capability summary", s.buildSearchCapabilityAnswer(), nil, protocol.ExecutionStatusCompleted, "", nil)
 }
 
 func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.Request, query string) {
@@ -134,18 +134,22 @@ func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.R
 	})
 	status := protocol.ExecutionStatusCompleted
 	blocker := ""
+	var degradation *protocol.ExecutionDegradation
 	if err != nil {
 		status = protocol.ExecutionStatusBlocked
 		blocker = err.Error()
+		degradation = searchDegradation("search_execution_error", blocker, "Retry after the selected search provider or runtime dependency is reachable.")
 	} else if resp.Status != "ok" {
 		status = protocol.ExecutionStatusBlocked
 		if resp.Blocker != nil {
 			blocker = resp.Blocker.Message
+			degradation = searchBlockerDegradation(resp.Blocker)
 		} else {
 			blocker = resp.Status
+			degradation = searchDegradation("search_blocked", blocker, "Retry after search capability configuration is corrected.")
 		}
 	}
-	s.respondSearchChatPayload(w, r, "Direct web search", query, buildDirectSearchAnswer(resp, err), []string{"web_search"}, status, blocker)
+	s.respondSearchChatPayload(w, r, "Direct web search", query, buildDirectSearchAnswer(resp, err), []string{"web_search"}, status, blocker, degradation)
 }
 
 func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
@@ -206,7 +210,7 @@ func directSearchNotice(resp searchcap.Response) string {
 	return fmt.Sprintf("Notice: web_search via %s; %s; external results are leads, verify before relying.", provider, mode)
 }
 
-func (s *AdminServer) respondSearchChatPayload(w http.ResponseWriter, r *http.Request, summary, originalIntent, text string, tools []string, resultStatus protocol.ExecutionStatus, blocker string) {
+func (s *AdminServer) respondSearchChatPayload(w http.ResponseWriter, r *http.Request, summary, originalIntent, text string, tools []string, resultStatus protocol.ExecutionStatus, blocker string, degradation *protocol.ExecutionDegradation) {
 	auditEventID, _ := s.createAuditEvent(
 		protocol.TemplateChatToAnswer, "admin", summary,
 		map[string]any{
@@ -228,7 +232,7 @@ func (s *AdminServer) respondSearchChatPayload(w http.ResponseWriter, r *http.Re
 			PolicyDecision:  "allow",
 			AuditEventID:    auditEventID,
 		},
-		ExecutionSummary: buildSearchExecutionSummary(originalIntent, text, auditEventID, tools, resultStatus, blocker),
+		ExecutionSummary: buildSearchExecutionSummary(originalIntent, text, auditEventID, tools, resultStatus, blocker, degradation),
 	}
 	payloadBytes, _ := json.Marshal(chatPayload)
 	envelope := protocol.CTSEnvelope{
@@ -243,57 +247,4 @@ func (s *AdminServer) respondSearchChatPayload(w http.ResponseWriter, r *http.Re
 		Mode:       protocol.ModeAnswer,
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(envelope))
-}
-
-func buildSearchExecutionSummary(originalIntent, replyText, auditEventID string, tools []string, status protocol.ExecutionStatus, blocker string) *protocol.ExecutionSummary {
-	shape := protocol.ExecutionShapeDirectSoma
-	executionSummary := "Soma completed a direct response."
-	if len(tools) > 0 {
-		shape = protocol.ExecutionShapeToolAssistedWork
-		executionSummary = "Soma completed tool-assisted work."
-	}
-	recoveryState := "completed"
-	if status == protocol.ExecutionStatusBlocked {
-		recoveryState = "blocked"
-		executionSummary = firstNonEmptyString(blocker, "Soma could not complete tool-assisted work.")
-	}
-	return &protocol.ExecutionSummary{
-		Intent: protocol.ExecutionIntent{
-			Original: strings.TrimSpace(originalIntent),
-			Resolved: "answer",
-		},
-		Understanding: protocol.ExecutionUnderstanding{
-			Summary: firstNonEmptyString(replyText, executionSummary),
-		},
-		Execution: protocol.ExecutionState{
-			Shape:   shape,
-			Status:  status,
-			Summary: executionSummary,
-		},
-		CapabilityUse: capabilityUseFromTools(tools, ""),
-		Outputs: []protocol.ExecutionOutput{{
-			Kind:           "answer",
-			Title:          "Soma answer",
-			Summary:        firstNonEmptyString(replyText, executionSummary),
-			Retained:       boolPtr(false),
-			RetentionClass: protocol.ExecutionRetentionClassNonRetained,
-		}},
-		Proof: protocol.ExecutionProof{
-			RunClass:     protocol.ExecutionRunClassNoRun,
-			NoRunReason:  "Direct search answers are audit-only and do not create execution runs.",
-			ProofClass:   protocol.ExecutionProofClassAuditOnly,
-			AuditEventID: auditEventID,
-			Verified:     boolPtr(strings.TrimSpace(auditEventID) != ""),
-		},
-		AuditRecovery: protocol.AuditRecovery{
-			ApprovalStatus: "allow",
-			RecoveryState:  recoveryState,
-			Blocker:        strings.TrimSpace(blocker),
-			Retryable:      boolPtr(true),
-		},
-		NextStep: &protocol.ExecutionNextStep{
-			Label:  "Ask a follow-up",
-			Action: "chat",
-		},
-	}
 }

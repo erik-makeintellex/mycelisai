@@ -41,7 +41,35 @@ describe('useCortexStore confirm proposal failure', () => {
         mockFetch.mockResolvedValue({
             ok: false,
             status: 500,
-            text: async () => JSON.stringify({ error: 'confirmation denied' }),
+            text: async () => JSON.stringify({
+                error: 'confirmation denied',
+                data: {
+                    run_id: 'run-failed-1',
+                    execution_summary: {
+                        execution: {
+                            shape: 'guided_proposal',
+                            status: 'failed',
+                            summary: 'Soma could not complete the approved proposal.',
+                        },
+                        audit_recovery: {
+                            recovery_state: 'failed',
+                            blocker: 'tool unavailable',
+                            degradation: {
+                                code: 'approved_execution_failed',
+                                what_failed: 'tool unavailable',
+                                trusted_state: 'The failed run record remains trusted.',
+                                safe_continuation: 'Review the failed run and retry.',
+                                requires_attention: true,
+                            },
+                        },
+                        proof: {
+                            run_id: 'run-failed-1',
+                            proof_class: 'run_and_audit',
+                            verified: false,
+                        },
+                    },
+                },
+            }),
         });
 
         const result = await useCortexStore.getState().confirmProposal();
@@ -56,6 +84,20 @@ describe('useCortexStore confirm proposal failure', () => {
         expect(useCortexStore.getState().missionChatFailure).toMatchObject({
             routeKind: 'workspace',
             type: 'server_error',
+        });
+        const lastMessage = useCortexStore.getState().missionChat.at(-1);
+        expect(lastMessage).toMatchObject({
+            mode: 'blocker',
+            run_id: 'run-failed-1',
+            execution_summary: {
+                execution: { status: 'failed' },
+                audit_recovery: {
+                    degradation: {
+                        code: 'approved_execution_failed',
+                        requires_attention: true,
+                    },
+                },
+            },
         });
         expect(useCortexStore.getState().pendingProposal).toBeNull();
     });

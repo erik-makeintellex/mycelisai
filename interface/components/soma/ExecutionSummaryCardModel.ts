@@ -120,6 +120,17 @@ export function auditText(value: ExecutionSummaryData["audit_recovery"]) {
     return [status, recovery, summary, blocker].filter(Boolean).join(": ") || null;
 }
 
+export function degradationLines(value: ExecutionSummaryData["audit_recovery"]): string[] {
+    if (!value || typeof value === "string" || !value.degradation) return [];
+    const degradation = value.degradation;
+    return [
+        compactText(degradation.what_failed) ? `Failed: ${degradation.what_failed}` : null,
+        compactText(degradation.trusted_state) ? `Still trusted: ${degradation.trusted_state}` : null,
+        compactText(degradation.invalidated_proof) ? `Invalid proof: ${degradation.invalidated_proof}` : null,
+        compactText(degradation.safe_continuation) ? `Safe next: ${degradation.safe_continuation}` : null,
+    ].filter(Boolean) as string[];
+}
+
 export function nextStepText(value: ExecutionSummaryData["next_step"]) {
     if (!value) return null;
     if (typeof value === "string") return compactText(value);
@@ -157,6 +168,7 @@ function auditObject(value: ExecutionSummaryData["audit_recovery"]) {
 export function trustVerdict(summary: ExecutionSummaryData, runId?: string, artifacts?: ChatArtifactRef[]): TrustVerdict {
     const status = (compactText(summary.execution?.status) ?? compactText(summary.execution_status) ?? "").toLowerCase();
     const audit = auditObject(summary.audit_recovery);
+    const degradation = audit?.degradation;
     const proofs = proofObjects(summary.proof);
     const proofClass = proofs.map((proof) => compactText(proof.proof_class)).find(Boolean);
     const verified = proofs.some((proof) => proof.verified === true);
@@ -164,10 +176,11 @@ export function trustVerdict(summary: ExecutionSummaryData, runId?: string, arti
     const retainedOutput = asItems(summary.outputs).some((item) => typeof item !== "string" && (item.retained === true || item.kind === "code" || item.kind === "file"))
         || Boolean(artifacts?.some((artifact) => artifact.id || artifact.cached || artifact.saved_path || artifact.url));
 
-    if (["failed", "blocked", "cancelled"].includes(status) || compactText(audit?.blocker)) {
+    if (degradation?.requires_attention || ["failed", "blocked", "cancelled"].includes(status) || compactText(audit?.blocker)) {
         return {
             label: "Needs operator attention",
-            detail: "Part of the work is blocked or failed. Review recovery before trusting the result.",
+            detail: compactText(degradation?.what_failed)
+                ?? "Part of the work is blocked or failed. Review recovery before trusting the result.",
             tone: "attention",
         };
     }

@@ -202,4 +202,45 @@ describe('MissionControlChat execution summary', () => {
             expect(writeText).toHaveBeenCalledWith(`> ${filePath}\n${href}`);
         });
     });
+
+    it('renders degradation proof boundaries for failed run messages', async () => {
+        useCortexStore.setState({
+            missionChat: [{
+                role: 'council',
+                content: 'Soma hit a server-side failure while handling the request.',
+                mode: 'blocker',
+                run_id: 'run-failed-123456',
+                execution_summary: {
+                    execution: {
+                        shape: 'guided_proposal',
+                        status: 'failed',
+                        summary: 'Soma could not complete the approved proposal.',
+                    },
+                    proof: [{ run_id: 'run-failed-123456', proof_class: 'run_and_audit', verified: false }],
+                    audit_recovery: {
+                        recovery_state: 'failed',
+                        blocker: 'tool unavailable',
+                        degradation: {
+                            code: 'approved_execution_failed',
+                            what_failed: 'tool unavailable',
+                            trusted_state: 'The failed run record remains trusted.',
+                            invalidated_proof: 'No completed output should be trusted.',
+                            safe_continuation: 'Review the failed run and retry.',
+                            requires_attention: true,
+                        },
+                    },
+                },
+            }],
+            councilMembers: COUNCIL_MEMBERS,
+            councilTarget: 'admin',
+        });
+
+        render(<MissionControlChat simpleMode />);
+
+        expect(await screen.findByText('Needs operator attention')).toBeDefined();
+        expect(screen.getByText('Failed: tool unavailable')).toBeDefined();
+        expect(screen.getByText('Still trusted: The failed run record remains trusted.')).toBeDefined();
+        expect(screen.getByText('Invalid proof: No completed output should be trusted.')).toBeDefined();
+        expect(screen.getByText('Safe next: Review the failed run and retry.')).toBeDefined();
+    });
 });

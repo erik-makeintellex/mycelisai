@@ -74,6 +74,15 @@ export interface ExecutionSummaryCapabilityUse {
     used?: Array<string | ExecutionSummaryItem>;
 }
 
+export interface ExecutionDegradation {
+    code?: string;
+    what_failed?: string;
+    trusted_state?: string;
+    invalidated_proof?: string;
+    safe_continuation?: string;
+    requires_attention?: boolean;
+}
+
 export interface ExecutionSummaryData {
     intent?: string | ExecutionSummaryIntent;
     understanding?: string | ExecutionSummaryUnderstanding;
@@ -89,6 +98,7 @@ export interface ExecutionSummaryData {
         recovery_state?: string;
         blocker?: string;
         retryable?: boolean;
+        degradation?: ExecutionDegradation;
     });
     next_step?: string | ExecutionSummaryLink & { action?: string };
 }

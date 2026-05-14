@@ -114,10 +114,20 @@ type ExecutionProof struct {
 }
 
 type AuditRecovery struct {
-	ApprovalStatus string `json:"approval_status,omitempty"`
-	RecoveryState  string `json:"recovery_state,omitempty"`
-	Blocker        string `json:"blocker,omitempty"`
-	Retryable      *bool  `json:"retryable,omitempty"`
+	ApprovalStatus string                `json:"approval_status,omitempty"`
+	RecoveryState  string                `json:"recovery_state,omitempty"`
+	Blocker        string                `json:"blocker,omitempty"`
+	Retryable      *bool                 `json:"retryable,omitempty"`
+	Degradation    *ExecutionDegradation `json:"degradation,omitempty"`
+}
+
+type ExecutionDegradation struct {
+	Code              string `json:"code,omitempty"`
+	WhatFailed        string `json:"what_failed,omitempty"`
+	TrustedState      string `json:"trusted_state,omitempty"`
+	InvalidatedProof  string `json:"invalidated_proof,omitempty"`
+	SafeContinuation  string `json:"safe_continuation,omitempty"`
+	RequiresAttention bool   `json:"requires_attention,omitempty"`
 }
 
 type ExecutionNextStep struct {

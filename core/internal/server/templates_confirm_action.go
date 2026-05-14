@@ -108,7 +108,7 @@ func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, tx *sql
 	if commitErr := tx.Commit(); commitErr != nil {
 		log.Printf("CE-1: confirm-action failure tx commit failed: %v", commitErr)
 	}
-	_, _ = s.createAuditEvent(
+	auditID, _ := s.createAuditEvent(
 		protocol.TemplateChatToProposal, "confirm-action",
 		"Chat proposal confirmation failed",
 		map[string]any{
@@ -122,7 +122,12 @@ func (s *AdminServer) respondConfirmActionFailure(w http.ResponseWriter, tx *sql
 			"approval_reason": err.Error(),
 		},
 	)
-	respondAPIError(w, fmt.Sprintf("approved execution failed: %v", err), http.StatusInternalServerError)
+	message := fmt.Sprintf("approved execution failed: %v", err)
+	respondAPIJSON(w, http.StatusInternalServerError, protocol.APIResponse{
+		OK:    false,
+		Error: message,
+		Data:  confirmActionFailureResponseData(proofID, runID, auditID, err),
+	})
 }
 
 func (s *AdminServer) auditConfirmedAction(proofID, runID string, scope *protocol.ScopeValidation, auditUser string) string {
