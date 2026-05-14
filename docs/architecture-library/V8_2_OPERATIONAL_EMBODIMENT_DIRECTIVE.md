@@ -8,13 +8,16 @@
 ## TOC
 
 - [Strategic Transition](#strategic-transition)
+- [Core Product Truth](#core-product-truth)
+- [Priority Order](#priority-order)
 - [Visible Experience Rule](#visible-experience-rule)
 - [Canonical MVP Workflow](#canonical-mvp-workflow)
 - [Operational Degradation](#operational-degradation)
 - [Confidence Provenance](#confidence-provenance)
 - [Soma As Operational Identity](#soma-as-operational-identity)
 - [Product Category](#product-category)
-- [Priority Rule](#priority-rule)
+- [Team Focus](#team-focus)
+- [Documentation Discipline](#documentation-discipline)
 - [Acceptance Standard](#acceptance-standard)
 
 ## Strategic Transition
@@ -30,6 +33,29 @@ V8.2 work must now prove itself through:
 - operator trust
 - deployment reality
 - repeatable workflows
+
+## Core Product Truth
+
+Mycelis is a Soma-centered governed cognitive operating environment.
+
+The operator experience must collapse into:
+
+```text
+I tell Soma what I want.
+Soma directs the work safely.
+I can see what happened.
+I can trust the result.
+```
+
+Runs, teams, memory, exchange, MCP, capabilities, deployment topology, audit, proof, and logs exist to support that experience. They are scoped operational contexts, not separate assistant identities.
+
+## Priority Order
+
+1. Operational embodiment: visible execution, durable outputs, inspectable proof, and recoverable runs.
+2. Soma UX compression: reduce visible complexity while preserving capability.
+3. Deployment trust: make runtime, roots, health, and proof understandable.
+4. Recovery and degradation: treat failure as a normal operational state.
+5. Confidence provenance: evolve proof toward why a result is trustworthy.
 
 ## Visible Experience Rule
 
@@ -112,7 +138,7 @@ Full confidence provenance is not required immediately. New work should avoid sh
 
 ## Soma As Operational Identity
 
-Soma should be treated as persistent operational cognition identity, not merely an orchestrator, agent coordinator, or assistant.
+Soma should be singular and treated as persistent operational cognition identity, not merely an orchestrator, agent coordinator, or assistant.
 
 Reflect this through:
 - continuity
@@ -139,23 +165,20 @@ This category is defined by:
 
 This language should shape product copy, demos, release strategy, deployment posture, and investor positioning.
 
-## Priority Rule
+## Team Focus
 
-Prioritize:
-- visible execution
-- visible proof
-- visible runs
-- visible artifacts
-- recoverability
-- deployment trust
-- operator confidence
+Active agentry should stay organized around five embodiment lanes:
+- Soma Experience: one dominant operating surface, compressed complexity, stronger causality, unified dashboard/workspace behavior.
+- Runtime and Capability: governed capabilities, normalized outputs, deployment/runtime trust, capability visibility.
+- Governance and Trust: proposal/confirm/execute, proof visibility, degradation handling, audit/recovery, confidence provenance preparation.
+- Deployment and Proof: deployment roots, execution roots, runtime health, proof visibility, self-hosted operator confidence.
+- QA and Embodiment: first-run understanding, continuity, re-entry, recovery, visible execution, operator trust, replayable demos.
 
-Deprioritize:
-- additional abstract runtime concepts
-- speculative autonomy
-- recursive architecture layering
-- marketplace thinking
-- over-generalized topology
+## Documentation Discipline
+
+Canonical docs must stay compressed. Keep README, V8.2, runtime contracts, and UI contracts stable; keep `V8_DEV_STATE.md` operational; archive stale topology language and superseded doctrine aggressively.
+
+Do not let documentation become another runtime system. Product experience must become simpler even while architecture deepens.
 
 ## Acceptance Standard
 
