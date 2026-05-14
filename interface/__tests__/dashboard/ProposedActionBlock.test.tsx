@@ -105,6 +105,7 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'cancelled' })} />);
 
         expect(screen.getByText(/cancelled/i)).toBeDefined();
+        expect(screen.getByText(/no action executed/i)).toBeDefined();
         expect(screen.queryByRole('button', { name: /approve & execute|execute/i })).toBeNull();
         expect(screen.queryByRole('button', { name: /cancel/i })).toBeNull();
     });
@@ -113,6 +114,7 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'confirmed_pending_execution' })} />);
 
         expect(screen.getByText(/awaiting execution proof/i)).toBeDefined();
+        expect(screen.getByText(/approved, not yet trusted/i)).toBeDefined();
         expect(screen.queryByRole('button', { name: /approve & execute|execute/i })).toBeNull();
     });
 
@@ -120,6 +122,7 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'executed' })} />);
 
         expect(screen.getByText(/awaiting execution proof/i)).toBeDefined();
+        expect(screen.getByText(/approved, not yet trusted/i)).toBeDefined();
         expect(screen.queryByText(/execution verified/i)).toBeNull();
     });
 
@@ -127,6 +130,8 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'executed', run_id: 'run-123' })} />);
 
         expect(screen.getByText(/execution verified/i)).toBeDefined();
+        expect(screen.getByText(/proof created/i)).toBeDefined();
+        expect(screen.getByRole('link', { name: /open run proof/i }).getAttribute('href')).toBe('/runs/run-123');
         expect(screen.queryByRole('button', { name: /approve & execute|execute/i })).toBeNull();
     });
 
@@ -134,6 +139,7 @@ describe('ProposedActionBlock', () => {
         render(<ProposedActionBlock message={buildMessage({ proposal_status: 'failed' })} />);
 
         expect(screen.getByText(/confirmation failed/i)).toBeDefined();
+        expect(screen.getByText(/no trusted execution/i)).toBeDefined();
         expect(screen.queryByRole('button', { name: /approve & execute|execute/i })).toBeNull();
         expect(screen.queryByRole('button', { name: /cancel/i })).toBeNull();
     });

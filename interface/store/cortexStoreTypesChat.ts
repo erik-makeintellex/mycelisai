@@ -23,8 +23,12 @@ export interface ExecutionSummaryLink {
     path?: string;
     id?: string;
     run_id?: string;
+    run_class?: string;
+    proof_class?: string;
+    no_run_reason?: string;
     audit_event_id?: string;
     intent_proof_id?: string;
+    exchange_item_id?: string;
     verified?: boolean;
 }
 

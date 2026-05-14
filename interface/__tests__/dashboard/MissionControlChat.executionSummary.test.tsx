@@ -77,7 +77,8 @@ describe('MissionControlChat execution summary', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         await waitFor(() => {
-            expect(screen.getByText('Directed execution package')).toBeDefined();
+            expect(screen.getByText('Operator trust package')).toBeDefined();
+            expect(screen.getByText('Proof needs review')).toBeDefined();
             expect(screen.getByText('directed_execution')).toBeDefined();
             expect(screen.getByText('workflow.launch')).toBeDefined();
             expect(screen.getByText('Operations Team')).toBeDefined();
@@ -143,6 +144,7 @@ describe('MissionControlChat execution summary', () => {
 
         await waitFor(() => {
             expect(screen.getByTestId('execution-summary-card')).toBeDefined();
+            expect(screen.getByText('Verified execution proof')).toBeDefined();
             expect(screen.getByRole('link', { name: /Run search-r/i }).getAttribute('href')).toBe('/runs/search-run-123');
             expect(screen.getByText('tool_assisted_work')).toBeDefined();
             expect(screen.getAllByText('web_search').length).toBeGreaterThan(0);
@@ -191,6 +193,7 @@ describe('MissionControlChat execution summary', () => {
         const outputLink = await screen.findByRole('link', { name: new RegExp(filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
         expect(outputLink.getAttribute('href')).toBe(href);
         expect(outputLink.getAttribute('target')).toBe('_blank');
+        expect(screen.getByText('Run proof + retained output')).toBeDefined();
         expect(screen.getByRole('link', { name: /Mission activated/i }).getAttribute('href')).toBe('/runs/run-game-123456');
 
         fireEvent.click(screen.getByRole('button', { name: new RegExp(`Copy output quote for ${filePath}`) }));

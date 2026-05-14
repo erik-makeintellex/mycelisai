@@ -18,6 +18,8 @@ import {
     linkRunId,
     nextStepText,
     proofLinks,
+    trustVerdict,
+    type TrustVerdictTone,
     understandingLines,
 } from "./ExecutionSummaryCardModel";
 
@@ -61,6 +63,12 @@ function quotedOutputText(output: { text: string; url: string | null }) {
     return output.url ? `> ${output.text}\n${output.url}` : `> ${output.text}`;
 }
 
+function trustToneClass(tone: TrustVerdictTone) {
+    if (tone === "trusted") return "border-cortex-success/25 bg-cortex-success/10 text-cortex-success";
+    if (tone === "attention") return "border-red-400/30 bg-red-400/10 text-red-300";
+    return "border-amber-400/25 bg-amber-400/10 text-amber-300";
+}
+
 export default function ExecutionSummaryCard({
     summary,
     runId,
@@ -93,6 +101,7 @@ export default function ExecutionSummaryCard({
         ...outputs,
         ...artifactOutputs.filter((artifact) => !outputs.some((output) => output.text === artifact.text)),
     ];
+    const trust = trustVerdict(summary, summaryRunId ?? runId, artifacts);
 
     const hasContent = intent.length
         || understanding.length
@@ -119,9 +128,12 @@ export default function ExecutionSummaryCard({
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-info">
                     <Sparkles className="h-3 w-3" />
-                    Directed execution package
+                    Operator trust package
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={`rounded border px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${trustToneClass(trust.tone)}`}>
+                        {trust.label}
+                    </span>
                     {summaryRunId && (
                         <a href={`/runs/${summaryRunId}`} className="inline-flex items-center gap-1 rounded border border-cortex-info/20 bg-cortex-info/10 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase text-cortex-info hover:underline">
                             Run {summaryRunId.slice(0, 8)}
@@ -222,6 +234,9 @@ export default function ExecutionSummaryCard({
                         {audit}
                     </SummaryRow>
                 )}
+                <SummaryRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Trust">
+                    {trust.detail}
+                </SummaryRow>
                 {nextStep && (
                     <div className="rounded border border-cortex-border/60 bg-cortex-surface/60 px-2 py-1.5 text-[11px] leading-5 text-cortex-text-main">
                         <span className="mr-1 font-mono text-[9px] font-bold uppercase tracking-widest text-cortex-text-muted">Next</span>

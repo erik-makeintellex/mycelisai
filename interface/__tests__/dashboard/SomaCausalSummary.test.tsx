@@ -53,7 +53,7 @@ describe("SomaCausalSummary", () => {
         render(<SomaCausalSummary messages={messages} />);
 
         expect(screen.getByText("Soma just did this")).toBeDefined();
-        expect(screen.getByText("Causal package")).toBeDefined();
+        expect(screen.getByText("Trust package")).toBeDefined();
         expect(screen.getByText("Prepare a reviewed onboarding package")).toBeDefined();
         expect(screen.getByText(/Package the request for the operations team/i)).toBeDefined();
         expect(screen.getByText(/complete: directed_execution/i)).toBeDefined();

@@ -5,6 +5,7 @@ import { Shield, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, Clock3, XCi
 import { useCortexStore, type ChatMessage, type ProposalData } from "@/store/useCortexStore";
 import { brainBadge, toolLabel, sourceNodeLabel } from "@/lib/labels";
 import ProposalRunIntent from "./ProposalRunIntent";
+import ProposalLifecycleProof from "./ProposalLifecycleProof";
 
 function humanizeLabel(value: string): string {
     const normalized = value.replace(/[_-]+/g, " ").trim();
@@ -111,7 +112,6 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                 : renderedLifecycle === "failed"
                     ? AlertTriangle
                     : Shield;
-
     return (
         <div className="mt-3 rounded-lg border border-amber-400/30 bg-cortex-surface/80 overflow-hidden">
             <div className="px-4 py-2 bg-amber-400/5 border-b border-amber-400/20 flex items-center gap-2">
@@ -124,7 +124,7 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     <LifecycleIcon className="h-3.5 w-3.5 flex-shrink-0" />
                     <span>{lifecycleLabel}</span>
                 </div>
-
+                <ProposalLifecycleProof lifecycle={renderedLifecycle} runId={message.run_id} />
                 <div className="space-y-1">
                     <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Soma wants to</div>
                     <p className="text-sm leading-6 text-cortex-text-main">{operatorSummary}</p>

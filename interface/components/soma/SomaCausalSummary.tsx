@@ -223,7 +223,7 @@ export function SomaCausalSummary({
           <Sparkles className="h-4 w-4 text-cortex-primary" />
           <p className="text-sm font-semibold text-cortex-text-main">Soma just did this</p>
         </div>
-        <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Causal package</p>
+        <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">Trust package</p>
       </div>
       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {primaryFacts.map((fact) => (

@@ -137,3 +137,78 @@ export function artifactOutputItems(artifacts?: ChatArtifactRef[]) {
         url: artifact.url ?? null,
     })) ?? [];
 }
+
+export type TrustVerdictTone = "trusted" | "review" | "attention";
+
+export interface TrustVerdict {
+    label: string;
+    detail: string;
+    tone: TrustVerdictTone;
+}
+
+function proofObjects(proof: ExecutionSummaryData["proof"]) {
+    return proofLinks(proof).filter((item): item is ExecutionSummaryLink => typeof item !== "string");
+}
+
+function auditObject(value: ExecutionSummaryData["audit_recovery"]) {
+    return value && typeof value !== "string" ? value : null;
+}
+
+export function trustVerdict(summary: ExecutionSummaryData, runId?: string, artifacts?: ChatArtifactRef[]): TrustVerdict {
+    const status = (compactText(summary.execution?.status) ?? compactText(summary.execution_status) ?? "").toLowerCase();
+    const audit = auditObject(summary.audit_recovery);
+    const proofs = proofObjects(summary.proof);
+    const proofClass = proofs.map((proof) => compactText(proof.proof_class)).find(Boolean);
+    const verified = proofs.some((proof) => proof.verified === true);
+    const hasRun = Boolean(compactText(runId) ?? proofs.map((proof) => compactText(proof.run_id)).find(Boolean));
+    const retainedOutput = asItems(summary.outputs).some((item) => typeof item !== "string" && (item.retained === true || item.kind === "code" || item.kind === "file"))
+        || Boolean(artifacts?.some((artifact) => artifact.id || artifact.cached || artifact.saved_path || artifact.url));
+
+    if (["failed", "blocked", "cancelled"].includes(status) || compactText(audit?.blocker)) {
+        return {
+            label: "Needs operator attention",
+            detail: "Part of the work is blocked or failed. Review recovery before trusting the result.",
+            tone: "attention",
+        };
+    }
+    if (status === "proposed" || audit?.approval_status === "approval_required" || audit?.recovery_state === "awaiting_confirmation") {
+        return {
+            label: "Awaiting approval",
+            detail: "Soma has intent proof, but execution trust is not established until approval runs.",
+            tone: "review",
+        };
+    }
+    if (hasRun && retainedOutput) {
+        return {
+            label: "Run proof + retained output",
+            detail: "A run is linked and the produced output is available for review.",
+            tone: "trusted",
+        };
+    }
+    if (hasRun || verified) {
+        return {
+            label: "Verified execution proof",
+            detail: "Run or audit proof is linked for this result.",
+            tone: "trusted",
+        };
+    }
+    if (proofClass === "audit_only") {
+        return {
+            label: "Audit-only proof",
+            detail: "No execution run was needed; the audit record is the trust anchor.",
+            tone: "review",
+        };
+    }
+    if (proofClass === "intent_proof") {
+        return {
+            label: "Intent proof only",
+            detail: "Soma captured the governed intent; execution proof will appear after approval.",
+            tone: "review",
+        };
+    }
+    return {
+        label: "Proof needs review",
+        detail: "Review the available output and proof before relying on this result.",
+        tone: "review",
+    };
+}
