@@ -43,19 +43,19 @@ export const defaultHomepageConfig: HomepageConfig = {
     enabled: true,
     brand: {
         product_name: "Mycelis",
-        tagline: "Soma-centered AI organization orchestration",
+        tagline: "Governed cognitive operating environment",
     },
     hero: {
-        headline: "Operate AI Organizations through Soma",
-        subheadline: "Express intent once. Soma coordinates teams, tools, reviews, and governed execution behind the scenes.",
+        headline: "Ask Soma. See the work. Trust the result.",
+        subheadline: "Mycelis turns intent into governed execution, durable outputs, visible proof, and recovery paths when trust is broken.",
         primary_cta: { label: "Start with Soma", href: "/dashboard" },
         secondary_cta: { label: "View Documentation", href: "/docs" },
     },
     sections: [
         { title: "Express intent", body: "Describe what you want to accomplish in plain language." },
-        { title: "Soma coordinates", body: "Soma turns intent into structured work across teams, tools, memory, and reviews." },
+        { title: "Soma coordinates", body: "Soma evaluates the request, prepares approval when needed, and coordinates teams, tools, memory, and reviews." },
         { title: "Governed execution", body: "Approvals, audit records, and capability boundaries keep actions controlled." },
-        { title: "Review outcomes", body: "Activity, artifacts, and audit records show what changed and why." },
+        { title: "Visible proof", body: "Runs, artifacts, and recovery state show what happened and what remains trusted." },
     ],
     links: [
         { label: "Documentation", href: "/docs", description: "Read setup and architecture guidance." },
@@ -63,7 +63,7 @@ export const defaultHomepageConfig: HomepageConfig = {
         { label: "Activity and Audit", href: "/activity", description: "Inspect system activity and governed execution." },
         { label: "Status", href: "/system", description: "Review service health and recovery status." },
     ],
-    footer_text: "Self-hosted AI Organization orchestration with Soma.",
+    footer_text: "Self-hosted governed cognitive operation with Soma.",
 };
 
 export function markExternal(href: string): boolean {

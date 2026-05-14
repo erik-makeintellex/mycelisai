@@ -1,12 +1,12 @@
 # Mycelis
 
-Mycelis is an AI Organization platform for creating, operating, and evolving governed multi-role systems through a Soma-primary operator experience.
+Mycelis is a governed cognitive operating environment for creating, operating, and evolving AI Organizations through a Soma-primary operator experience.
 
 This README is the development-swarm inception document. It points to current authority, defines the command and documentation contracts, and avoids duplicating the deeper architecture specs.
 
 Canonical ownership:
 - `README.md`: inception, navigation, and repo-wide working rules
-- `architecture/v8-2.md`: active V8.2/B2+ production target
+- `architecture/v8-2.md` and `docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`: active V8.2/B2+ production target plus embodiment rule, canonical MVP workflow, degradation posture, and product-category framing
 - `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`: V8.1 compatibility baseline
 - `docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md` and `docs/architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md`: operator UX, screen/API truth, and directed-execution alignment
 - `docs/architecture-library/V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md`: capability manifest, run/output, MCP/custom integration, and proof truth
@@ -44,31 +44,29 @@ Review these before planning or editing:
 2. [Architecture Library Index](docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md)
 3. [V8 Development State](.state/V8_DEV_STATE.md)
 4. [V8.2 Production Architecture Target](architecture/v8-2.md)
-5. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
-6. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
-7. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
-8. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
-9. [Operations](docs/architecture/OPERATIONS.md)
-10. [Testing](docs/TESTING.md)
-11. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
-12. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md)
-13. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
-14. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
-15. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
-16. [V7 Development State](.state/V7_DEV_STATE.md)
-17. [Docs Manifest](interface/lib/docsManifest.ts)
+5. [V8.2 Operational Embodiment Directive](docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md)
+6. [V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md)
+7. [V8 Runtime Contracts](docs/architecture-library/V8_RUNTIME_CONTRACTS.md)
+8. [V8 Config and Bootstrap Model](docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md)
+9. [V8 UI/API and Operator Experience Contract](docs/architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md)
+10. [Operations](docs/architecture/OPERATIONS.md)
+11. [Testing](docs/TESTING.md)
+12. [Remote User Testing](docs/REMOTE_USER_TESTING.md)
+13. [Target Deliverable V7](docs/architecture-library/TARGET_DELIVERABLE_V7.md)
+14. [Execution And Manifest Library V7](docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+15. [UI And Operator Experience V7](docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
+16. [UI Target And Transaction Contract V7](docs/architecture/UI_TARGET_AND_TRANSACTION_CONTRACT_V7.md)
+17. [V7 Development State](.state/V7_DEV_STATE.md)
+18. [Docs Manifest](interface/lib/docsManifest.ts)
 
 Fresh-agent rules:
-- V8 docs override V7 migration inputs when they conflict.
-- V7 documents remain useful migration evidence, not current product authority.
+- V8 docs override V7 migration inputs when they conflict; V7 documents remain useful migration evidence, not current product authority.
 - `.state/V8_DEV_STATE.md` is the implementation truth for what is actually complete.
 - Keep user-facing docs and engineering docs cross-linked but distinct.
 
 ## User Guidance
 
-For product use rather than implementation, start with [Docs Navigation](docs/README.md), then the user docs under `docs/user/`.
-
-The in-app `/docs` surface should expose the same canonical operator-facing documents through `interface/lib/docsManifest.ts`. When a docs-only slice requires a manifest change outside ownership, report it rather than editing interface files.
+For product use rather than implementation, start with [Docs Navigation](docs/README.md), then the user docs under `docs/user/`. The in-app `/docs` surface should expose the same canonical operator-facing documents through `interface/lib/docsManifest.ts`. When a docs-only slice requires a manifest change outside ownership, report it rather than editing interface files.
 
 ## Agent Guidance
 
@@ -84,9 +82,9 @@ Before changing runtime, API, operator workflow, governance, testing, or task be
 
 ## What Mycelis Is
 
-In operator language, Mycelis lets someone create an AI Organization, work through Soma, inspect advisors/departments/automations/memory, and keep action bounded by policy.
+In operator language, Mycelis lets someone ask Soma to create or review meaningful work, see what happened, inspect the durable result, and recover when trust is broken.
 
-In architecture language, Mycelis is built around instantiated organizations as runtime truth, a Soma coordination layer, governed execution, memory/continuity contracts, and auditable automation.
+In architecture language, Mycelis is built around instantiated organizations as runtime truth, a Soma operational identity layer, governed execution, memory/continuity contracts, durable outputs, recoverable runs, and auditable automation.
 
 ## Active Delivery Target (V8.2 B2+)
 
@@ -94,6 +92,7 @@ The active target is [V8.2 Production Architecture Target](architecture/v8-2.md)
 
 Delivery rule:
 - advance V8.2 modules only with a named boundary, proof lane, promotion rule, and documentation review
+- prefer operational embodiment over new doctrine: the canonical MVP workflow is intent -> Soma -> governed approval when needed -> execution -> run -> durable output -> proof/recovery
 - do not grow V8.1 docs with new B2+ target scope
 
 ## V8.1 Foundation And Compatibility Baseline

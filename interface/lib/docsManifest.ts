@@ -265,12 +265,8 @@ export const DOC_MANIFEST: DocSection[] = [
             { slug: "v8-directed-execution-delivery-plan", label: "V8 Directed Execution Delivery", path: "docs/architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md", description: "Team execution plan for directed-execution work packages, waves, dependencies, validation gates, and orchestration rules" },
             { slug: "v8-governed-execution-doctrine", label: "V8 Governed Execution Doctrine", path: "docs/architecture-library/V8_GOVERNED_EXECUTION_DOCTRINE.md", description: "Doctrine for accountable cognition, Event Spine truth, Workspace visibility, delivery compression, and manifestation pathway" },
             { slug: "v8-mvp-governed-execution-mission-plan", label: "V8 MVP Governed Execution Missions", path: "docs/architecture-library/V8_MVP_GOVERNED_EXECUTION_MISSION_PLAN.md", description: "Executable MVP mission plan for governed execution, Event Spine truth, Workspace visibility, capability governance, and proof-backed completion" },
-            {
-                slug: "v8-1-living-organization-architecture",
-                label: "V8.1 Living Organization Baseline",
-                path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md",
-                description: "Compatibility baseline for loops, continuity, capabilities, and bounded automations",
-            },
+            { slug: "v8-2-operational-embodiment-directive", label: "V8.2 Operational Embodiment", path: "docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md", description: "Directive to shift V8.2 from doctrine expansion into visible execution, durable outputs, recoverable runs, and the canonical MVP workflow" },
+            { slug: "v8-1-living-organization-architecture", label: "V8.1 Living Organization Baseline", path: "docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md", description: "Compatibility baseline for loops, continuity, capabilities, and bounded automations" },
             {
                 slug: "v8-compact-team-orchestration-defaults",
                 label: "V8 Compact Team Orchestration",

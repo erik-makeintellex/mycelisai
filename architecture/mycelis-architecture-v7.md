@@ -34,6 +34,7 @@ Primary detailed documents:
 - [Target Deliverable V7](../docs/architecture-library/TARGET_DELIVERABLE_V7.md)
 - [System Architecture V7](../docs/architecture-library/SYSTEM_ARCHITECTURE_V7.md)
 - [Execution And Manifest Library V7](../docs/architecture-library/EXECUTION_AND_MANIFEST_LIBRARY_V7.md)
+- [V8.2 Operational Embodiment Directive](../docs/architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md)
 - [UI And Operator Experience V7](../docs/architecture-library/UI_AND_OPERATOR_EXPERIENCE_V7.md)
 - [Delivery Governance And Testing V7](../docs/architecture-library/DELIVERY_GOVERNANCE_AND_TESTING_V7.md)
 - [Team Execution And Global State Protocol V7](../docs/architecture-library/TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md)
@@ -45,6 +46,8 @@ Mycelis is targeting a governed execution system where:
 - governed intent can return a proposal
 - executable intent can return a visible result
 - blocked intent returns a concrete recovery path
+
+Current V8.2 positioning frames Mycelis as a governed cognitive operating environment. New target work should prioritize operational embodiment: visible execution, durable outputs, recoverable runs, deployment trust, and repeatable proof before adding more doctrine.
 
 The platform must support plans that are:
 - `one_shot`

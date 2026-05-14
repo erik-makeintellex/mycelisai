@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md)
 
 > Status: Canonical
-> Last Updated: 2026-05-09
+> Last Updated: 2026-05-14
 > Purpose: Maintain one precise, durable documentation surface for product target, runtime structure, UI contract, and delivery proof.
 
 ## TOC
@@ -29,6 +29,7 @@ This index is now intentionally narrower:
 
 - [README](../../README.md) is the primary inception document for active development.
 - [V8.2 Full Production Architecture](../../architecture/v8-2.md) is the canonical full production architecture, full actuation target, and current B2+ delivery frame.
+- [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) is the strategic constraint that shifts work from doctrine expansion into visible, recoverable, trustworthy operation.
 - [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) is the foundation and compatibility baseline for the Soma-primary operator surface.
 - [V8 Development State](../../.state/V8_DEV_STATE.md) is the live implementation scoreboard.
 
@@ -52,6 +53,7 @@ V8.2/B2+ work may proceed when it is modular and proof-producing. Keep each slic
 | [V8 Directed Execution Delivery Plan](V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md) | coordinating implementation teams for directed execution UI/runtime delivery | team roster, DE-1 through DE-7 work packages, waves, dependencies, validation matrix, and orchestration rules |
 | [V8 Governed Execution Doctrine](V8_GOVERNED_EXECUTION_DOCTRINE.md) | checking the manifestation-phase doctrine before planning or expanding MVP work | accountable cognition, Event Spine truth, Workspace visibility, delivery compression, and manifestation pathway |
 | [V8 MVP Governed Execution Mission Plan](V8_MVP_GOVERNED_EXECUTION_MISSION_PLAN.md) | converting the governed-execution doctrine into executable MVP missions | mission scope, dependencies, governance implications, UI manifestation, Event Spine emissions, and proof requirements |
+| [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) | deciding whether new work should expand architecture or converge on the canonical MVP proof workflow | visible execution, durable outputs, recoverable runs, confidence provenance, operational degradation, and governed cognitive operating environment framing |
 | [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) | checking the V8.1 foundation and compatibility baseline | baseline architecture for loops, continuity, capabilities, and bounded automations |
 | [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) | defining how team creation should stay compact by default | compact team shape guidance, broad-ask splitting, and Soma/Council orchestration over NATS |
 | [V8 Teamed Agentry Workflow Advantage](V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md) | deciding when a team actually beats one strong context-rich agent | workflow variants, team-vs-single-agent boundary, and complex patterns where teamed agentry wins |
@@ -89,31 +91,33 @@ V8.2/B2+ work may proceed when it is modular and proof-producing. Keep each slic
 12. Use [V8 Directed Execution Delivery Plan](V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md) when assigning directed-execution implementation teams, dependencies, waves, and validation gates.
 13. Use [V8 Governed Execution Doctrine](V8_GOVERNED_EXECUTION_DOCTRINE.md) when checking whether a proposed slice strengthens accountable governed execution.
 14. Use [V8 MVP Governed Execution Mission Plan](V8_MVP_GOVERNED_EXECUTION_MISSION_PLAN.md) when converting doctrine into executable MVP missions, dependencies, UI manifestation, Event Spine emissions, and proof requirements.
-15. Use [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) when checking the foundation and compatibility baseline.
-16. Use [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) when shaping team defaults, broad-ask decomposition, or Soma/Council coordination over NATS.
-17. Use [V8 Teamed Agentry Workflow Advantage](V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md) when deciding whether a request should stay direct Soma, become a compact team, or split into several coordinated lanes.
-18. Use [V8 Workflow Variants And Reboot Proof Set](V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md) when you need one concrete demonstration set that compares direct Soma, compact teams, multi-lane workflows, and reboot-safe resume behavior.
-19. Use [V8 Universal Soma And Context Model PRD](V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md) when reasoning about one persistent Soma/Council pair across organizations and deployments, or when setting product standards for inspectable AI-agentry behavior.
-20. Use [V8 Multi-User Identity And Soma Tenancy](V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md) when reasoning about enterprise federation, local break-glass admins, or one shared Soma persona across many users.
-21. Use [V8.2 User Management And Enterprise Auth Module](V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md) when defining auth providers, enterprise SSO, SAML, OIDC/OAuth, internal RBAC, approval authority, or user-context policy.
-22. Use [V8 Memory Layer And Reflection Delivery Contract](V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md) when defining memory-layer boundaries, reflection candidates, or promotion rules.
-23. Use [V8 Trusted Memory Arbitration And Team Vector Contract](V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md) when defining Soma personal continuity, team-shared vector memory, governed swarm doctrine, or trusted memory arbitration.
-24. Use [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) when validating the supported single-host compose path.
-25. Use [V8 Self-Hosted Runtime Delivery Program](V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md) when coordinating the active compact team delivering Compose release proof and modular self-hosted Kubernetes runtime truth.
-26. Use [V8 Mycelis Search Capability Delivery Plan](V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md) when coordinating owned search capability, local-source search, operator-owned `local_api`, optional SearXNG, optional hosted/Brave search, and capability/MCP testing gates.
-27. Use [V8 Capability Manifest And Runtime Integration Standard](V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md) when adding or reviewing MCP tools, custom connectors, local scripts, external APIs, plugins, generated artifacts, or any execution/output contract.
-28. Use [V8 Enterprise Self-Hosted Kubernetes Delivery Plan](V8_ENTERPRISE_SELF_HOSTED_KUBERNETES_DELIVERY_PLAN.md) when coordinating Rancher Desktop K3s on Windows, k3d local validation on WSL/Linux, enterprise chart readiness, and promoted cluster deployment rules.
-29. Use [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) when validating data-plane-only Postgres/NATS startup, owner endpoint/credential configuration, and near-enterprise Compose workflow proof.
-30. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
-31. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
-32. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
-33. Use [V8.2 Full Production Architecture](../../architecture/v8-2.md) when checking whether a surface belongs to the active B2+ delivery frame or canonical full production target.
+15. Use [V8.2 Operational Embodiment Directive](V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md) when deciding whether to stop expanding doctrine and converge on visible execution, proof, degradation handling, or the canonical MVP workflow.
+16. Use [V8.1 Living Organization Architecture](V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) when checking the foundation and compatibility baseline.
+17. Use [V8 Compact Team Orchestration And Defaults](V8_COMPACT_TEAM_ORCHESTRATION_AND_DEFAULTS.md) when shaping team defaults, broad-ask decomposition, or Soma/Council coordination over NATS.
+18. Use [V8 Teamed Agentry Workflow Advantage](V8_TEAMED_AGENTRY_WORKFLOW_ADVANTAGE.md) when deciding whether a request should stay direct Soma, become a compact team, or split into several coordinated lanes.
+19. Use [V8 Workflow Variants And Reboot Proof Set](V8_WORKFLOW_VARIANTS_AND_REBOOT_PROOF_SET.md) when you need one concrete demonstration set that compares direct Soma, compact teams, multi-lane workflows, and reboot-safe resume behavior.
+20. Use [V8 Universal Soma And Context Model PRD](V8_UNIVERSAL_SOMA_AND_CONTEXT_MODEL_PRD.md) when reasoning about one persistent Soma/Council pair across organizations and deployments, or when setting product standards for inspectable AI-agentry behavior.
+21. Use [V8 Multi-User Identity And Soma Tenancy](V8_MULTI_USER_IDENTITY_AND_SOMA_TENANCY.md) when reasoning about enterprise federation, local break-glass admins, or one shared Soma persona across many users.
+22. Use [V8.2 User Management And Enterprise Auth Module](V8_2_USER_MANAGEMENT_AND_ENTERPRISE_AUTH_MODULE.md) when defining auth providers, enterprise SSO, SAML, OIDC/OAuth, internal RBAC, approval authority, or user-context policy.
+23. Use [V8 Memory Layer And Reflection Delivery Contract](V8_MEMORY_LAYER_AND_REFLECTION_DELIVERY_CONTRACT.md) when defining memory-layer boundaries, reflection candidates, or promotion rules.
+24. Use [V8 Trusted Memory Arbitration And Team Vector Contract](V8_TRUSTED_MEMORY_ARBITRATION_AND_TEAM_VECTOR_CONTRACT.md) when defining Soma personal continuity, team-shared vector memory, governed swarm doctrine, or trusted memory arbitration.
+25. Use [V8 Home Docker Compose Runtime](V8_HOME_DOCKER_COMPOSE_RUNTIME.md) when validating the supported single-host compose path.
+26. Use [V8 Self-Hosted Runtime Delivery Program](V8_SELF_HOSTED_RUNTIME_DELIVERY_PROGRAM.md) when coordinating the active compact team delivering Compose release proof and modular self-hosted Kubernetes runtime truth.
+27. Use [V8 Mycelis Search Capability Delivery Plan](V8_MYCELIS_SEARCH_CAPABILITY_DELIVERY_PLAN.md) when coordinating owned search capability, local-source search, operator-owned `local_api`, optional SearXNG, optional hosted/Brave search, and capability/MCP testing gates.
+28. Use [V8 Capability Manifest And Runtime Integration Standard](V8_CAPABILITY_MANIFEST_AND_RUNTIME_INTEGRATION_STANDARD.md) when adding or reviewing MCP tools, custom connectors, local scripts, external APIs, plugins, generated artifacts, or any execution/output contract.
+29. Use [V8 Enterprise Self-Hosted Kubernetes Delivery Plan](V8_ENTERPRISE_SELF_HOSTED_KUBERNETES_DELIVERY_PLAN.md) when coordinating Rancher Desktop K3s on Windows, k3d local validation on WSL/Linux, enterprise chart readiness, and promoted cluster deployment rules.
+30. Use [V8 Compose Personal Owner Deployment Test Plan](V8_COMPOSE_PERSONAL_OWNER_DEPLOYMENT_TEST_PLAN.md) when validating data-plane-only Postgres/NATS startup, owner endpoint/credential configuration, and near-enterprise Compose workflow proof.
+31. Use [V8 MVP Media, Team Output, And Template Registry](V8_MVP_MEDIA_TEAM_OUTPUT_AND_TEMPLATE_REGISTRY.md) when proving user-output-first media delivery, team-managed outputs, Ollama role routing, or DB-backed conversation templates.
+32. Use [V8 UI Testing Agentry Product Contract](V8_UI_TESTING_AGENTRY_PRODUCT_CONTRACT.md) when defining browser expectations for Soma-first flows.
+33. Use [V8 UI Team Full Test Set](V8_UI_TEAM_FULL_TEST_SET.md) when you need one complete UI/browser validation set.
+34. Use [V8.2 Full Production Architecture](../../architecture/v8-2.md) when checking whether a surface belongs to the active B2+ delivery frame or canonical full production target.
 
 Execution governance reminder:
 - [Delivery Governance And Testing V7](DELIVERY_GOVERNANCE_AND_TESTING_V7.md) and [Team Execution And Global State Protocol V7](TEAM_EXECUTION_AND_GLOBAL_STATE_PROTOCOL_V7.md) remain authoritative migration inputs for delivery discipline.
 - Apply the V8 bootstrap pipeline from [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) whenever configuration, templates, or runtime state are involved.
 - Update [.state/V8_DEV_STATE.md](../../.state/V8_DEV_STATE.md) whenever release posture or validation truth changes.
 - For V8.2-aligned slices, name the module boundary being advanced before implementation begins: runtime/deployment, memory/learning, team/workflow, capability/MCP, advanced UI, or governance/trust.
+- For V8.2-aligned slices, use the Operational Embodiment directive to reject doctrine-only expansion unless it directly improves the canonical MVP workflow, visible proof, recoverability, deployment trust, or confidence provenance.
 - Product-standard slices that change the expected AI-agentry interface must review both the universal Soma PRD and the UI testing agentry contract, then record status and evidence in [.state/V8_DEV_STATE.md](../../.state/V8_DEV_STATE.md).
 - Runtime integration slices must use the Capability Manifest standard before promoting a new MCP/custom/API/script/plugin path into Soma, teams, automations, or default UI.
 - UI/runtime alignment slices must use the Directed Execution directive to map current fit, gaps, recommendations, execution plan, and browser validation.

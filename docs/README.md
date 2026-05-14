@@ -41,6 +41,7 @@ These are the active authority surfaces for contributors changing or reviewing t
 - **Architecture Library Index**: `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
 - **V8 Runtime Contracts**: `./architecture-library/V8_RUNTIME_CONTRACTS.md`
 - **V8 Config and Bootstrap Model**: `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
+- **V8.2 Operational Embodiment Directive**: `./architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
 - **V8 UI/API and Operator Experience Contract**: `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
 - **V8 Directed Execution UI And Runtime Alignment Directive**: `./architecture-library/V8_DIRECTED_EXECUTION_UI_RUNTIME_ALIGNMENT_DIRECTIVE.md`
 - **V8 Directed Execution Delivery Plan**: `./architecture-library/V8_DIRECTED_EXECUTION_DELIVERY_PLAN.md`
@@ -115,18 +116,20 @@ Use these only when migration-era assumptions need cross-checking:
 Top detailed framework memory surfaces for active V8 work:
 1. `./architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`
 2. `./architecture-library/V8_RUNTIME_CONTRACTS.md`
-3. `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
-4. `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
-5. `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
-6. `../.state/V8_DEV_STATE.md`
-7. `./TESTING.md`
-8. `./architecture/OPERATIONS.md`
-9. `./architecture-library/SYSTEM_ARCHITECTURE_V7.md` when migration-era runtime assumptions need cross-checking
+3. `./architecture-library/V8_2_OPERATIONAL_EMBODIMENT_DIRECTIVE.md`
+4. `./architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`
+5. `./architecture-library/V8_UI_API_AND_OPERATOR_EXPERIENCE_CONTRACT.md`
+6. `./architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`
+7. `../.state/V8_DEV_STATE.md`
+8. `./TESTING.md`
+9. `./architecture/OPERATIONS.md`
+10. `./architecture-library/SYSTEM_ARCHITECTURE_V7.md` when migration-era runtime assumptions need cross-checking
 
 Guidance rules:
 - user guidance should stay focused on using the product, not implementation internals
 - agent/developer guidance should point to active V8 authority before V7 migration material
 - testing guidance should point to durable verification contracts rather than temporary execution notes
 - V8.2/B2+-aligned work should stay modular and name its owning boundary before it changes runtime, memory, workflow, capability, UI, user/auth, or governance behavior
+- V8.2/B2+-aligned work should prove operational embodiment through visible execution, durable outputs, recoverable runs, deployment trust, and one excellent canonical MVP workflow before expanding new doctrine
 - `./archive/README.md` is historical context only and should not drive active implementation
 - any slice that changes runtime, validation, API meaning, or memory/governance posture must review and update the matching docs set in the same change, including the trusted-memory contract when that posture is touched
