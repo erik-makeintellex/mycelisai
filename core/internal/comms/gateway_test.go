@@ -3,15 +3,21 @@ package comms
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
+
+var commsTestServerPort int32 = 13800 + int32(time.Now().UnixNano()%1000)
 
 func TestGateway_Send_WebhookProvider(t *testing.T) {
 	var gotBody map[string]any
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newCommsTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("method = %s", r.Method)
 		}
@@ -21,7 +27,6 @@ func TestGateway_Send_WebhookProvider(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	}))
-	defer ts.Close()
 
 	g := NewGateway()
 	g.Register(newWebhookProvider("slack", "chat", "Slack", ts.URL, nil))
@@ -44,6 +49,28 @@ func TestGateway_Send_WebhookProvider(t *testing.T) {
 	if gotBody["message"] != "health check" {
 		t.Fatalf("message = %v", gotBody["message"])
 	}
+}
+
+func newCommsTestServer(t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewUnstartedServer(handler)
+	srv.Listener = listenCommsTest(t)
+	srv.Start()
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func listenCommsTest(t *testing.T) net.Listener {
+	t.Helper()
+	for range 12000 {
+		port := int(atomic.AddInt32(&commsTestServerPort, 1))
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err == nil {
+			return ln
+		}
+	}
+	t.Fatal("no available low HTTP test port")
+	return nil
 }
 
 func TestGateway_Send_UnconfiguredProvider(t *testing.T) {

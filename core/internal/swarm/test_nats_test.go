@@ -11,15 +11,14 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-var swarmTestNATSPort int32 = 14220 + int32(time.Now().UnixNano()%1000)
-var swarmTestNATSClientPort int32 = 30000 + int32(time.Now().UnixNano()%5000)
+var swarmTestServerPort int32 = 12000 + int32(time.Now().UnixNano()%1000)
 
 func startTestNATS(t *testing.T) (*natsserver.Server, *nats.Conn) {
 	t.Helper()
 
 	opts := &natsserver.Options{
 		Host: "127.0.0.1",
-		Port: nextSwarmTestNATSPort(t),
+		Port: reserveSwarmTestPort(t),
 	}
 	srv, err := natsserver.NewServer(opts)
 	if err != nil {
@@ -30,13 +29,7 @@ func startTestNATS(t *testing.T) (*natsserver.Server, *nats.Conn) {
 		t.Fatal("nats server not ready")
 	}
 
-	nc, err := nats.Connect(srv.ClientURL(), nats.Dialer(&net.Dialer{
-		LocalAddr: &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: nextSwarmTestNATSClientPort(t),
-		},
-		Timeout: 2 * time.Second,
-	}))
+	nc, err := nats.Connect(srv.ClientURL(), nats.Dialer(&net.Dialer{Timeout: 2 * time.Second}))
 	if err != nil {
 		srv.Shutdown()
 		srv.WaitForShutdown()
@@ -51,24 +44,16 @@ func startTestNATS(t *testing.T) (*natsserver.Server, *nats.Conn) {
 	return srv, nc
 }
 
-func nextSwarmTestNATSPort(t *testing.T) int {
-	return nextSwarmTestTCPPort(t, &swarmTestNATSPort)
-}
-
-func nextSwarmTestNATSClientPort(t *testing.T) int {
-	return nextSwarmTestTCPPort(t, &swarmTestNATSClientPort)
-}
-
-func nextSwarmTestTCPPort(t *testing.T, counter *int32) int {
+func reserveSwarmTestPort(t *testing.T) int {
 	t.Helper()
-	for range 200 {
-		port := int(atomic.AddInt32(counter, 1))
+	for range 12000 {
+		port := int(atomic.AddInt32(&swarmTestServerPort, 1))
 		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 		if err == nil {
 			_ = ln.Close()
 			return port
 		}
 	}
-	t.Fatal("no available low NATS test port")
+	t.Fatal("no available low server test port")
 	return 0
 }

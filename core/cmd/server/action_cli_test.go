@@ -1,14 +1,20 @@
 package main
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
+
+var actionCLITestServerPort int32 = 12500 + int32(time.Now().UnixNano()%1000)
 
 func TestResolveActionURL(t *testing.T) {
 	got, err := resolveActionURL("http://localhost:8081", "/api/v1/services/status")
@@ -144,14 +150,13 @@ func TestParseActionShellLine(t *testing.T) {
 }
 
 func TestExecuteActionRequest(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newActionCLITestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/services/status" {
 			t.Fatalf("unexpected path %s", r.URL.Path)
 		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	}))
-	defer ts.Close()
 
 	cfg := defaultActionCLIConfig()
 	cfg.APIBaseURL = ts.URL
@@ -165,4 +170,26 @@ func TestExecuteActionRequest(t *testing.T) {
 	if !strings.Contains(body, `"ok":true`) {
 		t.Fatalf("body = %s", body)
 	}
+}
+
+func newActionCLITestServer(t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewUnstartedServer(handler)
+	srv.Listener = listenActionCLITest(t)
+	srv.Start()
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func listenActionCLITest(t *testing.T) net.Listener {
+	t.Helper()
+	for range 12000 {
+		port := int(atomic.AddInt32(&actionCLITestServerPort, 1))
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err == nil {
+			return ln
+		}
+	}
+	t.Fatal("no available low HTTP test port")
+	return nil
 }

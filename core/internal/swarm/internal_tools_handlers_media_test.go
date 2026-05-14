@@ -2,18 +2,14 @@ package swarm
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/mycelis/core/internal/cognitive"
 )
-
-var swarmTestHTTPPort int32 = 40000 + int32(time.Now().UnixNano()%5000)
 
 func TestHandleGenerateImage_UsesMediaProviderAuthKeyEnv(t *testing.T) {
 	t.Setenv("HOSTED_MEDIA_API_KEY", "test-media-key")
@@ -60,8 +56,7 @@ func TestHandleGenerateImage_UsesMediaProviderAuthKeyEnv(t *testing.T) {
 
 func newSwarmLocalHTTPTestServer(t *testing.T, handler http.Handler) *httptest.Server {
 	t.Helper()
-	port := nextSwarmTestTCPPort(t, &swarmTestHTTPPort)
-	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("test http listen: %v", err)
 	}
