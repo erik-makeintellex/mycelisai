@@ -161,7 +161,7 @@ Memory/governance note:
 | `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (MissionEventEnvelope records) |
 | `/api/v1/runs/{id}/chain` | GET | Causal chain — parent run → event → trigger → child run traversal |
 | **Intent (CE-1)** | | |
-| `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return `run_id` plus `execution_summary` proof for verified guided execution. Confirmed tool calls are logged to `/api/v1/runs/{id}/conversation`; approved `create_team` calls also mirror a collaboration-group record so the created team is visible through `/api/v1/groups`. Retained outputs identify created teams as `kind=team` and approved file writes as retained `kind=file` or `kind=code` depending on extension; file outputs include an `href` to the sandboxed workspace viewer when the path is workspace-readable. |
+| `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return `run_id` plus `execution_summary` proof for verified guided execution. Failed approved execution responses also return `data.execution_summary` with failed run/proof/audit metadata and `audit_recovery.degradation` so the UI can show what failed, what remains trusted, and what must be retried. Confirmed tool calls are logged to `/api/v1/runs/{id}/conversation`; approved `create_team` calls also mirror a collaboration-group record so the created team is visible through `/api/v1/groups`. Retained outputs identify created teams as `kind=team` and approved file writes as retained `kind=file` or `kind=code` depending on extension; file outputs include an `href` to the sandboxed workspace viewer when the path is workspace-readable. |
 | `/api/v1/intent/proof/{id}` | GET | Retrieve intent proof bundle by ID |
 | `/api/v1/templates` | GET | List CE-1 orchestration templates or V8 AI Organization starters when `view=organization-starters` |
 | `/api/v1/conversation-templates` | GET/POST | List/create DB-backed reusable Soma/Council/team ask templates |
@@ -188,12 +188,13 @@ The object can include:
 - `capability_use`: governed tools, teams, MCP capabilities, automations, or plugins used
 - `outputs`: answer, proposal, artifact, tool result, retained team, or retained file/code output references
 - `proof`: `run_id`, `audit_event_id`, `intent_proof_id`, and verification state
-- `audit_recovery`: approval status, recovery state, blocker, and retry posture
+- `audit_recovery`: approval status, recovery state, blocker, retry posture, and optional `degradation`
+- `audit_recovery.degradation`: operational degradation metadata covering `code`, `what_failed`, `trusted_state`, `invalidated_proof`, `safe_continuation`, and `requires_attention`
 - `next_step`: suggested continuation or proof/review link
 
 Current producers:
 - `/api/v1/chat` direct answers and guided proposals
-- `/api/v1/intent/confirm-action` verified proposal execution results, including retained tool outputs and run-conversation turns for confirmed tool calls
+- `/api/v1/intent/confirm-action` verified proposal execution results, failed approved-execution recovery summaries, retained tool outputs, and run-conversation turns for confirmed tool calls
 - `/api/v1/organizations/{id}/workspace/actions` Team Lead guidance responses with proof explicitly left unrun until execution exists
 - `/api/v1/groups/{id}/broadcast` accepted group broadcasts with `audit_event_id` proof and no fabricated `run_id`
 
