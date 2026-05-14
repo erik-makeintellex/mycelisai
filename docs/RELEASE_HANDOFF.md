@@ -7,15 +7,16 @@
 
 ## Current RC Result
 
-- RC proof date: 2026-05-13
-- Runtime proof commit: `8333788` (`feat(k8s): add Rancher Desktop K3s RC proof lane`)
-- State/evidence commit: `98f83b8` (`docs(state): record Rancher K3s RC proof`)
-- Handoff/package label: `v0.6.0-98f83b8`
+- RC proof date: 2026-05-14
+- Runtime proof commit: `5c7bf6a` (`Harden governed team execution proof`)
+- State/evidence commit: this proof-evidence handoff update
+- Handoff/package label: `v0.6.0-5c7bf6a`
 - Result: Rancher Desktop K3s local Kubernetes RC proof is green.
-- Proven image: `mycelis/core:v0.6.0-8333788`
+- Proven image: `mycelis/core:v0.6.0-5c7bf6a`
 - Proven Core bridge: `127.0.0.1:8081` local API port forwarding to in-cluster Core `:8080`
 - Proven AI endpoint: explicit reachable Windows host endpoint, not pod-local `localhost`
 - Proven text model: `qwen3:8b`
+- Proven search posture: `searxng`, `online_allowed=true`, `approval_mode=notify`, `disclosure_mode=notice_and_interpretation`
 - Local package result: binary archives and enterprise Helm verification bundles generated under `dist/`.
 
 ## Deployment Lanes
@@ -72,6 +73,7 @@ uv run inv interface.e2e --headed --live-backend --project=chromium --workers=1 
 ```
 
 Current RC evidence:
+- `team-execution-live.spec.ts`: passed
 - `soma-governance-live.spec.ts`: 4 passed
 - `team-creation.spec.ts`: passed
 - `groups-live-backend.spec.ts`: passed
