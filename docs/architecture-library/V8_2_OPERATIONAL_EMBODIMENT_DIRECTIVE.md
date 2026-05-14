@@ -88,6 +88,13 @@ Runtime and UI must answer:
 
 Operational degradation management is a first-class runtime concern, not a support-page afterthought.
 
+Current runtime embodiment:
+- `execution_summary` is the shared API/UI object for Soma-facing proof packages.
+- The default Soma surface renders that object as an Operator trust package, not as architecture terminology.
+- `audit_recovery.degradation` carries `code`, `what_failed`, `trusted_state`, `invalidated_proof`, `safe_continuation`, and `requires_attention`.
+- Approved proposal execution failures must return failed run/proof/audit metadata instead of only a flat error.
+- Search blockers must preserve provider blocker code and next action as degradation metadata.
+
 ## Confidence Provenance
 
 The current proof layer shows providers, capabilities, approval state, outputs, and execution proof. The next trust layer is why Mycelis believes a result is trustworthy.

@@ -20,6 +20,7 @@
 - Do not use bare `uvx inv ...`.
 - App-tied management logic stays in Python task modules; PowerShell is wrapper-only when the host needs it.
 - Task, runtime, or validation changes are not complete until the matching docs are reviewed and updated in the same slice.
+- GitHub Actions workflows are manual-only through `workflow_dispatch` for the current release-readiness push; automatic push and pull-request hosted runs are paused. Treat local, Rancher K3s, WSL/Compose, and explicit manual workflow proof as the active acceptance lanes.
 
 ## Components
 This directory contains the logic for the **Service Release Standard 1.0**.

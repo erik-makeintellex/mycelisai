@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-05-10
+> Last Updated: 2026-05-14
 > Module Boundary: advanced UI, runtime/deployment, capability/MCP, governance/trust, team/workflow
 > Purpose: Orchestrate the delivery teams that turn the directed-execution directive and capability-manifest standard into product behavior.
 
@@ -21,11 +21,11 @@ The release goal is not another panel. The release goal is one coherent executio
 | Team | Status | Owns | First Output |
 | --- | --- | --- | --- |
 | Orchestration Lead | ACTIVE | Plan, sequencing, dependency resolution, state/docs sync, acceptance decisions. | Keep this plan current and coordinate gates. |
-| Runtime/Run Spine | IN_REVIEW | Run attachment, execution identity, output references, recovery metadata. | Wave 1 trust-spine contract is proven and in final review. |
+| Runtime/Run Spine | IN_REVIEW | Run attachment, execution identity, output references, recovery and degradation metadata. | Wave 1 trust-spine contract is proven; failed approved execution and search blockers now carry bounded degradation proof. |
 | Output/Exchange | ACTIVE | Durable output object mapping, retained artifacts, exchange normalization. | Run/Output hardening across chat, tools, teams, artifacts, proof links, and recovery metadata. |
 | Capability/MCP | ACTIVE | Capability manifest registry, MCP-to-capability mapping, health/fallback. | Capability list that answers "what Soma can use" with risk, schema, approval, output destinations. |
-| Governance/Trust | IN_REVIEW | Proposal/approval/audit language, risk policy, proof semantics. | Default-safe proof copy plus advanced audit detail mapping. |
-| Interface/Soma UX | IN_REVIEW | Default Soma execution summary, proof links, output cards, next-step display. | Soma response surface showing intent, understanding, execution shape, capability/team use, outputs, proof, next step. |
+| Governance/Trust | IN_REVIEW | Proposal/approval/audit language, risk policy, proof semantics, degraded-trust boundaries. | Default-safe proof copy plus advanced audit detail mapping. |
+| Interface/Soma UX | IN_REVIEW | Default Soma execution summary, proof links, output cards, next-step and degradation display. | Soma response surface showing intent, understanding, execution shape, capability/team use, outputs, proof, recovery, degradation, and next step. |
 | Interface/Advanced UX | ACTIVE | Connected Tools capability view, Runs proof view, System/Deployments trust view. | GUI directed-execution surfaces that reveal manifests, run traces, deployment roots, and recovery without polluting default UX. |
 | Validation | ACTIVE | Browser-visible proof, unit/API contract coverage, failure/recovery checks. | Keep Wave 1 final-review evidence green while proving the next capability/output/GUI lanes. |
 | Docs/In-App Docs | ACTIVE | Architecture/user/state/docs manifest alignment. | Keep canonical docs and in-app docs synced for each slice. |
@@ -36,10 +36,10 @@ The release goal is not another panel. The release goal is one coherent executio
 | --- | --- | --- | --- | --- |
 | DE-1 | 1 | Runtime/Run Spine + Interface/Soma UX | Define and consume a reusable execution-summary contract. | Soma can display intent, understanding, execution shape, capability/team use, outputs, proof, and next step from one normalized object. |
 | DE-2 | 2 | Runtime/Run Spine + Output/Exchange | Ensure meaningful actions attach to runs and meaningful outputs attach to durable output objects. | Direct retained answers, proposals, tool use, team execution, automations, and plugins all have run/output proof or explicit non-retained classification. |
-| DE-3 | 3 | Interface/Soma UX + Governance/Trust | Put proof links and proposal/audit/recovery state next to meaningful outputs. | User can reach run proof, approval/audit evidence, and recovery state from the post-execution workflow. |
+| DE-3 | 3 | Interface/Soma UX + Governance/Trust | Put proof links and proposal/audit/recovery/degradation state next to meaningful outputs. | User can reach run proof, approval/audit evidence, recovery state, and degraded-trust boundaries from the post-execution workflow. |
 | DE-4 | 4 | Capability/MCP + Interface/Advanced UX | Reshape Connected Tools around governed capabilities rather than server inventory. | Resources shows what Soma can use, availability, risk, approval posture, schemas, output types, and destinations; raw MCP details sit behind disclosure. |
 | DE-5 | 5 | Interface/Advanced UX + Runtime/Deployment | Add deployment trust visibility. | System/Deployments shows checkout, deployment root, execution root, artifact/log/cache roots, current commit, proof status, and recovery action. |
-| DE-6 | 6 | Governance/Trust + Validation | Normalize proposal/proof/recovery language and test it. | Proposal never mutates before approval; success always has proof; failures have bounded recovery. |
+| DE-6 | 6 | Governance/Trust + Validation | Normalize proposal/proof/recovery/degradation language and test it. | Proposal never mutates before approval; success always has proof; failures answer what failed, what remains trusted, what proof is invalid, and what can be retried. |
 | DE-7 | 7 | Orchestration Lead + Interface/Soma UX | Collapse dashboard/admin-feeling duplicate workflow surfaces. | Default path feels like Soma-directed work, with advanced runtime/admin structure behind layers. |
 
 ## Execution Waves
@@ -62,8 +62,9 @@ Exit gate:
 
 Current implementation status:
 - `IN_REVIEW` direct Soma answers, guided proposals, and confirmed proposal execution share the additive `execution_summary` runtime payload.
-- `IN_REVIEW` the Soma chat surface renders intent, understanding, execution shape/status, capability use, outputs, proof, audit/recovery, and next step from that payload.
-- `IN_REVIEW` tool-assisted chat/search preserves read-only `tools_used`, classifies tool/artifact responses as `tool_assisted_work`, adds `execution_summary` to direct `web_search`, and marks blocked search as `blocked`.
+- `IN_REVIEW` the Soma chat surface renders an Operator trust package with intent, understanding, execution shape/status, capability use, outputs, proof, audit/recovery, degradation, and next step from that payload.
+- `IN_REVIEW` tool-assisted chat/search preserves read-only `tools_used`, classifies tool/artifact responses as `tool_assisted_work`, adds `execution_summary` to direct `web_search`, and marks blocked search as `blocked` with `audit_recovery.degradation` metadata.
+- `IN_REVIEW` confirmed proposal execution failures return failed run/proof/audit data and `audit_recovery.degradation` instead of only a flat API error, so the UI can show what failed, what remains trusted, what proof is invalid, and what can be retried.
 - `IN_REVIEW` Team Lead guidance and group broadcast accepted responses attach `execution_summary` without fabricating `run_id`; group/team proof stays audit/group scoped until a concrete run exists.
 - `IN_REVIEW` focused browser-visible component proof covers direct tool-assisted Soma search summaries and Team Lead execution summaries, including the no-fabricated-run-link boundary.
 - `IN_REVIEW` mocked Chromium browser proof covers Groups broadcast execution-summary/audit-proof visibility after `POST /api/v1/groups/{id}/broadcast`.
@@ -71,8 +72,9 @@ Current implementation status:
 
 Wave 1 validation evidence:
 - `go test ./pkg/protocol ./internal/server -run "TestChatResponsePayload_ExecutionSummaryIsAdditive|TestHandleChat_UnwrapsReadableJSONEnvelopeFromAgent|TestHandleChat_RoutesLatestMutationTurnToProposalAcrossThreadHistory|TestHandleConfirmAction_CompletesVerifiedExecutionWithPlannedToolCalls|TestHandleConfirmAction_NormalizesWriteFileAliasesInStoredPlan" -count=1 -v`
+- `go test ./pkg/protocol ./internal/server -run 'ExecutionSummary|Search|ConfirmAction' -count=1`
 - `cd interface; npx tsc --noEmit`
-- `cd interface; npx vitest run __tests__/dashboard/MissionControlChat.outputs.test.tsx __tests__/dashboard/MissionControlChat.executionSummary.test.tsx`
+- `cd interface; npx vitest run __tests__/dashboard/MissionControlChat.outputs.test.tsx __tests__/dashboard/MissionControlChat.executionSummary.test.tsx __tests__/store/useCortexStore.confirm-proposal.failure.test.ts`
 - `uv run pytest tests/test_docs_links.py tests/test_documentation_layout_contract.py -q`
 - `uv run inv quality.max-lines --limit 300`
 - `git diff --check`

@@ -5,6 +5,8 @@ This manual owns task and runtime operations. It links to [Local Development Wor
 
 Implementation slices that change runtime, tasking, validation, API meaning, or operator behavior must review and update the owning docs in the same change rather than leaving docs drift for later cleanup.
 
+Current GitHub Actions posture: workflows are intentionally manual-only through `workflow_dispatch`. Push and pull-request hosted runs are paused while local proof, Rancher Desktop K3s, WSL/Compose, and explicit manual workflow runs carry release discipline.
+
 ## TOC
 
 - [I. Prerequisites](#i-prerequisites)

@@ -95,6 +95,7 @@ def test_root_collection_exports_expected_task_surface():
         "compose.status",
         "compose.storage-health",
         "compose.up",
+        "compose.warm-cognitive",
         "core.build",
         "core.clean",
         "core.compile",
@@ -163,7 +164,7 @@ def test_install_skips_optional_engines_by_default(capsys):
     assert ctx.commands == [
         "uv sync --all-packages --dev",
         "go mod download",
-        "npm install --prefix interface",
+        "npm ci --prefix interface",
         "npx --prefix interface playwright install chromium",
     ]
     assert ctx.cd_paths == ["core"]
@@ -179,7 +180,7 @@ def test_install_can_include_optional_engines():
     assert ctx.commands == [
         "uv sync --all-packages --dev",
         "go mod download",
-        "npm install --prefix interface",
+        "npm ci --prefix interface",
         "npx --prefix interface playwright install chromium",
         "uv sync",
     ]

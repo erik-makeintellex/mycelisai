@@ -31,7 +31,7 @@ Mycelis uses a five-tier validation model: backend unit tests, frontend componen
 - Use `uv run inv ...` for real task execution.
 - `uv run inv ci.baseline` is the default branch-readiness gate.
 - Use `uv run inv ci.baseline --no-e2e` only for intentionally narrower debugging.
-- GitHub CI proves codebase health without hosted agentry; live AI/service proof remains local, WSL, Compose, or target-cluster evidence.
+- GitHub Actions are manual-only through `workflow_dispatch` during the current release-readiness push; when manually started, GitHub CI proves hosted codebase health while live AI/service acceptance remains local, Rancher K3s, WSL, Compose, or target-cluster evidence.
 - Windows is the edit/review/push surface; WSL is the guarded Compose release-style proof checkout, while Rancher Desktop K3s is the Windows local Kubernetes/commercial-parity proof lane.
 - `ci.service-check --live-backend` ensures the `cortex` database exists and proves the managed built server path when service/browser proof is required.
 - Playwright starts/stops the managed Next.js app, can use the built production Interface server path, and covers `mobile-chromium`, `@axe-core/playwright`, `workspace-live-backend.spec.ts`, and `--live-backend` paths where relevant.

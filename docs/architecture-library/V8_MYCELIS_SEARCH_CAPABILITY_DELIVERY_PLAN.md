@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: ACTIVE
-> Last Updated: 2026-04-26
+> Last Updated: 2026-05-14
 > Module Boundary: capability/MCP
 > Purpose: Put the delivery teams together for a Mycelis-owned search capability that does not require Brave tokens as the only web-search path.
 
@@ -60,12 +60,13 @@ Provider rules:
 - `local_api` calls an operator-owned HTTP JSON search endpoint and never requires hosted search tokens from Mycelis.
 - `brave` uses the existing curated MCP/provider path and requires `BRAVE_API_KEY`.
 - `disabled` returns a structured blocker naming the missing provider configuration.
+- Direct Soma search blockers also populate `execution_summary.audit_recovery.degradation` so the UI can show the blocker code, what failed, what remains trusted, invalidated proof, safe continuation, and attention requirement.
 
 Soma rules:
 - Direct Soma should call `web_search` for search intent when available.
 - `fetch` remains the explicit URL retrieval path.
 - `brave-search` remains an MCP path, but it is not the only search path.
-- Missing provider state must be reported as a capability/configuration blocker with a Connected Tools or System next action.
+- Missing provider state must be reported as a capability/configuration blocker with a Connected Tools or System next action and preserved as degradation metadata.
 
 ## Local Developer Contract
 
@@ -90,6 +91,7 @@ Local development should support:
 Runtime tests:
 - provider config resolves `disabled`, `local_sources`, `searxng`, `local_api`, and `brave` deterministically.
 - disabled provider returns a structured blocker.
+- disabled/provider blocker responses preserve blocker code and next action in `audit_recovery.degradation`.
 - local-source provider respects knowledge class, sensitivity, visibility, and target-goal filters.
 - SearXNG provider calls `/search?q=...&format=json`, normalizes results, and handles disabled JSON/403 as a readable blocker.
 - local API provider calls the configured endpoint, normalizes JSON results, and handles missing endpoint/unreachable service as a readable blocker.
@@ -103,13 +105,14 @@ Soma/tool tests:
 - asking "can you search the web?" returns capability status, not a blanket no.
 - asking for web research calls `web_search` when configured.
 - asking to fetch an explicit URL uses `fetch`/retrieval path when installed.
-- missing provider or credential produces a blocker naming the missing setting.
+- missing provider or credential produces a blocker naming the missing setting and a degradation object for the Operator trust package.
 
 Browser workflow tests:
 - Resources/Connected Tools shows the active search provider posture.
 - Central Soma can report search capability status.
 - A configured local-source search returns governed source results.
 - A disabled web-search setup shows a clear recovery action.
+- A disabled or degraded web-search setup shows degraded-trust boundaries in the Soma execution summary.
 
 ## Acceptance Gate
 

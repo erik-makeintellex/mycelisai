@@ -121,7 +121,14 @@ The header keeps organization identity, status, and navigation legible.
 
 Soma owns answers, proposals, execution results, blockers, and recovery.
 
-The dashboard Soma surface and the AI Organization Soma surface use one shared operating model. Intent suggestions live inside Soma. After meaningful actions, the interface shows a causal summary that connects what Soma understood, what teams/tools were coordinated, what outputs were produced, what state changed, and what the user can do next.
+The dashboard Soma surface and the AI Organization Soma surface use one shared operating model. Intent suggestions live inside Soma. After meaningful actions, the interface shows an Operator trust package that connects what Soma understood, what teams/tools were coordinated, what outputs were produced, what proof exists, what state changed, and what the user can do next.
+
+When execution degrades, the same package must expose:
+- what failed
+- what remains trusted
+- what proof is invalid
+- what can safely continue
+- what requires retry or operator attention
 
 ### 4.6 Advisor, Department, and Specialist visibility rules
 

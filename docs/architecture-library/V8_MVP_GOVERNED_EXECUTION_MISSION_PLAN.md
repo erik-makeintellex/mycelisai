@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Library](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.2 Full Production Architecture](../../architecture/v8-2.md)
 
 > Status: Canonical
-> Last Updated: 2026-05-10
+> Last Updated: 2026-05-14
 > Purpose: Convert the governed-execution doctrine into executable MVP missions with scope, dependencies, governance implications, UI manifestation, emitted events, and proof requirements.
 
 ## Mission Authority
@@ -209,14 +209,17 @@ Dependencies:
 - artifact storage
 - audit log entries
 - Workspace and Run proof UI
+- Operator trust package UI
+- `audit_recovery.degradation` for failed, blocked, or partial outcomes
 
 Governance implications:
 - completion is a state transition, not a model assertion
 - proof must identify what changed, what was used, what risk was accepted, and where evidence lives
 - blocked or partial outcomes must be first-class results
+- failed completion must name what failed, what remains trusted, what proof is invalid, and what can be retried
 
 UI manifestation:
-- Soma shows result status, proof, retained output, next step, and recovery path
+- Soma shows result status, proof, retained output, next step, recovery path, and degraded-trust boundaries
 - Workspace shows completion state without burying proof in logs
 - Run detail can reconstruct intent, approval, capability use, output, and evidence
 
@@ -231,6 +234,9 @@ Emitted events:
 
 Proof requirements:
 - tests cover completed, blocked, partial, and failed proof states
+- tests cover `execution_summary`, Operator trust package rendering, and `audit_recovery.degradation` fields
+- failed approved execution returns failed run/proof/audit metadata instead of only a flat API error
+- search blockers preserve provider blocker code and next action as degradation proof
 - browser proof demonstrates retained-output review after refresh
 - release proof includes at least one governed action with reconstructable completion
 
