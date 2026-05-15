@@ -37,4 +37,22 @@ test.describe('Templated homepage', () => {
         await expect(page.getByRole('heading', { name: 'Coordinate work through Soma' })).toBeVisible();
         await expect(page.getByRole('link', { name: /Support/i })).toHaveAttribute('href', 'https://support.example.com');
     });
+
+    test('front page uses the same saved UI theme as the app shell', async ({ page }) => {
+        await page.route('**/api/v1/user/settings', async (route) => {
+            await route.fulfill({
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    ok: true,
+                    data: { theme: 'midnight-cortex' },
+                }),
+            });
+        });
+
+        await page.goto('/');
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'midnight-cortex');
+
+        await page.goto('/dashboard');
+        await expect(page.locator('html')).toHaveAttribute('data-theme', 'midnight-cortex');
+    });
 });

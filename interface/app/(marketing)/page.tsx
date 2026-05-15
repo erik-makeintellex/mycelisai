@@ -15,6 +15,7 @@ import {
     Workflow,
     Wrench,
 } from "lucide-react";
+import { ThemeSync } from "@/components/shell/ThemeSync";
 import { readLastOrganization, subscribeLastOrganizationChange } from "@/lib/lastOrganization";
 import {
     defaultHomepageConfig,
@@ -23,6 +24,7 @@ import {
     type HomepageCTA,
     type HomepageLink,
 } from "@/lib/homepageConfig";
+import { useCortexStore } from "@/store/useCortexStore";
 
 const outcomes = [
     { title: "Soma orchestration", body: "One primary interface for intent, coordination, review, and output delivery.", icon: Workflow },
@@ -36,11 +38,13 @@ const outcomes = [
 export default function LandingPage() {
     const [config, setConfig] = useState<HomepageConfig>(defaultHomepageConfig);
     const [lastOrganization, setLastOrganization] = useState<{ id: string; name: string } | null>(null);
+    const fetchUserSettings = useCortexStore((s) => s.fetchUserSettings);
 
     useEffect(() => {
+        fetchUserSettings();
         setLastOrganization(readLastOrganization());
         return subscribeLastOrganizationChange(setLastOrganization);
-    }, []);
+    }, [fetchUserSettings]);
 
     useEffect(() => {
         let cancelled = false;
@@ -61,8 +65,9 @@ export default function LandingPage() {
     const secondaryCTA = config.hero.secondary_cta;
 
     return (
-        <main className="min-h-screen bg-cortex-bg text-cortex-text-main">
-            <nav className="sticky top-0 z-50 border-b border-cortex-border bg-cortex-bg/95 backdrop-blur">
+        <main className="min-h-screen bg-cortex-bg text-cortex-text-main selection:bg-cortex-primary/30 selection:text-white">
+            <ThemeSync />
+            <nav className="sticky top-0 z-50 border-b border-cortex-border bg-cortex-surface/95 backdrop-blur">
                 <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
                     <Link href="/" className="flex min-w-0 items-center gap-3">
                         <BrandMark logoUrl={config.brand.logo_url} productName={config.brand.product_name} />
@@ -75,10 +80,10 @@ export default function LandingPage() {
                 </div>
             </nav>
 
-            <section className="mx-auto grid max-w-7xl gap-10 px-6 py-14 lg:grid-cols-[1fr_0.86fr] lg:items-start">
+            <section className="mx-auto grid max-w-7xl gap-8 px-6 py-14 lg:grid-cols-[1fr_0.86fr] lg:items-start">
                 <div className="space-y-8">
                     {config.announcement?.enabled && config.announcement.text ? (
-                        <p className="inline-flex rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-4 py-1.5 text-sm font-medium text-cortex-primary">
+                        <p className="inline-flex rounded-lg border border-cortex-primary/25 bg-cortex-primary/10 px-4 py-1.5 text-sm font-medium text-cortex-primary">
                             {config.announcement.text}
                         </p>
                     ) : null}
@@ -92,7 +97,7 @@ export default function LandingPage() {
                     <div className="flex flex-col gap-3 sm:flex-row">
                         <ActionLink cta={primaryCTA} large icon={<ArrowRight className="h-4 w-4" />} />
                         {lastOrganization ? (
-                            <Link className="inline-flex items-center justify-center rounded-full border border-cortex-border bg-cortex-surface px-6 py-3 text-base font-medium hover:border-cortex-primary/40" href={`/organizations/${lastOrganization.id}`}>
+                            <Link className="inline-flex items-center justify-center rounded-lg border border-cortex-border bg-cortex-surface px-6 py-3 text-base font-medium hover:border-cortex-primary/40" href={`/organizations/${lastOrganization.id}`}>
                                 Resume {lastOrganization.name}
                             </Link>
                         ) : (
@@ -101,12 +106,12 @@ export default function LandingPage() {
                     </div>
                 </div>
 
-                <section className="rounded-3xl border border-cortex-border bg-cortex-surface p-5 shadow-[0_18px_50px_rgba(63,67,100,0.12)]">
+                <section className="rounded-xl border border-cortex-border bg-cortex-surface/90 p-5 shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
                     <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-cortex-primary">Example workspace preview</p>
                     <h2 className="mt-3 text-2xl font-semibold">Intent, progress, outcome.</h2>
                     <div className="mt-5 space-y-3">
                         {["User intent", "Soma coordination", "Team/tool execution", "Review and audit"].map((step) => (
-                            <div key={step} className="flex items-center gap-3 rounded-2xl border border-cortex-border bg-cortex-bg px-4 py-3">
+                            <div key={step} className="flex items-center gap-3 rounded-lg border border-cortex-border bg-cortex-bg px-4 py-3">
                                 <CheckCircle2 className="h-4 w-4 text-cortex-success" />
                                 <span className="text-sm font-medium">{step}</span>
                             </div>
@@ -156,16 +161,16 @@ export default function LandingPage() {
 }
 
 function BrandMark({ logoUrl, productName }: { logoUrl?: string; productName: string }) {
-    if (logoUrl) return <img src={logoUrl} alt={`${productName} logo`} className="h-8 w-8 rounded-xl object-contain" />;
-    return <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cortex-primary text-cortex-bg"><Workflow className="h-4 w-4" /></span>;
+    if (logoUrl) return <img src={logoUrl} alt={`${productName} logo`} className="h-8 w-8 rounded-lg object-contain" />;
+    return <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cortex-primary text-cortex-bg shadow-[0_4px_14px_0_var(--color-cortex-primary-glow)]"><Workflow className="h-4 w-4" /></span>;
 }
 
 function ActionLink({ cta, icon, quiet = false, large = false, compactOnMobile = false }: { cta: HomepageCTA; icon?: ReactNode; quiet?: boolean; large?: boolean; compactOnMobile?: boolean }) {
     const mobileShape = compactOnMobile ? "px-3 py-2 sm:px-4" : "";
     const textClass = compactOnMobile ? "sr-only sm:not-sr-only" : "";
     const className = quiet
-        ? `inline-flex items-center justify-center gap-2 rounded-full border border-cortex-border bg-cortex-surface ${large ? "px-6 py-3 text-base" : `${mobileShape || "px-4 py-2"} text-sm`} font-medium hover:border-cortex-primary/40`
-        : `inline-flex items-center justify-center gap-2 rounded-full bg-cortex-primary ${large ? "px-6 py-3 text-base" : `${mobileShape || "px-4 py-2"} text-sm`} font-semibold text-cortex-bg hover:bg-cortex-primary/90`;
+        ? `inline-flex items-center justify-center gap-2 rounded-lg border border-cortex-border bg-cortex-surface ${large ? "px-6 py-3 text-base" : `${mobileShape || "px-4 py-2"} text-sm`} font-medium text-cortex-text-main hover:border-cortex-primary/40 hover:bg-cortex-bg`
+        : `inline-flex items-center justify-center gap-2 rounded-lg bg-cortex-primary ${large ? "px-6 py-3 text-base" : `${mobileShape || "px-4 py-2"} text-sm`} font-semibold text-cortex-bg shadow-[0_4px_14px_0_var(--color-cortex-primary-glow)] hover:bg-cortex-primary/90`;
     const content = <><span className={textClass}>{cta.label}</span>{icon}</>;
     if (cta.external) return <a aria-label={compactOnMobile ? cta.label : undefined} className={className} href={cta.href} target="_blank" rel="noopener noreferrer">{content}</a>;
     return <Link aria-label={compactOnMobile ? cta.label : undefined} className={className} href={cta.href}>{content}</Link>;
@@ -182,8 +187,8 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
 
 function StepCard({ number, title, body }: { number: number; title: string; body: string }) {
     return (
-        <div className="rounded-3xl border border-cortex-border bg-cortex-bg p-5">
-            <span className="rounded-full border border-cortex-primary/20 bg-cortex-primary/10 px-2.5 py-1 text-xs font-semibold text-cortex-primary">{number}</span>
+        <div className="rounded-xl border border-cortex-border bg-cortex-bg p-5">
+            <span className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/10 px-2.5 py-1 text-xs font-semibold text-cortex-primary">{number}</span>
             <h3 className="mt-4 text-lg font-semibold">{title}</h3>
             <p className="mt-2 text-sm leading-6 text-cortex-text-muted">{body}</p>
         </div>
@@ -192,8 +197,8 @@ function StepCard({ number, title, body }: { number: number; title: string; body
 
 function SupportCard({ icon, title, detail }: { icon: ReactNode; title: string; detail: string }) {
     return (
-        <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-6">
-            <div className="inline-flex rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 p-3 text-cortex-primary">{icon}</div>
+        <div className="rounded-xl border border-cortex-border bg-cortex-surface p-6">
+            <div className="inline-flex rounded-lg border border-cortex-primary/20 bg-cortex-primary/10 p-3 text-cortex-primary">{icon}</div>
             <h3 className="mt-5 text-xl font-semibold">{title}</h3>
             <p className="mt-3 text-sm leading-7 text-cortex-text-muted">{detail}</p>
         </div>
@@ -210,7 +215,7 @@ function ResourceLink({ link }: { link: HomepageLink }) {
             <p className="mt-3 text-sm leading-6 text-cortex-text-muted">{link.description}</p>
         </>
     );
-    const className = "block rounded-3xl border border-cortex-border bg-cortex-bg p-5 transition hover:border-cortex-primary/35 hover:bg-cortex-surface";
+    const className = "block rounded-xl border border-cortex-border bg-cortex-bg p-5 transition hover:border-cortex-primary/35 hover:bg-cortex-surface";
     if (link.external) return <a className={className} href={link.href} target="_blank" rel="noopener noreferrer">{content}</a>;
     return <Link className={className} href={link.href}>{content}</Link>;
 }
